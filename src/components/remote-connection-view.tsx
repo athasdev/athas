@@ -16,6 +16,7 @@ import { cn } from "../utils/cn";
 import Button from "./button";
 import Dropdown from "./dropdown";
 import { invoke } from '@tauri-apps/api/core';
+import { safeLocalStorageSetItem } from '../utils/storage';
 
 interface RemoteConnection {
   id: string;
@@ -66,11 +67,31 @@ const RemoteConnectionView = ({
 
   // Save connections to localStorage
   const saveConnections = (conns: RemoteConnection[]) => {
-    try {
-      localStorage.setItem('athas-remote-connections', JSON.stringify(conns));
+    const connectionsJson = JSON.stringify(conns);
+    
+    const success = safeLocalStorageSetItem('athas-remote-connections', connectionsJson, {
+      clearPrefix: 'athas-remote-',
+      onSuccess: () => {
+        setConnections(conns);
+      },
+      onQuotaExceeded: (error) => {
+        console.error('Failed to save remote connections due to quota:', error);
+        // Still update the state even if localStorage fails
+        setConnections(conns);
+        
+        // Try to inform the user
+        try {
+          alert('Warning: Remote connections could not be saved due to storage limitations. Your connections will be lost when you restart the application.');
+        } catch {
+          console.warn('Remote connections could not be saved due to storage limitations');
+        }
+      }
+    });
+    
+    if (!success) {
+      console.error('Failed to save remote connections');
+      // Still update the state even if localStorage fails
       setConnections(conns);
-    } catch (error) {
-      console.error('Error saving remote connections:', error);
     }
   };
 

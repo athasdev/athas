@@ -39,6 +39,7 @@ import {
   GitCommit,
   GitDiff,
 } from "../utils/git";
+import { safeLocalStorageSetItem, truncateJsonArrayData } from "../utils/storage";
 
 interface GitViewProps {
   repoPath?: string;
@@ -256,19 +257,33 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
         const diff = await getFileDiff(repoPath, filePath, staged);
 
         if (diff && diff.lines.length > 0) {
-            // Your existing logic to store in localStorage and open buffer
             const diffFileName = `${filePath.split("/").pop()}.diff`;
             const virtualPath = `diff://${staged ? "staged" : "unstaged"}/${diffFileName}`;
+            const diffJson = JSON.stringify(diff);
 
-            // Store the diff object and open the buffer
-            localStorage.setItem(`diff-content-${virtualPath}`, JSON.stringify(diff));
-            onFileSelect(virtualPath, false);
+            const success = safeLocalStorageSetItem(`diff-content-${virtualPath}`, diffJson, {
+              clearPrefix: 'diff-content-',
+              truncateData: (data) => truncateJsonArrayData(data, 1000),
+              onSuccess: () => {
+                onFileSelect(virtualPath, false);
+              },
+              onTruncated: (originalSize, truncatedSize) => {
+                onFileSelect(virtualPath, false);
+                alert(`File diff was too large and has been truncated to the first 1000 lines.\nOriginal diff had ${diff.lines.length} lines.`);
+              },
+              onQuotaExceeded: (error) => {
+                alert(`Failed to display diff: The file diff is too large to display.\nFile: ${filePath}\nTry viewing smaller portions of the file.`);
+              }
+            });
+            
+            if (!success) {
+              console.error('Failed to store file diff');
+            }
         } else {
             // Handle case where there are no changes to display
             alert(`No ${staged ? 'staged' : 'unstaged'} changes for this file.`);
         }
     } catch (error) {
-        // This is the new, important part
         console.error("Error getting file diff:", error);
         alert(`Failed to get diff for ${filePath}:\n${error}`);
     }
@@ -287,9 +302,26 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
       if (diff && diff.lines.length > 0) {
         const diffFileName = `${diff.file_path.split("/").pop()}.diff`;
         const virtualPath = `diff://commit/${commitHash}/${diffFileName}`;
-  
-        localStorage.setItem(`diff-content-${virtualPath}`, JSON.stringify(diff));
-        onFileSelect(virtualPath, false);
+        const diffJson = JSON.stringify(diff);
+        
+        const success = safeLocalStorageSetItem(`diff-content-${virtualPath}`, diffJson, {
+          clearPrefix: 'diff-content-',
+          truncateData: (data) => truncateJsonArrayData(data, 1000),
+          onSuccess: () => {
+            onFileSelect(virtualPath, false);
+          },
+          onTruncated: (originalSize, truncatedSize) => {
+            onFileSelect(virtualPath, false);
+            alert(`Diff was too large and has been truncated to the first 1000 lines.\nOriginal diff had ${diff.lines.length} lines.`);
+          },
+          onQuotaExceeded: (error) => {
+            alert(`Failed to display diff: The commit diff is too large to display.\nCommit: ${commitHash}\nConsider viewing individual files instead.`);
+          }
+        });
+        
+        if (!success) {
+          console.error('Failed to store commit diff');
+        }
       } else {
         alert(`No changes in this commit for the specified file.`);
       }
