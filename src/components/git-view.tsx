@@ -252,150 +252,25 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
   ) => {
     if (!repoPath || !onFileSelect) return;
 
-    console.log("Attempting to view diff for:", filePath, "staged:", staged);
-
     try {
-      const diff = await getFileDiff(repoPath, filePath, staged);
-      console.log("Received diff:", diff);
+        const diff = await getFileDiff(repoPath, filePath, staged);
 
-      if (diff) {
-        // Store the diff object as JSON and open as buffer
-        const diffFileName = `${filePath.split("/").pop()}.diff`;
+        if (diff && diff.lines.length > 0) {
+            // Your existing logic to store in localStorage and open buffer
+            const diffFileName = `${filePath.split("/").pop()}.diff`;
+            const virtualPath = `diff://${staged ? "staged" : "unstaged"}/${diffFileName}`;
 
-        // Create a virtual diff file path
-        const virtualPath = `diff://${staged ? "staged" : "unstaged"}/${diffFileName}`;
-
-        // Open as buffer - this will need to be handled in the buffer system
-        onFileSelect(virtualPath, false);
-
-        // Store the diff object as JSON for the buffer system to access
-        localStorage.setItem(
-          `diff-content-${virtualPath}`,
-          JSON.stringify(diff),
-        );
-      } else {
-        console.warn("No diff received for file:", filePath);
-        // Create a mock GitDiff object for now if the backend isn't implemented
-        const mockDiff: GitDiff = {
-          file_path: filePath,
-          file_status: staged ? "modified" : "modified",
-          is_new: false,
-          is_deleted: false,
-          is_renamed: false,
-          old_path: null,
-          new_path: null,
-          lines: [
-            {
-              line_type: "header",
-              content: `@@ -1,3 +1,3 @@`,
-              old_line_number: null,
-              new_line_number: null,
-            },
-            {
-              line_type: "context",
-              content: "This is a placeholder diff view.",
-              old_line_number: 1,
-              new_line_number: 1,
-            },
-            {
-              line_type: "removed",
-              content:
-                "The Tauri backend git diff commands are not yet implemented.",
-              old_line_number: 2,
-              new_line_number: null,
-            },
-            {
-              line_type: "added",
-              content:
-                "Please implement git_diff_file and git_commit_diff in the Rust backend.",
-              old_line_number: null,
-              new_line_number: 2,
-            },
-            {
-              line_type: "context",
-              content: `File: ${filePath} (${staged ? "staged" : "unstaged"})`,
-              old_line_number: 3,
-              new_line_number: 3,
-            },
-          ],
-        };
-
-        const diffFileName = `${filePath.split("/").pop()}.diff`;
-        const virtualPath = `diff://${staged ? "staged" : "unstaged"}/${diffFileName}`;
-
-        onFileSelect(virtualPath, false);
-        localStorage.setItem(
-          `diff-content-${virtualPath}`,
-          JSON.stringify(mockDiff),
-        );
-      }
+            // Store the diff object and open the buffer
+            localStorage.setItem(`diff-content-${virtualPath}`, JSON.stringify(diff));
+            onFileSelect(virtualPath, false);
+        } else {
+            // Handle case where there are no changes to display
+            alert(`No ${staged ? 'staged' : 'unstaged'} changes for this file.`);
+        }
     } catch (error) {
-      console.error("Error getting file diff:", error);
-
-      // Create an error GitDiff object
-      const errorDiff: GitDiff = {
-        file_path: filePath,
-        file_status: "modified",
-        is_new: false,
-        is_deleted: false,
-        is_renamed: false,
-        old_path: null,
-        new_path: null,
-        lines: [
-          {
-            line_type: "header",
-            content: `@@ Error loading diff @@`,
-            old_line_number: null,
-            new_line_number: null,
-          },
-          {
-            line_type: "removed",
-            content: `Error loading diff for ${filePath}`,
-            old_line_number: 1,
-            new_line_number: null,
-          },
-          {
-            line_type: "added",
-            content: `Error: ${(error as Error).message}`,
-            old_line_number: null,
-            new_line_number: 1,
-          },
-          {
-            line_type: "context",
-            content:
-              "The git diff functionality requires backend implementation.",
-            old_line_number: 2,
-            new_line_number: 2,
-          },
-          {
-            line_type: "context",
-            content: "Please implement the following Tauri commands:",
-            old_line_number: 3,
-            new_line_number: 3,
-          },
-          {
-            line_type: "context",
-            content: "- git_diff_file",
-            old_line_number: 4,
-            new_line_number: 4,
-          },
-          {
-            line_type: "context",
-            content: "- git_commit_diff",
-            old_line_number: 5,
-            new_line_number: 5,
-          },
-        ],
-      };
-
-      const diffFileName = `${filePath.split("/").pop()}.diff`;
-      const virtualPath = `diff://error/${diffFileName}`;
-
-      onFileSelect(virtualPath, false);
-      localStorage.setItem(
-        `diff-content-${virtualPath}`,
-        JSON.stringify(errorDiff),
-      );
+        // This is the new, important part
+        console.error("Error getting file diff:", error);
+        alert(`Failed to get diff for ${filePath}:\n${error}`);
     }
   };
 
@@ -405,179 +280,22 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
   ) => {
     if (!repoPath || !onFileSelect) return;
 
-    console.log(
-      "Attempting to view commit diff for:",
-      commitHash,
-      "file:",
-      filePath,
-    );
-
     try {
       const diffs = await getCommitDiff(repoPath, commitHash, filePath);
-      console.log("Received commit diffs:", diffs);
-
-      if (diffs.length > 0) {
-        // For multiple diffs, create a combined GitDiff object
-        const combinedDiff: GitDiff = {
-          file_path: `commit-${commitHash.substring(0, 7)}`,
-          file_status: "modified",
-          is_new: false,
-          is_deleted: false,
-          is_renamed: false,
-          old_path: null,
-          new_path: null,
-          lines: diffs.flatMap((diff, index) => [
-            ...(index > 0
-              ? [
-                  {
-                    line_type: "header" as const,
-                    content: `\n--- File: ${diff.file_path} ---`,
-                    old_line_number: null,
-                    new_line_number: null,
-                  },
-                ]
-              : []),
-            ...diff.lines,
-          ]),
-        };
-
-        const diffFileName = `commit-${commitHash.substring(0, 7)}.diff`;
-        const virtualPath = `diff://commit/${diffFileName}`;
-
+      const diff = diffs[0]; // For now, assume single file diff view from commit
+  
+      if (diff && diff.lines.length > 0) {
+        const diffFileName = `${diff.file_path.split("/").pop()}.diff`;
+        const virtualPath = `diff://commit/${commitHash}/${diffFileName}`;
+  
+        localStorage.setItem(`diff-content-${virtualPath}`, JSON.stringify(diff));
         onFileSelect(virtualPath, false);
-        localStorage.setItem(
-          `diff-content-${virtualPath}`,
-          JSON.stringify(combinedDiff),
-        );
       } else {
-        console.warn("No commit diffs received for:", commitHash);
-
-        // Create a mock GitDiff for commits
-        const mockCommitDiff: GitDiff = {
-          file_path: `commit-${commitHash.substring(0, 7)}`,
-          file_status: "modified",
-          is_new: false,
-          is_deleted: false,
-          is_renamed: false,
-          old_path: null,
-          new_path: null,
-          lines: [
-            {
-              line_type: "header",
-              content: `@@ commit ${commitHash} @@`,
-              old_line_number: null,
-              new_line_number: null,
-            },
-            {
-              line_type: "context",
-              content: `Author: Developer`,
-              old_line_number: 1,
-              new_line_number: 1,
-            },
-            {
-              line_type: "context",
-              content: `Date: ${new Date().toISOString()}`,
-              old_line_number: 2,
-              new_line_number: 2,
-            },
-            {
-              line_type: "context",
-              content: "",
-              old_line_number: 3,
-              new_line_number: 3,
-            },
-            {
-              line_type: "removed",
-              content: "Commit diff view is not yet available.",
-              old_line_number: 4,
-              new_line_number: null,
-            },
-            {
-              line_type: "added",
-              content:
-                "The Tauri backend git commit diff commands are not yet implemented.",
-              old_line_number: null,
-              new_line_number: 4,
-            },
-            {
-              line_type: "context",
-              content: "Please implement git_commit_diff in the Rust backend.",
-              old_line_number: 5,
-              new_line_number: 5,
-            },
-            {
-              line_type: "context",
-              content: `This would show all file changes in commit ${commitHash.substring(0, 7)}`,
-              old_line_number: 6,
-              new_line_number: 6,
-            },
-          ],
-        };
-
-        const diffFileName = `commit-${commitHash.substring(0, 7)}.diff`;
-        const virtualPath = `diff://commit/${diffFileName}`;
-
-        onFileSelect(virtualPath, false);
-        localStorage.setItem(
-          `diff-content-${virtualPath}`,
-          JSON.stringify(mockCommitDiff),
-        );
+        alert(`No changes in this commit for the specified file.`);
       }
     } catch (error) {
-      console.error("Error getting commit diff:", error);
-
-      // Create an error GitDiff object for commit diff
-      const errorCommitDiff: GitDiff = {
-        file_path: `error-${commitHash.substring(0, 7)}`,
-        file_status: "modified",
-        is_new: false,
-        is_deleted: false,
-        is_renamed: false,
-        old_path: null,
-        new_path: null,
-        lines: [
-          {
-            line_type: "header",
-            content: `@@ Error loading commit diff @@`,
-            old_line_number: null,
-            new_line_number: null,
-          },
-          {
-            line_type: "removed",
-            content: `Error loading commit diff: ${commitHash.substring(0, 7)}`,
-            old_line_number: 1,
-            new_line_number: null,
-          },
-          {
-            line_type: "added",
-            content: `Error: ${(error as Error).message}`,
-            old_line_number: null,
-            new_line_number: 1,
-          },
-          {
-            line_type: "context",
-            content:
-              "The git commit diff functionality requires backend implementation.",
-            old_line_number: 2,
-            new_line_number: 2,
-          },
-          {
-            line_type: "context",
-            content: "Please implement the git_commit_diff Tauri command.",
-            old_line_number: 3,
-            new_line_number: 3,
-          },
-        ],
-      };
-
-      const diffFileName = `error-${commitHash.substring(0, 7)}.diff`;
-      const virtualPath = `diff://error/${diffFileName}`;
-
-      onFileSelect(virtualPath, false);
-      localStorage.setItem(
-        `diff-content-${virtualPath}`,
-        JSON.stringify(errorCommitDiff),
-      );
+        console.error("Error getting commit diff:", error);
+        alert(`Failed to get diff for commit ${commitHash}:\n${error}`);
     }
   };
 

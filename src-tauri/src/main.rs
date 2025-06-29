@@ -15,6 +15,7 @@ use tauri_plugin_opener;
 use tauri_plugin_os;
 use tauri_plugin_shell;
 use tauri_plugin_store;
+use git2::{Repository, Diff, DiffLine, Oid, DiffFormat};
 
 mod lsp;
 mod menu;
@@ -92,6 +93,55 @@ struct GitDiff {
     is_deleted: bool,
     is_renamed: bool,
     lines: Vec<GitDiffLine>,
+}
+
+fn parse_diff_to_lines(diff: &mut Diff) -> Result<Vec<GitDiffLine>, String> {
+    use git2::DiffFormat;
+
+    let mut lines: Vec<GitDiffLine> = Vec::new();
+
+    diff.print(DiffFormat::Patch, | _delta, _hunk, line | {
+        let origin = line.origin();
+        match origin {
+            'F' | 'H' => { // File or hunk header
+                let content = String::from_utf8_lossy(line.content()).to_string();
+                lines.push(GitDiffLine {
+                    line_type: "header".to_string(),
+                    content,
+                    old_line_number: None,
+                    new_line_number: None,
+                });
+            }
+            '+' => {
+                lines.push(GitDiffLine {
+                    line_type: "added".to_string(),
+                    content: String::from_utf8_lossy(line.content()).trim_end_matches('\n').to_string(),
+                    old_line_number: None,
+                    new_line_number: line.new_lineno(),
+                });
+            }
+            '-' => {
+                lines.push(GitDiffLine {
+                    line_type: "removed".to_string(),
+                    content: String::from_utf8_lossy(line.content()).trim_end_matches('\n').to_string(),
+                    old_line_number: line.old_lineno(),
+                    new_line_number: None,
+                });
+            }
+            ' ' => {
+                lines.push(GitDiffLine {
+                    line_type: "context".to_string(),
+                    content: String::from_utf8_lossy(line.content()).trim_end_matches('\n').to_string(),
+                    old_line_number: line.old_lineno(),
+                    new_line_number: line.new_lineno(),
+                });
+            }
+            _ => {}
+        }
+        true
+    }).map_err(|e| e.to_string())?;
+
+    Ok(lines)
 }
 
 #[tauri::command]
@@ -475,241 +525,114 @@ fn git_log(repo_path: String, limit: Option<u32>) -> Result<Vec<GitCommit>, Stri
 
 #[tauri::command]
 fn git_diff_file(repo_path: String, file_path: String, staged: bool) -> Result<GitDiff, String> {
-    let repo_dir = Path::new(&repo_path);
+    let repo = Repository::open(&repo_path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
 
-    // Check if it's a git repository
-    if !repo_dir.join(".git").exists() {
-        return Err("Not a git repository".to_string());
-    }
+    // Get the HEAD commit's tree
+    let head = repo.head().map_err(|e| format!("Failed to get HEAD: {}", e))?;
+    let head_commit = head.peel_to_commit().map_err(|e| format!("Failed to peel to commit: {}", e))?;
+    let head_tree = head_commit.tree().map_err(|e| format!("Failed to get HEAD tree: {}", e))?;
 
-    let mut args = vec!["diff"];
-    if staged {
-        args.push("--cached");
-    }
-    args.push("--no-color");
-    args.push("--unified=3");
-    args.push(&file_path);
+    let mut diff_opts = git2::DiffOptions::new();
+    diff_opts.pathspec(&file_path); // Important: only look at the specified file
 
-    let output = Command::new("git")
-        .current_dir(&repo_dir)
-        .args(&args)
-        .output()
-        .map_err(|e| format!("Failed to get file diff: {}", e))?;
+    let mut diff = if staged {
+        // Diff between HEAD and the index (staged changes)
+        let index = repo.index().map_err(|e| format!("Failed to get index: {}", e))?;
+        repo.diff_tree_to_index(Some(&head_tree), Some(&index), Some(&mut diff_opts))
+    } else {
+        // Diff between HEAD and the working directory (unstaged changes)
+        repo.diff_tree_to_workdir(Some(&head_tree), Some(&mut diff_opts))
+    }.map_err(|e| format!("Failed to create diff: {}", e))?;
 
-    if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).to_string());
-    }
+    let lines = parse_diff_to_lines(&mut diff)?;
 
-    let diff_text = String::from_utf8_lossy(&output.stdout);
-    let mut lines = Vec::new();
-    let mut old_line_num = 0u32;
-    let mut new_line_num = 0u32;
-
-    for line in diff_text.lines() {
-        if line.starts_with("@@") {
-            // Parse hunk header
-            lines.push(GitDiffLine {
-                line_type: "header".to_string(),
-                content: line.to_string(),
-                old_line_number: None,
-                new_line_number: None,
-            });
-
-            // Extract line numbers from hunk header: @@ -old_start,old_count +new_start,new_count @@
-            if let Some(captures) = line.split_whitespace().nth(1) {
-                if let Some(old_start) =
-                    captures.strip_prefix('-').and_then(|s| s.split(',').next())
-                {
-                    old_line_num = old_start.parse().unwrap_or(0);
-                }
-            }
-            if let Some(captures) = line.split_whitespace().nth(2) {
-                if let Some(new_start) =
-                    captures.strip_prefix('+').and_then(|s| s.split(',').next())
-                {
-                    new_line_num = new_start.parse().unwrap_or(0);
-                }
-            }
-        } else if line.starts_with('+') && !line.starts_with("+++") {
-            // Added line
-            lines.push(GitDiffLine {
-                line_type: "added".to_string(),
-                content: line[1..].to_string(),
-                old_line_number: None,
-                new_line_number: Some(new_line_num),
-            });
-            new_line_num += 1;
-        } else if line.starts_with('-') && !line.starts_with("---") {
-            // Removed line
-            lines.push(GitDiffLine {
-                line_type: "removed".to_string(),
-                content: line[1..].to_string(),
-                old_line_number: Some(old_line_num),
-                new_line_number: None,
-            });
-            old_line_num += 1;
-        } else if line.starts_with(' ') {
-            // Context line
-            lines.push(GitDiffLine {
-                line_type: "context".to_string(),
-                content: line[1..].to_string(),
-                old_line_number: Some(old_line_num),
-                new_line_number: Some(new_line_num),
-            });
-            old_line_num += 1;
-            new_line_num += 1;
-        }
-    }
-
-    // Check if file is new, deleted, or renamed
-    let status_output = Command::new("git")
-        .current_dir(&repo_dir)
-        .args(&["status", "--porcelain", &file_path])
-        .output()
-        .map_err(|e| format!("Failed to get file status: {}", e))?;
-
-    let status_text = String::from_utf8_lossy(&status_output.stdout);
-    let is_new = status_text.starts_with("A ");
-    let is_deleted = status_text.starts_with("D ");
-    let is_renamed = status_text.starts_with("R ");
+    // We can enhance this to get more accurate new/deleted/renamed status
+    // For now, this is a solid starting point.
+    let status_entry = repo.status_file(Path::new(&file_path))
+        .map_err(|e| format!("Could not get file status: {}", e))?;
+    let is_new = status_entry.contains(git2::Status::WT_NEW) || status_entry.contains(git2::Status::INDEX_NEW);
+    let is_deleted = status_entry.contains(git2::Status::WT_DELETED) || status_entry.contains(git2::Status::INDEX_DELETED);
 
     Ok(GitDiff {
         file_path: file_path.clone(),
-        old_path: None,
-        new_path: None,
+        old_path: None, // Simplified for now
+        new_path: None, // Simplified for now
         is_new,
         is_deleted,
-        is_renamed,
+        is_renamed: false, // Simplified for now
         lines,
     })
 }
 
 #[tauri::command]
-fn git_commit_diff(
-    repo_path: String,
-    commit_hash: String,
-    file_path: Option<String>,
-) -> Result<Vec<GitDiff>, String> {
-    let repo_dir = Path::new(&repo_path);
+fn git_commit_diff(repo_path: String, commit_hash: String, file_path: Option<String>) -> Result<Vec<GitDiff>, String> {
+    let repo = Repository::open(&repo_path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let oid = Oid::from_str(&commit_hash)
+        .map_err(|e| format!("Invalid commit hash: {}", e))?;
+    let commit = repo.find_commit(oid)
+        .map_err(|e| format!("Commit not found: {}", e))?;
+    let commit_tree = commit.tree()
+        .map_err(|e| format!("Failed to get commit tree: {}", e))?;
 
-    // Check if it's a git repository
-    if !repo_dir.join(".git").exists() {
-        return Err("Not a git repository".to_string());
+    // Get the parent commit to diff against
+    let parent = if commit.parent_count() > 0 {
+        Some(commit.parent(0).map_err(|e| format!("Failed to get parent commit: {}", e))?)
+    } else {
+        None
+    };
+
+    let parent_tree = if let Some(p) = parent {
+        Some(p.tree().map_err(|e| format!("Failed to get parent tree: {}", e))?)
+    } else {
+        None // This is the initial commit, diff against an empty tree
+    };
+
+    let mut diff_opts = git2::DiffOptions::new();
+    if let Some(path) = &file_path {
+        diff_opts.pathspec(path);
     }
+    
+    let mut diff = repo.diff_tree_to_tree(parent_tree.as_ref(), Some(&commit_tree), Some(&mut diff_opts))
+        .map_err(|e| format!("Failed to create commit diff: {}", e))?;
 
-    let mut args = vec!["show", "--no-color", "--unified=3", &commit_hash];
-    if let Some(ref file) = file_path {
-        args.push("--");
-        args.push(file);
-    }
+    let mut results: Vec<GitDiff> = Vec::new();
 
-    let output = Command::new("git")
-        .current_dir(&repo_dir)
-        .args(&args)
-        .output()
-        .map_err(|e| format!("Failed to get commit diff: {}", e))?;
+    for delta in diff.deltas() {
+        let file_path = delta
+            .new_file()
+            .path()
+            .unwrap_or_else(|| delta.old_file().path().unwrap())
+            .to_string_lossy()
+            .into_owned();
 
-    if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).to_string());
-    }
+        // To get lines for just THIS file, we need a new diff restricted to the file path
+        let mut single_file_opts = git2::DiffOptions::new();
+        single_file_opts.pathspec(&file_path);
 
-    let diff_text = String::from_utf8_lossy(&output.stdout);
-    let mut diffs = Vec::new();
-    let mut current_file = None;
-    let mut current_lines = Vec::new();
-    let mut old_line_num = 0u32;
-    let mut new_line_num = 0u32;
+        let mut single_file_diff = repo
+            .diff_tree_to_tree(parent_tree.as_ref(), Some(&commit_tree), Some(&mut single_file_opts))
+            .map_err(|e| format!("Failed to create single-file diff: {}", e))?;
 
-    for line in diff_text.lines() {
-        if line.starts_with("diff --git") {
-            // Save previous file if exists
-            if let Some(file_path) = current_file.take() {
-                diffs.push(GitDiff {
-                    file_path,
-                    old_path: None,
-                    new_path: None,
-                    is_new: false,
-                    is_deleted: false,
-                    is_renamed: false,
-                    lines: std::mem::take(&mut current_lines),
-                });
-            }
-
-            // Parse new file path from "diff --git a/path b/path"
-            if let Some(parts) = line.split_whitespace().nth(2) {
-                if let Some(path) = parts.strip_prefix("a/") {
-                    current_file = Some(path.to_string());
-                }
-            }
-        } else if line.starts_with("@@") {
-            // Parse hunk header
-            current_lines.push(GitDiffLine {
-                line_type: "header".to_string(),
-                content: line.to_string(),
-                old_line_number: None,
-                new_line_number: None,
-            });
-
-            // Extract line numbers from hunk header
-            if let Some(captures) = line.split_whitespace().nth(1) {
-                if let Some(old_start) =
-                    captures.strip_prefix('-').and_then(|s| s.split(',').next())
-                {
-                    old_line_num = old_start.parse().unwrap_or(0);
-                }
-            }
-            if let Some(captures) = line.split_whitespace().nth(2) {
-                if let Some(new_start) =
-                    captures.strip_prefix('+').and_then(|s| s.split(',').next())
-                {
-                    new_line_num = new_start.parse().unwrap_or(0);
-                }
-            }
-        } else if line.starts_with('+') && !line.starts_with("+++") {
-            // Added line
-            current_lines.push(GitDiffLine {
-                line_type: "added".to_string(),
-                content: line[1..].to_string(),
-                old_line_number: None,
-                new_line_number: Some(new_line_num),
-            });
-            new_line_num += 1;
-        } else if line.starts_with('-') && !line.starts_with("---") {
-            // Removed line
-            current_lines.push(GitDiffLine {
-                line_type: "removed".to_string(),
-                content: line[1..].to_string(),
-                old_line_number: Some(old_line_num),
-                new_line_number: None,
-            });
-            old_line_num += 1;
-        } else if line.starts_with(' ') {
-            // Context line
-            current_lines.push(GitDiffLine {
-                line_type: "context".to_string(),
-                content: line[1..].to_string(),
-                old_line_number: Some(old_line_num),
-                new_line_number: Some(new_line_num),
-            });
-            old_line_num += 1;
-            new_line_num += 1;
-        }
-    }
-
-    // Don't forget the last file
-    if let Some(file_path) = current_file {
-        diffs.push(GitDiff {
-            file_path,
-            old_path: None,
-            new_path: None,
-            is_new: false,
-            is_deleted: false,
-            is_renamed: false,
-            lines: current_lines,
+        results.push(GitDiff {
+            file_path: file_path.clone(),
+            old_path: delta
+                .old_file()
+                .path()
+                .map(|p| p.to_string_lossy().into_owned()),
+            new_path: delta
+                .new_file()
+                .path()
+                .map(|p| p.to_string_lossy().into_owned()),
+            is_new: delta.status() == git2::Delta::Added,
+            is_deleted: delta.status() == git2::Delta::Deleted,
+            is_renamed: delta.status() == git2::Delta::Renamed,
+            lines: parse_diff_to_lines(&mut single_file_diff).unwrap_or_default(),
         });
     }
 
-    Ok(diffs)
+    Ok(results)
 }
 
 #[tauri::command]
