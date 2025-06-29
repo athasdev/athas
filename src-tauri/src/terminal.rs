@@ -210,7 +210,7 @@ impl TerminalConnection {
                 cmd.env("TERM", "xterm-256color");
                 cmd
             }
-            TerminalKind::GitBash { working_directory: _ } => {
+            TerminalKind::GitBash { working_directory } => {
                 #[cfg(target_os = "windows")]
                 {
                     let git_bash_paths = [
@@ -246,8 +246,8 @@ impl TerminalConnection {
                 }
             }
             TerminalKind::Wsl {
-                distribution: _,
-                working_directory: _,
+                distribution,
+                working_directory,
             } => {
                 #[cfg(target_os = "windows")]
                 {
