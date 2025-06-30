@@ -55,7 +55,8 @@ type ThemeType =
   | "ayu-dark"
   | "ayu-mirage"
   | "ayu-light"
-  | "vercel-dark";
+  | "vercel-dark"
+  | "vesper";
 
 const AVAILABLE_EXTENSIONS: Extension[] = [
   // Language Servers
@@ -334,6 +335,14 @@ const AVAILABLE_EXTENSIONS: Extension[] = [
     status: "inactive",
     themeId: "vercel-dark",
   },
+  {
+    id: "vesper",
+    name: "Vesper",
+    description: "Dark theme with deep blues, purples, and teals",
+    category: "theme",
+    status: "inactive",
+    themeId: "vesper",
+  }
 ];
 
 interface ExtensionCardProps {
@@ -449,7 +458,7 @@ export default function ExtensionsView({
       // For themes, we just need to call onThemeChange
       // The status will be updated via the useEffect above
       onThemeChange(
-        extension.status === "inactive" ? extension.themeId! : "auto",
+        extension.status === "inactive" ? extension.themeId as ThemeType : "auto" as ThemeType,
       );
     }
   };

@@ -306,6 +306,32 @@ body {
     --syntax-punctuation: #e6e1cf;
 }
 
+/* Force Vesper theme */
+.force-vesper {
+    --primary-bg: #18181b;
+    --secondary-bg: #23232b;
+    --text-color: #e6e6e6;
+    --text-light: #6e6e8a;
+    --text-lighter: #44444a;
+    --border-color: #44444a;
+    --hover-color: #16213e;
+    --selected-color: rgba(127,255,212,0.08);
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: #44444a;
+    --scrollbar-thumb-hover: #7fffd4;
+
+    /* Syntax highlighting colors - Vesper theme */
+    --syntax-comment: #6e6e8a;
+    --syntax-keyword: #ffb86b;
+    --syntax-string: #aafac8;
+    --syntax-number: #ffb6b6;
+    --syntax-function: #8be9fd;
+    --syntax-variable: #b5e8e0;
+    --syntax-tag: #ffd6a5;
+    --syntax-attribute: #f1fa8c;
+    --syntax-punctuation: #b0b0c3;
+}
+
 @media (prefers-color-scheme: dark) {
     :root {
         --primary-bg: #1a1a1a;
@@ -1831,6 +1857,114 @@ textarea::-webkit-scrollbar-thumb:hover {
     --punctuation: #5c6773;
 }
 
+/* Vesper Theme*/
+.force-vesper {
+    --primary-bg: #18181b;
+    --secondary-bg: #0D0D0E;
+    --hover-color: #23232b;
+    --selected-color: #23232b;
+    --border-color: #23232b;
+    --text-color: #e6e6e6;
+    --text-light: #b0b0c3;
+    --text-lighter: #6e6e8a;
+    --accent-color: #7fffd4; 
+
+    /* Syntax highlighting colors*/
+    --syntax-comment: #6e6e8a;      
+    --syntax-keyword: #ffb86b;      
+    --syntax-string: #aafac8;       
+    --syntax-number: #ffb6b6;      
+    --syntax-function: #8be9fd;     
+    --syntax-variable: #b5e8e0;     
+    --syntax-tag: #ffd6a5;         
+    --syntax-attribute: #f1fa8c;    
+    --syntax-punctuation: #b0b0c3;  
+
+    /* Additional Vesper-specific colors */
+    --success-color: #aafac8;
+    --warning-color: #ffd6a5;
+    --error-color: #ffb6b6;
+    --info-color: #8be9fd;
+    
+    /* Component-specific overrides  */
+    --tab-active-bg: #18181b;
+    --tab-inactive-bg: #23232b;
+    --sidebar-bg: #23232b;
+    --editor-bg: #101012;
+    --terminal-bg: #101012;
+    
+    /* Scrollbar colors */
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: #44444a;
+    --scrollbar-thumb-hover: #7fffd4;
+}
+
+/* Vesper selection color */
+.force-vesper ::selection {
+    background: rgba(127,255,212,0.08) !important;
+}
+.force-vesper ::-moz-selection {
+    background: rgba(127,255,212,0.08) !important;
+}
+
+/* Vesper vignette/gradient background for extra polish */
+.force-vesper .window-container {
+    background: radial-gradient(ellipse at 60% 40%, rgba(127,255,212,0.04) 0%, rgba(24,24,27,0.98) 80%), #18181b !important;
+}
+
+/* Vercel Dark - Based on official Geist Design System */
+.force-vercel-dark {
+    /* Core backgrounds following Geist color scale */
+    --primary-bg: #000000;           /* Background 1 - Pure black like vercel.com */
+    --secondary-bg: #0a0a0a;         /* Background 2 - Subtle elevation */
+    --hover-color: #1a1a1a;          /* Color 1 - Hover background */
+    --selected-color: #2a2a2a;       /* Color 2 - Active background */
+    
+    /* Border colors following Geist scale */
+    --border-color: #333333;         /* Color 4 - Default border */
+    
+    /* Text colors following Geist scale */
+    --text-color: #fafafa;           /* Color 10 - Primary text (high contrast) */
+    --text-light: #a1a1a1;          /* Color 9 - Secondary text */
+    --text-lighter: #666666;        /* Dimmed text for less important content */
+    
+    /* Vercel brand accent */
+    --accent-color: #0070f3;         /* Official Vercel blue */
+    
+    /* Enhanced syntax highlighting inspired by Vercel's code blocks */
+    --syntax-comment: #666666;              /* Subtle gray for comments */
+    --syntax-keyword: #0070f3;              /* Vercel blue for keywords */
+    --syntax-string: #50e3c2;               /* Cyan for strings */
+    --syntax-number: #f81ce5;               /* Magenta for numbers */
+    --syntax-function: #79ffe1;             /* Bright cyan for functions */
+    --syntax-variable: #fafafa;             /* Primary text color for variables */
+    --syntax-tag: #ff0080;                  /* Hot pink for tags */
+    --syntax-attribute: #f81ce5;            /* Magenta for attributes */
+    --syntax-punctuation: #a1a1a1;          /* Secondary text for punctuation */
+    
+    /* Additional Vercel-specific colors */
+    --success-color: #00d9ff;        /* Vercel success cyan */
+    --warning-color: #f5a623;        /* Vercel warning orange */
+    --error-color: #ff0080;          /* Vercel error pink */
+    --info-color: #0070f3;           /* Vercel info blue */
+    
+    /* Component-specific overrides for better Vercel feel */
+    --tab-active-bg: #000000;        /* Active tabs pure black */
+    --tab-inactive-bg: #0a0a0a;      /* Inactive tabs slightly elevated */
+    --sidebar-bg: #0a0a0a;           /* Sidebar with subtle elevation */
+    --editor-bg: #000000;            /* Editor pure black */
+    --terminal-bg: #000000;          /* Terminal pure black */
+    
+    /* Enhanced contrast ratios */
+    --high-contrast-bg: #ffffff;     /* Pure white for high contrast elements */
+    --high-contrast-text: #000000;   /* Pure black text on white */
+    
+    /* Scrollbar colors */
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: #333333;
+    --scrollbar-thumb-hover: #555555;
+}
+
 /* Vercel Dark Theme Component Enhancements */
 .force-vercel-dark .tab-bar {
     background: var(--sidebar-bg);
@@ -2055,57 +2189,4 @@ textarea::-webkit-scrollbar-thumb:hover {
 
 .terminal-output:not(:last-child) {
   margin-bottom: 0.1em;
-}
-
-/* Vercel Dark - Based on official Geist Design System */
-.force-vercel-dark {
-    /* Core backgrounds following Geist color scale */
-    --primary-bg: #000000;           /* Background 1 - Pure black like vercel.com */
-    --secondary-bg: #0a0a0a;         /* Background 2 - Subtle elevation */
-    --hover-color: #1a1a1a;          /* Color 1 - Hover background */
-    --selected-color: #2a2a2a;       /* Color 2 - Active background */
-    
-    /* Border colors following Geist scale */
-    --border-color: #333333;         /* Color 4 - Default border */
-    
-    /* Text colors following Geist scale */
-    --text-color: #fafafa;           /* Color 10 - Primary text (high contrast) */
-    --text-light: #a1a1a1;          /* Color 9 - Secondary text */
-    --text-lighter: #666666;        /* Dimmed text for less important content */
-    
-    /* Vercel brand accent */
-    --accent-color: #0070f3;         /* Official Vercel blue */
-    
-    /* Enhanced syntax highlighting inspired by Vercel's code blocks */
-    --comment: #666666;              /* Subtle gray for comments */
-    --keyword: #0070f3;              /* Vercel blue for keywords */
-    --string: #50e3c2;               /* Cyan for strings */
-    --number: #f81ce5;               /* Magenta for numbers */
-    --function: #79ffe1;             /* Bright cyan for functions */
-    --variable: #fafafa;             /* Primary text color for variables */
-    --tag: #ff0080;                  /* Hot pink for tags */
-    --attribute: #f81ce5;            /* Magenta for attributes */
-    --punctuation: #a1a1a1;          /* Secondary text for punctuation */
-    
-    /* Additional Vercel-specific colors */
-    --success-color: #00d9ff;        /* Vercel success cyan */
-    --warning-color: #f5a623;        /* Vercel warning orange */
-    --error-color: #ff0080;          /* Vercel error pink */
-    --info-color: #0070f3;           /* Vercel info blue */
-    
-    /* Component-specific overrides for better Vercel feel */
-    --tab-active-bg: #000000;        /* Active tabs pure black */
-    --tab-inactive-bg: #0a0a0a;      /* Inactive tabs slightly elevated */
-    --sidebar-bg: #0a0a0a;           /* Sidebar with subtle elevation */
-    --editor-bg: #000000;            /* Editor pure black */
-    --terminal-bg: #000000;          /* Terminal pure black */
-    
-    /* Enhanced contrast ratios */
-    --high-contrast-bg: #ffffff;     /* Pure white for high contrast elements */
-    --high-contrast-text: #000000;   /* Pure black text on white */
-    
-    /* Scrollbar colors */
-    --scrollbar-track: transparent;
-    --scrollbar-thumb: #333333;
-    --scrollbar-thumb-hover: #555555;
 }

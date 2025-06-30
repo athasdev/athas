@@ -1183,6 +1183,7 @@ function App() {
       "force-ayu-mirage",
       "force-ayu-light",
       "force-vercel-dark",
+      "force-vesper",
     );
 
     if (theme !== "auto") {

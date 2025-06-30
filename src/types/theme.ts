@@ -31,4 +31,5 @@ export type ThemeType =
   | "ayu-dark"
   | "ayu-mirage"
   | "ayu-light"
-  | "vercel-dark" 
+  | "vercel-dark"
+  | "vesper"; 

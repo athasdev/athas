@@ -13,7 +13,8 @@ export interface Settings {
     | "github"
     | "one-dark"
     | "material"
-    | "ayu";
+    | "ayu"
+    | "vesper";
   fontSize: number;
   tabSize: number;
   wordWrap: boolean;
@@ -80,6 +81,7 @@ export const useSettings = () => {
       "force-one-dark",
       "force-material",
       "force-ayu",
+      "force-vesper",
     );
 
     if (theme === "light") {
@@ -104,6 +106,8 @@ export const useSettings = () => {
       document.documentElement.classList.add("force-material");
     } else if (theme === "ayu") {
       document.documentElement.classList.add("force-ayu");
+    } else if (theme === "vesper") {
+      document.documentElement.classList.add("force-vesper");
     }
     // 'auto' doesn't add any class, so it follows system preference
   }, []);
