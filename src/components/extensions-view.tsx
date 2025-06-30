@@ -338,7 +338,7 @@ const AVAILABLE_EXTENSIONS: Extension[] = [
   {
     id: "vesper",
     name: "Vesper",
-    description: "Dark theme with deep blues, purples, and teals",
+    description: "Dark theme with deep oranges and greens",
     category: "theme",
     status: "inactive",
     themeId: "vesper",

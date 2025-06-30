@@ -309,7 +309,7 @@ body {
 /* Force Vesper theme */
 .force-vesper {
     --primary-bg: #18181b;
-    --secondary-bg: #23232b;
+    --secondary-bg: #0D0D0E;
     --text-color: #e6e6e6;
     --text-light: #6e6e8a;
     --text-lighter: #44444a;
