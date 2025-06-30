@@ -43,7 +43,7 @@ export const getProviderApiToken = async (
       try {
         const token = (await invoke(storageKey)) as string | null;
         return token;
-      } catch (error) {
+      } catch (_error) {
         // Fallback to github token for backward compatibility
         if (providerId !== "openai") {
           const token = (await invoke("get_github_token")) as string | null;
@@ -76,7 +76,7 @@ export const storeProviderApiToken = async (
 
       try {
         await invoke(storageKey, { token });
-      } catch (error) {
+      } catch (_error) {
         // Fallback to github token storage for backward compatibility
         await invoke("store_github_token", { token });
       }
@@ -102,7 +102,7 @@ export const removeProviderApiToken = async (
 
       try {
         await invoke(storageKey);
-      } catch (error) {
+      } catch (_error) {
         // Fallback to github token removal for backward compatibility
         await invoke("remove_github_token");
       }
@@ -281,7 +281,7 @@ Current context:
 ${contextPrompt}`;
 
     // Build messages array with conversation history
-    const messages = [
+    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       {
         role: "system" as const,
         content: systemPrompt,

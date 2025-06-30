@@ -1,3 +1,4 @@
+import React from "react";
 import { Buffer } from "../../types/buffer";
 
 export interface Message {
@@ -31,7 +32,7 @@ export interface AIChatProps {
   buffers?: Buffer[];
   rootFolderPath?: string;
   selectedFiles?: string[];
-  mode: "chat";
+  mode: "chat"| "outline";
   // Buffer update functions
   onApplyCode?: (code: string) => void;
 }

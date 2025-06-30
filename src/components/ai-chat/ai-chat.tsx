@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   Bot,
@@ -74,7 +75,7 @@ export default function AIChat({
 
   // Get current chat
   const currentChat = chats.find((chat) => chat.id === currentChatId);
-  const messages = currentChat?.messages || [];
+  const messages = useMemo(() => currentChat?.messages || [], [currentChat]);
 
   // Theme detection removed - was causing unnecessary re-renders
 
@@ -234,7 +235,7 @@ export default function AIChat({
       try {
         const token = await getProviderApiToken(provider.id);
         newApiKeyMap.set(provider.id, !!token);
-      } catch (error) {
+      } catch (_error) {
         newApiKeyMap.set(provider.id, false);
       }
     }
