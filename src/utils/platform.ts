@@ -4,10 +4,21 @@ import { open as tauriOpen } from "@tauri-apps/plugin-dialog";
 
 // Detect if we're on macOS
 export const isMac = (): boolean => {
-  return /Mac|iPhone|iPod|iPad/.test(navigator.platform) || 
-         /Mac/.test(navigator.userAgent) ||
-         navigator.platform === 'MacIntel';
+  //Prefer User-Agent Client Hints (modern Chrome/Edge)
+  const uaData = (navigator as any).userAgentData;
+  if (uaData?.platform) {
+    return uaData.platform.toLowerCase().includes('mac');
+  }
+
+  //Fallback: parse navigator.userAgent
+  const ua = navigator.userAgent.toLowerCase();
+  if (/\b(macintosh|mac os x|macos|iphone|ipad|ipod)\b/.test(ua)) {
+    return true;
+  }
+
+  return false;
 };
+
 
 // Get the appropriate modifier key symbol for the platform
 export const getModifierSymbol = (): string => {
@@ -66,7 +77,7 @@ export const isTauri = (): boolean => {
     if (typeof tauriInvoke === 'function') {
       return true;
     }
-  } catch (error) {
+  } catch (_error) {
     // Ignore error
   }
   
@@ -231,7 +242,7 @@ export const setWebFiles = (files: FileList) => {
   webFileStructure.set('', rootStructure);
   
   // Cache subdirectory structures
-  const cacheSubdirectories = (items: any[], basePath: string = '') => {
+  const cacheSubdirectories = (items: any[], _basePath: string = '') => {
     items.forEach(item => {
       if (item.is_dir && item.children) {
         webFileStructure.set(item.path, item.children);
