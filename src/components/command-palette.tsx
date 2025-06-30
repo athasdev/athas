@@ -99,12 +99,12 @@ const CommandPalette = forwardRef<CommandPaletteRef, CommandPaletteProps>(
         action: () => setTheme('midnight')
       },
       {
-        id: 'theme-tokyonight',
+        id: 'theme-tokyo-night',
         label: 'Preferences: Color Theme (Tokyo Night)',
         description: 'Dark theme with vibrant purple and blue tones',
         icon: <Moon size={16} />,
         category: 'Theme',
-        action: () => setTheme('tokyonight')
+        action: () => setTheme('tokyo-night')
       }
     ];
 
@@ -118,7 +118,7 @@ const CommandPalette = forwardRef<CommandPaletteRef, CommandPaletteProps>(
 
 
     // Theme management
-    const setTheme = (theme: 'auto' | 'light' | 'dark' | 'midnight' | 'tokyonight') => {
+    const setTheme = (theme: 'auto' | 'light' | 'dark' | 'midnight' | 'tokyo-night') => {
       if (onThemeChange) {
         onThemeChange(theme);
       }
