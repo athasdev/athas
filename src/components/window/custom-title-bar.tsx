@@ -30,7 +30,7 @@ const CustomTitleBar = ({
       setCurrentWindow(window);
 
       try {
-        const platformName = await platform();
+        const platformName = platform();
         setCurrentPlatform(platformName);
       } catch (error) {
         console.error("Error getting platform:", error);
@@ -42,16 +42,25 @@ const CustomTitleBar = ({
         }
       }
 
+      const unlisten = await window.onResized(async () => {
+        const maximized = await window.isMaximized();
+        setIsMaximized(maximized);
+      });
+
       try {
         const maximized = await window.isMaximized();
         setIsMaximized(maximized);
-      } catch (error) {
-        console.error("Error checking maximized state:", error);
-      }
+      } catch (error) {}
+
+      return () => {
+        unlisten();
+      };
     };
 
     initWindow();
   }, []);
+
+  useEffect(() => {}, [isMaximized]);
 
   const handleMinimize = async () => {
     try {
@@ -64,8 +73,6 @@ const CustomTitleBar = ({
   const handleToggleMaximize = async () => {
     try {
       await currentWindow?.toggleMaximize();
-      const maximized = await currentWindow?.isMaximized();
-      setIsMaximized(maximized);
     } catch (error) {
       console.error("Error toggling maximize:", error);
     }
