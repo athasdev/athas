@@ -2,18 +2,23 @@
 
 A lightweight code editor built with React, TypeScript, and Tauri. Designed for developers who want a fast and customizable development environment.
 
-## Building
+# Getting started
+For more see the [documentation](https://github.com/athasdev/athas/blob/master/docs]
 
-### Linux
-1. Download dependencies: rust, bun, tauri
-2. Install packages: `bun install`
-3. Build and run: `bun run tauri dev`
+## Installation
+for now you need to build from source
+
+```bash
+git clone https://github.com/athasdev/athas.git
+cd athas
+bun install
+bun run tauri dev
+```
 
 ## Contributing
-Contributions are welcome!
-Thanks for taking interest in contributing to Athas.
-Please read the [contribution guidelines](https://github.com/athasdev/athas/blob/master/docs/CONTRIBUTING.md)
+Contributions are welcome and highly appreciated. To get started, check out the [contribution guidelines](https://github.com/athasdev/athas/blob/master/docs/CONTRIBUTING.md)
 
+You can also join us on [Slack](link)
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
