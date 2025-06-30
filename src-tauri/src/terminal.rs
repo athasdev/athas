@@ -210,7 +210,7 @@ impl TerminalConnection {
                 cmd.env("TERM", "xterm-256color");
                 cmd
             }
-            TerminalKind::GitBash { working_directory } => {
+            TerminalKind::GitBash { working_directory: _ } => {
                 #[cfg(target_os = "windows")]
                 {
                     let git_bash_paths = [
@@ -231,7 +231,9 @@ impl TerminalConnection {
                     cmd.arg("--login");
                     cmd.arg("-i");
 
-                    if let Some(working_dir) = working_directory.as_ref().or(config.working_dir.as_ref()) {
+                    if let Some(working_dir) =
+                        working_directory.as_ref().or(config.working_dir.as_ref())
+                    {
                         cmd.cwd(working_dir);
                     }
 
@@ -244,8 +246,8 @@ impl TerminalConnection {
                 }
             }
             TerminalKind::Wsl {
-                distribution,
-                working_directory,
+                distribution: _,
+                working_directory: _,
             } => {
                 #[cfg(target_os = "windows")]
                 {
