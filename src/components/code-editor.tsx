@@ -59,6 +59,7 @@ interface CodeEditorProps {
   lineNumbers?: boolean;
   aiCompletion?: boolean;
   minimap?: boolean;
+  colorSwatchEnabled?: boolean;
   // LSP functions passed from parent
   getCompletions?: (
     filePath: string,
@@ -237,6 +238,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       lineNumbers = true,
       aiCompletion = true,
       minimap = false,
+      colorSwatchEnabled = true,
       getCompletions,
       isLanguageSupported,
       openDocument,
@@ -249,12 +251,10 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
     const highlightRef = useRef<HTMLPreElement>(null);
     const lineNumbersRef = useRef<HTMLDivElement>(null);
     const [language, setLanguage] = useState<string>("text");
-      const [currentCompletion, setCurrentCompletion] =
-    useState<CompletionResponse | null>(null);
-  const [showCompletion, setShowCompletion] = useState(false);
-  const [lastCursorPosition, setLastCursorPosition] = useState(0);
-
-
+    const [currentCompletion, setCurrentCompletion] =
+      useState<CompletionResponse | null>(null);
+    const [showCompletion, setShowCompletion] = useState(false);
+    const [lastCursorPosition, setLastCursorPosition] = useState(0);
 
     // LSP completion state
     const [lspCompletions, setLspCompletions] = useState<CompletionItem[]>([]);
@@ -446,8 +446,6 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       };
     }, []);
 
-
-
     // Function to add search highlighting to syntax highlighted content (memoized)
     const addSearchHighlighting = useMemo(() => {
       return (content: string): string => {
@@ -463,64 +461,80 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       const sortedMatches = [...searchMatches].sort(
         (a, b) => b.start - a.start,
       );
+        // Get the text content to find positions in the highlighted HTML
+        const textContent = tempDiv.textContent || "";
 
-      // Process each match from end to beginning to avoid position shifts
-      sortedMatches.forEach((match) => {
-        const originalIndex = searchMatches.indexOf(match);
-        const isCurrentMatch = originalIndex === currentMatchIndex;
-        const matchClass = isCurrentMatch
-          ? "bg-orange-400 text-black font-semibold"
-          : "bg-yellow-300 text-black";
-
-        // Find the position in the HTML where this text match occurs
-        const walker = document.createTreeWalker(
-          tempDiv,
-          NodeFilter.SHOW_TEXT,
-          null,
+        // Sort matches by start position (descending) to process from end to beginning
+        const sortedMatches = [...searchMatches].sort(
+          (a, b) => b.start - a.start,
         );
 
-        let currentPos = 0;
-        let node;
+        // Process each match from end to beginning to avoid position shifts
+        sortedMatches.forEach((match) => {
+          const originalIndex = searchMatches.indexOf(match);
+          const isCurrentMatch = originalIndex === currentMatchIndex;
+          const matchClass = isCurrentMatch
+            ? "bg-orange-400 text-black font-semibold"
+            : "bg-yellow-300 text-black";
 
-        while ((node = walker.nextNode())) {
-          const nodeText = node.textContent || "";
-          const nodeStart = currentPos;
-          const nodeEnd = currentPos + nodeText.length;
+          // Find the position in the HTML where this text match occurs
+          const walker = document.createTreeWalker(
+            tempDiv,
+            NodeFilter.SHOW_TEXT,
+            null,
+          );
 
-          if (match.start >= nodeStart && match.end <= nodeEnd) {
-            // Match is within this text node
-            const relativeStart = match.start - nodeStart;
-            const relativeEnd = match.end - nodeStart;
+          let currentPos = 0;
+          let node;
 
-            const beforeText = nodeText.substring(0, relativeStart);
-            const matchText = nodeText.substring(relativeStart, relativeEnd);
-            const afterText = nodeText.substring(relativeEnd);
+          while ((node = walker.nextNode())) {
+            const nodeText = node.textContent || "";
+            const nodeStart = currentPos;
+            const nodeEnd = currentPos + nodeText.length;
 
-            // Create the replacement HTML
-            const replacement = document.createElement("span");
-            replacement.innerHTML =
-              beforeText +
-              `<span class="${matchClass}">${matchText}</span>` +
-              afterText;
+            if (match.start >= nodeStart && match.end <= nodeEnd) {
+              // Match is within this text node
+              const relativeStart = match.start - nodeStart;
+              const relativeEnd = match.end - nodeStart;
 
-            // Replace the text node with our highlighted version
-            const parent = node.parentNode;
-            if (parent) {
-              while (replacement.firstChild) {
-                parent.insertBefore(replacement.firstChild, node);
+              const beforeText = nodeText.substring(0, relativeStart);
+              const matchText = nodeText.substring(relativeStart, relativeEnd);
+              const afterText = nodeText.substring(relativeEnd);
+
+              // Create the replacement HTML
+              const replacement = document.createElement("span");
+              replacement.innerHTML =
+                beforeText +
+                `<span class="${matchClass}">${matchText}</span>` +
+                afterText;
+
+              // Replace the text node with our highlighted version
+              const parent = node.parentNode;
+              if (parent) {
+                while (replacement.firstChild) {
+                  parent.insertBefore(replacement.firstChild, node);
+                }
+                parent.removeChild(node);
               }
-              parent.removeChild(node);
+              break;
             }
-            break;
-          }
 
-          currentPos = nodeEnd;
-        }
-      });
+            currentPos = nodeEnd;
+          }
+        });
 
         return tempDiv.innerHTML;
       };
     }, [searchQuery, searchMatches, currentMatchIndex]);
+
+    // the regex for the color highlighting
+    const addColorSwatches = (html: string) => {
+      const colorRegex = /(#(?:[0-9a-fA-F]{3,8})\b|rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)|rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\)|hsl\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*\)|hsla\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*,\s*[\d.]+\s*\))/g;
+      return html.replace(colorRegex, (match) => {
+        const swatch = `<span style=\"display:inline-block;width:0.9em;height:0.9em;margin-left:0.3em;margin-bottom:-0.1em;border-radius:2px;vertical-align:middle;background:${match};border:1px solid #ccc;box-shadow:0 0 1px #0002; margin-right: 4px;\"></span>`;
+        return `${swatch}${match}`;
+      });
+    };
 
     // Highlight code when value, language, or search changes (debounced for performance)
     useEffect(() => {
@@ -532,22 +546,24 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       
       const timeoutId = setTimeout(() => {
         const performHighlighting = () => {
+          const applySwatches = (html: string) => colorSwatchEnabled ? addColorSwatches(html) : html;
           if (highlightRef.current && language !== "text") {
             try {
               const highlighted = safeHighlight(value, language);
               const withSearchHighlighting = addSearchHighlighting(highlighted);
-              highlightRef.current.innerHTML = withSearchHighlighting;
+              const withSwatches = applySwatches(withSearchHighlighting);
+              highlightRef.current.innerHTML = withSwatches;
             } catch (error) {
-              // Fallback to escaped plain text if highlighting fails
               const escapedValue = escapeHtml(value);
               const withSearchHighlighting = addSearchHighlighting(escapedValue);
-              highlightRef.current.innerHTML = withSearchHighlighting;
+              const withSwatches = applySwatches(withSearchHighlighting);
+              highlightRef.current.innerHTML = withSwatches;
             }
           } else if (highlightRef.current) {
-            // For plain text, still escape HTML to prevent unwanted rendering
             const escapedValue = escapeHtml(value);
             const withSearchHighlighting = addSearchHighlighting(escapedValue);
-            highlightRef.current.innerHTML = withSearchHighlighting;
+            const withSwatches = applySwatches(withSearchHighlighting);
+            highlightRef.current.innerHTML = withSwatches;
           }
         };
         
@@ -565,7 +581,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       }, debounceTime);
 
       return () => clearTimeout(timeoutId);
-    }, [value, language, searchQuery, searchMatches, currentMatchIndex, filePath]);
+    }, [value, language, searchQuery, searchMatches, currentMatchIndex, filePath, colorSwatchEnabled]);
 
     // Sync scroll between textarea, highlight layer, and line numbers
     const handleScroll = () => {
@@ -682,8 +698,6 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       const maxLines = Math.min(lineCount, 10000);
       return Array.from({ length: maxLines }, (_, i) => i + 1);
     }, [value]);
-
-
 
     return (
       <div className="flex-1 relative flex flex-col h-full">

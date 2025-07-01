@@ -15,6 +15,7 @@ export interface CoreFeaturesState {
   search: boolean;
   diagnostics: boolean;
   aiChat: boolean;
+  colorSwatch: boolean;
 }
 
 export const DEFAULT_CORE_FEATURES: CoreFeaturesState = {
@@ -24,4 +25,5 @@ export const DEFAULT_CORE_FEATURES: CoreFeaturesState = {
   search: true,
   diagnostics: true,
   aiChat: true,
+  colorSwatch: true,
 }; 

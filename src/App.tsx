@@ -10,6 +10,7 @@ import {
   Search,
   Server,
   Terminal as TerminalIcon,
+  Palette,
 } from "lucide-react";
 
 import { readFile, writeFile, isMac } from "./utils/platform";
@@ -228,6 +229,13 @@ function App() {
       description: "AI-powered code assistance and chat",
       icon: MessageSquare,
       enabled: coreFeatures.aiChat,
+    },
+    {
+      id: "colorSwatch",
+      name: "Color Swatches",
+      description: "Show color swatches for color codes in the editor",
+      icon: Palette,
+      enabled: coreFeatures.colorSwatch,
     },
   ];
 
@@ -1674,6 +1682,7 @@ function App() {
                     openDocument={openDocument}
                     changeDocument={changeDocument}
                     closeDocument={closeDocument}
+                    colorSwatchEnabled={coreFeatures.colorSwatch}
                   />
                 )
               ) : (
