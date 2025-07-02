@@ -457,12 +457,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
         const tempDiv = document.createElement("div");
         tempDiv.innerHTML = content;
 
-      // Sort matches by start position (descending) to process from end to beginning
-      const sortedMatches = [...searchMatches].sort(
-        (a, b) => b.start - a.start,
-      );
         // Get the text content to find positions in the highlighted HTML
-        const textContent = tempDiv.textContent || "";
 
         // Sort matches by start position (descending) to process from end to beginning
         const sortedMatches = [...searchMatches].sort(
@@ -529,10 +524,12 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
 
     // the regex for the color highlighting
     const addColorSwatches = (html: string) => {
+      // Comprehensive color regex that matches various color formats
       const colorRegex = /(#(?:[0-9a-fA-F]{3,8})\b|rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)|rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\)|hsl\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*\)|hsla\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*,\s*[\d.]+\s*\))/g;
       return html.replace(colorRegex, (match) => {
-        const swatch = `<span style=\"display:inline-block;width:0.9em;height:0.9em;margin-left:0.3em;margin-bottom:-0.1em;border-radius:2px;vertical-align:middle;background:${match};border:1px solid #ccc;box-shadow:0 0 1px #0002; margin-right: 4px;\"></span>`;
-        return `${swatch}${match}`;
+        // Use a CSS class for the swatch for better styling
+        const swatch = `<span class="color-swatch" style="background: ${match};" title="${match}"></span>`;
+        return `${match}${swatch}`;
       });
     };
 
