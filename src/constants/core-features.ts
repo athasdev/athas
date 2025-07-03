@@ -6,7 +6,6 @@ import {
   Bug,
   MessageSquare,
   Palette,
-  Droplet,
 } from "lucide-react";
 import { CoreFeature } from "../types/core-features";
 
@@ -57,7 +56,7 @@ export const createCoreFeaturesList = (coreFeatures: any): CoreFeature[] => [
     id: "colorSwatch",
     name: "Color Swatches",
     description: "Show color swatches for color codes in the editor",
-    icon: Droplet,
+    icon: Palette,
     enabled: coreFeatures.colorSwatch,
   },
 ];
