@@ -56,6 +56,7 @@ interface CodeEditorProps {
   lineNumbers?: boolean;
   aiCompletion?: boolean;
   minimap?: boolean;
+  colorSwatchEnabled?: boolean;
   // LSP functions passed from parent
   getCompletions?: (filePath: string, line: number, character: number) => Promise<CompletionItem[]>;
   getHover?: (filePath: string, line: number, character: number) => Promise<any>;
@@ -224,6 +225,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       openDocument,
       changeDocument,
       closeDocument,
+      colorSwatchEnabled = true,
     },
     ref,
   ) => {
@@ -591,7 +593,46 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
         const sortedMatches = [...searchMatches].sort((a, b) => b.start - a.start);
 
         // Process each match from end to beginning to avoid position shifts
-        sortedMatches.forEach(match => {
+        // sortedMatches.forEach(match => {
+        //   const originalIndex = searchMatches.indexOf(match);
+        //   const isCurrentMatch = originalIndex === currentMatchIndex;
+        //   const matchClass = isCurrentMatch
+        //     ? "bg-orange-400 text-black font-semibold"
+        //     : "bg-yellow-300 text-black";
+
+        //   // Find the position in the HTML where this text match occurs
+        //   const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null);
+
+        //   let currentPos = 0;
+        //   let node;
+
+        //   while ((node = walker.nextNode())) {
+        //     const nodeText = node.textContent || "";
+        //     const nodeStart = currentPos;
+        //     const nodeEnd = currentPos + nodeText.length;
+
+        //     if (match.start >= nodeStart && match.end <= nodeEnd) {
+        //       // Match is within this text node
+        //       const relativeStart = match.start - nodeStart;
+        //       const relativeEnd = match.end - nodeStart;
+
+        //       const beforeText = nodeText.substring(0, relativeStart);
+        //       const matchText = nodeText.substring(relativeStart, relativeEnd);
+        //       const afterText = nodeText.substring(relativeEnd);
+
+        //       // Create the replacement HTML
+        //       const replacement = document.createElement("span");
+        //       replacement.innerHTML =
+        //         beforeText + `<span class="${matchClass}">${matchText}</span>` + afterText;
+
+        //       // Replace the text node with our highlighted version
+        //       const parent = node.parentNode;
+        //       if (parent) {
+        //         while (replacement.firstChild) {
+        //           parent.insertBefore(replacement.firstChild, node);
+        //         }
+
+        sortedMatches.forEach((match) => {
           const originalIndex = searchMatches.indexOf(match);
           const isCurrentMatch = originalIndex === currentMatchIndex;
           const matchClass = isCurrentMatch
@@ -599,7 +640,11 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
             : "bg-yellow-300 text-black";
 
           // Find the position in the HTML where this text match occurs
-          const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null);
+          const walker = document.createTreeWalker(
+            tempDiv,
+            NodeFilter.SHOW_TEXT,
+            null,
+          );
 
           let currentPos = 0;
           let node;
@@ -617,11 +662,12 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
               const beforeText = nodeText.substring(0, relativeStart);
               const matchText = nodeText.substring(relativeStart, relativeEnd);
               const afterText = nodeText.substring(relativeEnd);
-
-              // Create the replacement HTML
+              
               const replacement = document.createElement("span");
               replacement.innerHTML =
-                beforeText + `<span class="${matchClass}">${matchText}</span>` + afterText;
+                beforeText +
+                `<span class="${matchClass}">${matchText}</span>` +
+                afterText;
 
               // Replace the text node with our highlighted version
               const parent = node.parentNode;
@@ -642,6 +688,17 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       };
     }, [searchQuery, searchMatches, currentMatchIndex]);
 
+    // the regex for the color highlighting
+    const addColorSwatches = (html: string) => {
+      // Comprehensive color regex that matches various color formats
+      const colorRegex = /(#(?:[0-9a-fA-F]{3,8})\b|rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)|rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\)|hsl\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*\)|hsla\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*,\s*[\d.]+\s*\))/g;
+      return html.replace(colorRegex, (match) => {
+        // Use a CSS class for the swatch for better styling
+        const swatch = `<span class="color-swatch" style="background: ${match};" title="${match}"></span>`;
+        return `${match}${swatch}`;
+      });
+    };
+
     // Highlight code when value, language, or search changes (optimized debouncing)
     useEffect(() => {
       // Clear previous timeout to prevent accumulation
@@ -656,22 +713,26 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
 
       highlightTimeoutRef.current = setTimeout(() => {
         const performHighlighting = () => {
+          const applySwatches = (html: string) => colorSwatchEnabled ? addColorSwatches(html) : html;
           if (highlightRef.current && language !== "text") {
             try {
               const highlighted = safeHighlight(value, language);
               const withSearchHighlighting = addSearchHighlighting(highlighted);
-              highlightRef.current.innerHTML = withSearchHighlighting;
+              const withSwatches = applySwatches(withSearchHighlighting);
+              highlightRef.current.innerHTML = withSwatches;
             } catch (_error) {
               // Fallback to escaped plain text if highlighting fails
               const escapedValue = escapeHtml(value);
               const withSearchHighlighting = addSearchHighlighting(escapedValue);
-              highlightRef.current.innerHTML = withSearchHighlighting;
+              const withSwatches = applySwatches(withSearchHighlighting);
+              highlightRef.current.innerHTML = withSwatches;
             }
           } else if (highlightRef.current) {
             // For plain text, still escape HTML to prevent unwanted rendering
             const escapedValue = escapeHtml(value);
             const withSearchHighlighting = addSearchHighlighting(escapedValue);
-            highlightRef.current.innerHTML = withSearchHighlighting;
+            const withSwatches = applySwatches(withSearchHighlighting);
+            highlightRef.current.innerHTML = withSwatches;
           }
         };
 
@@ -688,7 +749,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
           clearTimeout(highlightTimeoutRef.current);
         }
       };
-    }, [value, language, addSearchHighlighting, filePath]);
+    }, [value, language, searchQuery, searchMatches, currentMatchIndex, filePath, colorSwatchEnabled]);
 
     // Sync scroll between textarea, highlight layer, and line numbers
     const handleScroll = useCallback(() => {

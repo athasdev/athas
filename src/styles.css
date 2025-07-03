@@ -2249,7 +2249,7 @@ textarea::-webkit-scrollbar-thumb:hover {
     --success-color: #00d9ff;        /* Vercel success cyan */
     --warning-color: #f5a623;        /* Vercel warning orange */
     --error-color: #ff0080;          /* Vercel error pink */
-    --info-color: #0070f3;           /* Vercel info blue */
+    --info-color: #0070f3;         /* Vercel info blue */
 
     /* Component-specific overrides for better Vercel feel */
     --tab-active-bg: #000000;        /* Active tabs pure black */
@@ -2266,4 +2266,116 @@ textarea::-webkit-scrollbar-thumb:hover {
     --scrollbar-track: transparent;
     --scrollbar-thumb: #333333;
     --scrollbar-thumb-hover: #555555;
+}
+
+
+/* Color Swatch Styles */
+.color-swatch {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-left: 0.25em;
+    margin-right: 0.25em;
+    margin-bottom: -0.1em;
+    border-radius: 3px;
+    vertical-align: middle;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.color-swatch:hover {
+    transform: scale(1.2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+.color-swatch:active {
+    transform: scale(1.1);
+}
+
+/* Dark theme color swatch adjustments */
+.force-dark .color-swatch,
+.force-midnight .color-swatch,
+.force-tokyo-night .color-swatch,
+.force-tokyo-night-storm .color-swatch,
+.force-tokyo-night-light .color-swatch,
+.force-dracula .color-swatch,
+.force-dracula-soft .color-swatch,
+.force-nord .color-swatch,
+.force-nord-light .color-swatch,
+.force-github-dark .color-swatch,
+.force-github-dark-dimmed .color-swatch,
+.force-one-dark-pro .color-swatch,
+.force-material-deep-ocean .color-swatch,
+.force-material-palenight .color-swatch,
+.force-gruvbox-dark .color-swatch,
+.force-solarized-dark .color-swatch,
+.force-synthwave-84 .color-swatch,
+.force-monokai-pro .color-swatch,
+.force-ayu-dark .color-swatch,
+.force-ayu-mirage .color-swatch,
+.force-catppuccin-mocha .color-swatch,
+.force-catppuccin-macchiato .color-swatch,
+.force-catppuccin-frappe .color-swatch,
+.force-vesper .color-swatch,
+.force-aura .color-swatch,
+.force-vercel-dark .color-swatch {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.force-dark .color-swatch:hover,
+.force-midnight .color-swatch:hover,
+.force-tokyo-night .color-swatch:hover,
+.force-tokyo-night-storm .color-swatch:hover,
+.force-tokyo-night-light .color-swatch:hover,
+.force-dracula .color-swatch:hover,
+.force-dracula-soft .color-swatch:hover,
+.force-nord .color-swatch:hover,
+.force-nord-light .color-swatch:hover,
+.force-github-dark .color-swatch:hover,
+.force-github-dark-dimmed .color-swatch:hover,
+.force-one-dark-pro .color-swatch:hover,
+.force-material-deep-ocean .color-swatch:hover,
+.force-material-palenight .color-swatch:hover,
+.force-gruvbox-dark .color-swatch:hover,
+.force-solarized-dark .color-swatch:hover,
+.force-synthwave-84 .color-swatch:hover,
+.force-monokai-pro .color-swatch:hover,
+.force-ayu-dark .color-swatch:hover,
+.force-ayu-mirage .color-swatch:hover,
+.force-catppuccin-mocha .color-swatch:hover,
+.force-catppuccin-macchiato .color-swatch:hover,
+.force-catppuccin-frappe .color-swatch:hover,
+.force-vesper .color-swatch:hover,
+.force-aura .color-swatch:hover,
+.force-vercel-dark .color-swatch:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Light theme color swatch adjustments */
+.force-light .color-swatch,
+.force-github-light .color-swatch,
+.force-one-light-pro .color-swatch,
+.force-material-lighter .color-swatch,
+.force-gruvbox-light .color-swatch,
+.force-solarized-light .color-swatch,
+.force-ayu-light .color-swatch,
+.force-catppuccin-latte .color-swatch {
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.force-light .color-swatch:hover,
+.force-github-light .color-swatch:hover,
+.force-one-light-pro .color-swatch:hover,
+.force-material-lighter .color-swatch:hover,
+.force-gruvbox-light .color-swatch:hover,
+.force-solarized-light .color-swatch:hover,
+.force-ayu-light .color-swatch:hover,
+.force-catppuccin-latte .color-swatch:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }

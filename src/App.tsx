@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowLeftRight, Terminal as TerminalIcon } from "lucide-react";
+import { AlertCircle, ArrowLeftRight, Terminal as TerminalIcon, Palette } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import AIChat from "./components/ai-chat/ai-chat";
 import BottomPane from "./components/bottom-pane";
@@ -974,6 +974,7 @@ function App() {
                     openDocument={openDocument || undefined}
                     changeDocument={changeDocument || undefined}
                     closeDocument={closeDocument || undefined}
+                    colorSwatchEnabled={coreFeatures.colorSwatch}
                   />
                 )
               ) : (
