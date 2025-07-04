@@ -249,7 +249,7 @@ impl TerminalConnection {
                 cmd.env("TERM", "xterm-256color");
                 cmd
             }
-            TerminalKind::GitBash { working_directory } => {
+            TerminalKind::GitBash { working_directory: _ } => {
                 #[cfg(target_os = "windows")]
                 {
                     let git_bash_paths = [
@@ -270,7 +270,7 @@ impl TerminalConnection {
                     cmd.arg("--login");
                     cmd.arg("-i");
 
-                    if let Some(working_dir) = working_directory.as_ref().or(config.working_dir.as_ref()) {
+                    if let Some(working_dir) = config.working_dir.as_ref() {
                         cmd.cwd(working_dir);
                     }
 
@@ -282,20 +282,17 @@ impl TerminalConnection {
                     return Err(anyhow!("Git Bash is only available on Windows"));
                 }
             }
-            TerminalKind::Wsl {
-                distribution,
-                working_directory,
-            } => {
+            TerminalKind::Wsl { distribution, working_directory: _ } => {
                 #[cfg(target_os = "windows")]
                 {
                     let mut cmd = CommandBuilder::new("wsl");
 
-                    if let Some(dist) = distribution {
+                    if let Some(dist_name) = distribution {
                         cmd.arg("-d");
-                        cmd.arg(dist);
+                        cmd.arg(dist_name);
                     }
 
-                    if let Some(wd) = working_directory.as_ref().or(config.working_dir.as_ref()) {
+                    if let Some(wd) = config.working_dir.as_ref() {
                         cmd.arg("--cd");
                         cmd.arg(wd);
                     }

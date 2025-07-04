@@ -82,7 +82,7 @@ const CustomTitleBar = ({
 
   if (showMinimal) {
     const backgroundClass = isWelcomeScreen
-      ? "bg-white"
+      ? "bg-[var(--paper-bg)]"
       : isMacOS
         ? "bg-[var(--primary-bg)]"
         : "bg-[var(--secondary-bg)] backdrop-blur-sm";
@@ -90,9 +90,8 @@ const CustomTitleBar = ({
     return (
       <div
         data-tauri-drag-region
-        className={`flex items-center justify-between select-none relative z-50 ${
-          isMacOS ? "h-11" : "h-7"
-        } ${backgroundClass}`}
+        className={`flex items-center justify-between select-none relative z-50 ${isMacOS ? "h-11" : "h-7"
+          } ${backgroundClass}`}
       >
         {/* macOS traffic light controls */}
         {isMacOS && (

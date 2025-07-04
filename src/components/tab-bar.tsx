@@ -1,5 +1,5 @@
 import { Database, Package, Pin, PinOff, X } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Buffer } from "../types/buffer";
 import { getShortcutText } from "../utils/platform";
 import FileIcon from "./file-icon";
@@ -166,6 +166,17 @@ const TabBar = ({
   }>({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
 
   const tabBarRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Sort buffers: pinned tabs first, then regular tabs
+  const sortedBuffers = useMemo(() => {
+    return [...buffers].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
+    });
+  }, [buffers]);
+
   useEffect(() => {
     if (maxOpenTabs > 0 && buffers.length > maxOpenTabs && onTabClose) {
       // Filter out pinned and active tabs
@@ -179,6 +190,29 @@ const TabBar = ({
       }
     }
   }, [buffers, maxOpenTabs, activeBufferId, onTabClose]);
+
+  // Auto-scroll active tab into view
+  useEffect(() => {
+    const activeIndex = sortedBuffers.findIndex(buffer => buffer.id === activeBufferId);
+    if (activeIndex !== -1 && tabRefs.current[activeIndex] && tabBarRef.current) {
+      const activeTab = tabRefs.current[activeIndex];
+      const container = tabBarRef.current;
+
+      if (activeTab) {
+        const tabRect = activeTab.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+
+        // Check if tab is out of view
+        if (tabRect.left < containerRect.left || tabRect.right > containerRect.right) {
+          activeTab.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+            inline: "center",
+          });
+        }
+      }
+    }
+  }, [activeBufferId, sortedBuffers]);
 
   const handleMouseDown = (e: React.MouseEvent, index: number) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) {
@@ -338,13 +372,6 @@ const TabBar = ({
     setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
   };
 
-  // Sort buffers: pinned tabs first, then regular tabs
-  const sortedBuffers = [...buffers].sort((a, b) => {
-    if (a.isPinned && !b.isPinned) return -1;
-    if (!a.isPinned && b.isPinned) return 1;
-    return 0;
-  });
-
   useEffect(() => {
     if (draggedIndex === null) return;
 
@@ -370,7 +397,7 @@ const TabBar = ({
       <div className="relative">
         <div
           ref={tabBarRef}
-          className="flex bg-[var(--secondary-bg)] border-b border-[var(--border-color)]"
+          className="flex bg-[var(--secondary-bg)] border-b border-[var(--border-color)] overflow-x-auto scrollbar-hidden"
         >
           {sortedBuffers.map((buffer, index) => {
             const isActive = buffer.id === activeBufferId;
@@ -390,12 +417,13 @@ const TabBar = ({
                   </div>
                 )}
                 <div
+                  ref={el => (tabRefs.current[index] = el)}
                   draggable={true}
                   onDragStart={e => handleDragStart(e, index)}
                   onDragEnd={handleDragEnd}
                   className={`
-                     group flex items-center gap-1.5 px-2 py-1.5 border-r border-[var(--border-color)]
-                     cursor-pointer select-none min-w-0 relative
+                     group flex items-center gap-1.5 px-3 py-1.5 border-r border-[var(--border-color)]
+                     cursor-pointer select-none relative whitespace-nowrap flex-shrink-0
                      hover:bg-[var(--hover-color)] transition-colors duration-150
                      ${
                        isActive
@@ -403,8 +431,9 @@ const TabBar = ({
                          : "bg-[var(--secondary-bg)]"
                      }
                      ${buffer.isPinned ? "border-l-2 border-l-blue-500" : ""}
-                    
+
                    `}
+                  style={{ minWidth: "120px", maxWidth: "200px" }}
                   onMouseDown={e => handleMouseDown(e, index)}
                   onClick={() => {
                     if (!isDragging) {
@@ -435,7 +464,7 @@ const TabBar = ({
                   {/* File Name */}
                   <span
                     className={`
-                       font-mono text-xs whitespace-nowrap
+                       font-mono text-xs whitespace-nowrap overflow-hidden text-ellipsis flex-1
                        ${isActive ? "text-[var(--text-color)]" : "text-[var(--text-light)]"}
                      `}
                     title={buffer.path}

@@ -1,8 +1,8 @@
-import { useRef, useEffect, useCallback } from "react";
-import { CompletionItem, Diagnostic as LspDiagnostic } from "vscode-languageserver-protocol";
-import { LSPManager } from "../lsp/manager";
-import { Diagnostic } from "../components/diagnostics/diagnostics-pane";
 import { listen } from "@tauri-apps/api/event";
+import { useCallback, useEffect, useRef } from "react";
+import { CompletionItem, Diagnostic as LspDiagnostic } from "vscode-languageserver-protocol";
+import { Diagnostic } from "../components/diagnostics/diagnostics-pane";
+import { LSPManager } from "../lsp/manager";
 
 const convertLspDiagnostics = (lspDiagnostics: LspDiagnostic[]): Diagnostic[] => {
   return lspDiagnostics.map(diag => ({

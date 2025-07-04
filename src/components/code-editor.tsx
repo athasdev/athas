@@ -327,47 +327,69 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
     // Handle hover to show type information
     const handleHover = useCallback(
       async (e: React.MouseEvent) => {
-        if (!getHover || !filePath || !isLanguageSupported?.(filePath)) {
+        const current = currentValuesRef.current;
+        if (!getHover || !current.filePath || !isLanguageSupported?.(current.filePath)) {
           return;
         }
-        const isRemoteFile = filePath?.startsWith("remote://");
+        const isRemoteFile = current.filePath?.startsWith("remote://");
         if (isRemoteFile) return;
+
         const textarea = textareaRef.current;
         if (!textarea) return;
+
+        // Clear existing timeout
+        if (hoverTimeoutRef.current) {
+          clearTimeout(hoverTimeoutRef.current);
+        }
+
+        // Calculate position more accurately
         const rect = textarea.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
+
+        // Get computed styles for accurate measurements
         const style = window.getComputedStyle(textarea);
         const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.4;
-        const measureElement = document.createElement("span");
+
+        // More accurate character width calculation
+        const measureElement = document.createElement("div");
         measureElement.style.fontFamily = style.fontFamily;
         measureElement.style.fontSize = style.fontSize;
         measureElement.style.visibility = "hidden";
         measureElement.style.position = "absolute";
-        measureElement.textContent = "M";
+        measureElement.style.whiteSpace = "pre";
+        measureElement.style.padding = "0";
+        measureElement.style.margin = "0";
+        measureElement.textContent = "M".repeat(10); // Measure multiple chars for accuracy
         document.body.appendChild(measureElement);
-        const charWidth = measureElement.offsetWidth;
+        const charWidth = measureElement.offsetWidth / 10;
         document.body.removeChild(measureElement);
+
+        // Account for padding
         const paddingLeft = lineNumbers ? 8 : 16;
-        const line = Math.floor((y + textarea.scrollTop - 16) / lineHeight);
-        const character = Math.floor((x + textarea.scrollLeft - paddingLeft) / charWidth);
-        const lines = value.split("\n");
-        if (
-          line >= lines.length
-          || line < 0
-          || character < 0
-          || character >= (lines[line]?.length || 0)
-        ) {
-          return;
-        }
-        if (hoverTimeoutRef.current) {
-          clearTimeout(hoverTimeoutRef.current);
-        }
+        const paddingTop = 16;
+
+        // Calculate line and character position
+        const adjustedY = y + textarea.scrollTop - paddingTop;
+        const adjustedX = x + textarea.scrollLeft - paddingLeft;
+
+        const line = Math.floor(adjustedY / lineHeight);
+        const character = Math.max(0, Math.floor(adjustedX / charWidth));
+
+        const lines = current.value.split("\n");
+
+        // Validate position bounds
+        if (line < 0 || line >= lines.length) return;
+        if (character < 0 || character >= (lines[line]?.length || 0)) return;
+
+        // Set timeout for hover with reduced delay for better responsiveness
         hoverTimeoutRef.current = setTimeout(async () => {
           try {
-            const hoverResult = await getHover(filePath, line, character);
+            const hoverResult = await getHover(current.filePath!, line, character);
             if (hoverResult && hoverResult.contents) {
               let content = "";
+
+              // Handle different content formats
               if (typeof hoverResult.contents === "string") {
                 content = hoverResult.contents;
               } else if (Array.isArray(hoverResult.contents)) {
@@ -393,55 +415,129 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
               } else if (hoverResult.contents.value) {
                 content = hoverResult.contents.value;
               }
+
               if (content.trim()) {
-                const tooltipPosition = {
-                  top: Math.min(e.clientY + 15, window.innerHeight - 200),
-                  left: Math.min(e.clientX + 15, window.innerWidth - 400),
-                };
+                // Better tooltip positioning with screen edge detection
+                const tooltipWidth = 400;
+                const tooltipHeight = 200;
+                const margin = 10;
+
+                let tooltipX = e.clientX + 15;
+                let tooltipY = e.clientY + 15;
+
+                // Adjust horizontal position if tooltip would go off-screen
+                if (tooltipX + tooltipWidth > window.innerWidth - margin) {
+                  tooltipX = e.clientX - tooltipWidth - 15;
+                }
+
+                // Adjust vertical position if tooltip would go off-screen
+                if (tooltipY + tooltipHeight > window.innerHeight - margin) {
+                  tooltipY = e.clientY - tooltipHeight - 15;
+                }
+
+                // Ensure tooltip stays on screen
+                tooltipX = Math.max(
+                  margin,
+                  Math.min(tooltipX, window.innerWidth - tooltipWidth - margin),
+                );
+                tooltipY = Math.max(
+                  margin,
+                  Math.min(tooltipY, window.innerHeight - tooltipHeight - margin),
+                );
+
                 setHoverInfo({
                   content: content.trim(),
-                  position: tooltipPosition,
+                  position: { top: tooltipY, left: tooltipX },
                 });
               }
             }
           } catch (error) {
             console.error("LSP hover error:", error);
           }
-        }, 500);
+        }, 300); // Reduced delay for better responsiveness
       },
-      [getHover, filePath, isLanguageSupported, fontSize, lineNumbers, value],
+      [getHover, isLanguageSupported, fontSize, lineNumbers], // Stable dependencies only
     );
 
-    // LSP completion
+    // LSP completion - using refs for stability
     const handleLspCompletion = useCallback(
       async (cursorPos: number) => {
-        if (!getCompletions || !filePath || !isLanguageSupported?.(filePath)) {
+        const current = currentValuesRef.current;
+        if (!getCompletions || !current.filePath || !isLanguageSupported?.(current.filePath)) {
           return;
         }
-        const lines = value.substring(0, cursorPos).split("\n");
+
+        const isRemoteFile = current.filePath?.startsWith("remote://");
+        if (isRemoteFile) return;
+
+        const lines = current.value.substring(0, cursorPos).split("\n");
         const line = lines.length - 1;
         const character = lines[lines.length - 1].length;
+
         try {
-          const completions = await getCompletions(filePath, line, character);
+          const completions = await getCompletions(current.filePath, line, character);
           if (completions.length > 0) {
             setLspCompletions(completions);
             setSelectedLspIndex(0);
             setIsLspCompletionVisible(true);
+
+            // More accurate positioning calculation
             if (textareaRef.current) {
               const textarea = textareaRef.current;
               const rect = textarea.getBoundingClientRect();
-              const lineHeight = fontSize * 1.4;
-              const charWidth = fontSize * 0.6;
-              const top = rect.top + (line + 1) * lineHeight;
-              const left = rect.left + character * charWidth;
-              setCompletionPosition({ top, left });
+              const style = window.getComputedStyle(textarea);
+              const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.4;
+
+              // Accurate character width measurement
+              const measureElement = document.createElement("div");
+              measureElement.style.fontFamily = style.fontFamily;
+              measureElement.style.fontSize = style.fontSize;
+              measureElement.style.visibility = "hidden";
+              measureElement.style.position = "absolute";
+              measureElement.style.whiteSpace = "pre";
+              measureElement.style.padding = "0";
+              measureElement.style.margin = "0";
+              measureElement.textContent = "M".repeat(10);
+              document.body.appendChild(measureElement);
+              const charWidth = measureElement.offsetWidth / 10;
+              document.body.removeChild(measureElement);
+
+              // Account for padding and scroll
+              const paddingLeft = lineNumbers ? 8 : 16;
+              const paddingTop = 16;
+
+              // Calculate absolute position
+              const scrollLeft = textarea.scrollLeft;
+              const scrollTop = textarea.scrollTop;
+
+              const x = rect.left + character * charWidth + paddingLeft - scrollLeft;
+              const y = rect.top + (line + 1) * lineHeight + paddingTop - scrollTop;
+
+              // Ensure dropdown is visible on screen
+              const dropdownHeight = Math.min(completions.length * 40, 320);
+              const dropdownWidth = 320;
+
+              let finalX = x;
+              let finalY = y;
+
+              // Adjust if dropdown would go off right edge
+              if (finalX + dropdownWidth > window.innerWidth - 10) {
+                finalX = Math.max(10, x - dropdownWidth);
+              }
+
+              // Adjust if dropdown would go off bottom edge
+              if (finalY + dropdownHeight > window.innerHeight - 10) {
+                finalY = Math.max(10, y - dropdownHeight - lineHeight);
+              }
+
+              setCompletionPosition({ top: finalY, left: finalX });
             }
           }
         } catch (error) {
           console.error("LSP completion error:", error);
         }
       },
-      [getCompletions, filePath, isLanguageSupported, fontSize, value],
+      [getCompletions, isLanguageSupported, fontSize, lineNumbers], // Minimal stable dependencies
     );
 
     // Apply LSP completion
@@ -474,51 +570,91 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       setIsLspCompletionVisible(false);
     }, []);
 
-    // Completion trigger
-    const handleCompletionTrigger = useCallback(
-      (cursorPos: number) => {
-        if (disabled || !textareaRef.current) return;
-        if (vimEnabled && vimMode !== "insert") return;
-        const isRemoteFile = filePath?.startsWith("remote://");
-        if (isRemoteFile) return;
-        if (isLanguageSupported?.(filePath || "")) {
-          handleLspCompletion(cursorPos);
-        } else if (aiCompletion) {
-          cancelCompletion();
-          setShowCompletion(false);
-          requestCompletion(
-            {
-              code: value,
-              language,
-              filename,
-              cursorPosition: cursorPos,
-            },
-            completion => {
-              if (completion && completion.completion.trim()) {
-                setCurrentCompletion(completion);
-                setShowCompletion(true);
-              }
-            },
-          );
-        }
-      },
-      [
+    // Store current values in refs to avoid dependency issues
+    const currentValuesRef = useRef({
+      disabled,
+      vimEnabled,
+      vimMode,
+      filePath,
+      aiCompletion,
+      language,
+      filename,
+      value,
+    });
+
+    // Update refs when values change
+    useEffect(() => {
+      currentValuesRef.current = {
         disabled,
         vimEnabled,
         vimMode,
         filePath,
-        isLanguageSupported,
-        handleLspCompletion,
         aiCompletion,
         language,
         filename,
         value,
-      ],
+      };
+    }, [disabled, vimEnabled, vimMode, filePath, aiCompletion, language, filename, value]);
+
+    // Completion trigger with improved logic - stable version
+    const handleCompletionTrigger = useCallback(
+      (cursorPos: number, triggerChar?: string) => {
+        const current = currentValuesRef.current;
+        if (current.disabled || !textareaRef.current) return;
+        if (current.vimEnabled && current.vimMode !== "insert") return;
+        const isRemoteFile = current.filePath?.startsWith("remote://");
+        if (isRemoteFile) return;
+
+        // Check if we should trigger completion based on context
+        const shouldTriggerLsp = isLanguageSupported?.(current.filePath || "");
+        const shouldTriggerAi = !shouldTriggerLsp && current.aiCompletion;
+
+        // Get context around cursor for smarter triggering
+        const textBeforeCursor = current.value.substring(Math.max(0, cursorPos - 10), cursorPos);
+        const textAfterCursor = current.value.substring(
+          cursorPos,
+          Math.min(current.value.length, cursorPos + 5),
+        );
+
+        // LSP completion triggers
+        const lspTriggerChars = [".", ":", ">", "(", "<", " "];
+        const isLspTrigger = triggerChar && lspTriggerChars.includes(triggerChar);
+        const isWordCharacter = /[a-zA-Z0-9_]/.test(triggerChar || "");
+        const hasWordPrefix = /[a-zA-Z_]\w*$/.test(textBeforeCursor);
+
+        if (shouldTriggerLsp && (isLspTrigger || (isWordCharacter && hasWordPrefix))) {
+          handleLspCompletion(cursorPos);
+        } else if (shouldTriggerAi) {
+          // Only trigger AI completion for meaningful context
+          const isAtEndOfLine = /\s*$/.test(textAfterCursor);
+          const hasMinimumContext = textBeforeCursor.trim().length >= 2;
+
+          if (isAtEndOfLine && hasMinimumContext) {
+            cancelCompletion();
+            setShowCompletion(false);
+            requestCompletion(
+              {
+                code: current.value,
+                language: current.language,
+                filename: current.filename,
+                cursorPosition: cursorPos,
+              },
+              completion => {
+                if (completion && completion.completion.trim()) {
+                  setCurrentCompletion(completion);
+                  setShowCompletion(true);
+                }
+              },
+            );
+          }
+        }
+      },
+      [isLanguageSupported, handleLspCompletion], // Minimal stable dependencies
     );
 
-    // Debounced completion trigger
+    // Debounced completion trigger - using ref to avoid dependency issues
     const debouncedCompletionTrigger = useCallback(
-      (_newValue: string) => {
+      (newValue: string, oldValue: string) => {
         if (!textareaRef.current) return;
         const currentCursorPos = textareaRef.current.selectionStart;
 
@@ -527,15 +663,28 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
           clearTimeout(completionTimeoutRef.current);
         }
 
+        // Get the character that was just typed
+        let triggerChar: string | undefined;
+        if (newValue.length > oldValue.length && currentCursorPos > 0) {
+          triggerChar = newValue.charAt(currentCursorPos - 1);
+        }
+
+        // Determine delay based on trigger character and context
+        const isInstantTrigger = triggerChar && [".", ":", ">", "("].includes(triggerChar);
+        const delay = isInstantTrigger ? 50 : 300; // Faster for trigger chars
+
         // Set timeout for completion
         completionTimeoutRef.current = setTimeout(() => {
-          handleCompletionTrigger(currentCursorPos);
-        }, 400); // Increased timeout to reduce frequency
+          handleCompletionTrigger(currentCursorPos, triggerChar);
+        }, delay);
 
         setLastCursorPosition(currentCursorPos);
       },
-      [handleCompletionTrigger],
+      [], // Empty dependency array to prevent recreation
     );
+
+    // Track previous value for comparison
+    const previousValueRef = useRef(value);
 
     // --- EFFECTS ---
     useEffect(() => {
@@ -543,12 +692,16 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       if (!textareaRef.current) return;
 
       const currentCursorPos = textareaRef.current.selectionStart;
+      const previousValue = previousValueRef.current;
+
+      // Update previous value
+      previousValueRef.current = value;
 
       // Only trigger if cursor moved forward (typing) and within reasonable bounds
       if (currentCursorPos > lastCursorPosition && currentCursorPos - lastCursorPosition <= 3) {
         const triggerTimer = setTimeout(() => {
-          debouncedCompletionTrigger(value);
-        }, 200); // Increased debounce time
+          debouncedCompletionTrigger(value, previousValue);
+        }, 100); // Reduced initial delay
 
         return () => {
           clearTimeout(triggerTimer);
@@ -557,7 +710,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
           }
         };
       }
-    }, [value, lastCursorPosition, debouncedCompletionTrigger]);
+    }, [value, lastCursorPosition]); // Removed debouncedCompletionTrigger from dependencies
 
     // Cleanup completion on unmount
     useEffect(() => {
@@ -777,6 +930,14 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
 
     const handleMouseEnter = useCallback(() => {
       setIsHovering(true);
+    }, []);
+
+    // Hide hover info when user starts typing or interacting
+    const handleUserInteraction = useCallback(() => {
+      setHoverInfo(null);
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
     }, []);
 
     const getTextareaClasses = useMemo(() => {
@@ -1162,10 +1323,19 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
             <textarea
               ref={textareaRef}
               value={value}
-              onChange={e => onChange(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onChange={e => {
+                handleUserInteraction();
+                onChange(e.target.value);
+              }}
+              onKeyDown={e => {
+                handleUserInteraction();
+                handleKeyDown(e);
+              }}
               onKeyUp={handleCursorPositionChange}
-              onClick={handleCursorPositionChange}
+              onClick={_e => {
+                handleUserInteraction();
+                handleCursorPositionChange();
+              }}
               onScroll={handleScroll}
               onMouseMove={handleHover}
               onMouseEnter={handleMouseEnter}
@@ -1218,18 +1388,22 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
         {/* Hover Tooltip */}
         {hoverInfo && (
           <div
-            className="fixed z-50 bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg shadow-lg max-w-lg pointer-events-none"
+            className="fixed z-[110] bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg shadow-xl pointer-events-auto"
             style={{
               top: hoverInfo.position.top,
               left: hoverInfo.position.left,
+              maxWidth: "400px",
+              maxHeight: "300px",
+              backdropFilter: "blur(8px)",
+              animation: "fadeInUp 0.2s ease-out",
             }}
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
           >
-            <div className="p-3">
+            <div className="p-4 overflow-auto scrollbar-hidden">
               {/* Check if content contains code blocks */}
               {hoverInfo.content.includes("```") ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {hoverInfo.content.split(/```[\w]*\n?/).map((part, index) => {
                     const trimmedPart = part.trim();
                     if (!trimmedPart) return null;
@@ -1239,7 +1413,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
                       return (
                         <pre
                           key={index}
-                          className="font-mono text-xs bg-[var(--secondary-bg)] p-2 rounded border border-[var(--border-color)] text-[var(--text-color)] overflow-x-auto"
+                          className="font-mono text-sm bg-[var(--secondary-bg)] p-3 rounded-md border border-[var(--border-color)] text-[var(--text-color)] overflow-x-auto scrollbar-hidden"
                           style={{ fontSize: `${fontSize * 0.85}px` }}
                         >
                           {trimmedPart.replace(/```$/, "")}
@@ -1250,7 +1424,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
                       return trimmedPart ? (
                         <div
                           key={index}
-                          className="text-xs text-[var(--text-color)] leading-relaxed whitespace-pre-wrap"
+                          className="text-sm text-[var(--text-color)] leading-relaxed whitespace-pre-wrap"
                           style={{ fontSize: `${fontSize * 0.9}px` }}
                         >
                           {trimmedPart}
@@ -1261,7 +1435,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
                 </div>
               ) : (
                 <div
-                  className="text-xs text-[var(--text-color)] leading-relaxed whitespace-pre-wrap max-w-sm"
+                  className="text-sm text-[var(--text-color)] leading-relaxed whitespace-pre-wrap"
                   style={{ fontSize: `${fontSize * 0.9}px` }}
                 >
                   {hoverInfo.content}

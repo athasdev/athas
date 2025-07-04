@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Bot, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { getProviderApiToken } from "../utils/ai-chat";
 import { AI_PROVIDERS, getModelById } from "../types/ai-provider";
+import ModelProviderSelector from "./model-provider-selector";
 
 interface QuickEditInlineProps {
   isOpen: boolean;
@@ -27,6 +28,14 @@ const QuickEditInline = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Provider/model state for inline edit
+  const [providerId, setProviderId] = useState(
+    () => localStorage.getItem("ai-chat-provider") || "openai",
+  );
+  const [modelId, setModelId] = useState(
+    () => localStorage.getItem("ai-chat-model") || "gpt-3.5-turbo",
+  );
+
   useEffect(() => {
     if (isOpen) {
       setInstruction("");
@@ -44,20 +53,20 @@ const QuickEditInline = ({
         width: window.innerWidth,
         height: window.innerHeight,
       };
-      
+
       let left = cursorPosition.x;
-      let top = cursorPosition.y + 20; // Slightly below cursor
+      let top = cursorPosition.y + 12; // Slightly below cursor
 
       // Adjust if would go off screen
-      if (left + 300 > viewport.width) {
-        left = viewport.width - 320;
+      if (left + 320 > viewport.width) {
+        left = viewport.width - 340;
       }
-      if (top + 100 > viewport.height) {
-        top = cursorPosition.y - 120; // Above cursor instead
+      if (top + 80 > viewport.height) {
+        top = cursorPosition.y - 100; // Above cursor instead
       }
 
-      container.style.left = `${Math.max(10, left)}px`;
-      container.style.top = `${Math.max(10, top)}px`;
+      container.style.left = `${Math.max(8, left)}px`;
+      container.style.top = `${Math.max(8, top)}px`;
     }
   }, [isOpen, cursorPosition]);
 
@@ -76,37 +85,41 @@ const QuickEditInline = ({
     onClose();
   };
 
+  const handleProviderChange = (newProviderId: string, newModelId: string) => {
+    setProviderId(newProviderId);
+    setModelId(newModelId);
+    localStorage.setItem("ai-chat-provider", newProviderId);
+    localStorage.setItem("ai-chat-model", newModelId);
+  };
+
   const handleEdit = async () => {
     if (!instruction.trim() || isStreaming) return;
 
     setIsStreaming(true);
 
     try {
-      // Get stored provider and model settings
-      const storedProvider = localStorage.getItem("ai-chat-provider") || "openai";
-      const storedModel = localStorage.getItem("ai-chat-model") || "gpt-3.5-turbo";
-      
-      const provider = AI_PROVIDERS.find(p => p.id === storedProvider);
-      const model = provider ? getModelById(provider.id, storedModel) : null;
+      // Use selected provider/model
+      const provider = AI_PROVIDERS.find(p => p.id === providerId);
+      const model = provider ? getModelById(provider.id, modelId) : null;
 
       if (!provider || !model) {
         throw new Error("No AI provider or model configured");
       }
 
-      // Simple, direct API call
       const apiKey = await getProviderApiToken(provider.id);
       if (!apiKey) {
         throw new Error("API key not found");
       }
 
+      // Use the selected model's id
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-3.5-turbo",
+          model: model.id,
           messages: [
             {
               role: "user",
@@ -118,8 +131,8 @@ Instruction: ${instruction}
 Current code:
 ${selectedText}
 
-Return only the edited code, nothing else:`
-            }
+Return only the edited code, nothing else:`,
+            },
           ],
           max_tokens: 1000,
           temperature: 0.1,
@@ -133,15 +146,12 @@ Return only the edited code, nothing else:`
       const result = await response.json();
       const editedText = result.choices[0].message.content.trim();
 
-      console.log("✅ AI response:", editedText);
-      
       if (editedText) {
         onApplyEdit(editedText);
         onClose();
       } else {
         throw new Error("No response from AI");
       }
-
     } catch (error) {
       console.error("❌ Error during AI edit:", error);
       // TODO: Show error feedback in UI instead of alert
@@ -155,53 +165,56 @@ Return only the edited code, nothing else:`
   return (
     <div
       ref={containerRef}
-      className="fixed z-50 bg-[var(--bg-color)] !bg-white border border-[var(--border-color)] rounded-lg shadow-lg"
+      className="fixed z-50 bg-white border border-[var(--border-color)] rounded-md shadow-xl"
       style={{
-        minWidth: "300px",
-        maxWidth: "400px",
+        minWidth: "40%",
+        maxWidth: "100%",
+        padding: "0.5rem 0.5rem 0.25rem 0.75rem",
+        fontSize: "13px",
       }}
     >
-      <div className="flex items-center gap-2 p-3">
-        <div className="flex items-center gap-2 flex-1">
-          <Bot size={14} className="text-[var(--text-lighter)] flex-shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={instruction}
-            onChange={(e) => setInstruction(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Tell AI what to do with the selected text..."
-            disabled={isStreaming}
-            className="flex-1 bg-transparent text-xs text-[var(--text-color)] placeholder-[var(--text-lighter)] border-none outline-none"
-          />
-        </div>
-        
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {isStreaming ? (
-            <Loader2 size={14} className="text-[var(--text-lighter)] animate-spin" />
-          ) : (
-            <div className="text-xs text-[var(--text-lighter)] font-mono">
-              {selectedText.length}ch
-            </div>
-          )}
+      {/* Prompt input */}
+      <div className="flex items-center gap-1">
+        <input
+          ref={inputRef}
+          type="text"
+          value={instruction}
+          onChange={e => setInstruction(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Describe your changes (Enter to run, esc to close)"
+          disabled={isStreaming}
+          className="flex-1 rounded px-2 py-2 text-xs text-[var(--text-color)] placeholder-[var(--text-lighter)] outline-none transition-all"
+          style={{
+            fontSize: "14px",
+            minHeight: "2.2em",
+            fontWeight: 400,
+          }}
+        />
+        <div className="flex items-center gap-1 flex-shrink-0 ml-1">
+          {isStreaming && <Loader2 size={16} className="text-[var(--text-lighter)] animate-spin" />}
           <button
             onClick={handleClose}
             className="text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors p-1"
             disabled={isStreaming}
+            tabIndex={-1}
+            aria-label="Close"
           >
-            <X size={12} />
+            <X size={13} />
           </button>
         </div>
       </div>
-      
-      {/* Subtle hint */}
-      <div className="px-3 pb-2">
-        <div className="text-xs text-[var(--text-lighter)] font-mono">
-          Press Enter to edit • Esc to cancel
-        </div>
+      {/* Provider/Model Selector - compact */}
+      <div className="my-1">
+        <ModelProviderSelector
+          currentProviderId={providerId}
+          currentModelId={modelId}
+          onProviderChange={handleProviderChange}
+          onApiKeyRequest={() => {}}
+          hasApiKey={providerId => !!localStorage.getItem(`ai-chat-api-key-${providerId}`)}
+        />
       </div>
     </div>
   );
 };
 
-export default QuickEditInline; 
+export default QuickEditInline;

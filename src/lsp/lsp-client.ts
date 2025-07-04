@@ -1,11 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import {
-  CompletionItem,
-  Diagnostic,
-  Hover,
-} from "vscode-languageserver-protocol";
+import { CompletionItem, Diagnostic, Hover } from "vscode-languageserver-protocol";
 
-import { LSPConfig, LSPClientEvents, CompletionResponse } from "./types";
+import { CompletionResponse, LSPClientEvents, LSPConfig } from "./types";
 
 export class LSPClient {
   private processId: number | null = null;
@@ -15,7 +11,7 @@ export class LSPClient {
   constructor(
     private language: string,
     private config: LSPConfig,
-    private events: LSPClientEvents = {}
+    private events: LSPClientEvents = {},
   ) {}
 
   async initialize(workspaceRoot: string): Promise<void> {
@@ -32,9 +28,7 @@ export class LSPClient {
       this.isInitialized = true;
       this.events.onInitialized?.();
 
-      console.log(
-        `✅ ${this.language} LSP server started (PID: ${this.processId})`
-      );
+      console.log(`✅ ${this.language} LSP server started (PID: ${this.processId})`);
     } catch (error) {
       const message = `Failed to start ${this.language} LSP server: ${error}`;
       console.error(message);
@@ -56,10 +50,7 @@ export class LSPClient {
         version: 1,
       });
     } catch (error) {
-      console.error(
-        `Error in didOpenTextDocument for ${this.language}:`,
-        error
-      );
+      console.error(`Error in didOpenTextDocument for ${this.language}:`, error);
     }
   }
 
@@ -77,10 +68,7 @@ export class LSPClient {
         version,
       });
     } catch (error) {
-      console.error(
-        `Error in didChangeTextDocument for ${this.language}:`,
-        error
-      );
+      console.error(`Error in didChangeTextDocument for ${this.language}:`, error);
     }
   }
 
@@ -95,18 +83,11 @@ export class LSPClient {
         uri,
       });
     } catch (error) {
-      console.error(
-        `Error in didCloseTextDocument for ${this.language}:`,
-        error
-      );
+      console.error(`Error in didCloseTextDocument for ${this.language}:`, error);
     }
   }
 
-  async completion(
-    uri: string,
-    line: number,
-    character: number
-  ): Promise<CompletionItem[]> {
+  async completion(uri: string, line: number, character: number): Promise<CompletionItem[]> {
     if (!this.isInitialized) return [];
 
     try {
@@ -124,11 +105,7 @@ export class LSPClient {
     }
   }
 
-  async hover(
-    uri: string,
-    line: number,
-    character: number
-  ): Promise<Hover | null> {
+  async hover(uri: string, line: number, character: number): Promise<Hover | null> {
     if (!this.isInitialized) return null;
 
     try {
@@ -144,9 +121,7 @@ export class LSPClient {
     }
   }
 
-  onDiagnostics(
-    callback: (uri: string, diagnostics: Diagnostic[]) => void
-  ): void {
+  onDiagnostics(callback: (uri: string, diagnostics: Diagnostic[]) => void): void {
     this.events.onDiagnostics = callback;
   }
 
@@ -172,4 +147,3 @@ export class LSPClient {
     return this.isInitialized && this.processId !== null;
   }
 }
-
