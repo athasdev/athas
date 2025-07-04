@@ -18,6 +18,7 @@ interface UseFileOperationsProps {
 export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [rootFolderPath, setRootFolderPath] = useState<string>("");
+  const [filesVersion, setFilesVersion] = useState<number>(0);
 
   // Cache for project files to avoid unnecessary re-scanning
   const [projectFilesCache, setProjectFilesCache] = useState<{
@@ -304,21 +305,58 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
 
   const refreshDirectory = useCallback(
     async (directoryPath: string) => {
-      console.log("Refreshing directory:", directoryPath, "Root folder path:", rootFolderPath);
+      console.log("=== refreshDirectory called ===");
+      console.log("Directory path to refresh:", directoryPath || "(empty string)");
+      console.log("Root folder path:", rootFolderPath || "(not set)");
+      console.log("Current files count:", files.length);
+      
+      // Normalize paths by removing trailing slashes for comparison
+      const normalizedDirPath = directoryPath?.replace(/\/$/, '') || '';
+      const normalizedRootPath = rootFolderPath?.replace(/\/$/, '') || '';
       
       // Check if we're refreshing the root directory
-      if (directoryPath === rootFolderPath) {
-        console.log("Refreshing root directory");
+      if (normalizedDirPath === normalizedRootPath || (!normalizedDirPath && normalizedRootPath)) {
+        console.log(">>> Executing ROOT DIRECTORY refresh");
         try {
-          const entries = await readDirectory(directoryPath);
-          const newFiles = (entries as any[]).map((entry: any) => ({
-            name: entry.name || "Unknown",
-            path: entry.path,
-            isDir: entry.is_dir || false,
-            expanded: files.find(f => f.path === entry.path)?.expanded || false,
-            children: files.find(f => f.path === entry.path)?.children || undefined,
+          const entries = await readDirectory(rootFolderPath || directoryPath || ".");
+          console.log(`    Found ${entries.length} entries in root`);
+          const newFiles = await Promise.all(entries.map(async (entry: any) => {
+            const existingFile = files.find(f => f.path === entry.path);
+            const fileEntry: FileEntry = {
+              name: entry.name || "Unknown",
+              path: entry.path,
+              isDir: entry.is_dir || false,
+              expanded: existingFile?.expanded || false,
+              children: undefined,
+            };
+            
+            // If this directory was expanded, refresh its contents too
+            if (fileEntry.isDir && fileEntry.expanded && existingFile?.children) {
+              try {
+                const childEntries = await readDirectory(fileEntry.path);
+                fileEntry.children = childEntries.map((childEntry: any) => {
+                  const existingChild = existingFile.children?.find(c => c.path === childEntry.path);
+                  return {
+                    name: childEntry.name || "Unknown",
+                    path: childEntry.path,
+                    isDir: childEntry.is_dir || false,
+                    expanded: existingChild?.expanded || false,
+                    children: undefined, // Don't preserve nested children
+                  };
+                });
+              } catch (error) {
+                console.error(`Error refreshing expanded directory ${fileEntry.path}:`, error);
+                fileEntry.children = [];
+              }
+            }
+            
+            return fileEntry;
           }));
+          console.log(`    Setting ${newFiles.length} files in state`);
+          console.log("    New root files:", newFiles.map(f => ({ path: f.path, isDir: f.isDir })));
           setFiles(newFiles);
+          setFilesVersion(v => v + 1); // Increment version to force re-render
+          console.log(">>> Root directory refresh complete - state updated");
           return;
         } catch (error) {
           console.error("Error refreshing root directory:", error);
@@ -326,43 +364,95 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
         }
       }
       
-      const updateFiles = async (items: FileEntry[]): Promise<FileEntry[]> => {
+      console.log("Current file tree structure:");
+      console.log("Top-level items:", files.map(f => ({ path: f.path, isDir: f.isDir, hasChildren: !!f.children, childCount: f.children?.length || 0 })));
+      console.log(`Looking for directory with path: "${directoryPath}"`);
+      
+      const updateFiles = async (items: FileEntry[], level: number = 0): Promise<FileEntry[]> => {
         return Promise.all(
           items.map(async (item) => {
             if (item.path === directoryPath && item.isDir) {
+              console.log(`>>> Found matching directory to refresh: ${item.path}`);
+              console.log(`    Directory expanded: ${item.expanded}`);
+              console.log(`    Has children: ${!!item.children}`);
+              console.log(`    Children count: ${item.children?.length || 0}`);
               // Refresh this directory
               try {
                 const entries = await readDirectory(item.path);
+                console.log(`    Raw entries from readDirectory:`, entries);
+                
+                // Create a new children array with only the files that currently exist
                 const children = (entries as any[]).map((entry: any) => {
+                  // Find if this entry existed before to preserve its expanded state
                   const existingChild = item.children?.find(c => c.path === entry.path);
                   return {
                     name: entry.name || "Unknown",
                     path: entry.path,
                     isDir: entry.is_dir || false,
+                    // Only preserve expanded state, not children
                     expanded: existingChild?.expanded || false,
-                    children: existingChild?.children || undefined,
+                    // Don't preserve children - they should be reloaded when expanded
+                    children: undefined,
                   };
                 });
-                console.log(`Refreshed directory ${item.path}, found ${children.length} items`);
-                return { ...item, children, expanded: true };
+                console.log(`>>> Refreshed directory ${item.path}`);
+                console.log(`    Found ${children.length} items (was ${item.children?.length || 0})`);
+                console.log(`    New children paths:`, children.map(c => c.path));
+                if (item.children) {
+                  console.log(`    Old children paths:`, item.children.map(c => c.path));
+                }
+                // CRITICAL FIX: Create completely new objects to force React re-render
+                const newItem: FileEntry = {
+                  name: item.name,
+                  path: item.path,
+                  isDir: item.isDir,
+                  expanded: item.expanded, // Keep current expanded state
+                  children: children.map(child => ({ ...child })) // Deep clone children
+                };
+                console.log(`    Returning updated directory with expanded=${newItem.expanded}`);
+                console.log(`    Children count: ${newItem.children?.length || 0}`);
+                return newItem;
               } catch (error) {
                 console.error("Error refreshing directory:", error);
                 return item;
               }
             } else if (item.children) {
               // Recursively update children
-              const updatedChildren = await updateFiles(item.children);
-              return { ...item, children: updatedChildren };
+              console.log(`    Checking children of ${item.path} at level ${level}`);
+              const updatedChildren = await updateFiles(item.children, level + 1);
+              // Check if any child was updated (compare references)
+              const childrenChanged = updatedChildren.some((child, index) => child !== item.children![index]);
+              if (childrenChanged) {
+                return { ...item, children: updatedChildren };
+              }
             }
             return item;
           }),
         );
       };
 
-      const updatedFiles = await updateFiles(files);
-      setFiles(updatedFiles);
+      const updatedFiles = await updateFiles(files, 0);
+      console.log("=== Directory refresh complete ===");
+      console.log("Updated files structure:", updatedFiles.map(f => ({ 
+        path: f.path, 
+        isDir: f.isDir, 
+        childCount: f.children?.length || 0 
+      })));
+      
+      // Force deep clone to ensure React detects all changes
+      const deepCloneFiles = (items: FileEntry[]): FileEntry[] => {
+        return items.map(item => ({
+          ...item,
+          children: item.children ? deepCloneFiles(item.children) : undefined
+        }));
+      };
+      
+      // Create completely new object tree
+      const completelyNewFiles = deepCloneFiles(updatedFiles);
+      setFiles(completelyNewFiles);
+      setFilesVersion(v => v + 1); // Increment version to force re-render
     },
-    [files, rootFolderPath],
+    [files, rootFolderPath],  // Include files to ensure fresh data
   );
 
   const handleCreateNewFileInDirectory = useCallback(
@@ -555,6 +645,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
 
   return {
     files,
+    filesVersion,
     setFiles,
     rootFolderPath,
     getAllProjectFiles,

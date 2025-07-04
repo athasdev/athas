@@ -33,6 +33,7 @@ const FileTree = ({
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [draggedItem, setDraggedItem] = useState<{path: string, name: string, isDir: boolean} | null>(null);
+  const [, forceUpdate] = useState({});
 
   const handleContextMenu = (
     e: React.MouseEvent,
@@ -60,6 +61,16 @@ const FileTree = ({
       document.removeEventListener("click", handleDocumentClick);
     };
   }, []);
+  
+  // Debug: Log when files prop changes
+  useEffect(() => {
+    console.log("FileTree: files prop changed, count:", files.length);
+    files.forEach(f => {
+      if (f.isDir && f.expanded && f.children) {
+        console.log(`  Dir ${f.path}: ${f.children.length} children`);
+      }
+    });
+  }, [files]);
 
   const handleDragStart = (e: React.DragEvent, file: FileEntry) => {
     console.log("Drag started:", file.path);
@@ -125,10 +136,57 @@ const FileTree = ({
         return;
       }
       
-      // Get the parent directory path
+      // Calculate parent directory path
       const pathParts = sourcePath.split('/');
-      const sourceParentPath = pathParts.slice(0, -1).join('/') || rootFolderPath || '.';
-      console.log("Source parent path:", sourceParentPath, "from", sourcePath, "root:", rootFolderPath);
+      const fileName = pathParts[pathParts.length - 1];
+      let sourceParentPath = pathParts.slice(0, -1).join('/');
+      
+      console.log("=== CRITICAL DEBUG: File Move Analysis ===");
+      console.log("1. Source file path:", sourcePath);
+      console.log("2. Calculated parent path:", sourceParentPath);
+      console.log("3. Root folder path:", rootFolderPath);
+      console.log("4. Files array length:", files.length);
+      
+      // Find the actual parent directory that contains this file
+      let actualParentPath: string | null = null;
+      
+      const findParentDirectory = (items: FileEntry[]): string | null => {
+        for (const item of items) {
+          if (item.isDir && item.children) {
+            // Check if this directory contains our file
+            if (item.children.some(child => child.path === sourcePath)) {
+              console.log(`>>> 🎯 FOUND! File "${sourcePath}" is in directory "${item.path}"`);
+              return item.path;
+            }
+            // Recursively search subdirectories
+            const found = findParentDirectory(item.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      
+      actualParentPath = findParentDirectory(files);
+      
+      if (actualParentPath) {
+        sourceParentPath = actualParentPath;
+        console.log(`5. Using actual parent directory: "${sourceParentPath}"`);
+      } else {
+        console.log(`5. File not found in any directory, checking if at root level`);
+      }
+      
+      // Check if file is at root level
+      const isRootLevelFile = files.some(f => f.path === sourcePath);
+      console.log("6. Is file at root level?", isRootLevelFile);
+      
+      // If the parent path is empty, it means the file is at the root
+      if (!sourceParentPath && rootFolderPath) {
+        sourceParentPath = rootFolderPath;
+        console.log("7. Empty parent path, using root folder path:", sourceParentPath);
+      }
+      
+      console.log("=== FINAL: Source parent path for refresh:", sourceParentPath || rootFolderPath || "(root)", "===");
+      console.log("This is the directory that will be refreshed to remove the moved file.");
       
       if (targetPath === sourceParentPath) {
         setDraggedItem(null);
@@ -142,7 +200,11 @@ const FileTree = ({
       
       try {
         const newPath = targetPath + '/' + sourceName;
-        console.log("Moving file from", sourcePath, "to", newPath);
+        console.log("=== FILE MOVE OPERATION ===");
+        console.log("Moving from:", sourcePath);
+        console.log("Moving to:", newPath);
+        console.log("Source name:", sourceName);
+        console.log("Source is directory:", sourceIsDir);
         
         await moveFile(sourcePath, newPath);
         console.log("Move successful, refreshing directories");
@@ -152,24 +214,50 @@ const FileTree = ({
           onFileMove(sourcePath, newPath);
         }
         
+        // Add a delay to ensure file system operations complete
+        await new Promise(resolve => setTimeout(resolve, 250));
+        
         // Refresh both directories
         if (onRefreshDirectory) {
-          console.log("Refreshing source directory:", sourceParentPath);
-          await onRefreshDirectory(sourceParentPath);
+          console.log("=== STARTING DIRECTORY REFRESH ===");
+          console.log("Source parent path:", sourceParentPath || "(empty)");
+          console.log("Target path:", targetPath);
+          console.log("Root folder path:", rootFolderPath || "(not set)");
           
-          if (targetPath !== sourceParentPath) {
-            console.log("Refreshing target directory:", targetPath);
-            await onRefreshDirectory(targetPath);
+          // Always refresh source directory first
+          console.log(`>>> Attempting to refresh source directory: "${sourceParentPath || '(root)'}"`);
+          try {
+            await onRefreshDirectory(sourceParentPath);
+            console.log(`✓ Source directory refresh completed: "${sourceParentPath || '(root)'}"`);
+          } catch (error) {
+            console.error(`✗ Failed to refresh source directory: "${sourceParentPath || '(root)'}"`, error);
           }
+          
+          // Then refresh target directory if different
+          if (targetPath !== sourceParentPath) {
+            console.log(`>>> Attempting to refresh target directory: "${targetPath}"`);
+            try {
+              await onRefreshDirectory(targetPath);
+              console.log(`✓ Target directory refresh completed: "${targetPath}"`);
+            } catch (error) {
+              console.error(`✗ Failed to refresh target directory: "${targetPath}"`, error);
+            }
+          } else {
+            console.log("Target directory is same as source parent, skipping duplicate refresh");
+          }
+          console.log("=== DIRECTORY REFRESH COMPLETE ===");
         } else {
           console.warn("onRefreshDirectory is not defined, cannot refresh file tree");
         }
+        
+        // Clear dragged item state after successful move
+        setDraggedItem(null);
       } catch (error) {
         console.error("Failed to move file:", error);
         alert(`Failed to move ${sourceName}: ${error}`);
+        // Also clear dragged item on error
+        setDraggedItem(null);
       }
-      
-      setDraggedItem(null);
     } else {
       // Handle external file drop
       const files = e.dataTransfer.files;

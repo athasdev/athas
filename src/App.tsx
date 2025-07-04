@@ -158,6 +158,7 @@ function App() {
   // File operations with proper callback
   const {
     files,
+    filesVersion,
     setFiles,
     rootFolderPath,
     getAllProjectFiles,

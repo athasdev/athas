@@ -168,6 +168,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
             <RemoteConnectionView onFileSelect={onFileSelect} />
           ) : (
             <FileTree
+              key={JSON.stringify(files)}
               files={files}
               activeBufferPath={activeBufferPath}
               rootFolderPath={rootFolderPath}
