@@ -284,6 +284,49 @@ fn delete_path_custom(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn move_file(source_path: String, target_path: String) -> Result<(), String> {
+    let source = Path::new(&source_path);
+    let target = Path::new(&target_path);
+    
+    if !source.exists() {
+        return Err("Source path does not exist".to_string());
+    }
+    
+    if target.exists() {
+        return Err("Target path already exists".to_string());
+    }
+    
+    match fs::rename(source, target) {
+        Ok(()) => Ok(()),
+        Err(e) => Err(format!("Failed to move file: {}", e)),
+    }
+}
+
+#[tauri::command]
+fn copy_external_file(source_path: String, target_dir: String, file_name: String) -> Result<(), String> {
+    let source = Path::new(&source_path);
+    let target_dir_path = Path::new(&target_dir);
+    let target = target_dir_path.join(&file_name);
+    
+    if !source.exists() {
+        return Err("Source file does not exist".to_string());
+    }
+    
+    if !target_dir_path.exists() {
+        return Err("Target directory does not exist".to_string());
+    }
+    
+    if target.exists() {
+        return Err(format!("File {} already exists in target directory", file_name));
+    }
+    
+    match fs::copy(source, target) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to copy file: {}", e)),
+    }
+}
+
+#[tauri::command]
 fn get_sqlite_tables(path: String) -> Result<Vec<TableInfo>, String> {
     let conn = Connection::open(&path).map_err(|e| e.to_string())?;
 
@@ -1231,6 +1274,8 @@ fn main() {
             write_file_custom,
             create_directory_custom,
             delete_path_custom,
+            move_file,
+            copy_external_file,
             get_sqlite_tables,
             query_sqlite,
             git_status,

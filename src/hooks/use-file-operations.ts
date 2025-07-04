@@ -280,7 +280,8 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
                   return { ...item, expanded: true, children };
                 } catch (error) {
                   console.error("Error reading directory:", error);
-                  return { ...item, expanded: true, children: [] };
+                  // Keep the folder in its current state instead of showing empty
+                  return { ...item, expanded: false };
                 }
               } else {
                 // Collapse folder
@@ -304,6 +305,28 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
 
   const refreshDirectory = useCallback(
     async (directoryPath: string) => {
+      console.log("Refreshing directory:", directoryPath, "Root folder path:", rootFolderPath);
+      
+      // Check if we're refreshing the root directory
+      if (directoryPath === rootFolderPath) {
+        console.log("Refreshing root directory");
+        try {
+          const entries = await readDirectory(directoryPath);
+          const newFiles = (entries as any[]).map((entry: any) => ({
+            name: entry.name || "Unknown",
+            path: entry.path,
+            isDir: entry.is_dir || false,
+            expanded: files.find(f => f.path === entry.path)?.expanded || false,
+            children: files.find(f => f.path === entry.path)?.children || undefined,
+          }));
+          setFiles(newFiles);
+          return;
+        } catch (error) {
+          console.error("Error refreshing root directory:", error);
+          return;
+        }
+      }
+      
       const updateFiles = async (items: FileEntry[]): Promise<FileEntry[]> => {
         return Promise.all(
           items.map(async (item) => {
@@ -338,7 +361,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
       const updatedFiles = await updateFiles(files);
       setFiles(updatedFiles);
     },
-    [files],
+    [files, rootFolderPath],
   );
 
   const handleCreateNewFileInDirectory = useCallback(

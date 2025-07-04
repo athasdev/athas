@@ -125,7 +125,7 @@ export const readDirectory = async (path: string): Promise<any[]> => {
       return await tauriInvoke("read_directory_custom", { path });
     } catch (error) {
       console.error("Error reading directory with Tauri:", error);
-      return [];
+      throw error; // Throw error instead of returning empty array
     }
   } else {
     // Web fallback - we'll need to cache the files from the folder selection
@@ -207,6 +207,32 @@ export const deletePath = async (path: string): Promise<void> => {
     }
   } else {
     console.log("Path deletion simulated for web:", path);
+  }
+};
+
+export const moveFile = async (sourcePath: string, targetPath: string): Promise<void> => {
+  if (isTauri()) {
+    try {
+      await tauriInvoke("move_file", { sourcePath, targetPath });
+    } catch (error) {
+      console.error("Error moving file with Tauri:", error);
+      throw error;
+    }
+  } else {
+    console.log("File move simulated for web:", sourcePath, "->", targetPath);
+  }
+};
+
+export const copyExternalFile = async (sourcePath: string, targetDir: string, fileName: string): Promise<void> => {
+  if (isTauri()) {
+    try {
+      await tauriInvoke("copy_external_file", { sourcePath, targetDir, fileName });
+    } catch (error) {
+      console.error("Error copying external file with Tauri:", error);
+      throw error;
+    }
+  } else {
+    console.log("External file copy simulated for web:", sourcePath, "->", targetDir);
   }
 };
 

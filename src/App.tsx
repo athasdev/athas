@@ -1,5 +1,6 @@
 import { AlertCircle, ArrowLeftRight, Terminal as TerminalIcon } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import AIChat from "./components/ai-chat/ai-chat";
 import BottomPane from "./components/bottom-pane";
 import CodeEditor, { CodeEditorRef } from "./components/code-editor";
@@ -168,6 +169,7 @@ function App() {
     handleCreateNewFolderInDirectory,
     handleDeletePath,
     handleCollapseAllFolders,
+    refreshDirectory,
   } = useFileOperations({ openBuffer });
 
   // Function to refresh all project files (needed by remote connection hook)
@@ -284,6 +286,50 @@ function App() {
       addToRecents(rootFolderPath);
     }
   }, [rootFolderPath, addToRecents]);
+
+  // Handle Tauri file drop events
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    const setupFileDrop = async () => {
+      try {
+        unlisten = await listen('tauri://file-drop', async (event) => {
+          console.log('Files dropped:', event.payload);
+          // The payload contains an array of file paths
+          const files = event.payload as string[];
+          
+          if (files.length > 0 && rootFolderPath) {
+            // Copy files to the current root folder
+            for (const filePath of files) {
+              const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'unknown';
+              try {
+                const { copyExternalFile } = await import('./utils/platform');
+                await copyExternalFile(filePath, rootFolderPath, fileName);
+                console.log(`Copied ${fileName} to ${rootFolderPath}`);
+              } catch (error) {
+                console.error(`Failed to copy ${fileName}:`, error);
+              }
+            }
+            
+            // Refresh the root directory to show new files
+            if (refreshDirectory) {
+              refreshDirectory(rootFolderPath);
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Failed to setup file drop listener:', error);
+      }
+    };
+
+    setupFileDrop();
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [rootFolderPath, refreshDirectory]);
 
   const handleOpenRecentFolder = async (path: string) => {
     const success = await handleOpenFolderByPath(path);
@@ -861,6 +907,7 @@ function App() {
                     onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
                     onDeletePath={(path: string) => handleDeletePath(path, false)}
                     onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
+                    onRefreshDirectory={refreshDirectory}
                     projectName={getProjectName()}
                   />
                 </ResizableSidebar>
@@ -1112,6 +1159,7 @@ function App() {
                     onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
                     onDeletePath={(path: string) => handleDeletePath(path, false)}
                     onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
+                    onRefreshDirectory={refreshDirectory}
                     projectName={getProjectName()}
                   />
                 </ResizableRightPane>
