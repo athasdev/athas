@@ -280,8 +280,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
                   return { ...item, expanded: true, children };
                 } catch (error) {
                   console.error("Error reading directory:", error);
-                  // Keep the folder in its current state instead of showing empty
-                  return { ...item, expanded: false };
+                  return { ...item, expanded: true, children: [] };
                 }
               } else {
                 // Collapse folder
@@ -335,14 +334,16 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
               try {
                 const entries = await readDirectory(item.path);
                 const children = (entries as any[]).map((entry: any) => {
+                  const existingChild = item.children?.find(c => c.path === entry.path);
                   return {
                     name: entry.name || "Unknown",
                     path: entry.path,
                     isDir: entry.is_dir || false,
-                    expanded: false,
-                    children: undefined,
+                    expanded: existingChild?.expanded || false,
+                    children: existingChild?.children || undefined,
                   };
                 });
+                console.log(`Refreshed directory ${item.path}, found ${children.length} items`);
                 return { ...item, children, expanded: true };
               } catch (error) {
                 console.error("Error refreshing directory:", error);

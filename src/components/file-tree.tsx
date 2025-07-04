@@ -7,23 +7,27 @@ import { moveFile, copyExternalFile } from "../utils/platform";
 interface FileTreeProps {
   files: FileEntry[];
   activeBufferPath?: string;
+  rootFolderPath?: string;
   onFileSelect: (path: string, isDir: boolean) => void;
   onCreateNewFileInDirectory: (directoryPath: string) => void;
   onCreateNewFolderInDirectory?: (directoryPath: string) => void;
   onDeletePath?: (path: string, isDir: boolean) => void;
   onGenerateImage?: (directoryPath: string) => void;
   onRefreshDirectory?: (directoryPath: string) => void;
+  onFileMove?: (oldPath: string, newPath: string) => void;
 }
 
 const FileTree = ({
   files,
   activeBufferPath,
+  rootFolderPath,
   onFileSelect,
   onCreateNewFileInDirectory,
   onCreateNewFolderInDirectory,
   onDeletePath,
   onGenerateImage,
   onRefreshDirectory,
+  onFileMove,
 }: FileTreeProps) => {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
@@ -121,9 +125,10 @@ const FileTree = ({
         return;
       }
       
-      const lastSlashIndex = sourcePath.lastIndexOf('/');
-      const sourceParentPath = lastSlashIndex === -1 ? '.' : sourcePath.substring(0, lastSlashIndex);
-      console.log("Source parent path:", sourceParentPath, "from", sourcePath);
+      // Get the parent directory path
+      const pathParts = sourcePath.split('/');
+      const sourceParentPath = pathParts.slice(0, -1).join('/') || rootFolderPath || '.';
+      console.log("Source parent path:", sourceParentPath, "from", sourcePath, "root:", rootFolderPath);
       
       if (targetPath === sourceParentPath) {
         setDraggedItem(null);
@@ -142,11 +147,19 @@ const FileTree = ({
         await moveFile(sourcePath, newPath);
         console.log("Move successful, refreshing directories");
         
+        // Notify about the file move for buffer updates
+        if (onFileMove) {
+          onFileMove(sourcePath, newPath);
+        }
+        
+        // Refresh both directories
         if (onRefreshDirectory) {
-          console.log("Refreshing directories:", sourceParentPath, targetPath);
-          onRefreshDirectory(sourceParentPath);
+          console.log("Refreshing source directory:", sourceParentPath);
+          await onRefreshDirectory(sourceParentPath);
+          
           if (targetPath !== sourceParentPath) {
-            onRefreshDirectory(targetPath);
+            console.log("Refreshing target directory:", targetPath);
+            await onRefreshDirectory(targetPath);
           }
         } else {
           console.warn("onRefreshDirectory is not defined, cannot refresh file tree");

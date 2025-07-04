@@ -125,7 +125,7 @@ export const readDirectory = async (path: string): Promise<any[]> => {
       return await tauriInvoke("read_directory_custom", { path });
     } catch (error) {
       console.error("Error reading directory with Tauri:", error);
-      throw error; // Throw error instead of returning empty array
+      return [];
     }
   } else {
     // Web fallback - we'll need to cache the files from the folder selection

@@ -217,6 +217,70 @@ function App() {
     codeEditorRef,
   });
 
+  // File move functionality
+  const handleFileMove = useCallback(
+    async (sourcePath: string, destinationPath: string) => {
+      try {
+        // Import the moveFile function from platform utils
+        const { moveFile } = await import("./utils/platform");
+        
+        // Move the file using the cross-platform utility
+        await moveFile(sourcePath, destinationPath);
+
+        // Refresh the source directory
+        const sourceDir = sourcePath.split("/").slice(0, -1).join("/");
+        if (sourceDir) {
+          await refreshDirectory(sourceDir);
+        }
+
+        // Refresh the destination directory if different
+        const destDir = destinationPath.split("/").slice(0, -1).join("/");
+        if (destDir && destDir !== sourceDir) {
+          await refreshDirectory(destDir);
+        }
+
+        // If the moved file was open in a buffer, update its path
+        const affectedBuffer = buffers.find(b => b.path === sourcePath);
+        if (affectedBuffer) {
+          const fileName = destinationPath.split("/").pop() || "Unknown";
+          updateBuffer({
+            ...affectedBuffer,
+            path: destinationPath,
+            name: fileName,
+          });
+        }
+
+        console.log(`File moved from ${sourcePath} to ${destinationPath}`);
+      } catch (error) {
+        console.error("Error moving file:", error);
+        alert("Failed to move file");
+      }
+    },
+    [buffers, updateBuffer, refreshDirectory]
+  );
+
+  // Update buffers when a file has been moved (used by drag and drop)
+  const handleFileMoveComplete = useCallback(
+    (oldPath: string, newPath: string) => {
+      console.log("Updating buffers after file move:", oldPath, "->", newPath);
+      
+      // Find any buffers with the old path
+      const affectedBuffer = buffers.find(b => b.path === oldPath);
+      if (affectedBuffer) {
+        const fileName = newPath.split("/").pop() || affectedBuffer.name;
+        console.log("Updating buffer:", affectedBuffer.id, "with new path:", newPath);
+        
+        // Update the buffer with the new path and name
+        updateBuffer({
+          ...affectedBuffer,
+          path: newPath,
+          name: fileName,
+        });
+      }
+    },
+    [buffers, updateBuffer],
+  );
+
   // LSP integration (after rootFolderPath is available)
   const {
     openDocument,
@@ -908,6 +972,7 @@ function App() {
                     onDeletePath={(path: string) => handleDeletePath(path, false)}
                     onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
                     onRefreshDirectory={refreshDirectory}
+                    onFileMove={handleFileMoveComplete}
                     projectName={getProjectName()}
                   />
                 </ResizableSidebar>
@@ -1160,6 +1225,7 @@ function App() {
                     onDeletePath={(path: string) => handleDeletePath(path, false)}
                     onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
                     onRefreshDirectory={refreshDirectory}
+                    onFileMove={handleFileMoveComplete}
                     projectName={getProjectName()}
                   />
                 </ResizableRightPane>
