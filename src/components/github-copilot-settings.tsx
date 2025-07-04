@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle, Key, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { removeGitHubToken, storeGitHubToken } from "../utils/ai-completion";
 import Button from "./ui/button";
+
 interface GitHubCopilotSettingsProps {
   isVisible: boolean;
   onClose: () => void;
