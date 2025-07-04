@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { File, Command as CommandIcon, X } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { File, Command as CommandIcon, X, Clock } from "lucide-react";
 import {
   Command,
   CommandInput,
@@ -17,6 +17,46 @@ interface CommandBarProps {
   rootFolderPath?: string;
 }
 
+// Storage key for recently opened files
+const RECENT_FILES_KEY = "athas-recent-files";
+
+// In-memory cache for recent files to avoid localStorage reads
+// TODO: This is a hack to avoid localStorage reads. We should use redis maybe .
+let recentFilesCache: string[] = [];
+let cacheInitialized = false;
+
+// Initialize cache asynchronously
+const initializeCache = () => {
+  if (cacheInitialized) return;
+
+  setTimeout(() => {
+    try {
+      const stored = localStorage.getItem(RECENT_FILES_KEY);
+      recentFilesCache = stored ? JSON.parse(stored) : [];
+      cacheInitialized = true;
+    } catch {
+      recentFilesCache = [];
+      cacheInitialized = true;
+    }
+  }, 0);
+};
+
+// Add file to recent files (async, non-blocking)
+const addToRecentFiles = (filePath: string) => {
+  // Update cache immediately for instant UI update
+  const filtered = recentFilesCache.filter(path => path !== filePath);
+  recentFilesCache = [filePath, ...filtered].slice(0, 20);
+
+  // Persist to localStorage asynchronously (non-blocking)
+  setTimeout(() => {
+    try {
+      localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(recentFilesCache));
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, 0);
+};
+
 const CommandBar = ({
   isVisible,
   onClose,
@@ -25,11 +65,19 @@ const CommandBar = ({
   rootFolderPath,
 }: CommandBarProps) => {
   const [query, setQuery] = useState("");
+  const [recentFiles, setRecentFiles] = useState<string[]>([]);
 
-  // Reset query when command bar becomes visible
+  // Initialize cache when component mounts
+  useEffect(() => {
+    initializeCache();
+  }, []);
+
+  // Update local state when command bar becomes visible
   useEffect(() => {
     if (isVisible) {
       setQuery("");
+      // Use cached recent files or empty array if cache not ready
+      setRecentFiles(cacheInitialized ? [...recentFilesCache] : []);
     }
   }, [isVisible]);
 
@@ -60,42 +108,80 @@ const CommandBar = ({
     };
   }, [isVisible, onClose]);
 
-  // Helper function to get relative path
-  const getRelativePath = (fullPath: string): string => {
-    if (!rootFolderPath) return fullPath;
+  // Memoize relative path function
+  const getRelativePath = useCallback(
+    (fullPath: string): string => {
+      if (!rootFolderPath) return fullPath;
 
-    // Normalize paths to handle different path separators
-    const normalizedFullPath = fullPath.replace(/\\/g, "/");
-    const normalizedRootPath = rootFolderPath.replace(/\\/g, "/");
+      const normalizedFullPath = fullPath.replace(/\\/g, "/");
+      const normalizedRootPath = rootFolderPath.replace(/\\/g, "/");
 
-    if (normalizedFullPath.startsWith(normalizedRootPath)) {
-      const relativePath = normalizedFullPath.substring(normalizedRootPath.length);
-      // Remove leading slash if present
-      return relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
+      if (normalizedFullPath.startsWith(normalizedRootPath)) {
+        const relativePath = normalizedFullPath.substring(normalizedRootPath.length);
+        return relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
+      }
+
+      return fullPath;
+    },
+    [rootFolderPath],
+  );
+
+  // Memoize file filtering and sorting
+  const { recentFilesInResults, otherFiles } = useMemo(() => {
+    const allFiles = files.filter(entry => !entry.isDir);
+
+    if (!query.trim()) {
+      // No search query - show recent files first, then alphabetical
+      const recent = allFiles
+        .filter(file => recentFiles.includes(file.path))
+        .sort((a, b) => recentFiles.indexOf(a.path) - recentFiles.indexOf(b.path));
+
+      const others = allFiles
+        .filter(file => !recentFiles.includes(file.path))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      return {
+        recentFilesInResults: recent.slice(0, 10),
+        otherFiles: others.slice(0, 20 - recent.length),
+      };
     }
 
-    return fullPath;
-  };
-
-  // Get all files (filter out directories)
-  const getAllFiles = (entries: Array<{ name: string; path: string; isDir: boolean }>) => {
-    return entries.filter(entry => !entry.isDir);
-  };
-
-  const handleFileSelect = (path: string) => {
-    onFileSelect(path);
-    onClose();
-  };
-
-  // Get filtered files
-  const allFiles = getAllFiles(files);
-  const filteredFiles = allFiles
-    .filter(
+    // With search query - filter first, then prioritize recent files
+    const queryLower = query.toLowerCase();
+    const filtered = allFiles.filter(
       file =>
-        file.name.toLowerCase().includes(query.toLowerCase())
-        || file.path.toLowerCase().includes(query.toLowerCase()),
-    )
-    .slice(0, 20); // Limit to 20 results
+        file.name.toLowerCase().includes(queryLower)
+        || file.path.toLowerCase().includes(queryLower),
+    );
+
+    const recent = filtered
+      .filter(file => recentFiles.includes(file.path))
+      .sort((a, b) => recentFiles.indexOf(a.path) - recentFiles.indexOf(b.path));
+
+    const others = filtered
+      .filter(file => !recentFiles.includes(file.path))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+      recentFilesInResults: recent.slice(0, 20),
+      otherFiles: others.slice(0, 20 - recent.length),
+    };
+  }, [files, recentFiles, query]);
+
+  const handleFileSelect = useCallback(
+    (path: string) => {
+      // Update cache and state immediately
+      addToRecentFiles(path);
+      setRecentFiles(prev => {
+        const filtered = prev.filter(p => p !== path);
+        return [path, ...filtered].slice(0, 20);
+      });
+
+      onFileSelect(path);
+      onClose();
+    },
+    [onFileSelect, onClose],
+  );
 
   if (!isVisible) {
     return null;
@@ -132,11 +218,45 @@ const CommandBar = ({
               {query ? "No matching files found" : "No files available"}
             </CommandEmpty>
 
-            {filteredFiles.length > 0 && (
+            {/* Recent Files Section */}
+            {recentFilesInResults.length > 0 && (
               <CommandGroup className="p-0">
-                {filteredFiles.map(file => (
+                <div className="px-4 py-2 text-xs font-medium text-[var(--text-lighter)] border-b border-[var(--border-color)] bg-[var(--primary-bg)]">
+                  <div className="flex items-center gap-2">
+                    <Clock size={12} />
+                    Recently Opened
+                  </div>
+                </div>
+                {recentFilesInResults.map(file => (
                   <CommandItem
-                    key={file.path}
+                    key={`recent-${file.path}`}
+                    value={`${file.name} ${file.path}`}
+                    onSelect={() => handleFileSelect(file.path)}
+                    className="px-4 py-2 flex items-center gap-3 cursor-pointer aria-selected:bg-[var(--selected-color)] aria-selected:text-[var(--text-color)] hover:bg-[var(--hover-color)] font-mono m-0 rounded-none border-none bg-transparent transition-colors duration-150"
+                  >
+                    <File size={14} className="text-blue-400" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-[var(--text-color)] truncate">{file.name}</div>
+                      <div className="text-xs text-[var(--text-lighter)] truncate">
+                        {getRelativePath(file.path)}
+                      </div>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {/* Other Files Section */}
+            {otherFiles.length > 0 && (
+              <CommandGroup className="p-0">
+                {recentFilesInResults.length > 0 && (
+                  <div className="px-4 py-2 text-xs font-medium text-[var(--text-lighter)] border-b border-[var(--border-color)] bg-[var(--primary-bg)]">
+                    Other Files
+                  </div>
+                )}
+                {otherFiles.map(file => (
+                  <CommandItem
+                    key={`other-${file.path}`}
                     value={`${file.name} ${file.path}`}
                     onSelect={() => handleFileSelect(file.path)}
                     className="px-4 py-2 flex items-center gap-3 cursor-pointer aria-selected:bg-[var(--selected-color)] aria-selected:text-[var(--text-color)] hover:bg-[var(--hover-color)] font-mono m-0 rounded-none border-none bg-transparent transition-colors duration-150"
