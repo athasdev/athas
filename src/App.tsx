@@ -950,6 +950,7 @@ function App() {
                     remoteConnectionName={remoteConnectionName || undefined}
                     coreFeatures={coreFeatures}
                     files={files}
+                    filesVersion={filesVersion}
                     rootFolderPath={rootFolderPath}
                     allProjectFiles={allProjectFiles}
                     activeBufferPath={activeBuffer?.path}
@@ -1203,6 +1204,7 @@ function App() {
                     remoteConnectionName={remoteConnectionName || undefined}
                     coreFeatures={coreFeatures}
                     files={files}
+                    filesVersion={filesVersion}
                     rootFolderPath={rootFolderPath}
                     allProjectFiles={allProjectFiles}
                     activeBufferPath={activeBuffer?.path}

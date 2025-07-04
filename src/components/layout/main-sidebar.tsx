@@ -27,6 +27,7 @@ interface MainSidebarProps {
 
   // Files and project
   files: FileEntry[];
+  filesVersion: number;
   rootFolderPath?: string;
   allProjectFiles: FileEntry[];
   activeBufferPath?: string;
@@ -58,6 +59,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
       remoteConnectionName,
       coreFeatures,
       files,
+      filesVersion,
       rootFolderPath,
       allProjectFiles,
       activeBufferPath,
@@ -168,7 +170,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
             <RemoteConnectionView onFileSelect={onFileSelect} />
           ) : (
             <FileTree
-              key={JSON.stringify(files)}
+              key={`filetree-${filesVersion}`}
               files={files}
               activeBufferPath={activeBufferPath}
               rootFolderPath={rootFolderPath}

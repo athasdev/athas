@@ -68,6 +68,9 @@ const FileTree = ({
     files.forEach(f => {
       if (f.isDir && f.expanded && f.children) {
         console.log(`  Dir ${f.path}: ${f.children.length} children`);
+        f.children.forEach(child => {
+          console.log(`    - ${child.name} (${child.path})`);
+        });
       }
     });
   }, [files]);
@@ -147,45 +150,17 @@ const FileTree = ({
       console.log("3. Root folder path:", rootFolderPath);
       console.log("4. Files array length:", files.length);
       
-      // Find the actual parent directory that contains this file
-      let actualParentPath: string | null = null;
-      
-      const findParentDirectory = (items: FileEntry[]): string | null => {
-        for (const item of items) {
-          if (item.isDir && item.children) {
-            // Check if this directory contains our file
-            if (item.children.some(child => child.path === sourcePath)) {
-              console.log(`>>> 🎯 FOUND! File "${sourcePath}" is in directory "${item.path}"`);
-              return item.path;
-            }
-            // Recursively search subdirectories
-            const found = findParentDirectory(item.children);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-      
-      actualParentPath = findParentDirectory(files);
-      
-      if (actualParentPath) {
-        sourceParentPath = actualParentPath;
-        console.log(`5. Using actual parent directory: "${sourceParentPath}"`);
-      } else {
-        console.log(`5. File not found in any directory, checking if at root level`);
-      }
-      
       // Check if file is at root level
       const isRootLevelFile = files.some(f => f.path === sourcePath);
-      console.log("6. Is file at root level?", isRootLevelFile);
+      console.log("5. Is file at root level?", isRootLevelFile);
       
       // If the parent path is empty, it means the file is at the root
-      if (!sourceParentPath && rootFolderPath) {
-        sourceParentPath = rootFolderPath;
-        console.log("7. Empty parent path, using root folder path:", sourceParentPath);
+      if (!sourceParentPath || isRootLevelFile) {
+        sourceParentPath = rootFolderPath || "";
+        console.log("6. Using root folder path as parent:", sourceParentPath || "(empty - will refresh root)");
       }
       
-      console.log("=== FINAL: Source parent path for refresh:", sourceParentPath || rootFolderPath || "(root)", "===");
+      console.log("=== FINAL: Source parent path for refresh:", sourceParentPath || "(root)", "===");
       console.log("This is the directory that will be refreshed to remove the moved file.");
       
       if (targetPath === sourceParentPath) {
@@ -214,8 +189,7 @@ const FileTree = ({
           onFileMove(sourcePath, newPath);
         }
         
-        // Add a delay to ensure file system operations complete
-        await new Promise(resolve => setTimeout(resolve, 250));
+        // No delay needed - moveFile is async and waits for completion
         
         // Refresh both directories
         if (onRefreshDirectory) {
@@ -224,7 +198,21 @@ const FileTree = ({
           console.log("Target path:", targetPath);
           console.log("Root folder path:", rootFolderPath || "(not set)");
           
-          // Always refresh source directory first
+          // IMPORTANT: Refresh target directory FIRST
+          // This ensures the moved file appears in the target before it disappears from source
+          if (targetPath !== sourceParentPath) {
+            console.log(`>>> Attempting to refresh target directory FIRST: "${targetPath}"`);
+            try {
+              await onRefreshDirectory(targetPath);
+              console.log(`✓ Target directory refresh completed: "${targetPath}"`);
+              
+              // No delay needed between refreshes
+            } catch (error) {
+              console.error(`✗ Failed to refresh target directory: "${targetPath}"`, error);
+            }
+          }
+          
+          // Then refresh source directory
           console.log(`>>> Attempting to refresh source directory: "${sourceParentPath || '(root)'}"`);
           try {
             await onRefreshDirectory(sourceParentPath);
@@ -233,19 +221,11 @@ const FileTree = ({
             console.error(`✗ Failed to refresh source directory: "${sourceParentPath || '(root)'}"`, error);
           }
           
-          // Then refresh target directory if different
-          if (targetPath !== sourceParentPath) {
-            console.log(`>>> Attempting to refresh target directory: "${targetPath}"`);
-            try {
-              await onRefreshDirectory(targetPath);
-              console.log(`✓ Target directory refresh completed: "${targetPath}"`);
-            } catch (error) {
-              console.error(`✗ Failed to refresh target directory: "${targetPath}"`, error);
-            }
-          } else {
-            console.log("Target directory is same as source parent, skipping duplicate refresh");
-          }
           console.log("=== DIRECTORY REFRESH COMPLETE ===");
+          
+          // Force a re-render of the FileTree component immediately
+          console.log(">>> Forcing FileTree re-render");
+          forceUpdate({});
         } else {
           console.warn("onRefreshDirectory is not defined, cannot refresh file tree");
         }
@@ -274,8 +254,12 @@ const FileTree = ({
   };
 
   const renderFileTree = (items: FileEntry[], depth = 0) => {
-    return items.map((file) => (
-      <div key={file.path}>
+    return items.map((file, index) => {
+      // Use file path as key since it's unique and stable
+      // This ensures React properly tracks items when they're added/removed
+      const itemKey = file.path;
+      return (
+      <div key={itemKey}>
         <button
           draggable
           onDragStart={(e) => handleDragStart(e, file)}
@@ -307,7 +291,8 @@ const FileTree = ({
           <div className="ml-4">{renderFileTree(file.children, depth + 1)}</div>
         )}
       </div>
-    ));
+    );
+    });
   };
 
   const handleRootDrop = async (e: React.DragEvent) => {
