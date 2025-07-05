@@ -34,7 +34,7 @@ import { useRecentFolders } from "./hooks/use-recent-folders";
 import { useRemoteConnection } from "./hooks/use-remote-connection";
 import { useSearch } from "./hooks/use-search";
 import { useSettings } from "./hooks/use-settings";
-import { useUIState } from "./hooks/use-ui-state";
+import { useUIState } from "./store/ui-state";
 import { useVim } from "./hooks/use-vim";
 import { FileEntry } from "./types/app";
 import { CoreFeaturesState, DEFAULT_CORE_FEATURES } from "./types/core-features";
@@ -42,11 +42,12 @@ import { ThemeType } from "./types/theme";
 import { getFilenameFromPath, getLanguageFromFilename } from "./utils/file-utils";
 import { GitDiff } from "./utils/git";
 import { isMac, writeFile } from "./utils/platform";
+import { useQuickEdit } from "./hooks/use-quick-edit";
 
 function App() {
-  // Use modular hooks
   const uiState = useUIState();
   const { settings, updateSetting, updateSettingsFromJSON } = useSettings();
+  const quickEdit = useQuickEdit();
 
   // Context menus hook
   const contextMenus = useContextMenus({
@@ -145,13 +146,8 @@ function App() {
     }
   }, [settings.vimMode, vimEnabled]);
 
-  // State for all project files (for command palette)
   const [allProjectFiles, setAllProjectFiles] = useState<FileEntry[]>([]);
-
-  // State for tab dragging across panes
   const [_isDraggingTab, setIsDraggingTab] = useState(false);
-
-  // State for minimap visibility (controlled by breadcrumb)
   const [isMinimapVisible, setIsMinimapVisible] = useState(false);
 
   // File operations with proper callback
@@ -283,7 +279,8 @@ function App() {
     if (rootFolderPath) {
       addToRecents(rootFolderPath);
     }
-  }, [rootFolderPath, addToRecents]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rootFolderPath]);
 
   const handleOpenRecentFolder = async (path: string) => {
     const success = await handleOpenFolderByPath(path);
@@ -406,65 +403,54 @@ function App() {
     const cursorX = textareaRect.left + currentColumn * charWidth - scrollLeft;
     const cursorY = textareaRect.top + currentLine * lineHeight - scrollTop;
 
+    let text = selectedText;
+    let selectionRange = { start, end };
+
     if (start === end) {
-      const lines = textarea.value.split("\n");
+      const linesArr = textarea.value.split("\n");
       let currentPos = 0;
       let lineIndex = 0;
-
-      for (let i = 0; i < lines.length; i++) {
-        if (currentPos + lines[i].length >= start) {
+      for (let i = 0; i < linesArr.length; i++) {
+        if (currentPos + linesArr[i].length >= start) {
           lineIndex = i;
           break;
         }
-        currentPos += lines[i].length + 1;
+        currentPos += linesArr[i].length + 1;
       }
-
       const lineStart = currentPos;
-      const lineEnd = currentPos + lines[lineIndex].length;
-      const lineText = lines[lineIndex];
-
-      uiState.setQuickEditSelection({
-        text: lineText,
-        start: lineStart,
-        end: lineEnd,
-        cursorPosition: { x: cursorX, y: cursorY },
-      });
-    } else {
-      uiState.setQuickEditSelection({
-        text: selectedText,
-        start,
-        end,
-        cursorPosition: { x: cursorX, y: cursorY },
-      });
+      const lineEnd = currentPos + linesArr[lineIndex].length;
+      text = linesArr[lineIndex];
+      selectionRange = { start: lineStart, end: lineEnd };
     }
 
-    uiState.setIsQuickEditVisible(true);
+    quickEdit.openQuickEdit({
+      text,
+      cursorPosition: { x: cursorX, y: cursorY },
+      selectionRange,
+    });
   };
 
   const handleQuickEditApply = (editedText: string) => {
     if (!activeBuffer || !codeEditorRef.current?.textarea) return;
 
     const textarea = codeEditorRef.current.textarea;
-    const { start, end } = uiState.quickEditSelection;
+    const { start, end } = quickEdit.selectionRange;
 
-    // Replace the selected text with the edited text
     const newContent =
       activeBuffer.content.substring(0, start) + editedText + activeBuffer.content.substring(end);
 
-    // Update the buffer content
     updateBufferContent(activeBuffer.id, newContent);
 
-    // Update the textarea selection to show the new text - use requestAnimationFrame for immediate execution
     requestAnimationFrame(() => {
       textarea.focus();
       textarea.setSelectionRange(start, start + editedText.length);
     });
 
-    uiState.setIsQuickEditVisible(false);
+    quickEdit.closeQuickEdit();
   };
 
   const handleQuickEditClose = () => {
-    uiState.setIsQuickEditVisible(false);
+    quickEdit.closeQuickEdit();
   };
 
   const handleToggleSidebarPosition = () => {
@@ -806,66 +792,64 @@ function App() {
         <div className="flex flex-col h-full w-full bg-[var(--primary-bg)] overflow-hidden">
           <div className="flex flex-row flex-1 overflow-hidden custom-scrollbar-auto">
             {/* Left Side - AI Chat (when sidebar is on right) or File Tree (when sidebar is on left) */}
-            {settings.sidebarPosition === "right" ? (
-              // AI Chat on left when sidebar is on right
-              coreFeatures.aiChat && (
-                <ResizableRightPane
-                  isVisible={uiState.isRightPaneVisible}
-                  defaultWidth={300}
-                  minWidth={280}
-                  maxWidth={600}
-                  position="left"
-                >
-                  <AIChat
-                    activeBuffer={activeBuffer}
-                    buffers={buffers}
-                    rootFolderPath={rootFolderPath}
-                    selectedFiles={[]}
-                    mode="chat"
-                    onApplyCode={handleApplyCodeFromChat}
-                  />
-                </ResizableRightPane>
-              )
-            ) : (
-              // File Tree on left when sidebar is on left
-              uiState.isSidebarVisible && (
-                <ResizableSidebar defaultWidth={220} minWidth={200} maxWidth={400}>
-                  <MainSidebar
-                    ref={searchViewRef}
-                    isGitViewActive={uiState.isGitViewActive}
-                    isSearchViewActive={uiState.isSearchViewActive}
-                    isRemoteViewActive={uiState.isRemoteViewActive}
-                    isRemoteWindow={isRemoteWindow}
-                    remoteConnectionName={remoteConnectionName || undefined}
-                    coreFeatures={coreFeatures}
-                    files={files}
-                    rootFolderPath={rootFolderPath}
-                    allProjectFiles={allProjectFiles}
-                    activeBufferPath={activeBuffer?.path}
-                    onViewChange={uiState.setActiveView}
-                    onOpenExtensions={handleOpenExtensions}
-                    onOpenFolder={handleOpenFolder}
-                    onCreateNewFile={handleCreateNewFile}
-                    onCreateNewFolderInDirectory={handleCreateNewFolderInDirectory}
-                    onFileSelect={
-                      isRemoteWindow
-                        ? async (path: string, isDir: boolean) => {
-                            if (isDir) {
-                              await handleFolderToggle(path);
-                            } else {
-                              await remoteFileSelect(path, isDir, openBuffer);
+            {settings.sidebarPosition === "right"
+              ? // AI Chat on left when sidebar is on right
+                coreFeatures.aiChat && (
+                  <ResizableRightPane
+                    isVisible={uiState.isRightPaneVisible}
+                    defaultWidth={300}
+                    minWidth={280}
+                    maxWidth={600}
+                    position="left"
+                  >
+                    <AIChat
+                      activeBuffer={activeBuffer}
+                      buffers={buffers}
+                      rootFolderPath={rootFolderPath}
+                      selectedFiles={[]}
+                      mode="chat"
+                      onApplyCode={handleApplyCodeFromChat}
+                    />
+                  </ResizableRightPane>
+                )
+              : // File Tree on left when sidebar is on left
+                uiState.isSidebarVisible && (
+                  <ResizableSidebar defaultWidth={220} minWidth={200} maxWidth={400}>
+                    <MainSidebar
+                      ref={searchViewRef}
+                      isGitViewActive={uiState.isGitViewActive}
+                      isSearchViewActive={uiState.isSearchViewActive}
+                      isRemoteViewActive={uiState.isRemoteViewActive}
+                      isRemoteWindow={isRemoteWindow}
+                      remoteConnectionName={remoteConnectionName || undefined}
+                      coreFeatures={coreFeatures}
+                      files={files}
+                      rootFolderPath={rootFolderPath}
+                      allProjectFiles={allProjectFiles}
+                      activeBufferPath={activeBuffer?.path}
+                      onViewChange={uiState.setActiveView}
+                      onOpenExtensions={handleOpenExtensions}
+                      onOpenFolder={handleOpenFolder}
+                      onCreateNewFile={handleCreateNewFile}
+                      onCreateNewFolderInDirectory={handleCreateNewFolderInDirectory}
+                      onFileSelect={
+                        isRemoteWindow
+                          ? async (path: string, isDir: boolean) => {
+                              if (isDir) {
+                                await handleFolderToggle(path);
+                              } else {
+                                await remoteFileSelect(path, isDir, openBuffer);
+                              }
                             }
-                          }
-                        : handleFileSelect
-                    }
-                    onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
-                    onDeletePath={(path: string) => handleDeletePath(path, false)}
-                    onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
-                    projectName={getProjectName()}
-                  />
-                </ResizableSidebar>
-              )
-            )}
+                          : handleFileSelect
+                      }
+                      onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
+                      onDeletePath={(path: string) => handleDeletePath(path, false)}
+                      onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
+                      projectName={getProjectName()}
+                    />
+                  </ResizableSidebar>
+                )}
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col bg-[var(--primary-bg)] h-full overflow-hidden">
@@ -885,14 +869,17 @@ function App() {
                 maxOpenTabs={maxOpenTabs}
               />
 
-              {/* Breadcrumb */}
-              <BreadcrumbContainer
-                activeBuffer={activeBuffer}
-                rootFolderPath={rootFolderPath}
-                onFileSelect={handleFileSelect}
-                setIsRightPaneVisible={uiState.setIsRightPaneVisible}
-                onMinimapStateChange={setIsMinimapVisible}
-              />
+              {/* Breadcrumb - Hidden in git view and extensions view */}
+              {!uiState.isGitViewActive
+                && activeBuffer?.path !== "extensions://language-servers" && (
+                  <BreadcrumbContainer
+                    activeBuffer={activeBuffer}
+                    rootFolderPath={rootFolderPath}
+                    onFileSelect={handleFileSelect}
+                    setIsRightPaneVisible={uiState.setIsRightPaneVisible}
+                    onMinimapStateChange={setIsMinimapVisible}
+                  />
+                )}
 
               {/* Find Bar */}
               <FindBar
@@ -1072,72 +1059,70 @@ function App() {
             </div>
 
             {/* Right Side - File Tree (when sidebar is on right) or AI Chat (when sidebar is on left) */}
-            {settings.sidebarPosition === "right" ? (
-              // File Tree on right when sidebar is on right
-              uiState.isSidebarVisible && (
-                <ResizableRightPane
-                  isVisible={true}
-                  defaultWidth={220}
-                  minWidth={200}
-                  maxWidth={400}
-                  position="right"
-                >
-                  <MainSidebar
-                    ref={searchViewRef}
-                    isGitViewActive={uiState.isGitViewActive}
-                    isSearchViewActive={uiState.isSearchViewActive}
-                    isRemoteViewActive={uiState.isRemoteViewActive}
-                    isRemoteWindow={isRemoteWindow}
-                    remoteConnectionName={remoteConnectionName || undefined}
-                    coreFeatures={coreFeatures}
-                    files={files}
-                    rootFolderPath={rootFolderPath}
-                    allProjectFiles={allProjectFiles}
-                    activeBufferPath={activeBuffer?.path}
-                    onViewChange={uiState.setActiveView}
-                    onOpenExtensions={handleOpenExtensions}
-                    onOpenFolder={handleOpenFolder}
-                    onCreateNewFile={handleCreateNewFile}
-                    onCreateNewFolderInDirectory={handleCreateNewFolderInDirectory}
-                    onFileSelect={
-                      isRemoteWindow
-                        ? async (path: string, isDir: boolean) => {
-                            if (isDir) {
-                              await handleFolderToggle(path);
-                            } else {
-                              await remoteFileSelect(path, isDir, openBuffer);
+            {settings.sidebarPosition === "right"
+              ? // File Tree on right when sidebar is on right
+                uiState.isSidebarVisible && (
+                  <ResizableRightPane
+                    isVisible={true}
+                    defaultWidth={220}
+                    minWidth={200}
+                    maxWidth={400}
+                    position="right"
+                  >
+                    <MainSidebar
+                      ref={searchViewRef}
+                      isGitViewActive={uiState.isGitViewActive}
+                      isSearchViewActive={uiState.isSearchViewActive}
+                      isRemoteViewActive={uiState.isRemoteViewActive}
+                      isRemoteWindow={isRemoteWindow}
+                      remoteConnectionName={remoteConnectionName || undefined}
+                      coreFeatures={coreFeatures}
+                      files={files}
+                      rootFolderPath={rootFolderPath}
+                      allProjectFiles={allProjectFiles}
+                      activeBufferPath={activeBuffer?.path}
+                      onViewChange={uiState.setActiveView}
+                      onOpenExtensions={handleOpenExtensions}
+                      onOpenFolder={handleOpenFolder}
+                      onCreateNewFile={handleCreateNewFile}
+                      onCreateNewFolderInDirectory={handleCreateNewFolderInDirectory}
+                      onFileSelect={
+                        isRemoteWindow
+                          ? async (path: string, isDir: boolean) => {
+                              if (isDir) {
+                                await handleFolderToggle(path);
+                              } else {
+                                await remoteFileSelect(path, isDir, openBuffer);
+                              }
                             }
-                          }
-                        : handleFileSelect
-                    }
-                    onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
-                    onDeletePath={(path: string) => handleDeletePath(path, false)}
-                    onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
-                    projectName={getProjectName()}
-                  />
-                </ResizableRightPane>
-              )
-            ) : (
-              // AI Chat on right when sidebar is on left
-              coreFeatures.aiChat && (
-                <ResizableRightPane
-                  isVisible={uiState.isRightPaneVisible}
-                  defaultWidth={300}
-                  minWidth={280}
-                  maxWidth={600}
-                  position="right"
-                >
-                  <AIChat
-                    activeBuffer={activeBuffer}
-                    buffers={buffers}
-                    rootFolderPath={rootFolderPath}
-                    selectedFiles={[]}
-                    mode="chat"
-                    onApplyCode={handleApplyCodeFromChat}
-                  />
-                </ResizableRightPane>
-              )
-            )}
+                          : handleFileSelect
+                      }
+                      onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
+                      onDeletePath={(path: string) => handleDeletePath(path, false)}
+                      onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
+                      projectName={getProjectName()}
+                    />
+                  </ResizableRightPane>
+                )
+              : // AI Chat on right when sidebar is on left
+                coreFeatures.aiChat && (
+                  <ResizableRightPane
+                    isVisible={uiState.isRightPaneVisible}
+                    defaultWidth={300}
+                    minWidth={280}
+                    maxWidth={600}
+                    position="right"
+                  >
+                    <AIChat
+                      activeBuffer={activeBuffer}
+                      buffers={buffers}
+                      rootFolderPath={rootFolderPath}
+                      selectedFiles={[]}
+                      mode="chat"
+                      onApplyCode={handleApplyCodeFromChat}
+                    />
+                  </ResizableRightPane>
+                )}
           </div>
 
           {/* Bottom Pane */}
@@ -1194,6 +1179,7 @@ function App() {
               );
             }}
             onThemeChange={handleThemeChange}
+            onQuickEditInline={handleQuickEdit}
           />
 
           {/* GitHub Copilot Settings */}
@@ -1204,11 +1190,11 @@ function App() {
 
           {/* Quick Edit Inline */}
           <QuickEditInline
-            isOpen={uiState.isQuickEditVisible}
+            isOpen={quickEdit.isOpen}
             onClose={handleQuickEditClose}
             onApplyEdit={handleQuickEditApply}
-            selectedText={uiState.quickEditSelection.text}
-            cursorPosition={uiState.quickEditSelection.cursorPosition}
+            selectedText={quickEdit.selectedText}
+            cursorPosition={quickEdit.cursorPosition}
             filename={activeBuffer ? getFilenameFromPath(activeBuffer.path) : undefined}
             language={
               activeBuffer

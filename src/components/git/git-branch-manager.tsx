@@ -1,18 +1,6 @@
-import { useState, useEffect } from "react";
-import {
-  GitBranch,
-  ChevronDown,
-  Plus,
-  Trash2,
-  Check,
-  X,
-} from "lucide-react";
-import {
-  getBranches,
-  checkoutBranch,
-  createBranch,
-  deleteBranch,
-} from "../../utils/git";
+import { Check, ChevronDown, GitBranch, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../../utils/git";
 
 interface GitBranchManagerProps {
   currentBranch?: string;
@@ -45,7 +33,7 @@ const GitBranchManager = ({ currentBranch, repoPath, onBranchChange }: GitBranch
 
   const loadBranches = async () => {
     if (!repoPath) return;
-    
+
     try {
       const branchList = await getBranches(repoPath);
       setBranches(branchList);
@@ -119,13 +107,13 @@ const GitBranchManager = ({ currentBranch, repoPath, onBranchChange }: GitBranch
       </button>
 
       {showModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50"
           onClick={() => setShowModal(false)}
         >
-          <div 
-            className="bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg shadow-xl w-80 max-h-[60vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+          <div
+            className="bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg shadow-xl w-120 max-h-[60vh] flex flex-col"
+            onClick={e => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-color)]">
@@ -152,9 +140,9 @@ const GitBranchManager = ({ currentBranch, repoPath, onBranchChange }: GitBranch
                     type="text"
                     placeholder="Enter branch name..."
                     value={newBranchName}
-                    onChange={(e) => setNewBranchName(e.target.value)}
+                    onChange={e => setNewBranchName(e.target.value)}
                     className="flex-1 bg-[var(--secondary-bg)] text-[var(--text-color)] border border-[var(--border-color)] px-2 py-1.5 text-xs rounded focus:outline-none focus:border-blue-500"
-                    onKeyDown={(e) => {
+                    onKeyDown={e => {
                       if (e.key === "Enter" && newBranchName.trim()) {
                         e.preventDefault();
                         handleCreateBranch();
@@ -187,7 +175,7 @@ const GitBranchManager = ({ currentBranch, repoPath, onBranchChange }: GitBranch
                   Branches ({branches.length})
                 </h4>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto">
                 {branches.length === 0 ? (
                   <div className="p-3 text-center text-xs text-[var(--text-lighter)] italic">
@@ -195,7 +183,7 @@ const GitBranchManager = ({ currentBranch, repoPath, onBranchChange }: GitBranch
                   </div>
                 ) : (
                   <div className="p-1">
-                    {branches.map((branch) => (
+                    {branches.map(branch => (
                       <div
                         key={branch}
                         className="flex items-center justify-between px-2 py-1.5 hover:bg-[var(--hover-color)] rounded group"
@@ -238,8 +226,15 @@ const GitBranchManager = ({ currentBranch, repoPath, onBranchChange }: GitBranch
             {/* Modal Footer */}
             <div className="px-3 py-2 border-t border-[var(--border-color)] bg-[var(--secondary-bg)] rounded-b-lg">
               <div className="flex items-center justify-between text-[10px] text-[var(--text-lighter)]">
-                <span>Current: <span className="font-mono text-[var(--text-color)]">{currentBranch}</span></span>
-                <span>Press <kbd className="px-1 py-0.5 bg-[var(--hover-color)] rounded text-[9px]">Esc</kbd> to close</span>
+                <span>
+                  Current:{" "}
+                  <span className="font-mono text-[var(--text-color)]">{currentBranch}</span>
+                </span>
+                <span>
+                  Press{" "}
+                  <kbd className="px-1 py-0.5 bg-[var(--hover-color)] rounded text-[9px]">Esc</kbd>{" "}
+                  to close
+                </span>
               </div>
             </div>
           </div>
@@ -249,4 +244,4 @@ const GitBranchManager = ({ currentBranch, repoPath, onBranchChange }: GitBranch
   );
 };
 
-export default GitBranchManager; 
+export default GitBranchManager;

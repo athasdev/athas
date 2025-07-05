@@ -4,6 +4,7 @@ Athas is a modern, lightweight code editor with powerful features for developers
 
 ## Table of Contents
 
+
 1. [Editor Features](#editor-features)
 2. [File Management](#file-management)
 3. [Git Integration](#git-integration)
@@ -100,9 +101,10 @@ Athas provides intelligent code assistance through LSP:
 - `Escape` to dismiss
 - Configurable in settings
 
-**Supported Models:**
-- OpenAI GPT-3.5/4
-- Custom API endpoints
+**Supported Providers:**
+- OpenAI
+- Anthropic
+- OpenRouter
 
 ## File Management
 
@@ -212,12 +214,13 @@ Access via the AI icon in sidebar.
 - Apply suggestions to editor
 
 **Supported Providers:**
-- OpenAI (GPT-3.5, GPT-4)
+- OpenAI
 - Anthropic (Claude)
 - Google (Gemini)
 - Groq
 - DeepSeek
 - xAI
+- v0
 
 **Using AI Chat:**
 1. Open AI panel

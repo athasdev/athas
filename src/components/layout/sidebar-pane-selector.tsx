@@ -1,4 +1,4 @@
-import { Folder, Search, GitBranch, Server, Package } from "lucide-react";
+import { Folder, GitBranch, Package, Search, Server } from "lucide-react";
 import Button from "../ui/button";
 
 interface SidebarPaneSelectorProps {

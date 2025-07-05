@@ -587,28 +587,6 @@ const DiffViewer = ({
 
       {/* Diff Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        {/* Split View Column Headers */}
-        {viewMode === "split" && hunks.length > 0 && (
-          <div className="sticky top-0 z-20 bg-[var(--secondary-bg)] border-b border-[var(--border-color)] flex text-xs font-medium">
-            <div className="flex-1 flex border-r border-[var(--border-color)]">
-              <div className="w-12 px-2 py-2 text-center text-[var(--text-lighter)] border-r border-[var(--border-color)]">
-                #
-              </div>
-              <div className="flex-1 px-3 py-2 text-[var(--text-color)]">
-                {diff.is_renamed && diff.old_path ? diff.old_path : "Original"}
-              </div>
-            </div>
-            <div className="flex-1 flex">
-              <div className="w-12 px-2 py-2 text-center text-[var(--text-lighter)] border-r border-[var(--border-color)]">
-                #
-              </div>
-              <div className="flex-1 px-3 py-2 text-[var(--text-color)]">
-                {diff.is_renamed && diff.new_path ? diff.new_path : "Modified"}
-              </div>
-            </div>
-          </div>
-        )}
-
         {hunks.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">

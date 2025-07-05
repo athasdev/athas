@@ -1,4 +1,4 @@
-import { Monitor, Moon, Palette, Settings, Sun, X } from "lucide-react";
+import { Bot, Monitor, Moon, Palette, Settings, Sun, X } from "lucide-react";
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { ThemeType } from "../types/theme";
 
@@ -16,6 +16,7 @@ interface CommandPaletteProps {
   onClose: () => void;
   onOpenSettings: () => void;
   onThemeChange: (theme: ThemeType) => void;
+  onQuickEditInline?: () => void;
 }
 
 export interface CommandPaletteRef {
@@ -23,7 +24,7 @@ export interface CommandPaletteRef {
 }
 
 const CommandPalette = forwardRef<CommandPaletteRef, CommandPaletteProps>(
-  ({ isVisible, onClose, onOpenSettings, onThemeChange }, ref) => {
+  ({ isVisible, onClose, onOpenSettings, onThemeChange, onQuickEditInline }, ref) => {
     const [query, setQuery] = useState("");
     const [selectedIndex, setSelectedIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -37,8 +38,29 @@ const CommandPalette = forwardRef<CommandPaletteRef, CommandPaletteProps>(
       },
     }));
 
+    // Theme management
+    const setTheme = (
+      theme: "auto" | "light" | "dark" | "midnight" | "tokyo-night" | "vesper" | "aura",
+    ) => {
+      if (onThemeChange) {
+        onThemeChange(theme);
+      }
+      onClose();
+    };
+
     // Define available actions
     const actions: Action[] = [
+      {
+        id: "ai-quick-edit",
+        label: "AI: Quick Edit Selection",
+        description: "Edit selected text using AI inline",
+        icon: <Bot size={16} />,
+        category: "AI",
+        action: () => {
+          if (onQuickEditInline) onQuickEditInline();
+          onClose();
+        },
+      },
       {
         id: "open-settings",
         label: "Preferences: Open Settings (JSON)",
@@ -117,16 +139,6 @@ const CommandPalette = forwardRef<CommandPaletteRef, CommandPaletteProps>(
         || action.description?.toLowerCase().includes(query.toLowerCase())
         || action.category.toLowerCase().includes(query.toLowerCase()),
     );
-
-    // Theme management
-    const setTheme = (
-      theme: "auto" | "light" | "dark" | "midnight" | "tokyo-night" | "vesper" | "aura",
-    ) => {
-      if (onThemeChange) {
-        onThemeChange(theme);
-      }
-      onClose();
-    };
 
     // Handle keyboard navigation
     useEffect(() => {

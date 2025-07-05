@@ -60,7 +60,7 @@ const WelcomeScreen = ({
                 <button
                   key={index}
                   onClick={() => handleRecentFolderClick(folder.path)}
-                  className="w-full p-2 rounded-md paper-recent-item transition-all duration-200 text-left group hover:bg-gray-100 cursor-pointer active:scale-[0.99]"
+                  className="w-full p-2 rounded-md paper-recent-item transition-all duration-200 text-left group cursor-pointer active:scale-[0.99]"
                 >
                   <div className="flex items-center gap-2">
                     <FolderOpen

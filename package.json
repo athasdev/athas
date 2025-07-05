@@ -39,7 +39,8 @@
     "prismjs": "^1.30.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "vscode-languageserver-protocol": "^3.17.5"
+    "vscode-languageserver-protocol": "^3.17.5",
+    "zustand": "^5.0.6"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",

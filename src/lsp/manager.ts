@@ -1,6 +1,6 @@
 import { Diagnostic } from "vscode-languageserver-protocol";
-import { LSPClient } from "./lsp-client";
 import { LSP_CONFIGS, getLanguageFromPath } from "./configs";
+import { LSPClient } from "./lsp-client";
 import { LSPClientEvents } from "./types";
 
 export class LSPManager {
@@ -8,9 +8,7 @@ export class LSPManager {
   private workspaceRoot: string | null = null;
   private documentLanguages = new Map<string, string>();
 
-  constructor(
-    private onDiagnostics?: (uri: string, diagnostics: Diagnostic[]) => void
-  ) {}
+  constructor(private onDiagnostics?: (uri: string, diagnostics: Diagnostic[]) => void) {}
 
   async setWorkspaceRoot(path: string): Promise<void> {
     if (this.workspaceRoot == path) {
@@ -34,7 +32,7 @@ export class LSPManager {
       const config = LSP_CONFIGS[language];
       const events: LSPClientEvents = {
         onDiagnostics: this.onDiagnostics,
-        onError: (error) => console.error(`LSP Error (${language}):`, error),
+        onError: error => console.error(`LSP Error (${language}):`, error),
       };
 
       client = new LSPClient(language, config, events);
@@ -106,4 +104,3 @@ export class LSPManager {
     return getLanguageFromPath(filePath) !== null;
   }
 }
-

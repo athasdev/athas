@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { CompletionItem } from "vscode-languageserver-protocol";
 
 interface CompletionDropdownProps {
@@ -13,6 +13,7 @@ export const CompletionDropdown = React.memo(function CompletionDropdown({
   items,
   selectedIndex,
   onSelect,
+  onClose,
   position,
 }: CompletionDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -27,14 +28,59 @@ export const CompletionDropdown = React.memo(function CompletionDropdown({
     }
   }, [selectedIndex]);
 
-  // Memoize position calculation to prevent unnecessary recalculations
-  const adjustedPosition = useMemo(
-    () => ({
-      top: Math.min(Math.max(position.top, 0), window.innerHeight - 200),
-      left: Math.min(Math.max(position.left, 0), window.innerWidth - 280),
-    }),
-    [position.top, position.left],
-  );
+  // Improved position calculation with better edge detection
+  const adjustedPosition = useMemo(() => {
+    const dropdownWidth = 320; // Max width of dropdown
+    const dropdownHeight = Math.min(items.length * 40, 320); // Estimate height, max 320px
+    const padding = 8; // Padding from edges
+
+    let { top, left } = position;
+
+    // Adjust horizontal position if dropdown would go off-screen
+    if (left + dropdownWidth > window.innerWidth - padding) {
+      left = Math.max(padding, window.innerWidth - dropdownWidth - padding);
+    }
+
+    // Adjust vertical position if dropdown would go off-screen
+    if (top + dropdownHeight > window.innerHeight - padding) {
+      // Try positioning above the cursor
+      const abovePosition = top - dropdownHeight - 20; // 20px offset from cursor
+      if (abovePosition >= padding) {
+        top = abovePosition;
+      } else {
+        // If can't fit above, position at bottom with scroll
+        top = Math.max(padding, window.innerHeight - dropdownHeight - padding);
+      }
+    }
+
+    return {
+      top: Math.max(padding, top),
+      left: Math.max(padding, left),
+    };
+  }, [position.top, position.left, items.length]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [onClose]);
 
   if (items.length === 0) {
     return null;
@@ -43,45 +89,72 @@ export const CompletionDropdown = React.memo(function CompletionDropdown({
   return (
     <div
       ref={dropdownRef}
-      className="fixed z-50 bg-[var(--primary-bg)] border border-[var(--border-color)] rounded shadow-lg max-h-48 overflow-y-auto min-w-[240px] max-w-[360px] custom-scrollbar"
+      className="fixed z-[100] bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg shadow-xl scrollbar-hidden"
       style={{
         top: adjustedPosition.top,
         left: adjustedPosition.left,
-        // Ensure it's visible with explicit display and positioning
+        maxHeight: "320px",
+        minWidth: "260px",
+        maxWidth: "400px",
+        overflowY: "auto",
+        overflowX: "hidden",
+        // Ensure proper stacking and visibility
         display: "block",
         visibility: "visible",
+        // Add backdrop blur for better visual separation
+        backdropFilter: "blur(8px)",
+        // Subtle animation
+        animation: "fadeInUp 0.15s ease-out",
       }}
     >
-      {items.map((item, index) => (
-        <div
-          key={`${item.label}-${item.kind}-${index}`}
-          className={`px-2 py-1 cursor-pointer flex items-center gap-2 transition-colors duration-150 text-xs ${
-            index === selectedIndex
-              ? "bg-[var(--selected-color)] text-[var(--text-color)]"
-              : "hover:bg-[var(--hover-color)]"
-          }`}
-          onClick={() => onSelect(item)}
-        >
-          <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center bg-[var(--secondary-bg)] rounded-sm border border-[var(--border-color)]">
-            <span className="text-xs font-medium text-[var(--text-lighter)]">
-              {getCompletionIcon(item.kind)}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-mono text-xs text-[var(--text-color)] truncate">{item.label}</div>
-            {item.detail && (
-              <div className="text-xs text-[var(--text-lighter)] truncate opacity-70">
-                {item.detail}
+      {items.slice(0, 20).map(
+        (
+          item,
+          index, // Limit to 20 items for performance
+        ) => (
+          <div
+            key={`${item.label}-${item.kind}-${index}`}
+            className={`px-3 py-2 cursor-pointer flex items-center gap-3 transition-all duration-100 text-sm border-b border-[var(--border-color)] last:border-b-0 ${
+              index === selectedIndex
+                ? "bg-[var(--selected-color)] text-[var(--text-color)] shadow-sm"
+                : "hover:bg-[var(--hover-color)] text-[var(--text-color)]"
+            }`}
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSelect(item);
+            }}
+            onMouseEnter={() => {
+              // Optional: Update selected index on hover for better UX
+              // setSelectedLspIndex(index);
+            }}
+          >
+            <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center bg-[var(--secondary-bg)] rounded border border-[var(--border-color)] text-xs font-semibold">
+              <span className="text-[var(--text-lighter)]">{getCompletionIcon(item.kind)}</span>
+            </div>
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <div className="font-mono text-sm text-[var(--text-color)] truncate font-medium">
+                {item.label}
               </div>
-            )}
+              {item.detail && (
+                <div className="text-xs text-[var(--text-lighter)] truncate opacity-75 mt-0.5">
+                  {item.detail}
+                </div>
+              )}
+            </div>
+            <div className="flex-shrink-0">
+              <span className="text-xs text-[var(--text-lighter)] opacity-60 font-medium">
+                {getCompletionTypeLabel(item.kind)}
+              </span>
+            </div>
           </div>
-          <div className="flex-shrink-0">
-            <span className="text-xs text-[var(--text-lighter)] opacity-60">
-              {getCompletionTypeLabel(item.kind)}
-            </span>
-          </div>
+        ),
+      )}
+      {items.length > 20 && (
+        <div className="px-3 py-2 text-xs text-[var(--text-lighter)] text-center border-t border-[var(--border-color)] bg-[var(--secondary-bg)]">
+          +{items.length - 20} more items...
         </div>
-      ))}
+      )}
     </div>
   );
 });
@@ -93,13 +166,13 @@ function getCompletionIcon(kind?: number): string {
     case 2:
       return "M"; // Method
     case 3:
-      return "F"; // Function
+      return "f"; // Function
     case 4:
       return "C"; // Constructor
     case 5:
       return "F"; // Field
     case 6:
-      return "V"; // Variable
+      return "v"; // Variable
     case 7:
       return "C"; // Class
     case 8:
@@ -107,7 +180,7 @@ function getCompletionIcon(kind?: number): string {
     case 9:
       return "M"; // Module
     case 10:
-      return "P"; // Property
+      return "p"; // Property
     case 11:
       return "U"; // Unit
     case 12:
@@ -115,31 +188,31 @@ function getCompletionIcon(kind?: number): string {
     case 13:
       return "E"; // Enum
     case 14:
-      return "K"; // Keyword
+      return "k"; // Keyword
     case 15:
       return "S"; // Snippet
     case 16:
       return "🎨"; // Color
     case 17:
-      return "F"; // File
+      return "📄"; // File
     case 18:
       return "R"; // Reference
     case 19:
-      return "D"; // Folder
+      return "📁"; // Folder
     case 20:
-      return "E"; // EnumMember
+      return "e"; // EnumMember
     case 21:
-      return "C"; // Constant
+      return "c"; // Constant
     case 22:
       return "S"; // Struct
     case 23:
-      return "E"; // Event
+      return "⚡"; // Event
     case 24:
-      return "O"; // Operator
+      return "⊕"; // Operator
     case 25:
       return "T"; // TypeParameter
     default:
-      return "T";
+      return "?";
   }
 }
 
@@ -196,6 +269,6 @@ function getCompletionTypeLabel(kind?: number): string {
     case 25:
       return "type param";
     default:
-      return "text";
+      return "unknown";
   }
 }

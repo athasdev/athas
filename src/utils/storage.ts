@@ -7,14 +7,14 @@
  */
 export const clearLocalStorageByPrefix = (prefix: string): void => {
   const keysToRemove: string[] = [];
-  
+
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key && key.startsWith(prefix)) {
       keysToRemove.push(key);
     }
   }
-  
+
   keysToRemove.forEach(key => localStorage.removeItem(key));
   console.log(`Cleared ${keysToRemove.length} items with prefix "${prefix}"`);
 };
@@ -24,7 +24,7 @@ export const clearLocalStorageByPrefix = (prefix: string): void => {
  */
 export const getLocalStorageSize = (): number => {
   let total = 0;
-  
+
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key) {
@@ -34,7 +34,7 @@ export const getLocalStorageSize = (): number => {
       }
     }
   }
-  
+
   return total;
 };
 
@@ -42,8 +42,8 @@ export const getLocalStorageSize = (): number => {
  * Safely stores an item in localStorage with quota exceeded handling
  */
 export const safeLocalStorageSetItem = (
-  key: string, 
-  value: string, 
+  key: string,
+  value: string,
   options: {
     clearPrefix?: string;
     maxRetries?: number;
@@ -51,7 +51,7 @@ export const safeLocalStorageSetItem = (
     onQuotaExceeded?: (error: Error) => void;
     onSuccess?: () => void;
     onTruncated?: (originalSize: number, truncatedSize: number) => void;
-  } = {}
+  } = {},
 ): boolean => {
   const {
     clearPrefix,
@@ -59,7 +59,7 @@ export const safeLocalStorageSetItem = (
     truncateData,
     onQuotaExceeded,
     onSuccess,
-    onTruncated
+    onTruncated,
   } = options;
 
   let attempts = 0;
@@ -68,18 +68,18 @@ export const safeLocalStorageSetItem = (
   while (attempts <= maxRetries) {
     try {
       localStorage.setItem(key, currentValue);
-      
+
       if (attempts === 0) {
         onSuccess?.();
       } else if (attempts > 0 && onTruncated) {
         onTruncated(value.length, currentValue.length);
       }
-      
+
       return true;
     } catch (error) {
-      if (error instanceof Error && error.name === 'QuotaExceededError') {
+      if (error instanceof Error && error.name === "QuotaExceededError") {
         console.warn(`localStorage quota exceeded on attempt ${attempts + 1}`, error);
-        
+
         if (attempts === 0 && clearPrefix) {
           // First attempt: try clearing items with specified prefix
           clearLocalStorageByPrefix(clearPrefix);
@@ -87,26 +87,26 @@ export const safeLocalStorageSetItem = (
           // Second attempt: try truncating the data
           const originalLength = currentValue.length;
           currentValue = truncateData(currentValue);
-          
+
           if (currentValue.length >= originalLength) {
             // Truncation didn't help, give up
-            console.error('Data truncation did not reduce size sufficiently');
+            console.error("Data truncation did not reduce size sufficiently");
             onQuotaExceeded?.(error);
             return false;
           }
         } else {
           // Final attempt failed
-          console.error('All attempts to store in localStorage failed');
+          console.error("All attempts to store in localStorage failed");
           onQuotaExceeded?.(error);
           return false;
         }
       } else {
         // Non-quota error
-        console.error('localStorage error:', error);
+        console.error("localStorage error:", error);
         return false;
       }
     }
-    
+
     attempts++;
   }
 
@@ -116,23 +116,26 @@ export const safeLocalStorageSetItem = (
 /**
  * Truncates a JSON string by limiting array elements
  */
-export const truncateJsonArrayData = (jsonString: string, maxArrayLength: number = 1000): string => {
+export const truncateJsonArrayData = (
+  jsonString: string,
+  maxArrayLength: number = 1000,
+): string => {
   try {
     const data = JSON.parse(jsonString);
-    
+
     // If the data has a 'lines' array (like our diff data), truncate it
-    if (data && typeof data === 'object' && Array.isArray(data.lines)) {
+    if (data && typeof data === "object" && Array.isArray(data.lines)) {
       return JSON.stringify({
         ...data,
         lines: data.lines.slice(0, maxArrayLength),
         _truncated: true,
-        _originalLength: data.lines.length
+        _originalLength: data.lines.length,
       });
     }
-    
+
     return jsonString;
   } catch (error) {
-    console.error('Failed to truncate JSON data:', error);
+    console.error("Failed to truncate JSON data:", error);
     return jsonString;
   }
 };
@@ -150,7 +153,7 @@ export const getStorageStats = (): {
   let itemCount = 0;
   let diffContentSize = 0;
   let diffContentCount = 0;
-  
+
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key) {
@@ -159,19 +162,19 @@ export const getStorageStats = (): {
         const size = key.length + value.length;
         totalSize += size;
         itemCount++;
-        
-        if (key.startsWith('diff-content-')) {
+
+        if (key.startsWith("diff-content-")) {
           diffContentSize += size;
           diffContentCount++;
         }
       }
     }
   }
-  
+
   return {
     totalSize,
     itemCount,
     diffContentSize,
-    diffContentCount
+    diffContentCount,
   };
-}; 
+};
