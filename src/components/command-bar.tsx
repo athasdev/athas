@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { File, Command as CommandIcon, X, Clock } from "lucide-react";
+import { File, Command as CommandIcon, X } from "lucide-react";
 import {
   Command,
   CommandInput,
@@ -191,80 +191,74 @@ const CommandBar = ({
     <div className="fixed inset-0 flex items-start justify-center pt-20 z-50 pointer-events-none">
       <div
         data-command-bar
-        className="bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-lg shadow-2xl w-96 max-h-96 overflow-hidden pointer-events-auto"
+        className="bg-[#1a1a1a] border border-[#333] rounded-lg shadow-2xl w-96 max-h-96 overflow-hidden pointer-events-auto"
       >
         <Command className="bg-transparent border-none shadow-none" shouldFilter={false}>
-          {/* Header */}
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border-color)]">
-            <CommandIcon size={14} className="text-[var(--text-lighter)]" />
-            <CommandInput
-              value={query}
-              onValueChange={setQuery}
-              placeholder="Type to search files..."
-              className="flex-1 bg-transparent text-[var(--text-color)] text-sm font-mono focus:outline-none placeholder-[var(--text-lighter)] border-none h-auto py-0 shadow-none ring-0 focus:ring-0"
-              autoFocus
-            />
+          {/* Minimal Header */}
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <div className="flex items-center">
+              <CommandIcon size={16} className="text-[#666]" />
+              <CommandInput
+                value={query}
+                onValueChange={setQuery}
+                placeholder="Type to search files..."
+                className="flex-1 bg-transparent text-[#e0e0e0] text-sm font-mono focus:outline-none placeholder-[#666] border-none h-auto py-0 shadow-none ring-0 focus:ring-0"
+                autoFocus
+              />
+            </div>
             <button
               onClick={onClose}
-              className="p-1 rounded hover:bg-[var(--hover-color)] transition-colors duration-150"
+              className="p-1 rounded hover:bg-[#333] transition-colors duration-150"
             >
-              <X size={14} className="text-[var(--text-lighter)]" />
+              <X size={16} className="text-[#666]" />
             </button>
           </div>
 
           {/* Command List */}
           <CommandList className="max-h-80 overflow-y-auto custom-scrollbar bg-transparent">
-            <CommandEmpty className="px-4 py-6 text-center text-[var(--text-lighter)] text-sm font-mono">
+            <CommandEmpty className="px-4 py-6 text-center text-[#666] text-sm font-mono">
               {query ? "No matching files found" : "No files available"}
             </CommandEmpty>
 
-            {/* Recent Files Section */}
+            {/* Recent Files Section - Minimal */}
             {recentFilesInResults.length > 0 && (
               <CommandGroup className="p-0">
-                <div className="px-4 py-2 text-xs font-medium text-[var(--text-lighter)] border-b border-[var(--border-color)] bg-[var(--primary-bg)]">
-                  <div className="flex items-center gap-2">
-                    <Clock size={12} />
-                    Recently Opened
-                  </div>
-                </div>
-                {recentFilesInResults.map(file => (
+                {recentFilesInResults.map((file, index) => (
                   <CommandItem
                     key={`recent-${file.path}`}
                     value={`${file.name} ${file.path}`}
                     onSelect={() => handleFileSelect(file.path)}
-                    className="px-4 py-2 flex items-center gap-3 cursor-pointer aria-selected:bg-[var(--selected-color)] aria-selected:text-[var(--text-color)] hover:bg-[var(--hover-color)] font-mono m-0 rounded-none border-none bg-transparent transition-colors duration-150"
+                    className="px-4 py-2 flex items-center gap-3 cursor-pointer aria-selected:bg-[#2a2a2a] aria-selected:text-[#e0e0e0] hover:bg-[#2a2a2a] font-mono m-0 rounded-none border-none bg-transparent transition-colors duration-150"
                   >
-                    <File size={14} className="text-blue-400" />
+                    <File size={16} className="text-[#8ab4f8]" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-[var(--text-color)] truncate">{file.name}</div>
-                      <div className="text-xs text-[var(--text-lighter)] truncate">
+                      <div className="text-sm text-[#e0e0e0] truncate">{file.name}</div>
+                      <div className="text-xs text-[#666] truncate">
                         {getRelativePath(file.path)}
                       </div>
                     </div>
+                    {index < 3 && (
+                      <div className="w-1 h-1 bg-[#8ab4f8] rounded-full opacity-60"></div>
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>
             )}
 
-            {/* Other Files Section */}
+            {/* Other Files Section - Minimal */}
             {otherFiles.length > 0 && (
               <CommandGroup className="p-0">
-                {recentFilesInResults.length > 0 && (
-                  <div className="px-4 py-2 text-xs font-medium text-[var(--text-lighter)] border-b border-[var(--border-color)] bg-[var(--primary-bg)]">
-                    Other Files
-                  </div>
-                )}
                 {otherFiles.map(file => (
                   <CommandItem
                     key={`other-${file.path}`}
                     value={`${file.name} ${file.path}`}
                     onSelect={() => handleFileSelect(file.path)}
-                    className="px-4 py-2 flex items-center gap-3 cursor-pointer aria-selected:bg-[var(--selected-color)] aria-selected:text-[var(--text-color)] hover:bg-[var(--hover-color)] font-mono m-0 rounded-none border-none bg-transparent transition-colors duration-150"
+                    className="px-4 py-2 flex items-center gap-3 cursor-pointer aria-selected:bg-[#2a2a2a] aria-selected:text-[#e0e0e0] hover:bg-[#2a2a2a] font-mono m-0 rounded-none border-none bg-transparent transition-colors duration-150"
                   >
-                    <File size={14} className="text-[var(--text-lighter)]" />
+                    <File size={16} className="text-[#666]" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-[var(--text-color)] truncate">{file.name}</div>
-                      <div className="text-xs text-[var(--text-lighter)] truncate">
+                      <div className="text-sm text-[#e0e0e0] truncate">{file.name}</div>
+                      <div className="text-xs text-[#666] truncate">
                         {getRelativePath(file.path)}
                       </div>
                     </div>
