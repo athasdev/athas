@@ -129,10 +129,12 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
   );
 
   // Terminal-specific keyboard shortcuts
+  // Terminal-specific keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle shortcuts when the terminal container is active
-      if (!document.querySelector('[data-terminal-container="active"]')) {
+      // Only handle shortcuts when the terminal container or its children have focus
+      const terminalContainer = document.querySelector('[data-terminal-container="active"]');
+      if (!terminalContainer || !terminalContainer.contains(document.activeElement)) {
         return;
       }
 
@@ -236,7 +238,7 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
     if (terminals.length === 0) {
       handleNewTerminal();
     }
-  }, []); // Only run on mount
+  }, [handleNewTerminal, terminals.length]);
 
   // Create first terminal if none exist (fallback UI)
   if (terminals.length === 0) {

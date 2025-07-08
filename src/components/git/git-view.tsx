@@ -162,6 +162,36 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
     }
   };
 
+  const handleOpenOriginalFile = async (filePath: string) => {
+    if (!repoPath || !onFileSelect) return;
+
+    try {
+      // Handle special Git path formats
+      let actualFilePath = filePath;
+
+      // Handle renamed files: "oldfile -> newfile"
+      if (filePath.includes(" -> ")) {
+        const parts = filePath.split(" -> ");
+        // For opening the file, always use the new name
+        actualFilePath = parts[1].trim();
+      }
+
+      // Handle quoted filenames: "\"filename\""
+      if (actualFilePath.startsWith('"') && actualFilePath.endsWith('"')) {
+        actualFilePath = actualFilePath.slice(1, -1);
+      }
+
+      // Construct the full path
+      const fullPath = `${repoPath}/${actualFilePath}`;
+
+      // Open the file directly (not as a diff)
+      onFileSelect(fullPath, false);
+    } catch (error) {
+      console.error("Error opening file:", error);
+      alert(`Failed to open file ${filePath}:\n${error}`);
+    }
+  };
+
   const handleViewFileDiff = async (filePath: string, staged: boolean = false) => {
     if (!repoPath || !onFileSelect) return;
 
@@ -512,6 +542,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
           <GitStatusPanel
             files={gitStatus.files}
             onFileSelect={handleViewFileDiff}
+            onOpenFile={handleOpenOriginalFile}
             onRefresh={loadGitData}
             repoPath={repoPath}
           />

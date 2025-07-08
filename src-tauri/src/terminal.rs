@@ -351,11 +351,11 @@ impl TerminalConnection {
                                 if let Some(ref mut writer) = writer_guard.as_mut() {
                                     for response in responses {
                                         if let Err(e) = writer.write_all(response.as_bytes()) {
-                                            println!("Failed to write response to PTY: {}", e);
+                                            log::error!("Failed to write response to PTY: {}", e);
                                             break;
                                         }
                                         if let Err(e) = writer.flush() {
-                                            println!("Failed to flush response to PTY: {}", e);
+                                            log::error!("Failed to flush response to PTY: {}", e);
                                             break;
                                         }
                                     }
@@ -367,13 +367,13 @@ impl TerminalConnection {
                             if let Err(e) = app_handle
                                 .emit(&format!("terminal-event-{}", connection_id), &event)
                             {
-                                println!("Failed to emit terminal event: {}", e);
+                                log::error!("Failed to emit terminal event: {}", e);
                                 break;
                             }
                         }
                     }
                     Err(e) => {
-                        println!("Error reading from PTY: {}", e);
+                        log::error!("Error reading from PTY: {}", e);
                         break;
                     }
                 }
@@ -738,7 +738,7 @@ impl TerminalState {
             _ => {
                 // Unknown sequence - log for debugging only in development
                 #[cfg(debug_assertions)]
-                println!("Unknown CSI sequence: ESC[{}{}", params, cmd);
+                log::debug!("Unknown CSI sequence: ESC[{}{}", params, cmd);
             }
         }
     }

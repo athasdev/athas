@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Plus,
   Minus,
@@ -9,6 +9,7 @@ import {
   FileX,
   RotateCcw,
   Trash2,
+  FileText,
 } from "lucide-react";
 import {
   stageFile,
@@ -22,15 +23,30 @@ import {
 interface GitStatusPanelProps {
   files: GitFile[];
   onFileSelect?: (path: string, staged: boolean) => void;
+  onOpenFile?: (path: string) => void;
   onRefresh?: () => void;
   repoPath?: string;
 }
 
-const GitStatusPanel = ({ files, onFileSelect, onRefresh, repoPath }: GitStatusPanelProps) => {
-  const [isLoading, setIsLoading] = useState(false);
+interface ContextMenuState {
+  x: number;
+  y: number;
+  filePath: string;
+  isStaged: boolean;
+}
 
-  const stagedFiles = files.filter((f) => f.staged);
-  const unstagedFiles = files.filter((f) => !f.staged);
+const GitStatusPanel = ({
+  files,
+  onFileSelect,
+  onOpenFile,
+  onRefresh,
+  repoPath,
+}: GitStatusPanelProps) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+
+  const stagedFiles = files.filter(f => f.staged);
+  const unstagedFiles = files.filter(f => !f.staged);
 
   const getFileIcon = (file: GitFile) => {
     switch (file.status) {
@@ -112,9 +128,11 @@ const GitStatusPanel = ({ files, onFileSelect, onRefresh, repoPath }: GitStatusP
 
   const handleDiscardFile = async (filePath: string) => {
     if (!repoPath) return;
-    const confirmed = confirm(`Are you sure you want to discard changes to ${filePath}? This cannot be undone.`);
+    const confirmed = confirm(
+      `Are you sure you want to discard changes to ${filePath}? This cannot be undone.`,
+    );
     if (!confirmed) return;
-    
+
     setIsLoading(true);
     try {
       await discardFileChanges(repoPath, filePath);
@@ -123,6 +141,29 @@ const GitStatusPanel = ({ files, onFileSelect, onRefresh, repoPath }: GitStatusP
       setIsLoading(false);
     }
   };
+
+  const handleContextMenu = (e: React.MouseEvent, filePath: string, isStaged: boolean) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      filePath: filePath,
+      isStaged: isStaged,
+    });
+  };
+
+  const handleDocumentClick = () => {
+    setContextMenu(null);
+  };
+
+  useEffect(() => {
+    document.addEventListener("click", handleDocumentClick);
+    return () => {
+      document.removeEventListener("click", handleDocumentClick);
+    };
+  }, []);
 
   return (
     <div className="space-y-0">
@@ -156,18 +197,26 @@ const GitStatusPanel = ({ files, onFileSelect, onRefresh, repoPath }: GitStatusP
               <div
                 key={`staged-${file.path}-${index}`}
                 className="flex items-center gap-2 px-3 py-1 hover:bg-[var(--hover-color)] group cursor-pointer"
-                onClick={() => onFileSelect?.(file.path, true)}
+                onClick={e => {
+                  if (e.button === 0) {
+                    onFileSelect?.(file.path, true);
+                  }
+                }}
+                onContextMenu={e => handleContextMenu(e, file.path, true)}
               >
                 <span className="text-[10px] text-[var(--text-lighter)] w-3 text-center font-medium">
                   {getStatusText(file)}
                 </span>
                 {getFileIcon(file)}
-                <span className="flex-1 text-[10px] text-[var(--text-color)] truncate" title={file.path}>
+                <span
+                  className="flex-1 text-[10px] text-[var(--text-color)] truncate"
+                  title={file.path}
+                >
                   {file.path.split("/").pop()}
                 </span>
                 <div className="opacity-0 group-hover:opacity-100 flex gap-1">
                   <button
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation();
                       handleUnstageFile(file.path);
                     }}
@@ -214,18 +263,26 @@ const GitStatusPanel = ({ files, onFileSelect, onRefresh, repoPath }: GitStatusP
               <div
                 key={`unstaged-${file.path}-${index}`}
                 className="flex items-center gap-2 px-3 py-1 hover:bg-[var(--hover-color)] group cursor-pointer"
-                onClick={() => onFileSelect?.(file.path, false)}
+                onClick={e => {
+                  if (e.button === 0) {
+                    onFileSelect?.(file.path, false);
+                  }
+                }}
+                onContextMenu={e => handleContextMenu(e, file.path, false)}
               >
                 <span className="text-[10px] text-[var(--text-lighter)] w-3 text-center font-medium">
                   {getStatusText(file)}
                 </span>
                 {getFileIcon(file)}
-                <span className="flex-1 text-[10px] text-[var(--text-color)] truncate" title={file.path}>
+                <span
+                  className="flex-1 text-[10px] text-[var(--text-color)] truncate"
+                  title={file.path}
+                >
                   {file.path.split("/").pop()}
                 </span>
                 <div className="opacity-0 group-hover:opacity-100 flex gap-1">
                   <button
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation();
                       handleStageFile(file.path);
                     }}
@@ -237,7 +294,7 @@ const GitStatusPanel = ({ files, onFileSelect, onRefresh, repoPath }: GitStatusP
                   </button>
                   {file.status !== "untracked" && (
                     <button
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation();
                         handleDiscardFile(file.path);
                       }}
@@ -267,8 +324,33 @@ const GitStatusPanel = ({ files, onFileSelect, onRefresh, repoPath }: GitStatusP
           </div>
         </div>
       )}
+
+      {/* Context Menu */}
+      {contextMenu && onOpenFile && (
+        <div
+          className="fixed bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-md shadow-lg z-50 py-1 min-w-[120px]"
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+          }}
+          onMouseDown={e => {
+            e.stopPropagation();
+          }}
+        >
+          <button
+            onClick={() => {
+              onOpenFile(contextMenu.filePath);
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+          >
+            <FileText size={12} />
+            Open File
+          </button>
+        </div>
+      )}
     </div>
   );
 };
 
-export default GitStatusPanel; 
+export default GitStatusPanel;

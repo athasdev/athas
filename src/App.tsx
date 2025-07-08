@@ -5,6 +5,7 @@ import BottomPane from "./components/bottom-pane";
 import CodeEditor, { CodeEditorRef } from "./components/code-editor";
 import CommandBar from "./components/command-bar";
 import CommandPalette, { CommandPaletteRef } from "./components/command-palette";
+import FileReloadToast from "./components/file-reload-toast";
 import { Diagnostic } from "./components/diagnostics/diagnostics-pane";
 import DiffViewer from "./components/diff-viewer";
 import BreadcrumbContainer from "./components/editor/breadcrumbs/breadcrumb-container";
@@ -26,6 +27,11 @@ import { useBuffers } from "./hooks/use-buffers";
 import { ProjectNameMenu, useContextMenus } from "./hooks/use-context-menus";
 import { useFileOperations } from "./hooks/use-file-operations";
 import { useFileSelection } from "./hooks/use-file-selection";
+import {
+  useFileWatcherStore,
+  initializeFileWatcherListener,
+  cleanupFileWatcherListener,
+} from "./store/file-watcher-store";
 import { useFolderOperations } from "./hooks/use-folder-operations";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { useLSP } from "./hooks/use-lsp";
@@ -41,7 +47,7 @@ import { CoreFeaturesState, DEFAULT_CORE_FEATURES } from "./types/core-features"
 import { ThemeType } from "./types/theme";
 import { getFilenameFromPath, getLanguageFromFilename } from "./utils/file-utils";
 import { GitDiff } from "./utils/git";
-import { isMac, writeFile } from "./utils/platform";
+import { isMac, readFile, writeFile } from "./utils/platform";
 import { useQuickEdit } from "./hooks/use-quick-edit";
 
 function App() {
@@ -164,7 +170,74 @@ function App() {
     handleCreateNewFolderInDirectory,
     handleDeletePath,
     handleCollapseAllFolders,
+    refreshDirectory,
   } = useFileOperations({ openBuffer });
+
+  // File watcher store - get external changes as array
+  const startWatching = useFileWatcherStore(state => state.startWatching);
+  const markPendingSave = useFileWatcherStore(state => state.markPendingSave);
+  // const clearPendingSave = useFileWatcherStore(state => state.clearPendingSave); // Reserved for future use
+  // const stopWatching = useFileWatcherStore((state) => state.stopWatching); // Reserved for future use
+
+  // Initialize file watcher listeners only once when app starts
+  useEffect(() => {
+    initializeFileWatcherListener();
+
+    return () => {
+      cleanupFileWatcherListener();
+    };
+  }, []); // Only run once on mount
+
+  // Listen for file external changes
+  useEffect(() => {
+    const handleFileExternalChange = (event: CustomEvent) => {
+      const { path, changeType } = event.detail;
+
+      // Check if this file is open in any buffer
+      const buffer = buffers.find(b => b.path === path);
+
+      if (buffer && changeType === "modified") {
+        // Auto-reload all files regardless of dirty state
+        readFile(path)
+          .then(content => {
+            updateBufferContent(buffer.id, content, false);
+            // Dispatch event for toast notification
+            window.dispatchEvent(new CustomEvent("file-reloaded", { detail: { path } }));
+          })
+          .catch(error => {
+            console.error("❌ Failed to auto-reload file:", path, error);
+          });
+      }
+
+      // If it's a directory change, refresh the file tree
+      if (changeType === "modified" && rootFolderPath && path.startsWith(rootFolderPath)) {
+        const dirPath = path.substring(0, path.lastIndexOf("/"));
+        refreshDirectory(dirPath);
+      }
+    };
+
+    window.addEventListener("file-external-change", handleFileExternalChange as any);
+
+    return () => {
+      window.removeEventListener("file-external-change", handleFileExternalChange as any);
+    };
+  }, [buffers, updateBufferContent, rootFolderPath, refreshDirectory]);
+
+  // Watch individual files based on open buffers
+  useEffect(() => {
+    const currentPaths = new Set(
+      buffers
+        .filter(buffer => !buffer.isVirtual && !buffer.path.startsWith("diff://"))
+        .map(buffer => buffer.path),
+    );
+
+    // Start watching new files
+    currentPaths.forEach(path => {
+      startWatching(path);
+    });
+
+    // TODO: Consider cleaning up watchers for closed files
+  }, [buffers, startWatching]);
 
   // Function to refresh all project files (needed by remote connection hook)
   const refreshAllProjectFiles = useCallback(async () => {
@@ -369,6 +442,8 @@ function App() {
       } else {
         (async () => {
           try {
+            // Mark as pending save before writing
+            markPendingSave(activeBuffer.path);
             await writeFile(activeBuffer.path, activeBuffer.content);
             markBufferDirty(activeBuffer.id, false);
           } catch (error) {
@@ -563,13 +638,20 @@ function App() {
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-    setIsBottomPaneVisible: uiState.setIsBottomPaneVisible,
+    setIsBottomPaneVisible: v =>
+      uiState.setIsBottomPaneVisible(typeof v === "function" ? v(uiState.isBottomPaneVisible) : v),
     setBottomPaneActiveTab: uiState.setBottomPaneActiveTab,
-    setIsSidebarVisible: uiState.setIsSidebarVisible,
+    setIsSidebarVisible: v =>
+      uiState.setIsSidebarVisible(typeof v === "function" ? v(uiState.isSidebarVisible) : v),
     setIsFindVisible,
-    setIsRightPaneVisible: uiState.setIsRightPaneVisible,
-    setIsCommandBarVisible: uiState.setIsCommandBarVisible,
-    setIsCommandPaletteVisible: uiState.setIsCommandPaletteVisible,
+    setIsRightPaneVisible: v =>
+      uiState.setIsRightPaneVisible(typeof v === "function" ? v(uiState.isRightPaneVisible) : v),
+    setIsCommandBarVisible: v =>
+      uiState.setIsCommandBarVisible(typeof v === "function" ? v(uiState.isCommandBarVisible) : v),
+    setIsCommandPaletteVisible: v =>
+      uiState.setIsCommandPaletteVisible(
+        typeof v === "function" ? v(uiState.isCommandPaletteVisible) : v,
+      ),
     setIsSearchViewActive: uiState.setIsSearchViewActive,
     focusSearchInput,
     focusCommandPalette,
@@ -629,6 +711,8 @@ function App() {
           }
           autoSaveTimeoutRef.current = setTimeout(async () => {
             try {
+              // Mark as pending save before auto-saving
+              markPendingSave(activeBuffer.path);
               await writeFile(activeBuffer.path, content);
               markBufferDirty(activeBuffer.id, false);
             } catch (error) {
@@ -639,7 +723,7 @@ function App() {
         }
       }
     },
-    [activeBuffer, updateBufferContent, markBufferDirty, settings.autoSave],
+    [activeBuffer, updateBufferContent, markBufferDirty, settings.autoSave, markPendingSave],
   );
 
   const handleTabClick = (bufferId: string) => {
@@ -867,6 +951,7 @@ function App() {
                 onTabDragStart={handleTabDragStart}
                 onTabDragEnd={handleTabDragEnd}
                 maxOpenTabs={maxOpenTabs}
+                externallyModifiedPaths={new Set()}
               />
 
               {/* Breadcrumb - Hidden in git view and extensions view */}
@@ -1132,13 +1217,7 @@ function App() {
             onTabChange={tab => uiState.setBottomPaneActiveTab(tab)}
             diagnostics={diagnostics}
             onDiagnosticClick={handleDiagnosticClick}
-            currentDirectory={
-              files.length > 0
-                ? typeof files[0]?.path === "string"
-                  ? files[0].path.split("/").slice(0, -1).join("/")
-                  : undefined
-                : undefined
-            }
+            currentDirectory={rootFolderPath}
             showTerminal={coreFeatures.terminal}
             showDiagnostics={coreFeatures.diagnostics}
           />
@@ -1211,6 +1290,9 @@ function App() {
             onOpenRecentFolder={handleOpenRecentFolder}
             onCloseMenu={() => uiState.setProjectNameMenu(null)}
           />
+
+          {/* Subtle reload notifications */}
+          <FileReloadToast />
         </div>
       </div>
     </div>

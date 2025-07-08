@@ -18,6 +18,7 @@ interface TabBarProps {
   onTabDragEnd?: () => void;
   paneId?: string; // For split view panes
   maxOpenTabs: number; // Optional prop to limit open tabs
+  externallyModifiedPaths?: Set<string>; // Paths that have been modified externally
 }
 
 interface ContextMenuProps {
@@ -146,6 +147,7 @@ const TabBar = ({
   onTabDragEnd,
   paneId,
   maxOpenTabs,
+  externallyModifiedPaths = new Set(),
 }: TabBarProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -401,6 +403,7 @@ const TabBar = ({
         >
           {sortedBuffers.map((buffer, index) => {
             const isActive = buffer.id === activeBufferId;
+            const isExternallyModified = externallyModifiedPaths.has(buffer.path);
             // Drop indicator should be shown before the tab at dropTarget
             const showDropIndicator =
               dropTarget === index && draggedIndex !== null && !isDraggedOutside;
@@ -471,6 +474,11 @@ const TabBar = ({
                   >
                     {buffer.name}
                     {buffer.isDirty && <span className="text-[var(--text-lighter)] ml-1">•</span>}
+                    {isExternallyModified && !buffer.isDirty && (
+                      <span className="text-yellow-400 ml-1" title="Modified externally">
+                        ⚠
+                      </span>
+                    )}
                   </span>
 
                   {/* Close Button */}

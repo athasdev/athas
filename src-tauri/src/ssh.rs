@@ -149,39 +149,39 @@ pub fn create_ssh_session(
 
     // Try key authentication first (most secure and common for SSH configs)
     if !key_file.is_empty() && Path::new(key_file).exists() {
-        println!("Attempting key authentication with: {}", key_file);
+        log::debug!("Attempting key authentication with: {}", key_file);
         match sess.userauth_pubkey_file(actual_username, None, Path::new(key_file), None) {
             Ok(()) => {
                 if sess.authenticated() {
-                    println!("Key authentication successful");
+                    log::info!("Key authentication successful");
                     return Ok(sess);
                 }
             }
             Err(e) => {
-                println!("Key authentication failed: {}", e);
+                log::debug!("Key authentication failed: {}", e);
                 // Continue to try other methods
             }
         }
     }
 
     // Try agent authentication (for loaded SSH keys)
-    println!("Trying SSH agent authentication...");
+    log::debug!("Trying SSH agent authentication...");
     match sess.userauth_agent(actual_username) {
         Ok(()) => {
             if sess.authenticated() {
-                println!("SSH agent authentication successful");
+                log::info!("SSH agent authentication successful");
                 return Ok(sess);
             }
         }
         Err(e) => {
-            println!("SSH agent authentication failed: {}", e);
+            log::debug!("SSH agent authentication failed: {}", e);
             // Continue to try password
         }
     }
 
     // Finally try password authentication if provided
     if let Some(pass) = password {
-        println!("Trying password authentication...");
+        log::debug!("Trying password authentication...");
         sess.userauth_password(actual_username, pass)
             .map_err(|e| format!("Password authentication failed: {}", e))?;
     } else {
@@ -192,7 +192,7 @@ pub fn create_ssh_session(
         return Err("Authentication failed with all available methods".to_string());
     }
 
-    println!("Authentication successful!");
+    log::info!("Authentication successful!");
     Ok(sess)
 }
 

@@ -38,6 +38,7 @@ export const getLanguageFromFilename = (filename: string): string => {
     php4: "PHP",
     php5: "PHP",
     php7: "PHP",
+    csharp: "C#",
   };
   return languageMap[ext || ""] || "Text";
 };
@@ -48,11 +49,11 @@ export const getLanguageFromFilename = (filename: string): string => {
 export const isERBFile = (path: string): boolean => {
   const lowerPath = path.toLowerCase();
   return (
-    lowerPath.endsWith(".erb") ||
-    lowerPath.endsWith(".html.erb") ||
-    lowerPath.endsWith(".js.erb") ||
-    lowerPath.endsWith(".css.erb") ||
-    lowerPath.endsWith(".xml.erb")
+    lowerPath.endsWith(".erb")
+    || lowerPath.endsWith(".html.erb")
+    || lowerPath.endsWith(".js.erb")
+    || lowerPath.endsWith(".css.erb")
+    || lowerPath.endsWith(".xml.erb")
   );
 };
 
@@ -61,9 +62,9 @@ export const isERBFile = (path: string): boolean => {
  */
 export const isSQLiteFile = (path: string): boolean => {
   return (
-    path.toLowerCase().endsWith(".sqlite") ||
-    path.toLowerCase().endsWith(".db") ||
-    path.toLowerCase().endsWith(".sqlite3")
+    path.toLowerCase().endsWith(".sqlite")
+    || path.toLowerCase().endsWith(".db")
+    || path.toLowerCase().endsWith(".sqlite3")
   );
 };
 
@@ -73,23 +74,23 @@ export const isSQLiteFile = (path: string): boolean => {
 export const isImageFile = (path: string): boolean => {
   const lowerPath = path.toLowerCase();
   return (
-    lowerPath.endsWith(".png") ||
-    lowerPath.endsWith(".jpg") ||
-    lowerPath.endsWith(".jpeg") ||
-    lowerPath.endsWith(".gif") ||
-    lowerPath.endsWith(".bmp") ||
-    lowerPath.endsWith(".svg") ||
-    lowerPath.endsWith(".webp") ||
-    lowerPath.endsWith(".ico") ||
-    lowerPath.endsWith(".tiff") ||
-    lowerPath.endsWith(".tif") ||
-    lowerPath.endsWith(".avif") ||
-    lowerPath.endsWith(".heic") ||
-    lowerPath.endsWith(".heif") ||
-    lowerPath.endsWith(".jfif") ||
-    lowerPath.endsWith(".pjpeg") ||
-    lowerPath.endsWith(".pjp") ||
-    lowerPath.endsWith(".apng")
+    lowerPath.endsWith(".png")
+    || lowerPath.endsWith(".jpg")
+    || lowerPath.endsWith(".jpeg")
+    || lowerPath.endsWith(".gif")
+    || lowerPath.endsWith(".bmp")
+    || lowerPath.endsWith(".svg")
+    || lowerPath.endsWith(".webp")
+    || lowerPath.endsWith(".ico")
+    || lowerPath.endsWith(".tiff")
+    || lowerPath.endsWith(".tif")
+    || lowerPath.endsWith(".avif")
+    || lowerPath.endsWith(".heic")
+    || lowerPath.endsWith(".heif")
+    || lowerPath.endsWith(".jfif")
+    || lowerPath.endsWith(".pjpeg")
+    || lowerPath.endsWith(".pjp")
+    || lowerPath.endsWith(".apng")
   );
 };
 

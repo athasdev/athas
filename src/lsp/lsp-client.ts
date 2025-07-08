@@ -22,6 +22,7 @@ export class LSPClient {
           command: this.config.command,
           args: this.config.args,
           working_dir: workspaceRoot,
+          initialization_options: this.config.initializationOptions || null,
         },
       });
 

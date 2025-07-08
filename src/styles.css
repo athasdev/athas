@@ -2383,3 +2383,34 @@ textarea::-webkit-scrollbar-thumb:hover {
     --scrollbar-thumb: #333333;
     --scrollbar-thumb-hover: #555555;
 }
+
+/* Animations */
+@keyframes slide-in-left {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.animate-slide-in-left {
+    animation: slide-in-left 0.5s ease-out;
+}
+
+@keyframes slide-in-right {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out;
+}
