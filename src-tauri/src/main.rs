@@ -288,17 +288,39 @@ fn move_file(source_path: String, target_path: String) -> Result<(), String> {
     let source = Path::new(&source_path);
     let target = Path::new(&target_path);
     
+    // Validate source exists
     if !source.exists() {
         return Err("Source path does not exist".to_string());
     }
     
+    // Validate target doesn't exist
     if target.exists() {
         return Err("Target path already exists".to_string());
     }
     
+    // Ensure target directory exists
+    if let Some(parent) = target.parent() {
+        if !parent.exists() {
+            return Err("Target directory does not exist".to_string());
+        }
+    }
+    
+    // Try to rename (fast for same filesystem)
     match fs::rename(source, target) {
         Ok(()) => Ok(()),
-        Err(e) => Err(format!("Failed to move file: {}", e)),
+        Err(e) => {
+            // If rename fails (e.g., cross-filesystem), try copy + delete
+            match fs::copy(source, target) {
+                Ok(_) => {
+                    // Only delete source after successful copy
+                    match fs::remove_file(source) {
+                        Ok(()) => Ok(()),
+                        Err(del_err) => Err(format!("File copied but failed to delete source: {}", del_err)),
+                    }
+                },
+                Err(copy_err) => Err(format!("Failed to move file: {} (rename: {}, copy: {})", e, e, copy_err)),
+            }
+        }
     }
 }
 
@@ -306,20 +328,38 @@ fn move_file(source_path: String, target_path: String) -> Result<(), String> {
 fn copy_external_file(source_path: String, target_dir: String, file_name: String) -> Result<(), String> {
     let source = Path::new(&source_path);
     let target_dir_path = Path::new(&target_dir);
+    
+    // Sanitize file name to prevent path traversal
+    if file_name.contains("..") || file_name.contains("/") || file_name.contains("\\") {
+        return Err("Invalid file name".to_string());
+    }
+    
     let target = target_dir_path.join(&file_name);
     
+    // Validate source file
     if !source.exists() {
         return Err("Source file does not exist".to_string());
     }
     
+    if !source.is_file() {
+        return Err("Source path is not a file".to_string());
+    }
+    
+    // Validate target directory
     if !target_dir_path.exists() {
         return Err("Target directory does not exist".to_string());
     }
     
+    if !target_dir_path.is_dir() {
+        return Err("Target path is not a directory".to_string());
+    }
+    
+    // Check if target already exists
     if target.exists() {
         return Err(format!("File {} already exists in target directory", file_name));
     }
     
+    // Perform the copy
     match fs::copy(source, target) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Failed to copy file: {}", e)),

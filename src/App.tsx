@@ -224,14 +224,16 @@ function App() {
         // Move the file using the cross-platform utility
         await moveFile(sourcePath, destinationPath);
 
-        // Refresh the source directory
-        const sourceDir = sourcePath.split("/").slice(0, -1).join("/");
+        // Refresh the source directory - handle both forward and backslashes
+        const sourcePathSep = sourcePath.includes('\\') ? '\\' : '/';
+        const sourceDir = sourcePath.split(sourcePathSep).slice(0, -1).join(sourcePathSep);
         if (sourceDir) {
           await refreshDirectory(sourceDir);
         }
 
-        // Refresh the destination directory if different
-        const destDir = destinationPath.split("/").slice(0, -1).join("/");
+        // Refresh the destination directory if different - handle both forward and backslashes
+        const destPathSep = destinationPath.includes('\\') ? '\\' : '/';
+        const destDir = destinationPath.split(destPathSep).slice(0, -1).join(destPathSep);
         if (destDir && destDir !== sourceDir) {
           await refreshDirectory(destDir);
         }
@@ -239,7 +241,7 @@ function App() {
         // If the moved file was open in a buffer, update its path
         const affectedBuffer = buffers.find(b => b.path === sourcePath);
         if (affectedBuffer) {
-          const fileName = destinationPath.split("/").pop() || "Unknown";
+          const fileName = destinationPath.split(destPathSep).pop() || "Unknown";
           updateBuffer({
             ...affectedBuffer,
             path: destinationPath,
@@ -264,7 +266,8 @@ function App() {
       // Find any buffers with the old path
       const affectedBuffer = buffers.find(b => b.path === oldPath);
       if (affectedBuffer) {
-        const fileName = newPath.split("/").pop() || affectedBuffer.name;
+        const pathSep = newPath.includes('\\') ? '\\' : '/';
+        const fileName = newPath.split(pathSep).pop() || affectedBuffer.name;
         console.log("Updating buffer:", affectedBuffer.id, "with new path:", newPath);
         
         // Update the buffer with the new path and name

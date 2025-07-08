@@ -139,10 +139,11 @@ const FileTree = ({
         return;
       }
       
-      // Calculate parent directory path
-      const pathParts = sourcePath.split('/');
+      // Calculate parent directory path - handle both forward and backslashes
+      const pathSeparator = sourcePath.includes('\\') ? '\\' : '/';
+      const pathParts = sourcePath.split(pathSeparator);
       const fileName = pathParts[pathParts.length - 1];
-      let sourceParentPath = pathParts.slice(0, -1).join('/');
+      let sourceParentPath = pathParts.slice(0, -1).join(pathSeparator);
       
       console.log("=== CRITICAL DEBUG: File Move Analysis ===");
       console.log("1. Source file path:", sourcePath);
@@ -168,13 +169,13 @@ const FileTree = ({
         return;
       }
       
-      if (targetPath.startsWith(sourcePath + '/')) {
+      if (targetPath.startsWith(sourcePath + pathSeparator)) {
         setDraggedItem(null);
         return;
       }
       
       try {
-        const newPath = targetPath + '/' + sourceName;
+        const newPath = targetPath + pathSeparator + sourceName;
         console.log("=== FILE MOVE OPERATION ===");
         console.log("Moving from:", sourcePath);
         console.log("Moving to:", newPath);
@@ -301,7 +302,10 @@ const FileTree = ({
     
     // Handle external file drops to root
     if (!draggedItem && e.dataTransfer.files.length > 0) {
-      const rootPath = files[0]?.path.split('/').slice(0, -1).join('/') || '.';
+      // Get root path - handle both forward and backslashes
+      const firstFilePath = files[0]?.path || '';
+      const pathSep = firstFilePath.includes('\\') ? '\\' : '/';
+      const rootPath = firstFilePath.split(pathSep).slice(0, -1).join(pathSep) || '.';
       console.log("External files dropped to root:", rootPath);
       
       for (let i = 0; i < e.dataTransfer.files.length; i++) {
