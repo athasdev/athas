@@ -1,0 +1,14 @@
+# https://rust-lang.github.io/rustfmt/
+
+max_width = 100                  # default: 100
+use_field_init_shorthand = true # default: false
+hard_tabs = false                # default: false use spaces instead of tabs
+
+# Unstable features (we need to change to nightly for this)
+# format_strings = true          # default: false
+# imports_granularity = "Crate"  # default: "Preserve"
+# wrap_comments = true           # default: false
+# empty_item_single_line = false # default: true
+# fn_single_line = false         # default: false
+# group_imports = "One"          # default: "Preserve"
+# comment_width = 90             # default: 80
