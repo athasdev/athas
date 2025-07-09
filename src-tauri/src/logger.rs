@@ -19,17 +19,26 @@ pub fn init<R: Runtime>(level: LevelFilter) -> TauriPlugin<R> {
                     .on_default()
                     .effects(style::Effects::BOLD),
             };
-            cb.finish(format_args!(
-                "[{}] [{style}{}{style:#}] [{}]: {}",
-                chrono::Local::now()
-                    .format("%I:%M:%S%p")
-                    .to_string()
-                    .yellow()
-                    .dimmed(),
-                record.level(),
-                record.target(),
-                record.args()
-            ));
+            if cfg!(debug_assertions) {
+                cb.finish(format_args!(
+                    "[{style}{}{style:#}] [{}]: {}",
+                    record.level(),
+                    record.target(),
+                    record.args()
+                ));
+            } else {
+                cb.finish(format_args!(
+                    "[{}] [{style}{}{style:#}] [{}]: {}",
+                    chrono::Local::now()
+                        .format("%I:%M:%S%p")
+                        .to_string()
+                        .yellow()
+                        .dimmed(),
+                    record.level(),
+                    record.target(),
+                    record.args()
+                ));
+            }
         })
         .build()
 }
