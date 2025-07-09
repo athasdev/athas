@@ -36,4 +36,10 @@ impl InterceptorState {
             .tx
             .send(InterceptorMessage::Error { request_id, error });
     }
+
+    pub fn send_stream_chunk(&self, request_id: Uuid, chunk: crate::types::StreamingChunk) {
+        let _ = self
+            .tx
+            .send(InterceptorMessage::StreamChunk { request_id, chunk });
+    }
 }

@@ -4,6 +4,7 @@
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 
+mod claude_bridge;
 mod commands;
 mod file_watcher;
 mod logger;
@@ -11,6 +12,7 @@ mod lsp;
 mod menu;
 mod ssh;
 mod terminal;
+use claude_bridge::init_claude_bridge;
 use commands::*;
 use file_watcher::FileWatcher;
 use lsp::{
@@ -42,6 +44,9 @@ fn main() {
 
             // Set up the file watcher
             app.manage(Arc::new(FileWatcher::new(app.handle().clone())));
+
+            // Set up Claude bridge
+            app.manage(init_claude_bridge(app.handle()));
 
             #[cfg(target_os = "macos")]
             {
@@ -200,7 +205,12 @@ fn main() {
             ssh_list_directory,
             ssh_read_file,
             ssh_write_file,
-            ssh_execute_command
+            ssh_execute_command,
+            // Claude commands
+            start_claude_code,
+            stop_claude_code,
+            send_claude_input,
+            get_claude_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

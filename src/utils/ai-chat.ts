@@ -1,4 +1,5 @@
 import type { AIMessage } from "@/types/ai-chat";
+import type { ClaudeStatus, InterceptorMessage } from "@/types/claude";
 import { getModelById, getProviderById } from "../types/ai-provider";
 import { isTauri } from "./platform";
 
@@ -236,6 +237,19 @@ export const getChatCompletionStream = async (
 
     if (!provider || !model) {
       throw new Error(`Provider or model not found: ${providerId}/${modelId}`);
+    }
+
+    // Handle Claude Code provider differently
+    if (providerId === "claude-code") {
+      await handleClaudeCodeStream(
+        userMessage,
+        context,
+        onChunk,
+        onComplete,
+        onError,
+        conversationHistory,
+      );
+      return;
     }
 
     const apiKey = await getProviderApiToken(providerId);
@@ -569,3 +583,149 @@ Please provide:
 
   return getOpenAIChatCompletion(explainPrompt, context);
 };
+
+// Handle Claude Code streaming
+async function handleClaudeCodeStream(
+  userMessage: string,
+  context: ContextInfo,
+  onChunk: (chunk: string) => void,
+  onComplete: () => void,
+  onError: (error: string) => void,
+  conversationHistory?: AIMessage[],
+): Promise<void> {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const { listen } = await import("@tauri-apps/api/event");
+
+    // Check if Claude Code is running
+    const status = await invoke<ClaudeStatus>("get_claude_status");
+
+    if (!status.running) {
+      // Try to start Claude Code
+      console.log("🚀 Starting Claude Code...");
+      const startStatus = await invoke<ClaudeStatus>("start_claude_code");
+
+      if (!startStatus.running) {
+        onError("Failed to start Claude Code. Please check your setup.");
+        return;
+      }
+
+      // Wait a bit for the process to stabilize
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    // Prepare the full message with context
+    const contextPrompt = buildContextPrompt(context);
+
+    // Build a simplified message format for Claude Code CLI
+    let fullMessage = "";
+
+    // Add conversation history if any
+    if (conversationHistory && conversationHistory.length > 0) {
+      for (const msg of conversationHistory) {
+        if (msg.role === "user") {
+          fullMessage += `Human: ${msg.content}\n\n`;
+        } else if (msg.role === "assistant") {
+          fullMessage += `Assistant: ${msg.content}\n\n`;
+        }
+      }
+    }
+
+    // Add context if available
+    if (contextPrompt) {
+      fullMessage += `Context:\n${contextPrompt}\n\n`;
+    }
+
+    // Add the current message
+    fullMessage += `Human: ${userMessage}`;
+
+    // Set up event listeners for Claude messages
+    let unlisten: (() => void) | null = null;
+
+    const cleanup = () => {
+      if (unlisten) {
+        unlisten();
+        unlisten = null;
+      }
+    };
+
+    // Set up message listeners for stream-json format
+    // Listen for text chunks from Claude Code stdout
+    const chunkUnlisten = await listen<string>("claude-chunk", event => {
+      const text = event.payload;
+      onChunk(text);
+    });
+
+    // Listen for completion from Claude Code
+    const completeUnlisten = await listen<void>("claude-complete", () => {
+      cleanupAll();
+      onComplete();
+    });
+
+    // Listen for interceptor messages
+    const interceptorUnlisten = await listen<InterceptorMessage>("claude-message", event => {
+      const message = event.payload;
+      console.log("📡 Interceptor message:", message);
+
+      if (message.type === "stream_chunk" && message.chunk) {
+        // Handle streaming chunks from interceptor
+        const chunk = message.chunk;
+        if (chunk.delta?.text) {
+          onChunk(chunk.delta.text);
+        }
+
+        // Check for completion
+        if (chunk.type === "message_stop") {
+          cleanupAll();
+          onComplete();
+        }
+      } else if (message.type === "response" && message.data?.parsed_response) {
+        // Handle non-streaming response
+        const response = message.data.parsed_response;
+        if (response.content) {
+          for (const block of response.content) {
+            if (block.type === "text" && block.text) {
+              onChunk(block.text);
+            }
+          }
+        }
+        cleanupAll();
+        onComplete();
+      } else if (message.type === "error") {
+        cleanupAll();
+        onError(message.error || "Unknown error from interceptor");
+      }
+    });
+
+    // Create a new cleanup function that includes all listeners
+    const cleanupAll = () => {
+      cleanup();
+      if (chunkUnlisten) chunkUnlisten();
+      if (completeUnlisten) completeUnlisten();
+      if (interceptorUnlisten) interceptorUnlisten();
+    };
+
+    // Also listen for stdout/stderr from Claude Code
+    const stdoutUnlisten = await listen<string>("claude-stdout", event => {
+      console.log("Claude stdout:", event.payload);
+    });
+
+    const stderrUnlisten = await listen<string>("claude-stderr", event => {
+      console.log("Claude stderr:", event.payload);
+    });
+
+    // Send the message to Claude Code
+    await invoke("send_claude_input", { input: fullMessage });
+
+    // Set up a timeout to clean up listeners
+    setTimeout(() => {
+      cleanupAll();
+      stdoutUnlisten();
+      stderrUnlisten();
+      onError("Request timed out");
+    }, 120000); // 2 minute timeout
+  } catch (error) {
+    console.error("❌ Claude Code error:", error);
+    onError(`Claude Code error: ${error}`);
+  }
+}

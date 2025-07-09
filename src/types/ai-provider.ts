@@ -22,6 +22,20 @@ export interface ProviderConfig {
 
 export const AI_PROVIDERS: ModelProvider[] = [
   {
+    id: "claude-code",
+    name: "Claude Code (Local)",
+    apiUrl: "local",
+    requiresApiKey: false,
+    models: [
+      {
+        id: "claude-code",
+        name: "Claude Code",
+        maxTokens: 200000,
+        description: "Claude running locally via Claude Code CLI",
+      },
+    ],
+  },
+  {
     id: "openai",
     name: "OpenAI",
     apiUrl: "https://api.openai.com/v1/chat/completions",

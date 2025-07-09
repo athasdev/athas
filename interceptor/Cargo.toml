@@ -18,3 +18,4 @@ uuid = { version = "1.11", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 bytes = "1.8"
 thin-logger = "0.1.4"
+futures-util = "0.3"

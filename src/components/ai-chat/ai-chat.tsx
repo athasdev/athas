@@ -26,6 +26,8 @@ import ModelProviderSelector from "../model-provider-selector";
 import OutlineView from "../outline-view";
 import Button from "../ui/button";
 import ChatHistoryModal from "./chat-history-modal";
+import ClaudeStatusIndicator from "./claude-status";
+import InterceptorDisplay from "./interceptor-display";
 import MarkdownRenderer from "./markdown-renderer";
 import type { AIChatProps, Chat, ContextInfo, Message } from "./types";
 import { formatTime } from "./utils";
@@ -196,6 +198,12 @@ export default function AIChat({
 
   const checkApiKey = useCallback(async () => {
     try {
+      // Claude Code doesn't require an API key in the frontend
+      if (currentProviderId === "claude-code") {
+        setHasApiKey(true);
+        return;
+      }
+
       const token = await getProviderApiToken(currentProviderId);
       setHasApiKey(!!token);
     } catch (error) {
@@ -209,6 +217,12 @@ export default function AIChat({
 
     for (const provider of AI_PROVIDERS) {
       try {
+        // Claude Code doesn't require an API key in the frontend
+        if (provider.id === "claude-code") {
+          newApiKeyMap.set(provider.id, true);
+          continue;
+        }
+
         const token = await getProviderApiToken(provider.id);
         newApiKeyMap.set(provider.id, !!token);
       } catch (_error) {
@@ -684,6 +698,9 @@ export default function AIChat({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Interceptor Display */}
+      <InterceptorDisplay isActive={currentProviderId === "claude-code"} />
+
       {/* Input */}
       <div
         style={{
@@ -818,7 +835,8 @@ export default function AIChat({
                 {estimatedTokens.toLocaleString()}/{(maxTokens / 1000).toFixed(0)}k tokens
               </span>
             </div>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-2 ml-auto">
+              <ClaudeStatusIndicator isActive={currentProviderId === "claude-code"} />
               <ModelProviderSelector
                 currentProviderId={currentProviderId}
                 currentModelId={currentModelId}

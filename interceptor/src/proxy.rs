@@ -49,7 +49,7 @@ pub async fn start_proxy_server(
     Ok(rx)
 }
 
-async fn proxy_handler(
+pub async fn proxy_handler(
     State(state): State<InterceptorState>,
     uri: Uri,
     headers: HeaderMap,
@@ -201,6 +201,18 @@ async fn proxy_handler(
                     Ok(bytes) => {
                         let chunk_str = String::from_utf8_lossy(&bytes);
                         captured_response.push_str(&chunk_str);
+
+                        // Parse SSE chunks and send to WebSocket
+                        for line in chunk_str.lines() {
+                            if line.starts_with("data: ") {
+                                let data = &line[6..];
+                                if let Ok(chunk) =
+                                    serde_json::from_str::<crate::types::StreamingChunk>(data)
+                                {
+                                    state_clone.send_stream_chunk(request_id, chunk);
+                                }
+                            }
+                        }
 
                         // Send chunk to client
                         if tx.send(Ok(bytes)).await.is_err() {

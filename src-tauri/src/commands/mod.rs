@@ -1,3 +1,4 @@
+pub mod claude;
 pub mod database;
 pub mod fs;
 pub mod git;
@@ -6,6 +7,7 @@ pub mod terminal;
 pub mod watcher;
 pub mod window;
 
+pub use claude::*;
 pub use database::*;
 pub use fs::*;
 pub use git::*;

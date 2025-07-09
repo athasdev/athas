@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -180,6 +181,56 @@ pub struct InterceptedRequest {
     pub error: Option<String>,
 }
 
+impl fmt::Display for InterceptedRequest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[{}] {} {} - Model: {}",
+            self.timestamp.format("%Y-%m-%d %H:%M:%S"),
+            self.method,
+            self.path,
+            self.parsed_request.model
+        )
+    }
+}
+
+impl fmt::Display for StreamingChunk {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.chunk_type.as_str() {
+            &"content_block_delta" => {
+                if let Some(delta) = &self.delta {
+                    if let Some(text) = &delta.text {
+                        write!(f, "text: {}", text)
+                    } else if let Some(json) = &delta.partial_json {
+                        write!(f, "json: {}", json)
+                    } else {
+                        write!(f, "delta: {:?}", delta)
+                    }
+                } else {
+                    write!(f, "{}", self.chunk_type)
+                }
+            }
+            &"message_start" => {
+                if let Some(message) = &self.message {
+                    write!(f, "message_start: {}", message.id)
+                } else {
+                    write!(f, "message_start")
+                }
+            }
+            &"message_stop" => write!(f, "message_stop"),
+            &"content_block_start" => {
+                if let Some(block) = &self.content_block {
+                    write!(f, "content_block_start: {:?}", block.content_type)
+                } else {
+                    write!(f, "content_block_start")
+                }
+            }
+            &"content_block_stop" => write!(f, "content_block_stop"),
+            _ => write!(f, "{}", self.chunk_type),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum InterceptorMessage {
@@ -197,4 +248,35 @@ pub enum InterceptorMessage {
         request_id: Uuid,
         error: String,
     },
+}
+impl InterceptorMessage {
+    pub fn type_name(&self) -> &'static str {
+        match self {
+            InterceptorMessage::Request { .. } => "Request",
+            InterceptorMessage::Response { .. } => "Response",
+            InterceptorMessage::StreamChunk { .. } => "StreamChunk",
+            InterceptorMessage::Error { .. } => "Error",
+        }
+    }
+}
+
+impl fmt::Display for InterceptorMessage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InterceptorMessage::Request { data } => {
+                write!(f, "REQUEST: {}", data)
+            }
+            InterceptorMessage::Response { data } => {
+                write!(f, "RESPONSE: {}", data)
+            }
+            InterceptorMessage::StreamChunk { request_id, chunk } => {
+                let short_id = request_id.to_string()[..8].to_string();
+                write!(f, "STREAM_CHUNK[{}]: {}", short_id, chunk)
+            }
+            InterceptorMessage::Error { request_id, error } => {
+                let short_id = request_id.to_string()[..8].to_string();
+                write!(f, "ERROR[{}]: {}", short_id, error)
+            }
+        }
+    }
 }
