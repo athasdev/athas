@@ -1,5 +1,6 @@
 use crate::types::{ParsedResponse, StreamingChunk};
 use anyhow::{Result, bail};
+use thin_logger::log;
 
 pub fn parse_streaming_response(
     response_text: &str,
@@ -72,7 +73,7 @@ pub fn parse_streaming_response(
                     chunks.push(chunk);
                 }
                 Err(e) => {
-                    tracing::error!("Failed to parse streaming chunk: {} - {:?}", data, e);
+                    log::error!("Failed to parse streaming chunk: {} - {:?}", data, e);
                 }
             }
         }

@@ -16,6 +16,7 @@ use chrono::Utc;
 use futures::StreamExt;
 use reqwest::header::{CONTENT_LENGTH, HOST, HeaderName};
 use std::{collections::HashMap, str::FromStr, time::Instant};
+use thin_logger::log;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use uuid::Uuid;
@@ -34,14 +35,14 @@ pub async fn start_proxy_server(
         .await
         .context("Failed to bind proxy server")?;
 
-    tracing::info!(
+    log::info!(
         "Claude Code Proxy running on http://localhost:{}",
         proxy_port
     );
 
     tokio::spawn(async move {
         if let Err(e) = axum::serve(listener, app).await {
-            tracing::error!("Proxy server error: {}", e);
+            log::error!("Proxy server error: {}", e);
         }
     });
 
@@ -60,13 +61,17 @@ async fn proxy_handler(
     let method_str = method.to_string();
     let path = uri.path().to_string();
 
-    tracing::info!(request_id = %request_id, path = %path, "Intercepting request");
+    log::info!(
+        "Intercepting request - request_id: {}, path: {}",
+        request_id,
+        path
+    );
 
     // Extract body
     let body_bytes = match axum::body::to_bytes(request.into_body(), usize::MAX).await {
         Ok(bytes) => bytes,
         Err(e) => {
-            tracing::error!("Failed to read request body: {}", e);
+            log::error!("Failed to read request body: {}", e);
             return create_error_response(StatusCode::BAD_REQUEST, "Failed to read request body");
         }
     };
@@ -77,7 +82,7 @@ async fn proxy_handler(
     let parsed_request: ParsedRequest = match serde_json::from_str(&body_str) {
         Ok(req) => req,
         Err(e) => {
-            tracing::error!("Failed to parse request: {}", e);
+            log::error!("Failed to parse request: {}", e);
             return create_error_response(StatusCode::BAD_REQUEST, "Failed to parse request");
         }
     };
@@ -89,7 +94,15 @@ async fn proxy_handler(
                 MessageContent::Text(text) => text.clone(),
                 MessageContent::Blocks(blocks) => serde_json::to_string(blocks).unwrap_or_default(),
             };
-            tracing::info!(request_id = %request_id, user_message = %content, "User request");
+            if !content.is_empty() {
+                log::info!(
+                    "User request - request_id: {}, user_message: {}",
+                    request_id,
+                    content
+                );
+            } else {
+                log::debug!("Empty Message!");
+            }
         }
     }
 
@@ -135,7 +148,11 @@ async fn proxy_handler(
         }
     }
 
-    tracing::info!(request_id = %request_id, url = %url, "Forwarding request");
+    log::info!(
+        "Forwarding request - request_id: {}, url: {}",
+        request_id,
+        url
+    );
 
     let response = match client
         .request(method, &url)
@@ -147,7 +164,11 @@ async fn proxy_handler(
         Ok(resp) => resp,
         Err(e) => {
             let error = format!("Failed to forward request: {e}");
-            tracing::error!(request_id = %request_id, error = %error);
+            log::error!(
+                "Request error - request_id: {}, error: {}",
+                request_id,
+                error
+            );
             intercepted.error = Some(error.clone());
             intercepted.duration_ms = Some(start_time.elapsed().as_millis() as u64);
             state.update_response(request_id, intercepted);
@@ -159,7 +180,11 @@ async fn proxy_handler(
     let status = response.status();
     let response_headers = response.headers().clone();
 
-    tracing::info!(request_id = %request_id, status = %status.as_u16(), "Response received");
+    log::info!(
+        "Response received - request_id: {}, status: {}",
+        request_id,
+        status.as_u16()
+    );
 
     // Handle streaming vs non-streaming
     if parsed_request.stream.unwrap_or(false) {
@@ -183,7 +208,7 @@ async fn proxy_handler(
                         }
                     }
                     Err(e) => {
-                        tracing::error!("Error reading stream chunk: {}", e);
+                        log::error!("Error reading stream chunk: {}", e);
                         let _ = tx.send(Err(axum::Error::new(e))).await;
                         break;
                     }
@@ -214,12 +239,12 @@ async fn proxy_handler(
                         .collect();
 
                     if !assistant_content.is_empty() {
-                        tracing::info!(
-                            request_id = %request_id,
-                            duration_ms = intercepted.duration_ms.unwrap_or(0),
-                            model = parsed.model.as_deref().unwrap_or("unknown"),
-                            assistant_response = %assistant_content.join("\n"),
-                            "Assistant response"
+                        log::info!(
+                            "Assistant response - request_id: {}, duration_ms: {}, model: {}, assistant_response: {}",
+                            request_id,
+                            intercepted.duration_ms.unwrap_or(0),
+                            parsed.model.as_deref().unwrap_or("unknown"),
+                            assistant_content.join("\n")
                         );
                     }
                 }
@@ -261,12 +286,12 @@ async fn proxy_handler(
                             .collect();
 
                         if !assistant_content.is_empty() {
-                            tracing::info!(
-                                request_id = %request_id,
-                                duration_ms = intercepted.duration_ms.unwrap_or(0),
-                                model = parsed.model.as_deref().unwrap_or("unknown"),
-                                assistant_response = %assistant_content.join("\n"),
-                                "Assistant response"
+                            log::info!(
+                                "Assistant response - request_id: {}, duration_ms: {}, model: {}, assistant_response: {}",
+                                request_id,
+                                intercepted.duration_ms.unwrap_or(0),
+                                parsed.model.as_deref().unwrap_or("unknown"),
+                                assistant_content.join("\n")
                             );
                         }
                     }
@@ -283,7 +308,11 @@ async fn proxy_handler(
             }
             Err(e) => {
                 let error = format!("Failed to read response: {e}");
-                tracing::error!(request_id = %request_id, error = %error);
+                log::error!(
+                    "Request error - request_id: {}, error: {}",
+                    request_id,
+                    error
+                );
                 intercepted.error = Some(error.clone());
                 intercepted.duration_ms = Some(start_time.elapsed().as_millis() as u64);
                 state.update_response(request_id, intercepted);
