@@ -10,14 +10,14 @@
     "build:tauri": "tauri build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "format": "prettier . --write --ignore-path .gitignore",
-    "format:check": "prettier . --check --ignore-path .gitignore",
+    "format": "biome format --write",
+    "format:check": "biome format",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts,.tsx",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --write",
     "lint:staged": "lint-staged",
-    "check": "bun run typecheck && bun run lint && bun run format:check",
-    "fix": "bun run lint:fix && bun run format",
+    "check": "bun run typecheck && biome check",
+    "fix": "biome check --write",
     "clean": "rm -rf dist build node_modules/.vite",
     "clean:all": "rm -rf dist build node_modules bun.lockb && bun install",
     "commitlint": "commitlint --edit",
@@ -43,37 +43,28 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.1.1",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@tailwindcss/vite": "^4.1.8",
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
-    "@typescript-eslint/eslint-plugin": "^8.35.0",
-    "@typescript-eslint/parser": "^8.35.0",
     "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.30.0",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "globals": "^16.2.0",
+    "concurrently": "^9.2.0",
     "lint-staged": "^16.1.2",
-    "prettier": "3.6.2",
     "simple-git-hooks": "^2.13.0",
     "tailwindcss": "^4.1.8",
     "typescript": "~5.6.2",
     "vite": "^6.3.5"
   },
   "simple-git-hooks": {
-    "pre-commit": "bun run lint:staged",
+    "pre-commit": "bunx concurrently './scripts/format-staged-rust.sh' './scripts/format-staged-biome.sh && bun run lint:staged'",
     "commit-msg": "bun commitlint --edit $1"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,yml,yaml}": [
-      "prettier --write"
+    "*.{ts,tsx,js,jsx,json}": [
+      "biome lint --no-errors-on-unmatched"
     ]
   }
 }
