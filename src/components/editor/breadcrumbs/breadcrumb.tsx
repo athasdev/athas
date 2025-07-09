@@ -1,4 +1,4 @@
-import { ChevronRight, List, Map } from "lucide-react";
+import { ChevronRight, List, Map as MapIcon } from "lucide-react";
 
 interface BreadcrumbProps {
   filePath: string;
@@ -53,7 +53,7 @@ export default function Breadcrumb({
             <button
               onClick={() => {
                 if (rootPath) {
-                  const fullPath = rootPath + "/" + segments.slice(0, index + 1).join("/");
+                  const fullPath = `${rootPath}/${segments.slice(0, index + 1).join("/")}`;
                   onNavigate(fullPath);
                 } else {
                   onNavigate(segments.slice(0, index + 1).join("/"));
@@ -90,7 +90,7 @@ export default function Breadcrumb({
           }`}
           title="Toggle Minimap"
         >
-          <Map size={12} />
+          <MapIcon size={12} />
         </button>
       </div>
     </div>

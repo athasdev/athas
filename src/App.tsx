@@ -1,15 +1,16 @@
 import { AlertCircle, ArrowLeftRight, Terminal as TerminalIcon } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AIChat from "./components/ai-chat/ai-chat";
 import BottomPane from "./components/bottom-pane";
-import CodeEditor, { CodeEditorRef } from "./components/code-editor";
+import CodeEditor, { type CodeEditorRef } from "./components/code-editor";
 import CommandBar from "./components/command-bar";
-import CommandPalette, { CommandPaletteRef } from "./components/command-palette";
-import FileReloadToast from "./components/file-reload-toast";
-import { Diagnostic } from "./components/diagnostics/diagnostics-pane";
+import CommandPalette, { type CommandPaletteRef } from "./components/command-palette";
+import type { Diagnostic } from "./components/diagnostics/diagnostics-pane";
 import DiffViewer from "./components/diff-viewer";
 import BreadcrumbContainer from "./components/editor/breadcrumbs/breadcrumb-container";
 import ExtensionsView from "./components/extensions-view";
+import FileReloadToast from "./components/file-reload-toast";
 import FindBar from "./components/find-bar";
 import GitHubCopilotSettings from "./components/github-copilot-settings";
 import ImageViewer from "./components/image-viewer";
@@ -17,7 +18,7 @@ import { MainSidebar } from "./components/layout/main-sidebar";
 import QuickEditInline from "./components/quick-edit-modal";
 import ResizableRightPane from "./components/resizable-right-pane";
 import ResizableSidebar from "./components/resizable-sidebar";
-import { SearchViewRef } from "./components/search-view";
+import type { SearchViewRef } from "./components/search-view";
 import SQLiteViewer from "./components/sqlite-viewer";
 import TabBar from "./components/tab-bar";
 import CustomTitleBar from "./components/window/custom-title-bar";
@@ -27,28 +28,28 @@ import { useBuffers } from "./hooks/use-buffers";
 import { ProjectNameMenu, useContextMenus } from "./hooks/use-context-menus";
 import { useFileOperations } from "./hooks/use-file-operations";
 import { useFileSelection } from "./hooks/use-file-selection";
-import {
-  useFileWatcherStore,
-  initializeFileWatcherListener,
-  cleanupFileWatcherListener,
-} from "./store/file-watcher-store";
 import { useFolderOperations } from "./hooks/use-folder-operations";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { useLSP } from "./hooks/use-lsp";
 import { useMenuEvents } from "./hooks/use-menu-events";
+import { useQuickEdit } from "./hooks/use-quick-edit";
 import { useRecentFolders } from "./hooks/use-recent-folders";
 import { useRemoteConnection } from "./hooks/use-remote-connection";
 import { useSearch } from "./hooks/use-search";
 import { useSettings } from "./hooks/use-settings";
-import { useUIState } from "./store/ui-state";
 import { useVim } from "./hooks/use-vim";
-import { FileEntry } from "./types/app";
-import { CoreFeaturesState, DEFAULT_CORE_FEATURES } from "./types/core-features";
-import { ThemeType } from "./types/theme";
+import {
+  cleanupFileWatcherListener,
+  initializeFileWatcherListener,
+  useFileWatcherStore,
+} from "./store/file-watcher-store";
+import { useUIState } from "./store/ui-state";
+import type { FileEntry } from "./types/app";
+import { type CoreFeaturesState, DEFAULT_CORE_FEATURES } from "./types/core-features";
+import type { ThemeType } from "./types/theme";
 import { getFilenameFromPath, getLanguageFromFilename } from "./utils/file-utils";
-import { GitDiff } from "./utils/git";
+import type { GitDiff } from "./utils/git";
 import { isMac, readFile, writeFile } from "./utils/platform";
-import { useQuickEdit } from "./hooks/use-quick-edit";
 
 function App() {
   const uiState = useUIState();
@@ -421,7 +422,7 @@ function App() {
 
         const pathParts = activeBuffer.path.replace("remote://", "").split("/");
         const connectionId = pathParts.shift();
-        const remotePath = "/" + pathParts.join("/");
+        const remotePath = `/${pathParts.join("/")}`;
 
         if (connectionId) {
           (async () => {
@@ -609,7 +610,7 @@ function App() {
       const line = prompt("Go to line:");
       if (line && codeEditorRef.current?.textarea) {
         const lineNumber = parseInt(line, 10);
-        if (!isNaN(lineNumber)) {
+        if (!Number.isNaN(lineNumber)) {
           const textarea = codeEditorRef.current.textarea;
           const lines = textarea.value.split("\n");
           let targetPosition = 0;
@@ -816,11 +817,11 @@ function App() {
 
   // Check if we should show welcome screen (no folder open and not a remote window)
   const shouldShowWelcome =
-    files.length === 0
-    && !isRemoteWindow
-    && !remoteConnectionId
-    && !isRemoteFromUrl
-    && !remoteParam;
+    files.length === 0 &&
+    !isRemoteWindow &&
+    !remoteConnectionId &&
+    !isRemoteFromUrl &&
+    !remoteParam;
 
   if (shouldShowWelcome) {
     return (
@@ -955,8 +956,8 @@ function App() {
               />
 
               {/* Breadcrumb - Hidden in git view and extensions view */}
-              {!uiState.isGitViewActive
-                && activeBuffer?.path !== "extensions://language-servers" && (
+              {!uiState.isGitViewActive &&
+                activeBuffer?.path !== "extensions://language-servers" && (
                   <BreadcrumbContainer
                     activeBuffer={activeBuffer}
                     rootFolderPath={rootFolderPath}
@@ -1075,8 +1076,8 @@ function App() {
                       onClick={() => {
                         uiState.setBottomPaneActiveTab("terminal");
                         uiState.setIsBottomPaneVisible(
-                          !uiState.isBottomPaneVisible
-                            || uiState.bottomPaneActiveTab !== "terminal",
+                          !uiState.isBottomPaneVisible ||
+                            uiState.bottomPaneActiveTab !== "terminal",
                         );
                       }}
                       className={`flex items-center gap-1 px-2 py-1 border rounded transition-colors ${
@@ -1096,8 +1097,8 @@ function App() {
                       onClick={() => {
                         uiState.setBottomPaneActiveTab("diagnostics");
                         uiState.setIsBottomPaneVisible(
-                          !uiState.isBottomPaneVisible
-                            || uiState.bottomPaneActiveTab !== "diagnostics",
+                          !uiState.isBottomPaneVisible ||
+                            uiState.bottomPaneActiveTab !== "diagnostics",
                         );
                       }}
                       className={`flex items-center gap-1 px-2 py-1 border rounded transition-colors ${

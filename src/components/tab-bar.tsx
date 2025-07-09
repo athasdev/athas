@@ -1,6 +1,6 @@
 import { Database, Package, Pin, PinOff, X } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Buffer } from "../types/buffer";
+import type { Buffer } from "../types/buffer";
 import { getShortcutText } from "../utils/platform";
 import FileIcon from "./file-icon";
 
@@ -232,7 +232,7 @@ const TabBar = ({
     setDragCurrentPosition({ x: e.clientX, y: e.clientY });
 
     const distance = Math.sqrt(
-      Math.pow(e.clientX - dragStartPosition.x, 2) + Math.pow(e.clientY - dragStartPosition.y, 2),
+      (e.clientX - dragStartPosition.x) ** 2 + (e.clientY - dragStartPosition.y) ** 2,
     );
 
     if (distance > 5 && !isDragging) {
@@ -420,7 +420,9 @@ const TabBar = ({
                   </div>
                 )}
                 <div
-                  ref={el => (tabRefs.current[index] = el)}
+                  ref={el => {
+                    tabRefs.current[index] = el;
+                  }}
                   draggable={true}
                   onDragStart={e => handleDragStart(e, index)}
                   onDragEnd={handleDragEnd}

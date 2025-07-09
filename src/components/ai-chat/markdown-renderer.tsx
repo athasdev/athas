@@ -1,6 +1,6 @@
 import Prism from "prismjs";
-import React from "react";
-import { MarkdownRendererProps } from "./types";
+import type React from "react";
+import type { MarkdownRendererProps } from "./types";
 import { mapLanguage } from "./utils";
 
 // Import common language components
@@ -203,10 +203,10 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
         const italicParts = boldPart.split(/(\*[^*]+\*)/g);
         return italicParts.map((italicPart, italicIndex) => {
           if (
-            italicPart.startsWith("*")
-            && italicPart.endsWith("*")
-            && italicPart.length > 2
-            && !italicPart.startsWith("**")
+            italicPart.startsWith("*") &&
+            italicPart.endsWith("*") &&
+            italicPart.length > 2 &&
+            !italicPart.startsWith("**")
           ) {
             return (
               <em key={`${index}-${boldIndex}-${italicIndex}`} className="italic">

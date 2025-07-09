@@ -1,6 +1,6 @@
-import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { create } from "zustand";
 
 interface FileChangeEvent {
   path: string;

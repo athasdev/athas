@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { Code, Copy, Database, Download, RefreshCw, Search, Table, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import Button from "./ui/button";
-import { Database, Search, Table, RefreshCw, Download, Copy, X, Code } from "lucide-react";
 
 interface SQLiteViewerProps {
   databasePath: string;
@@ -313,7 +313,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                     title={query}
                   >
                     <Code size={10} className="inline mr-1.5" />
-                    {query.length > 25 ? query.substring(0, 25) + "..." : query}
+                    {query.length > 25 ? `${query.substring(0, 25)}...` : query}
                   </button>
                 ))}
               </div>

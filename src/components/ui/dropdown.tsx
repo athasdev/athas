@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
 
 interface DropdownProps {

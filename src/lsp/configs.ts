@@ -1,4 +1,4 @@
-import { LSPConfig } from "./types";
+import type { LSPConfig } from "./types";
 
 export const LSP_CONFIGS: Record<string, LSPConfig> = {
   ruby: {
@@ -81,7 +81,7 @@ export const LSP_CONFIGS: Record<string, LSPConfig> = {
 };
 
 export function getLanguageFromPath(filePath: string): string | null {
-  const extension = "." + filePath.split(".").pop()?.toLowerCase();
+  const extension = `.${filePath.split(".").pop()?.toLowerCase()}`;
 
   for (const [language, config] of Object.entries(LSP_CONFIGS)) {
     if (config.fileExtensions.includes(extension)) {

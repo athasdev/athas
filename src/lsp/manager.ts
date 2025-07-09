@@ -1,7 +1,7 @@
-import { Diagnostic } from "vscode-languageserver-protocol";
-import { LSP_CONFIGS, getLanguageFromPath } from "./configs";
+import type { Diagnostic } from "vscode-languageserver-protocol";
+import { getLanguageFromPath, LSP_CONFIGS } from "./configs";
 import { LSPClient } from "./lsp-client";
-import { LSPClientEvents } from "./types";
+import type { LSPClientEvents } from "./types";
 
 export class LSPManager {
   private clients = new Map<string, LSPClient>();
@@ -11,7 +11,7 @@ export class LSPManager {
   constructor(private onDiagnostics?: (uri: string, diagnostics: Diagnostic[]) => void) {}
 
   async setWorkspaceRoot(path: string): Promise<void> {
-    if (this.workspaceRoot == path) {
+    if (this.workspaceRoot === path) {
       console.log(`LSPManager: workspace root is already set to ${path}`);
       return;
     }

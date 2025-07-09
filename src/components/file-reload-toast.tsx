@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
 
 interface ToastItem {
   id: string;
@@ -7,9 +8,7 @@ interface ToastItem {
   timestamp: number;
 }
 
-interface FileReloadToastProps {
-  // This component maintains its own state and only uses this prop as a trigger
-}
+type FileReloadToastProps = Record<string, never>;
 
 // Keep track of toasts outside component to handle rapid updates
 let toastCounter = 0;

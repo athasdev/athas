@@ -1,21 +1,12 @@
-import { useState, useEffect } from "react";
+import { Archive, Clock, Download, GitBranch, Plus, Trash2, Upload, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
-  Archive,
-  Plus,
-  Download,
-  Upload,
-  Trash2,
-  X,
-  Clock,
-  GitBranch,
-} from "lucide-react";
-import {
-  getStashes,
-  createStash,
   applyStash,
-  popStash,
+  createStash,
   dropStash,
-  GitStash,
+  type GitStash,
+  getStashes,
+  popStash,
 } from "../../utils/git";
 
 interface GitStashManagerProps {
@@ -40,7 +31,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
 
   const loadStashes = async () => {
     if (!repoPath) return;
-    
+
     setIsLoading(true);
     try {
       const stashList = await getStashes(repoPath);
@@ -54,13 +45,13 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
 
   const handleCreateStash = async () => {
     if (!repoPath) return;
-    
+
     setIsLoading(true);
     try {
       const success = await createStash(
-        repoPath, 
+        repoPath,
         newStashMessage.trim() || undefined,
-        includeUntracked
+        includeUntracked,
       );
       if (success) {
         setNewStashMessage("");
@@ -75,10 +66,10 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
   const handleStashAction = async (
     action: () => Promise<boolean>,
     stashIndex: number,
-    actionName: string
+    actionName: string,
   ) => {
     if (!repoPath) return;
-    
+
     setActionLoading(prev => new Set(prev).add(stashIndex));
     try {
       const success = await action();
@@ -99,30 +90,18 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
   };
 
   const handleApplyStash = (stashIndex: number) => {
-    handleStashAction(
-      () => applyStash(repoPath!, stashIndex),
-      stashIndex,
-      "Apply stash"
-    );
+    handleStashAction(() => applyStash(repoPath!, stashIndex), stashIndex, "Apply stash");
   };
 
   const handlePopStash = (stashIndex: number) => {
-    handleStashAction(
-      () => popStash(repoPath!, stashIndex),
-      stashIndex,
-      "Pop stash"
-    );
+    handleStashAction(() => popStash(repoPath!, stashIndex), stashIndex, "Pop stash");
   };
 
   const handleDropStash = (stashIndex: number) => {
     const confirmed = confirm("Are you sure you want to drop this stash? This cannot be undone.");
     if (!confirmed) return;
-    
-    handleStashAction(
-      () => dropStash(repoPath!, stashIndex),
-      stashIndex,
-      "Drop stash"
-    );
+
+    handleStashAction(() => dropStash(repoPath!, stashIndex), stashIndex, "Drop stash");
   };
 
   const formatDate = (dateString: string) => {
@@ -131,7 +110,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      
+
       if (diffDays === 0) {
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
         if (diffHours === 0) {
@@ -179,32 +158,32 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
               <Plus size={12} className="text-[var(--text-lighter)]" />
               <span className="text-xs text-[var(--text-color)] font-medium">Create New Stash</span>
             </div>
-            
+
             <input
               type="text"
               placeholder="Stash message (optional)..."
               value={newStashMessage}
-              onChange={(e) => setNewStashMessage(e.target.value)}
+              onChange={e => setNewStashMessage(e.target.value)}
               className="w-full bg-[var(--primary-bg)] text-[var(--text-color)] border border-[var(--border-color)] px-2 py-1 text-xs rounded focus:outline-none focus:border-blue-500"
-              onKeyDown={(e) => {
+              onKeyDown={e => {
                 if (e.key === "Enter") {
                   handleCreateStash();
                 }
               }}
             />
-            
+
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-1 text-xs text-[var(--text-color)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={includeUntracked}
-                  onChange={(e) => setIncludeUntracked(e.target.checked)}
+                  onChange={e => setIncludeUntracked(e.target.checked)}
                   className="w-3 h-3"
                 />
                 Include untracked files
               </label>
             </div>
-            
+
             <button
               onClick={handleCreateStash}
               disabled={isLoading}
@@ -227,9 +206,9 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
             </div>
           ) : (
             <div className="space-y-0">
-              {stashes.map((stash) => {
+              {stashes.map(stash => {
                 const isActionLoading = actionLoading.has(stash.index);
-                
+
                 return (
                   <div
                     key={stash.index}
@@ -246,11 +225,11 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                             {stash.branch}
                           </div>
                         </div>
-                        
+
                         <div className="text-xs text-[var(--text-color)] mb-1">
-                          {stash.message || "WIP on " + stash.branch}
+                          {stash.message || `WIP on ${stash.branch}`}
                         </div>
-                        
+
                         <div className="flex items-center gap-1 text-[9px] text-[var(--text-lighter)]">
                           <Clock size={8} />
                           {formatDate(stash.date)}
@@ -269,7 +248,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                         <Download size={8} />
                         Apply
                       </button>
-                      
+
                       <button
                         onClick={() => handlePopStash(stash.index)}
                         disabled={isActionLoading}
@@ -279,7 +258,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                         <Upload size={8} />
                         Pop
                       </button>
-                      
+
                       <button
                         onClick={() => handleDropStash(stash.index)}
                         disabled={isActionLoading}
@@ -299,11 +278,11 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
 
         {/* Footer */}
         <div className="p-3 border-t border-[var(--border-color)] text-[9px] text-[var(--text-lighter)] bg-[var(--primary-bg)]">
-          {stashes.length} stash{stashes.length !== 1 ? 'es' : ''} total
+          {stashes.length} stash{stashes.length !== 1 ? "es" : ""} total
         </div>
       </div>
     </div>
   );
 };
 
-export default GitStashManager; 
+export default GitStashManager;

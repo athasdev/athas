@@ -1,128 +1,124 @@
-import { useState, useEffect } from 'react'
-import { FileText, Hash, Code, Braces, Type } from 'lucide-react'
-import { cn } from '../utils/cn'
+import { Braces, Code, FileText, Hash, Type } from "lucide-react";
+import { useEffect, useState } from "react";
+import { cn } from "../utils/cn";
 
 interface OutlineItem {
-  name: string
-  type: 'function' | 'class' | 'interface' | 'method' | 'property' | 'header' | 'section'
-  line: number
-  level: number
+  name: string;
+  type: "function" | "class" | "interface" | "method" | "property" | "header" | "section";
+  line: number;
+  level: number;
 }
 
 interface OutlineViewProps {
-  content?: string
-  language?: string
-  onItemClick?: (line: number) => void
-  className?: string
+  content?: string;
+  language?: string;
+  onItemClick?: (line: number) => void;
+  className?: string;
 }
 
 export default function OutlineView({
-  content = '',
-  language = 'text',
+  content = "",
+  language = "text",
   onItemClick,
-  className = ''
+  className = "",
 }: OutlineViewProps) {
-  const [outlineItems, setOutlineItems] = useState<OutlineItem[]>([])
+  const [outlineItems, setOutlineItems] = useState<OutlineItem[]>([]);
 
   useEffect(() => {
     if (!content) {
-      setOutlineItems([])
-      return
+      setOutlineItems([]);
+      return;
     }
 
-    const lines = content.split('\n')
-    const items: OutlineItem[] = []
+    const lines = content.split("\n");
+    const items: OutlineItem[] = [];
 
     lines.forEach((line, index) => {
-      const trimmedLine = line.trim()
-      const lineNumber = index + 1
+      const trimmedLine = line.trim();
+      const lineNumber = index + 1;
 
-      if (language === 'typescript' || language === 'javascript') {
+      if (language === "typescript" || language === "javascript") {
         if (trimmedLine.match(/^(export\s+)?(async\s+)?function\s+(\w+)/)) {
-          const match = trimmedLine.match(/function\s+(\w+)/)
+          const match = trimmedLine.match(/function\s+(\w+)/);
           if (match) {
             items.push({
               name: match[1],
-              type: 'function',
+              type: "function",
               line: lineNumber,
-              level: 0
-            })
+              level: 0,
+            });
           }
-        }
-        else if (trimmedLine.match(/^(const|let|var)\s+(\w+)\s*=\s*(\([^)]*\))?\s*=>/)) {
-          const match = trimmedLine.match(/(const|let|var)\s+(\w+)/)
+        } else if (trimmedLine.match(/^(const|let|var)\s+(\w+)\s*=\s*(\([^)]*\))?\s*=>/)) {
+          const match = trimmedLine.match(/(const|let|var)\s+(\w+)/);
           if (match) {
             items.push({
               name: match[2],
-              type: 'function',
+              type: "function",
               line: lineNumber,
-              level: 0
-            })
+              level: 0,
+            });
           }
-        }
-        else if (trimmedLine.match(/^(export\s+)?(abstract\s+)?class\s+(\w+)/)) {
-          const match = trimmedLine.match(/class\s+(\w+)/)
+        } else if (trimmedLine.match(/^(export\s+)?(abstract\s+)?class\s+(\w+)/)) {
+          const match = trimmedLine.match(/class\s+(\w+)/);
           if (match) {
             items.push({
               name: match[1],
-              type: 'class',
+              type: "class",
               line: lineNumber,
-              level: 0
-            })
+              level: 0,
+            });
           }
-        }
-        else if (trimmedLine.match(/^(export\s+)?interface\s+(\w+)/)) {
-          const match = trimmedLine.match(/interface\s+(\w+)/)
+        } else if (trimmedLine.match(/^(export\s+)?interface\s+(\w+)/)) {
+          const match = trimmedLine.match(/interface\s+(\w+)/);
           if (match) {
             items.push({
               name: match[1],
-              type: 'interface',
+              type: "interface",
               line: lineNumber,
-              level: 0
-            })
+              level: 0,
+            });
           }
         }
-      }
-      else if (language === 'markdown') {
-        const headerMatch = trimmedLine.match(/^(#{1,6})\s+(.+)$/)
+      } else if (language === "markdown") {
+        const headerMatch = trimmedLine.match(/^(#{1,6})\s+(.+)$/);
         if (headerMatch) {
           items.push({
             name: headerMatch[2],
-            type: 'header',
+            type: "header",
             line: lineNumber,
-            level: headerMatch[1].length - 1
-          })
+            level: headerMatch[1].length - 1,
+          });
         }
       }
-    })
+    });
 
-    setOutlineItems(items)
-  }, [content, language])
+    setOutlineItems(items);
+  }, [content, language]);
 
-  const getIcon = (type: OutlineItem['type']) => {
+  const getIcon = (type: OutlineItem["type"]) => {
     switch (type) {
-      case 'function':
-        return <Code size={12} className="text-blue-500" />
-      case 'class':
-        return <Braces size={12} className="text-green-500" />
-      case 'interface':
-        return <Type size={12} className="text-purple-500" />
-      case 'method':
-        return <Code size={12} className="text-blue-400" />
-      case 'property':
-        return <Hash size={12} className="text-yellow-500" />
-      case 'header':
-        return <Hash size={12} className="text-gray-500" />
+      case "function":
+        return <Code size={12} className="text-blue-500" />;
+      case "class":
+        return <Braces size={12} className="text-green-500" />;
+      case "interface":
+        return <Type size={12} className="text-purple-500" />;
+      case "method":
+        return <Code size={12} className="text-blue-400" />;
+      case "property":
+        return <Hash size={12} className="text-yellow-500" />;
+      case "header":
+        return <Hash size={12} className="text-gray-500" />;
       default:
-        return <FileText size={12} className="text-gray-400" />
+        return <FileText size={12} className="text-gray-400" />;
     }
-  }
+  };
 
   const handleItemClick = (item: OutlineItem) => {
     if (onItemClick) {
-      onItemClick(item.line)
+      onItemClick(item.line);
     }
-  }
+  };
 
   if (outlineItems.length === 0) {
     return (
@@ -139,7 +135,7 @@ export default function OutlineView({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -159,15 +155,11 @@ export default function OutlineView({
             title={`Line ${item.line}: ${item.name}`}
           >
             {getIcon(item.type)}
-            <span className="flex-1 text-[var(--text-color)] truncate">
-              {item.name}
-            </span>
-            <span className="text-xs text-[var(--text-lighter)] opacity-75">
-              {item.line}
-            </span>
+            <span className="flex-1 text-[var(--text-color)] truncate">{item.name}</span>
+            <span className="text-xs text-[var(--text-lighter)] opacity-75">{item.line}</span>
           </button>
         ))}
       </div>
     </div>
-  )
-} 
+  );
+}

@@ -1,7 +1,7 @@
 import { Code, Package, Palette, Search, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CoreFeature } from "../types/core-features";
-import { ThemeType } from "../types/theme";
+import type { CoreFeature } from "../types/core-features";
+import type { ThemeType } from "../types/theme";
 import Button from "./ui/button";
 
 interface Extension {
@@ -418,8 +418,8 @@ export default function ExtensionsView({
 
   const filteredExtensions = extensions.filter(extension => {
     const matchesSearch =
-      extension.name.toLowerCase().includes(searchQuery.toLowerCase())
-      || extension.description.toLowerCase().includes(searchQuery.toLowerCase());
+      extension.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      extension.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === "all" || extension.category === activeTab;
     return matchesSearch && matchesTab;
   });
@@ -427,8 +427,8 @@ export default function ExtensionsView({
   const filteredCoreFeatures =
     coreFeatures?.filter(feature => {
       const matchesSearch =
-        feature.name.toLowerCase().includes(searchQuery.toLowerCase())
-        || feature.description.toLowerCase().includes(searchQuery.toLowerCase());
+        feature.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        feature.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesSearch;
     }) || [];
 
@@ -495,9 +495,9 @@ export default function ExtensionsView({
 
       <div className="flex-1 overflow-auto p-4">
         {/* Core Features */}
-        {(activeTab === "all" || activeTab === "core")
-          && coreFeatures
-          && coreFeatures.length > 0 && (
+        {(activeTab === "all" || activeTab === "core") &&
+          coreFeatures &&
+          coreFeatures.length > 0 && (
             <div className="mb-6">
               {activeTab === "all" && (
                 <h3 className="text-sm font-medium text-[var(--text-color)] mb-3 flex items-center gap-2">
@@ -540,11 +540,11 @@ export default function ExtensionsView({
         )}
 
         {/* No results */}
-        {((activeTab === "core" && filteredCoreFeatures.length === 0)
-          || (activeTab !== "core" && activeTab !== "all" && filteredExtensions.length === 0)
-          || (activeTab === "all"
-            && filteredCoreFeatures.length === 0
-            && filteredExtensions.length === 0)) && (
+        {((activeTab === "core" && filteredCoreFeatures.length === 0) ||
+          (activeTab !== "core" && activeTab !== "all" && filteredExtensions.length === 0) ||
+          (activeTab === "all" &&
+            filteredCoreFeatures.length === 0 &&
+            filteredExtensions.length === 0)) && (
           <div className="text-center py-8 text-[var(--text-lighter)]">
             <Package size={24} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm">No items found matching your search.</p>

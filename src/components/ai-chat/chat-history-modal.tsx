@@ -1,7 +1,7 @@
+import { MessageSquare, Search, Trash2, X } from "lucide-react";
 import { useState } from "react";
-import { X, Search, MessageSquare, Trash2 } from "lucide-react";
 import { cn } from "../../utils/cn";
-import { ChatHistoryModalProps } from "./types";
+import type { ChatHistoryModalProps } from "./types";
 import { getRelativeTime } from "./utils";
 
 export default function ChatHistoryModal({
@@ -14,7 +14,7 @@ export default function ChatHistoryModal({
 }: ChatHistoryModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredChats = chats.filter((chat) =>
+  const filteredChats = chats.filter(chat =>
     chat.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
@@ -24,9 +24,7 @@ export default function ChatHistoryModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
       <div className="bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-hidden">
         <div className="flex items-center justify-between p-3 border-b border-[var(--border-color)]">
-          <h3 className="text-sm font-medium text-[var(--text-color)]">
-            Chat History
-          </h3>
+          <h3 className="text-sm font-medium text-[var(--text-color)]">Chat History</h3>
           <button
             onClick={onClose}
             className="p-1 hover:bg-[var(--hover-color)] rounded transition-colors"
@@ -45,7 +43,7 @@ export default function ChatHistoryModal({
               type="text"
               placeholder="Search chats..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-7 pr-2 py-1 text-xs bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded focus:outline-none focus:border-[var(--text-lighter)] text-[var(--text-color)]"
             />
           </div>
@@ -55,13 +53,11 @@ export default function ChatHistoryModal({
           {filteredChats.length === 0 ? (
             <div className="text-center py-8 text-[var(--text-lighter)]">
               <MessageSquare size={24} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">
-                {searchQuery ? "No matching chats" : "No chat history"}
-              </p>
+              <p className="text-sm">{searchQuery ? "No matching chats" : "No chat history"}</p>
             </div>
           ) : (
             <div>
-              {filteredChats.map((chat) => (
+              {filteredChats.map(chat => (
                 <div
                   key={chat.id}
                   onClick={() => {
@@ -70,9 +66,7 @@ export default function ChatHistoryModal({
                   }}
                   className={cn(
                     "flex items-center justify-between p-2 cursor-pointer transition-colors group border-b border-[var(--border-color)] last:border-b-0",
-                    chat.id === currentChatId
-                      ? "bg-blue-500/20"
-                      : "hover:bg-[var(--hover-color)]",
+                    chat.id === currentChatId ? "bg-blue-500/20" : "hover:bg-[var(--hover-color)]",
                   )}
                 >
                   <div className="flex-1 min-w-0 pr-2">
@@ -84,7 +78,7 @@ export default function ChatHistoryModal({
                     </div>
                   </div>
                   <button
-                    onClick={(e) => onDeleteChat(chat.id, e)}
+                    onClick={e => onDeleteChat(chat.id, e)}
                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition-all"
                     title="Delete chat"
                   >

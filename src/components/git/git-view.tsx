@@ -13,14 +13,14 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
+  type GitCommit,
+  type GitFile,
+  type GitStatus,
   getBranches,
   getCommitDiff,
   getFileDiff,
   getGitLog,
   getGitStatus,
-  GitCommit,
-  GitFile,
-  GitStatus,
 } from "../../utils/git";
 import { safeLocalStorageSetItem, truncateJsonArrayData } from "../../utils/storage";
 
@@ -359,8 +359,8 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
   );
 
   const renderGitActionsMenu = () =>
-    showGitActionsMenu
-    && gitActionsMenuPosition && (
+    showGitActionsMenu &&
+    gitActionsMenuPosition && (
       <div
         className="fixed bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-md shadow-lg z-50 py-1 min-w-[180px]"
         style={{

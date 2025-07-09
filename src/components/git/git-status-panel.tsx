@@ -1,23 +1,24 @@
-import React, { useState, useEffect } from "react";
 import {
-  Plus,
-  Minus,
   Check,
   Edit3,
   FileIcon,
   FilePlus,
+  FileText,
   FileX,
+  Minus,
+  Plus,
   RotateCcw,
   Trash2,
-  FileText,
 } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import {
-  stageFile,
-  unstageFile,
-  stageAllFiles,
-  unstageAllFiles,
   discardFileChanges,
-  GitFile,
+  type GitFile,
+  stageAllFiles,
+  stageFile,
+  unstageAllFiles,
+  unstageFile,
 } from "../../utils/git";
 
 interface GitStatusPanelProps {

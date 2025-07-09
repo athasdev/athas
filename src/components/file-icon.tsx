@@ -1,14 +1,14 @@
 import {
-  Folder,
-  FolderOpen,
-  FileText,
+  Database,
+  File,
+  FileAudio,
   FileCode,
   FileImage,
+  FileText,
   FileVideo,
-  FileAudio,
-  File,
+  Folder,
+  FolderOpen,
   Settings,
-  Database,
 } from "lucide-react";
 
 interface FileIconProps {
@@ -37,9 +37,9 @@ const FileIcon = ({
   const lowerFileName = fileName.toLowerCase();
   const extension = fileName.split(".").pop()?.toLowerCase();
   const iconProps = { size, className };
-  
+
   // Handle compound extensions like .html.erb
-  if (lowerFileName.endsWith('.html.erb')) {
+  if (lowerFileName.endsWith(".html.erb")) {
     return <FileCode {...iconProps} />;
   }
 

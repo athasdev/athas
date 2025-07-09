@@ -1,6 +1,7 @@
 import { Bot, Monitor, Moon, Palette, Settings, Sun, X } from "lucide-react";
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { ThemeType } from "../types/theme";
+import type React from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import type { ThemeType } from "../types/theme";
 
 interface Action {
   id: string;
@@ -135,9 +136,9 @@ const CommandPalette = forwardRef<CommandPaletteRef, CommandPaletteProps>(
     // Filter actions based on query
     const filteredActions = actions.filter(
       action =>
-        action.label.toLowerCase().includes(query.toLowerCase())
-        || action.description?.toLowerCase().includes(query.toLowerCase())
-        || action.category.toLowerCase().includes(query.toLowerCase()),
+        action.label.toLowerCase().includes(query.toLowerCase()) ||
+        action.description?.toLowerCase().includes(query.toLowerCase()) ||
+        action.category.toLowerCase().includes(query.toLowerCase()),
     );
 
     // Handle keyboard navigation

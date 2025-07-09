@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ThemeType } from "../types/theme";
+import type { ThemeType } from "../types/theme";
 
 export interface Settings {
   theme: ThemeType;

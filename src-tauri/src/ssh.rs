@@ -79,7 +79,8 @@ fn get_ssh_config(host: &str) -> SshConfig {
                             "hostname" => config.hostname = Some(value.to_string()),
                             "user" => config.user = Some(value.to_string()),
                             "identityfile" => {
-                                let expanded_path = if let Some(stripped) = value.strip_prefix("~/") {
+                                let expanded_path = if let Some(stripped) = value.strip_prefix("~/")
+                                {
                                     format!("{}/{}", home_dir, stripped)
                                 } else {
                                     value.to_string()

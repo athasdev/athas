@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { RecentFolder } from "../types/recent-folders";
+import type { RecentFolder } from "../types/recent-folders";
 
 export const useRecentFolders = () => {
   const [recentFolders, setRecentFolders] = useState<RecentFolder[]>([]);

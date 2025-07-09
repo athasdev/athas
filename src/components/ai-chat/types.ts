@@ -1,5 +1,5 @@
-import React from "react";
-import { Buffer } from "../../types/buffer";
+import type React from "react";
+import type { Buffer } from "../../types/buffer";
 
 export interface Message {
   id: string;

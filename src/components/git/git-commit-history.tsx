@@ -1,15 +1,15 @@
-import { useState } from "react";
 import {
-  GitCommit as GitCommitIcon,
-  Clock,
-  User,
-  Hash,
-  Eye,
-  Copy,
-  ChevronRight,
   ChevronDown,
+  ChevronRight,
+  Clock,
+  Copy,
+  Eye,
+  GitCommit as GitCommitIcon,
+  Hash,
+  User,
 } from "lucide-react";
-import { GitCommit, getCommitDiff } from "../../utils/git";
+import { useState } from "react";
+import { type GitCommit, getCommitDiff } from "../../utils/git";
 
 interface GitCommitHistoryProps {
   commits: GitCommit[];
@@ -24,21 +24,21 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
 
   const toggleCommitExpansion = async (commitHash: string) => {
     const newExpanded = new Set(expandedCommits);
-    
+
     if (expandedCommits.has(commitHash)) {
       // Collapse
       newExpanded.delete(commitHash);
     } else {
       // Expand - load commit files if not already loaded
       newExpanded.add(commitHash);
-      
+
       if (!commitFiles[commitHash] && repoPath) {
         setLoadingCommits(prev => new Set(prev).add(commitHash));
         try {
           const diffs = await getCommitDiff(repoPath, commitHash);
           setCommitFiles(prev => ({
             ...prev,
-            [commitHash]: diffs
+            [commitHash]: diffs,
           }));
         } catch (error) {
           console.error("Failed to load commit files:", error);
@@ -51,7 +51,7 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
         }
       }
     }
-    
+
     setExpandedCommits(newExpanded);
   };
 
@@ -65,7 +65,7 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      
+
       if (diffDays === 0) {
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
         if (diffHours === 0) {
@@ -122,11 +122,11 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
       </div>
 
       <div className="bg-[var(--primary-bg)] max-h-96 overflow-y-auto">
-        {commits.map((commit) => {
+        {commits.map(commit => {
           const isExpanded = expandedCommits.has(commit.hash);
           const files = commitFiles[commit.hash] || [];
           const isLoading = loadingCommits.has(commit.hash);
-          
+
           return (
             <div
               key={commit.hash}
@@ -139,39 +139,35 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
                     onClick={() => toggleCommitExpansion(commit.hash)}
                     className="mt-0.5 text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
                   >
-                    {isExpanded ? (
-                      <ChevronDown size={10} />
-                    ) : (
-                      <ChevronRight size={10} />
-                    )}
+                    {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
                   </button>
-                  
+
                   <GitCommitIcon
                     size={10}
                     className="text-[var(--text-lighter)] mt-0.5 flex-shrink-0"
                   />
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="text-[10px] text-[var(--text-color)] font-medium leading-tight mb-1">
                       {commit.message}
                     </div>
-                    
+
                     <div className="flex items-center gap-3 text-[9px] text-[var(--text-lighter)]">
                       <span className="flex items-center gap-1">
                         <User size={8} />
                         {commit.author}
                       </span>
-                      
+
                       <span className="flex items-center gap-1">
                         <Clock size={8} />
                         {formatDate(commit.date)}
                       </span>
-                      
+
                       <div className="flex items-center gap-1">
                         <Hash size={8} />
                         <span className="font-mono">{commit.hash.substring(0, 7)}</span>
                         <button
-                          onClick={(e) => {
+                          onClick={e => {
                             e.stopPropagation();
                             copyCommitHash(commit.hash);
                           }}
@@ -183,9 +179,9 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
                       </div>
                     </div>
                   </div>
-                  
+
                   <button
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation();
                       onViewCommitDiff?.(commit.hash);
                     }}
@@ -207,7 +203,7 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
                   ) : files.length > 0 ? (
                     <div className="space-y-1">
                       <div className="text-[9px] text-[var(--text-lighter)] mb-1">
-                        {files.length} file{files.length !== 1 ? 's' : ''} changed
+                        {files.length} file{files.length !== 1 ? "s" : ""} changed
                       </div>
                       {files.map((file, fileIndex) => (
                         <div
@@ -215,16 +211,16 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
                           className="flex items-center gap-2 text-[9px] hover:bg-[var(--hover-color)] px-2 py-1 rounded cursor-pointer"
                           onClick={() => onViewCommitDiff?.(commit.hash, file.file_path)}
                         >
-                          <span className={`font-mono ${getFileStatusColor(file.is_new ? 'added' : file.is_deleted ? 'deleted' : 'modified')}`}>
-                            {file.is_new ? 'A' : file.is_deleted ? 'D' : 'M'}
+                          <span
+                            className={`font-mono ${getFileStatusColor(file.is_new ? "added" : file.is_deleted ? "deleted" : "modified")}`}
+                          >
+                            {file.is_new ? "A" : file.is_deleted ? "D" : "M"}
                           </span>
                           <span className="text-[var(--text-color)] truncate">
                             {file.file_path}
                           </span>
                           {file.is_renamed && file.old_path && (
-                            <span className="text-[var(--text-lighter)]">
-                              ← {file.old_path}
-                            </span>
+                            <span className="text-[var(--text-lighter)]">← {file.old_path}</span>
                           )}
                         </div>
                       ))}
@@ -244,4 +240,4 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
   );
 };
 
-export default GitCommitHistory; 
+export default GitCommitHistory;

@@ -1,4 +1,4 @@
-import { AIMessage } from "@/types/ai-chat";
+import type { AIMessage } from "@/types/ai-chat";
 import { getModelById, getProviderById } from "../types/ai-provider";
 import { isTauri } from "./platform";
 
@@ -292,11 +292,11 @@ ${contextPrompt}`;
 
     // Add provider-specific headers
     if (providerId === "openrouter") {
-      headers["Authorization"] = `Bearer ${apiKey}`;
+      headers.Authorization = `Bearer ${apiKey}`;
       headers["HTTP-Referer"] = "https://localhost";
       headers["X-Title"] = "Code Editor";
     } else if (apiKey) {
-      headers["Authorization"] = `Bearer ${apiKey}`;
+      headers.Authorization = `Bearer ${apiKey}`;
     }
 
     const payload = {
@@ -367,13 +367,13 @@ ${contextPrompt}`;
 
               // Handle different response formats
               let content = "";
-              if (data.choices && data.choices[0]) {
+              if (data.choices?.[0]) {
                 const choice = data.choices[0];
                 console.log("🔍 Choice data:", choice);
-                if (choice.delta && choice.delta.content) {
+                if (choice.delta?.content) {
                   content = choice.delta.content;
                   console.log("🔍 Delta content found:", content);
-                } else if (choice.message && choice.message.content) {
+                } else if (choice.message?.content) {
                   content = choice.message.content;
                   console.log("🔍 Message content found:", content);
                 }

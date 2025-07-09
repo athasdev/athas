@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { GitDiff, GitDiffLine } from "../utils/git";
+import type { GitDiff, GitDiffLine } from "../utils/git";
 
 interface DiffViewerProps {
   diff: GitDiff | null;

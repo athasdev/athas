@@ -1,5 +1,6 @@
 import Prism from "prismjs";
-import React, {
+import type React from "react";
+import {
   forwardRef,
   useCallback,
   useEffect,
@@ -8,8 +9,12 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { CompletionItem } from "vscode-languageserver-protocol";
-import { cancelCompletion, CompletionResponse, requestCompletion } from "../utils/ai-completion";
+import type { CompletionItem } from "vscode-languageserver-protocol";
+import {
+  type CompletionResponse,
+  cancelCompletion,
+  requestCompletion,
+} from "../utils/ai-completion";
 import { cn } from "../utils/cn";
 import { CompletionDropdown } from "./completion-dropdown";
 import InlineCompletion from "./inline-completion";
@@ -392,7 +397,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
         hoverTimeoutRef.current = setTimeout(async () => {
           try {
             const hoverResult = await getHover(current.filePath!, line, character);
-            if (hoverResult && hoverResult.contents) {
+            if (hoverResult?.contents) {
               let content = "";
 
               // Handle different content formats
@@ -646,7 +651,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
                 cursorPosition: cursorPos,
               },
               completion => {
-                if (completion && completion.completion.trim()) {
+                if (completion?.completion.trim()) {
                   setCurrentCompletion(completion);
                   setShowCompletion(true);
                 }
@@ -761,9 +766,11 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
           const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null);
 
           let currentPos = 0;
-          let node;
+          let node: Node | null;
 
-          while ((node = walker.nextNode())) {
+          while (true) {
+            node = walker.nextNode();
+            if (!node) break;
             const nodeText = node.textContent || "";
             const nodeStart = currentPos;
             const nodeEnd = currentPos + nodeText.length;
@@ -779,8 +786,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
 
               // Create the replacement HTML
               const replacement = document.createElement("span");
-              replacement.innerHTML =
-                beforeText + `<span class="${matchClass}">${matchText}</span>` + afterText;
+              replacement.innerHTML = `${beforeText}<span class="${matchClass}">${matchText}</span>${afterText}`;
 
               // Replace the text node with our highlighted version
               const parent = node.parentNode;
@@ -872,9 +878,9 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
 
         // Trigger LSP completion if supported and in insert mode (or vim disabled) - but not for remote files
         if (
-          !isRemoteFile
-          && isLanguageSupported?.(filePath || "")
-          && (!vimEnabled || vimMode === "insert")
+          !isRemoteFile &&
+          isLanguageSupported?.(filePath || "") &&
+          (!vimEnabled || vimMode === "insert")
         ) {
           handleLspCompletion(position);
         }
@@ -894,9 +900,9 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
 
       const currentCursorPos = textareaRef.current.selectionStart;
       const newValue =
-        value.substring(0, currentCursorPos)
-        + currentCompletion.completion
-        + value.substring(currentCursorPos);
+        value.substring(0, currentCursorPos) +
+        currentCompletion.completion +
+        value.substring(currentCursorPos);
 
       onChange(newValue);
       setShowCompletion(false);
@@ -1040,9 +1046,9 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
             if (selectionStart === selectionEnd) {
               // No selection - insert tab at cursor
               const newValue =
-                currentValue.substring(0, selectionStart)
-                + spaces
-                + currentValue.substring(selectionStart);
+                currentValue.substring(0, selectionStart) +
+                spaces +
+                currentValue.substring(selectionStart);
               onChange(newValue);
 
               requestAnimationFrame(() => {
@@ -1125,8 +1131,8 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
                     lines.slice(0, targetLine).join("\n").length + (targetLine > 0 ? 1 : 0);
                   const currentLineText = lines[targetLine];
                   const cursorOffsetInLine =
-                    selectionStart
-                    - (currentValue.substring(0, selectionStart).lastIndexOf("\n") + 1);
+                    selectionStart -
+                    (currentValue.substring(0, selectionStart).lastIndexOf("\n") + 1);
                   const newPos =
                     targetLineStart + Math.min(cursorOffsetInLine, currentLineText.length);
                   textarea.setSelectionRange(newPos, newPos);
@@ -1199,10 +1205,10 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
                 // Comment
                 const leadingWhitespace = lines[i].match(/^\s*/)?.[0] || "";
                 lines[i] =
-                  leadingWhitespace
-                  + commentPrefix
-                  + " "
-                  + lines[i].substring(leadingWhitespace.length);
+                  leadingWhitespace +
+                  commentPrefix +
+                  " " +
+                  lines[i].substring(leadingWhitespace.length);
               }
             }
 
@@ -1217,14 +1223,14 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
             const lines = currentValue.split("\n");
             const currentLine = currentValue.substring(0, selectionStart).split("\n").length - 1;
             const currentLineEnd =
-              currentValue.substring(0, selectionStart).lastIndexOf("\n")
-              + 1
-              + lines[currentLine].length;
+              currentValue.substring(0, selectionStart).lastIndexOf("\n") +
+              1 +
+              lines[currentLine].length;
 
             const newValue =
-              currentValue.substring(0, currentLineEnd)
-              + "\n"
-              + currentValue.substring(currentLineEnd);
+              currentValue.substring(0, currentLineEnd) +
+              "\n" +
+              currentValue.substring(currentLineEnd);
             onChange(newValue);
 
             requestAnimationFrame(() => {
@@ -1243,9 +1249,9 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
               currentValue.substring(0, selectionStart).lastIndexOf("\n") + 1;
 
             const newValue =
-              currentValue.substring(0, currentLineStart)
-              + "\n"
-              + currentValue.substring(currentLineStart);
+              currentValue.substring(0, currentLineStart) +
+              "\n" +
+              currentValue.substring(currentLineStart);
             onChange(newValue);
 
             requestAnimationFrame(() => {

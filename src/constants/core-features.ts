@@ -1,12 +1,12 @@
 import {
+  Bug,
   GitBranch,
+  MessageSquare,
+  Search,
   Server,
   Terminal as TerminalIcon,
-  Search,
-  Bug,
-  MessageSquare,
 } from "lucide-react";
-import { CoreFeature } from "../types/core-features";
+import type { CoreFeature } from "../types/core-features";
 
 export const createCoreFeaturesList = (coreFeatures: any): CoreFeature[] => [
   {

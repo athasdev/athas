@@ -20,4 +20,4 @@ export interface SearchState {
   currentMatch: number;
   totalMatches: number;
   matches: { start: number; end: number }[];
-} 
+}

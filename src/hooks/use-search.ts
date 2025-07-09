@@ -1,7 +1,8 @@
-import React, { useCallback, useState } from "react";
-import { CodeEditorRef } from "../components/code-editor";
-import { SearchState } from "../types/app";
-import { Buffer } from "../types/buffer";
+import type React from "react";
+import { useCallback, useState } from "react";
+import type { CodeEditorRef } from "../components/code-editor";
+import type { SearchState } from "../types/app";
+import type { Buffer } from "../types/buffer";
 
 interface UseSearchProps {
   activeBuffer: Buffer | null;

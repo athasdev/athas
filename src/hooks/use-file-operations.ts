@@ -1,7 +1,13 @@
-import { useState, useCallback } from "react";
-import { openFolder, readDirectory, writeFile, createDirectory, deletePath } from "../utils/platform";
-import { FileEntry } from "../types/app";
+import { useCallback, useState } from "react";
+import type { FileEntry } from "../types/app";
 import { getRootPath } from "../utils/file-utils";
+import {
+  createDirectory,
+  deletePath,
+  openFolder,
+  readDirectory,
+  writeFile,
+} from "../utils/platform";
 
 interface UseFileOperationsProps {
   openBuffer: (
@@ -32,9 +38,11 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
 
     // Check cache first (cache for 30 seconds)
     const now = Date.now();
-    if (projectFilesCache &&
+    if (
+      projectFilesCache &&
       projectFilesCache.path === rootFolderPath &&
-      now - projectFilesCache.timestamp < 30000) {
+      now - projectFilesCache.timestamp < 30000
+    ) {
       console.log(`📋 Using cached project files: ${projectFilesCache.files.length} files`);
       return projectFilesCache.files;
     }
@@ -44,70 +52,89 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
     // Common directories and patterns to ignore for performance
     const IGNORE_PATTERNS = [
       // Dependencies
-      'node_modules',
-      'vendor',
-      '.pnpm',
-      '.yarn',
+      "node_modules",
+      "vendor",
+      ".pnpm",
+      ".yarn",
 
       // Version control
-      '.git',
-      '.svn',
-      '.hg',
+      ".git",
+      ".svn",
+      ".hg",
 
       // Build outputs
-      'dist',
-      'build',
-      'out',
-      'target',
-      '.next',
-      '.nuxt',
+      "dist",
+      "build",
+      "out",
+      "target",
+      ".next",
+      ".nuxt",
 
       // Cache/temp directories
-      '.cache',
-      'tmp',
-      'temp',
-      '.tmp',
-      '.DS_Store',
-      'Thumbs.db',
+      ".cache",
+      "tmp",
+      "temp",
+      ".tmp",
+      ".DS_Store",
+      "Thumbs.db",
 
       // IDE/Editor files
-      '.vscode',
-      '.idea',
-      '*.swp',
-      '*.swo',
-      '*~',
+      ".vscode",
+      ".idea",
+      "*.swp",
+      "*.swo",
+      "*~",
 
       // Logs
-      'logs',
-      '*.log',
+      "logs",
+      "*.log",
 
       // OS generated files
-      '.Spotlight-V100',
-      '.Trashes',
-      'ehthumbs.db',
+      ".Spotlight-V100",
+      ".Trashes",
+      "ehthumbs.db",
 
       // Package manager locks (large files)
-      'package-lock.json',
-      'yarn.lock',
-      'pnpm-lock.yaml',
-      'Cargo.lock',
+      "package-lock.json",
+      "yarn.lock",
+      "pnpm-lock.yaml",
+      "Cargo.lock",
     ];
 
     const IGNORE_FILE_EXTENSIONS = [
       // Binary files
-      '.exe', '.dll', '.so', '.dylib',
-      '.bin', '.obj', '.o', '.a',
+      ".exe",
+      ".dll",
+      ".so",
+      ".dylib",
+      ".bin",
+      ".obj",
+      ".o",
+      ".a",
 
       // Large media files
-      '.mov', '.mp4', '.avi', '.mkv',
-      '.wav', '.mp3', '.flac',
-      '.psd', '.ai', '.sketch',
+      ".mov",
+      ".mp4",
+      ".avi",
+      ".mkv",
+      ".wav",
+      ".mp3",
+      ".flac",
+      ".psd",
+      ".ai",
+      ".sketch",
 
       // Archives
-      '.zip', '.rar', '.7z', '.tar', '.gz',
+      ".zip",
+      ".rar",
+      ".7z",
+      ".tar",
+      ".gz",
 
       // Database files
-      '.db', '.sqlite', '.sqlite3',
+      ".db",
+      ".sqlite",
+      ".sqlite3",
     ];
 
     const shouldIgnore = (name: string, isDir: boolean): boolean => {
@@ -115,9 +142,9 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
 
       // Check ignore patterns
       for (const pattern of IGNORE_PATTERNS) {
-        if (pattern.includes('*')) {
+        if (pattern.includes("*")) {
           // Simple glob pattern matching
-          const regexPattern = pattern.replace(/\*/g, '.*');
+          const regexPattern = pattern.replace(/\*/g, ".*");
           if (new RegExp(`^${regexPattern}$`).test(lowerName)) {
             return true;
           }
@@ -128,14 +155,19 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
 
       // Check file extensions (only for files, not directories)
       if (!isDir) {
-        const extension = name.substring(name.lastIndexOf('.')).toLowerCase();
+        const extension = name.substring(name.lastIndexOf(".")).toLowerCase();
         if (IGNORE_FILE_EXTENSIONS.includes(extension)) {
           return true;
         }
       }
 
       // Skip hidden files/folders (starting with .) except important ones
-      if (name.startsWith('.') && name !== '.env' && name !== '.gitignore' && name !== '.editorconfig') {
+      if (
+        name.startsWith(".") &&
+        name !== ".env" &&
+        name !== ".gitignore" &&
+        name !== ".editorconfig"
+      ) {
         return true;
       }
 
@@ -183,7 +215,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
           if (allFiles.length % 500 === 0) {
             // Use requestIdleCallback for better performance when available
             await new Promise(resolve => {
-              if ('requestIdleCallback' in window) {
+              if ("requestIdleCallback" in window) {
                 requestIdleCallback(resolve, { timeout: 16 });
               } else {
                 requestAnimationFrame(resolve);
@@ -207,7 +239,9 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
     await scanDirectory(rootFolderPath);
 
     const endTime = Date.now();
-    console.log(`✅ File scan completed: ${allFiles.length} files found in ${endTime - startTime}ms`);
+    console.log(
+      `✅ File scan completed: ${allFiles.length} files found in ${endTime - startTime}ms`,
+    );
 
     // Cache the results
     setProjectFilesCache({
@@ -237,10 +271,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
         const fileTree = (entries as any[]).map((entry: any) => ({
           name: entry.name || "Unknown",
           path:
-            entry.path ||
-            (typeof selected === "string"
-              ? `${selected}/${entry.name}`
-              : entry.name),
+            entry.path || (typeof selected === "string" ? `${selected}/${entry.name}` : entry.name),
           isDir: entry.is_dir || false,
           expanded: false,
           children: undefined,
@@ -262,7 +293,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
     async (folderPath: string) => {
       const updateFiles = async (items: FileEntry[]): Promise<FileEntry[]> => {
         return Promise.all(
-          items.map(async (item) => {
+          items.map(async item => {
             if (item.path === folderPath && item.isDir) {
               if (!item.expanded) {
                 // Expand folder - load children
@@ -306,7 +337,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
     async (directoryPath: string) => {
       const updateFiles = async (items: FileEntry[]): Promise<FileEntry[]> => {
         return Promise.all(
-          items.map(async (item) => {
+          items.map(async item => {
             if (item.path === directoryPath && item.isDir) {
               // Refresh this directory
               try {
@@ -347,9 +378,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
       if (!fileName) return;
 
       try {
-        const newFilePath = directoryPath
-          ? `${directoryPath}/${fileName}`
-          : fileName;
+        const newFilePath = directoryPath ? `${directoryPath}/${fileName}` : fileName;
 
         // Create an empty file
         await writeFile(newFilePath, "");
@@ -360,17 +389,13 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
         // If it's the root directory, just refresh the entire file tree
         if (
           !directoryPath ||
-          files.some(
-            (f) => f.path.split("/").slice(0, -1).join("/") === directoryPath,
-          )
+          files.some(f => f.path.split("/").slice(0, -1).join("/") === directoryPath)
         ) {
           // Refresh the root directory
           const entries = await readDirectory(directoryPath || ".");
           const updatedFileTree = (entries as any[]).map((entry: any) => ({
             name: entry.name || "Unknown",
-            path:
-              entry.path ||
-              (directoryPath ? `${directoryPath}/${entry.name}` : entry.name),
+            path: entry.path || (directoryPath ? `${directoryPath}/${entry.name}` : entry.name),
             isDir: entry.is_dir || false,
             expanded: false,
             children: undefined,
@@ -397,9 +422,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
       if (!folderName) return;
 
       try {
-        const newFolderPath = directoryPath
-          ? `${directoryPath}/${folderName}`
-          : folderName;
+        const newFolderPath = directoryPath ? `${directoryPath}/${folderName}` : folderName;
 
         // Create the directory
         await createDirectory(newFolderPath);
@@ -410,17 +433,13 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
         // If it's the root directory, just refresh the entire file tree
         if (
           !directoryPath ||
-          files.some(
-            (f) => f.path.split("/").slice(0, -1).join("/") === directoryPath,
-          )
+          files.some(f => f.path.split("/").slice(0, -1).join("/") === directoryPath)
         ) {
           // Refresh the root directory
           const entries = await readDirectory(directoryPath || ".");
           const updatedFileTree = (entries as any[]).map((entry: any) => ({
             name: entry.name || "Unknown",
-            path:
-              entry.path ||
-              (directoryPath ? `${directoryPath}/${entry.name}` : entry.name),
+            path: entry.path || (directoryPath ? `${directoryPath}/${entry.name}` : entry.name),
             isDir: entry.is_dir || false,
             expanded: false,
             children: undefined,
@@ -491,7 +510,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
 
   const handleCollapseAllFolders = useCallback(() => {
     const collapseFiles = (items: FileEntry[]): FileEntry[] => {
-      return items.map((item) => {
+      return items.map(item => {
         if (item.isDir) {
           return {
             ...item,

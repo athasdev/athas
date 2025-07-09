@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use portable_pty::{Child, CommandBuilder, PtyPair, PtySize};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, State};
@@ -167,12 +167,18 @@ impl TerminalConnection {
                         .or_else(|_| std::env::var("ZSH"))
                         .unwrap_or_else(|_| {
                             // Fallback: try common shell locations
-                            for shell in ["/bin/zsh", "/usr/bin/zsh", "/bin/bash", "/usr/bin/bash", "/bin/sh"] {
+                            for shell in [
+                                "/bin/zsh",
+                                "/usr/bin/zsh",
+                                "/bin/bash",
+                                "/usr/bin/bash",
+                                "/bin/sh",
+                            ] {
                                 if std::path::Path::new(shell).exists() {
                                     return shell.to_string();
                                 }
                             }
-                            
+
                             "/bin/bash".to_string()
                         })
                 };
@@ -196,21 +202,21 @@ impl TerminalConnection {
 
                 // Better shell integration
                 cmd.env("SHELL", shell_path);
-                
+
                 // Force color output for common tools
                 cmd.env("FORCE_COLOR", "1");
                 cmd.env("CLICOLOR", "1");
                 cmd.env("CLICOLOR_FORCE", "1");
-                
+
                 // Git color configuration
                 cmd.env("GIT_TERMINAL_PROMPT", "1");
-                
+
                 // Ensure proper locale settings
                 if std::env::var("LC_ALL").is_err() && std::env::var("LANG").is_err() {
                     cmd.env("LANG", "en_US.UTF-8");
                 }
                 cmd.env("LC_CTYPE", "en_US.UTF-8");
-                
+
                 // Better readline support
                 cmd.env("INPUTRC", "/etc/inputrc");
 
@@ -249,7 +255,9 @@ impl TerminalConnection {
                 cmd.env("TERM", "xterm-256color");
                 cmd
             }
-            TerminalKind::GitBash { working_directory: _ } => {
+            TerminalKind::GitBash {
+                working_directory: _,
+            } => {
                 #[cfg(target_os = "windows")]
                 {
                     let git_bash_paths = [
@@ -282,7 +290,10 @@ impl TerminalConnection {
                     return Err(anyhow!("Git Bash is only available on Windows"));
                 }
             }
-            TerminalKind::Wsl { distribution, working_directory: _ } => {
+            TerminalKind::Wsl {
+                distribution,
+                working_directory: _,
+            } => {
                 #[cfg(target_os = "windows")]
                 {
                     let mut cmd = CommandBuilder::new("wsl");
@@ -413,7 +424,6 @@ impl TerminalConnection {
 
         Ok(())
     }
-
 }
 
 // Terminal state with ANSI parsing (simplified version for space)
@@ -684,7 +694,11 @@ impl TerminalState {
                 // Set scrolling region
                 let parts: Vec<&str> = params.split(';').collect();
                 let top = parts.first().and_then(|s| s.parse().ok()).unwrap_or(1) - 1;
-                let bottom = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(self.screen_rows) - 1;
+                let bottom = parts
+                    .get(1)
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(self.screen_rows)
+                    - 1;
                 self.set_scrolling_region(top, bottom);
             }
             's' => {
@@ -868,7 +882,7 @@ impl TerminalState {
     pub fn take_pending_responses(&mut self) -> Vec<String> {
         std::mem::take(&mut self.pending_responses)
     }
-    
+
     // Additional ANSI sequence implementations
     fn scroll_up(&mut self, amount: u16) {
         let amount = amount.min(self.screen_rows) as usize;
@@ -877,7 +891,7 @@ impl TerminalState {
             self.screen_buffer.push(Vec::new());
         }
     }
-    
+
     fn scroll_down(&mut self, amount: u16) {
         let amount = amount.min(self.screen_rows) as usize;
         for _ in 0..amount {
@@ -885,7 +899,7 @@ impl TerminalState {
             self.screen_buffer.insert(0, Vec::new());
         }
     }
-    
+
     fn delete_characters(&mut self, amount: u16) {
         if let Some(line) = self.screen_buffer.get_mut(self.cursor_line as usize) {
             let start = self.cursor_col as usize;
@@ -893,24 +907,27 @@ impl TerminalState {
             line.drain(start..end);
         }
     }
-    
+
     fn insert_characters(&mut self, amount: u16) {
         if let Some(line) = self.screen_buffer.get_mut(self.cursor_line as usize) {
             let pos = self.cursor_col as usize;
             for _ in 0..amount {
-                line.insert(pos, LineItem {
-                    lexeme: " ".to_string(),
-                    width: 1,
-                    is_underline: false,
-                    is_bold: false,
-                    is_italic: false,
-                    background_color: None,
-                    foreground_color: None,
-                });
+                line.insert(
+                    pos,
+                    LineItem {
+                        lexeme: " ".to_string(),
+                        width: 1,
+                        is_underline: false,
+                        is_bold: false,
+                        is_italic: false,
+                        background_color: None,
+                        foreground_color: None,
+                    },
+                );
             }
         }
     }
-    
+
     fn insert_lines(&mut self, amount: u16) {
         let line_idx = self.cursor_line as usize;
         for _ in 0..amount {
@@ -923,7 +940,7 @@ impl TerminalState {
             self.screen_buffer.pop();
         }
     }
-    
+
     fn delete_lines(&mut self, amount: u16) {
         let line_idx = self.cursor_line as usize;
         for _ in 0..amount {
@@ -933,7 +950,7 @@ impl TerminalState {
             }
         }
     }
-    
+
     fn erase_characters(&mut self, amount: u16) {
         if let Some(line) = self.screen_buffer.get_mut(self.cursor_line as usize) {
             let start = self.cursor_col as usize;
@@ -953,17 +970,17 @@ impl TerminalState {
             }
         }
     }
-    
+
     fn set_scrolling_region(&mut self, _top: u16, _bottom: u16) {
         // For now, just acknowledge the scrolling region
         // Full implementation would require tracking the scrolling region
     }
-    
+
     fn save_cursor(&mut self) {
         // Store cursor position - for now we'll just acknowledge it
         // Full implementation would require storing cursor state
     }
-    
+
     fn restore_cursor(&mut self) {
         // Restore cursor position - for now we'll just acknowledge it
         // Full implementation would require restoring cursor state

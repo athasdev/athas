@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 
 export interface CoreFeature {
   id: string;
@@ -24,4 +24,4 @@ export const DEFAULT_CORE_FEATURES: CoreFeaturesState = {
   search: true,
   diagnostics: true,
   aiChat: true,
-}; 
+};

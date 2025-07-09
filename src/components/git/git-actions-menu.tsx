@@ -1,21 +1,21 @@
-import { useState } from "react";
 import {
-  Upload,
+  Archive,
   Download,
   GitPullRequest,
-  RotateCcw,
-  Settings,
-  Archive,
-  Tag,
-  Server,
   RefreshCw,
+  RotateCcw,
+  Server,
+  Settings,
+  Tag,
+  Upload,
 } from "lucide-react";
+import { useState } from "react";
 import {
-  pushChanges,
-  pullChanges,
-  fetchChanges,
   discardAllChanges,
+  fetchChanges,
   initRepository,
+  pullChanges,
+  pushChanges,
 } from "../../utils/git";
 
 interface GitActionsMenuProps {
@@ -45,7 +45,7 @@ const GitActionsMenu = ({
 
   const handleAction = async (action: () => Promise<boolean>, actionName: string) => {
     if (!repoPath) return;
-    
+
     setIsLoading(true);
     try {
       const success = await action();
@@ -77,13 +77,15 @@ const GitActionsMenu = ({
 
   const handleDiscardAllChanges = async () => {
     if (!repoPath) return;
-    
-    const confirmed = confirm("Are you sure you want to discard all changes? This cannot be undone.");
+
+    const confirmed = confirm(
+      "Are you sure you want to discard all changes? This cannot be undone.",
+    );
     if (!confirmed) {
       onClose();
       return;
     }
-    
+
     handleAction(() => discardAllChanges(repoPath!), "Discard all changes");
   };
 
@@ -122,7 +124,7 @@ const GitActionsMenu = ({
         left: position.x,
         top: position.y,
       }}
-      onMouseDown={(e) => {
+      onMouseDown={e => {
         e.stopPropagation();
       }}
     >
@@ -130,7 +132,7 @@ const GitActionsMenu = ({
         <>
           {/* Basic Git Operations */}
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handlePush();
@@ -141,9 +143,9 @@ const GitActionsMenu = ({
             <Upload size={12} />
             Push Changes
           </button>
-          
+
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handlePull();
@@ -154,9 +156,9 @@ const GitActionsMenu = ({
             <Download size={12} />
             Pull Changes
           </button>
-          
+
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleFetch();
@@ -167,12 +169,12 @@ const GitActionsMenu = ({
             <GitPullRequest size={12} />
             Fetch
           </button>
-          
+
           <div className="border-t border-[var(--border-color)] my-1"></div>
-          
+
           {/* Advanced Operations */}
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleStashManager();
@@ -182,9 +184,9 @@ const GitActionsMenu = ({
             <Archive size={12} />
             Manage Stashes
           </button>
-          
+
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleRemoteManager();
@@ -194,9 +196,9 @@ const GitActionsMenu = ({
             <Server size={12} />
             Manage Remotes
           </button>
-          
+
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleTagManager();
@@ -206,12 +208,12 @@ const GitActionsMenu = ({
             <Tag size={12} />
             Manage Tags
           </button>
-          
+
           <div className="border-t border-[var(--border-color)] my-1"></div>
-          
+
           {/* Refresh */}
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleRefresh();
@@ -221,12 +223,12 @@ const GitActionsMenu = ({
             <RefreshCw size={12} />
             Refresh Status
           </button>
-          
+
           <div className="border-t border-[var(--border-color)] my-1"></div>
-          
+
           {/* Destructive Operations */}
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleDiscardAllChanges();
@@ -242,7 +244,7 @@ const GitActionsMenu = ({
         <>
           {/* No Git Repository */}
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleInitRepository();
@@ -253,11 +255,11 @@ const GitActionsMenu = ({
             <Settings size={12} />
             Initialize Repository
           </button>
-          
+
           <div className="border-t border-[var(--border-color)] my-1"></div>
-          
+
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleRefresh();
@@ -273,4 +275,4 @@ const GitActionsMenu = ({
   );
 };
 
-export default GitActionsMenu; 
+export default GitActionsMenu;

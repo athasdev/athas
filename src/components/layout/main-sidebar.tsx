@@ -1,10 +1,11 @@
 import { FilePlus, FolderOpen, FolderPlus, Server } from "lucide-react";
-import React, { forwardRef } from "react";
-import { FileEntry } from "../../types/app";
+import type React from "react";
+import { forwardRef } from "react";
+import type { FileEntry } from "../../types/app";
 import FileTree from "../file-tree";
 import GitView from "../git/git-view";
 import RemoteConnectionView from "../remote/remote-connection-view";
-import SearchView, { SearchViewRef } from "../search-view";
+import SearchView, { type SearchViewRef } from "../search-view";
 import Button from "../ui/button";
 import { SidebarPaneSelector } from "./sidebar-pane-selector";
 

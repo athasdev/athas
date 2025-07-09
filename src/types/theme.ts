@@ -33,4 +33,4 @@ export type ThemeType =
   | "ayu-light"
   | "vercel-dark"
   | "vesper"
-  | "aura"
+  | "aura";

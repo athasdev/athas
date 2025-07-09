@@ -1,6 +1,6 @@
 use colored::Colorize as _;
 use log::LevelFilter;
-use tauri::{plugin::TauriPlugin, Runtime};
+use tauri::{Runtime, plugin::TauriPlugin};
 use tauri_plugin_log::Builder;
 
 /// logs go to `~/Library/Logs/com.athas-code.app/Athas.log` on macOS

@@ -1,5 +1,5 @@
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect, useRef } from "react";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
 
 function cleanupMenuListeners() {
   if (!listenersAreSetup) return;

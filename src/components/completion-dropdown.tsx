@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { CompletionItem } from "vscode-languageserver-protocol";
+import type { CompletionItem } from "vscode-languageserver-protocol";
 
 interface CompletionDropdownProps {
   items: CompletionItem[];

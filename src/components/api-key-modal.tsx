@@ -170,12 +170,16 @@ const ApiKeyModal = ({
 
           {/* API Key Input */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-xs font-medium text-[var(--text-color)]">
+            <label
+              htmlFor="api-key-input"
+              className="flex items-center gap-2 text-xs font-medium text-[var(--text-color)]"
+            >
               <Key size={12} />
               API Key
             </label>
 
             <input
+              id="api-key-input"
               type="password"
               value={apiKey}
               onChange={e => handleKeyChange(e.target.value)}

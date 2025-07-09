@@ -1,4 +1,4 @@
-import { CompletionItem, Diagnostic } from 'vscode-languageserver-protocol';
+import type { CompletionItem, Diagnostic } from "vscode-languageserver-protocol";
 
 export interface LSPConfig {
   command: string;
@@ -31,4 +31,4 @@ export interface LSPClientEvents {
 export interface CompletionResponse {
   items: CompletionItem[];
   isIncomplete?: boolean;
-} 
+}

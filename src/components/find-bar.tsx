@@ -1,15 +1,12 @@
-import React, { useRef, useEffect } from "react";
-import { Search, X, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import type React from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "../utils/cn";
 
 interface FindBarProps {
   isVisible: boolean;
   onClose: () => void;
-  onSearch: (
-    query: string,
-    direction: "next" | "previous",
-    shouldFocus?: boolean,
-  ) => void;
+  onSearch: (query: string, direction: "next" | "previous", shouldFocus?: boolean) => void;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   currentMatch: number;
@@ -77,9 +74,7 @@ const FindBar = ({
 
         {searchQuery && (
           <div className="flex items-center gap-1 text-xs text-[var(--text-lighter)] font-mono">
-            <span>
-              {totalMatches > 0 ? `${currentMatch}/${totalMatches}` : "0/0"}
-            </span>
+            <span>{totalMatches > 0 ? `${currentMatch}/${totalMatches}` : "0/0"}</span>
           </div>
         )}
       </div>
@@ -90,8 +85,7 @@ const FindBar = ({
           disabled={!searchQuery || totalMatches === 0}
           className={cn(
             "p-1 rounded hover:bg-[var(--hover-color)] transition-colors duration-150",
-            (!searchQuery || totalMatches === 0) &&
-              "opacity-50 cursor-not-allowed",
+            (!searchQuery || totalMatches === 0) && "opacity-50 cursor-not-allowed",
           )}
           title="Previous match (Shift+Enter)"
         >
@@ -102,8 +96,7 @@ const FindBar = ({
           disabled={!searchQuery || totalMatches === 0}
           className={cn(
             "p-1 rounded hover:bg-[var(--hover-color)] transition-colors duration-150",
-            (!searchQuery || totalMatches === 0) &&
-              "opacity-50 cursor-not-allowed",
+            (!searchQuery || totalMatches === 0) && "opacity-50 cursor-not-allowed",
           )}
           title="Next match (Enter)"
         >

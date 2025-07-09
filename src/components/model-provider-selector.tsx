@@ -1,5 +1,6 @@
 import { Bot, Check, ChevronDown, Key } from "lucide-react";
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { AI_PROVIDERS, getModelById, getProviderById } from "../types/ai-provider";
 import { cn } from "../utils/cn";
 

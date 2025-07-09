@@ -102,8 +102,8 @@ const ImageGenerationModal = ({
       setImageSize("1024x1024");
     }
     if (
-      imageModel === "gpt-image-1"
-      && !["1024x1024", "1536x1024", "1024x1536"].includes(imageSize)
+      imageModel === "gpt-image-1" &&
+      !["1024x1024", "1536x1024", "1024x1536"].includes(imageSize)
     ) {
       setImageSize("1024x1024");
     }
@@ -139,11 +139,15 @@ const ImageGenerationModal = ({
 
           {/* Prompt Input */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-xs font-medium text-[var(--text-color)]">
+            <label
+              htmlFor="image-description"
+              className="flex items-center gap-2 text-xs font-medium text-[var(--text-color)]"
+            >
               <Wand2 size={12} />
               Image Description
             </label>
             <textarea
+              id="image-description"
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
               placeholder="Describe the image you want to generate... (e.g., 'A serene mountain landscape at sunset with a lake reflection')"
@@ -156,7 +160,9 @@ const ImageGenerationModal = ({
           {/* Generation Options */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-color)]">Size</label>
+              <label htmlFor="image-size" className="text-xs font-medium text-[var(--text-color)]">
+                Size
+              </label>
               <Dropdown
                 value={imageSize}
                 options={
@@ -186,7 +192,9 @@ const ImageGenerationModal = ({
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-color)]">Style</label>
+              <label htmlFor="image-style" className="text-xs font-medium text-[var(--text-color)]">
+                Style
+              </label>
               <Dropdown
                 value={imageStyle}
                 options={[
@@ -208,9 +216,7 @@ const ImageGenerationModal = ({
           {/* Generated Image */}
           {generatedImage && (
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-color)]">
-                Generated Image
-              </label>
+              <div className="text-xs font-medium text-[var(--text-color)]">Generated Image</div>
               <div className="border border-[var(--border-color)] rounded-lg overflow-hidden">
                 <img
                   src={generatedImage}
@@ -221,8 +227,11 @@ const ImageGenerationModal = ({
 
               {/* Filename Input */}
               <div className="space-y-2">
-                <label className="text-xs font-medium text-[var(--text-color)]">File Name</label>
+                <label htmlFor="file-name" className="text-xs font-medium text-[var(--text-color)]">
+                  File Name
+                </label>
                 <input
+                  id="file-name"
                   type="text"
                   value={fileName}
                   onChange={e => setFileName(e.target.value)}
@@ -322,7 +331,7 @@ async function generateImage(
       };
     }
 
-    let response;
+    let response: Response;
 
     if (model === "gpt-image-1") {
       // Use GPT-Image-1 API
@@ -377,7 +386,7 @@ async function generateImage(
 
     if (model === "gpt-image-1") {
       // GPT-Image-1 returns base64 data
-      if (data.data && data.data[0] && data.data[0].b64_json) {
+      if (data.data?.[0]?.b64_json) {
         const base64Data = data.data[0].b64_json;
         const dataUrl = `data:image/jpeg;base64,${base64Data}`;
         return { success: true, imageUrl: dataUrl };
@@ -386,7 +395,7 @@ async function generateImage(
       }
     } else {
       // Traditional DALL-E returns URL
-      if (data.data && data.data[0] && data.data[0].url) {
+      if (data.data?.[0]?.url) {
         return { success: true, imageUrl: data.data[0].url };
       } else {
         return { success: false, error: "No image URL returned from DALL-E API" };

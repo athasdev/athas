@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
-use notify_debouncer_mini::{new_debouncer, DebounceEventResult, Debouncer, DebouncedEvent};
 use notify::RecursiveMode;
+use notify_debouncer_mini::{DebounceEventResult, DebouncedEvent, Debouncer, new_debouncer};
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -77,12 +77,15 @@ impl FileWatcher {
                                     path: path.to_string_lossy().to_string(),
                                     event_type,
                                 };
-                                log::debug!("[FileWatcher] Emitting file-changed event for: {}", change_event.path);
+                                log::debug!(
+                                    "[FileWatcher] Emitting file-changed event for: {}",
+                                    change_event.path
+                                );
                                 let _ = app_handle.emit("file-changed", &change_event);
                             }
                         }
                     }
-                }
+                },
             )?;
 
             *debouncer_guard = Some(debouncer);

@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTerminalTabs } from "../../hooks/use-terminal-tabs";
 import TerminalSession from "./terminal-session";
 import TerminalTabBar from "./terminal-tab-bar";
@@ -26,6 +27,7 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
 
   const [renamingTerminalId, setRenamingTerminalId] = useState<string | null>(null);
   const [newTerminalName, setNewTerminalName] = useState("");
+  const hasInitializedRef = useRef(false);
 
   const handleNewTerminal = useCallback(() => {
     const dirName = currentDirectory.split("/").pop() || "terminal";
@@ -233,12 +235,14 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
     switchToPrevTerminal,
   ]);
 
-  // Auto-create first terminal when container is mounted
+  // Auto-create first terminal when the pane becomes visible
   useEffect(() => {
-    if (terminals.length === 0) {
-      handleNewTerminal();
+    if (terminals.length === 0 && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      const dirName = currentDirectory.split("/").pop() || "terminal";
+      createTerminal(dirName, currentDirectory);
     }
-  }, [handleNewTerminal, terminals.length]);
+  }, [terminals.length, currentDirectory, createTerminal]);
 
   // Create first terminal if none exist (fallback UI)
   if (terminals.length === 0) {
@@ -320,7 +324,6 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
               }}
               className="w-full px-3 py-2 text-sm bg-[var(--primary-bg)] border border-[var(--border-color)] rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-[var(--text-color)]"
               placeholder="Terminal name"
-              autoFocus
             />
             <div className="flex gap-2 mt-3 justify-end">
               <button

@@ -1,5 +1,6 @@
-import React, { useEffect } from "react";
-import { RecentFolder } from "../types/recent-folders";
+import type React from "react";
+import { useEffect } from "react";
+import type { RecentFolder } from "../types/recent-folders";
 
 interface UseContextMenusProps {
   folderHeaderContextMenu: { x: number; y: number } | null;

@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
 import { Loader2, X } from "lucide-react";
-import { getProviderApiToken } from "../utils/ai-chat";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { AI_PROVIDERS, getModelById } from "../types/ai-provider";
+import { getProviderApiToken } from "../utils/ai-chat";
 import ModelProviderSelector from "./model-provider-selector";
 
 interface QuickEditInlineProps {

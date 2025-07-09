@@ -1,6 +1,6 @@
-import { X, FileText, Database } from "lucide-react";
+import { Database, FileText, X } from "lucide-react";
 import { cn } from "../../utils/cn";
-import { BufferSelectorModalProps } from "./types";
+import type { BufferSelectorModalProps } from "./types";
 
 export default function BufferSelectorModal({
   isOpen,
@@ -15,9 +15,7 @@ export default function BufferSelectorModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
       <div className="bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[70vh] overflow-hidden">
         <div className="flex items-center justify-between p-3 border-b border-[var(--border-color)]">
-          <h3 className="text-sm font-medium text-[var(--text-color)]">
-            Select Files for Context
-          </h3>
+          <h3 className="text-sm font-medium text-[var(--text-color)]">Select Files for Context</h3>
           <button
             onClick={onClose}
             className="p-1 hover:bg-[var(--hover-color)] rounded transition-colors"
@@ -34,7 +32,7 @@ export default function BufferSelectorModal({
             </div>
           ) : (
             <div className="space-y-2">
-              {buffers.map((buffer) => (
+              {buffers.map(buffer => (
                 <div
                   key={buffer.id}
                   className={cn(
@@ -59,19 +57,11 @@ export default function BufferSelectorModal({
                   </div>
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     {buffer.isSQLite ? (
-                      <Database
-                        size={14}
-                        className="text-[var(--text-lighter)] flex-shrink-0"
-                      />
+                      <Database size={14} className="text-[var(--text-lighter)] flex-shrink-0" />
                     ) : (
-                      <FileText
-                        size={14}
-                        className="text-[var(--text-lighter)] flex-shrink-0"
-                      />
+                      <FileText size={14} className="text-[var(--text-lighter)] flex-shrink-0" />
                     )}
-                    <span className="text-sm text-[var(--text-color)] truncate">
-                      {buffer.name}
-                    </span>
+                    <span className="text-sm text-[var(--text-color)] truncate">{buffer.name}</span>
                     {buffer.isDirty && (
                       <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0" />
                     )}
@@ -93,4 +83,4 @@ export default function BufferSelectorModal({
       </div>
     </div>
   );
-} 
+}

@@ -132,11 +132,15 @@ const GitBranchManager = ({ currentBranch, repoPath, onBranchChange }: GitBranch
             {/* Create New Branch */}
             <div className="px-3 py-2 border-b border-[var(--border-color)]">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] text-[var(--text-lighter)] font-medium">
+                <label
+                  htmlFor="new-branch-name"
+                  className="text-[10px] text-[var(--text-lighter)] font-medium"
+                >
                   Create New Branch
                 </label>
                 <div className="flex gap-1.5">
                   <input
+                    id="new-branch-name"
                     type="text"
                     placeholder="Enter branch name..."
                     value={newBranchName}
@@ -149,7 +153,6 @@ const GitBranchManager = ({ currentBranch, repoPath, onBranchChange }: GitBranch
                       }
                     }}
                     disabled={isLoading}
-                    autoFocus
                   />
                   <button
                     onClick={handleCreateBranch}

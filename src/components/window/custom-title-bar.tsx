@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { platform } from "@tauri-apps/plugin-os";
-import { Minus, Maximize2, Minimize2, X, Settings } from "lucide-react";
+import { Maximize2, Minimize2, Minus, Settings, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface CustomTitleBarProps {
   title?: string;
@@ -90,8 +90,9 @@ const CustomTitleBar = ({
     return (
       <div
         data-tauri-drag-region
-        className={`flex items-center justify-between select-none relative z-50 ${isMacOS ? "h-11" : "h-7"
-          } ${backgroundClass}`}
+        className={`flex items-center justify-between select-none relative z-50 ${
+          isMacOS ? "h-11" : "h-7"
+        } ${backgroundClass}`}
       >
         {/* macOS traffic light controls */}
         {isMacOS && (

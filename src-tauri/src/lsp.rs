@@ -1,6 +1,6 @@
 use anyhow::{Context, bail};
 use lsp_types::notification::{self, Notification};
-use lsp_types::request::{Completion, Initialize, HoverRequest};
+use lsp_types::request::{Completion, HoverRequest, Initialize};
 use lsp_types::{
     ClientCapabilities, ClientInfo, CodeActionCapabilityResolveSupport,
     CodeActionClientCapabilities, CodeActionKind, CodeActionKindLiteralSupport,
@@ -10,7 +10,7 @@ use lsp_types::{
     DiagnosticTag, DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities,
     DidCloseTextDocumentParams, DidOpenTextDocumentParams, DocumentSymbolClientCapabilities,
     DynamicRegistrationClientCapabilities, FailureHandlingKind, GotoCapability,
-    HoverClientCapabilities, InitializeParams, InitializedParams, InsertTextMode,
+    HoverClientCapabilities, HoverParams, InitializeParams, InitializedParams, InsertTextMode,
     InsertTextModeSupport, LogMessageParams, MarkupKind, MessageActionItemCapabilities,
     ParameterInformationSettings, PartialResultParams, Position, PrepareSupportDefaultBehavior,
     PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, ResourceOperationKind,
@@ -21,7 +21,7 @@ use lsp_types::{
     TextDocumentPositionParams, TextDocumentSyncClientCapabilities, TraceValue,
     VersionedTextDocumentIdentifier, WindowClientCapabilities, WorkDoneProgressParams,
     WorkspaceClientCapabilities, WorkspaceEditClientCapabilities, WorkspaceFolder,
-    WorkspaceSymbolClientCapabilities, HoverParams,
+    WorkspaceSymbolClientCapabilities,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -696,7 +696,9 @@ pub async fn lsp_hover(
         if let Ok(result) = lsp_process.send_request::<HoverRequest>(params).await {
             if let Some(hover) = result {
                 // Convert the hover result to a JSON value for easier handling on the frontend
-                Ok(Some(serde_json::to_value(hover).map_err(|e| e.to_string())?))
+                Ok(Some(
+                    serde_json::to_value(hover).map_err(|e| e.to_string())?,
+                ))
             } else {
                 Ok(None)
             }

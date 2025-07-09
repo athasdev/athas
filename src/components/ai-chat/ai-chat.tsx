@@ -9,7 +9,8 @@ import {
   Square,
   X,
 } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AI_PROVIDERS, getModelById } from "../../types/ai-provider";
 import {
   getChatCompletionStream,
@@ -26,7 +27,7 @@ import OutlineView from "../outline-view";
 import Button from "../ui/button";
 import ChatHistoryModal from "./chat-history-modal";
 import MarkdownRenderer from "./markdown-renderer";
-import { AIChatProps, Chat, ContextInfo, Message } from "./types";
+import type { AIChatProps, Chat, ContextInfo, Message } from "./types";
 import { formatTime } from "./utils";
 
 export default function AIChat({
@@ -76,8 +77,8 @@ export default function AIChat({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        contextDropdownRef.current
-        && !contextDropdownRef.current.contains(event.target as Node)
+        contextDropdownRef.current &&
+        !contextDropdownRef.current.contains(event.target as Node)
       ) {
         setIsContextDropdownOpen(false);
       }
@@ -171,7 +172,7 @@ export default function AIChat({
 
   // Update chat title based on first message
   const updateChatTitle = (chatId: string, firstMessage: string) => {
-    const title = firstMessage.length > 50 ? firstMessage.substring(0, 50) + "..." : firstMessage;
+    const title = firstMessage.length > 50 ? `${firstMessage.substring(0, 50)}...` : firstMessage;
 
     setChats(prev => prev.map(chat => (chat.id === chatId ? { ...chat, title } : chat)));
   };

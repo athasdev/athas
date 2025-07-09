@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { 
-  Folder, 
-  FolderOpen, 
-  File, 
-  ChevronRight, 
+import { invoke } from "@tauri-apps/api/core";
+import {
+  AlertCircle,
   ChevronDown,
+  ChevronRight,
+  File,
+  Folder,
+  FolderOpen,
   Loader,
-  AlertCircle
 } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/utils/cn";
-import { invoke } from '@tauri-apps/api/core';
 
 interface RemoteFileEntry {
   name: string;
@@ -31,10 +32,7 @@ interface TreeNode extends RemoteFileEntry {
   error?: string;
 }
 
-const RemoteFileTree = ({
-  connectionId,
-  onFileSelect
-}: RemoteFileTreeProps) => {
+const RemoteFileTree = ({ connectionId, onFileSelect }: RemoteFileTreeProps) => {
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,19 +43,19 @@ const RemoteFileTree = ({
 
   const loadDirectory = async (path: string): Promise<TreeNode[]> => {
     try {
-      const files = await invoke<RemoteFileEntry[]>('ssh_list_directory', {
+      const files = await invoke<RemoteFileEntry[]>("ssh_list_directory", {
         connectionId,
-        path
+        path,
       });
 
       return files.map(file => ({
         ...file,
         children: file.is_dir ? [] : undefined,
         isExpanded: false,
-        isLoading: false
+        isLoading: false,
       }));
     } catch (error) {
-      console.error('Failed to load directory:', error);
+      console.error("Failed to load directory:", error);
       throw error;
     }
   };
@@ -68,15 +66,19 @@ const RemoteFileTree = ({
       return;
     }
 
-    const updateNode = (nodes: TreeNode[], path: number[], updater: (node: TreeNode) => TreeNode): TreeNode[] => {
+    const updateNode = (
+      nodes: TreeNode[],
+      path: number[],
+      updater: (node: TreeNode) => TreeNode,
+    ): TreeNode[] => {
       if (path.length === 0) return nodes;
       if (path.length === 1) {
-        return nodes.map((n, i) => i === path[0] ? updater(n) : n);
+        return nodes.map((n, i) => (i === path[0] ? updater(n) : n));
       }
-      return nodes.map((n, i) => 
-        i === path[0] 
+      return nodes.map((n, i) =>
+        i === path[0]
           ? { ...n, children: updateNode(n.children || [], path.slice(1), updater) }
-          : n
+          : n,
       );
     };
 
@@ -91,35 +93,39 @@ const RemoteFileTree = ({
 
       try {
         const children = await loadDirectory(node.path);
-        const finalUpdater = (n: TreeNode) => ({ 
-          ...n, 
-          children, 
-          isLoading: false, 
+        const finalUpdater = (n: TreeNode) => ({
+          ...n,
+          children,
+          isLoading: false,
           isExpanded: true,
-          error: undefined
+          error: undefined,
         });
         setRootNodes(nodes => updateNode(nodes, nodePath, finalUpdater));
       } catch (error) {
-        const errorUpdater = (n: TreeNode) => ({ 
-          ...n, 
-          isLoading: false, 
+        const errorUpdater = (n: TreeNode) => ({
+          ...n,
+          isLoading: false,
           error: `Failed to load: ${error}`,
-          isExpanded: false
+          isExpanded: false,
         });
         setRootNodes(nodes => updateNode(nodes, nodePath, errorUpdater));
       }
     }
   };
 
-  const renderNode = (node: TreeNode, depth: number = 0, nodePath: number[] = []): React.ReactNode => {
+  const renderNode = (
+    node: TreeNode,
+    depth: number = 0,
+    nodePath: number[] = [],
+  ): React.ReactNode => {
     const indent = depth * 12;
-    
+
     return (
       <div key={node.path}>
         <div
           className={cn(
             "flex items-center py-1 px-2 hover:bg-[var(--hover-color)] cursor-pointer transition-colors group",
-            "text-sm text-[var(--text-color)]"
+            "text-sm text-[var(--text-color)]",
           )}
           style={{ paddingLeft: `${8 + indent}px` }}
           onClick={() => handleDirectoryClick(node, nodePath)}
@@ -138,7 +144,7 @@ const RemoteFileTree = ({
               )}
             </div>
           )}
-          
+
           <div className="w-4 h-4 flex items-center justify-center mr-2">
             {node.is_dir ? (
               node.isExpanded ? (
@@ -150,31 +156,29 @@ const RemoteFileTree = ({
               <File size={14} className="text-[var(--text-lighter)]" />
             )}
           </div>
-          
-          <span className="truncate flex-1 select-none">
-            {node.name}
-          </span>
-          
+
+          <span className="truncate flex-1 select-none">{node.name}</span>
+
           {!node.is_dir && node.size > 0 && (
             <span className="text-xs text-[var(--text-lighter)] ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
               {formatFileSize(node.size)}
             </span>
           )}
         </div>
-        
+
         {node.error && (
-          <div 
+          <div
             className="text-xs text-red-500 px-2 py-1"
             style={{ paddingLeft: `${20 + indent}px` }}
           >
             {node.error}
           </div>
         )}
-        
+
         {node.isExpanded && node.children && (
           <div>
-            {node.children.map((child, index) => 
-              renderNode(child, depth + 1, [...nodePath, index])
+            {node.children.map((child, index) =>
+              renderNode(child, depth + 1, [...nodePath, index]),
             )}
           </div>
         )}
@@ -183,11 +187,11 @@ const RemoteFileTree = ({
   };
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) return "0 B";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return `${parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
   };
 
   useEffect(() => {
@@ -211,9 +215,7 @@ const RemoteFileTree = ({
     return (
       <div className="flex items-center justify-center h-32">
         <Loader size={24} className="animate-spin text-[var(--text-lighter)]" />
-        <span className="ml-2 text-sm text-[var(--text-lighter)]">
-          Loading remote files...
-        </span>
+        <span className="ml-2 text-sm text-[var(--text-lighter)]">Loading remote files...</span>
       </div>
     );
   }
@@ -240,12 +242,10 @@ const RemoteFileTree = ({
           No files found
         </div>
       ) : (
-        <div className="py-1">
-          {rootNodes.map((node, index) => renderNode(node, 0, [index]))}
-        </div>
+        <div className="py-1">{rootNodes.map((node, index) => renderNode(node, 0, [index]))}</div>
       )}
     </div>
   );
 };
 
-export default RemoteFileTree; 
+export default RemoteFileTree;

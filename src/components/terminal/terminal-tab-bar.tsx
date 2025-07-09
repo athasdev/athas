@@ -1,6 +1,7 @@
 import { Pin, PinOff, Plus, Terminal as TerminalIcon, X } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
-import { Terminal } from "../../types/terminal";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import type { Terminal } from "../../types/terminal";
 import { cn } from "../../utils/cn";
 
 interface TerminalContextMenuProps {
@@ -171,12 +172,10 @@ const TerminalTabBar = ({
   };
 
   const handleMouseMove = (e: MouseEvent) => {
-    if (draggedIndex === null || !dragStartPosition || !tabBarRef.current)
-      return;
+    if (draggedIndex === null || !dragStartPosition || !tabBarRef.current) return;
 
     const distance = Math.sqrt(
-      Math.pow(e.clientX - dragStartPosition.x, 2)
-        + Math.pow(e.clientY - dragStartPosition.y, 2),
+      (e.clientX - dragStartPosition.x) ** 2 + (e.clientY - dragStartPosition.y) ** 2,
     );
 
     if (distance > 5 && !isDragging) {
@@ -186,9 +185,7 @@ const TerminalTabBar = ({
     if (isDragging) {
       const rect = tabBarRef.current.getBoundingClientRect();
       const x = e.clientX - rect.left;
-      const tabElements = Array.from(
-        tabBarRef.current.children,
-      ) as HTMLElement[];
+      const tabElements = Array.from(tabBarRef.current.children) as HTMLElement[];
 
       let newDropTarget: number | null = null;
       for (let i = 0; i < tabElements.length - 1; i++) {
@@ -211,10 +208,10 @@ const TerminalTabBar = ({
 
   const handleMouseUp = () => {
     if (
-      draggedIndex !== null
-      && dropTarget !== null
-      && dropTarget !== draggedIndex
-      && onTabReorder
+      draggedIndex !== null &&
+      dropTarget !== null &&
+      dropTarget !== draggedIndex &&
+      onTabReorder
     ) {
       onTabReorder(draggedIndex, dropTarget);
     }
@@ -261,9 +258,7 @@ const TerminalTabBar = ({
       <div className="flex items-center justify-between bg-[var(--secondary-bg)] border-b border-[var(--border-color)] px-2 py-1 min-h-[28px]">
         <div className="flex items-center gap-1.5">
           <TerminalIcon size={10} className="text-[var(--text-lighter)]" />
-          <span className="text-xs font-mono text-[var(--text-lighter)]">
-            No terminals
-          </span>
+          <span className="text-xs font-mono text-[var(--text-lighter)]">No terminals</span>
         </div>
         {onNewTerminal && (
           <button
@@ -312,13 +307,9 @@ const TerminalTabBar = ({
             >
               <TerminalIcon size={12} className="flex-shrink-0" />
 
-              <span className="truncate font-mono text-xs">
-                {terminal.name}
-              </span>
+              <span className="truncate font-mono text-xs">{terminal.name}</span>
 
-              {terminal.isPinned && (
-                <Pin size={12} className="flex-shrink-0 text-blue-400" />
-              )}
+              {terminal.isPinned && <Pin size={12} className="flex-shrink-0 text-blue-400" />}
 
               <button
                 onClick={e => {

@@ -1,6 +1,7 @@
 import { AlertCircle, Terminal as TerminalIcon, X } from "lucide-react";
-import React, { useCallback, useState } from "react";
-import DiagnosticsPane, { Diagnostic } from "./diagnostics/diagnostics-pane";
+import type React from "react";
+import { useCallback, useState } from "react";
+import DiagnosticsPane, { type Diagnostic } from "./diagnostics/diagnostics-pane";
 import TerminalContainer from "./terminal/terminal-container";
 
 interface BottomPaneProps {
@@ -40,10 +41,7 @@ const BottomPane = ({
 
       const handleMouseMove = (e: MouseEvent) => {
         const deltaY = startY - e.clientY; // Reverse direction since we're resizing from top
-        const newHeight = Math.min(
-          Math.max(startHeight + deltaY, 200),
-          window.innerHeight * 0.8,
-        ); // Min 200px, max 80% of screen
+        const newHeight = Math.min(Math.max(startHeight + deltaY, 200), window.innerHeight * 0.8); // Min 200px, max 80% of screen
         setHeight(newHeight);
       };
 

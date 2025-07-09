@@ -1,5 +1,6 @@
 import { AlertCircle, GitCommit as GitCommitIcon, Send } from "lucide-react";
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { commitChanges } from "../../utils/git";
 
 interface GitCommitPanelProps {

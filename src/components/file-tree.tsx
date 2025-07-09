@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { FilePlus, ImageIcon, FolderPlus, Trash } from "lucide-react";
-import { FileEntry, ContextMenuState } from "../types/app";
+import { FilePlus, FolderPlus, ImageIcon, Trash } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
+import type { ContextMenuState, FileEntry } from "../types/app";
 import FileIcon from "./file-icon";
 
 interface FileTreeProps {
@@ -24,11 +25,7 @@ const FileTree = ({
 }: FileTreeProps) => {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
-  const handleContextMenu = (
-    e: React.MouseEvent,
-    filePath: string,
-    isDir: boolean,
-  ) => {
+  const handleContextMenu = (e: React.MouseEvent, filePath: string, isDir: boolean) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -52,20 +49,21 @@ const FileTree = ({
   }, []);
 
   const renderFileTree = (items: FileEntry[], depth = 0) => {
-    return items.map((file) => (
+    return items.map(file => (
       <div key={file.path}>
         <button
           draggable={!file.isDir}
-          onDragStart={(e) => {
+          onDragStart={e => {
             if (!file.isDir) {
               e.dataTransfer.setData("application/file-path", file.path);
               e.dataTransfer.effectAllowed = "copy";
             }
           }}
           onClick={() => onFileSelect(file.path, file.isDir)}
-          onContextMenu={(e) => handleContextMenu(e, file.path, file.isDir)}
-          className={`w-full text-left px-1.5 py-1 bg-transparent border-none text-[var(--text-color)] cursor-pointer text-xs font-mono flex items-center gap-1.5 transition-colors duration-150 whitespace-nowrap overflow-hidden text-ellipsis min-h-[22px] shadow-none outline-none hover:bg-[var(--hover-color)] focus:outline-none ${activeBufferPath === file.path ? "bg-[var(--selected-color)]" : ""
-            }`}
+          onContextMenu={e => handleContextMenu(e, file.path, file.isDir)}
+          className={`w-full text-left px-1.5 py-1 bg-transparent border-none text-[var(--text-color)] cursor-pointer text-xs font-mono flex items-center gap-1.5 transition-colors duration-150 whitespace-nowrap overflow-hidden text-ellipsis min-h-[22px] shadow-none outline-none hover:bg-[var(--hover-color)] focus:outline-none ${
+            activeBufferPath === file.path ? "bg-[var(--selected-color)]" : ""
+          }`}
           style={{ paddingLeft: `${12 + depth * 16}px` }}
         >
           <FileIcon
@@ -135,7 +133,9 @@ const FileTree = ({
                   Generate Image
                 </button>
               )}
-              {(onCreateNewFolderInDirectory || onGenerateImage) && <div className="border-t border-[var(--border-color)] my-1" />}
+              {(onCreateNewFolderInDirectory || onGenerateImage) && (
+                <div className="border-t border-[var(--border-color)] my-1" />
+              )}
             </>
           )}
 

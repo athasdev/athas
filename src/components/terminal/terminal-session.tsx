@@ -1,8 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import Convert from "ansi-to-html";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Terminal as TerminalType } from "../../types/terminal";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { Terminal as TerminalType } from "../../types/terminal";
 
 interface TerminalSessionProps {
   terminal: TerminalType;

@@ -1,4 +1,4 @@
-import { Folder, Clock, FolderOpen } from "lucide-react";
+import { Clock, Folder, FolderOpen } from "lucide-react";
 
 interface RecentFolder {
   name: string;

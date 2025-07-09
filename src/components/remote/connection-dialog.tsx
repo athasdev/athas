@@ -2,7 +2,7 @@ import { AlertCircle, CheckCircle, Eye, EyeOff, Save, Server, X } from "lucide-r
 import { useEffect, useState } from "react";
 import Button from "../ui/button";
 import Dropdown from "../ui/dropdown";
-import { RemoteConnection, RemoteConnectionFormData } from "./types";
+import type { RemoteConnection, RemoteConnectionFormData } from "./types";
 
 interface ConnectionDialogProps {
   isOpen: boolean;
@@ -150,10 +150,14 @@ const ConnectionDialog = ({
           <div className="space-y-4">
             {/* Connection Name */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-color)]">
+              <label
+                htmlFor="connection-name"
+                className="text-xs font-medium text-[var(--text-color)]"
+              >
                 Connection Name *
               </label>
               <input
+                id="connection-name"
                 type="text"
                 value={formData.name}
                 onChange={e => updateFormData({ name: e.target.value })}
@@ -166,8 +170,11 @@ const ConnectionDialog = ({
             {/* Host, Port, Type */}
             <div className="grid grid-cols-12 gap-3">
               <div className="col-span-6 space-y-2">
-                <label className="text-xs font-medium text-[var(--text-color)]">Host *</label>
+                <label htmlFor="host" className="text-xs font-medium text-[var(--text-color)]">
+                  Host *
+                </label>
                 <input
+                  id="host"
                   type="text"
                   value={formData.host}
                   onChange={e => updateFormData({ host: e.target.value })}
@@ -177,8 +184,11 @@ const ConnectionDialog = ({
                 />
               </div>
               <div className="col-span-3 space-y-2">
-                <label className="text-xs font-medium text-[var(--text-color)]">Port</label>
+                <label htmlFor="port" className="text-xs font-medium text-[var(--text-color)]">
+                  Port
+                </label>
                 <input
+                  id="port"
                   type="number"
                   value={formData.port}
                   onChange={e => updateFormData({ port: parseInt(e.target.value) || 22 })}
@@ -190,7 +200,9 @@ const ConnectionDialog = ({
                 />
               </div>
               <div className="col-span-3 space-y-2">
-                <label className="text-xs font-medium text-[var(--text-color)]">Type</label>
+                <label htmlFor="type" className="text-xs font-medium text-[var(--text-color)]">
+                  Type
+                </label>
                 <Dropdown
                   value={formData.type}
                   options={connectionTypeOptions}
@@ -202,8 +214,11 @@ const ConnectionDialog = ({
 
             {/* Username */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-color)]">Username *</label>
+              <label htmlFor="username" className="text-xs font-medium text-[var(--text-color)]">
+                Username *
+              </label>
               <input
+                id="username"
                 type="text"
                 value={formData.username}
                 onChange={e => updateFormData({ username: e.target.value })}
@@ -215,11 +230,12 @@ const ConnectionDialog = ({
 
             {/* Password */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-color)]">
+              <label htmlFor="password" className="text-xs font-medium text-[var(--text-color)]">
                 Password (optional)
               </label>
               <div className="relative">
                 <input
+                  id="password"
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={e => updateFormData({ password: e.target.value })}
@@ -239,10 +255,11 @@ const ConnectionDialog = ({
 
             {/* Private Key Path */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-color)]">
+              <label htmlFor="keypath" className="text-xs font-medium text-[var(--text-color)]">
                 Private Key Path (optional)
               </label>
               <input
+                id="keypath"
                 type="text"
                 value={formData.keyPath}
                 onChange={e => updateFormData({ keyPath: e.target.value })}

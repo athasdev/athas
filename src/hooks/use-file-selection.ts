@@ -1,8 +1,9 @@
-import React, { useCallback } from "react";
-import { CodeEditorRef } from "../components/code-editor";
-import { VimMode } from "../types/app";
+import type React from "react";
+import { useCallback } from "react";
+import type { CodeEditorRef } from "../components/code-editor";
+import type { VimMode } from "../types/app";
 import { getFilenameFromPath, isImageFile, isSQLiteFile } from "../utils/file-utils";
-import { GitDiff, GitDiffLine } from "../utils/git";
+import type { GitDiff, GitDiffLine } from "../utils/git";
 import { readFile } from "../utils/platform";
 
 interface UseFileSelectionProps {
@@ -46,8 +47,8 @@ const parseRawDiffContent = (content: string, filePath: string): GitDiff => {
         diffLines.push({
           line_type: "header",
           content: line,
-          old_line_number: null,
-          new_line_number: null,
+          old_line_number: undefined,
+          new_line_number: undefined,
         });
       }
       continue;
@@ -55,10 +56,10 @@ const parseRawDiffContent = (content: string, filePath: string): GitDiff => {
 
     // File headers (ignore for now)
     if (
-      line.startsWith("---")
-      || line.startsWith("+++")
-      || line.startsWith("diff ")
-      || line.startsWith("index ")
+      line.startsWith("---") ||
+      line.startsWith("+++") ||
+      line.startsWith("diff ") ||
+      line.startsWith("index ")
     ) {
       continue;
     }
@@ -68,7 +69,7 @@ const parseRawDiffContent = (content: string, filePath: string): GitDiff => {
       diffLines.push({
         line_type: "added",
         content: line.substring(1), // Remove the + prefix
-        old_line_number: null,
+        old_line_number: undefined,
         new_line_number: currentNewLine,
       });
       currentNewLine++;
@@ -79,7 +80,7 @@ const parseRawDiffContent = (content: string, filePath: string): GitDiff => {
         line_type: "removed",
         content: line.substring(1), // Remove the - prefix
         old_line_number: currentOldLine,
-        new_line_number: null,
+        new_line_number: undefined,
       });
       currentOldLine++;
     }
@@ -109,15 +110,15 @@ const parseRawDiffContent = (content: string, filePath: string): GitDiff => {
 
   return {
     file_path: fileName,
-    old_path: null,
-    new_path: null,
+    old_path: undefined,
+    new_path: undefined,
     is_new: false,
     is_deleted: false,
     is_renamed: false,
     is_binary: false,
     is_image: false,
-    old_blob_base64: null,
-    new_blob_base64: null,
+    old_blob_base64: undefined,
+    new_blob_base64: undefined,
     lines: diffLines,
   };
 };

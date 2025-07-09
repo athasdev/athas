@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useEffect, useState } from "react";
+import { safeLocalStorageSetItem } from "../../utils/storage";
 import ConnectionDialog from "./connection-dialog";
 import ConnectionList from "./connection-list";
-import { RemoteConnection, RemoteConnectionFormData } from "./types";
-import { safeLocalStorageSetItem } from "../../utils/storage";
+import type { RemoteConnection, RemoteConnectionFormData } from "./types";
 
 interface RemoteConnectionViewProps {
   onFileSelect?: (path: string, isDir: boolean) => void;
@@ -12,8 +12,7 @@ interface RemoteConnectionViewProps {
 const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
   const [connections, setConnections] = useState<RemoteConnection[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingConnection, setEditingConnection] =
-    useState<RemoteConnection | null>(null);
+  const [editingConnection, setEditingConnection] = useState<RemoteConnection | null>(null);
 
   // Load connections from localStorage
   useEffect(() => {
@@ -21,9 +20,7 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        setConnections(
-          parsed.map((conn: any) => ({ ...conn, isConnected: false })),
-        );
+        setConnections(parsed.map((conn: any) => ({ ...conn, isConnected: false })));
       } catch (error) {
         console.error("Error loading remote connections:", error);
       }
@@ -34,35 +31,26 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
   const saveConnections = (conns: RemoteConnection[]) => {
     const connectionsJson = JSON.stringify(conns);
 
-    const success = safeLocalStorageSetItem(
-      "athas-remote-connections",
-      connectionsJson,
-      {
-        clearPrefix: "athas-remote-",
-        onSuccess: () => {
-          setConnections(conns);
-        },
-        onQuotaExceeded: (error) => {
-          console.error(
-            "Failed to save remote connections due to quota:",
-            error,
-          );
-          // Still update the state even if localStorage fails
-          setConnections(conns);
-
-          // Try to inform the user
-          try {
-            alert(
-              "Warning: Remote connections could not be saved due to storage limitations. Your connections will be lost when you restart the application.",
-            );
-          } catch {
-            console.warn(
-              "Remote connections could not be saved due to storage limitations",
-            );
-          }
-        },
+    const success = safeLocalStorageSetItem("athas-remote-connections", connectionsJson, {
+      clearPrefix: "athas-remote-",
+      onSuccess: () => {
+        setConnections(conns);
       },
-    );
+      onQuotaExceeded: error => {
+        console.error("Failed to save remote connections due to quota:", error);
+        // Still update the state even if localStorage fails
+        setConnections(conns);
+
+        // Try to inform the user
+        try {
+          alert(
+            "Warning: Remote connections could not be saved due to storage limitations. Your connections will be lost when you restart the application.",
+          );
+        } catch {
+          console.warn("Remote connections could not be saved due to storage limitations");
+        }
+      },
+    });
 
     if (!success) {
       console.error("Failed to save remote connections");
@@ -71,15 +59,13 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
     }
   };
 
-  const handleSaveConnection = async (
-    formData: RemoteConnectionFormData,
-  ): Promise<boolean> => {
+  const handleSaveConnection = async (formData: RemoteConnectionFormData): Promise<boolean> => {
     try {
       let updatedConnections: RemoteConnection[];
 
       if (editingConnection) {
         // Update existing connection
-        updatedConnections = connections.map((conn) =>
+        updatedConnections = connections.map(conn =>
           conn.id === editingConnection.id
             ? {
                 ...conn,
@@ -109,7 +95,7 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
   };
 
   const handleConnect = async (connectionId: string) => {
-    const connection = connections.find((conn) => conn.id === connectionId);
+    const connection = connections.find(conn => conn.id === connectionId);
     if (!connection) return;
 
     try {
@@ -118,7 +104,7 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
         await invoke("ssh_disconnect", { connectionId });
 
         setConnections(
-          connections.map((conn) =>
+          connections.map(conn =>
             conn.id === connectionId ? { ...conn, isConnected: false } : conn,
           ),
         );
@@ -136,7 +122,7 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
 
         // Update connection status
         setConnections(
-          connections.map((conn) =>
+          connections.map(conn =>
             conn.id === connectionId
               ? {
                   ...conn,
@@ -176,7 +162,7 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
   };
 
   const handleDeleteConnection = (connectionId: string) => {
-    saveConnections(connections.filter((conn) => conn.id !== connectionId));
+    saveConnections(connections.filter(conn => conn.id !== connectionId));
   };
 
   const handleAddNew = () => {

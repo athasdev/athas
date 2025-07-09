@@ -1,4 +1,4 @@
-use tauri::menu::{MenuBuilder, SubmenuBuilder, AboutMetadata, MenuItem};
+use tauri::menu::{AboutMetadata, MenuBuilder, MenuItem, SubmenuBuilder};
 
 pub fn create_menu<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
@@ -17,18 +17,54 @@ pub fn create_menu<R: tauri::Runtime>(
         .hide_others()
         .show_all()
         .separator()
-        .item(&MenuItem::with_id(app, "quit_app", "Quit Athas", true, Some("CmdOrCtrl+Q"))?)
+        .item(&MenuItem::with_id(
+            app,
+            "quit_app",
+            "Quit Athas",
+            true,
+            Some("CmdOrCtrl+Q"),
+        )?)
         .build()?;
 
     // File menu with cross-platform keyboard shortcuts
     let file_menu = SubmenuBuilder::new(app, "File")
-        .item(&MenuItem::with_id(app, "new_file", "New File", true, Some("CmdOrCtrl+N"))?)
-        .item(&MenuItem::with_id(app, "open_folder", "Open Folder", true, Some("CmdOrCtrl+O"))?)
+        .item(&MenuItem::with_id(
+            app,
+            "new_file",
+            "New File",
+            true,
+            Some("CmdOrCtrl+N"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "open_folder",
+            "Open Folder",
+            true,
+            Some("CmdOrCtrl+O"),
+        )?)
         .separator()
-        .item(&MenuItem::with_id(app, "save", "Save", true, Some("CmdOrCtrl+S"))?)
-        .item(&MenuItem::with_id(app, "save_as", "Save As...", true, Some("CmdOrCtrl+Shift+S"))?)
+        .item(&MenuItem::with_id(
+            app,
+            "save",
+            "Save",
+            true,
+            Some("CmdOrCtrl+S"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "save_as",
+            "Save As...",
+            true,
+            Some("CmdOrCtrl+Shift+S"),
+        )?)
         .separator()
-        .item(&MenuItem::with_id(app, "close_tab", "Close Tab", true, Some("CmdOrCtrl+W"))?)
+        .item(&MenuItem::with_id(
+            app,
+            "close_tab",
+            "Close Tab",
+            true,
+            Some("CmdOrCtrl+W"),
+        )?)
         .build()?;
 
     // Edit menu with native macOS items
@@ -41,10 +77,28 @@ pub fn create_menu<R: tauri::Runtime>(
         .paste()
         .select_all()
         .separator()
-        .item(&MenuItem::with_id(app, "find", "Find", true, Some("CmdOrCtrl+F"))?)
-        .item(&MenuItem::with_id(app, "find_replace", "Find and Replace", true, Some("CmdOrCtrl+Option+F"))?)
+        .item(&MenuItem::with_id(
+            app,
+            "find",
+            "Find",
+            true,
+            Some("CmdOrCtrl+F"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "find_replace",
+            "Find and Replace",
+            true,
+            Some("CmdOrCtrl+Option+F"),
+        )?)
         .separator()
-        .item(&MenuItem::with_id(app, "command_palette", "Command Palette", true, Some("CmdOrCtrl+Shift+P"))?)
+        .item(&MenuItem::with_id(
+            app,
+            "command_palette",
+            "Command Palette",
+            true,
+            Some("CmdOrCtrl+Shift+P"),
+        )?)
         .build()?;
 
     // Theme submenu
@@ -63,9 +117,27 @@ pub fn create_menu<R: tauri::Runtime>(
 
     // View menu
     let view_menu = SubmenuBuilder::new(app, "View")
-        .item(&MenuItem::with_id(app, "toggle_sidebar", "Toggle Sidebar", true, Some("CmdOrCtrl+B"))?)
-        .item(&MenuItem::with_id(app, "toggle_terminal", "Toggle Terminal", true, Some("CmdOrCtrl+J"))?)
-        .item(&MenuItem::with_id(app, "toggle_ai_chat", "Toggle AI Chat", true, Some("CmdOrCtrl+R"))?)
+        .item(&MenuItem::with_id(
+            app,
+            "toggle_sidebar",
+            "Toggle Sidebar",
+            true,
+            Some("CmdOrCtrl+B"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "toggle_terminal",
+            "Toggle Terminal",
+            true,
+            Some("CmdOrCtrl+J"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "toggle_ai_chat",
+            "Toggle AI Chat",
+            true,
+            Some("CmdOrCtrl+R"),
+        )?)
         .separator()
         .text("split_editor", "Split Editor")
         .separator()
@@ -76,11 +148,35 @@ pub fn create_menu<R: tauri::Runtime>(
 
     // Go menu with navigation shortcuts
     let go_menu = SubmenuBuilder::new(app, "Go")
-        .item(&MenuItem::with_id(app, "go_to_file", "Go to File", true, Some("CmdOrCtrl+P"))?)
-        .item(&MenuItem::with_id(app, "go_to_line", "Go to Line", true, Some("CmdOrCtrl+G"))?)
+        .item(&MenuItem::with_id(
+            app,
+            "go_to_file",
+            "Go to File",
+            true,
+            Some("CmdOrCtrl+P"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "go_to_line",
+            "Go to Line",
+            true,
+            Some("CmdOrCtrl+G"),
+        )?)
         .separator()
-        .item(&MenuItem::with_id(app, "next_tab", "Next Tab", true, Some("CmdOrCtrl+Option+Right"))?)
-        .item(&MenuItem::with_id(app, "prev_tab", "Previous Tab", true, Some("CmdOrCtrl+Option+Left"))?)
+        .item(&MenuItem::with_id(
+            app,
+            "next_tab",
+            "Next Tab",
+            true,
+            Some("CmdOrCtrl+Option+Right"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "prev_tab",
+            "Previous Tab",
+            true,
+            Some("CmdOrCtrl+Option+Left"),
+        )?)
         .build()?;
 
     // Window menu (macOS convention)
@@ -97,6 +193,14 @@ pub fn create_menu<R: tauri::Runtime>(
 
     // Main menu - include app menu first for macOS convention
     MenuBuilder::new(app)
-        .items(&[&app_menu, &file_menu, &edit_menu, &view_menu, &go_menu, &window_menu, &help_menu])
+        .items(&[
+            &app_menu,
+            &file_menu,
+            &edit_menu,
+            &view_menu,
+            &go_menu,
+            &window_menu,
+            &help_menu,
+        ])
         .build()
 }
