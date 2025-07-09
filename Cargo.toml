@@ -1,5 +1,6 @@
 [workspace]
 members = [
-    "src-tauri"
+    "src-tauri",
+    "interceptor"
 ]
 resolver = "2"
