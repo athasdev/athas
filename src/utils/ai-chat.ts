@@ -397,7 +397,7 @@ ${contextPrompt}`;
                 console.log("✅ Sending chunk to callback:", content);
                 onChunk(content);
               } else {
-                console.log("⚠️ No content found in chunk");
+                console.log("! No content found in chunk");
               }
             } catch (parseError) {
               console.warn("❌ Failed to parse SSE data:", parseError, "Raw data:", trimmedLine);
@@ -641,6 +641,7 @@ async function handleClaudeCodeStream(
 
     // Set up event listeners for Claude messages
     let unlisten: (() => void) | null = null;
+    let currentStopReason: string | null = null; // Track stop_reason across events
 
     const cleanup = () => {
       if (unlisten) {
@@ -658,6 +659,7 @@ async function handleClaudeCodeStream(
 
     // Listen for completion from Claude Code
     const completeUnlisten = await listen<void>("claude-complete", () => {
+      console.log("🏁 Claude-complete event received");
       cleanupAll();
       onComplete();
     });
@@ -665,23 +667,53 @@ async function handleClaudeCodeStream(
     // Listen for interceptor messages
     const interceptorUnlisten = await listen<InterceptorMessage>("claude-message", event => {
       const message = event.payload;
-      console.log("📡 Interceptor message:", message);
+      console.log(
+        "📡 Interceptor message type:",
+        message.type,
+        "request_id:",
+        message.request_id || message.data?.id,
+      );
 
       if (message.type === "stream_chunk" && message.chunk) {
         // Handle streaming chunks from interceptor
         const chunk = message.chunk;
+
+        // Capture stop_reason from message_start
+        if (chunk.type === "message_start" && chunk.message) {
+          currentStopReason = chunk.message.stop_reason || null;
+          console.log("📋 message_start with stop_reason:", currentStopReason);
+        }
+
         if (chunk.delta?.text) {
           onChunk(chunk.delta.text);
         }
 
         // Check for completion
         if (chunk.type === "message_stop") {
-          cleanupAll();
-          onComplete();
+          console.log("🛑 message_stop in stream_chunk, stop_reason was:", currentStopReason);
+
+          if (currentStopReason === "tool_use") {
+            console.log("🔧 Tool use detected, waiting for follow-up response...");
+            // Reset stop reason for next message
+            currentStopReason = null;
+            // Don't call onComplete yet - more messages coming
+          } else {
+            console.log("✅ Final message complete, cleaning up...");
+            // Now we're truly done
+            cleanupAll();
+            onComplete();
+            currentStopReason = null;
+          }
         }
       } else if (message.type === "response" && message.data?.parsed_response) {
         // Handle non-streaming response
         const response = message.data.parsed_response;
+        console.log("📨 Response data:", {
+          stop_reason: response.stop_reason,
+          usage: response.usage,
+          content_blocks: response.content?.length,
+        });
+
         if (response.content) {
           for (const block of response.content) {
             if (block.type === "text" && block.text) {
@@ -689,9 +721,18 @@ async function handleClaudeCodeStream(
             }
           }
         }
-        cleanupAll();
-        onComplete();
+
+        // Check if this is a tool use response
+        if (response.stop_reason === "tool_use") {
+          console.log("🔧 Tool use detected, waiting for follow-up response...");
+          // Don't clean up - Claude will send another response with the tool result
+        } else {
+          console.log("📨 Final response complete, cleaning up...");
+          cleanupAll();
+          onComplete();
+        }
       } else if (message.type === "error") {
+        console.log("❌ Error from interceptor, cleaning up...");
         cleanupAll();
         onError(message.error || "Unknown error from interceptor");
       }
@@ -699,6 +740,7 @@ async function handleClaudeCodeStream(
 
     // Create a new cleanup function that includes all listeners
     const cleanupAll = () => {
+      console.log("Cleaning up Claude Code listeners...");
       cleanup();
       if (chunkUnlisten) chunkUnlisten();
       if (completeUnlisten) completeUnlisten();
@@ -719,6 +761,7 @@ async function handleClaudeCodeStream(
 
     // Set up a timeout to clean up listeners
     setTimeout(() => {
+      console.log("⏰ Timeout reached (2 min), cleaning up...");
       cleanupAll();
       stdoutUnlisten();
       stderrUnlisten();
