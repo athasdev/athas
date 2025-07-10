@@ -7,6 +7,7 @@ use tauri_plugin_log::Builder;
 pub fn init<R: Runtime>(level: LevelFilter) -> TauriPlugin<R> {
     Builder::new()
         .level(LevelFilter::Warn) // external crates unrelated to "athas"
+        .level_for("interceptor", level) // interceptor
         .level_for("athas_code", level) // athas
         .format(|cb, _, record| {
             use env_logger::fmt::style;
