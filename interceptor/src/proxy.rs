@@ -16,7 +16,7 @@ use chrono::Utc;
 use futures::StreamExt;
 use reqwest::header::{CONTENT_LENGTH, HOST, HeaderName};
 use std::{collections::HashMap, str::FromStr, time::Instant};
-use thin_logger::log;
+use thin_logger::log::{self, debug, error, info};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use uuid::Uuid;
@@ -61,17 +61,13 @@ pub async fn proxy_handler(
     let method_str = method.to_string();
     let path = uri.path().to_string();
 
-    log::info!(
-        "Intercepting request - request_id: {}, path: {}",
-        request_id,
-        path
-    );
+    debug!("Request {} -> {}", request_id, path);
 
     // Extract body
     let body_bytes = match axum::body::to_bytes(request.into_body(), usize::MAX).await {
         Ok(bytes) => bytes,
         Err(e) => {
-            log::error!("Failed to read request body: {}", e);
+            error!("Failed to read request body: {}", e);
             return create_error_response(StatusCode::BAD_REQUEST, "Failed to read request body");
         }
     };
@@ -82,26 +78,52 @@ pub async fn proxy_handler(
     let parsed_request: ParsedRequest = match serde_json::from_str(&body_str) {
         Ok(req) => req,
         Err(e) => {
-            log::error!("Failed to parse request: {}", e);
+            error!("Failed to parse request: {}", e);
             return create_error_response(StatusCode::BAD_REQUEST, "Failed to parse request");
         }
     };
 
-    // Log user messages
+    // Log user messages compactly
     for msg in &parsed_request.messages {
         if matches!(msg.role, crate::types::Role::User) {
             let content = match &msg.content {
                 MessageContent::Text(text) => text.clone(),
-                MessageContent::Blocks(blocks) => serde_json::to_string(blocks).unwrap_or_default(),
+                MessageContent::Blocks(blocks) => {
+                    // Extract text content and tool results from blocks
+                    let mut parts = Vec::new();
+                    let mut tool_results = Vec::new();
+
+                    for block in blocks {
+                        match block.content_type.as_str() {
+                            "text" => {
+                                if let Some(text) = &block.text {
+                                    parts.push(text.clone());
+                                }
+                            }
+                            "tool_result" => {
+                                if let Some(id) = &block.tool_use_id {
+                                    tool_results.push(format!("[Tool Result: {}]", id));
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    if !tool_results.is_empty() {
+                        info!("🔄 Tool results: {}", tool_results.join(", "));
+                    }
+
+                    parts.join(" ")
+                }
             };
             if !content.is_empty() {
-                log::info!(
-                    "User request - request_id: {}, user_message: {}",
-                    request_id,
+                // Truncate long messages
+                let display_content = if content.len() > 100 {
+                    format!("{}...", &content[..97])
+                } else {
                     content
-                );
-            } else {
-                log::debug!("Empty Message!");
+                };
+                info!("👤 User: {}", display_content);
             }
         }
     }
@@ -148,11 +170,7 @@ pub async fn proxy_handler(
         }
     }
 
-    log::info!(
-        "Forwarding request - request_id: {}, url: {}",
-        request_id,
-        url
-    );
+    debug!("Forward {} -> {}", request_id, url);
 
     let response = match client
         .request(method, &url)
@@ -164,11 +182,7 @@ pub async fn proxy_handler(
         Ok(resp) => resp,
         Err(e) => {
             let error = format!("Failed to forward request: {e}");
-            log::error!(
-                "Request error - request_id: {}, error: {}",
-                request_id,
-                error
-            );
+            error!("Request error: {}", error);
             intercepted.error = Some(error.clone());
             intercepted.duration_ms = Some(start_time.elapsed().as_millis() as u64);
             state.update_response(request_id, intercepted);
@@ -180,11 +194,7 @@ pub async fn proxy_handler(
     let status = response.status();
     let response_headers = response.headers().clone();
 
-    log::info!(
-        "Response received - request_id: {}, status: {}",
-        request_id,
-        status.as_u16()
-    );
+    debug!("Response {} - status: {}", request_id, status.as_u16());
 
     // Handle streaming vs non-streaming
     if parsed_request.stream.unwrap_or(false) {
@@ -220,7 +230,7 @@ pub async fn proxy_handler(
                         }
                     }
                     Err(e) => {
-                        log::error!("Error reading stream chunk: {}", e);
+                        error!("Error reading stream chunk: {}", e);
                         let _ = tx.send(Err(axum::Error::new(e))).await;
                         break;
                     }
@@ -236,27 +246,43 @@ pub async fn proxy_handler(
             intercepted.raw_response = Some(captured_response);
             intercepted.duration_ms = Some(start_time.elapsed().as_millis() as u64);
 
-            // Log assistant response
+            // Log assistant response with tool usage
             if let Some(ref parsed) = intercepted.parsed_response {
                 if let Some(ref content) = parsed.content {
-                    let assistant_content: Vec<String> = content
-                        .iter()
-                        .filter_map(|block| {
-                            if block.content_type == "text" {
-                                block.text.clone()
-                            } else {
-                                None
-                            }
-                        })
-                        .collect();
+                    let mut text_parts = Vec::new();
+                    let mut tool_uses = Vec::new();
 
-                    if !assistant_content.is_empty() {
-                        log::info!(
-                            "Assistant response - request_id: {}, duration_ms: {}, model: {}, assistant_response: {}",
-                            request_id,
+                    for block in content {
+                        match block.content_type.as_str() {
+                            "text" => {
+                                if let Some(text) = &block.text {
+                                    text_parts.push(text.clone());
+                                }
+                            }
+                            "tool_use" => {
+                                if let Some(name) = &block.name {
+                                    tool_uses.push(name.clone());
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    if !tool_uses.is_empty() {
+                        info!("🔧 Tools called: {}", tool_uses.join(", "));
+                    }
+
+                    if !text_parts.is_empty() {
+                        let response_text = text_parts.join(" ");
+                        let display_response = if response_text.len() > 150 {
+                            format!("{}...", &response_text[..147])
+                        } else {
+                            response_text
+                        };
+                        info!(
+                            "🤖 Assistant ({}ms): {}",
                             intercepted.duration_ms.unwrap_or(0),
-                            parsed.model.as_deref().unwrap_or("unknown"),
-                            assistant_content.join("\n")
+                            display_response
                         );
                     }
                 }
@@ -283,27 +309,43 @@ pub async fn proxy_handler(
                 intercepted.raw_response = Some(response_text.clone());
                 intercepted.duration_ms = Some(start_time.elapsed().as_millis() as u64);
 
-                // Log assistant response
+                // Log assistant response with tool usage
                 if let Some(ref parsed) = intercepted.parsed_response {
                     if let Some(ref content) = parsed.content {
-                        let assistant_content: Vec<String> = content
-                            .iter()
-                            .filter_map(|block| {
-                                if block.content_type == "text" {
-                                    block.text.clone()
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect();
+                        let mut text_parts = Vec::new();
+                        let mut tool_uses = Vec::new();
 
-                        if !assistant_content.is_empty() {
-                            log::info!(
-                                "Assistant response - request_id: {}, duration_ms: {}, model: {}, assistant_response: {}",
-                                request_id,
+                        for block in content {
+                            match block.content_type.as_str() {
+                                "text" => {
+                                    if let Some(text) = &block.text {
+                                        text_parts.push(text.clone());
+                                    }
+                                }
+                                "tool_use" => {
+                                    if let Some(name) = &block.name {
+                                        tool_uses.push(name.clone());
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+
+                        if !tool_uses.is_empty() {
+                            info!("🔧 Tools called: {}", tool_uses.join(", "));
+                        }
+
+                        if !text_parts.is_empty() {
+                            let response_text = text_parts.join(" ");
+                            let display_response = if response_text.len() > 150 {
+                                format!("{}...", &response_text[..147])
+                            } else {
+                                response_text
+                            };
+                            info!(
+                                "🤖 Assistant ({}ms): {}",
                                 intercepted.duration_ms.unwrap_or(0),
-                                parsed.model.as_deref().unwrap_or("unknown"),
-                                assistant_content.join("\n")
+                                display_response
                             );
                         }
                     }
@@ -320,11 +362,7 @@ pub async fn proxy_handler(
             }
             Err(e) => {
                 let error = format!("Failed to read response: {e}");
-                log::error!(
-                    "Request error - request_id: {}, error: {}",
-                    request_id,
-                    error
-                );
+                error!("Response error: {}", error);
                 intercepted.error = Some(error.clone());
                 intercepted.duration_ms = Some(start_time.elapsed().as_millis() as u64);
                 state.update_response(request_id, intercepted);

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use axum::{Router, routing::get};
 use std::net::SocketAddr;
-use thin_logger::log::info;
+use thin_logger::log::{error, info};
 use tokio::sync::mpsc;
 
 use crate::{
@@ -46,7 +46,7 @@ pub async fn start_proxy_server_with_ws(
 
     tokio::spawn(async move {
         if let Err(e) = axum::serve(listener, app).await {
-            info!("Proxy server error: {}", e);
+            error!("Proxy server error: {}", e);
         }
     });
 

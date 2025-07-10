@@ -5,7 +5,7 @@ use axum::{
 use dashmap::DashMap;
 use futures_util::{SinkExt, StreamExt};
 use std::sync::Arc;
-use thin_logger::log::info;
+use thin_logger::log;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -26,23 +26,22 @@ impl WsState {
     }
 
     pub fn broadcast(&self, message: InterceptorMessage) {
-        let serialized = match serde_json::to_string(&message) {
+        let _serialized = match serde_json::to_string(&message) {
             Ok(msg) => msg,
             Err(e) => {
-                info!("Failed to serialize message: {}", e);
+                log::error!("Failed to serialize message: {}", e);
                 return;
             }
         };
 
-        info!(
-            "Broadcasting message to {} clients: {}",
-            self.clients.len(),
-            &serialized[..serialized.len().min(100)]
-        );
+        // Only log if there are actually clients
+        if self.clients.len() > 0 {
+            log::debug!("Broadcasting to {} clients", self.clients.len());
+        }
 
         self.clients.retain(|id, tx| {
             if tx.send(message.clone()).is_err() {
-                info!("Client {} disconnected, removing", id);
+                log::debug!("Client {} disconnected, removing", id);
                 false
             } else {
                 true
@@ -57,7 +56,7 @@ pub async fn ws_handler(ws: WebSocketUpgrade, State(ws_state): State<WsState>) -
 
 async fn handle_socket(socket: WebSocket, ws_state: WsState) {
     let client_id = Uuid::new_v4();
-    info!("WebSocket client connected: {}", client_id);
+    log::debug!("WS client connected: {}", client_id);
 
     let (mut sender, mut receiver) = socket.split();
     let (tx, mut rx) = mpsc::unbounded_channel::<InterceptorMessage>();
@@ -92,7 +91,7 @@ async fn handle_socket(socket: WebSocket, ws_state: WsState) {
     }
 
     ws_state.clients.remove(&client_id);
-    info!("WebSocket client disconnected: {}", client_id);
+    log::debug!("WS client disconnected: {}", client_id);
 }
 
 pub fn create_ws_broadcaster(
@@ -100,11 +99,10 @@ pub fn create_ws_broadcaster(
     mut rx: mpsc::UnboundedReceiver<InterceptorMessage>,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        info!("WebSocket broadcaster started");
+        log::debug!("WebSocket broadcaster started");
         while let Some(message) = rx.recv().await {
-            info!("Broadcasting message type: {:?}", message.type_name());
             ws_state.broadcast(message);
         }
-        info!("WebSocket broadcaster ended");
+        log::debug!("WebSocket broadcaster ended");
     })
 }
