@@ -214,8 +214,7 @@ pub async fn proxy_handler(
 
                         // Parse SSE chunks and send to WebSocket
                         for line in chunk_str.lines() {
-                            if line.starts_with("data: ") {
-                                let data = &line[6..];
+                            if let Some(data) = line.strip_prefix("data: ") {
                                 if let Ok(chunk) =
                                     serde_json::from_str::<crate::types::StreamingChunk>(data)
                                 {

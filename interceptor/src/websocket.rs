@@ -35,7 +35,7 @@ impl WsState {
         };
 
         // Only log if there are actually clients
-        if self.clients.len() > 0 {
+        if !self.clients.is_empty() {
             log::debug!("Broadcasting to {} clients", self.clients.len());
         }
 

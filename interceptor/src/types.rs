@@ -196,8 +196,8 @@ impl fmt::Display for InterceptedRequest {
 
 impl fmt::Display for StreamingChunk {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.chunk_type.as_str() {
-            &"content_block_delta" => {
+        match self.chunk_type.as_str() {
+            "content_block_delta" => {
                 if let Some(delta) = &self.delta {
                     if let Some(text) = &delta.text {
                         write!(f, "text: {}", text)
@@ -210,22 +210,22 @@ impl fmt::Display for StreamingChunk {
                     write!(f, "{}", self.chunk_type)
                 }
             }
-            &"message_start" => {
+            "message_start" => {
                 if let Some(message) = &self.message {
                     write!(f, "message_start: {}", message.id)
                 } else {
                     write!(f, "message_start")
                 }
             }
-            &"message_stop" => write!(f, "message_stop"),
-            &"content_block_start" => {
+            "message_stop" => write!(f, "message_stop"),
+            "content_block_start" => {
                 if let Some(block) = &self.content_block {
                     write!(f, "content_block_start: {:?}", block.content_type)
                 } else {
                     write!(f, "content_block_start")
                 }
             }
-            &"content_block_stop" => write!(f, "content_block_stop"),
+            "content_block_stop" => write!(f, "content_block_stop"),
             _ => write!(f, "{}", self.chunk_type),
         }
     }
