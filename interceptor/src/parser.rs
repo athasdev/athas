@@ -1,4 +1,4 @@
-use crate::types::{ContentBlock, Delta, ParsedResponse, StreamingChunk};
+use crate::types::{ChunkType, ContentBlock, Delta, ParsedResponse, StreamingChunk};
 use anyhow::{Context, Result};
 use thin_logger::log;
 
@@ -71,23 +71,23 @@ pub fn parse_streaming_response(
 
             match serde_json::from_str::<StreamingChunk>(data) {
                 Ok(chunk) => {
-                    match chunk.chunk_type.as_str() {
-                        "message_start" => {
+                    match chunk.chunk_type {
+                        ChunkType::MessageStart => {
                             final_response = process_message_start(&chunk);
                         }
-                        "content_block_start" => {
+                        ChunkType::ContentBlockStart => {
                             if let Some(response) = &mut final_response {
                                 process_content_block_start(&chunk, response);
                             }
                         }
-                        "content_block_delta" => {
+                        ChunkType::ContentBlockDelta => {
                             if let (Some(delta), Some(response)) =
                                 (&chunk.delta, &mut final_response)
                             {
                                 process_content_block_delta(delta, response);
                             }
                         }
-                        "message_delta" => {
+                        ChunkType::MessageDelta => {
                             if let (Some(delta), Some(response)) =
                                 (&chunk.delta, &mut final_response)
                             {

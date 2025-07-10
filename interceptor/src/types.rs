@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
+use strum::{Display, EnumString};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -118,10 +119,24 @@ pub struct ErrorResponse {
     pub message: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum ChunkType {
+    MessageStart,
+    MessageDelta,
+    MessageStop,
+    ContentBlockStart,
+    ContentBlockDelta,
+    ContentBlockStop,
+    Error,
+    Ping,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreamingChunk {
     #[serde(rename = "type")]
-    pub chunk_type: String,
+    pub chunk_type: ChunkType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub index: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -198,8 +213,8 @@ impl fmt::Display for InterceptedRequest {
 
 impl fmt::Display for StreamingChunk {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.chunk_type.as_str() {
-            "content_block_delta" => {
+        match self.chunk_type {
+            ChunkType::ContentBlockDelta => {
                 if let Some(delta) = &self.delta {
                     if let Some(text) = &delta.text {
                         write!(f, "text: {}", text)
@@ -212,22 +227,22 @@ impl fmt::Display for StreamingChunk {
                     write!(f, "{}", self.chunk_type)
                 }
             }
-            "message_start" => {
+            ChunkType::MessageStart => {
                 if let Some(message) = &self.message {
                     write!(f, "message_start: {}", message.id)
                 } else {
                     write!(f, "message_start")
                 }
             }
-            "message_stop" => write!(f, "message_stop"),
-            "content_block_start" => {
+            ChunkType::MessageStop => write!(f, "message_stop"),
+            ChunkType::ContentBlockStart => {
                 if let Some(block) = &self.content_block {
                     write!(f, "content_block_start: {:?}", block.content_type)
                 } else {
                     write!(f, "content_block_start")
                 }
             }
-            "content_block_stop" => write!(f, "content_block_stop"),
+            ChunkType::ContentBlockStop => write!(f, "content_block_stop"),
             _ => write!(f, "{}", self.chunk_type),
         }
     }

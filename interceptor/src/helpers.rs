@@ -76,7 +76,7 @@ pub fn log_user_messages(messages: &[crate::types::ParsedMessage]) {
             };
 
             if !content.is_empty() {
-                let display_content = truncate_for_display(&content, 100);
+                let display_content = truncate_for_display(&content, 2000);
                 info!("👤 User: {}", display_content);
             }
         }
