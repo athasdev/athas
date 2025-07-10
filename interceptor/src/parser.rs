@@ -1,6 +1,61 @@
-use crate::types::{ParsedResponse, StreamingChunk};
-use anyhow::{Result, bail};
+use crate::types::{ContentBlock, Delta, ParsedResponse, StreamingChunk};
+use anyhow::{Context, Result};
 use thin_logger::log;
+
+impl ParsedResponse {
+    fn append_content_block(&mut self, block: ContentBlock) {
+        self.content.get_or_insert_with(Vec::new).push(block);
+    }
+
+    fn append_text_to_last_block(&mut self, text: &str) {
+        if let Some(content) = &mut self.content {
+            if let Some(last_block) = content.last_mut() {
+                if last_block.content_type == "text" {
+                    match &mut last_block.text {
+                        Some(existing_text) => existing_text.push_str(text),
+                        None => last_block.text = Some(text.to_string()),
+                    }
+                }
+            }
+        }
+    }
+
+    fn set_stop_info(&mut self, stop_reason: Option<String>, stop_sequence: Option<String>) {
+        if let Some(reason) = stop_reason {
+            self.stop_reason = Some(reason);
+        }
+        self.stop_sequence = stop_sequence;
+    }
+}
+
+fn process_message_start(chunk: &StreamingChunk) -> Option<ParsedResponse> {
+    chunk.message.as_ref().map(|message| {
+        ParsedResponse::builder()
+            .id(message.id.clone())
+            .response_type(message.message_type.clone())
+            .role(message.role.clone())
+            .model(message.model.clone())
+            .content(Vec::new())
+            .usage(message.usage.clone())
+            .build()
+    })
+}
+
+fn process_content_block_start(chunk: &StreamingChunk, response: &mut ParsedResponse) {
+    if let Some(content_block) = &chunk.content_block {
+        response.append_content_block(content_block.clone());
+    }
+}
+
+fn process_content_block_delta(delta: &Delta, response: &mut ParsedResponse) {
+    if let Some(text) = &delta.text {
+        response.append_text_to_last_block(text);
+    }
+}
+
+fn process_message_delta(delta: &Delta, response: &mut ParsedResponse) {
+    response.set_stop_info(delta.stop_reason.clone(), delta.stop_sequence.clone());
+}
 
 pub fn parse_streaming_response(
     response_text: &str,
@@ -16,60 +71,31 @@ pub fn parse_streaming_response(
 
             match serde_json::from_str::<StreamingChunk>(data) {
                 Ok(chunk) => {
-                    // Build final response from message_start and content_blocks
-                    if chunk.chunk_type == "message_start" {
-                        if let Some(ref message) = chunk.message {
-                            final_response = Some(ParsedResponse {
-                                id: Some(message.id.clone()),
-                                response_type: Some(message.message_type.clone()),
-                                role: Some(message.role.clone()),
-                                model: Some(message.model.clone()),
-                                content: Some(Vec::new()),
-                                usage: Some(message.usage.clone()),
-                                stop_reason: None,
-                                stop_sequence: None,
-                                error: None,
-                            });
+                    match chunk.chunk_type.as_str() {
+                        "message_start" => {
+                            final_response = process_message_start(&chunk);
                         }
-                    }
-
-                    if chunk.chunk_type == "content_block_start" {
-                        if let (Some(content_block), Some(response)) =
-                            (&chunk.content_block, &mut final_response)
-                        {
-                            if let Some(content) = &mut response.content {
-                                content.push(content_block.clone());
+                        "content_block_start" => {
+                            if let Some(response) = &mut final_response {
+                                process_content_block_start(&chunk, response);
                             }
                         }
-                    }
-
-                    if chunk.chunk_type == "content_block_delta" {
-                        if let (Some(delta), Some(response)) = (&chunk.delta, &mut final_response) {
-                            if let (Some(text), Some(content)) =
-                                (&delta.text, &mut response.content)
+                        "content_block_delta" => {
+                            if let (Some(delta), Some(response)) =
+                                (&chunk.delta, &mut final_response)
                             {
-                                if let Some(last_block) = content.last_mut() {
-                                    if last_block.content_type == "text" {
-                                        if let Some(ref mut block_text) = last_block.text {
-                                            block_text.push_str(text);
-                                        } else {
-                                            last_block.text = Some(text.clone());
-                                        }
-                                    }
-                                }
+                                process_content_block_delta(delta, response);
                             }
                         }
-                    }
-
-                    if chunk.chunk_type == "message_delta" {
-                        if let (Some(delta), Some(response)) = (&chunk.delta, &mut final_response) {
-                            if let Some(stop_reason) = &delta.stop_reason {
-                                response.stop_reason = Some(stop_reason.clone());
+                        "message_delta" => {
+                            if let (Some(delta), Some(response)) =
+                                (&chunk.delta, &mut final_response)
+                            {
+                                process_message_delta(delta, response);
                             }
-                            response.stop_sequence = delta.stop_sequence.clone();
                         }
+                        _ => {}
                     }
-
                     chunks.push(chunk);
                 }
                 Err(e) => {
@@ -83,10 +109,5 @@ pub fn parse_streaming_response(
 }
 
 pub fn parse_non_streaming_response(response_text: &str) -> Result<ParsedResponse> {
-    match serde_json::from_str(response_text) {
-        Ok(response) => Ok(response),
-        Err(e) => {
-            bail!("Failed to parse response: {}", e)
-        }
-    }
+    serde_json::from_str(response_text).context("Failed to parse response")
 }

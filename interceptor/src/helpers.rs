@@ -84,7 +84,12 @@ pub fn log_user_messages(messages: &[crate::types::ParsedMessage]) {
 }
 
 /// Logs assistant response with tool usage
-pub fn log_assistant_response(text_parts: &[String], tool_uses: &[String], duration_ms: u64) {
+pub fn log_assistant_response(
+    text_parts: &[String],
+    tool_uses: &[String],
+    duration_ms: u64,
+    is_streaming: bool,
+) {
     if !tool_uses.is_empty() {
         info!("🔧 Tools called: {}", tool_uses.join(", "));
     }
@@ -92,6 +97,13 @@ pub fn log_assistant_response(text_parts: &[String], tool_uses: &[String], durat
     if !text_parts.is_empty() {
         let response_text = text_parts.join(" ");
         let display_response = truncate_for_display(&response_text, 150);
-        info!("🤖 Assistant ({}ms): {}", duration_ms, display_response);
+        let mode_icon = if is_streaming { "🌊" } else { "📦" };
+        info!(
+            "{} 🤖 Assistant [{}] ({}ms): {}",
+            mode_icon,
+            if is_streaming { "STREAM" } else { "FULL" },
+            duration_ms,
+            display_response
+        );
     }
 }

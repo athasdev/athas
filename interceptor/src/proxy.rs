@@ -18,7 +18,7 @@ use chrono::Utc;
 use futures::StreamExt;
 use reqwest::header::{CONTENT_LENGTH, HOST, HeaderName};
 use std::{collections::HashMap, str::FromStr, time::Instant};
-use thin_logger::log::{self, debug, error};
+use thin_logger::log::{self, debug, error, info};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use uuid::Uuid;
@@ -117,6 +117,7 @@ async fn process_streaming_response(
     StatusCode,
     HeaderMap,
 ) {
+    debug!("🌊 Processing STREAMING response for {}", request_id);
     let status = response.status();
     let response_headers = response.headers().clone();
     let (tx, rx) = mpsc::channel::<Result<Bytes, axum::Error>>(100);
@@ -170,6 +171,7 @@ async fn process_streaming_response(
                     &text_parts,
                     &tool_uses,
                     intercepted.duration_ms.unwrap_or(0),
+                    true, // streaming
                 );
             }
         }
@@ -188,6 +190,7 @@ async fn process_non_streaming_response(
     start_time: Instant,
     mut intercepted: InterceptedRequest,
 ) -> Result<(String, StatusCode, HeaderMap)> {
+    debug!("📦 Processing NON-STREAMING response for {}", request_id);
     let status = response.status();
     let response_headers = response.headers().clone();
     let response_text = response.text().await.context("Failed to read response")?;
@@ -204,6 +207,7 @@ async fn process_non_streaming_response(
                 &text_parts,
                 &tool_uses,
                 intercepted.duration_ms.unwrap_or(0),
+                false, // non-streaming
             );
         }
     }
@@ -317,7 +321,19 @@ pub async fn proxy_handler(
     debug!("Response {} - status: {}", request_id, status.as_u16());
 
     // Handle streaming vs non-streaming
-    if parsed_request.stream.unwrap_or(false) {
+    let is_streaming = parsed_request.stream.unwrap_or(false);
+    info!(
+        "{} Request {} - Mode: {}",
+        if is_streaming { "🌊" } else { "📦" },
+        request_id,
+        if is_streaming {
+            "STREAMING"
+        } else {
+            "NON-STREAMING"
+        }
+    );
+
+    if is_streaming {
         let (rx, status, response_headers) =
             process_streaming_response(response, state, request_id, start_time, intercepted).await;
 
