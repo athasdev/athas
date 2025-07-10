@@ -7,6 +7,7 @@ use tokio::sync::Mutex;
 #[tauri::command]
 pub async fn start_claude_code(
     bridge: State<'_, Arc<Mutex<ClaudeCodeBridge>>>,
+    workspace_path: Option<String>,
 ) -> Result<ClaudeStatus, String> {
     let mut bridge = bridge.lock().await;
 
@@ -18,9 +19,9 @@ pub async fn start_claude_code(
             .map_err(|e| e.to_string())?;
     }
 
-    // Then start Claude Code
+    // Then start Claude Code with workspace path
     bridge
-        .start_claude_code()
+        .start_claude_code(workspace_path)
         .await
         .map_err(|e| e.to_string())?;
 

@@ -836,7 +836,10 @@ export default function AIChat({
               </span>
             </div>
             <div className="flex items-center gap-2 ml-auto">
-              <ClaudeStatusIndicator isActive={currentProviderId === "claude-code"} />
+              <ClaudeStatusIndicator
+                isActive={currentProviderId === "claude-code"}
+                workspacePath={rootFolderPath}
+              />
               <ModelProviderSelector
                 currentProviderId={currentProviderId}
                 currentModelId={currentModelId}

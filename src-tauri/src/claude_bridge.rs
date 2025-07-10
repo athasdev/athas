@@ -74,7 +74,7 @@ impl ClaudeCodeBridge {
         Ok(())
     }
 
-    pub async fn start_claude_code(&mut self) -> Result<()> {
+    pub async fn start_claude_code(&mut self, workspace_path: Option<String>) -> Result<()> {
         if self.claude_process.is_some() {
             bail!("Claude Code is already running");
         }
@@ -91,6 +91,12 @@ impl ClaudeCodeBridge {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
+
+        // Set the working directory if workspace path is provided
+        if let Some(path) = workspace_path {
+            cmd.current_dir(&path);
+            log::info!("Starting Claude Code in workspace: {}", path);
+        }
 
         let mut child = cmd.spawn().map_err(|e| {
             anyhow::anyhow!(

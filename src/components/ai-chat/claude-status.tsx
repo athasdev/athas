@@ -8,9 +8,13 @@ import Button from "../ui/button";
 
 interface ClaudeStatusIndicatorProps {
   isActive: boolean;
+  workspacePath?: string;
 }
 
-export default function ClaudeStatusIndicator({ isActive }: ClaudeStatusIndicatorProps) {
+export default function ClaudeStatusIndicator({
+  isActive,
+  workspacePath,
+}: ClaudeStatusIndicatorProps) {
   const [status, setStatus] = useState<ClaudeStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +86,9 @@ export default function ClaudeStatusIndicator({ isActive }: ClaudeStatusIndicato
     setIsLoading(true);
     setError(null);
     try {
-      const newStatus = await invoke<ClaudeStatus>("start_claude_code");
+      const newStatus = await invoke<ClaudeStatus>("start_claude_code", {
+        workspacePath: workspacePath || null,
+      });
       setStatus(newStatus);
       if (!newStatus.running) {
         setError("Failed to start Claude Code");
