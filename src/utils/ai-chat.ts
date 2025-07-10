@@ -241,14 +241,7 @@ export const getChatCompletionStream = async (
 
     // Handle Claude Code provider differently
     if (providerId === "claude-code") {
-      await handleClaudeCodeStream(
-        userMessage,
-        context,
-        onChunk,
-        onComplete,
-        onError,
-        conversationHistory,
-      );
+      await handleClaudeCodeStream(userMessage, context, onChunk, onComplete, onError);
       return;
     }
 
@@ -591,7 +584,6 @@ async function handleClaudeCodeStream(
   onChunk: (chunk: string) => void,
   onComplete: () => void,
   onError: (error: string) => void,
-  conversationHistory?: AIMessage[],
 ): Promise<void> {
   try {
     const { invoke } = await import("@tauri-apps/api/core");
@@ -614,30 +606,22 @@ async function handleClaudeCodeStream(
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    // Prepare the full message with context
+    // Prepare the message with context
     const contextPrompt = buildContextPrompt(context);
 
-    // Build a simplified message format for Claude Code CLI
+    // Build message for Claude Code CLI
+    // Claude maintains its own conversation state, so we only send:
+    // 1. Context (if available)
+    // 2. User message
     let fullMessage = "";
-
-    // Add conversation history if any
-    if (conversationHistory && conversationHistory.length > 0) {
-      for (const msg of conversationHistory) {
-        if (msg.role === "user") {
-          fullMessage += `Human: ${msg.content}\n\n`;
-        } else if (msg.role === "assistant") {
-          fullMessage += `Assistant: ${msg.content}\n\n`;
-        }
-      }
-    }
 
     // Add context if available
     if (contextPrompt) {
-      fullMessage += `Context:\n${contextPrompt}\n\n`;
+      fullMessage += `${contextPrompt}\n\n`;
     }
 
     // Add the current message
-    fullMessage += `Human: ${userMessage}`;
+    fullMessage += userMessage;
 
     // Set up event listeners for Claude messages
     let unlisten: (() => void) | null = null;
