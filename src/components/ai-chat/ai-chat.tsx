@@ -27,7 +27,6 @@ import OutlineView from "../outline-view";
 import Button from "../ui/button";
 import ChatHistoryModal from "./chat-history-modal";
 import ClaudeStatusIndicator from "./claude-status";
-import InterceptorDisplay from "./interceptor-display";
 import MarkdownRenderer from "./markdown-renderer";
 import type { AIChatProps, Chat, ContextInfo, Message } from "./types";
 import { formatTime } from "./utils";
@@ -697,9 +696,6 @@ export default function AIChat({
 
         <div ref={messagesEndRef} />
       </div>
-
-      {/* Interceptor Display */}
-      <InterceptorDisplay isActive={currentProviderId === "claude-code"} />
 
       {/* Input */}
       <div
