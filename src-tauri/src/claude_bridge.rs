@@ -1,17 +1,14 @@
 use anyhow::{Context, Result, bail};
-use chrono::{DateTime, Utc};
-use futures_util::StreamExt;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use interceptor::{
+    InterceptorMessage, start_proxy_server_with_ws, websocket::create_ws_broadcaster,
+};
+use serde::Serialize;
 use std::process::Stdio;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncReadExt;
 use tokio::process::{Child, Command};
-use tokio::sync::Mutex;
-use tokio_tungstenite::{connect_async, tungstenite::Message};
-use url::Url;
-use uuid::Uuid;
+use tokio::sync::{Mutex, mpsc};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ClaudeStatus {
@@ -20,206 +17,10 @@ pub struct ClaudeStatus {
     pub interceptor_running: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Role {
-    User,
-    Assistant,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContentBlock {
-    #[serde(rename = "type")]
-    pub content_type: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub text: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub input: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub content: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tool_use_id: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum MessageContent {
-    Text(String),
-    Blocks(Vec<ContentBlock>),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ParsedMessage {
-    pub role: Role,
-    pub content: MessageContent,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Tool {
-    pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub input_schema: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum SystemPrompt {
-    Text(String),
-    Blocks(Vec<SystemBlock>),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SystemBlock {
-    #[serde(rename = "type")]
-    pub block_type: String,
-    pub text: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ParsedRequest {
-    pub model: String,
-    pub messages: Vec<ParsedMessage>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub system: Option<SystemPrompt>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tools: Option<Vec<Tool>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub temperature: Option<f32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub max_tokens: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stream: Option<bool>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Usage {
-    pub input_tokens: u32,
-    pub output_tokens: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ErrorResponse {
-    #[serde(rename = "type")]
-    pub error_type: String,
-    pub message: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ParsedResponse {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    pub response_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub role: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub content: Option<Vec<ContentBlock>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub model: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stop_reason: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stop_sequence: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub usage: Option<Usage>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<ErrorResponse>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Delta {
-    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    pub delta_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub text: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub partial_json: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stop_reason: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stop_sequence: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StreamMessage {
-    pub id: String,
-    #[serde(rename = "type")]
-    pub message_type: String,
-    pub role: String,
-    pub model: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stop_reason: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stop_sequence: Option<String>,
-    pub usage: Usage,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StreamingChunk {
-    #[serde(rename = "type")]
-    pub chunk_type: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub index: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub delta: Option<Delta>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub content_block: Option<ContentBlock>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<StreamMessage>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<ErrorResponse>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InterceptedRequest {
-    pub id: Uuid,
-    pub timestamp: DateTime<Utc>,
-    pub method: String,
-    pub path: String,
-    pub parsed_request: ParsedRequest,
-    pub raw_request: String,
-    pub headers: HashMap<String, String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub parsed_response: Option<ParsedResponse>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub raw_response: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub streaming_chunks: Option<Vec<StreamingChunk>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration_ms: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum InterceptorMessage {
-    Request {
-        data: InterceptedRequest,
-    },
-    Response {
-        data: InterceptedRequest,
-    },
-    StreamChunk {
-        request_id: Uuid,
-        chunk: StreamingChunk,
-    },
-    Error {
-        request_id: Uuid,
-        error: String,
-    },
-}
-
 pub struct ClaudeCodeBridge {
     claude_process: Option<Child>,
     pub claude_stdin: Option<tokio::process::ChildStdin>,
-    interceptor_process: Option<Child>,
+    interceptor_handle: Option<tokio::task::JoinHandle<()>>,
     ws_connected: bool,
     app_handle: AppHandle,
 }
@@ -229,165 +30,47 @@ impl ClaudeCodeBridge {
         Self {
             claude_process: None,
             claude_stdin: None,
-            interceptor_process: None,
+            interceptor_handle: None,
             ws_connected: false,
             app_handle,
         }
     }
 
     pub async fn start_interceptor(&mut self) -> Result<()> {
-        if self.interceptor_process.is_some() {
+        if self.interceptor_handle.is_some() {
             bail!("Interceptor is already running");
         }
 
-        // The interceptor binary is in the workspace target directory
-        let interceptor_path = if cfg!(debug_assertions) {
-            // In development, use the workspace target directory
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .parent()
-                .context("Failed to get parent directory")?
-                .join("target")
-                .join("debug")
-                .join("interceptor")
-        } else {
-            // In production, use release build
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .parent()
-                .context("Failed to get parent directory")?
-                .join("target")
-                .join("release")
-                .join("interceptor")
-        };
+        log::info!("Starting interceptor as embedded service...");
 
-        if !interceptor_path.exists() {
-            bail!(
-                "Interceptor binary not found at {:?}. Please build the interceptor first.",
-                interceptor_path
-            );
-        }
+        let proxy_port = 3456;
 
-        let mut cmd = Command::new(&interceptor_path);
-        let mut child = cmd
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|e| {
-                anyhow::anyhow!(
-                    "Failed to spawn interceptor at {:?}: {}",
-                    interceptor_path,
-                    e
-                )
-            })?;
+        // Start the interceptor proxy server
+        let (rx, ws_state) = start_proxy_server_with_ws(proxy_port).await?;
 
-        // Spawn stdout reader for interceptor
-        if let Some(stdout) = child.stdout.take() {
-            let app_handle = self.app_handle.clone();
-            tokio::spawn(async move {
-                let mut reader = tokio::io::BufReader::new(stdout);
-                let mut line = String::new();
-                loop {
-                    use tokio::io::AsyncBufReadExt;
-                    match reader.read_line(&mut line).await {
-                        Ok(0) => break, // EOF
-                        Ok(_) => {
-                            let trimmed = line.trim();
-                            if !trimmed.is_empty() {
-                                log::info!("[Interceptor] {}", trimmed);
-                                let _ = app_handle.emit("interceptor-log", trimmed);
-                            }
-                            line.clear();
-                        }
-                        Err(e) => {
-                            log::error!("[Interceptor] Error reading stdout: {}", e);
-                            break;
-                        }
-                    }
-                }
-            });
-        }
-
-        // Spawn stderr reader for interceptor
-        if let Some(stderr) = child.stderr.take() {
-            tokio::spawn(async move {
-                let mut reader = tokio::io::BufReader::new(stderr);
-                let mut line = String::new();
-                loop {
-                    use tokio::io::AsyncBufReadExt;
-                    match reader.read_line(&mut line).await {
-                        Ok(0) => break, // EOF
-                        Ok(_) => {
-                            let trimmed = line.trim();
-                            if !trimmed.is_empty() {
-                                log::error!("[Interceptor Error] {}", trimmed);
-                            }
-                            line.clear();
-                        }
-                        Err(e) => {
-                            log::error!("[Interceptor] Error reading stderr: {}", e);
-                            break;
-                        }
-                    }
-                }
-            });
-        }
-
-        self.interceptor_process = Some(child);
-
-        // Give the interceptor time to start
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-
-        // Connect to WebSocket
-        self.connect_websocket().await?;
-
-        Ok(())
-    }
-
-    async fn connect_websocket(&mut self) -> Result<()> {
-        let url = Url::parse("ws://localhost:3456/ws")?;
-        let (ws_stream, _) = connect_async(url)
-            .await
-            .context("Failed to connect to interceptor WebSocket")?;
-
+        // Create channels for message distribution
+        let (broadcast_tx, broadcast_rx) = mpsc::unbounded_channel::<InterceptorMessage>();
         let app_handle = self.app_handle.clone();
-        let (write, read) = ws_stream.split();
 
-        // Create shared state for write half (if needed later)
-        let write_arc = Arc::new(Mutex::new(write));
-        self.app_handle.manage(write_arc.clone());
+        // Spawn WebSocket broadcaster
+        tokio::spawn(create_ws_broadcaster(ws_state, broadcast_rx));
 
-        // Spawn reader task
-        tokio::spawn(async move {
-            let mut read = read;
-            while let Some(msg) = read.next().await {
-                match msg {
-                    Ok(Message::Text(text)) => {
-                        log::info!(
-                            "Received WebSocket message: {}",
-                            &text[..text.len().min(100)]
-                        );
-                        if let Ok(interceptor_msg) =
-                            serde_json::from_str::<InterceptorMessage>(&text)
-                        {
-                            log::info!("Emitting claude-message event");
-                            let _ = app_handle.emit("claude-message", interceptor_msg);
-                        } else {
-                            log::error!(
-                                "Failed to parse interceptor message: {}",
-                                &text[..text.len().min(200)]
-                            );
-                        }
-                    }
-                    Ok(Message::Close(_)) => break,
-                    Err(e) => {
-                        log::error!("WebSocket error: {}", e);
-                        break;
-                    }
-                    _ => {}
-                }
+        // Spawn message handler that forwards to frontend
+        let message_handler = tokio::spawn(async move {
+            let mut rx = rx;
+            while let Some(message) = rx.recv().await {
+                // Forward to WebSocket clients
+                let _ = broadcast_tx.send(message.clone());
+
+                // Emit to frontend
+                let _ = app_handle.emit("claude-message", message);
             }
         });
 
+        self.interceptor_handle = Some(message_handler);
         self.ws_connected = true;
+
+        log::info!("Interceptor started successfully on port {}", proxy_port);
         Ok(())
     }
 
@@ -495,8 +178,8 @@ impl ClaudeCodeBridge {
         self.ws_connected = false;
 
         // Stop interceptor
-        if let Some(mut child) = self.interceptor_process.take() {
-            let _ = child.kill().await;
+        if let Some(handle) = self.interceptor_handle.take() {
+            handle.abort();
         }
 
         Ok(())
@@ -506,7 +189,7 @@ impl ClaudeCodeBridge {
         ClaudeStatus {
             running: self.claude_process.is_some(),
             connected: self.ws_connected,
-            interceptor_running: self.interceptor_process.is_some(),
+            interceptor_running: self.interceptor_handle.is_some(),
         }
     }
 }

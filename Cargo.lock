@@ -381,6 +381,7 @@ dependencies = [
  "env_logger",
  "futures-util",
  "git2",
+ "interceptor",
  "lazy_static",
  "log",
  "lsp-types",
