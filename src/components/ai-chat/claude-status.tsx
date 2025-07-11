@@ -53,22 +53,8 @@ export default function ClaudeStatusIndicator({
         console.log("[Interceptor]", event.payload);
       });
 
-      // Listen for Claude stdout
-      const unlistenClaudeOut = await listen<string>("claude-stdout", event => {
-        console.log("[Claude]", event.payload);
-      });
-
-      // Listen for Claude stderr
-      const unlistenClaudeErr = await listen<string>("claude-stderr", event => {
-        // Claude stderr might contain stream-json error messages
-        // Just log them without trying to parse as they're debugging info
-        console.log("Claude stderr:", event.payload);
-      });
-
       return () => {
         unlistenInterceptor();
-        unlistenClaudeOut();
-        unlistenClaudeErr();
       };
     };
 

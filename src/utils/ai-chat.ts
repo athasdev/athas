@@ -595,10 +595,7 @@ interface ClaudeCodeHandlers {
 }
 
 interface ClaudeListeners {
-  chunk?: () => void;
   interceptor?: () => void;
-  stdout?: () => void;
-  stderr?: () => void;
 }
 
 class ClaudeCodeStreamHandler {
@@ -647,21 +644,8 @@ class ClaudeCodeStreamHandler {
   }
 
   private async setupListeners(): Promise<void> {
-    this.listeners.chunk = await listen<string>("claude-chunk", event => {
-      this.lastActivityTime = Date.now();
-      this.handlers.onChunk(event.payload);
-    });
-
     this.listeners.interceptor = await listen<InterceptorMessage>("claude-message", event => {
       this.handleInterceptorMessage(event.payload);
-    });
-
-    this.listeners.stdout = await listen<string>("claude-stdout", event => {
-      console.log("Claude stdout:", event.payload);
-    });
-
-    this.listeners.stderr = await listen<string>("claude-stderr", event => {
-      console.log("Claude stderr:", event.payload);
     });
   }
 

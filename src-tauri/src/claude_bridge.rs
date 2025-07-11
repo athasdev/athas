@@ -6,7 +6,6 @@ use serde::Serialize;
 use std::process::Stdio;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
-use tokio::io::AsyncReadExt;
 use tokio::process::{Child, Command};
 use tokio::sync::{Mutex, mpsc};
 
@@ -108,82 +107,30 @@ impl ClaudeCodeBridge {
         // Get stdin handle
         let stdin = child.stdin.take().context("Failed to get stdin")?;
         self.claude_stdin = Some(stdin);
-        self.claude_process = Some(child);
 
-        // Spawn stdout reader for stream-json format
-        if let Some(stdout) = self.claude_process.as_mut().unwrap().stdout.take() {
-            let app_handle = self.app_handle.clone();
+        // Consume stdout and stderr to prevent broken pipe errors, but discard the output
+        // since all communication goes through the interceptor
+        if let Some(stdout) = child.stdout.take() {
             tokio::spawn(async move {
                 use tokio::io::{AsyncBufReadExt, BufReader};
                 let reader = BufReader::new(stdout);
                 let mut lines = reader.lines();
-
-                while let Ok(Some(line)) = lines.next_line().await {
-                    // Parse each line as JSON
-                    if let Ok(json_msg) = serde_json::from_str::<serde_json::Value>(&line) {
-                        // Check if it's a message chunk
-                        if let Some(msg_type) = json_msg.get("type").and_then(|v| v.as_str()) {
-                            match msg_type {
-                                "content_block_delta" => {
-                                    if let Some(text) = json_msg
-                                        .get("delta")
-                                        .and_then(|d| d.get("text"))
-                                        .and_then(|t| t.as_str())
-                                    {
-                                        let _ = app_handle.emit("claude-chunk", text);
-                                    }
-                                }
-                                "content_block_start" => {
-                                    // Check if it's a tool use block
-                                    if let Some(block) = json_msg.get("content_block") {
-                                        if let Some(block_type) =
-                                            block.get("type").and_then(|t| t.as_str())
-                                        {
-                                            if block_type == "tool_use" {
-                                                // Emit tool use event with name and input
-                                                let _ = app_handle.emit("claude-tool-use", block);
-                                            }
-                                        }
-                                    }
-                                    // Also emit the raw message
-                                    let _ = app_handle.emit("claude-message", json_msg);
-                                }
-                                "message_stop" => {
-                                    // Don't emit claude-complete here - let the interceptor handle it
-                                    // This just means one message is done, not the whole conversation
-                                    let _ = app_handle.emit("claude-message", json_msg);
-                                }
-                                _ => {
-                                    // Emit raw JSON for other message types
-                                    let _ = app_handle.emit("claude-message", json_msg);
-                                }
-                            }
-                        }
-                    } else {
-                        // If not JSON, emit as regular stdout
-                        let _ = app_handle.emit("claude-stdout", &line);
-                    }
-                }
+                // Just consume and discard
+                while let Ok(Some(_)) = lines.next_line().await {}
             });
         }
 
-        // Spawn stderr reader
-        if let Some(mut stderr) = self.claude_process.as_mut().unwrap().stderr.take() {
-            let app_handle = self.app_handle.clone();
+        if let Some(stderr) = child.stderr.take() {
             tokio::spawn(async move {
-                let mut buf = vec![0; 1024];
-                loop {
-                    match stderr.read(&mut buf).await {
-                        Ok(0) => break,
-                        Ok(n) => {
-                            let text = String::from_utf8_lossy(&buf[..n]).into_owned();
-                            let _ = app_handle.emit("claude-stderr", text);
-                        }
-                        Err(_) => break,
-                    }
-                }
+                use tokio::io::{AsyncBufReadExt, BufReader};
+                let reader = BufReader::new(stderr);
+                let mut lines = reader.lines();
+                // Just consume and discard
+                while let Ok(Some(_)) = lines.next_line().await {}
             });
         }
+
+        self.claude_process = Some(child);
 
         Ok(())
     }
