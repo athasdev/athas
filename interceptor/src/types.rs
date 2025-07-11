@@ -45,9 +45,24 @@ pub struct Tool {
     pub input_schema: Option<serde_json::Value>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Display, EnumString)]
+#[serde(rename_all = "kebab-case")]
+#[strum(serialize_all = "kebab-case")]
+pub enum ClaudeModel {
+    #[serde(rename = "claude-opus-4-20250514")]
+    #[strum(serialize = "claude-opus-4-20250514")]
+    Opus,
+    #[serde(rename = "claude-sonnet-4-20250514")]
+    #[strum(serialize = "claude-sonnet-4-20250514")]
+    Sonnet,
+    #[serde(rename = "claude-3-5-haiku-20241022")]
+    #[strum(serialize = "claude-3-5-haiku-20241022")]
+    Haiku,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParsedRequest {
-    pub model: String,
+    pub model: ClaudeModel,
     pub messages: Vec<ParsedMessage>,
     pub system: Option<SystemPrompt>,
     pub tools: Option<Vec<Tool>>,

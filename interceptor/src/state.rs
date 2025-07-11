@@ -21,23 +21,57 @@ impl InterceptorState {
     pub fn add_request(&self, request: InterceptedRequest) {
         let id = request.id;
         self.requests.insert(id, request.clone());
-        let _ = self.tx.send(InterceptorMessage::Request { data: request });
+
+        // Skip sending message if model is Haiku (metadata requests)
+        if !matches!(
+            request.parsed_request.model,
+            crate::types::ClaudeModel::Haiku
+        ) {
+            let _ = self.tx.send(InterceptorMessage::Request { data: request });
+        }
     }
 
     pub fn update_response(&self, id: Uuid, response: InterceptedRequest) {
         self.requests.insert(id, response.clone());
-        let _ = self
-            .tx
-            .send(InterceptorMessage::Response { data: response });
+
+        // Skip sending message if model is Haiku (metadata requests)
+        if !matches!(
+            response.parsed_request.model,
+            crate::types::ClaudeModel::Haiku
+        ) {
+            let _ = self
+                .tx
+                .send(InterceptorMessage::Response { data: response });
+        }
     }
 
     pub fn send_error(&self, request_id: Uuid, error: String) {
+        // Check if this request is for a Haiku model and skip if so
+        if let Some(request) = self.requests.get(&request_id) {
+            if matches!(
+                request.parsed_request.model,
+                crate::types::ClaudeModel::Haiku
+            ) {
+                return;
+            }
+        }
+
         let _ = self
             .tx
             .send(InterceptorMessage::Error { request_id, error });
     }
 
     pub fn send_stream_chunk(&self, request_id: Uuid, chunk: crate::types::StreamingChunk) {
+        // Check if this request is for a Haiku model and skip if so
+        if let Some(request) = self.requests.get(&request_id) {
+            if matches!(
+                request.parsed_request.model,
+                crate::types::ClaudeModel::Haiku
+            ) {
+                return;
+            }
+        }
+
         let _ = self
             .tx
             .send(InterceptorMessage::StreamChunk { request_id, chunk });
