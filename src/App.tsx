@@ -38,6 +38,7 @@ import { useRemoteConnection } from "./hooks/use-remote-connection";
 import { useSearch } from "./hooks/use-search";
 import { useSettings } from "./hooks/use-settings";
 import { useVim } from "./hooks/use-vim";
+import { useCodeEditorStore } from "./store/code-editor-store";
 import {
   cleanupFileWatcherListener,
   initializeFileWatcherListener,
@@ -568,12 +569,14 @@ function App() {
     },
     onUndo: () => {
       if (codeEditorRef.current?.textarea) {
-        document.execCommand("undo");
+        const store = useCodeEditorStore.getState();
+        store.undo();
       }
     },
     onRedo: () => {
       if (codeEditorRef.current?.textarea) {
-        document.execCommand("redo");
+        const store = useCodeEditorStore.getState();
+        store.redo();
       }
     },
     onFind: () => {

@@ -18,6 +18,12 @@ interface CompletionPosition {
   left: number;
 }
 
+// Add HistoryState interface
+interface HistoryState {
+  content: string;
+  cursorPosition: number;
+}
+
 interface CodeEditorState {
   // Core Editor State
   value: string;
@@ -34,6 +40,7 @@ interface CodeEditorState {
   wordWrap: boolean;
   lineNumbers: boolean;
   disabled: boolean;
+  undoStepSize: number; // Add this setting
 
   // LSP State
   lspCompletions: CompletionItem[];
@@ -62,6 +69,15 @@ interface CodeEditorState {
   minimap: boolean;
   isTyping: boolean;
 
+  // Add undo/redo state
+  undoStack: HistoryState[];
+  redoStack: HistoryState[];
+  pushToHistory: (state: HistoryState) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+
   // Actions - Core Editor
   setValue: (value: string) => void;
   setLanguage: (language: string) => void;
@@ -76,6 +92,7 @@ interface CodeEditorState {
   setWordWrap: (wrap: boolean) => void;
   setLineNumbers: (show: boolean) => void;
   setDisabled: (disabled: boolean) => void;
+  setUndoStepSize: (size: number) => void; // Add setter for undoStepSize
 
   // Actions - LSP
   setLspCompletions: (completions: CompletionItem[]) => void;
@@ -133,6 +150,7 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
   wordWrap: false,
   lineNumbers: true,
   disabled: false,
+  undoStepSize: 1, // Default to 1 character
 
   // Initial LSP State
   lspCompletions: [],
@@ -161,6 +179,88 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
   minimap: false,
   isTyping: false,
 
+  // Add initial undo/redo state
+  undoStack: [],
+  redoStack: [],
+
+  // Add undo/redo methods
+  pushToHistory: (state: HistoryState) => {
+    const { undoStack } = get();
+    set({
+      undoStack: [...undoStack, state],
+      redoStack: [], // Clear redo stack when new change is made
+    });
+  },
+
+  // Update undo method to handle multiple steps
+  undo: () => {
+    const { undoStack, redoStack, value, undoStepSize } = get();
+    if (undoStack.length === 0) return;
+
+    const currentState = {
+      content: value,
+      cursorPosition:
+        document.activeElement instanceof HTMLTextAreaElement
+          ? document.activeElement.selectionStart
+          : 0,
+    };
+
+    // Take multiple steps based on undoStepSize
+    const stepsToUndo = Math.min(undoStepSize, undoStack.length);
+    const statesToUndo = undoStack.slice(-stepsToUndo);
+    const prevState = statesToUndo[0]; // Use the oldest state in our step size
+
+    set({
+      value: prevState.content,
+      undoStack: undoStack.slice(0, -stepsToUndo),
+      redoStack: [...redoStack, currentState, ...statesToUndo.slice(1).reverse()],
+    });
+
+    // Restore cursor position after state update
+    requestAnimationFrame(() => {
+      const textarea = document.activeElement;
+      if (textarea instanceof HTMLTextAreaElement) {
+        textarea.setSelectionRange(prevState.cursorPosition, prevState.cursorPosition);
+      }
+    });
+  },
+
+  // Update redo method to handle multiple steps
+  redo: () => {
+    const { undoStack, redoStack, value, undoStepSize } = get();
+    if (redoStack.length === 0) return;
+
+    const currentState = {
+      content: value,
+      cursorPosition:
+        document.activeElement instanceof HTMLTextAreaElement
+          ? document.activeElement.selectionStart
+          : 0,
+    };
+
+    // Take multiple steps based on undoStepSize
+    const stepsToRedo = Math.min(undoStepSize, redoStack.length);
+    const statesToRedo = redoStack.slice(-stepsToRedo);
+    const nextState = statesToRedo[0]; // Use the oldest state in our step size
+
+    set({
+      value: nextState.content,
+      undoStack: [...undoStack, currentState, ...statesToRedo.slice(1).reverse()],
+      redoStack: redoStack.slice(0, -stepsToRedo),
+    });
+
+    // Restore cursor position after state update
+    requestAnimationFrame(() => {
+      const textarea = document.activeElement;
+      if (textarea instanceof HTMLTextAreaElement) {
+        textarea.setSelectionRange(nextState.cursorPosition, nextState.cursorPosition);
+      }
+    });
+  },
+
+  canUndo: () => get().undoStack.length > 0,
+  canRedo: () => get().redoStack.length > 0,
+
   // Core Editor Actions
   setValue: (value: string) => set({ value }),
   setLanguage: (language: string) => set({ language }),
@@ -175,6 +275,7 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
   setWordWrap: (wrap: boolean) => set({ wordWrap: wrap }),
   setLineNumbers: (show: boolean) => set({ lineNumbers: show }),
   setDisabled: (disabled: boolean) => set({ disabled }),
+  setUndoStepSize: (size: number) => set({ undoStepSize: Math.max(1, size) }),
 
   // LSP Actions
   setLspCompletions: (completions: CompletionItem[]) => set({ lspCompletions: completions }),

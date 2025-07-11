@@ -17,6 +17,9 @@ export const useEditorKeyboard = (
   const language = useCodeEditorStore(state => state.language);
   const vimEnabled = useCodeEditorStore(state => state.vimEnabled);
   const value = useCodeEditorStore(state => state.value);
+  const undo = useCodeEditorStore(state => state.undo);
+  const redo = useCodeEditorStore(state => state.redo);
+  const pushToHistory = useCodeEditorStore(state => state.pushToHistory);
 
   // Store actions
   const nextLspCompletion = useCodeEditorStore(state => state.nextLspCompletion);
@@ -55,6 +58,33 @@ export const useEditorKeyboard = (
       const textarea = e.currentTarget;
       const currentValue = textarea.value;
       const { selectionStart, selectionEnd } = textarea;
+      const cmdKey = isMac() ? e.metaKey : e.ctrlKey;
+
+      // Handle undo/redo
+      if (cmdKey && e.key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+        return;
+      }
+
+      // Push to history before making changes
+      const shouldPushHistory =
+        e.key === "Enter" ||
+        e.key === "Tab" ||
+        e.key === "Backspace" ||
+        e.key === "Delete" ||
+        (e.key.length === 1 && !cmdKey); // Single character input
+
+      if (shouldPushHistory) {
+        pushToHistory({
+          content: currentValue,
+          cursorPosition: selectionStart,
+        });
+      }
 
       // Handle LSP completion navigation
       if (isLspCompletionVisible && lspCompletions.length > 0) {
@@ -88,8 +118,6 @@ export const useEditorKeyboard = (
 
       // Handle regular editor shortcuts
       if (!vimEnabled) {
-        const cmdKey = isMac() ? e.metaKey : e.ctrlKey;
-
         // Tab handling
         if (e.key === "Tab") {
           e.preventDefault();
@@ -244,6 +272,9 @@ export const useEditorKeyboard = (
       language,
       onChange,
       onKeyDown,
+      undo,
+      redo,
+      pushToHistory,
     ],
   );
 

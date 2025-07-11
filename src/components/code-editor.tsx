@@ -229,6 +229,9 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
     const isHovering = useCodeEditorStore(state => state.isHovering);
     const currentCompletion = useCodeEditorStore(state => state.currentCompletion);
     const showCompletion = useCodeEditorStore(state => state.showCompletion);
+    const pushToHistory = useCodeEditorStore(state => state.pushToHistory);
+    const undo = useCodeEditorStore(state => state.undo);
+    const redo = useCodeEditorStore(state => state.redo);
 
     // Store actions
     const setFilename = useCodeEditorStore(state => state.setFilename);
@@ -605,6 +608,61 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       setIsHovering(true);
     }, [setIsHovering]);
 
+    // Handle keyboard shortcuts
+    const handleEditorKeyDown = useCallback(
+      (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        // Handle undo/redo
+        if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
+          if (e.key === "z") {
+            e.preventDefault();
+            undo();
+            return;
+          }
+        }
+        if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "Z") {
+          e.preventDefault();
+          redo();
+          return;
+        }
+
+        // Handle Ctrl+Z and Ctrl+Shift+Z
+        if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          if (e.shiftKey) {
+            redo();
+          } else {
+            undo();
+          }
+          return;
+        }
+
+        // Call the original onKeyDown handler
+        if (onKeyDown) {
+          onKeyDown(e);
+        }
+      },
+      [onKeyDown, undo, redo],
+    );
+
+    // Handle content changes
+    const handleContentChange = useCallback(
+      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newValue = e.target.value;
+        const cursorPos = e.target.selectionStart;
+
+        // Push the current state to history before updating
+        pushToHistory({
+          content: value,
+          cursorPosition: cursorPos,
+        });
+
+        // Update the value
+        setValue(newValue);
+        onChange(newValue);
+      },
+      [value, onChange, setValue, pushToHistory],
+    );
+
     // Calculate styles
     const getTextareaClasses = useMemo(() => {
       let classes = `absolute top-0 bottom-0 right-0 left-0 m-0 p-4 font-mono leading-6 text-transparent bg-transparent border-none outline-none resize-none overflow-auto z-[2] shadow-none rounded-none transition-none`;
@@ -693,14 +751,8 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
             <textarea
               ref={textareaRef}
               value={value}
-              onChange={e => {
-                handleUserInteraction();
-                onChange(e.target.value);
-              }}
-              onKeyDown={e => {
-                handleUserInteraction();
-                handleKeyDown(e);
-              }}
+              onChange={handleContentChange}
+              onKeyDown={handleEditorKeyDown}
               onKeyUp={() =>
                 handleCursorPositionChange(
                   onCursorPositionChange,
