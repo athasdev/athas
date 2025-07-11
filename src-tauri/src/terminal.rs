@@ -220,17 +220,14 @@ impl TerminalConnection {
                 // Better readline support
                 cmd.env("INPUTRC", "/etc/inputrc");
 
-                // Force interactive shell
+                // Force interactive shell - use only interactive mode, not login shell
                 if !cfg!(target_os = "windows") {
                     if shell_path.contains("bash") {
                         cmd.arg("-i"); // Interactive mode for bash
-                        cmd.arg("-l"); // Login shell for proper profile loading
                     } else if shell_path.contains("zsh") {
                         cmd.arg("-i"); // Interactive mode for zsh
-                        cmd.arg("-l"); // Login shell for proper profile loading
                     } else if shell_path.contains("fish") {
                         cmd.arg("-i"); // Interactive mode for fish
-                        cmd.arg("-l"); // Login shell for proper profile loading
                     } else if shell_path.contains("dash") {
                         cmd.arg("-i"); // Interactive mode for dash
                     } else if shell_path.contains("ksh") {

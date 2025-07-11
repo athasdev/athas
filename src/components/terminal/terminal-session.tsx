@@ -50,13 +50,14 @@ const TerminalSession = ({
 }: TerminalSessionProps) => {
   const sessionRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [screen, setScreen] = useState<LineItem[][]>([]);
   const [cursorLine, setCursorLine] = useState(0);
   const [cursorCol, setCursorCol] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [terminalSize, setTerminalSize] = useState({ rows: 24, cols: 80 });
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Create ANSI to HTML converter with minimal overrides
   // Let the shell's color configuration come through naturally
@@ -143,44 +144,63 @@ const TerminalSession = ({
     }
   }, [isActive, connectionId, terminal, calculateTerminalSize, onActivity]);
 
-  // Auto-focus input when terminal becomes active and handle focus management
+  // Auto-focus hidden input when terminal becomes active
   useEffect(() => {
-    if (isActive && inputRef.current) {
-      inputRef.current.focus();
+    if (isActive) {
+      const hiddenInput = document.getElementById(`terminal-input-${terminal.id}`);
+      if (hiddenInput) {
+        hiddenInput.focus();
+      }
     }
-  }, [isActive]);
+  }, [isActive, terminal.id]);
 
-  // Keep input focused when clicking on terminal or when terminal becomes active
+  // Auto-scroll to bottom when screen updates
+  useEffect(() => {
+    if (terminalRef.current && isActive && !isUserScrolling) {
+      const terminal = terminalRef.current;
+      // Use setTimeout to ensure the DOM has updated
+      setTimeout(() => {
+        terminal.scrollTop = terminal.scrollHeight;
+      }, 0);
+    }
+  }, [screen, isActive, isUserScrolling]);
+
+  // Handle scroll events to detect user scrolling
   useEffect(() => {
     const terminal = terminalRef.current;
     if (!terminal) return;
 
-    const handleClick = () => {
-      if (inputRef.current) {
-        inputRef.current.focus();
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = terminal;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5; // 5px tolerance
+
+      if (!isAtBottom) {
+        setIsUserScrolling(true);
+        // Clear any existing timeout
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+        // Reset user scrolling after 3 seconds of no scroll activity
+        scrollTimeoutRef.current = setTimeout(() => {
+          setIsUserScrolling(false);
+        }, 3000);
+      } else {
+        setIsUserScrolling(false);
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+          scrollTimeoutRef.current = null;
+        }
       }
     };
 
-    terminal.addEventListener("click", handleClick);
-
+    terminal.addEventListener("scroll", handleScroll);
     return () => {
-      terminal.removeEventListener("click", handleClick);
+      terminal.removeEventListener("scroll", handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
     };
   }, []);
-
-  // Focus input when terminal becomes active
-  useEffect(() => {
-    if (isActive && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isActive]);
-
-  // Auto-scroll to bottom when screen updates
-  useEffect(() => {
-    if (terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
-    }
-  }, [screen]);
 
   // Handle terminal resize
   useEffect(() => {
@@ -236,6 +256,68 @@ const TerminalSession = ({
         return;
       }
 
+      // Allow global shortcuts to bubble up - don't prevent default for these combinations
+      if (e.metaKey || e.ctrlKey) {
+        // Check for global shortcuts that should bubble up
+        if (e.key === "j" || e.key === "J") {
+          // Terminal toggle - let it bubble up
+          return;
+        }
+
+        // Handle terminal-specific shortcuts
+        if ((e.key === "t" || e.key === "T") && !e.shiftKey) {
+          return; // Let terminal container handle new terminal
+        }
+        if ((e.key === "w" || e.key === "W") && !e.shiftKey) {
+          return; // Let terminal container handle close terminal
+        }
+
+        // Other global shortcuts that should bubble up
+        if (
+          e.key === "`" ||
+          e.key === "~" || // Common terminal shortcuts
+          e.key === "k" ||
+          e.key === "K" || // Command palette
+          e.key === "p" ||
+          e.key === "P" || // File search
+          e.key === "f" ||
+          e.key === "F" || // Find
+          e.key === "," ||
+          e.key === "<" || // Settings
+          e.key === "n" ||
+          e.key === "N" || // New window
+          e.key === "q" ||
+          e.key === "Q" || // Quit
+          e.key === "r" ||
+          e.key === "R" || // Refresh
+          e.key === "s" ||
+          e.key === "S" || // Save
+          e.key === "o" ||
+          e.key === "O" || // Open
+          e.key === "z" ||
+          e.key === "Z" || // Undo
+          e.key === "y" ||
+          e.key === "Y" || // Redo
+          e.key === "x" ||
+          e.key === "X" || // Cut
+          e.key === "v" ||
+          e.key === "V" || // Paste
+          e.key === "a" ||
+          e.key === "A" || // Select all
+          e.key === "=" ||
+          e.key === "+" || // Zoom in
+          e.key === "-" ||
+          e.key === "_" || // Zoom out
+          e.key === "0" ||
+          e.key === ")" || // Reset zoom
+          (e.key >= "1" && e.key <= "9")
+        ) {
+          // Tab switching
+          return;
+        }
+      }
+
+      // Always prevent default and stop propagation for terminal input
       e.preventDefault();
       e.stopPropagation();
 
@@ -306,9 +388,12 @@ const TerminalSession = ({
           case "Escape":
             data = "\x1b";
             break;
+          case " ":
+            data = " ";
+            break;
           default:
-            // Handle all printable characters
-            if (e.key.length === 1) {
+            // Handle all printable characters - be more specific
+            if (e.key.length === 1 && e.key >= " " && e.key <= "~") {
               data = e.key;
             }
             break;
@@ -342,7 +427,7 @@ const TerminalSession = ({
     };
   }, [connectionId]);
 
-  // Render terminal lines
+  // Enhanced terminal line rendering with smart highlighting
   const renderTerminalLine = (line: LineItem[], lineIndex: number) => {
     if (!line || line.length === 0) {
       return (
@@ -352,35 +437,91 @@ const TerminalSession = ({
       );
     }
 
+    // Convert line to text for pattern detection
+    const _lineText = line.map(item => item.lexeme || " ").join("");
+
+    // Apply smart highlighting based on content patterns
+    const enhancedLine = line.map((item, itemIndex) => {
+      let className = "inline";
+      const style: React.CSSProperties = {};
+
+      if (item.is_bold) className += " font-bold";
+      if (item.is_italic) className += " italic";
+      if (item.is_underline) className += " underline";
+
+      // Enhanced color handling
+      if (item.foreground_color) {
+        style.color = item.foreground_color || "#cccccc";
+      }
+      if (item.background_color) {
+        style.backgroundColor = item.background_color || "transparent";
+      }
+
+      // Smart highlighting enhancements
+      const lexeme = item.lexeme || " ";
+      const enhancedLexeme = lexeme;
+
+      // Only apply enhancements if there's no existing color
+      if (!item.foreground_color) {
+        // File extensions
+        if (lexeme.match(/\.(js|ts|tsx|jsx)$/)) {
+          style.color = "#f0db4f";
+        } else if (lexeme.match(/\.(py)$/)) {
+          style.color = "#3776ab";
+        } else if (lexeme.match(/\.(rs)$/)) {
+          style.color = "#dea584";
+        } else if (lexeme.match(/\.(json)$/)) {
+          style.color = "#cbcb41";
+        } else if (lexeme.match(/\.(md)$/)) {
+          style.color = "#083fa1";
+        }
+
+        // Directory indicators
+        else if (lexeme.startsWith("drwx")) {
+          style.color = "#58a6ff";
+        }
+
+        // Error patterns
+        else if (lexeme.match(/(error|Error|ERROR|failed|Failed|FAILED|fatal|Fatal|FATAL)/)) {
+          style.color = "#f85149";
+          className += " font-bold";
+        }
+
+        // Warning patterns
+        else if (lexeme.match(/(warning|Warning|WARNING|warn|Warn|WARN)/)) {
+          style.color = "#f0883e";
+          className += " font-bold";
+        }
+
+        // Success patterns
+        else if (
+          lexeme.match(/(success|Success|SUCCESS|done|Done|DONE|completed|Completed|COMPLETED)/)
+        ) {
+          style.color = "#3fb950";
+          className += " font-bold";
+        }
+
+        // Git branch indicators
+        else if (lexeme.match(/\(.*\)/)) {
+          style.color = "#9a9a9a";
+        }
+      }
+
+      return (
+        <span
+          key={itemIndex}
+          className={className}
+          style={style}
+          dangerouslySetInnerHTML={{
+            __html: ansiConverter.current.toHtml(enhancedLexeme),
+          }}
+        />
+      );
+    });
+
     return (
       <div key={lineIndex} className="h-[14px] whitespace-pre font-mono text-xs leading-[14px]">
-        {line.map((item, itemIndex) => {
-          let className = "inline";
-          const style: React.CSSProperties = {};
-
-          if (item.is_bold) className += " font-bold";
-          if (item.is_italic) className += " italic";
-          if (item.is_underline) className += " underline";
-
-          // Handle colors (simplified for now)
-          if (item.foreground_color) {
-            style.color = "#cccccc"; // Default for now
-          }
-          if (item.background_color) {
-            style.backgroundColor = "transparent"; // Default for now
-          }
-
-          return (
-            <span
-              key={itemIndex}
-              className={className}
-              style={style}
-              dangerouslySetInnerHTML={{
-                __html: ansiConverter.current.toHtml(item.lexeme || " "),
-              }}
-            />
-          );
-        })}
+        {enhancedLine}
       </div>
     );
   };
@@ -396,7 +537,13 @@ const TerminalSession = ({
         <div
           ref={terminalRef}
           className="relative flex-1 cursor-text overflow-hidden bg-primary-bg p-3 font-mono text-text text-xs"
-          onClick={() => inputRef.current?.focus()}
+          onClick={() => {
+            // Focus the hidden input when terminal is clicked
+            const hiddenInput = document.getElementById(`terminal-input-${terminal.id}`);
+            if (hiddenInput) {
+              hiddenInput.focus();
+            }
+          }}
         >
           {!isConnected ? (
             <div className="pt-4 text-center text-text-lighter">Connecting to terminal...</div>
@@ -417,25 +564,42 @@ const TerminalSession = ({
               />
             </div>
           )}
-
-          {/* Hidden input for capturing ALL keyboard events */}
-          <input
-            ref={inputRef}
-            className="absolute h-0 w-0 opacity-0"
-            value=""
-            onChange={() => {}}
-            onKeyDown={handleKeyDown}
-            onKeyPress={() => {}}
-            onInput={() => {}}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            tabIndex={0}
-            style={{ left: "-9999px", top: "-9999px", pointerEvents: "none" }}
-          />
         </div>
       </div>
+
+      {/* Hidden textarea for capturing keyboard input */}
+      <textarea
+        id={`terminal-input-${terminal.id}`}
+        className="pointer-events-none fixed resize-none opacity-0"
+        style={{
+          position: "fixed",
+          left: "-9999px",
+          top: "-9999px",
+          width: "1px",
+          height: "1px",
+          opacity: 0,
+          zIndex: -1,
+          border: "none",
+          outline: "none",
+          background: "transparent",
+        }}
+        value=""
+        onChange={() => {}}
+        onKeyDown={handleKeyDown}
+        onPaste={e => {
+          e.preventDefault();
+          const pasteData = e.clipboardData?.getData("text");
+          if (pasteData && connectionId) {
+            sendInput(pasteData);
+          }
+        }}
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        rows={1}
+        cols={1}
+      />
     </div>
   );
 };

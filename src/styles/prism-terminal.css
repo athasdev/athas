@@ -1,0 +1,185 @@
+/* Terminal-specific Prism.js theme */
+.terminal-content {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+/* Token styles for terminal output */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #6a9955;
+}
+
+.token.punctuation {
+  color: #d4d4d4;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #b5cea8;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: #ce9178;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: #d4d4d4;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: #569cd6;
+}
+
+.token.function,
+.token.class-name {
+  color: #dcdcaa;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: #d16969;
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+/* Diff highlighting */
+.token.diff {
+  color: #d4d4d4;
+}
+
+.token.diff .token.inserted {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.token.diff .token.deleted {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* JSON highlighting */
+.token.json .token.property {
+  color: #9cdcfe;
+}
+
+.token.json .token.string {
+  color: #ce9178;
+}
+
+.token.json .token.number {
+  color: #b5cea8;
+}
+
+.token.json .token.boolean {
+  color: #569cd6;
+}
+
+.token.json .token.null {
+  color: #569cd6;
+}
+
+/* Shell/Bash highlighting */
+.token.shell .token.command {
+  color: #dcdcaa;
+}
+
+.token.shell .token.parameter {
+  color: #9cdcfe;
+}
+
+.token.shell .token.option {
+  color: #ce9178;
+}
+
+/* Custom terminal colors */
+.terminal-path {
+  color: #58a6ff;
+}
+
+.terminal-url {
+  color: #58a6ff;
+  text-decoration: underline;
+}
+
+.terminal-error {
+  color: #f85149;
+  font-weight: bold;
+}
+
+.terminal-warning {
+  color: #f0883e;
+  font-weight: bold;
+}
+
+.terminal-success {
+  color: #3fb950;
+  font-weight: bold;
+}
+
+/* File type indicators */
+.terminal-file-js,
+.terminal-file-ts {
+  color: #f0db4f;
+}
+
+.terminal-file-py {
+  color: #3776ab;
+}
+
+.terminal-file-rs {
+  color: #dea584;
+}
+
+.terminal-file-go {
+  color: #00add8;
+}
+
+.terminal-file-java {
+  color: #f89820;
+}
+
+.terminal-file-json {
+  color: #cbcb41;
+}
+
+.terminal-file-md {
+  color: #083fa1;
+}
+
+.terminal-file-css {
+  color: #1572b6;
+}
+
+.terminal-file-html {
+  color: #e34c26;
+}
