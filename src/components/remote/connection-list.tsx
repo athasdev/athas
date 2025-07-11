@@ -53,18 +53,18 @@ const ConnectionList = ({
   }, [connectionMenu]);
 
   return (
-    <div className="flex flex-col h-full bg-[var(--secondary-bg)]">
+    <div className="flex h-full flex-col bg-secondary-bg">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-color)]">
+      <div className="flex items-center justify-between border-border border-b px-3 py-2">
         <div className="flex items-center gap-2">
-          <Server size={14} className="text-[var(--text-lighter)]" />
-          <span className="text-sm font-medium text-[var(--text-color)]">Remote</span>
+          <Server size={14} className="text-text-lighter" />
+          <span className="font-medium text-sm text-text">Remote</span>
         </div>
         <Button
           onClick={onAddNew}
           variant="ghost"
           size="sm"
-          className="h-7 w-7 p-0 hover:bg-[var(--hover-color)] transition-colors"
+          className="h-7 w-7 p-0 transition-colors hover:bg-hover"
           title="Add Remote Connection"
         >
           <Plus size={14} />
@@ -74,14 +74,12 @@ const ConnectionList = ({
       {/* Connections List */}
       <div className="flex-1 overflow-y-auto">
         {connections.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-[var(--hover-color)] flex items-center justify-center mb-4">
-              <Server size={24} className="text-[var(--text-lighter)]" />
+          <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-hover">
+              <Server size={24} className="text-text-lighter" />
             </div>
-            <h3 className="text-sm font-medium text-[var(--text-color)] mb-1">
-              No remote connections
-            </h3>
-            <p className="text-sm text-[var(--text-lighter)] mb-4">
+            <h3 className="mb-1 font-medium text-sm text-text">No remote connections</h3>
+            <p className="mb-4 text-sm text-text-lighter">
               Connect to remote servers via SSH or SFTP
             </p>
             <Button onClick={onAddNew} variant="default" size="sm" className="h-8">
@@ -90,31 +88,31 @@ const ConnectionList = ({
             </Button>
           </div>
         ) : (
-          <div className="p-2 sm:p-3 space-y-2">
+          <div className="space-y-2 p-2 sm:p-3">
             {connections.map(connection => (
               <div
                 key={connection.id}
                 className={cn(
-                  "group relative p-2 rounded-lg border transition-all duration-200 hover:shadow-sm overflow-hidden",
+                  "group relative overflow-hidden rounded-lg border p-2 transition-all duration-200 hover:shadow-sm",
                   connection.isConnected
-                    ? "bg-green-50/50 border-green-200/50 dark:bg-green-950/20 dark:border-green-800/30"
-                    : "bg-[var(--secondary-bg)] border-[var(--border-color)]",
+                    ? "border-green-200/50 bg-green-50/50 dark:border-green-800/30 dark:bg-green-950/20"
+                    : "border-border bg-secondary-bg",
                 )}
               >
                 <div className="flex items-center gap-3">
                   {/* Connection Status */}
                   <div
                     className={cn(
-                      "w-2.5 h-2.5 rounded-full transition-colors flex-shrink-0",
+                      "h-2.5 w-2.5 flex-shrink-0 rounded-full transition-colors",
                       connection.isConnected ? "bg-green-500" : "bg-gray-400 dark:bg-gray-600",
                     )}
                   />
 
                   {/* Connection Info - Clickable */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
                       <span
-                        className="text-sm font-medium text-[var(--text-color)] truncate cursor-pointer hover:bg-[var(--hover-color)] px-1 py-0.5 rounded"
+                        className="cursor-pointer truncate rounded px-1 py-0.5 font-medium text-sm text-text hover:bg-hover"
                         title="Click for options"
                         onClick={e => {
                           e.preventDefault();
@@ -137,11 +135,11 @@ const ConnectionList = ({
                       >
                         {connection.name}
                       </span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--hover-color)] text-[var(--text-lighter)] font-mono flex-shrink-0">
+                      <span className="flex-shrink-0 rounded bg-hover px-1.5 py-0.5 font-mono text-text-lighter text-xs">
                         {connection.type.toUpperCase()}
                       </span>
                     </div>
-                    <div className="text-xs text-[var(--text-lighter)] truncate">
+                    <div className="truncate text-text-lighter text-xs">
                       {connection.isConnected
                         ? "Connected"
                         : connection.lastConnected
@@ -151,13 +149,13 @@ const ConnectionList = ({
                   </div>
 
                   {/* Connect/Browse Button Only */}
-                  <div className="flex items-center flex-shrink-0">
+                  <div className="flex flex-shrink-0 items-center">
                     {connection.isConnected ? (
                       <Button
                         onClick={() => onFileSelect?.(`/remote/${connection.id}/`, true)}
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 cursor-pointer"
+                        className="h-6 w-6 cursor-pointer p-0"
                         title="Browse Files"
                       >
                         <FolderOpen size={12} />
@@ -167,7 +165,7 @@ const ConnectionList = ({
                         onClick={() => onConnect(connection.id)}
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 cursor-pointer text-[var(--text-lighter)] hover:text-[var(--text-color)]"
+                        className="h-6 w-6 cursor-pointer p-0 text-text-lighter hover:text-text"
                         title="Connect"
                       >
                         <Wifi size={12} />
@@ -184,7 +182,7 @@ const ConnectionList = ({
       {/* Connection Menu Dropdown */}
       {connectionMenu && (
         <div
-          className="fixed bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-md shadow-lg z-50 py-1 min-w-[120px]"
+          className="fixed z-50 min-w-[120px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
           style={{
             left: connectionMenu.x,
             top: connectionMenu.y,
@@ -203,7 +201,7 @@ const ConnectionList = ({
               }
               setConnectionMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <Edit size={12} />
             Edit
@@ -215,7 +213,7 @@ const ConnectionList = ({
               onDelete(connectionMenu.connectionId);
               setConnectionMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-red-400 hover:bg-red-500/10 flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-red-400 text-xs hover:bg-red-500/10"
           >
             <Trash2 size={12} />
             Delete

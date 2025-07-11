@@ -80,12 +80,12 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
 
   if (imageError) {
     return (
-      <div className="flex flex-col h-full">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-red-500 p-4 text-center">
-            <p className="text-lg font-semibold mb-2">Error loading image</p>
+      <div className="flex h-full flex-col">
+        <div className="flex flex-1 items-center justify-center">
+          <div className="p-4 text-center text-red-500">
+            <p className="mb-2 font-semibold text-lg">Error loading image</p>
             <p className="text-sm opacity-80">Could not load {imagePath.split("/").pop()}</p>
-            <p className="text-xs mt-2 opacity-60">Please check the console for more details.</p>
+            <p className="mt-2 text-xs opacity-60">Please check the console for more details.</p>
           </div>
         </div>
       </div>
@@ -94,10 +94,10 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
 
   if (imageLoading) {
     return (
-      <div className="flex flex-col h-full">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="p-4 text-[var(--text-lighter)]">
-            <div className="animate-spin w-8 h-8 border-2 border-[var(--border-color)] border-t-[var(--text-color)] rounded-full mx-auto mb-4"></div>
+      <div className="flex h-full flex-col">
+        <div className="flex flex-1 items-center justify-center">
+          <div className="p-4 text-text-lighter">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-border border-t-text"></div>
             <p>Loading image...</p>
           </div>
         </div>
@@ -106,15 +106,15 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[var(--primary-bg)]">
+    <div className="flex h-full flex-col bg-primary-bg">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[var(--secondary-bg)] border-b border-[var(--border-color)] shrink-0">
+      <div className="flex shrink-0 items-center justify-between border-border border-b bg-secondary-bg px-4 py-2">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs text-[var(--text-lighter)]">
+          <span className="font-mono text-text-lighter text-xs">
             {imagePath.split("/").pop()} • {getFileExtension(imagePath)}
           </span>
           {imageSize && (
-            <span className="font-mono text-xs text-[var(--text-lighter)]">
+            <span className="font-mono text-text-lighter text-xs">
               • {imageSize.width}×{imageSize.height}
             </span>
           )}
@@ -123,38 +123,38 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowInfo(!showInfo)}
-            className="p-1 hover:bg-[var(--hover-color)] rounded text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+            className="rounded p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             title="Toggle Info"
           >
             <Info size={14} />
           </button>
           <button
             onClick={handleZoomOut}
-            className="p-1 hover:bg-[var(--hover-color)] rounded text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+            className="rounded p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             title="Zoom Out"
           >
             <ZoomOut size={14} />
           </button>
-          <span className="font-mono text-xs text-[var(--text-lighter)] px-2 min-w-[60px] text-center">
+          <span className="min-w-[60px] px-2 text-center font-mono text-text-lighter text-xs">
             {Math.round(zoom * 100)}%
           </span>
           <button
             onClick={handleZoomIn}
-            className="p-1 hover:bg-[var(--hover-color)] rounded text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+            className="rounded p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             title="Zoom In"
           >
             <ZoomIn size={14} />
           </button>
           <button
             onClick={handleResetZoom}
-            className="p-1 hover:bg-[var(--hover-color)] rounded text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+            className="rounded p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             title="Reset Zoom"
           >
             <RotateCcw size={14} />
           </button>
           <button
             onClick={handleDownload}
-            className="p-1 hover:bg-[var(--hover-color)] rounded text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+            className="rounded p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             title="Download"
           >
             <Download size={14} />
@@ -163,7 +163,7 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
       </div>
 
       {/* Image Content */}
-      <div className="flex-1 overflow-auto relative bg-[var(--editor-bg)] flex items-center justify-center">
+      <div className="relative flex flex-1 items-center justify-center overflow-auto bg-[var(--editor-bg)]">
         <div className="p-4">
           <img
             src={imageUrl}
@@ -180,8 +180,8 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
 
       {/* Footer/Info Panel */}
       {showInfo && imageSize && (
-        <div className="px-4 py-2 bg-[var(--secondary-bg)] border-t border-[var(--border-color)] shrink-0">
-          <div className="flex items-center justify-between font-mono text-xs text-[var(--text-lighter)]">
+        <div className="shrink-0 border-border border-t bg-secondary-bg px-4 py-2">
+          <div className="flex items-center justify-between font-mono text-text-lighter text-xs">
             <div className="flex items-center gap-4">
               <span>
                 Dimensions: {imageSize.width}×{imageSize.height}

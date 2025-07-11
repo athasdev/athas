@@ -42,10 +42,8 @@ const Dropdown = ({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          "w-full px-3 py-2 text-sm bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors text-[var(--text-color)] flex items-center justify-between",
-          disabled
-            ? "opacity-50 cursor-not-allowed"
-            : "hover:bg-[var(--hover-color)] cursor-pointer",
+          "flex w-full items-center justify-between rounded-md border border-border bg-primary-bg px-3 py-2 text-sm text-text transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50",
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
         )}
       >
         <span>{selectedOption ? selectedOption.label : placeholder}</span>
@@ -53,7 +51,7 @@ const Dropdown = ({
       </button>
 
       {isOpen && !disabled && (
-        <div className="absolute z-50 w-full mt-1 bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-md shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-primary-bg shadow-lg">
           {options.map(option => (
             <button
               key={option.value}
@@ -63,8 +61,8 @@ const Dropdown = ({
                 setIsOpen(false);
               }}
               className={cn(
-                "w-full px-3 py-2 text-sm text-left hover:bg-[var(--hover-color)] transition-colors",
-                value === option.value && "bg-[var(--hover-color)] text-[var(--text-color)]",
+                "w-full px-3 py-2 text-left text-sm transition-colors hover:bg-hover",
+                value === option.value && "bg-hover text-text",
               )}
             >
               {option.label}

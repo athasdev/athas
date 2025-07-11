@@ -119,7 +119,7 @@ const GitActionsMenu = ({
 
   return (
     <div
-      className="fixed bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-md shadow-lg z-50 py-1 min-w-[180px]"
+      className="fixed z-50 min-w-[180px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
       style={{
         left: position.x,
         top: position.y,
@@ -138,7 +138,7 @@ const GitActionsMenu = ({
               handlePush();
             }}
             disabled={isLoading}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2 disabled:opacity-50"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <Upload size={12} />
             Push Changes
@@ -151,7 +151,7 @@ const GitActionsMenu = ({
               handlePull();
             }}
             disabled={isLoading}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2 disabled:opacity-50"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <Download size={12} />
             Pull Changes
@@ -164,13 +164,13 @@ const GitActionsMenu = ({
               handleFetch();
             }}
             disabled={isLoading}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2 disabled:opacity-50"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <GitPullRequest size={12} />
             Fetch
           </button>
 
-          <div className="border-t border-[var(--border-color)] my-1"></div>
+          <div className="my-1 border-border border-t"></div>
 
           {/* Advanced Operations */}
           <button
@@ -179,7 +179,7 @@ const GitActionsMenu = ({
               e.stopPropagation();
               handleStashManager();
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <Archive size={12} />
             Manage Stashes
@@ -191,7 +191,7 @@ const GitActionsMenu = ({
               e.stopPropagation();
               handleRemoteManager();
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <Server size={12} />
             Manage Remotes
@@ -203,13 +203,13 @@ const GitActionsMenu = ({
               e.stopPropagation();
               handleTagManager();
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <Tag size={12} />
             Manage Tags
           </button>
 
-          <div className="border-t border-[var(--border-color)] my-1"></div>
+          <div className="my-1 border-border border-t"></div>
 
           {/* Refresh */}
           <button
@@ -218,13 +218,13 @@ const GitActionsMenu = ({
               e.stopPropagation();
               handleRefresh();
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <RefreshCw size={12} />
             Refresh Status
           </button>
 
-          <div className="border-t border-[var(--border-color)] my-1"></div>
+          <div className="my-1 border-border border-t"></div>
 
           {/* Destructive Operations */}
           <button
@@ -234,7 +234,7 @@ const GitActionsMenu = ({
               handleDiscardAllChanges();
             }}
             disabled={isLoading}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-red-400 hover:bg-[var(--hover-color)] flex items-center gap-2 disabled:opacity-50"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-red-400 text-xs hover:bg-hover disabled:opacity-50"
           >
             <RotateCcw size={12} />
             Discard All Changes
@@ -250,13 +250,13 @@ const GitActionsMenu = ({
               handleInitRepository();
             }}
             disabled={isLoading}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2 disabled:opacity-50"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <Settings size={12} />
             Initialize Repository
           </button>
 
-          <div className="border-t border-[var(--border-color)] my-1"></div>
+          <div className="my-1 border-border border-t"></div>
 
           <button
             onMouseDown={e => {
@@ -264,7 +264,7 @@ const GitActionsMenu = ({
               e.stopPropagation();
               handleRefresh();
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <RefreshCw size={12} />
             Refresh Status

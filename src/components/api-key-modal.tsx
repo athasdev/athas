@@ -147,24 +147,21 @@ const ApiKeyModal = ({
   const instructions = getInstructions();
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg w-[480px] max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="flex max-h-[90vh] w-[480px] flex-col rounded-lg border border-border bg-primary-bg">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
+        <div className="flex items-center justify-between border-border border-b p-4">
           <div className="flex items-center gap-2">
-            <Key size={16} className="text-[var(--text-color)]" />
-            <h3 className="font-mono text-sm text-[var(--text-color)]">{provider.name} API Key</h3>
+            <Key size={16} className="text-text" />
+            <h3 className="font-mono text-sm text-text">{provider.name} API Key</h3>
           </div>
-          <button
-            onClick={onClose}
-            className="text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
-          >
+          <button onClick={onClose} className="text-text-lighter transition-colors hover:text-text">
             <X size={16} />
           </button>
         </div>
 
-        <div className="p-4 space-y-4 flex-1 overflow-y-auto">
-          <div className="text-xs text-[var(--text-lighter)] leading-relaxed">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="text-text-lighter text-xs leading-relaxed">
             Connect to {provider.name} to access their AI models for intelligent code assistance.
           </div>
 
@@ -172,7 +169,7 @@ const ApiKeyModal = ({
           <div className="space-y-2">
             <label
               htmlFor="api-key-input"
-              className="flex items-center gap-2 text-xs font-medium text-[var(--text-color)]"
+              className="flex items-center gap-2 font-medium text-text text-xs"
             >
               <Key size={12} />
               API Key
@@ -184,20 +181,20 @@ const ApiKeyModal = ({
               value={apiKey}
               onChange={e => handleKeyChange(e.target.value)}
               placeholder={getApiKeyPlaceholder()}
-              className="w-full px-3 py-2 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded text-xs font-mono text-[var(--text-color)] focus:outline-none focus:border-blue-500"
+              className="w-full rounded border border-border bg-secondary-bg px-3 py-2 font-mono text-text text-xs focus:border-blue-500 focus:outline-none"
               disabled={isValidating}
             />
 
             {/* Validation Status */}
             {validationStatus === "valid" && (
-              <div className="flex items-center gap-2 text-xs text-green-500">
+              <div className="flex items-center gap-2 text-green-500 text-xs">
                 <CheckCircle size={12} />
                 API key validated successfully!
               </div>
             )}
 
             {validationStatus === "invalid" && (
-              <div className="flex items-center gap-2 text-xs text-red-500">
+              <div className="flex items-center gap-2 text-red-500 text-xs">
                 <AlertCircle size={12} />
                 {errorMessage}
               </div>
@@ -205,22 +202,20 @@ const ApiKeyModal = ({
           </div>
 
           {/* Instructions */}
-          <div className="bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded p-3 space-y-2">
-            <div className="text-xs font-medium text-[var(--text-color)] mb-2">
-              {instructions.title}
-            </div>
-            <ol className="text-xs text-[var(--text-lighter)] space-y-1 list-decimal list-inside">
+          <div className="space-y-2 rounded border border-border bg-secondary-bg p-3">
+            <div className="mb-2 font-medium text-text text-xs">{instructions.title}</div>
+            <ol className="list-inside list-decimal space-y-1 text-text-lighter text-xs">
               {instructions.steps.map((step, index) => (
                 <li key={index}>{step}</li>
               ))}
             </ol>
             {instructions.link && (
-              <div className="mt-2 pt-2 border-t border-[var(--border-color)]">
+              <div className="mt-2 border-border border-t pt-2">
                 <a
                   href={instructions.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  className="inline-flex items-center gap-1 text-blue-400 text-xs transition-colors hover:text-blue-300"
                 >
                   <ExternalLink size={10} />
                   Open {provider.name} Dashboard
@@ -230,21 +225,19 @@ const ApiKeyModal = ({
           </div>
 
           {/* Model Info */}
-          <div className="bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded p-3">
-            <div className="text-xs font-medium text-[var(--text-color)] mb-2">
-              Available Models:
-            </div>
+          <div className="rounded border border-border bg-secondary-bg p-3">
+            <div className="mb-2 font-medium text-text text-xs">Available Models:</div>
             <div className="space-y-1">
               {provider.models.slice(0, 3).map(model => (
                 <div key={model.id} className="flex items-center justify-between text-xs">
-                  <span className="text-[var(--text-color)]">{model.name}</span>
-                  <span className="text-[var(--text-lighter)]">
+                  <span className="text-text">{model.name}</span>
+                  <span className="text-text-lighter">
                     {model.costPer1kTokens && `$${model.costPer1kTokens}/1k tokens`}
                   </span>
                 </div>
               ))}
               {provider.models.length > 3 && (
-                <div className="text-xs text-[var(--text-lighter)]">
+                <div className="text-text-lighter text-xs">
                   +{provider.models.length - 3} more models
                 </div>
               )}
@@ -253,7 +246,7 @@ const ApiKeyModal = ({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 p-4 border-t border-[var(--border-color)]">
+        <div className="flex gap-2 border-border border-t p-4">
           <Button
             onClick={handleSaveKey}
             disabled={!apiKey.trim() || isValidating}

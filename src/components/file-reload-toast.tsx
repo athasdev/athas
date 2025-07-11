@@ -46,17 +46,16 @@ const FileReloadToast: React.FC<FileReloadToastProps> = () => {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-40 space-y-2 pointer-events-none">
+    <div className="pointer-events-none fixed right-4 bottom-4 z-40 space-y-2">
       {toasts.map(toast => (
         <div
           key={toast.id}
-          className="bg-[var(--secondary-bg)] backdrop-blur-sm border border-[var(--border-color)] rounded-lg shadow-lg px-4 py-2 text-sm
-                     flex items-center gap-2 text-[var(--text-color)] animate-slide-in-right"
+          className="flex animate-slide-in-right items-center gap-2 rounded-lg border border-border bg-secondary-bg px-4 py-2 text-sm text-text shadow-lg backdrop-blur-sm"
         >
-          <RefreshCw className="w-3.5 h-3.5 text-[var(--info-color)]" />
+          <RefreshCw className="h-3.5 w-3.5 text-info" />
           <span>
-            <span className="text-[var(--text-light)]">Reloaded</span>{" "}
-            <span className="text-[var(--text-color)] font-medium">{toast.fileName}</span>
+            <span className="text-text-light">Reloaded</span>{" "}
+            <span className="font-medium text-text">{toast.fileName}</span>
           </span>
         </div>
       ))}

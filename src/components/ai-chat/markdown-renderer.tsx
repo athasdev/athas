@@ -55,16 +55,14 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
         }
 
         return (
-          <div key={index} className="relative group my-2">
-            <pre className="bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded p-2 overflow-x-auto max-w-full">
-              <div className="flex items-center justify-between mb-1">
-                {language && (
-                  <div className="text-xs text-[var(--text-lighter)] font-mono">{language}</div>
-                )}
+          <div key={index} className="group relative my-2">
+            <pre className="max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
+              <div className="mb-1 flex items-center justify-between">
+                {language && <div className="font-mono text-text-lighter text-xs">{language}</div>}
                 {onApplyCode && code.trim() && (
                   <button
                     onClick={() => onApplyCode(code)}
-                    className="text-xs px-2 py-1 bg-[var(--primary-bg)] hover:bg-[var(--hover-color)] text-[var(--text-color)] border border-[var(--border-color)] rounded font-mono transition-colors opacity-0 group-hover:opacity-100 whitespace-nowrap"
+                    className="whitespace-nowrap rounded border border-border bg-primary-bg px-2 py-1 font-mono text-text text-xs opacity-0 transition-colors hover:bg-hover group-hover:opacity-100"
                     title="Apply this code to current buffer"
                   >
                     Apply
@@ -72,7 +70,7 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
                 )}
               </div>
               <code
-                className="text-xs font-mono text-[var(--text-color)] block whitespace-pre-wrap break-all"
+                className="block whitespace-pre-wrap break-all font-mono text-text text-xs"
                 dangerouslySetInnerHTML={{ __html: highlightedCode }}
               />
             </pre>
@@ -99,7 +97,7 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
       if (currentList.type && currentList.items.length > 0) {
         const ListComponent = currentList.type === "ol" ? "ol" : "ul";
         elements.push(
-          <ListComponent key={`list-${elements.length}`} className="ml-4 my-2">
+          <ListComponent key={`list-${elements.length}`} className="my-2 ml-4">
             {currentList.items.map((item, index) => (
               <li key={index} className="my-1">
                 {renderInlineFormatting(item)}
@@ -181,7 +179,7 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
         return (
           <code
             key={index}
-            className="bg-[var(--secondary-bg)] px-1 rounded text-xs font-mono border border-[var(--border-color)]"
+            className="rounded border border-border bg-secondary-bg px-1 font-mono text-xs"
           >
             {code}
           </code>

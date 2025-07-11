@@ -125,7 +125,7 @@ const HoverTooltip = ({ hoverInfo, fontSize, onMouseEnter, onMouseLeave }: Hover
 
   return (
     <div
-      className="fixed z-[110] bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg shadow-xl pointer-events-auto"
+      className="pointer-events-auto fixed z-[110] rounded-lg border border-border bg-primary-bg shadow-xl"
       style={{
         top: hoverInfo.position.top,
         left: hoverInfo.position.left,
@@ -137,7 +137,7 @@ const HoverTooltip = ({ hoverInfo, fontSize, onMouseEnter, onMouseLeave }: Hover
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <div className="p-4 overflow-auto scrollbar-hidden">
+      <div className="scrollbar-hidden overflow-auto p-4">
         {hoverInfo.content.includes("```") ? (
           <div className="space-y-3">
             {hoverInfo.content.split(/```[\w]*\n?/).map((part, index) => {
@@ -148,7 +148,7 @@ const HoverTooltip = ({ hoverInfo, fontSize, onMouseEnter, onMouseLeave }: Hover
                 return (
                   <pre
                     key={index}
-                    className="font-mono text-sm bg-[var(--secondary-bg)] p-3 rounded-md border border-[var(--border-color)] text-[var(--text-color)] overflow-x-auto scrollbar-hidden"
+                    className="scrollbar-hidden overflow-x-auto rounded-md border border-border bg-secondary-bg p-3 font-mono text-sm text-text"
                     style={{ fontSize: `${fontSize * 0.85}px` }}
                   >
                     {trimmedPart.replace(/```$/, "")}
@@ -158,7 +158,7 @@ const HoverTooltip = ({ hoverInfo, fontSize, onMouseEnter, onMouseLeave }: Hover
               return trimmedPart ? (
                 <div
                   key={index}
-                  className="text-sm text-[var(--text-color)] leading-relaxed whitespace-pre-wrap"
+                  className="whitespace-pre-wrap text-sm text-text leading-relaxed"
                   style={{ fontSize: `${fontSize * 0.9}px` }}
                 >
                   {trimmedPart}
@@ -168,7 +168,7 @@ const HoverTooltip = ({ hoverInfo, fontSize, onMouseEnter, onMouseLeave }: Hover
           </div>
         ) : (
           <div
-            className="text-sm text-[var(--text-color)] leading-relaxed whitespace-pre-wrap"
+            className="whitespace-pre-wrap text-sm text-text leading-relaxed"
             style={{ fontSize: `${fontSize * 0.9}px` }}
           >
             {hoverInfo.content}
@@ -622,17 +622,17 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       }
 
       if (vimEnabled) {
-        classes += " bg-[var(--primary-bg)]";
+        classes += " bg-primary-bg";
         if (vimMode === "normal") {
           classes += " caret-transparent";
         } else {
-          classes += " caret-[var(--text-color)]";
+          classes += " caret-text";
         }
         if (vimMode === "visual") {
           classes += " vim-visual-selection";
         }
       } else {
-        classes += " caret-[var(--text-color)]";
+        classes += " caret-text";
       }
 
       return classes;
@@ -653,14 +653,14 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
     }, [value]);
 
     return (
-      <div className="flex-1 relative flex flex-col h-full">
-        <div className="flex-1 relative overflow-hidden flex h-full">
+      <div className="relative flex h-full flex-1 flex-col">
+        <div className="relative flex h-full flex-1 overflow-hidden">
           {/* Line numbers */}
           {lineNumbers && (
-            <div className="w-12 bg-[var(--secondary-bg)] relative overflow-hidden border-r border-[var(--border-color)]">
+            <div className="relative w-12 overflow-hidden border-border border-r bg-secondary-bg">
               <div
                 ref={lineNumbersRef}
-                className="absolute inset-0 p-4 pr-2 pt-4 font-mono text-right select-none pointer-events-none overflow-hidden"
+                className="pointer-events-none absolute inset-0 select-none overflow-hidden p-4 pt-4 pr-2 text-right font-mono"
                 style={{
                   fontSize: `${fontSize * 0.85}px`,
                   lineHeight: `${fontSize * 1.4}px`,
@@ -677,11 +677,11 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
           )}
 
           {/* Editor content area */}
-          <div className="flex-1 relative overflow-hidden h-full">
+          <div className="relative h-full flex-1 overflow-hidden">
             {/* Syntax highlighting layer */}
             <pre
               ref={highlightRef}
-              className={`absolute top-0 bottom-0 right-0 left-0 m-0 p-4 font-mono text-[var(--text-color)] bg-transparent border-none outline-none overflow-auto pointer-events-none z-[1] ${wordWrap ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}
+              className={`pointer-events-none absolute top-0 right-0 bottom-0 left-0 z-[1] m-0 overflow-auto border-none bg-transparent p-4 font-mono text-text outline-none ${wordWrap ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}
               style={{
                 ...getEditorStyles,
                 paddingLeft: lineNumbers ? "8px" : "16px",

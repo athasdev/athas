@@ -353,7 +353,7 @@ const TerminalSession = ({
     }
 
     return (
-      <div key={lineIndex} className="whitespace-pre font-mono text-xs leading-[14px] h-[14px]">
+      <div key={lineIndex} className="h-[14px] whitespace-pre font-mono text-xs leading-[14px]">
         {line.map((item, itemIndex) => {
           let className = "inline";
           const style: React.CSSProperties = {};
@@ -391,24 +391,22 @@ const TerminalSession = ({
       className={`h-full ${isActive ? "block" : "hidden"}`}
       data-terminal-id={terminal.id}
     >
-      <div className="flex flex-col h-full">
+      <div className="flex h-full flex-col">
         {/* Terminal content */}
         <div
           ref={terminalRef}
-          className="flex-1 overflow-hidden font-mono text-xs p-3 bg-[var(--primary-bg)] text-[var(--text-color)] cursor-text relative"
+          className="relative flex-1 cursor-text overflow-hidden bg-primary-bg p-3 font-mono text-text text-xs"
           onClick={() => inputRef.current?.focus()}
         >
           {!isConnected ? (
-            <div className="text-[var(--text-lighter)] text-center pt-4">
-              Connecting to terminal...
-            </div>
+            <div className="pt-4 text-center text-text-lighter">Connecting to terminal...</div>
           ) : (
             <div className="relative">
               {screen.map((line, index) => renderTerminalLine(line, index))}
 
               {/* Cursor */}
               <div
-                className="absolute bg-[var(--text-color)] opacity-75"
+                className="absolute bg-text opacity-75"
                 style={{
                   left: `${cursorCol * 7.2}px`,
                   top: `${cursorLine * 14}px`,
@@ -423,7 +421,7 @@ const TerminalSession = ({
           {/* Hidden input for capturing ALL keyboard events */}
           <input
             ref={inputRef}
-            className="absolute opacity-0 w-0 h-0"
+            className="absolute h-0 w-0 opacity-0"
             value=""
             onChange={() => {}}
             onKeyDown={handleKeyDown}

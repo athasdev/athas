@@ -135,28 +135,25 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
   }
 
   return (
-    <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-lg shadow-xl w-96 max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50">
+      <div className="flex max-h-[80vh] w-96 flex-col rounded-lg border border-border bg-secondary-bg shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
+        <div className="flex items-center justify-between border-border border-b p-4">
           <div className="flex items-center gap-2">
-            <Archive size={16} className="text-[var(--text-lighter)]" />
-            <h2 className="text-sm font-medium text-[var(--text-color)]">Stash Manager</h2>
+            <Archive size={16} className="text-text-lighter" />
+            <h2 className="font-medium text-sm text-text">Stash Manager</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
-          >
+          <button onClick={onClose} className="text-text-lighter transition-colors hover:text-text">
             <X size={16} />
           </button>
         </div>
 
         {/* Create New Stash */}
-        <div className="p-4 border-b border-[var(--border-color)]">
+        <div className="border-border border-b p-4">
           <div className="space-y-2">
-            <div className="flex items-center gap-2 mb-2">
-              <Plus size={12} className="text-[var(--text-lighter)]" />
-              <span className="text-xs text-[var(--text-color)] font-medium">Create New Stash</span>
+            <div className="mb-2 flex items-center gap-2">
+              <Plus size={12} className="text-text-lighter" />
+              <span className="font-medium text-text text-xs">Create New Stash</span>
             </div>
 
             <input
@@ -164,7 +161,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
               placeholder="Stash message (optional)..."
               value={newStashMessage}
               onChange={e => setNewStashMessage(e.target.value)}
-              className="w-full bg-[var(--primary-bg)] text-[var(--text-color)] border border-[var(--border-color)] px-2 py-1 text-xs rounded focus:outline-none focus:border-blue-500"
+              className="w-full rounded border border-border bg-primary-bg px-2 py-1 text-text text-xs focus:border-blue-500 focus:outline-none"
               onKeyDown={e => {
                 if (e.key === "Enter") {
                   handleCreateStash();
@@ -173,12 +170,12 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
             />
 
             <div className="flex items-center gap-2">
-              <label className="flex items-center gap-1 text-xs text-[var(--text-color)] cursor-pointer">
+              <label className="flex cursor-pointer items-center gap-1 text-text text-xs">
                 <input
                   type="checkbox"
                   checked={includeUntracked}
                   onChange={e => setIncludeUntracked(e.target.checked)}
-                  className="w-3 h-3"
+                  className="h-3 w-3"
                 />
                 Include untracked files
               </label>
@@ -187,7 +184,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
             <button
               onClick={handleCreateStash}
               disabled={isLoading}
-              className="w-full bg-[var(--primary-bg)] border border-[var(--border-color)] text-[var(--text-color)] text-xs py-1.5 rounded hover:bg-[var(--hover-color)] disabled:opacity-50 transition-colors"
+              className="w-full rounded border border-border bg-primary-bg py-1.5 text-text text-xs transition-colors hover:bg-hover disabled:opacity-50"
             >
               {isLoading ? "Creating..." : "Create Stash"}
             </button>
@@ -197,13 +194,9 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
         {/* Stash List */}
         <div className="flex-1 overflow-y-auto">
           {isLoading && stashes.length === 0 ? (
-            <div className="p-4 text-center text-[var(--text-lighter)] text-xs">
-              Loading stashes...
-            </div>
+            <div className="p-4 text-center text-text-lighter text-xs">Loading stashes...</div>
           ) : stashes.length === 0 ? (
-            <div className="p-4 text-center text-[var(--text-lighter)] text-xs">
-              No stashes found
-            </div>
+            <div className="p-4 text-center text-text-lighter text-xs">No stashes found</div>
           ) : (
             <div className="space-y-0">
               {stashes.map(stash => {
@@ -212,25 +205,25 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                 return (
                   <div
                     key={stash.index}
-                    className="p-3 border-b border-[var(--border-color)] last:border-b-0 hover:bg-[var(--hover-color)]"
+                    className="border-border border-b p-3 last:border-b-0 hover:bg-hover"
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-mono text-[var(--text-lighter)]">
+                    <div className="mb-2 flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex items-center gap-2">
+                          <span className="font-mono text-text-lighter text-xs">
                             {`stash@{${stash.index}}`}
                           </span>
-                          <div className="flex items-center gap-1 text-[9px] text-[var(--text-lighter)]">
+                          <div className="flex items-center gap-1 text-[9px] text-text-lighter">
                             <GitBranch size={8} />
                             {stash.branch}
                           </div>
                         </div>
 
-                        <div className="text-xs text-[var(--text-color)] mb-1">
+                        <div className="mb-1 text-text text-xs">
                           {stash.message || `WIP on ${stash.branch}`}
                         </div>
 
-                        <div className="flex items-center gap-1 text-[9px] text-[var(--text-lighter)]">
+                        <div className="flex items-center gap-1 text-[9px] text-text-lighter">
                           <Clock size={8} />
                           {formatDate(stash.date)}
                         </div>
@@ -242,7 +235,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                       <button
                         onClick={() => handleApplyStash(stash.index)}
                         disabled={isActionLoading}
-                        className="flex items-center gap-1 px-2 py-1 text-[9px] bg-[var(--primary-bg)] border border-[var(--border-color)] text-[var(--text-color)] rounded hover:bg-[var(--secondary-bg)] disabled:opacity-50 transition-colors"
+                        className="flex items-center gap-1 rounded border border-border bg-primary-bg px-2 py-1 text-[9px] text-text transition-colors hover:bg-secondary-bg disabled:opacity-50"
                         title="Apply stash (keep in stash list)"
                       >
                         <Download size={8} />
@@ -252,7 +245,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                       <button
                         onClick={() => handlePopStash(stash.index)}
                         disabled={isActionLoading}
-                        className="flex items-center gap-1 px-2 py-1 text-[9px] bg-[var(--primary-bg)] border border-[var(--border-color)] text-[var(--text-color)] rounded hover:bg-[var(--secondary-bg)] disabled:opacity-50 transition-colors"
+                        className="flex items-center gap-1 rounded border border-border bg-primary-bg px-2 py-1 text-[9px] text-text transition-colors hover:bg-secondary-bg disabled:opacity-50"
                         title="Pop stash (apply and remove from stash list)"
                       >
                         <Upload size={8} />
@@ -262,7 +255,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                       <button
                         onClick={() => handleDropStash(stash.index)}
                         disabled={isActionLoading}
-                        className="flex items-center gap-1 px-2 py-1 text-[9px] bg-red-600 border border-red-500 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                        className="flex items-center gap-1 rounded border border-red-500 bg-red-600 px-2 py-1 text-[9px] text-white transition-colors hover:bg-red-700 disabled:opacity-50"
                         title="Drop stash (delete permanently)"
                       >
                         <Trash2 size={8} />
@@ -277,7 +270,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-[var(--border-color)] text-[9px] text-[var(--text-lighter)] bg-[var(--primary-bg)]">
+        <div className="border-border border-t bg-primary-bg p-3 text-[9px] text-text-lighter">
           {stashes.length} stash{stashes.length !== 1 ? "es" : ""} total
         </div>
       </div>

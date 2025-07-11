@@ -247,7 +247,7 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
   // Create first terminal if none exist (fallback UI)
   if (terminals.length === 0) {
     return (
-      <div className={`flex flex-col h-full ${className}`} data-terminal-container="active">
+      <div className={`flex h-full flex-col ${className}`} data-terminal-container="active">
         <TerminalTabBar
           terminals={[]}
           activeTerminalId={null}
@@ -261,12 +261,12 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
           onCloseTabsToRight={handleCloseTabsToRight}
           onRenameTerminal={handleRenameTerminal}
         />
-        <div className="flex-1 flex items-center justify-center text-[var(--text-lighter)]">
+        <div className="flex flex-1 items-center justify-center text-text-lighter">
           <div className="text-center">
             <p className="mb-4 text-xs">No terminal sessions</p>
             <button
               onClick={handleNewTerminal}
-              className="px-2 py-1 text-xs bg-[var(--selected-color)] text-[var(--text-color)] rounded hover:bg-[var(--hover-color)] transition-colors"
+              className="rounded bg-selected px-2 py-1 text-text text-xs transition-colors hover:bg-hover"
             >
               Create Terminal
             </button>
@@ -277,7 +277,7 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
   }
 
   return (
-    <div className={`flex flex-col h-full ${className}`} data-terminal-container="active">
+    <div className={`flex h-full flex-col ${className}`} data-terminal-container="active">
       {/* Terminal Tab Bar */}
       <TerminalTabBar
         terminals={terminals}
@@ -294,7 +294,7 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
       />
 
       {/* Terminal Sessions */}
-      <div className="flex-1 relative">
+      <div className="relative flex-1">
         {terminals.map(terminal => (
           <TerminalSession
             key={terminal.id}
@@ -308,9 +308,9 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
 
       {/* Rename Modal */}
       {renamingTerminalId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-lg p-4 min-w-[300px]">
-            <h3 className="text-sm font-medium text-[var(--text-color)] mb-3">Rename Terminal</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="min-w-[300px] rounded-lg border border-border bg-secondary-bg p-4">
+            <h3 className="mb-3 font-medium text-sm text-text">Rename Terminal</h3>
             <input
               type="text"
               value={newTerminalName}
@@ -322,19 +322,19 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
                   cancelRename();
                 }
               }}
-              className="w-full px-3 py-2 text-sm bg-[var(--primary-bg)] border border-[var(--border-color)] rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-[var(--text-color)]"
+              className="w-full rounded border border-border bg-primary-bg px-3 py-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Terminal name"
             />
-            <div className="flex gap-2 mt-3 justify-end">
+            <div className="mt-3 flex justify-end gap-2">
               <button
                 onClick={cancelRename}
-                className="px-3 py-1.5 text-xs text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+                className="px-3 py-1.5 text-text-lighter text-xs transition-colors hover:text-text"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmRename}
-                className="px-3 py-1.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                className="rounded bg-blue-500 px-3 py-1.5 text-white text-xs transition-colors hover:bg-blue-600"
               >
                 Rename
               </button>

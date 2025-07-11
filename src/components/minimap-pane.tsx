@@ -250,11 +250,11 @@ export default function MinimapPane({ content, textareaRef, fontSize }: MinimapP
   }, [lines, lineHeight]);
 
   return (
-    <div className="relative flex bg-[var(--secondary-bg)] border-l border-[var(--border-color)] h-full">
+    <div className="relative flex h-full border-border border-l bg-secondary-bg">
       {/* Resize handle */}
       <div
         ref={resizerRef}
-        className="w-1 bg-[var(--border-color)] hover:bg-blue-500 cursor-col-resize transition-colors flex-shrink-0"
+        className="w-1 flex-shrink-0 cursor-col-resize bg-border transition-colors hover:bg-blue-500"
         onMouseDown={handleResizeStart}
         title="Drag to resize minimap"
       />
@@ -262,19 +262,17 @@ export default function MinimapPane({ content, textareaRef, fontSize }: MinimapP
       {/* Minimap content */}
       <div
         ref={minimapRef}
-        className="relative overflow-hidden flex-shrink-0 cursor-pointer select-none"
+        className="relative flex-shrink-0 cursor-pointer select-none overflow-hidden"
         style={{ width: `${width}px` }}
         onClick={handleMinimapClick}
       >
         {/* Header */}
-        <div className="px-2 py-1 border-b border-[var(--border-color)] bg-[var(--secondary-bg)]">
-          <div className="text-[9px] font-mono text-[var(--text-color)] font-medium tracking-wider">
-            MINIMAP
-          </div>
+        <div className="border-border border-b bg-secondary-bg px-2 py-1">
+          <div className="font-medium font-mono text-[9px] text-text tracking-wider">MINIMAP</div>
         </div>
 
         {/* Content area */}
-        <div className="relative overflow-hidden h-full">
+        <div className="relative h-full overflow-hidden">
           <div ref={contentRef} className="absolute inset-0 p-1">
             {renderLines}
           </div>
@@ -282,7 +280,7 @@ export default function MinimapPane({ content, textareaRef, fontSize }: MinimapP
           {/* Viewport indicator */}
           <div
             ref={viewportRef}
-            className="absolute left-0 right-0 bg-blue-500/30 border-l-2 border-blue-400 cursor-grab active:cursor-grabbing transition-opacity duration-150 hover:bg-blue-500/40"
+            className="absolute right-0 left-0 cursor-grab border-blue-400 border-l-2 bg-blue-500/30 transition-opacity duration-150 hover:bg-blue-500/40 active:cursor-grabbing"
             style={{
               top: `${viewportTop}px`,
               height: `${viewportHeight}px`,

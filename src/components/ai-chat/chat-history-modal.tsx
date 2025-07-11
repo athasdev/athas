@@ -21,37 +21,34 @@ export default function ChatHistoryModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
-      <div className="bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-hidden">
-        <div className="flex items-center justify-between p-3 border-b border-[var(--border-color)]">
-          <h3 className="text-sm font-medium text-[var(--text-color)]">Chat History</h3>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-[var(--hover-color)] rounded transition-colors"
-          >
-            <X size={14} className="text-[var(--text-lighter)]" />
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+      <div className="mx-4 max-h-[80vh] w-full max-w-md overflow-hidden rounded-lg border border-border bg-primary-bg shadow-xl">
+        <div className="flex items-center justify-between border-border border-b p-3">
+          <h3 className="font-medium text-sm text-text">Chat History</h3>
+          <button onClick={onClose} className="rounded p-1 transition-colors hover:bg-hover">
+            <X size={14} className="text-text-lighter" />
           </button>
         </div>
 
-        <div className="p-3 border-b border-[var(--border-color)]">
+        <div className="border-border border-b p-3">
           <div className="relative">
             <Search
               size={12}
-              className="absolute left-2 top-1/2 transform -translate-y-1/2 text-[var(--text-lighter)]"
+              className="-translate-y-1/2 absolute top-1/2 left-2 transform text-text-lighter"
             />
             <input
               type="text"
               placeholder="Search chats..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-7 pr-2 py-1 text-xs bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded focus:outline-none focus:border-[var(--text-lighter)] text-[var(--text-color)]"
+              className="w-full rounded border border-border bg-secondary-bg py-1 pr-2 pl-7 text-text text-xs focus:border-text-lighter focus:outline-none"
             />
           </div>
         </div>
 
         <div className="max-h-[50vh] overflow-y-auto">
           {filteredChats.length === 0 ? (
-            <div className="text-center py-8 text-[var(--text-lighter)]">
+            <div className="py-8 text-center text-text-lighter">
               <MessageSquare size={24} className="mx-auto mb-2 opacity-50" />
               <p className="text-sm">{searchQuery ? "No matching chats" : "No chat history"}</p>
             </div>
@@ -65,21 +62,19 @@ export default function ChatHistoryModal({
                     onClose();
                   }}
                   className={cn(
-                    "flex items-center justify-between p-2 cursor-pointer transition-colors group border-b border-[var(--border-color)] last:border-b-0",
-                    chat.id === currentChatId ? "bg-blue-500/20" : "hover:bg-[var(--hover-color)]",
+                    "group flex cursor-pointer items-center justify-between border-border border-b p-2 transition-colors last:border-b-0",
+                    chat.id === currentChatId ? "bg-blue-500/20" : "hover:bg-hover",
                   )}
                 >
-                  <div className="flex-1 min-w-0 pr-2">
-                    <div className="text-xs text-[var(--text-color)] truncate font-medium">
-                      {chat.title}
-                    </div>
-                    <div className="text-xs text-[var(--text-lighter)]">
+                  <div className="min-w-0 flex-1 pr-2">
+                    <div className="truncate font-medium text-text text-xs">{chat.title}</div>
+                    <div className="text-text-lighter text-xs">
                       {getRelativeTime(chat.lastMessageAt)}
                     </div>
                   </div>
                   <button
                     onClick={e => onDeleteChat(chat.id, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition-all"
+                    className="rounded p-1 opacity-0 transition-all hover:bg-red-500/20 group-hover:opacity-100"
                     title="Delete chat"
                   >
                     <Trash2 size={10} className="text-red-500" />

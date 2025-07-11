@@ -124,28 +124,28 @@ const RemoteFileTree = ({ connectionId, onFileSelect }: RemoteFileTreeProps) => 
       <div key={node.path}>
         <div
           className={cn(
-            "flex items-center py-1 px-2 hover:bg-[var(--hover-color)] cursor-pointer transition-colors group",
-            "text-sm text-[var(--text-color)]",
+            "group flex cursor-pointer items-center px-2 py-1 transition-colors hover:bg-hover",
+            "text-sm text-text",
           )}
           style={{ paddingLeft: `${8 + indent}px` }}
           onClick={() => handleDirectoryClick(node, nodePath)}
           title={node.path}
         >
           {node.is_dir && (
-            <div className="w-4 h-4 flex items-center justify-center mr-1">
+            <div className="mr-1 flex h-4 w-4 items-center justify-center">
               {node.isLoading ? (
-                <Loader size={12} className="animate-spin text-[var(--text-lighter)]" />
+                <Loader size={12} className="animate-spin text-text-lighter" />
               ) : node.error ? (
                 <AlertCircle size={12} className="text-red-500" />
               ) : node.isExpanded ? (
-                <ChevronDown size={12} className="text-[var(--text-lighter)]" />
+                <ChevronDown size={12} className="text-text-lighter" />
               ) : (
-                <ChevronRight size={12} className="text-[var(--text-lighter)]" />
+                <ChevronRight size={12} className="text-text-lighter" />
               )}
             </div>
           )}
 
-          <div className="w-4 h-4 flex items-center justify-center mr-2">
+          <div className="mr-2 flex h-4 w-4 items-center justify-center">
             {node.is_dir ? (
               node.isExpanded ? (
                 <FolderOpen size={14} className="text-blue-500" />
@@ -153,14 +153,14 @@ const RemoteFileTree = ({ connectionId, onFileSelect }: RemoteFileTreeProps) => 
                 <Folder size={14} className="text-blue-500" />
               )
             ) : (
-              <File size={14} className="text-[var(--text-lighter)]" />
+              <File size={14} className="text-text-lighter" />
             )}
           </div>
 
-          <span className="truncate flex-1 select-none">{node.name}</span>
+          <span className="flex-1 select-none truncate">{node.name}</span>
 
           {!node.is_dir && node.size > 0 && (
-            <span className="text-xs text-[var(--text-lighter)] ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="ml-2 text-text-lighter text-xs opacity-0 transition-opacity group-hover:opacity-100">
               {formatFileSize(node.size)}
             </span>
           )}
@@ -168,7 +168,7 @@ const RemoteFileTree = ({ connectionId, onFileSelect }: RemoteFileTreeProps) => 
 
         {node.error && (
           <div
-            className="text-xs text-red-500 px-2 py-1"
+            className="px-2 py-1 text-red-500 text-xs"
             style={{ paddingLeft: `${20 + indent}px` }}
           >
             {node.error}
@@ -213,21 +213,21 @@ const RemoteFileTree = ({ connectionId, onFileSelect }: RemoteFileTreeProps) => 
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-32">
-        <Loader size={24} className="animate-spin text-[var(--text-lighter)]" />
-        <span className="ml-2 text-sm text-[var(--text-lighter)]">Loading remote files...</span>
+      <div className="flex h-32 items-center justify-center">
+        <Loader size={24} className="animate-spin text-text-lighter" />
+        <span className="ml-2 text-sm text-text-lighter">Loading remote files...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-32 p-4">
-        <AlertCircle size={24} className="text-red-500 mb-2" />
-        <span className="text-sm text-red-500 text-center">{error}</span>
+      <div className="flex h-32 flex-col items-center justify-center p-4">
+        <AlertCircle size={24} className="mb-2 text-red-500" />
+        <span className="text-center text-red-500 text-sm">{error}</span>
         <button
           onClick={() => loadDirectory("/")}
-          className="mt-2 px-3 py-1 text-xs bg-[var(--hover-color)] text-[var(--text-color)] rounded hover:bg-[var(--border-color)] transition-colors"
+          className="mt-2 rounded bg-hover px-3 py-1 text-text text-xs transition-colors hover:bg-border"
         >
           Retry
         </button>
@@ -238,7 +238,7 @@ const RemoteFileTree = ({ connectionId, onFileSelect }: RemoteFileTreeProps) => 
   return (
     <div className="h-full overflow-y-auto">
       {rootNodes.length === 0 ? (
-        <div className="flex items-center justify-center h-32 text-sm text-[var(--text-lighter)]">
+        <div className="flex h-32 items-center justify-center text-sm text-text-lighter">
           No files found
         </div>
       ) : (

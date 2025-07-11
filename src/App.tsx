@@ -825,9 +825,9 @@ function App() {
 
   if (shouldShowWelcome) {
     return (
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-transparent">
+      <div className="flex h-screen w-screen flex-col overflow-hidden bg-transparent">
         <div
-          className={`window-container flex flex-col h-full w-full bg-white overflow-hidden ${isMac() && "rounded-xl"}`}
+          className={`window-container flex h-full w-full flex-col overflow-hidden bg-white ${isMac() && "rounded-xl"}`}
         >
           <CustomTitleBar showMinimal={true} isWelcomeScreen={true} />
           <WelcomeScreen
@@ -841,9 +841,9 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-transparent">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-transparent">
       <div
-        className={`window-container flex flex-col h-full w-full bg-[var(--primary-bg)] overflow-hidden ${isMac() && "rounded-xl"}`}
+        className={`window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg ${isMac() && "rounded-xl"}`}
       >
         {/* Custom Titlebar */}
         <CustomTitleBar
@@ -871,11 +871,11 @@ function App() {
         />
 
         {/* Thin separator bar */}
-        <div className="h-px bg-[var(--border-color)] flex-shrink-0" />
+        <div className="h-px flex-shrink-0 bg-border" />
 
         {/* Main App Content */}
-        <div className="flex flex-col h-full w-full bg-[var(--primary-bg)] overflow-hidden">
-          <div className="flex flex-row flex-1 overflow-hidden custom-scrollbar-auto">
+        <div className="flex h-full w-full flex-col overflow-hidden bg-primary-bg">
+          <div className="custom-scrollbar-auto flex flex-1 flex-row overflow-hidden">
             {/* Left Side - AI Chat (when sidebar is on right) or File Tree (when sidebar is on left) */}
             {settings.sidebarPosition === "right"
               ? // AI Chat on left when sidebar is on right
@@ -937,7 +937,7 @@ function App() {
                 )}
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col bg-[var(--primary-bg)] h-full overflow-hidden">
+            <div className="flex h-full flex-1 flex-col overflow-hidden bg-primary-bg">
               {/* Tab Bar */}
               <TabBar
                 buffers={buffers}
@@ -1050,14 +1050,14 @@ function App() {
                   />
                 )
               ) : (
-                <div className="flex items-center justify-center flex-1 p-4 text-[var(--text-lighter)] font-mono text-sm">
+                <div className="flex flex-1 items-center justify-center p-4 font-mono text-sm text-text-lighter">
                   Select a file to edit...
                 </div>
               )}
 
               {/* Footer with indicators */}
-              <div className="flex items-center justify-between px-4 py-2 bg-[var(--secondary-bg)] min-h-[40px] border-t border-[var(--border-color)]">
-                <div className="flex items-center gap-4 font-mono text-xs text-[var(--text-lighter)]">
+              <div className="flex min-h-[40px] items-center justify-between border-border border-t bg-secondary-bg px-4 py-2">
+                <div className="flex items-center gap-4 font-mono text-text-lighter text-xs">
                   {activeBuffer && (
                     <>
                       <span>{activeBuffer.content.split("\n").length} lines</span>
@@ -1080,10 +1080,10 @@ function App() {
                             uiState.bottomPaneActiveTab !== "terminal",
                         );
                       }}
-                      className={`flex items-center gap-1 px-2 py-1 border rounded transition-colors ${
+                      className={`flex items-center gap-1 rounded border px-2 py-1 transition-colors ${
                         uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"
-                          ? "bg-[var(--selected-color)] border-[var(--border-color)] text-[var(--text-color)]"
-                          : "bg-[var(--primary-bg)] border-[var(--border-color)] text-[var(--text-lighter)] hover:bg-[var(--hover-color)]"
+                          ? "border-border bg-selected text-text"
+                          : "border-border bg-primary-bg text-text-lighter hover:bg-hover"
                       }`}
                       title="Toggle Terminal"
                     >
@@ -1101,29 +1101,29 @@ function App() {
                             uiState.bottomPaneActiveTab !== "diagnostics",
                         );
                       }}
-                      className={`flex items-center gap-1 px-2 py-1 border rounded transition-colors ${
+                      className={`flex items-center gap-1 rounded border px-2 py-1 transition-colors ${
                         uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"
-                          ? "bg-[var(--selected-color)] border-[var(--border-color)] text-[var(--text-color)]"
+                          ? "border-border bg-selected text-text"
                           : diagnostics.length > 0
-                            ? "bg-[var(--primary-bg)] border-red-300 text-red-600 hover:bg-red-50"
-                            : "bg-[var(--primary-bg)] border-[var(--border-color)] text-[var(--text-lighter)] hover:bg-[var(--hover-color)]"
+                            ? "border-red-300 bg-primary-bg text-red-600 hover:bg-red-50"
+                            : "border-border bg-primary-bg text-text-lighter hover:bg-hover"
                       }`}
                       title="Toggle Problems Panel"
                     >
                       <AlertCircle size={12} />
                       {diagnostics.length > 0 && (
-                        <span className="text-xs rounded text-center leading-none">
+                        <span className="rounded text-center text-xs leading-none">
                           {diagnostics.length}
                         </span>
                       )}
                     </button>
                   )}
                 </div>
-                <div className="flex items-center gap-4 font-mono text-xs text-[var(--text-lighter)]">
+                <div className="flex items-center gap-4 font-mono text-text-lighter text-xs">
                   {/* Sidebar Position Toggle */}
                   <button
                     onClick={handleToggleSidebarPosition}
-                    className="cursor-pointer flex items-center gap-1 px-2 py-1 bg-[var(--primary-bg)] border border-[var(--border-color)] rounded hover:bg-[var(--hover-color)] transition-colors"
+                    className="flex cursor-pointer items-center gap-1 rounded border border-border bg-primary-bg px-2 py-1 transition-colors hover:bg-hover"
                     title={`Switch sidebar to ${settings.sidebarPosition === "left" ? "right" : "left"} (Cmd+Shift+B)`}
                   >
                     <ArrowLeftRight size={12} />
@@ -1132,10 +1132,10 @@ function App() {
                   {activeBuffer && !activeBuffer.isSQLite && (
                     <button
                       onClick={() => uiState.setIsGitHubCopilotSettingsVisible(true)}
-                      className="cursor-pointer flex items-center gap-1 px-2 py-1 bg-[var(--primary-bg)] border border-[var(--border-color)] rounded hover:bg-[var(--hover-color)] transition-colors"
+                      className="flex cursor-pointer items-center gap-1 rounded border border-border bg-primary-bg px-2 py-1 transition-colors hover:bg-hover"
                       title="AI Code Completion Settings"
                     >
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-blue-500"></div>
                       <span>AI Assist</span>
                     </button>
                   )}

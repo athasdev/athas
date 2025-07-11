@@ -13,50 +13,50 @@ const DiagnosticOverlay = ({ diagnostics, content, className = "" }: DiagnosticO
   const getSeverityIcon = (severity: number) => {
     switch (severity) {
       case 1: // Error
-        return <AlertCircle size={12} className="text-[var(--error-color)]" />;
+        return <AlertCircle size={12} className="text-error" />;
       case 2: // Warning
-        return <AlertTriangle size={12} className="text-[var(--warning-color)]" />;
+        return <AlertTriangle size={12} className="text-warning" />;
       case 3: // Information
-        return <Info size={12} className="text-[var(--info-color)]" />;
+        return <Info size={12} className="text-info" />;
       case 4: // Hint
-        return <Info size={12} className="text-[var(--text-lighter)]" />;
+        return <Info size={12} className="text-text-lighter" />;
       default:
-        return <AlertCircle size={12} className="text-[var(--error-color)]" />;
+        return <AlertCircle size={12} className="text-error" />;
     }
   };
 
   const getSeverityClass = (severity: number) => {
     switch (severity) {
       case 1: // Error
-        return "border-b-2 border-[var(--error-color)] bg-[var(--error-color)]/10";
+        return "border-b-2 border-error bg-error/10";
       case 2: // Warning
-        return "border-b-2 border-[var(--warning-color)] bg-[var(--warning-color)]/10";
+        return "border-b-2 border-warning bg-warning/10";
       case 3: // Information
-        return "border-b-2 border-[var(--info-color)] bg-[var(--info-color)]/10";
+        return "border-b-2 border-info bg-info/10";
       case 4: // Hint
-        return "border-b-2 border-[var(--text-lighter)] bg-[var(--text-lighter)]/10";
+        return "border-b-2 border-text-lighter bg-text-lighter/10";
       default:
-        return "border-b-2 border-[var(--error-color)] bg-[var(--error-color)]/10";
+        return "border-b-2 border-error bg-error/10";
     }
   };
 
   const getSeverityTextColor = (severity: number) => {
     switch (severity) {
       case 1: // Error
-        return "text-[var(--error-color)]";
+        return "text-error";
       case 2: // Warning
-        return "text-[var(--warning-color)]";
+        return "text-warning";
       case 3: // Information
-        return "text-[var(--info-color)]";
+        return "text-info";
       case 4: // Hint
-        return "text-[var(--text-lighter)]";
+        return "text-text-lighter";
       default:
-        return "text-[var(--error-color)]";
+        return "text-error";
     }
   };
 
   return (
-    <div className={`absolute inset-0 pointer-events-none z-10 ${className}`}>
+    <div className={`pointer-events-none absolute inset-0 z-10 ${className}`}>
       {diagnostics.map((diagnostic, index) => {
         const startLine = diagnostic.range.start.line;
         const endLine = diagnostic.range.end.line;
@@ -95,7 +95,7 @@ const DiagnosticOverlay = ({ diagnostics, content, className = "" }: DiagnosticO
               <div className="flex items-center gap-1.5 opacity-90">
                 {getSeverityIcon(diagnostic.severity || 1)}
                 <span
-                  className={`text-xs font-medium ${getSeverityTextColor(diagnostic.severity || 1)} truncate`}
+                  className={`font-medium text-xs ${getSeverityTextColor(diagnostic.severity || 1)} truncate`}
                 >
                   {diagnostic.message.length > 30
                     ? `${diagnostic.message.substring(0, 30)}...`

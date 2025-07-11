@@ -69,10 +69,8 @@ const ResizableRightPane = ({
         ref={paneRef}
         style={{ width: `${width}px` }}
         className={cn(
-          "bg-[var(--secondary-bg)] flex flex-col flex-1 relative",
-          position === "right"
-            ? "border-l border-[var(--border-color)]"
-            : "border-r border-[var(--border-color)]",
+          "relative flex flex-1 flex-col bg-secondary-bg",
+          position === "right" ? "border-border border-l" : "border-border border-r",
           className,
         )}
       >
@@ -81,15 +79,15 @@ const ResizableRightPane = ({
           ref={resizerRef}
           onMouseDown={handleMouseDown}
           className={cn(
-            "absolute top-0 w-1 h-full cursor-col-resize hover:bg-blue-500/30 transition-colors duration-150 group",
+            "group absolute top-0 h-full w-1 cursor-col-resize transition-colors duration-150 hover:bg-blue-500/30",
             position === "right" ? "left-0" : "right-0",
             isResizing && "bg-blue-500/50",
           )}
         >
           <div
             className={cn(
-              "absolute top-0 w-[3px] h-full opacity-0 group-hover:opacity-100 bg-blue-500 transition-opacity duration-150",
-              position === "right" ? "left-0 translate-x-[1px]" : "right-0 -translate-x-[1px]",
+              "absolute top-0 h-full w-[3px] bg-blue-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100",
+              position === "right" ? "left-0 translate-x-[1px]" : "-translate-x-[1px] right-0",
             )}
           />
         </div>

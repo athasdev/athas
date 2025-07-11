@@ -96,18 +96,18 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
       case "renamed":
         return "text-blue-400";
       default:
-        return "text-[var(--text-lighter)]";
+        return "text-text-lighter";
     }
   };
 
   if (commits.length === 0) {
     return (
-      <div className="border-b border-[var(--border-color)]">
-        <div className="flex items-center gap-2 px-3 py-1 bg-[var(--secondary-bg)] text-[var(--text-lighter)]">
+      <div className="border-border border-b">
+        <div className="flex items-center gap-2 bg-secondary-bg px-3 py-1 text-text-lighter">
           <Clock size={10} />
           <span>commits (0)</span>
         </div>
-        <div className="px-3 py-2 bg-[var(--primary-bg)] text-[var(--text-lighter)] text-[10px] italic">
+        <div className="bg-primary-bg px-3 py-2 text-[10px] text-text-lighter italic">
           No commits found
         </div>
       </div>
@@ -115,44 +115,38 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
   }
 
   return (
-    <div className="border-b border-[var(--border-color)]">
-      <div className="flex items-center gap-2 px-3 py-1 bg-[var(--secondary-bg)] text-[var(--text-lighter)]">
+    <div className="border-border border-b">
+      <div className="flex items-center gap-2 bg-secondary-bg px-3 py-1 text-text-lighter">
         <Clock size={10} />
         <span>commits ({commits.length})</span>
       </div>
 
-      <div className="bg-[var(--primary-bg)] max-h-96 overflow-y-auto">
+      <div className="max-h-96 overflow-y-auto bg-primary-bg">
         {commits.map(commit => {
           const isExpanded = expandedCommits.has(commit.hash);
           const files = commitFiles[commit.hash] || [];
           const isLoading = loadingCommits.has(commit.hash);
 
           return (
-            <div
-              key={commit.hash}
-              className="border-b border-[var(--border-color)] last:border-b-0"
-            >
+            <div key={commit.hash} className="border-border border-b last:border-b-0">
               {/* Commit Header */}
-              <div className="px-3 py-2 hover:bg-[var(--hover-color)] cursor-pointer">
+              <div className="cursor-pointer px-3 py-2 hover:bg-hover">
                 <div className="flex items-start gap-2">
                   <button
                     onClick={() => toggleCommitExpansion(commit.hash)}
-                    className="mt-0.5 text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+                    className="mt-0.5 text-text-lighter transition-colors hover:text-text"
                   >
                     {isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
                   </button>
 
-                  <GitCommitIcon
-                    size={10}
-                    className="text-[var(--text-lighter)] mt-0.5 flex-shrink-0"
-                  />
+                  <GitCommitIcon size={10} className="mt-0.5 flex-shrink-0 text-text-lighter" />
 
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] text-[var(--text-color)] font-medium leading-tight mb-1">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 font-medium text-[10px] text-text leading-tight">
                       {commit.message}
                     </div>
 
-                    <div className="flex items-center gap-3 text-[9px] text-[var(--text-lighter)]">
+                    <div className="flex items-center gap-3 text-[9px] text-text-lighter">
                       <span className="flex items-center gap-1">
                         <User size={8} />
                         {commit.author}
@@ -171,7 +165,7 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
                             e.stopPropagation();
                             copyCommitHash(commit.hash);
                           }}
-                          className="text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+                          className="text-text-lighter transition-colors hover:text-text"
                           title="Copy full hash"
                         >
                           <Copy size={8} />
@@ -185,7 +179,7 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
                       e.stopPropagation();
                       onViewCommitDiff?.(commit.hash);
                     }}
-                    className="text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+                    className="text-text-lighter transition-colors hover:text-text"
                     title="View commit diff"
                   >
                     <Eye size={10} />
@@ -195,20 +189,18 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
 
               {/* Expanded Commit Details */}
               {isExpanded && (
-                <div className="px-8 pb-2 bg-[var(--secondary-bg)]">
+                <div className="bg-secondary-bg px-8 pb-2">
                   {isLoading ? (
-                    <div className="text-[9px] text-[var(--text-lighter)] italic">
-                      Loading files...
-                    </div>
+                    <div className="text-[9px] text-text-lighter italic">Loading files...</div>
                   ) : files.length > 0 ? (
                     <div className="space-y-1">
-                      <div className="text-[9px] text-[var(--text-lighter)] mb-1">
+                      <div className="mb-1 text-[9px] text-text-lighter">
                         {files.length} file{files.length !== 1 ? "s" : ""} changed
                       </div>
                       {files.map((file, fileIndex) => (
                         <div
                           key={fileIndex}
-                          className="flex items-center gap-2 text-[9px] hover:bg-[var(--hover-color)] px-2 py-1 rounded cursor-pointer"
+                          className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-[9px] hover:bg-hover"
                           onClick={() => onViewCommitDiff?.(commit.hash, file.file_path)}
                         >
                           <span
@@ -216,19 +208,15 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
                           >
                             {file.is_new ? "A" : file.is_deleted ? "D" : "M"}
                           </span>
-                          <span className="text-[var(--text-color)] truncate">
-                            {file.file_path}
-                          </span>
+                          <span className="truncate text-text">{file.file_path}</span>
                           {file.is_renamed && file.old_path && (
-                            <span className="text-[var(--text-lighter)]">← {file.old_path}</span>
+                            <span className="text-text-lighter">← {file.old_path}</span>
                           )}
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-[9px] text-[var(--text-lighter)] italic">
-                      No files changed
-                    </div>
+                    <div className="text-[9px] text-text-lighter italic">No files changed</div>
                   )}
                 </div>
               )}

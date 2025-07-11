@@ -43,12 +43,12 @@ export default function Breadcrumb({
   if (segments.length === 0) return null;
 
   return (
-    <div className="flex items-center justify-between px-3 py-1 bg-[var(--secondary-bg)] border-b border-[var(--border-color)] min-h-[28px]">
-      <div className="flex items-center gap-0.5 text-xs text-[var(--text-lighter)] font-mono overflow-hidden">
+    <div className="flex min-h-[28px] items-center justify-between border-border border-b bg-secondary-bg px-3 py-1">
+      <div className="flex items-center gap-0.5 overflow-hidden font-mono text-text-lighter text-xs">
         {segments.map((segment, index) => (
-          <div key={index} className="flex items-center gap-0.5 min-w-0">
+          <div key={index} className="flex min-w-0 items-center gap-0.5">
             {index > 0 && (
-              <ChevronRight size={10} className="text-[var(--text-lighter)] flex-shrink-0 mx-0.5" />
+              <ChevronRight size={10} className="mx-0.5 flex-shrink-0 text-text-lighter" />
             )}
             <button
               onClick={() => {
@@ -59,7 +59,7 @@ export default function Breadcrumb({
                   onNavigate(segments.slice(0, index + 1).join("/"));
                 }
               }}
-              className="hover:text-[var(--text-color)] transition-colors truncate px-1 py-0.5 rounded text-xs max-w-[120px]"
+              className="max-w-[120px] truncate rounded px-1 py-0.5 text-xs transition-colors hover:text-text"
               title={segment}
             >
               {segment}
@@ -71,10 +71,10 @@ export default function Breadcrumb({
       <div className="flex items-center gap-0.5">
         <button
           onClick={onToggleOutline}
-          className={`p-1 rounded transition-colors ${
+          className={`rounded p-1 transition-colors ${
             isOutlineVisible
-              ? "bg-[var(--selected-color)] text-[var(--text-color)]"
-              : "text-[var(--text-lighter)] hover:bg-[var(--hover-color)] hover:text-[var(--text-color)]"
+              ? "bg-selected text-text"
+              : "text-text-lighter hover:bg-hover hover:text-text"
           }`}
           title="Toggle Outline"
         >
@@ -83,10 +83,10 @@ export default function Breadcrumb({
 
         <button
           onClick={onToggleMinimap}
-          className={`p-1 rounded transition-colors ${
+          className={`rounded p-1 transition-colors ${
             isMinimapVisible
-              ? "bg-[var(--selected-color)] text-[var(--text-color)]"
-              : "text-[var(--text-lighter)] hover:bg-[var(--hover-color)] hover:text-[var(--text-color)]"
+              ? "bg-selected text-text"
+              : "text-text-lighter hover:bg-hover hover:text-text"
           }`}
           title="Toggle Minimap"
         >

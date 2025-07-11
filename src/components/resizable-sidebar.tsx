@@ -78,7 +78,7 @@ const ResizableSidebar = ({
         ref={sidebarRef}
         style={{ width: `${width}px` }}
         className={cn(
-          "bg-[var(--secondary-bg)] flex flex-col h-full border-r border-[var(--border-color)] relative",
+          "relative flex h-full flex-col border-border border-r bg-secondary-bg",
           className,
         )}
       >
@@ -89,11 +89,11 @@ const ResizableSidebar = ({
           ref={resizerRef}
           onMouseDown={handleMouseDown}
           className={cn(
-            "absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500/30 transition-colors duration-150 group",
+            "group absolute top-0 right-0 h-full w-1 cursor-col-resize transition-colors duration-150 hover:bg-blue-500/30",
             isResizing && "bg-blue-500/50",
           )}
         >
-          <div className="absolute top-0 right-0 w-[3px] h-full -translate-x-[1px] opacity-0 group-hover:opacity-100 bg-blue-500 transition-opacity duration-150" />
+          <div className="-translate-x-[1px] absolute top-0 right-0 h-full w-[3px] bg-blue-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
         </div>
       </div>
     </div>

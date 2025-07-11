@@ -227,12 +227,12 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[var(--primary-bg)] text-[var(--text-color)]">
+    <div className="flex h-full flex-col overflow-hidden bg-primary-bg text-text">
       {/* Header with DB file info */}
-      <div className="px-4 py-2 bg-[var(--secondary-bg)] border-b border-[var(--border-color)] flex items-center justify-between">
+      <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-4 py-2">
         <div className="flex items-center gap-2">
-          <Database size={16} className="text-[var(--text-lighter)]" />
-          <span className="font-mono text-sm font-medium">{fileName}</span>
+          <Database size={16} className="text-text-lighter" />
+          <span className="font-medium font-mono text-sm">{fileName}</span>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -268,23 +268,23 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex min-h-0 flex-1">
         {/* Sidebar with tables */}
-        <div className="w-64 bg-[var(--secondary-bg)] border-r border-[var(--border-color)] flex flex-col">
-          <div className="p-3 border-b border-[var(--border-color)]">
-            <h3 className="font-mono text-sm font-semibold text-[var(--text-color)] flex items-center gap-2">
+        <div className="flex w-64 flex-col border-border border-r bg-secondary-bg">
+          <div className="border-border border-b p-3">
+            <h3 className="flex items-center gap-2 font-mono font-semibold text-sm text-text">
               <Database size={16} />
               Tables ({tables.length})
             </h3>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+          <div className="custom-scrollbar flex-1 overflow-y-auto p-2">
             {tables.map(table => (
               <button
                 key={table.name}
                 onClick={() => handleTableChange(table.name)}
-                className={`w-full text-left px-3 py-1.5 text-xs font-mono flex items-center gap-1.5 hover:bg-[var(--hover-color)] ${
-                  selectedTable === table.name ? "bg-[var(--selected-color)]" : ""
+                className={`flex w-full items-center gap-1.5 px-3 py-1.5 text-left font-mono text-xs hover:bg-hover ${
+                  selectedTable === table.name ? "bg-selected" : ""
                 }`}
               >
                 <Table size={12} className="flex-shrink-0" />
@@ -295,9 +295,9 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
 
           {/* SQL history section */}
           {sqlHistory.length > 0 && (
-            <div className="border-t border-[var(--border-color)]">
-              <div className="p-2 border-b border-[var(--border-color)]">
-                <div className="text-xs font-mono font-medium text-[var(--text-lighter)] uppercase px-2 py-1">
+            <div className="border-border border-t">
+              <div className="border-border border-b p-2">
+                <div className="px-2 py-1 font-medium font-mono text-text-lighter text-xs uppercase">
                   Recent Queries
                 </div>
               </div>
@@ -309,10 +309,10 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                       setCustomQuery(query);
                       setIsCustomQuery(true);
                     }}
-                    className="w-full text-left px-3 py-1.5 text-xs font-mono truncate hover:bg-[var(--hover-color)]"
+                    className="w-full truncate px-3 py-1.5 text-left font-mono text-xs hover:bg-hover"
                     title={query}
                   >
-                    <Code size={10} className="inline mr-1.5" />
+                    <Code size={10} className="mr-1.5 inline" />
                     {query.length > 25 ? `${query.substring(0, 25)}...` : query}
                   </button>
                 ))}
@@ -322,16 +322,16 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col">
           {/* Query bar */}
-          <div className="p-2 border-b border-[var(--border-color)] bg-[var(--secondary-bg)]">
+          <div className="border-border border-b bg-secondary-bg p-2">
             {isCustomQuery ? (
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-1">
                   <textarea
                     value={customQuery}
                     onChange={e => setCustomQuery(e.target.value)}
-                    className="flex-1 px-2 py-1.5 bg-[var(--primary-bg)] border border-[var(--border-color)] rounded text-xs font-mono h-16 resize-none focus:outline-none focus:border-blue-500"
+                    className="h-16 flex-1 resize-none rounded border border-border bg-primary-bg px-2 py-1.5 font-mono text-xs focus:border-blue-500 focus:outline-none"
                     placeholder="SELECT * FROM table_name WHERE condition LIMIT 100"
                     disabled={isLoading}
                   />
@@ -360,10 +360,10 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <div className="flex-1 relative">
+                <div className="relative flex-1">
                   <Search
                     size={14}
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 text-[var(--text-lighter)]"
+                    className="-translate-y-1/2 absolute top-1/2 left-2 transform text-text-lighter"
                   />
                   <input
                     type="text"
@@ -373,12 +373,12 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                       setCurrentPage(1);
                     }}
                     placeholder="Search in table..."
-                    className="w-full pl-8 pr-2 py-1.5 bg-[var(--primary-bg)] border border-[var(--border-color)] rounded text-xs font-mono focus:outline-none focus:border-blue-500"
+                    className="w-full rounded border border-border bg-primary-bg py-1.5 pr-2 pl-8 font-mono text-xs focus:border-blue-500 focus:outline-none"
                   />
                   {searchTerm && (
                     <button
                       onClick={() => setSearchTerm("")}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-[var(--text-lighter)] hover:text-[var(--text-color)]"
+                      className="-translate-y-1/2 absolute top-1/2 right-2 transform text-text-lighter hover:text-text"
                     >
                       <X size={14} />
                     </button>
@@ -388,7 +388,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                   onClick={() => setIsCustomQuery(true)}
                   variant="default"
                   size="sm"
-                  className="text-xs whitespace-nowrap"
+                  className="whitespace-nowrap text-xs"
                 >
                   <Code size={14} className="mr-1" />
                   Custom SQL
@@ -399,15 +399,15 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
 
           {/* Error message */}
           {error && (
-            <div className="p-2 m-2 bg-red-50 border border-red-200 text-red-600 rounded-md text-xs">
+            <div className="m-2 rounded-md border border-red-200 bg-red-50 p-2 text-red-600 text-xs">
               {error}
             </div>
           )}
 
           {/* Loading indicator */}
           {isLoading && (
-            <div className="flex items-center justify-center p-8 flex-1">
-              <div className="flex items-center gap-2 font-mono text-sm text-[var(--text-lighter)]">
+            <div className="flex flex-1 items-center justify-center p-8">
+              <div className="flex items-center gap-2 font-mono text-sm text-text-lighter">
                 <RefreshCw size={16} className="animate-spin" />
                 Loading...
               </div>
@@ -416,30 +416,28 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
 
           {/* Results table */}
           {!isLoading && queryResult && (
-            <div className="flex-1 overflow-auto p-0 custom-scrollbar">
+            <div className="custom-scrollbar flex-1 overflow-auto p-0">
               {queryResult.rows.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="font-mono text-sm text-[var(--text-lighter)] italic">
-                    No data returned
-                  </div>
+                <div className="flex h-full items-center justify-center">
+                  <div className="font-mono text-sm text-text-lighter italic">No data returned</div>
                 </div>
               ) : (
                 <table className="w-full border-collapse font-mono text-xs">
                   <thead className="sticky top-0 z-10">
-                    <tr className="bg-[var(--secondary-bg)]">
+                    <tr className="bg-secondary-bg">
                       {/* Row number column */}
-                      <th className="border border-[var(--border-color)] px-2 py-1.5 text-left w-10 bg-[var(--secondary-bg)]">
+                      <th className="w-10 border border-border bg-secondary-bg px-2 py-1.5 text-left">
                         #
                       </th>
                       {queryResult.columns.map((column, i) => (
                         <th
                           key={i}
-                          className="border border-[var(--border-color)] px-2 py-1.5 text-left bg-[var(--secondary-bg)] whitespace-nowrap"
+                          className="whitespace-nowrap border border-border bg-secondary-bg px-2 py-1.5 text-left"
                           title={tableMeta.find(c => c.name === column)?.type || ""}
                         >
                           {column}
                           {tableMeta.find(c => c.name === column) && (
-                            <span className="ml-1 text-[var(--text-lighter)] text-xs">
+                            <span className="ml-1 text-text-lighter text-xs">
                               ({tableMeta.find(c => c.name === column)?.type})
                             </span>
                           )}
@@ -449,19 +447,19 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                   </thead>
                   <tbody>
                     {queryResult.rows.map((row, rowIndex) => (
-                      <tr key={rowIndex} className="hover:bg-[var(--hover-color)]">
+                      <tr key={rowIndex} className="hover:bg-hover">
                         {/* Row number */}
-                        <td className="border border-[var(--border-color)] px-2 py-1 text-[var(--text-lighter)]">
+                        <td className="border border-border px-2 py-1 text-text-lighter">
                           {(currentPage - 1) * pageSize + rowIndex + 1}
                         </td>
                         {row.map((cell, cellIndex) => (
                           <td
                             key={cellIndex}
-                            className="border border-[var(--border-color)] px-2 py-1 max-w-[300px] truncate"
+                            className="max-w-[300px] truncate border border-border px-2 py-1"
                             title={cell === null ? "NULL" : String(cell)}
                           >
                             {cell === null ? (
-                              <span className="text-[var(--text-lighter)] italic">NULL</span>
+                              <span className="text-text-lighter italic">NULL</span>
                             ) : typeof cell === "object" ? (
                               <span className="text-blue-500">{JSON.stringify(cell)}</span>
                             ) : (
@@ -479,9 +477,9 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
 
           {/* Pagination */}
           {!isLoading && queryResult && !isCustomQuery && totalPages > 1 && (
-            <div className="px-4 py-2 border-t border-[var(--border-color)] bg-[var(--secondary-bg)] flex items-center justify-between">
+            <div className="flex items-center justify-between border-border border-t bg-secondary-bg px-4 py-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-[var(--text-lighter)]">
+                <span className="font-mono text-text-lighter text-xs">
                   {pageSize} rows per page
                 </span>
                 <select
@@ -490,7 +488,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                     setPageSize(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="text-xs font-mono bg-[var(--primary-bg)] border border-[var(--border-color)] rounded px-1.5 py-0.5"
+                  className="rounded border border-border bg-primary-bg px-1.5 py-0.5 font-mono text-xs"
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
@@ -506,7 +504,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                   disabled={currentPage === 1}
                   variant="ghost"
                   size="sm"
-                  className="text-xs px-1.5"
+                  className="px-1.5 text-xs"
                 >
                   First
                 </Button>
@@ -515,12 +513,12 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                   disabled={currentPage === 1}
                   variant="ghost"
                   size="sm"
-                  className="text-xs px-1.5"
+                  className="px-1.5 text-xs"
                 >
                   Prev
                 </Button>
 
-                <span className="text-xs font-mono px-2">
+                <span className="px-2 font-mono text-xs">
                   Page {currentPage} of {totalPages}
                 </span>
 
@@ -529,7 +527,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                   disabled={currentPage === totalPages}
                   variant="ghost"
                   size="sm"
-                  className="text-xs px-1.5"
+                  className="px-1.5 text-xs"
                 >
                   Next
                 </Button>
@@ -538,7 +536,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                   disabled={currentPage === totalPages}
                   variant="ghost"
                   size="sm"
-                  className="text-xs px-1.5"
+                  className="px-1.5 text-xs"
                 >
                   Last
                 </Button>

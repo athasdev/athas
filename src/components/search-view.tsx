@@ -283,7 +283,7 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
 
       return parts.map((part, index) =>
         regex.test(part) ? (
-          <span key={index} className="bg-yellow-200 text-yellow-900 px-0.5 rounded">
+          <span key={index} className="rounded bg-yellow-200 px-0.5 text-yellow-900">
             {part}
           </span>
         ) : (
@@ -293,13 +293,13 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
     };
 
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex h-full flex-col">
         {/* Search Input */}
-        <div className="p-3 border-b border-[var(--border-color)]">
+        <div className="border-border border-b p-3">
           <div className="relative">
             <Search
               size={14}
-              className="absolute left-2 top-1/2 transform -translate-y-1/2 text-[var(--text-lighter)]"
+              className="-translate-y-1/2 absolute top-1/2 left-2 transform text-text-lighter"
             />
             <input
               ref={searchInputRef}
@@ -307,12 +307,12 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search in files..."
-              className="w-full pl-8 pr-8 py-2 text-xs bg-[var(--primary-bg)] border border-[var(--border-color)] rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-[var(--text-color)]"
+              className="w-full rounded border border-border bg-primary-bg py-2 pr-8 pl-8 text-text text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             {searchQuery && (
               <button
                 onClick={clearSearch}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-[var(--text-lighter)] hover:text-[var(--text-color)]"
+                className="-translate-y-1/2 absolute top-1/2 right-2 transform text-text-lighter hover:text-text"
               >
                 <X size={12} />
               </button>
@@ -320,12 +320,12 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
           </div>
 
           {/* Search Options */}
-          <div className="flex gap-1 mt-2">
+          <div className="mt-2 flex gap-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setCaseSensitive(!caseSensitive)}
-              className={`text-xs px-2 py-1 ${caseSensitive ? "bg-[var(--selected-color)]" : ""}`}
+              className={`px-2 py-1 text-xs ${caseSensitive ? "bg-selected" : ""}`}
               title="Match Case"
             >
               Aa
@@ -334,7 +334,7 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
               variant="ghost"
               size="sm"
               onClick={() => setWholeWord(!wholeWord)}
-              className={`text-xs px-2 py-1 ${wholeWord ? "bg-[var(--selected-color)]" : ""}`}
+              className={`px-2 py-1 text-xs ${wholeWord ? "bg-selected" : ""}`}
               title="Match Whole Word"
             >
               Ab
@@ -343,7 +343,7 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
               variant="ghost"
               size="sm"
               onClick={() => setUseRegex(!useRegex)}
-              className={`text-xs px-2 py-1 ${useRegex ? "bg-[var(--selected-color)]" : ""}`}
+              className={`px-2 py-1 text-xs ${useRegex ? "bg-selected" : ""}`}
               title="Use Regular Expression"
             >
               .*
@@ -352,26 +352,24 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
         </div>
 
         {/* Search Results */}
-        <div className="flex-1 overflow-auto custom-scrollbar">
+        <div className="custom-scrollbar flex-1 overflow-auto">
           {isSearching && (
-            <div className="p-4 text-center text-[var(--text-lighter)] text-xs">Searching...</div>
+            <div className="p-4 text-center text-text-lighter text-xs">Searching...</div>
           )}
 
           {!isSearching && searchQuery && searchResults.length === 0 && (
-            <div className="p-4 text-center text-[var(--text-lighter)] text-xs">
-              No results found
-            </div>
+            <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
           )}
 
           {!isSearching && searchResults.length > 0 && (
             <div className="p-2">
-              <div className="text-xs text-[var(--text-lighter)] mb-2 px-1">
+              <div className="mb-2 px-1 text-text-lighter text-xs">
                 {searchResults.length >= MAX_RESULTS ? `${MAX_RESULTS}+` : searchResults.length}{" "}
                 result{searchResults.length !== 1 ? "s" : ""} in{" "}
                 {Object.keys(groupedResults).length} file
                 {Object.keys(groupedResults).length !== 1 ? "s" : ""}
                 {searchResults.length >= MAX_RESULTS && (
-                  <span className="text-yellow-600 ml-2">(limited)</span>
+                  <span className="ml-2 text-yellow-600">(limited)</span>
                 )}
               </div>
 
@@ -380,24 +378,22 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
                   {/* File Header */}
                   <button
                     onClick={() => handleFileToggle(filePath)}
-                    className="flex items-center gap-1 w-full p-1 hover:bg-[var(--hover-color)] rounded text-left"
+                    className="flex w-full items-center gap-1 rounded p-1 text-left hover:bg-hover"
                   >
                     {expandedFiles.has(filePath) ? (
-                      <ChevronDown size={12} className="text-[var(--text-lighter)]" />
+                      <ChevronDown size={12} className="text-text-lighter" />
                     ) : (
-                      <ChevronRight size={12} className="text-[var(--text-lighter)]" />
+                      <ChevronRight size={12} className="text-text-lighter" />
                     )}
                     <FileIcon fileName={getFileName(filePath)} isDir={false} size={12} />
-                    <span className="text-xs font-medium text-[var(--text-color)] truncate">
+                    <span className="truncate font-medium text-text text-xs">
                       {getFileName(filePath)}
                     </span>
-                    <span className="text-xs text-[var(--text-lighter)] ml-auto">
-                      {results.length}
-                    </span>
+                    <span className="ml-auto text-text-lighter text-xs">{results.length}</span>
                   </button>
 
                   {/* File Path */}
-                  <div className="text-xs text-[var(--text-lighter)] ml-6 mb-1 truncate">
+                  <div className="mb-1 ml-6 truncate text-text-lighter text-xs">
                     {getRelativePath(filePath)}
                   </div>
 
@@ -408,12 +404,12 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
                         <button
                           key={index}
                           onClick={() => handleResultClick(result)}
-                          className="flex items-start gap-2 w-full p-1 hover:bg-[var(--hover-color)] rounded text-left"
+                          className="flex w-full items-start gap-2 rounded p-1 text-left hover:bg-hover"
                         >
-                          <span className="text-xs text-[var(--text-lighter)] min-w-[2rem] text-right">
+                          <span className="min-w-[2rem] text-right text-text-lighter text-xs">
                             {result.line}
                           </span>
-                          <span className="text-xs text-[var(--text-color)] flex-1 truncate">
+                          <span className="flex-1 truncate text-text text-xs">
                             {highlightMatch(result.text, result.match)}
                           </span>
                         </button>
@@ -426,7 +422,7 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
           )}
 
           {!searchQuery && !isSearching && (
-            <div className="p-4 text-center text-[var(--text-lighter)] text-xs">
+            <div className="p-4 text-center text-text-lighter text-xs">
               Enter a search term to find text across your project files
             </div>
           )}

@@ -61,8 +61,8 @@ const FileTree = ({
           }}
           onClick={() => onFileSelect(file.path, file.isDir)}
           onContextMenu={e => handleContextMenu(e, file.path, file.isDir)}
-          className={`w-full text-left px-1.5 py-1 bg-transparent border-none text-[var(--text-color)] cursor-pointer text-xs font-mono flex items-center gap-1.5 transition-colors duration-150 whitespace-nowrap overflow-hidden text-ellipsis min-h-[22px] shadow-none outline-none hover:bg-[var(--hover-color)] focus:outline-none ${
-            activeBufferPath === file.path ? "bg-[var(--selected-color)]" : ""
+          className={`flex min-h-[22px] w-full cursor-pointer items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap border-none bg-transparent px-1.5 py-1 text-left font-mono text-text text-xs shadow-none outline-none transition-colors duration-150 hover:bg-hover focus:outline-none ${
+            activeBufferPath === file.path ? "bg-selected" : ""
           }`}
           style={{ paddingLeft: `${12 + depth * 16}px` }}
         >
@@ -70,7 +70,7 @@ const FileTree = ({
             fileName={file.name}
             isDir={file.isDir}
             isExpanded={file.expanded}
-            className="text-[var(--text-lighter)] flex-shrink-0"
+            className="flex-shrink-0 text-text-lighter"
           />
           <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
             {file.name}
@@ -85,13 +85,13 @@ const FileTree = ({
 
   return (
     <>
-      <div className="overflow-y-auto p-2 flex flex-col gap-0 flex-1 custom-scrollbar">
+      <div className="custom-scrollbar flex flex-1 flex-col gap-0 overflow-y-auto p-2">
         {renderFileTree(files)}
       </div>
 
       {contextMenu && (
         <div
-          className="fixed bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-md shadow-lg z-50 py-1"
+          className="fixed z-50 rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
           style={{
             left: contextMenu.x,
             top: contextMenu.y,
@@ -104,7 +104,7 @@ const FileTree = ({
                   onCreateNewFileInDirectory(contextMenu.path);
                   setContextMenu(null);
                 }}
-                className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
               >
                 <FilePlus size={12} />
                 New File
@@ -115,7 +115,7 @@ const FileTree = ({
                     onCreateNewFolderInDirectory(contextMenu.path);
                     setContextMenu(null);
                   }}
-                  className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
                 >
                   <FolderPlus size={12} />
                   New Folder
@@ -127,14 +127,14 @@ const FileTree = ({
                     onGenerateImage(contextMenu.path);
                     setContextMenu(null);
                   }}
-                  className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
                 >
                   <ImageIcon size={12} />
                   Generate Image
                 </button>
               )}
               {(onCreateNewFolderInDirectory || onGenerateImage) && (
-                <div className="border-t border-[var(--border-color)] my-1" />
+                <div className="my-1 border-border border-t" />
               )}
             </>
           )}
@@ -145,7 +145,7 @@ const FileTree = ({
                 onDeletePath(contextMenu.path, contextMenu.isDir);
                 setContextMenu(null);
               }}
-              className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] hover:text-red-500 flex items-center gap-2"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover hover:text-red-500"
             >
               <Trash size={12} />
               Delete

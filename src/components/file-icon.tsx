@@ -24,7 +24,7 @@ const FileIcon = ({
   isDir,
   isExpanded = false,
   size = 14,
-  className = "text-[var(--text-lighter)]",
+  className = "text-text-lighter",
 }: FileIconProps) => {
   if (isDir) {
     return isExpanded ? (

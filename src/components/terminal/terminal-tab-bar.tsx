@@ -50,7 +50,7 @@ const TerminalContextMenu = ({
 
   return (
     <div
-      className="fixed bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-md shadow-lg z-50 py-1 min-w-[160px] text-[var(--text-color)]"
+      className="fixed z-50 min-w-[160px] rounded-md border border-border bg-secondary-bg py-1 text-text shadow-lg"
       style={{ left: position.x, top: position.y }}
       onClick={e => e.stopPropagation()}
     >
@@ -59,32 +59,32 @@ const TerminalContextMenu = ({
           onRename(terminal.id);
           onClose();
         }}
-        className="w-full px-3 py-1.5 text-left text-xs hover:bg-[var(--hover-color)] flex items-center gap-2"
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-hover"
       >
         Rename Terminal
       </button>
 
-      <div className="h-px bg-[var(--border-color)] my-1" />
+      <div className="my-1 h-px bg-border" />
 
       <button
         onClick={() => {
           onPin(terminal.id);
           onClose();
         }}
-        className="w-full px-3 py-1.5 text-left text-xs hover:bg-[var(--hover-color)] flex items-center gap-2"
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-hover"
       >
         {terminal.isPinned ? <PinOff size={12} /> : <Pin size={12} />}
         {terminal.isPinned ? "Unpin Terminal" : "Pin Terminal"}
       </button>
 
-      <div className="h-px bg-[var(--border-color)] my-1" />
+      <div className="my-1 h-px bg-border" />
 
       <button
         onClick={() => {
           onCloseTab(terminal.id);
           onClose();
         }}
-        className="w-full px-3 py-1.5 text-left text-xs hover:bg-[var(--hover-color)]"
+        className="w-full px-3 py-1.5 text-left text-xs hover:bg-hover"
       >
         Close Terminal
       </button>
@@ -93,7 +93,7 @@ const TerminalContextMenu = ({
           onCloseOthers(terminal.id);
           onClose();
         }}
-        className="w-full px-3 py-1.5 text-left text-xs hover:bg-[var(--hover-color)]"
+        className="w-full px-3 py-1.5 text-left text-xs hover:bg-hover"
       >
         Close Other Terminals
       </button>
@@ -102,7 +102,7 @@ const TerminalContextMenu = ({
           onCloseToRight(terminal.id);
           onClose();
         }}
-        className="w-full px-3 py-1.5 text-left text-xs hover:bg-[var(--hover-color)]"
+        className="w-full px-3 py-1.5 text-left text-xs hover:bg-hover"
       >
         Close Terminals to the Right
       </button>
@@ -111,7 +111,7 @@ const TerminalContextMenu = ({
           onCloseAll();
           onClose();
         }}
-        className="w-full px-3 py-1.5 text-left text-xs hover:bg-[var(--hover-color)] text-red-400"
+        className="w-full px-3 py-1.5 text-left text-red-400 text-xs hover:bg-hover"
       >
         Close All Terminals
       </button>
@@ -255,15 +255,15 @@ const TerminalTabBar = ({
 
   if (terminals.length === 0) {
     return (
-      <div className="flex items-center justify-between bg-[var(--secondary-bg)] border-b border-[var(--border-color)] px-2 py-1 min-h-[28px]">
+      <div className="flex min-h-[28px] items-center justify-between border-border border-b bg-secondary-bg px-2 py-1">
         <div className="flex items-center gap-1.5">
-          <TerminalIcon size={10} className="text-[var(--text-lighter)]" />
-          <span className="text-xs font-mono text-[var(--text-lighter)]">No terminals</span>
+          <TerminalIcon size={10} className="text-text-lighter" />
+          <span className="font-mono text-text-lighter text-xs">No terminals</span>
         </div>
         {onNewTerminal && (
           <button
             onClick={onNewTerminal}
-            className="flex items-center gap-0.5 px-1.5 py-1 text-xs rounded hover:bg-[var(--hover-color)] transition-colors text-[var(--text-lighter)]"
+            className="flex items-center gap-0.5 rounded px-1.5 py-1 text-text-lighter text-xs transition-colors hover:bg-hover"
             title="New Terminal (Cmd+T)"
           >
             <Plus size={9} />
@@ -277,7 +277,7 @@ const TerminalTabBar = ({
     <>
       <div
         ref={tabBarRef}
-        className="flex items-center bg-[var(--secondary-bg)] border-b border-[var(--border-color)] px-0.5 overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[var(--border-color)] min-h-[28px]"
+        className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border flex min-h-[28px] items-center overflow-x-auto border-border border-b bg-secondary-bg px-0.5"
         style={{
           scrollbarWidth: "thin",
           scrollbarGutter: "stable",
@@ -292,12 +292,12 @@ const TerminalTabBar = ({
             <div
               key={terminal.id}
               className={cn(
-                "flex items-center gap-1 px-1.5 py-1 text-xs border-r border-[var(--border-color)] cursor-pointer select-none min-w-0 max-w-[180px] transition-all duration-150",
+                "flex min-w-0 max-w-[180px] cursor-pointer select-none items-center gap-1 border-border border-r px-1.5 py-1 text-xs transition-all duration-150",
                 isActive
-                  ? "bg-[var(--selected-color)] text-[var(--text-color)]"
-                  : "text-[var(--text-lighter)] hover:bg-[var(--hover-color)] hover:text-[var(--text-color)]",
-                isDraggedItem && "opacity-50 scale-95",
-                isDraggedOver && "bg-blue-500/20 border-blue-500/50",
+                  ? "bg-selected text-text"
+                  : "text-text-lighter hover:bg-hover hover:text-text",
+                isDraggedItem && "scale-95 opacity-50",
+                isDraggedOver && "border-blue-500/50 bg-blue-500/20",
                 terminal.isPinned && "border-l-2 border-l-blue-500",
               )}
               onMouseDown={e => handleMouseDown(e, index)}
@@ -316,7 +316,7 @@ const TerminalTabBar = ({
                   e.stopPropagation();
                   onTabClose(terminal.id, e);
                 }}
-                className="flex-shrink-0 p-0.5 rounded hover:bg-[var(--border-color)] hover:text-red-400 transition-colors opacity-60 hover:opacity-100 cursor-pointer"
+                className="flex-shrink-0 cursor-pointer rounded p-0.5 opacity-60 transition-colors hover:bg-border hover:text-red-400 hover:opacity-100"
                 title="Close Terminal"
               >
                 <X size={12} />
@@ -329,7 +329,7 @@ const TerminalTabBar = ({
         {onNewTerminal && (
           <button
             onClick={onNewTerminal}
-            className="flex items-center gap-0.5 p-1.5 text-xs rounded hover:bg-[var(--hover-color)] transition-colors text-[var(--text-lighter)] flex-shrink-0 ml-0.5 cursor-pointer"
+            className="ml-0.5 flex flex-shrink-0 cursor-pointer items-center gap-0.5 rounded p-1.5 text-text-lighter text-xs transition-colors hover:bg-hover"
             title="New Terminal (Cmd+T)"
           >
             <Plus size={12} />

@@ -58,11 +58,11 @@ const GitStatusPanel = ({
       case "modified":
         return <Edit3 size={10} className="text-yellow-400" />;
       case "untracked":
-        return <FileIcon size={10} className="text-[var(--text-lighter)]" />;
+        return <FileIcon size={10} className="text-text-lighter" />;
       case "renamed":
         return <RotateCcw size={10} className="text-blue-400" />;
       default:
-        return <FileIcon size={10} className="text-[var(--text-lighter)]" />;
+        return <FileIcon size={10} className="text-text-lighter" />;
     }
   };
 
@@ -169,8 +169,8 @@ const GitStatusPanel = ({
   return (
     <div className="space-y-0">
       {/* Staged Changes */}
-      <div className="border-b border-[var(--border-color)]">
-        <div className="flex items-center gap-2 px-3 py-1 bg-[var(--secondary-bg)] text-[var(--text-lighter)]">
+      <div className="border-border border-b">
+        <div className="flex items-center gap-2 bg-secondary-bg px-3 py-1 text-text-lighter">
           <span className="flex items-center gap-1">
             <Check size={10} />
             <span>staged ({stagedFiles.length})</span>
@@ -180,7 +180,7 @@ const GitStatusPanel = ({
             <button
               onClick={handleUnstageAll}
               disabled={isLoading}
-              className="text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors disabled:opacity-50"
+              className="text-text-lighter transition-colors hover:text-text disabled:opacity-50"
               title="Unstage all"
             >
               <Minus size={10} />
@@ -189,15 +189,15 @@ const GitStatusPanel = ({
         </div>
 
         {stagedFiles.length === 0 ? (
-          <div className="px-3 py-2 bg-[var(--primary-bg)] text-[var(--text-lighter)] text-[10px] italic">
+          <div className="bg-primary-bg px-3 py-2 text-[10px] text-text-lighter italic">
             No staged changes
           </div>
         ) : (
-          <div className="bg-[var(--primary-bg)]">
+          <div className="bg-primary-bg">
             {stagedFiles.map((file, index) => (
               <div
                 key={`staged-${file.path}-${index}`}
-                className="flex items-center gap-2 px-3 py-1 hover:bg-[var(--hover-color)] group cursor-pointer"
+                className="group flex cursor-pointer items-center gap-2 px-3 py-1 hover:bg-hover"
                 onClick={e => {
                   if (e.button === 0) {
                     onFileSelect?.(file.path, true);
@@ -205,24 +205,21 @@ const GitStatusPanel = ({
                 }}
                 onContextMenu={e => handleContextMenu(e, file.path, true)}
               >
-                <span className="text-[10px] text-[var(--text-lighter)] w-3 text-center font-medium">
+                <span className="w-3 text-center font-medium text-[10px] text-text-lighter">
                   {getStatusText(file)}
                 </span>
                 {getFileIcon(file)}
-                <span
-                  className="flex-1 text-[10px] text-[var(--text-color)] truncate"
-                  title={file.path}
-                >
+                <span className="flex-1 truncate text-[10px] text-text" title={file.path}>
                   {file.path.split("/").pop()}
                 </span>
-                <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100">
                   <button
                     onClick={e => {
                       e.stopPropagation();
                       handleUnstageFile(file.path);
                     }}
                     disabled={isLoading}
-                    className="text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors disabled:opacity-50"
+                    className="text-text-lighter transition-colors hover:text-text disabled:opacity-50"
                     title="Unstage"
                   >
                     <Minus size={8} />
@@ -235,8 +232,8 @@ const GitStatusPanel = ({
       </div>
 
       {/* Unstaged Changes */}
-      <div className="border-b border-[var(--border-color)]">
-        <div className="flex items-center gap-2 px-3 py-1 bg-[var(--secondary-bg)] text-[var(--text-lighter)]">
+      <div className="border-border border-b">
+        <div className="flex items-center gap-2 bg-secondary-bg px-3 py-1 text-text-lighter">
           <span className="flex items-center gap-1">
             <Edit3 size={10} />
             <span>changes ({unstagedFiles.length})</span>
@@ -246,7 +243,7 @@ const GitStatusPanel = ({
             <button
               onClick={handleStageAll}
               disabled={isLoading}
-              className="text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors disabled:opacity-50"
+              className="text-text-lighter transition-colors hover:text-text disabled:opacity-50"
               title="Stage all"
             >
               <Plus size={10} />
@@ -255,15 +252,15 @@ const GitStatusPanel = ({
         </div>
 
         {unstagedFiles.length === 0 ? (
-          <div className="px-3 py-2 bg-[var(--primary-bg)] text-[var(--text-lighter)] text-[10px] italic">
+          <div className="bg-primary-bg px-3 py-2 text-[10px] text-text-lighter italic">
             No unstaged changes
           </div>
         ) : (
-          <div className="bg-[var(--primary-bg)]">
+          <div className="bg-primary-bg">
             {unstagedFiles.map((file, index) => (
               <div
                 key={`unstaged-${file.path}-${index}`}
-                className="flex items-center gap-2 px-3 py-1 hover:bg-[var(--hover-color)] group cursor-pointer"
+                className="group flex cursor-pointer items-center gap-2 px-3 py-1 hover:bg-hover"
                 onClick={e => {
                   if (e.button === 0) {
                     onFileSelect?.(file.path, false);
@@ -271,24 +268,21 @@ const GitStatusPanel = ({
                 }}
                 onContextMenu={e => handleContextMenu(e, file.path, false)}
               >
-                <span className="text-[10px] text-[var(--text-lighter)] w-3 text-center font-medium">
+                <span className="w-3 text-center font-medium text-[10px] text-text-lighter">
                   {getStatusText(file)}
                 </span>
                 {getFileIcon(file)}
-                <span
-                  className="flex-1 text-[10px] text-[var(--text-color)] truncate"
-                  title={file.path}
-                >
+                <span className="flex-1 truncate text-[10px] text-text" title={file.path}>
                   {file.path.split("/").pop()}
                 </span>
-                <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100">
                   <button
                     onClick={e => {
                       e.stopPropagation();
                       handleStageFile(file.path);
                     }}
                     disabled={isLoading}
-                    className="text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors disabled:opacity-50"
+                    className="text-text-lighter transition-colors hover:text-text disabled:opacity-50"
                     title="Stage"
                   >
                     <Plus size={8} />
@@ -300,7 +294,7 @@ const GitStatusPanel = ({
                         handleDiscardFile(file.path);
                       }}
                       disabled={isLoading}
-                      className="text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+                      className="text-red-400 transition-colors hover:text-red-300 disabled:opacity-50"
                       title="Discard changes"
                     >
                       <Trash2 size={8} />
@@ -315,12 +309,12 @@ const GitStatusPanel = ({
 
       {/* Clean State */}
       {stagedFiles.length === 0 && unstagedFiles.length === 0 && (
-        <div className="border-b border-[var(--border-color)]">
-          <div className="flex items-center gap-2 px-3 py-1 bg-[var(--secondary-bg)] text-[var(--text-lighter)]">
+        <div className="border-border border-b">
+          <div className="flex items-center gap-2 bg-secondary-bg px-3 py-1 text-text-lighter">
             <Check size={10} />
             <span>clean</span>
           </div>
-          <div className="px-3 py-2 bg-[var(--primary-bg)] text-[var(--text-lighter)] text-[10px] italic">
+          <div className="bg-primary-bg px-3 py-2 text-[10px] text-text-lighter italic">
             No changes detected
           </div>
         </div>
@@ -329,7 +323,7 @@ const GitStatusPanel = ({
       {/* Context Menu */}
       {contextMenu && onOpenFile && (
         <div
-          className="fixed bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-md shadow-lg z-50 py-1 min-w-[120px]"
+          className="fixed z-50 min-w-[120px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
           style={{
             left: contextMenu.x,
             top: contextMenu.y,
@@ -343,7 +337,7 @@ const GitStatusPanel = ({
               onOpenFile(contextMenu.filePath);
               setContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <FileText size={12} />
             Open File

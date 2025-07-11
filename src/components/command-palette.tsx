@@ -206,33 +206,28 @@ const CommandPalette = forwardRef<CommandPaletteRef, CommandPaletteProps>(
     if (!isVisible) return null;
 
     return (
-      <div className="fixed top-12 left-1/2 transform -translate-x-1/2 z-[9999]">
-        <div className="bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg shadow-lg w-[480px] max-h-[320px] flex flex-col overflow-hidden">
+      <div className="-translate-x-1/2 fixed top-12 left-1/2 z-[9999] transform">
+        <div className="flex max-h-[320px] w-[480px] flex-col overflow-hidden rounded-lg border border-border bg-primary-bg shadow-lg">
           {/* Header */}
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-color)]">
-            <Palette size={14} className="text-[var(--text-lighter)]" />
+          <div className="flex items-center gap-2 border-border border-b px-3 py-2">
+            <Palette size={14} className="text-text-lighter" />
             <input
               ref={inputRef}
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Type a command..."
-              className="flex-1 bg-transparent text-[var(--text-color)] placeholder-[var(--text-lighter)] outline-none text-sm"
+              className="flex-1 bg-transparent text-sm text-text placeholder-text-lighter outline-none"
             />
-            <button
-              onClick={onClose}
-              className="p-1 hover:bg-[var(--hover-color)] rounded transition-colors"
-            >
-              <X size={14} className="text-[var(--text-lighter)]" />
+            <button onClick={onClose} className="rounded p-1 transition-colors hover:bg-hover">
+              <X size={14} className="text-text-lighter" />
             </button>
           </div>
 
           {/* Results */}
-          <div ref={resultsRef} className="flex-1 overflow-y-auto custom-scrollbar-thin">
+          <div ref={resultsRef} className="custom-scrollbar-thin flex-1 overflow-y-auto">
             {filteredActions.length === 0 ? (
-              <div className="p-4 text-center text-[var(--text-lighter)] text-sm">
-                No commands found
-              </div>
+              <div className="p-4 text-center text-sm text-text-lighter">No commands found</div>
             ) : (
               filteredActions.map((action, index) => (
                 <button
@@ -242,22 +237,18 @@ const CommandPalette = forwardRef<CommandPaletteRef, CommandPaletteProps>(
                     e.stopPropagation();
                     action.action();
                   }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors cursor-pointer ${
-                    index === selectedIndex
-                      ? "bg-[var(--selected-color)] text-[var(--text-color)]"
-                      : "hover:bg-[var(--hover-color)] text-[var(--text-color)]"
+                  className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left transition-colors ${
+                    index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover"
                   }`}
                 >
-                  <div className="text-[var(--text-lighter)] flex-shrink-0">{action.icon}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{action.label}</div>
+                  <div className="flex-shrink-0 text-text-lighter">{action.icon}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium text-sm">{action.label}</div>
                     {action.description && (
-                      <div className="text-xs text-[var(--text-lighter)] truncate">
-                        {action.description}
-                      </div>
+                      <div className="truncate text-text-lighter text-xs">{action.description}</div>
                     )}
                   </div>
-                  <div className="text-xs text-[var(--text-lighter)] uppercase tracking-wide flex-shrink-0">
+                  <div className="flex-shrink-0 text-text-lighter text-xs uppercase tracking-wide">
                     {action.category}
                   </div>
                 </button>

@@ -122,14 +122,14 @@ export default function OutlineView({
 
   if (outlineItems.length === 0) {
     return (
-      <div className={cn("flex flex-col h-full", className)}>
-        <div className="p-3 border-b border-[var(--border-color)]">
-          <h3 className="font-mono text-xs font-medium text-[var(--text-color)] uppercase tracking-wide">
+      <div className={cn("flex h-full flex-col", className)}>
+        <div className="border-border border-b p-3">
+          <h3 className="font-medium font-mono text-text text-xs uppercase tracking-wide">
             Outline
           </h3>
         </div>
-        <div className="flex-1 flex items-center justify-center p-4">
-          <div className="text-center text-[var(--text-lighter)]">
+        <div className="flex flex-1 items-center justify-center p-4">
+          <div className="text-center text-text-lighter">
             <FileText size={24} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm">No outline available</p>
           </div>
@@ -139,24 +139,22 @@ export default function OutlineView({
   }
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
-      <div className="p-3 border-b border-[var(--border-color)]">
-        <h3 className="font-mono text-xs font-medium text-[var(--text-color)] uppercase tracking-wide">
-          Outline
-        </h3>
+    <div className={cn("flex h-full flex-col", className)}>
+      <div className="border-border border-b p-3">
+        <h3 className="font-medium font-mono text-text text-xs uppercase tracking-wide">Outline</h3>
       </div>
       <div className="flex-1 overflow-y-auto">
         {outlineItems.map((item, index) => (
           <button
             key={index}
             onClick={() => handleItemClick(item)}
-            className="w-full text-left px-3 py-1.5 hover:bg-[var(--hover-color)] transition-colors flex items-center gap-2 text-sm font-mono"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-sm transition-colors hover:bg-hover"
             style={{ paddingLeft: `${12 + item.level * 16}px` }}
             title={`Line ${item.line}: ${item.name}`}
           >
             {getIcon(item.type)}
-            <span className="flex-1 text-[var(--text-color)] truncate">{item.name}</span>
-            <span className="text-xs text-[var(--text-lighter)] opacity-75">{item.line}</span>
+            <span className="flex-1 truncate text-text">{item.name}</span>
+            <span className="text-text-lighter text-xs opacity-75">{item.line}</span>
           </button>
         ))}
       </div>

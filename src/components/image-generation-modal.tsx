@@ -112,27 +112,27 @@ const ImageGenerationModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg w-[600px] max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="flex max-h-[90vh] w-[600px] flex-col rounded-lg border border-border bg-primary-bg">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
+        <div className="flex items-center justify-between border-border border-b p-4">
           <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-[var(--text-color)]" />
-            <h3 className="font-mono text-sm text-[var(--text-color)]">Generate Image with AI</h3>
+            <Sparkles size={16} className="text-text" />
+            <h3 className="font-mono text-sm text-text">Generate Image with AI</h3>
           </div>
           <button
             onClick={handleClose}
-            className="text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+            className="text-text-lighter transition-colors hover:text-text"
           >
             <X size={16} />
           </button>
         </div>
 
-        <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
           {/* Folder Info */}
-          <div className="text-xs text-[var(--text-lighter)] leading-relaxed">
+          <div className="text-text-lighter text-xs leading-relaxed">
             Generate an AI image and save it to:{" "}
-            <span className="font-mono text-[var(--text-color)]">
+            <span className="font-mono text-text">
               {targetFolder.split("/").pop() || targetFolder}
             </span>
           </div>
@@ -141,7 +141,7 @@ const ImageGenerationModal = ({
           <div className="space-y-2">
             <label
               htmlFor="image-description"
-              className="flex items-center gap-2 text-xs font-medium text-[var(--text-color)]"
+              className="flex items-center gap-2 font-medium text-text text-xs"
             >
               <Wand2 size={12} />
               Image Description
@@ -151,7 +151,7 @@ const ImageGenerationModal = ({
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
               placeholder="Describe the image you want to generate... (e.g., 'A serene mountain landscape at sunset with a lake reflection')"
-              className="w-full px-3 py-2 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded text-xs text-[var(--text-color)] focus:outline-none focus:border-blue-500 resize-none"
+              className="w-full resize-none rounded border border-border bg-secondary-bg px-3 py-2 text-text text-xs focus:border-blue-500 focus:outline-none"
               rows={3}
               disabled={isGenerating}
             />
@@ -160,7 +160,7 @@ const ImageGenerationModal = ({
           {/* Generation Options */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label htmlFor="image-size" className="text-xs font-medium text-[var(--text-color)]">
+              <label htmlFor="image-size" className="font-medium text-text text-xs">
                 Size
               </label>
               <Dropdown
@@ -192,7 +192,7 @@ const ImageGenerationModal = ({
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="image-style" className="text-xs font-medium text-[var(--text-color)]">
+              <label htmlFor="image-style" className="font-medium text-text text-xs">
                 Style
               </label>
               <Dropdown
@@ -206,9 +206,7 @@ const ImageGenerationModal = ({
                 className="text-xs"
               />
               {imageModel === "dall-e-2" && (
-                <p className="text-xs text-[var(--text-lighter)]">
-                  Style not available for DALL-E 2
-                </p>
+                <p className="text-text-lighter text-xs">Style not available for DALL-E 2</p>
               )}
             </div>
           </div>
@@ -216,18 +214,18 @@ const ImageGenerationModal = ({
           {/* Generated Image */}
           {generatedImage && (
             <div className="space-y-2">
-              <div className="text-xs font-medium text-[var(--text-color)]">Generated Image</div>
-              <div className="border border-[var(--border-color)] rounded-lg overflow-hidden">
+              <div className="font-medium text-text text-xs">Generated Image</div>
+              <div className="overflow-hidden rounded-lg border border-border">
                 <img
                   src={generatedImage}
                   alt="Generated"
-                  className="w-full h-auto max-h-80 object-contain bg-[var(--secondary-bg)]"
+                  className="h-auto max-h-80 w-full bg-secondary-bg object-contain"
                 />
               </div>
 
               {/* Filename Input */}
               <div className="space-y-2">
-                <label htmlFor="file-name" className="text-xs font-medium text-[var(--text-color)]">
+                <label htmlFor="file-name" className="font-medium text-text text-xs">
                   File Name
                 </label>
                 <input
@@ -235,7 +233,7 @@ const ImageGenerationModal = ({
                   type="text"
                   value={fileName}
                   onChange={e => setFileName(e.target.value)}
-                  className="w-full px-3 py-2 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded text-xs text-[var(--text-color)] focus:outline-none focus:border-blue-500"
+                  className="w-full rounded border border-border bg-secondary-bg px-3 py-2 text-text text-xs focus:border-blue-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -243,16 +241,16 @@ const ImageGenerationModal = ({
 
           {/* Error Message */}
           {error && (
-            <div className="text-xs text-red-500 bg-red-500/10 p-2 rounded border border-red-500/20">
+            <div className="rounded border border-red-500/20 bg-red-500/10 p-2 text-red-500 text-xs">
               {error}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-[var(--border-color)]">
+        <div className="flex items-center justify-between border-border border-t p-4">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--text-lighter)]">Model:</span>
+            <span className="text-text-lighter text-xs">Model:</span>
             <Dropdown
               value={imageModel}
               options={[
@@ -264,7 +262,7 @@ const ImageGenerationModal = ({
                 setImageModel(value as "gpt-image-1" | "dall-e-3" | "dall-e-2")
               }
               disabled={isGenerating}
-              className="text-xs min-w-[120px]"
+              className="min-w-[120px] text-xs"
             />
           </div>
 

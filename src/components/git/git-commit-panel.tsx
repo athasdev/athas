@@ -49,17 +49,17 @@ const GitCommitPanel = ({ stagedFilesCount, repoPath, onCommitSuccess }: GitComm
   }
 
   return (
-    <div className="border-t border-[var(--border-color)] bg-[var(--secondary-bg)]">
+    <div className="border-border border-t bg-secondary-bg">
       <div className="p-3">
-        <div className="flex items-center gap-2 mb-2">
-          <GitCommitIcon size={12} className="text-[var(--text-lighter)]" />
-          <span className="text-xs text-[var(--text-color)] font-medium">
+        <div className="mb-2 flex items-center gap-2">
+          <GitCommitIcon size={12} className="text-text-lighter" />
+          <span className="font-medium text-text text-xs">
             Commit {stagedFilesCount} file{stagedFilesCount !== 1 ? "s" : ""}
           </span>
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 mb-2 p-2 bg-red-900 bg-opacity-20 border border-red-500 border-opacity-30 rounded text-xs text-red-400">
+          <div className="mb-2 flex items-center gap-2 rounded border border-red-500 border-opacity-30 bg-red-900 bg-opacity-20 p-2 text-red-400 text-xs">
             <AlertCircle size={12} />
             {error}
           </div>
@@ -71,26 +71,26 @@ const GitCommitPanel = ({ stagedFilesCount, repoPath, onCommitSuccess }: GitComm
             onChange={e => setCommitMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Enter commit message..."
-            className="w-full bg-[var(--primary-bg)] text-[var(--text-color)] border border-[var(--border-color)] px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-blue-500 resize-none"
+            className="w-full resize-none border border-border bg-primary-bg px-2 py-1.5 font-mono text-text text-xs focus:border-blue-500 focus:outline-none"
             rows={3}
             disabled={isCommitting}
           />
 
           <div className="flex items-center justify-between">
-            <div className="text-[9px] text-[var(--text-lighter)]">Ctrl+Enter to commit</div>
+            <div className="text-[9px] text-text-lighter">Ctrl+Enter to commit</div>
 
             <button
               onClick={handleCommit}
               disabled={isCommitDisabled}
-              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-mono border transition-colors duration-150 rounded ${
+              className={`flex items-center gap-1 rounded border px-3 py-1.5 font-mono text-xs transition-colors duration-150 ${
                 isCommitDisabled
-                  ? "bg-[var(--secondary-bg)] border-[var(--border-color)] text-[var(--text-lighter)] cursor-not-allowed"
-                  : "bg-blue-600 border-blue-500 text-white hover:bg-blue-700"
+                  ? "cursor-not-allowed border-border bg-secondary-bg text-text-lighter"
+                  : "border-blue-500 bg-blue-600 text-white hover:bg-blue-700"
               }`}
             >
               {isCommitting ? (
                 <>
-                  <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div className="h-3 w-3 animate-spin rounded-full border border-white border-t-transparent"></div>
                   Committing...
                 </>
               ) : (

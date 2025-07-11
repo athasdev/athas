@@ -89,7 +89,7 @@ export const CompletionDropdown = React.memo(function CompletionDropdown({
   return (
     <div
       ref={dropdownRef}
-      className="fixed z-[100] bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg shadow-xl scrollbar-hidden"
+      className="scrollbar-hidden fixed z-[100] rounded-lg border border-border bg-primary-bg shadow-xl"
       style={{
         top: adjustedPosition.top,
         left: adjustedPosition.left,
@@ -114,10 +114,10 @@ export const CompletionDropdown = React.memo(function CompletionDropdown({
         ) => (
           <div
             key={`${item.label}-${item.kind}-${index}`}
-            className={`px-3 py-2 cursor-pointer flex items-center gap-3 transition-all duration-100 text-sm border-b border-[var(--border-color)] last:border-b-0 ${
+            className={`flex cursor-pointer items-center gap-3 border-border border-b px-3 py-2 text-sm transition-all duration-100 last:border-b-0 ${
               index === selectedIndex
-                ? "bg-[var(--selected-color)] text-[var(--text-color)] shadow-sm"
-                : "hover:bg-[var(--hover-color)] text-[var(--text-color)]"
+                ? "bg-selected text-text shadow-sm"
+                : "text-text hover:bg-hover"
             }`}
             onClick={e => {
               e.preventDefault();
@@ -129,21 +129,19 @@ export const CompletionDropdown = React.memo(function CompletionDropdown({
               // setSelectedLspIndex(index);
             }}
           >
-            <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center bg-[var(--secondary-bg)] rounded border border-[var(--border-color)] text-xs font-semibold">
-              <span className="text-[var(--text-lighter)]">{getCompletionIcon(item.kind)}</span>
+            <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border border-border bg-secondary-bg font-semibold text-xs">
+              <span className="text-text-lighter">{getCompletionIcon(item.kind)}</span>
             </div>
-            <div className="flex-1 min-w-0 overflow-hidden">
-              <div className="font-mono text-sm text-[var(--text-color)] truncate font-medium">
-                {item.label}
-              </div>
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="truncate font-medium font-mono text-sm text-text">{item.label}</div>
               {item.detail && (
-                <div className="text-xs text-[var(--text-lighter)] truncate opacity-75 mt-0.5">
+                <div className="mt-0.5 truncate text-text-lighter text-xs opacity-75">
                   {item.detail}
                 </div>
               )}
             </div>
             <div className="flex-shrink-0">
-              <span className="text-xs text-[var(--text-lighter)] opacity-60 font-medium">
+              <span className="font-medium text-text-lighter text-xs opacity-60">
                 {getCompletionTypeLabel(item.kind)}
               </span>
             </div>
@@ -151,7 +149,7 @@ export const CompletionDropdown = React.memo(function CompletionDropdown({
         ),
       )}
       {items.length > 20 && (
-        <div className="px-3 py-2 text-xs text-[var(--text-lighter)] text-center border-t border-[var(--border-color)] bg-[var(--secondary-bg)]">
+        <div className="border-border border-t bg-secondary-bg px-3 py-2 text-center text-text-lighter text-xs">
           +{items.length - 20} more items...
         </div>
       )}

@@ -45,6 +45,9 @@
       },
       "correctness": {
         "useExhaustiveDependencies": "off"
+      },
+      "nursery": {
+        "useSortedClasses": "warn"
       }
     }
   },

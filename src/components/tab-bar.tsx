@@ -75,11 +75,11 @@ const ContextMenu = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-[var(--primary-bg)] border border-[var(--border-color)] rounded shadow-lg py-1 w-max min-w-[120px] dark:bg-gray-800 dark:border-gray-600 dark:shadow-xl"
+      className="fixed z-50 w-max min-w-[120px] rounded border border-border bg-primary-bg py-1 shadow-lg dark:border-gray-600 dark:bg-gray-800 dark:shadow-xl"
       style={{ left: position.x, top: position.y }}
     >
       <button
-        className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--hover-color)] flex items-center gap-2 dark:text-gray-200 dark:hover:bg-gray-700"
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-hover dark:text-gray-200 dark:hover:bg-gray-700"
         onClick={() => {
           onPin(buffer.id);
           onClose();
@@ -89,21 +89,21 @@ const ContextMenu = ({
         {buffer.isPinned ? "Unpin Tab" : "Pin Tab"}
       </button>
 
-      <div className="border-t border-[var(--border-color)] my-1 dark:border-gray-600" />
+      <div className="my-1 border-border border-t dark:border-gray-600" />
       <button
-        className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--hover-color)] flex items-center justify-between gap-2 dark:text-gray-200 dark:hover:bg-gray-700"
+        className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs hover:bg-hover dark:text-gray-200 dark:hover:bg-gray-700"
         onClick={() => {
           onCloseTab(buffer.id);
           onClose();
         }}
       >
         <span>Close</span>
-        <span className="text-[var(--text-lighter)] text-[10px] font-mono opacity-60">
+        <span className="font-mono text-[10px] text-text-lighter opacity-60">
           {getShortcutText("w", ["cmd"])}
         </span>
       </button>
       <button
-        className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--hover-color)] dark:text-gray-200 dark:hover:bg-gray-700"
+        className="w-full px-3 py-1.5 text-left text-xs hover:bg-hover dark:text-gray-200 dark:hover:bg-gray-700"
         onClick={() => {
           onCloseOthers(buffer.id);
           onClose();
@@ -112,7 +112,7 @@ const ContextMenu = ({
         Close Others
       </button>
       <button
-        className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--hover-color)] dark:text-gray-200 dark:hover:bg-gray-700"
+        className="w-full px-3 py-1.5 text-left text-xs hover:bg-hover dark:text-gray-200 dark:hover:bg-gray-700"
         onClick={() => {
           onCloseToRight(buffer.id);
           onClose();
@@ -121,7 +121,7 @@ const ContextMenu = ({
         Close to Right
       </button>
       <button
-        className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--hover-color)] dark:text-gray-200 dark:hover:bg-gray-700"
+        className="w-full px-3 py-1.5 text-left text-xs hover:bg-hover dark:text-gray-200 dark:hover:bg-gray-700"
         onClick={() => {
           onCloseAll();
           onClose();
@@ -337,7 +337,7 @@ const TabBar = ({
     // Create drag image
     const dragImage = document.createElement("div");
     dragImage.className =
-      "bg-[var(--primary-bg)] border border-[var(--border-color)] rounded px-2 py-1 text-xs font-mono shadow-lg";
+      "bg-primary-bg border border-border rounded px-2 py-1 text-xs font-mono shadow-lg";
     dragImage.textContent = buffer.name;
     dragImage.style.position = "absolute";
     dragImage.style.top = "-1000px";
@@ -399,7 +399,7 @@ const TabBar = ({
       <div className="relative">
         <div
           ref={tabBarRef}
-          className="flex bg-[var(--secondary-bg)] border-b border-[var(--border-color)] overflow-x-auto scrollbar-hidden"
+          className="scrollbar-hidden flex overflow-x-auto border-border border-b bg-secondary-bg"
         >
           {sortedBuffers.map((buffer, index) => {
             const isActive = buffer.id === activeBufferId;
@@ -414,7 +414,7 @@ const TabBar = ({
                 {showDropIndicator && (
                   <div className="relative flex items-center">
                     <div
-                      className="absolute   top-0 bottom-0 w-0.5 h-full bg-[var(--accent-color)] z-10"
+                      className="absolute top-0 bottom-0 z-10 h-full w-0.5 bg-accent"
                       style={{ height: "100%" }}
                     />
                   </div>
@@ -426,18 +426,9 @@ const TabBar = ({
                   draggable={true}
                   onDragStart={e => handleDragStart(e, index)}
                   onDragEnd={handleDragEnd}
-                  className={`
-                     group flex items-center gap-1.5 px-3 py-1.5 border-r border-[var(--border-color)]
-                     cursor-pointer select-none relative whitespace-nowrap flex-shrink-0
-                     hover:bg-[var(--hover-color)] transition-colors duration-150
-                     ${
-                       isActive
-                         ? "bg-[var(--primary-bg)] border-b-2 border-b-[var(--accent-color)]"
-                         : "bg-[var(--secondary-bg)]"
-                     }
-                     ${buffer.isPinned ? "border-l-2 border-l-blue-500" : ""}
-
-                   `}
+                  className={`group relative flex flex-shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap border-border border-r px-3 py-1.5 transition-colors duration-150 hover:bg-hover ${
+                    isActive ? "border-b-2 border-b-accent bg-primary-bg" : "bg-secondary-bg"
+                  } ${buffer.isPinned ? "border-l-2 border-l-blue-500" : ""} `}
                   style={{ minWidth: "120px", maxWidth: "200px" }}
                   onMouseDown={e => handleMouseDown(e, index)}
                   onClick={() => {
@@ -452,32 +443,29 @@ const TabBar = ({
                     {buffer.path === "extensions://language-servers" ? (
                       <Package size={12} className="text-blue-500" />
                     ) : buffer.isSQLite ? (
-                      <Database size={12} className="text-[var(--text-lighter)]" />
+                      <Database size={12} className="text-text-lighter" />
                     ) : (
                       <FileIcon
                         fileName={buffer.name}
                         isDir={false}
-                        className="text-[var(--text-lighter)]"
+                        className="text-text-lighter"
                         size={12}
                       />
                     )}
                   </div>
 
                   {/* Pin indicator */}
-                  {buffer.isPinned && <Pin size={8} className="text-blue-500 flex-shrink-0" />}
+                  {buffer.isPinned && <Pin size={8} className="flex-shrink-0 text-blue-500" />}
 
                   {/* File Name */}
                   <span
-                    className={`
-                       font-mono text-xs whitespace-nowrap overflow-hidden text-ellipsis flex-1
-                       ${isActive ? "text-[var(--text-color)]" : "text-[var(--text-light)]"}
-                     `}
+                    className={`flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs ${isActive ? "text-text" : "text-text-light"} `}
                     title={buffer.path}
                   >
                     {buffer.name}
-                    {buffer.isDirty && <span className="text-[var(--text-lighter)] ml-1">•</span>}
+                    {buffer.isDirty && <span className="ml-1 text-text-lighter">•</span>}
                     {isExternallyModified && !buffer.isDirty && (
-                      <span className="text-yellow-400 ml-1" title="Modified externally">
+                      <span className="ml-1 text-yellow-400" title="Modified externally">
                         ⚠
                       </span>
                     )}
@@ -490,16 +478,7 @@ const TabBar = ({
                         e.stopPropagation();
                         onTabClose(buffer.id, e);
                       }}
-                      className={`
-                       cursor-pointer flex-shrink-0 p-0.5 rounded hover:bg-[var(--hover-color)]
-                        transition-all duration-150 opacity-0 group-hover:opacity-100
-                        ${
-                          isActive
-                            ? "text-[var(--text-color)] opacity-70"
-                            : "text-[var(--text-lighter)]"
-                        }
-                        hover:text-[var(--text-color)] hover:opacity-100
-                      `}
+                      className={`flex-shrink-0 cursor-pointer rounded p-0.5 opacity-0 transition-all duration-150 hover:bg-hover group-hover:opacity-100 ${isActive ? "text-text opacity-70" : "text-text-lighter"}hover:text-text hover:opacity-100 `}
                       title={`Close ${buffer.name}`}
                     >
                       <X size={12} />
@@ -513,7 +492,7 @@ const TabBar = ({
           {dropTarget === sortedBuffers.length && draggedIndex !== null && !isDraggedOutside && (
             <div className="relative flex items-center">
               <div
-                className="absolute top-0 bottom-0 w-0.5 bg-[var(--accent-color)] z-10"
+                className="absolute top-0 bottom-0 z-10 w-0.5 bg-accent"
                 style={{ height: "100%" }}
               />
             </div>
@@ -530,7 +509,7 @@ const TabBar = ({
                 el.style.top = `${dragCurrentPosition.y - rect.height / 2}px`;
               }
             }}
-            className="cursor-pointer fixed z-50 px-2 py-1.5 rounded bg-[var(--primary-bg)] border border-[var(--border-color)] shadow-lg font-mono text-xs flex items-center gap-1.5"
+            className="fixed z-50 flex cursor-pointer items-center gap-1.5 rounded border border-border bg-primary-bg px-2 py-1.5 font-mono text-xs shadow-lg"
             style={{
               opacity: 0.95,
               minWidth: 60,
@@ -544,24 +523,24 @@ const TabBar = ({
               {sortedBuffers[draggedIndex].path === "extensions://language-servers" ? (
                 <Package size={12} className="text-blue-500" />
               ) : sortedBuffers[draggedIndex].isSQLite ? (
-                <Database size={12} className="text-[var(--text-lighter)]" />
+                <Database size={12} className="text-text-lighter" />
               ) : (
                 <FileIcon
                   fileName={sortedBuffers[draggedIndex].name}
                   isDir={false}
-                  className="text-[var(--text-lighter)]"
+                  className="text-text-lighter"
                   size={12}
                 />
               )}
             </span>
             {/* Pin indicator */}
             {sortedBuffers[draggedIndex].isPinned && (
-              <Pin size={8} className="text-blue-500 flex-shrink-0" />
+              <Pin size={8} className="flex-shrink-0 text-blue-500" />
             )}
             <span className="truncate">
               {sortedBuffers[draggedIndex].name}
               {sortedBuffers[draggedIndex].isDirty && (
-                <span className="text-[var(--text-lighter)] ml-1">•</span>
+                <span className="ml-1 text-text-lighter">•</span>
               )}
             </span>
           </div>

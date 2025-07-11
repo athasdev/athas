@@ -188,12 +188,12 @@ const CommandBar = ({
   }
 
   return (
-    <div className="fixed inset-0 flex items-start justify-center pt-20 z-50 pointer-events-none">
+    <div className="pointer-events-none fixed inset-0 z-50 flex items-start justify-center pt-20">
       <div
         data-command-bar
-        className="bg-[#1a1a1a] border border-[#333] rounded-lg shadow-2xl w-96 max-h-96 overflow-hidden pointer-events-auto"
+        className="pointer-events-auto max-h-96 w-96 overflow-hidden rounded-lg border border-[#333] bg-[#1a1a1a] shadow-2xl"
       >
-        <Command className="bg-transparent border-none shadow-none" shouldFilter={false}>
+        <Command className="border-none bg-transparent shadow-none" shouldFilter={false}>
           {/* Minimal Header */}
           <div className="flex items-center justify-between gap-3 px-4 py-3">
             <div className="flex items-center">
@@ -202,21 +202,21 @@ const CommandBar = ({
                 value={query}
                 onValueChange={setQuery}
                 placeholder="Type to search files..."
-                className="flex-1 bg-transparent text-[#e0e0e0] text-sm font-mono focus:outline-none placeholder-[#666] border-none h-auto py-0 shadow-none ring-0 focus:ring-0"
+                className="h-auto flex-1 border-none bg-transparent py-0 font-mono text-[#e0e0e0] text-sm placeholder-[#666] shadow-none ring-0 focus:outline-none focus:ring-0"
                 autoFocus
               />
             </div>
             <button
               onClick={onClose}
-              className="p-1 rounded hover:bg-[#333] transition-colors duration-150"
+              className="rounded p-1 transition-colors duration-150 hover:bg-[#333]"
             >
               <X size={16} className="text-[#666]" />
             </button>
           </div>
 
           {/* Command List */}
-          <CommandList className="max-h-80 overflow-y-auto custom-scrollbar bg-transparent">
-            <CommandEmpty className="px-4 py-6 text-center text-[#666] text-sm font-mono">
+          <CommandList className="custom-scrollbar max-h-80 overflow-y-auto bg-transparent">
+            <CommandEmpty className="px-4 py-6 text-center font-mono text-[#666] text-sm">
               {query ? "No matching files found" : "No files available"}
             </CommandEmpty>
 
@@ -228,17 +228,17 @@ const CommandBar = ({
                     key={`recent-${file.path}`}
                     value={`${file.name} ${file.path}`}
                     onSelect={() => handleFileSelect(file.path)}
-                    className="px-4 py-2 flex items-center gap-3 cursor-pointer aria-selected:bg-[#2a2a2a] aria-selected:text-[#e0e0e0] hover:bg-[#2a2a2a] font-mono m-0 rounded-none border-none bg-transparent transition-colors duration-150"
+                    className="m-0 flex cursor-pointer items-center gap-3 rounded-none border-none bg-transparent px-4 py-2 font-mono transition-colors duration-150 hover:bg-[#2a2a2a] aria-selected:bg-[#2a2a2a] aria-selected:text-[#e0e0e0]"
                   >
                     <File size={16} className="text-[#8ab4f8]" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-[#e0e0e0] truncate">{file.name}</div>
-                      <div className="text-xs text-[#666] truncate">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[#e0e0e0] text-sm">{file.name}</div>
+                      <div className="truncate text-[#666] text-xs">
                         {getRelativePath(file.path)}
                       </div>
                     </div>
                     {index < 3 && (
-                      <div className="w-1 h-1 bg-[#8ab4f8] rounded-full opacity-60"></div>
+                      <div className="h-1 w-1 rounded-full bg-[#8ab4f8] opacity-60"></div>
                     )}
                   </CommandItem>
                 ))}
@@ -253,12 +253,12 @@ const CommandBar = ({
                     key={`other-${file.path}`}
                     value={`${file.name} ${file.path}`}
                     onSelect={() => handleFileSelect(file.path)}
-                    className="px-4 py-2 flex items-center gap-3 cursor-pointer aria-selected:bg-[#2a2a2a] aria-selected:text-[#e0e0e0] hover:bg-[#2a2a2a] font-mono m-0 rounded-none border-none bg-transparent transition-colors duration-150"
+                    className="m-0 flex cursor-pointer items-center gap-3 rounded-none border-none bg-transparent px-4 py-2 font-mono transition-colors duration-150 hover:bg-[#2a2a2a] aria-selected:bg-[#2a2a2a] aria-selected:text-[#e0e0e0]"
                   >
                     <File size={16} className="text-[#666]" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-[#e0e0e0] truncate">{file.name}</div>
-                      <div className="text-xs text-[#666] truncate">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[#e0e0e0] text-sm">{file.name}</div>
+                      <div className="truncate text-[#666] text-xs">
                         {getRelativePath(file.path)}
                       </div>
                     </div>

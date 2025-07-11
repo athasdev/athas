@@ -18,10 +18,10 @@ export default function Button({
     "inline-flex items-center justify-center font-mono font-medium transition-all duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed rounded-md";
 
   const variants = {
-    default: "bg-[var(--hover-color)] text-[var(--text-color)] hover:bg-[var(--selected-color)]",
-    ghost: "bg-transparent text-[var(--text-color)] hover:bg-[var(--hover-color)]",
-    outline: "bg-transparent text-[var(--text-color)] hover:bg-[var(--hover-color)]",
-    vim: "bg-transparent text-[var(--text-color)] hover:bg-[var(--hover-color)] data-[active=true]:bg-blue-500/20 data-[active=true]:text-blue-600 data-[active=true]:border-blue-500/30",
+    default: "bg-hover text-text hover:bg-selected",
+    ghost: "bg-transparent text-text hover:bg-hover",
+    outline: "bg-transparent text-text hover:bg-hover",
+    vim: "bg-transparent text-text hover:bg-hover data-[active=true]:bg-blue-500/20 data-[active=true]:text-blue-600 data-[active=true]:border-blue-500/30",
   };
 
   const sizes = {
