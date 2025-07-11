@@ -18,7 +18,11 @@ pub struct AppState {
 
 pub async fn start_proxy_server_with_ws(
     proxy_port: u16,
-) -> Result<(mpsc::UnboundedReceiver<InterceptorMessage>, WsState)> {
+) -> Result<(
+    mpsc::UnboundedReceiver<InterceptorMessage>,
+    WsState,
+    tokio::task::JoinHandle<()>,
+)> {
     let (tx, rx) = mpsc::unbounded_channel::<InterceptorMessage>();
     let interceptor_state = InterceptorState::new(tx);
     let ws_state = WsState::new();
@@ -44,13 +48,13 @@ pub async fn start_proxy_server_with_ws(
     );
     info!("WebSocket endpoint: ws://localhost:{}/ws", proxy_port);
 
-    tokio::spawn(async move {
+    let server_handle = tokio::spawn(async move {
         if let Err(e) = axum::serve(listener, app).await {
             error!("Proxy server error: {}", e);
         }
     });
 
-    Ok((rx, ws_state))
+    Ok((rx, ws_state, server_handle))
 }
 
 async fn ws_handler_wrapper(

@@ -20,6 +20,7 @@ pub struct ClaudeCodeBridge {
     claude_process: Option<Child>,
     pub claude_stdin: Option<tokio::process::ChildStdin>,
     interceptor_handle: Option<tokio::task::JoinHandle<()>>,
+    server_handle: Option<tokio::task::JoinHandle<()>>,
     ws_connected: bool,
     app_handle: AppHandle,
 }
@@ -30,6 +31,7 @@ impl ClaudeCodeBridge {
             claude_process: None,
             claude_stdin: None,
             interceptor_handle: None,
+            server_handle: None,
             ws_connected: false,
             app_handle,
         }
@@ -45,7 +47,7 @@ impl ClaudeCodeBridge {
         let proxy_port = 3456;
 
         // Start the interceptor proxy server
-        let (rx, ws_state) = start_proxy_server_with_ws(proxy_port).await?;
+        let (rx, ws_state, server_handle) = start_proxy_server_with_ws(proxy_port).await?;
 
         // Create channels for message distribution
         let (broadcast_tx, broadcast_rx) = mpsc::unbounded_channel::<InterceptorMessage>();
@@ -67,6 +69,7 @@ impl ClaudeCodeBridge {
         });
 
         self.interceptor_handle = Some(message_handler);
+        self.server_handle = Some(server_handle);
         self.ws_connected = true;
 
         log::info!("Interceptor started successfully on port {}", proxy_port);
@@ -149,6 +152,11 @@ impl ClaudeCodeBridge {
 
         // Stop interceptor
         if let Some(handle) = self.interceptor_handle.take() {
+            handle.abort();
+        }
+
+        // Stop the server
+        if let Some(handle) = self.server_handle.take() {
             handle.abort();
         }
 
