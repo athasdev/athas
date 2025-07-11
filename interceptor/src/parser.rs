@@ -20,6 +20,55 @@ impl ParsedResponse {
         }
     }
 
+    fn append_partial_json_to_last_block(&mut self, partial_json: &str) {
+        if let Some(content) = &mut self.content {
+            if let Some(last_block) = content.last_mut() {
+                if last_block.content_type == "tool_use" {
+                    // For tool_use blocks, accumulate partial JSON into a temporary string
+                    // We'll parse it when the block is complete
+                    match &mut last_block.input {
+                        Some(serde_json::Value::String(json_str)) => {
+                            json_str.push_str(partial_json);
+                        }
+                        Some(_) => {
+                            // Already parsed, shouldn't happen
+                            log::warn!("Unexpected: tool_use block already has parsed input");
+                        }
+                        None => {
+                            last_block.input =
+                                Some(serde_json::Value::String(partial_json.to_string()));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn finalize_tool_use_block(&mut self) {
+        if let Some(content) = &mut self.content {
+            if let Some(last_block) = content.last_mut() {
+                if last_block.content_type == "tool_use" {
+                    // Parse accumulated JSON string into proper JSON value
+                    if let Some(serde_json::Value::String(json_str)) = &last_block.input {
+                        match serde_json::from_str::<serde_json::Value>(json_str) {
+                            Ok(parsed_json) => {
+                                last_block.input = Some(parsed_json);
+                            }
+                            Err(e) => {
+                                log::error!(
+                                    "Failed to parse tool_use input JSON: {} - Error: {}",
+                                    json_str,
+                                    e
+                                );
+                                // Keep the raw string on error
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fn set_stop_info(&mut self, stop_reason: Option<String>, stop_sequence: Option<String>) {
         if let Some(reason) = stop_reason {
             self.stop_reason = Some(reason);
@@ -50,6 +99,9 @@ fn process_content_block_start(chunk: &StreamingChunk, response: &mut ParsedResp
 fn process_content_block_delta(delta: &Delta, response: &mut ParsedResponse) {
     if let Some(text) = &delta.text {
         response.append_text_to_last_block(text);
+    }
+    if let Some(partial_json) = &delta.partial_json {
+        response.append_partial_json_to_last_block(partial_json);
     }
 }
 
@@ -92,6 +144,11 @@ pub fn parse_streaming_response(
                                 (&chunk.delta, &mut final_response)
                             {
                                 process_message_delta(delta, response);
+                            }
+                        }
+                        ChunkType::ContentBlockStop => {
+                            if let Some(response) = &mut final_response {
+                                response.finalize_tool_use_block();
                             }
                         }
                         _ => {}

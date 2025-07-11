@@ -3,7 +3,10 @@ use crate::{
     helpers::{extract_response_content, log_assistant_response, log_user_messages},
     parser::{parse_non_streaming_response, parse_streaming_response},
     state::InterceptorState,
-    types::{InterceptedRequest, InterceptorMessage, ParsedRequest, StreamingChunk},
+    types::{
+        ChunkType, ContentBlock, InterceptedRequest, InterceptorMessage, ParsedRequest,
+        StreamingChunk,
+    },
 };
 use anyhow::{Context, Result};
 use axum::{
@@ -125,6 +128,9 @@ async fn process_streaming_response(
     tokio::spawn(async move {
         let mut captured_response = String::new();
         let mut stream = response.bytes_stream();
+        let mut tool_json_accumulator: Option<String> = None;
+        let mut current_tool_name: Option<String> = None;
+        let mut current_tool_id: Option<String> = None;
 
         while let Some(chunk_result) = stream.next().await {
             match chunk_result {
@@ -136,6 +142,62 @@ async fn process_streaming_response(
                     for line in chunk_str.lines() {
                         if let Some(data) = line.strip_prefix("data: ") {
                             if let Ok(chunk) = serde_json::from_str::<StreamingChunk>(data) {
+                                // Handle tool use accumulation
+                                match chunk.chunk_type {
+                                    ChunkType::ContentBlockStart => {
+                                        if let Some(ref content_block) = chunk.content_block {
+                                            if content_block.content_type == "tool_use" {
+                                                // Starting a new tool use block
+                                                tool_json_accumulator = Some(String::new());
+                                                current_tool_name = content_block.name.clone();
+                                                current_tool_id = content_block.id.clone();
+                                            }
+                                        }
+                                    }
+                                    ChunkType::ContentBlockDelta => {
+                                        if let Some(ref delta) = chunk.delta {
+                                            if let Some(ref partial_json) = delta.partial_json {
+                                                if let Some(ref mut accumulator) =
+                                                    tool_json_accumulator
+                                                {
+                                                    accumulator.push_str(partial_json);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ChunkType::ContentBlockStop => {
+                                        // Finalize tool use block with accumulated JSON
+                                        if let Some(json_str) = tool_json_accumulator.take() {
+                                            if let Ok(json_value) =
+                                                serde_json::from_str::<serde_json::Value>(&json_str)
+                                            {
+                                                // Create a synthetic content_block_start with the complete input
+                                                let complete_block = StreamingChunk {
+                                                    chunk_type: ChunkType::ContentBlockStart,
+                                                    index: chunk.index,
+                                                    delta: None,
+                                                    content_block: Some(ContentBlock {
+                                                        content_type: "tool_use".to_string(),
+                                                        text: None,
+                                                        id: current_tool_id.clone(),
+                                                        name: current_tool_name.clone(),
+                                                        input: Some(json_value),
+                                                        content: None,
+                                                        tool_use_id: None,
+                                                    }),
+                                                    message: None,
+                                                    error: None,
+                                                };
+                                                // Send the complete tool use block
+                                                state.send_stream_chunk(request_id, complete_block);
+                                            }
+                                            current_tool_name = None;
+                                            current_tool_id = None;
+                                        }
+                                    }
+                                    _ => {}
+                                }
+
                                 state.send_stream_chunk(request_id, chunk);
                             }
                         }

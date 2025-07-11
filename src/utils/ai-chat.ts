@@ -222,7 +222,8 @@ export const getChatCompletionStream = async (
   onError: (error: string) => void,
   conversationHistory?: AIMessage[],
   onNewMessage?: () => void,
-  onToolUse?: (toolName: string) => void,
+  onToolUse?: (toolName: string, toolInput?: any) => void,
+  onToolComplete?: (toolName: string) => void,
 ): Promise<void> => {
   if (!isTauri()) {
     onError("Not in Tauri environment, skipping API call");
@@ -247,6 +248,7 @@ export const getChatCompletionStream = async (
         onError,
         onNewMessage,
         onToolUse,
+        onToolComplete,
       );
       return;
     }
@@ -588,7 +590,8 @@ interface ClaudeCodeHandlers {
   onComplete: () => void;
   onError: (error: string) => void;
   onNewMessage?: () => void;
-  onToolUse?: (toolName: string) => void;
+  onToolUse?: (toolName: string, toolInput?: any) => void;
+  onToolComplete?: (toolName: string) => void;
 }
 
 interface ClaudeListeners {
@@ -606,6 +609,7 @@ class ClaudeCodeStreamHandler {
   private lastActivityTime = Date.now();
   private messageCount = 0;
   private isFirstMessage = true;
+  private currentToolName: string | null = null;
 
   constructor(private handlers: ClaudeCodeHandlers) {}
 
@@ -704,9 +708,18 @@ class ClaudeCodeStreamHandler {
 
     // Handle tool use blocks
     if (chunk.type === "content_block_start" && chunk.content_block?.type === "tool_use") {
+      this.currentToolName = chunk.content_block.name || "unknown";
       if (this.handlers.onToolUse) {
-        this.handlers.onToolUse(chunk.content_block.name || "unknown");
+        this.handlers.onToolUse(this.currentToolName!, chunk.content_block.input);
       }
+    }
+
+    // Handle tool completion
+    if (chunk.type === "content_block_stop") {
+      if (this.currentToolName && this.handlers.onToolComplete) {
+        this.handlers.onToolComplete(this.currentToolName!);
+      }
+      this.currentToolName = null;
     }
 
     if (chunk.delta?.text) {
@@ -815,7 +828,8 @@ async function handleClaudeCodeStream(
   onComplete: () => void,
   onError: (error: string) => void,
   onNewMessage?: () => void,
-  onToolUse?: (toolName: string) => void,
+  onToolUse?: (toolName: string, toolInput?: any) => void,
+  onToolComplete?: (toolName: string) => void,
 ): Promise<void> {
   const handler = new ClaudeCodeStreamHandler({
     onChunk,
@@ -823,6 +837,7 @@ async function handleClaudeCodeStream(
     onError,
     onNewMessage,
     onToolUse,
+    onToolComplete,
   });
   await handler.start(userMessage, context);
 }

@@ -33,6 +33,10 @@ export const mapLanguage = (lang: string): string => {
 
 // Get relative time string
 export const getRelativeTime = (date: Date): string => {
+  if (!date || !(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "";
+  }
+
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / (1000 * 60));
@@ -48,5 +52,8 @@ export const getRelativeTime = (date: Date): string => {
 
 // Format time for display
 export const formatTime = (date: Date): string => {
+  if (!date || !(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "";
+  }
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };

@@ -133,6 +133,21 @@ impl ClaudeCodeBridge {
                                         let _ = app_handle.emit("claude-chunk", text);
                                     }
                                 }
+                                "content_block_start" => {
+                                    // Check if it's a tool use block
+                                    if let Some(block) = json_msg.get("content_block") {
+                                        if let Some(block_type) =
+                                            block.get("type").and_then(|t| t.as_str())
+                                        {
+                                            if block_type == "tool_use" {
+                                                // Emit tool use event with name and input
+                                                let _ = app_handle.emit("claude-tool-use", block);
+                                            }
+                                        }
+                                    }
+                                    // Also emit the raw message
+                                    let _ = app_handle.emit("claude-message", json_msg);
+                                }
                                 "message_stop" => {
                                     // Don't emit claude-complete here - let the interceptor handle it
                                     // This just means one message is done, not the whole conversation

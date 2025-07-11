@@ -7,7 +7,6 @@ import {
   Plus,
   Send,
   Square,
-  Wrench,
   X,
 } from "lucide-react";
 import type React from "react";
@@ -29,6 +28,7 @@ import Button from "../ui/button";
 import ChatHistoryModal from "./chat-history-modal";
 import ClaudeStatusIndicator from "./claude-status";
 import MarkdownRenderer from "./markdown-renderer";
+import ToolCallDisplay from "./tool-call-display";
 import type { AIChatProps, Chat, ContextInfo, Message } from "./types";
 import { formatTime } from "./utils";
 
@@ -102,6 +102,10 @@ export default function AIChat({
           messages: chat.messages.map((msg: any) => ({
             ...msg,
             timestamp: new Date(msg.timestamp),
+            toolCalls: msg.toolCalls?.map((tc: any) => ({
+              ...tc,
+              timestamp: new Date(tc.timestamp),
+            })),
           })),
         }));
         setChats(parsedChats);
@@ -499,6 +503,35 @@ export default function AIChat({
           setStreamingMessageId(newMessageId);
         },
         // onToolUse - mark the current message as tool use
+        (toolName: string, toolInput?: any) => {
+          setChats(prev =>
+            prev.map(chat =>
+              chat.id === chatId
+                ? {
+                    ...chat,
+                    messages: chat.messages.map(msg =>
+                      msg.id === currentAssistantMessageId
+                        ? {
+                            ...msg,
+                            isToolUse: true,
+                            toolName,
+                            toolCalls: [
+                              ...(msg.toolCalls || []),
+                              {
+                                name: toolName,
+                                input: toolInput,
+                                timestamp: new Date(),
+                              },
+                            ],
+                          }
+                        : msg,
+                    ),
+                  }
+                : chat,
+            ),
+          );
+        },
+        // onToolComplete - mark tool as complete
         (toolName: string) => {
           setChats(prev =>
             prev.map(chat =>
@@ -507,7 +540,14 @@ export default function AIChat({
                     ...chat,
                     messages: chat.messages.map(msg =>
                       msg.id === currentAssistantMessageId
-                        ? { ...msg, isToolUse: true, toolName }
+                        ? {
+                            ...msg,
+                            toolCalls: msg.toolCalls?.map(tc =>
+                              tc.name === toolName && !tc.isComplete
+                                ? { ...tc, isComplete: true }
+                                : tc,
+                            ),
+                          }
                         : msg,
                     ),
                   }
@@ -704,10 +744,8 @@ export default function AIChat({
                 {/* AI Message Header */}
                 <div className="mb-2 flex items-center gap-2">
                   <div className="flex items-center gap-1" style={{ color: "var(--text-lighter)" }}>
-                    {message.isToolUse ? <Wrench size={10} /> : <Bot size={10} />}
-                    <span>
-                      {message.isToolUse ? `tool: ${message.toolName || "unknown"}` : "ai"}
-                    </span>
+                    <Bot size={10} />
+                    <span>ai</span>
                     {message.isStreaming && (
                       <div className="ml-1 flex items-center gap-1">
                         <span className="h-1 w-1 animate-pulse rounded-full bg-text-lighter" />
@@ -728,16 +766,32 @@ export default function AIChat({
                   </span>
                 </div>
 
-                {/* AI Message Content */}
-                <div
-                  className={`leading-relaxed pr-1 ${message.isToolUse ? "pl-4 border-l-2 border-[var(--border-color)]" : ""}`}
-                >
-                  <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
+                {/* Tool Calls */}
+                {message.toolCalls && message.toolCalls.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {message.toolCalls!.map((toolCall, index) => (
+                      <ToolCallDisplay
+                        key={`${message.id}-tool-${index}`}
+                        toolName={toolCall.name}
+                        input={toolCall.input}
+                        output={toolCall.output}
+                        error={toolCall.error}
+                        isStreaming={!toolCall.isComplete && message.isStreaming}
+                      />
+                    ))}
+                  </div>
+                )}
 
-                  {message.isStreaming && (
-                    <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-text-lighter" />
-                  )}
-                </div>
+                {/* AI Message Content */}
+                {message.content && (
+                  <div className="leading-relaxed pr-1">
+                    <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
+
+                    {message.isStreaming && (
+                      <span className="inline-block w-2 h-4 animate-pulse ml-1 bg-[var(--text-lighter)]" />
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

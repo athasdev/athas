@@ -218,6 +218,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
     const highlightRef = useRef<HTMLPreElement | null>(null);
     const lineNumbersRef = useRef<HTMLDivElement | null>(null);
     const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const mountedRef = useRef(true);
 
     // Store subscriptions - only what we need
     const language = useCodeEditorStore(state => state.language);
@@ -330,10 +331,22 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       textarea: textareaRef.current,
     }));
 
+    // Cleanup on unmount
+    useEffect(() => {
+      return () => {
+        mountedRef.current = false;
+      };
+    }, []);
+
     // LSP completion handler
     const handleLspCompletion = useCallback(
       async (cursorPos: number) => {
-        if (!getCompletions || !filePath || !isLanguageSupported?.(filePath)) {
+        if (
+          !mountedRef.current ||
+          !getCompletions ||
+          !filePath ||
+          !isLanguageSupported?.(filePath)
+        ) {
           return;
         }
 
@@ -346,6 +359,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
 
         try {
           const completions = await getCompletions(filePath, line, character);
+          if (!mountedRef.current) return;
           if (completions.length > 0) {
             setLspCompletions(completions);
             setSelectedLspIndex(0);
@@ -443,6 +457,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
 
         hoverTimeoutRef.current = setTimeout(async () => {
           const textarea = e.currentTarget;
+          if (!textarea) return;
           const rect = textarea.getBoundingClientRect();
           const x = e.clientX - rect.left;
           const y = e.clientY - rect.top;
