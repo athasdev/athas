@@ -7,6 +7,7 @@ import {
   Plus,
   Send,
   Square,
+  Wrench,
   X,
 } from "lucide-react";
 import type React from "react";
@@ -402,6 +403,7 @@ export default function AIChat({
         }));
 
       const enhancedMessage = userMessage.content;
+      let currentAssistantMessageId = assistantMessageId;
 
       await getChatCompletionStream(
         currentProviderId,
@@ -416,7 +418,7 @@ export default function AIChat({
                 ? {
                     ...chat,
                     messages: chat.messages.map(msg =>
-                      msg.id === assistantMessageId
+                      msg.id === currentAssistantMessageId
                         ? { ...msg, content: msg.content + chunk }
                         : msg,
                     ),
@@ -433,7 +435,7 @@ export default function AIChat({
                 ? {
                     ...chat,
                     messages: chat.messages.map(msg =>
-                      msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg,
+                      msg.id === currentAssistantMessageId ? { ...msg, isStreaming: false } : msg,
                     ),
                     lastMessageAt: new Date(),
                   }
@@ -453,7 +455,7 @@ export default function AIChat({
                 ? {
                     ...chat,
                     messages: chat.messages.map(msg =>
-                      msg.id === assistantMessageId
+                      msg.id === currentAssistantMessageId
                         ? {
                             ...msg,
                             content: msg.content || `Error: ${error}`,
@@ -470,6 +472,49 @@ export default function AIChat({
           abortControllerRef.current = null;
         },
         conversationContext, // Pass conversation history for context
+        // onNewMessage - create a new assistant message
+        () => {
+          const newMessageId = Date.now().toString();
+          const newAssistantMessage: Message = {
+            id: newMessageId,
+            content: "",
+            role: "assistant",
+            timestamp: new Date(),
+            isStreaming: true,
+          };
+
+          setChats(prev =>
+            prev.map(chat =>
+              chat.id === chatId
+                ? {
+                    ...chat,
+                    messages: [...chat.messages, newAssistantMessage],
+                  }
+                : chat,
+            ),
+          );
+
+          // Update the current message ID to append chunks to the new message
+          currentAssistantMessageId = newMessageId;
+          setStreamingMessageId(newMessageId);
+        },
+        // onToolUse - mark the current message as tool use
+        (toolName: string) => {
+          setChats(prev =>
+            prev.map(chat =>
+              chat.id === chatId
+                ? {
+                    ...chat,
+                    messages: chat.messages.map(msg =>
+                      msg.id === currentAssistantMessageId
+                        ? { ...msg, isToolUse: true, toolName }
+                        : msg,
+                    ),
+                  }
+                : chat,
+            ),
+          );
+        },
       );
     } catch (error) {
       console.error("Failed to start streaming:", error);
@@ -659,8 +704,10 @@ export default function AIChat({
                 {/* AI Message Header */}
                 <div className="mb-2 flex items-center gap-2">
                   <div className="flex items-center gap-1" style={{ color: "var(--text-lighter)" }}>
-                    <Bot size={10} />
-                    <span>ai</span>
+                    {message.isToolUse ? <Wrench size={10} /> : <Bot size={10} />}
+                    <span>
+                      {message.isToolUse ? `tool: ${message.toolName || "unknown"}` : "ai"}
+                    </span>
                     {message.isStreaming && (
                       <div className="ml-1 flex items-center gap-1">
                         <span className="h-1 w-1 animate-pulse rounded-full bg-text-lighter" />
@@ -682,7 +729,9 @@ export default function AIChat({
                 </div>
 
                 {/* AI Message Content */}
-                <div className="pr-1 leading-relaxed">
+                <div
+                  className={`leading-relaxed pr-1 ${message.isToolUse ? "pl-4 border-l-2 border-[var(--border-color)]" : ""}`}
+                >
                   <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
 
                   {message.isStreaming && (

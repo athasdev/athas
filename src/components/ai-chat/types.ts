@@ -7,6 +7,8 @@ export interface Message {
   role: "user" | "assistant" | "system";
   timestamp: Date;
   isStreaming?: boolean;
+  isToolUse?: boolean;
+  toolName?: string;
 }
 
 export interface Chat {

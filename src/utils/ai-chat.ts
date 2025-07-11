@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import type { AIMessage } from "@/types/ai-chat";
 import type { ClaudeStatus, InterceptorMessage } from "@/types/claude";
 import { getModelById, getProviderById } from "../types/ai-provider";
@@ -31,8 +33,6 @@ interface ContextInfo {
 export const getProviderApiToken = async (providerId: string): Promise<string | null> => {
   try {
     if (isTauri()) {
-      const { invoke } = await import("@tauri-apps/api/core");
-
       // For now, use the same storage key but we could extend this
       // to support multiple providers with different storage keys
       const storageKey = providerId === "openai" ? "get_github_token" : `get_${providerId}_token`;
@@ -60,8 +60,6 @@ export const getProviderApiToken = async (providerId: string): Promise<string | 
 export const storeProviderApiToken = async (providerId: string, token: string): Promise<void> => {
   try {
     if (isTauri()) {
-      const { invoke } = await import("@tauri-apps/api/core");
-
       // For now, use the same storage method but we could extend this
       const storageKey =
         providerId === "openai" ? "store_github_token" : `store_${providerId}_token`;
@@ -83,8 +81,6 @@ export const storeProviderApiToken = async (providerId: string, token: string): 
 export const removeProviderApiToken = async (providerId: string): Promise<void> => {
   try {
     if (isTauri()) {
-      const { invoke } = await import("@tauri-apps/api/core");
-
       const storageKey =
         providerId === "openai" ? "remove_github_token" : `remove_${providerId}_token`;
 
@@ -225,6 +221,8 @@ export const getChatCompletionStream = async (
   onComplete: () => void,
   onError: (error: string) => void,
   conversationHistory?: AIMessage[],
+  onNewMessage?: () => void,
+  onToolUse?: (toolName: string) => void,
 ): Promise<void> => {
   if (!isTauri()) {
     onError("Not in Tauri environment, skipping API call");
@@ -241,7 +239,15 @@ export const getChatCompletionStream = async (
 
     // Handle Claude Code provider differently
     if (providerId === "claude-code") {
-      await handleClaudeCodeStream(userMessage, context, onChunk, onComplete, onError);
+      await handleClaudeCodeStream(
+        userMessage,
+        context,
+        onChunk,
+        onComplete,
+        onError,
+        onNewMessage,
+        onToolUse,
+      );
       return;
     }
 
@@ -577,6 +583,230 @@ Please provide:
   return getOpenAIChatCompletion(explainPrompt, context);
 };
 
+interface ClaudeCodeHandlers {
+  onChunk: (chunk: string) => void;
+  onComplete: () => void;
+  onError: (error: string) => void;
+  onNewMessage?: () => void;
+  onToolUse?: (toolName: string) => void;
+}
+
+interface ClaudeListeners {
+  chunk?: () => void;
+  interceptor?: () => void;
+  stdout?: () => void;
+  stderr?: () => void;
+}
+
+class ClaudeCodeStreamHandler {
+  private currentStopReason: string | null = null;
+  private listeners: ClaudeListeners = {};
+  private timeout?: NodeJS.Timeout;
+  private expectingMoreMessages = false;
+  private lastActivityTime = Date.now();
+  private messageCount = 0;
+  private isFirstMessage = true;
+
+  constructor(private handlers: ClaudeCodeHandlers) {}
+
+  async start(userMessage: string, context: ContextInfo): Promise<void> {
+    try {
+      await this.ensureClaudeCodeRunning();
+      const fullMessage = this.buildMessage(userMessage, context);
+      await this.setupListeners();
+      await invoke("send_claude_input", { input: fullMessage });
+      this.setupTimeout();
+    } catch (error) {
+      console.error("❌ Claude Code error:", error);
+      this.handlers.onError(`Claude Code error: ${error}`);
+    }
+  }
+
+  private async ensureClaudeCodeRunning(): Promise<void> {
+    const status = await invoke<ClaudeStatus>("get_claude_status");
+
+    if (!status.running) {
+      console.log("🚀 Starting Claude Code...");
+      const startStatus = await invoke<ClaudeStatus>("start_claude_code");
+
+      if (!startStatus.running) {
+        throw new Error("Failed to start Claude Code. Please check your setup.");
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  private buildMessage(userMessage: string, context: ContextInfo): string {
+    const contextPrompt = buildContextPrompt(context);
+    return contextPrompt ? `${contextPrompt}\n\n${userMessage}` : userMessage;
+  }
+
+  private async setupListeners(): Promise<void> {
+    this.listeners.chunk = await listen<string>("claude-chunk", event => {
+      this.lastActivityTime = Date.now();
+      this.handlers.onChunk(event.payload);
+    });
+
+    this.listeners.interceptor = await listen<InterceptorMessage>("claude-message", event => {
+      this.handleInterceptorMessage(event.payload);
+    });
+
+    this.listeners.stdout = await listen<string>("claude-stdout", event => {
+      console.log("Claude stdout:", event.payload);
+    });
+
+    this.listeners.stderr = await listen<string>("claude-stderr", event => {
+      console.log("Claude stderr:", event.payload);
+    });
+  }
+
+  private handleInterceptorMessage(message: InterceptorMessage): void {
+    console.log(
+      "📡 Interceptor message type:",
+      message.type,
+      "request_id:",
+      message.request_id || message.data?.id,
+    );
+
+    switch (message.type) {
+      case "stream_chunk":
+        this.handleStreamChunk(message.chunk);
+        break;
+      case "response":
+        this.handleResponse(message.data?.parsed_response);
+        break;
+      case "error":
+        console.log("❌ Error from interceptor, cleaning up...");
+        this.cleanup();
+        this.handlers.onError(message.error || "Unknown error from interceptor");
+        break;
+    }
+  }
+
+  private handleStreamChunk(chunk: any): void {
+    if (!chunk) return;
+
+    this.lastActivityTime = Date.now();
+
+    if (chunk.type === "message_start" && chunk.message) {
+      this.currentStopReason = chunk.message.stop_reason || null;
+      console.log("📋 message_start with stop_reason:", this.currentStopReason);
+
+      // If this is not the first message, signal a new message
+      if (!this.isFirstMessage && this.handlers.onNewMessage) {
+        console.log("📝 Starting new message in conversation");
+        this.handlers.onNewMessage();
+      }
+      this.isFirstMessage = false;
+      this.messageCount++;
+    }
+
+    // Handle tool use blocks
+    if (chunk.type === "content_block_start" && chunk.content_block?.type === "tool_use") {
+      if (this.handlers.onToolUse) {
+        this.handlers.onToolUse(chunk.content_block.name || "unknown");
+      }
+    }
+
+    if (chunk.delta?.text) {
+      this.handlers.onChunk(chunk.delta.text);
+    }
+
+    if (chunk.type === "message_stop") {
+      console.log("🛑 message_stop in stream_chunk, stop_reason was:", this.currentStopReason);
+
+      if (this.currentStopReason === "tool_use") {
+        console.log("🔧 Tool use detected, expecting more messages...");
+        this.expectingMoreMessages = true;
+        this.currentStopReason = null;
+      } else if (this.expectingMoreMessages) {
+        console.log("📝 Follow-up message complete after tool use");
+        this.expectingMoreMessages = false;
+        // Don't cleanup yet - there might be more messages
+      } else {
+        console.log(
+          "⏳ Message complete, but not cleaning up yet - waiting for explicit completion signal",
+        );
+        // Don't cleanup on message_stop anymore
+      }
+      this.currentStopReason = null;
+    }
+  }
+
+  private handleResponse(response: any): void {
+    if (!response) return;
+
+    this.lastActivityTime = Date.now();
+
+    console.log("📨 Response data:", {
+      stop_reason: response.stop_reason,
+      usage: response.usage,
+      content_blocks: response.content?.length,
+    });
+
+    if (response.content) {
+      for (const block of response.content) {
+        if (block.type === "text" && block.text) {
+          this.handlers.onChunk(block.text);
+        }
+      }
+    }
+
+    if (response.stop_reason === "tool_use") {
+      console.log("🔧 Tool use detected in response, expecting more messages...");
+      this.expectingMoreMessages = true;
+    } else {
+      console.log("📨 Response received, but not cleaning up - waiting for activity timeout");
+      // Don't cleanup immediately - wait for inactivity timeout
+    }
+  }
+
+  private setupTimeout(): void {
+    // Check for inactivity every second
+    const checkInactivity = () => {
+      const now = Date.now();
+      const inactiveTime = now - this.lastActivityTime;
+
+      // If no activity for 5 seconds and not expecting more messages, complete
+      if (inactiveTime > 5000 && !this.expectingMoreMessages) {
+        console.log("✅ No activity for 5 seconds, conversation appears complete");
+        this.cleanup();
+        this.handlers.onComplete();
+        return;
+      }
+
+      // If still expecting messages but no activity for 30 seconds, timeout
+      if (inactiveTime > 30000) {
+        console.log("⏰ Timeout: No activity for 30 seconds");
+        this.cleanup();
+        this.handlers.onError("Request timed out - no activity");
+        return;
+      }
+
+      // Continue checking
+      this.timeout = setTimeout(checkInactivity, 1000);
+    };
+
+    this.timeout = setTimeout(checkInactivity, 1000);
+  }
+
+  private cleanup(): void {
+    console.log("Cleaning up Claude Code listeners...");
+
+    if (this.timeout) {
+      clearTimeout(this.timeout);
+      this.timeout = undefined;
+    }
+
+    Object.values(this.listeners).forEach(unlisten => {
+      if (unlisten) unlisten();
+    });
+
+    this.listeners = {};
+  }
+}
+
 // Handle Claude Code streaming
 async function handleClaudeCodeStream(
   userMessage: string,
@@ -584,175 +814,15 @@ async function handleClaudeCodeStream(
   onChunk: (chunk: string) => void,
   onComplete: () => void,
   onError: (error: string) => void,
+  onNewMessage?: () => void,
+  onToolUse?: (toolName: string) => void,
 ): Promise<void> {
-  try {
-    const { invoke } = await import("@tauri-apps/api/core");
-    const { listen } = await import("@tauri-apps/api/event");
-
-    // Check if Claude Code is running
-    const status = await invoke<ClaudeStatus>("get_claude_status");
-
-    if (!status.running) {
-      // Try to start Claude Code
-      console.log("🚀 Starting Claude Code...");
-      const startStatus = await invoke<ClaudeStatus>("start_claude_code");
-
-      if (!startStatus.running) {
-        onError("Failed to start Claude Code. Please check your setup.");
-        return;
-      }
-
-      // Wait a bit for the process to stabilize
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
-    // Prepare the message with context
-    const contextPrompt = buildContextPrompt(context);
-
-    // Build message for Claude Code CLI
-    // Claude maintains its own conversation state, so we only send:
-    // 1. Context (if available)
-    // 2. User message
-    let fullMessage = "";
-
-    // Add context if available
-    if (contextPrompt) {
-      fullMessage += `${contextPrompt}\n\n`;
-    }
-
-    // Add the current message
-    fullMessage += userMessage;
-
-    // Set up event listeners for Claude messages
-    let unlisten: (() => void) | null = null;
-    let currentStopReason: string | null = null; // Track stop_reason across events
-
-    const cleanup = () => {
-      if (unlisten) {
-        unlisten();
-        unlisten = null;
-      }
-    };
-
-    // Set up message listeners for stream-json format
-    // Listen for text chunks from Claude Code stdout
-    const chunkUnlisten = await listen<string>("claude-chunk", event => {
-      const text = event.payload;
-      onChunk(text);
-    });
-
-    // Listen for completion from Claude Code
-    const completeUnlisten = await listen<void>("claude-complete", () => {
-      console.log("🏁 Claude-complete event received");
-      cleanupAll();
-      onComplete();
-    });
-
-    // Listen for interceptor messages
-    const interceptorUnlisten = await listen<InterceptorMessage>("claude-message", event => {
-      const message = event.payload;
-      console.log(
-        "📡 Interceptor message type:",
-        message.type,
-        "request_id:",
-        message.request_id || message.data?.id,
-      );
-
-      if (message.type === "stream_chunk" && message.chunk) {
-        // Handle streaming chunks from interceptor
-        const chunk = message.chunk;
-
-        // Capture stop_reason from message_start
-        if (chunk.type === "message_start" && chunk.message) {
-          currentStopReason = chunk.message.stop_reason || null;
-          console.log("📋 message_start with stop_reason:", currentStopReason);
-        }
-
-        if (chunk.delta?.text) {
-          onChunk(chunk.delta.text);
-        }
-
-        // Check for completion
-        if (chunk.type === "message_stop") {
-          console.log("🛑 message_stop in stream_chunk, stop_reason was:", currentStopReason);
-
-          if (currentStopReason === "tool_use") {
-            console.log("🔧 Tool use detected, waiting for follow-up response...");
-            // Reset stop reason for next message
-            currentStopReason = null;
-            // Don't call onComplete yet - more messages coming
-          } else {
-            console.log("✅ Final message complete, cleaning up...");
-            // Now we're truly done
-            cleanupAll();
-            onComplete();
-            currentStopReason = null;
-          }
-        }
-      } else if (message.type === "response" && message.data?.parsed_response) {
-        // Handle non-streaming response
-        const response = message.data.parsed_response;
-        console.log("📨 Response data:", {
-          stop_reason: response.stop_reason,
-          usage: response.usage,
-          content_blocks: response.content?.length,
-        });
-
-        if (response.content) {
-          for (const block of response.content) {
-            if (block.type === "text" && block.text) {
-              onChunk(block.text);
-            }
-          }
-        }
-
-        // Check if this is a tool use response
-        if (response.stop_reason === "tool_use") {
-          console.log("🔧 Tool use detected, waiting for follow-up response...");
-          // Don't clean up - Claude will send another response with the tool result
-        } else {
-          console.log("📨 Final response complete, cleaning up...");
-          cleanupAll();
-          onComplete();
-        }
-      } else if (message.type === "error") {
-        console.log("❌ Error from interceptor, cleaning up...");
-        cleanupAll();
-        onError(message.error || "Unknown error from interceptor");
-      }
-    });
-
-    // Create a new cleanup function that includes all listeners
-    const cleanupAll = () => {
-      console.log("Cleaning up Claude Code listeners...");
-      cleanup();
-      if (chunkUnlisten) chunkUnlisten();
-      if (completeUnlisten) completeUnlisten();
-      if (interceptorUnlisten) interceptorUnlisten();
-    };
-
-    // Also listen for stdout/stderr from Claude Code
-    const stdoutUnlisten = await listen<string>("claude-stdout", event => {
-      console.log("Claude stdout:", event.payload);
-    });
-
-    const stderrUnlisten = await listen<string>("claude-stderr", event => {
-      console.log("Claude stderr:", event.payload);
-    });
-
-    // Send the message to Claude Code
-    await invoke("send_claude_input", { input: fullMessage });
-
-    // Set up a timeout to clean up listeners
-    setTimeout(() => {
-      console.log("⏰ Timeout reached (2 min), cleaning up...");
-      cleanupAll();
-      stdoutUnlisten();
-      stderrUnlisten();
-      onError("Request timed out");
-    }, 120000); // 2 minute timeout
-  } catch (error) {
-    console.error("❌ Claude Code error:", error);
-    onError(`Claude Code error: ${error}`);
-  }
+  const handler = new ClaudeCodeStreamHandler({
+    onChunk,
+    onComplete,
+    onError,
+    onNewMessage,
+    onToolUse,
+  });
+  await handler.start(userMessage, context);
 }

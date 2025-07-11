@@ -134,7 +134,9 @@ impl ClaudeCodeBridge {
                                     }
                                 }
                                 "message_stop" => {
-                                    let _ = app_handle.emit("claude-complete", ());
+                                    // Don't emit claude-complete here - let the interceptor handle it
+                                    // This just means one message is done, not the whole conversation
+                                    let _ = app_handle.emit("claude-message", json_msg);
                                 }
                                 _ => {
                                     // Emit raw JSON for other message types
