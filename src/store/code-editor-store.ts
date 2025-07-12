@@ -46,7 +46,6 @@ interface CodeEditorState {
   wordWrap: boolean;
   lineNumbers: boolean;
   disabled: boolean;
-  undoStepSize: number; // Add this setting
 
   // LSP State
   lspCompletions: CompletionItem[];
@@ -78,11 +77,6 @@ interface CodeEditorState {
   // Add undo/redo state
   fileHistories: Map<string, FileHistory>; // Per-file history
   isUndoRedoInProgress: boolean; // Add flag to prevent loops
-  pushToHistory: (state: HistoryState) => void;
-  undo: () => void;
-  redo: () => void;
-  canUndo: () => boolean;
-  canRedo: () => boolean;
 
   // Actions - Core Editor
   setValue: (value: string) => void;
@@ -98,7 +92,6 @@ interface CodeEditorState {
   setWordWrap: (wrap: boolean) => void;
   setLineNumbers: (show: boolean) => void;
   setDisabled: (disabled: boolean) => void;
-  setUndoStepSize: (size: number) => void; // Add setter for undoStepSize
 
   // Actions - LSP
   setLspCompletions: (completions: CompletionItem[]) => void;
@@ -126,6 +119,13 @@ interface CodeEditorState {
   // Actions - UI
   setMinimap: (show: boolean) => void;
   setIsTyping: (typing: boolean) => void;
+
+  // Add undo/redo methods
+  pushToHistory: (state: HistoryState) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
 
   // Helper Actions
   clearCompletions: () => void;
@@ -156,7 +156,6 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
   wordWrap: false,
   lineNumbers: true,
   disabled: false,
-  undoStepSize: 1, // Default to 1 character
 
   // Initial LSP State
   lspCompletions: [],
@@ -187,108 +186,7 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
 
   // Add initial undo/redo state
   fileHistories: new Map(),
-  isUndoRedoInProgress: false, // Add flag to prevent loops
-
-  // Add undo/redo methods
-  pushToHistory: (state: HistoryState) => {
-    const { fileHistories } = get();
-    const filePath = get().filePath;
-    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
-
-    set({
-      fileHistories: new Map(fileHistories).set(filePath, {
-        undoStack: [...fileHistory.undoStack, state],
-        redoStack: [], // Clear redo stack when new change is made
-      }),
-    });
-  },
-
-  // Update undo method to handle multiple steps
-  undo: () => {
-    const { fileHistories, filePath, value } = get();
-    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
-
-    if (fileHistory.undoStack.length === 0) return; // Early return if nothing to undo
-
-    set({ isUndoRedoInProgress: true }); // Set flag to prevent loops
-
-    const currentState = {
-      content: value,
-      cursorPosition:
-        document.activeElement instanceof HTMLTextAreaElement
-          ? document.activeElement.selectionStart
-          : 0,
-    };
-
-    // Only undo one state at a time for more predictable behavior
-    const prevState = fileHistory.undoStack[fileHistory.undoStack.length - 1];
-
-    set({
-      value: prevState.content,
-      fileHistories: new Map(fileHistories).set(filePath, {
-        undoStack: fileHistory.undoStack.slice(0, -1),
-        redoStack: [...fileHistory.redoStack, currentState],
-      }),
-      isUndoRedoInProgress: false, // Clear flag
-    });
-
-    // Restore cursor position after state update
-    requestAnimationFrame(() => {
-      const textarea = document.activeElement;
-      if (textarea instanceof HTMLTextAreaElement) {
-        textarea.setSelectionRange(prevState.cursorPosition, prevState.cursorPosition);
-      }
-    });
-  },
-
-  // Update redo method to match new undo behavior
-  redo: () => {
-    const { fileHistories, filePath, value } = get();
-    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
-
-    if (fileHistory.redoStack.length === 0) return;
-
-    set({ isUndoRedoInProgress: true }); // Set flag to prevent loops
-
-    const currentState = {
-      content: value,
-      cursorPosition:
-        document.activeElement instanceof HTMLTextAreaElement
-          ? document.activeElement.selectionStart
-          : 0,
-    };
-
-    // Only redo one state at a time
-    const nextState = fileHistory.redoStack[fileHistory.redoStack.length - 1];
-
-    set({
-      value: nextState.content,
-      fileHistories: new Map(fileHistories).set(filePath, {
-        undoStack: [...fileHistory.undoStack, currentState],
-        redoStack: fileHistory.redoStack.slice(0, -1),
-      }),
-      isUndoRedoInProgress: false, // Clear flag
-    });
-
-    // Restore cursor position after state update
-    requestAnimationFrame(() => {
-      const textarea = document.activeElement;
-      if (textarea instanceof HTMLTextAreaElement) {
-        textarea.setSelectionRange(nextState.cursorPosition, nextState.cursorPosition);
-      }
-    });
-  },
-
-  canUndo: () => {
-    const { fileHistories, filePath } = get();
-    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
-    return fileHistory.undoStack.length > 0;
-  },
-  canRedo: () => {
-    const { fileHistories, filePath } = get();
-    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
-    return fileHistory.redoStack.length > 0;
-  },
+  isUndoRedoInProgress: false,
 
   // Core Editor Actions
   setValue: (value: string) => set({ value }),
@@ -304,7 +202,6 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
   setWordWrap: (wrap: boolean) => set({ wordWrap: wrap }),
   setLineNumbers: (show: boolean) => set({ lineNumbers: show }),
   setDisabled: (disabled: boolean) => set({ disabled }),
-  setUndoStepSize: (size: number) => set({ undoStepSize: Math.max(1, size) }),
 
   // LSP Actions
   setLspCompletions: (completions: CompletionItem[]) => set({ lspCompletions: completions }),
@@ -333,6 +230,159 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
   // UI Actions
   setMinimap: (show: boolean) => set({ minimap: show }),
   setIsTyping: (typing: boolean) => set({ isTyping: typing }),
+
+  // Add undo/redo methods
+  pushToHistory: (state: HistoryState) => {
+    const { fileHistories, filePath } = get();
+
+    console.log(
+      "pushToHistory called - filePath:",
+      filePath,
+      "content length:",
+      state.content.length,
+    );
+
+    if (!filePath) {
+      console.warn("No filePath set, cannot push to history");
+      return;
+    }
+
+    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
+
+    console.log(
+      "Current undo stack length:",
+      fileHistory.undoStack.length,
+      "Adding state with content length:",
+      state.content.length,
+    );
+
+    set({
+      fileHistories: new Map(fileHistories).set(filePath, {
+        undoStack: [...fileHistory.undoStack, state],
+        redoStack: [], // Clear redo stack when new change is made
+      }),
+    });
+  },
+
+  undo: () => {
+    const { fileHistories, filePath, value } = get();
+
+    console.log("Undo called - filePath:", filePath, "value length:", value.length);
+
+    if (!filePath) {
+      console.warn("No filePath set, cannot undo");
+      return;
+    }
+
+    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
+
+    console.log(
+      "Undo stack length:",
+      fileHistory.undoStack.length,
+      "Redo stack length:",
+      fileHistory.redoStack.length,
+    );
+
+    if (fileHistory.undoStack.length === 0) return;
+
+    set({ isUndoRedoInProgress: true });
+
+    const prevState = fileHistory.undoStack[fileHistory.undoStack.length - 1];
+
+    // Add current state to redo stack
+    const currentState = {
+      content: value,
+      cursorPosition:
+        document.activeElement instanceof HTMLTextAreaElement
+          ? document.activeElement.selectionStart
+          : 0,
+    };
+
+    console.log("Undoing from:", value.length, "chars to:", prevState.content.length, "chars");
+
+    set({
+      value: prevState.content,
+      fileHistories: new Map(fileHistories).set(filePath, {
+        undoStack: fileHistory.undoStack.slice(0, -1),
+        redoStack: [...fileHistory.redoStack, currentState],
+      }),
+    });
+
+    // Restore cursor position after state update
+    requestAnimationFrame(() => {
+      const textarea = document.activeElement;
+      if (textarea instanceof HTMLTextAreaElement) {
+        textarea.setSelectionRange(prevState.cursorPosition, prevState.cursorPosition);
+      }
+      set({ isUndoRedoInProgress: false });
+    });
+  },
+
+  redo: () => {
+    const { fileHistories, filePath, value } = get();
+
+    console.log("Redo called - filePath:", filePath, "value length:", value.length);
+
+    if (!filePath) {
+      console.warn("No filePath set, cannot redo");
+      return;
+    }
+
+    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
+
+    console.log(
+      "Undo stack length:",
+      fileHistory.undoStack.length,
+      "Redo stack length:",
+      fileHistory.redoStack.length,
+    );
+
+    if (fileHistory.redoStack.length === 0) return;
+
+    set({ isUndoRedoInProgress: true });
+
+    const nextState = fileHistory.redoStack[fileHistory.redoStack.length - 1];
+
+    // Add current state to undo stack
+    const currentState = {
+      content: value,
+      cursorPosition:
+        document.activeElement instanceof HTMLTextAreaElement
+          ? document.activeElement.selectionStart
+          : 0,
+    };
+
+    console.log("Redoing from:", value.length, "chars to:", nextState.content.length, "chars");
+
+    set({
+      value: nextState.content,
+      fileHistories: new Map(fileHistories).set(filePath, {
+        undoStack: [...fileHistory.undoStack, currentState],
+        redoStack: fileHistory.redoStack.slice(0, -1),
+      }),
+    });
+
+    // Restore cursor position after state update
+    requestAnimationFrame(() => {
+      const textarea = document.activeElement;
+      if (textarea instanceof HTMLTextAreaElement) {
+        textarea.setSelectionRange(nextState.cursorPosition, nextState.cursorPosition);
+      }
+      set({ isUndoRedoInProgress: false });
+    });
+  },
+
+  canUndo: () => {
+    const { fileHistories, filePath } = get();
+    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
+    return fileHistory.undoStack.length > 0;
+  },
+
+  canRedo: () => {
+    const { fileHistories, filePath } = get();
+    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
+    return fileHistory.redoStack.length > 0;
+  },
 
   // Helper Actions
   clearCompletions: () =>

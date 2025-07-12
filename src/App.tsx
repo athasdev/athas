@@ -57,6 +57,10 @@ function App() {
   const { settings, updateSetting, updateSettingsFromJSON } = useSettings();
   const quickEdit = useQuickEdit();
 
+  // Get undo/redo methods from store
+  const undo = useCodeEditorStore(state => state.undo);
+  const redo = useCodeEditorStore(state => state.redo);
+
   // Context menus hook
   const contextMenus = useContextMenus({
     folderHeaderContextMenu: uiState.folderHeaderContextMenu,
@@ -568,16 +572,10 @@ function App() {
       }
     },
     onUndo: () => {
-      if (codeEditorRef.current?.textarea) {
-        const store = useCodeEditorStore.getState();
-        store.undo();
-      }
+      undo();
     },
     onRedo: () => {
-      if (codeEditorRef.current?.textarea) {
-        const store = useCodeEditorStore.getState();
-        store.redo();
-      }
+      redo();
     },
     onFind: () => {
       setIsFindVisible(true);

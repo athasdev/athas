@@ -7,6 +7,7 @@ import { useEditorScroll } from "../hooks/use-editor-scroll";
 import { useCodeEditorStore } from "../store/code-editor-store";
 import { cancelCompletion, requestCompletion } from "../utils/ai-completion";
 import { cn } from "../utils/cn";
+import { isMac } from "../utils/platform";
 import { CompletionDropdown } from "./completion-dropdown";
 import InlineCompletion from "./inline-completion";
 import MinimapPane from "./minimap-pane";
@@ -232,8 +233,13 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
     const pushToHistory = useCodeEditorStore(state => state.pushToHistory);
     const undo = useCodeEditorStore(state => state.undo);
     const redo = useCodeEditorStore(state => state.redo);
+    const _canUndo = useCodeEditorStore(state => state.canUndo);
+    const _canRedo = useCodeEditorStore(state => state.canRedo);
+    const isUndoRedoInProgress = useCodeEditorStore(state => state.isUndoRedoInProgress);
 
     // Store actions
+    const setValue = useCodeEditorStore(state => state.setValue);
+    const _setLanguage = useCodeEditorStore(state => state.setLanguage);
     const setFilename = useCodeEditorStore(state => state.setFilename);
     const setFilePath = useCodeEditorStore(state => state.setFilePath);
     const setFontSize = useCodeEditorStore(state => state.setFontSize);
@@ -248,7 +254,6 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
     const setSearchQuery = useCodeEditorStore(state => state.setSearchQuery);
     const setSearchMatches = useCodeEditorStore(state => state.setSearchMatches);
     const setCurrentMatchIndex = useCodeEditorStore(state => state.setCurrentMatchIndex);
-    const setValue = useCodeEditorStore(state => state.setValue);
     const setLspCompletions = useCodeEditorStore(state => state.setLspCompletions);
     const setSelectedLspIndex = useCodeEditorStore(state => state.setSelectedLspIndex);
     const setIsLspCompletionVisible = useCodeEditorStore(state => state.setIsLspCompletionVisible);
@@ -265,6 +270,53 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       textareaRef,
       highlightRef,
       lineNumbersRef,
+    );
+
+    // Handle content changes for history tracking
+    const handleContentChange = useCallback(
+      (newContent: string) => {
+        if (isUndoRedoInProgress) return;
+
+        // Only push to history if content actually changed
+        if (newContent !== value) {
+          const currentState = {
+            content: value,
+            cursorPosition: textareaRef.current?.selectionStart || 0,
+          };
+
+          pushToHistory(currentState);
+        }
+
+        onChange(newContent);
+      },
+      [value, pushToHistory, onChange, isUndoRedoInProgress],
+    );
+
+    // Handle keyboard shortcuts for undo/redo
+    const handleEditorKeyDown = useCallback(
+      (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        const cmdKey = isMac() ? e.metaKey : e.ctrlKey;
+
+        // Undo: Ctrl/Cmd + Z (without Shift)
+        if (cmdKey && e.key === "z" && !e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          undo();
+          return;
+        }
+
+        // Redo: Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y
+        if (cmdKey && ((e.key === "z" && e.shiftKey) || e.key === "y")) {
+          e.preventDefault();
+          e.stopPropagation();
+          redo();
+          return;
+        }
+
+        // Call the original keyboard handler for other shortcuts
+        handleKeyDown(e);
+      },
+      [undo, redo, handleKeyDown],
     );
 
     // Sync props with store
@@ -608,63 +660,6 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
       setIsHovering(true);
     }, [setIsHovering]);
 
-    // Handle keyboard shortcuts
-    const handleEditorKeyDown = useCallback(
-      (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        // Handle undo/redo
-        if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
-          if (e.key === "z") {
-            e.preventDefault();
-            undo();
-            return;
-          }
-        }
-        if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "Z") {
-          e.preventDefault();
-          redo();
-          return;
-        }
-
-        // Handle Ctrl+Z and Ctrl+Shift+Z
-        if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
-          e.preventDefault();
-          if (e.shiftKey) {
-            redo();
-          } else {
-            undo();
-          }
-          return;
-        }
-
-        // Call the original onKeyDown handler
-        if (onKeyDown) {
-          onKeyDown(e);
-        }
-      },
-      [onKeyDown, undo, redo],
-    );
-
-    // Handle content changes
-    const handleContentChange = useCallback(
-      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const newValue = e.target.value;
-        const cursorPos = e.target.selectionStart;
-
-        // Only push to history if not from undo/redo operation
-        const { isUndoRedoInProgress } = useCodeEditorStore.getState();
-        if (!isUndoRedoInProgress) {
-          pushToHistory({
-            content: value,
-            cursorPosition: cursorPos,
-          });
-        }
-
-        setValue(newValue);
-        onChange(newValue);
-      },
-      [value, onChange, setValue, pushToHistory],
-    );
-
     // Calculate styles
     const getTextareaClasses = useMemo(() => {
       let classes = `absolute top-0 bottom-0 right-0 left-0 m-0 p-4 font-mono leading-6 text-transparent bg-transparent border-none outline-none resize-none overflow-auto z-[2] shadow-none rounded-none transition-none`;
@@ -753,7 +748,10 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
             <textarea
               ref={textareaRef}
               value={value}
-              onChange={handleContentChange}
+              onChange={e => {
+                handleUserInteraction();
+                handleContentChange(e.target.value);
+              }}
               onKeyDown={handleEditorKeyDown}
               onKeyUp={() =>
                 handleCursorPositionChange(
