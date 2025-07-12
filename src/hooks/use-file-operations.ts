@@ -258,16 +258,13 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
       const selected = await openFolder();
 
       if (selected) {
-        // For both web and Tauri, we can now just read the directory
-        const path = typeof selected === "string" ? selected : "";
-
         // Store the root folder path
-        setRootFolderPath(path);
+        setRootFolderPath(selected);
 
         // Clear the cache when changing folders
         setProjectFilesCache(null);
 
-        const entries = await readDirectory(path);
+        const entries = await readDirectory(selected);
         const fileTree = (entries as any[]).map((entry: any) => ({
           name: entry.name || "Unknown",
           path:

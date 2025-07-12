@@ -38,7 +38,7 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
           const diffs = await getCommitDiff(repoPath, commitHash);
           setCommitFiles(prev => ({
             ...prev,
-            [commitHash]: diffs,
+            [commitHash]: diffs || [],
           }));
         } catch (error) {
           console.error("Failed to load commit files:", error);

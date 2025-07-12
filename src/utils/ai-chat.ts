@@ -2,7 +2,6 @@ import type { AIMessage } from "@/types/ai-chat";
 import { getModelById, getProviderById } from "../types/ai-provider";
 import { ClaudeCodeStreamHandler } from "./claude-code-handler";
 import { buildContextPrompt, buildSystemPrompt } from "./context-builder";
-import { isTauri } from "./platform";
 import { getProvider } from "./providers";
 import { processStreamingResponse } from "./stream-utils";
 import { getProviderApiToken } from "./token-manager";
@@ -39,11 +38,6 @@ export const getChatCompletionStream = async (
   onToolUse?: (toolName: string, toolInput?: any) => void,
   onToolComplete?: (toolName: string) => void,
 ): Promise<void> => {
-  if (!isTauri()) {
-    onError("Not in Tauri environment, skipping API call");
-    return;
-  }
-
   try {
     const provider = getProviderById(providerId);
     const model = getModelById(providerId, modelId);

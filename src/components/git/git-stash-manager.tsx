@@ -1,4 +1,4 @@
-import { Archive, Clock, Download, GitBranch, Plus, Trash2, Upload, X } from "lucide-react";
+import { Archive, Clock, Download, Plus, Trash2, Upload, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   applyStash,
@@ -213,14 +213,10 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                           <span className="font-mono text-text-lighter text-xs">
                             {`stash@{${stash.index}}`}
                           </span>
-                          <div className="flex items-center gap-1 text-[9px] text-text-lighter">
-                            <GitBranch size={8} />
-                            {stash.branch}
-                          </div>
                         </div>
 
                         <div className="mb-1 text-text text-xs">
-                          {stash.message || `WIP on ${stash.branch}`}
+                          {stash.message || "Stashed changes"}
                         </div>
 
                         <div className="flex items-center gap-1 text-[9px] text-text-lighter">

@@ -264,10 +264,10 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
     if (!repoPath || !onFileSelect) return;
 
     try {
-      const diffs = await getCommitDiff(repoPath, commitHash, filePath);
+      const diffs = await getCommitDiff(repoPath, commitHash);
 
-      if (diffs.length > 0) {
-        const diff = diffs[0]; // For now, show first diff or specific file
+      if (diffs && diffs.length > 0) {
+        const diff = filePath ? diffs.find(d => d.file_path === filePath) || diffs[0] : diffs[0]; // Show specific file or first diff
         const diffFileName = `${diff.file_path.split("/").pop()}.diff`;
         const virtualPath = `diff://commit/${commitHash}/${diffFileName}`;
         const diffJson = JSON.stringify(diff);

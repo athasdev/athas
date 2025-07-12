@@ -1,5 +1,4 @@
 import { buildContextPrompt, buildSystemPrompt } from "./context-builder";
-import { isTauri } from "./platform";
 import { getOpenAIToken } from "./token-manager";
 import type { ContextInfo } from "./types";
 
@@ -31,11 +30,6 @@ export const getOpenAIChatCompletion = async (
   userMessage: string,
   context: ContextInfo,
 ): Promise<string | null> => {
-  if (!isTauri()) {
-    console.log("❌ Not in Tauri environment, skipping OpenAI API");
-    return null;
-  }
-
   try {
     const apiKey = await getOpenAIToken();
     if (!apiKey) {

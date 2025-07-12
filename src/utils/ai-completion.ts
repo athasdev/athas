@@ -1,5 +1,3 @@
-import { isTauri } from "./platform";
-
 export interface CompletionRequest {
   code: string;
   language: string;
@@ -24,11 +22,6 @@ const AI_CONFIG = {
 export const getOpenAICompletion = async (
   request: CompletionRequest,
 ): Promise<CompletionResponse | null> => {
-  if (!isTauri()) {
-    console.log("❌ Not in Tauri environment, skipping OpenAI API");
-    return null;
-  }
-
   try {
     // Get API key from storage (we'll use the same storage as GitHub token for now)
     const apiKey = await getGitHubToken(); // Reusing the same storage
@@ -115,13 +108,7 @@ export const getGitHubCopilotCompletion = async (
 // Get GitHub token from secure storage
 const getGitHubToken = async (): Promise<string | null> => {
   try {
-    // Try to get from Tauri secure storage first
-    if (isTauri()) {
-      return await getTokenFromTauriStorage();
-    }
-
-    // No fallback in browser environment
-    return null;
+    return await getTokenFromTauriStorage();
   } catch (error) {
     console.error("Error getting GitHub token:", error);
     return null;
@@ -142,10 +129,6 @@ const getTokenFromTauriStorage = async (): Promise<string | null> => {
 
 // Store GitHub token securely
 export const storeGitHubToken = async (token: string): Promise<void> => {
-  if (!isTauri()) {
-    throw new Error("Token storage only available in Tauri environment");
-  }
-
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("store_github_token", { token });
@@ -157,10 +140,6 @@ export const storeGitHubToken = async (token: string): Promise<void> => {
 
 // Remove GitHub token from storage
 export const removeGitHubToken = async (): Promise<void> => {
-  if (!isTauri()) {
-    throw new Error("Token removal only available in Tauri environment");
-  }
-
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("remove_github_token");

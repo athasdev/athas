@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { isTauri } from "./platform";
 
 /**
  * Token management utilities for AI providers
@@ -9,24 +8,21 @@ import { isTauri } from "./platform";
 // Get API token for a specific provider
 export const getProviderApiToken = async (providerId: string): Promise<string | null> => {
   try {
-    if (isTauri()) {
-      // For now, use the same storage key but we could extend this
-      // to support multiple providers with different storage keys
-      const storageKey = providerId === "openai" ? "get_github_token" : `get_${providerId}_token`;
+    // For now, use the same storage key but we could extend this
+    // to support multiple providers with different storage keys
+    const storageKey = providerId === "openai" ? "get_github_token" : `get_${providerId}_token`;
 
-      try {
-        const token = (await invoke(storageKey)) as string | null;
+    try {
+      const token = (await invoke(storageKey)) as string | null;
+      return token;
+    } catch (_error) {
+      // Fallback to github token for backward compatibility
+      if (providerId !== "openai") {
+        const token = (await invoke("get_github_token")) as string | null;
         return token;
-      } catch (_error) {
-        // Fallback to github token for backward compatibility
-        if (providerId !== "openai") {
-          const token = (await invoke("get_github_token")) as string | null;
-          return token;
-        }
-        return null;
       }
+      return null;
     }
-    return null;
   } catch (_error) {
     console.error(`Error getting ${providerId} API token:`, _error);
     return null;
@@ -36,17 +32,14 @@ export const getProviderApiToken = async (providerId: string): Promise<string | 
 // Store API token for a specific provider
 export const storeProviderApiToken = async (providerId: string, token: string): Promise<void> => {
   try {
-    if (isTauri()) {
-      // For now, use the same storage method but we could extend this
-      const storageKey =
-        providerId === "openai" ? "store_github_token" : `store_${providerId}_token`;
+    // For now, use the same storage method but we could extend this
+    const storageKey = providerId === "openai" ? "store_github_token" : `store_${providerId}_token`;
 
-      try {
-        await invoke(storageKey, { token });
-      } catch (_error) {
-        // Fallback to github token storage for backward compatibility
-        await invoke("store_github_token", { token });
-      }
+    try {
+      await invoke(storageKey, { token });
+    } catch (_error) {
+      // Fallback to github token storage for backward compatibility
+      await invoke("store_github_token", { token });
     }
   } catch (_error) {
     console.error(`Error storing ${providerId} API token:`, _error);
@@ -57,16 +50,14 @@ export const storeProviderApiToken = async (providerId: string, token: string): 
 // Remove API token for a specific provider
 export const removeProviderApiToken = async (providerId: string): Promise<void> => {
   try {
-    if (isTauri()) {
-      const storageKey =
-        providerId === "openai" ? "remove_github_token" : `remove_${providerId}_token`;
+    const storageKey =
+      providerId === "openai" ? "remove_github_token" : `remove_${providerId}_token`;
 
-      try {
-        await invoke(storageKey);
-      } catch (_error) {
-        // Fallback to github token removal for backward compatibility
-        await invoke("remove_github_token");
-      }
+    try {
+      await invoke(storageKey);
+    } catch (_error) {
+      // Fallback to github token removal for backward compatibility
+      await invoke("remove_github_token");
     }
   } catch (_error) {
     console.error(`Error removing ${providerId} API token:`, _error);

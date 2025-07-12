@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import type { Buffer } from "../types/buffer";
 import type { CoreFeaturesState } from "../types/core-features";
-import { isTauri } from "../utils/platform";
 
 interface UseKeyboardShortcutsProps {
   setIsBottomPaneVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
@@ -59,7 +58,6 @@ export const useKeyboardShortcuts = ({
       if (
         (e.metaKey || e.ctrlKey) &&
         e.key === "j" &&
-        isTauri() &&
         coreFeatures.terminal &&
         !/Mac|iPhone|iPod|iPad/.test(navigator.platform)
       ) {
@@ -74,13 +72,7 @@ export const useKeyboardShortcuts = ({
       }
 
       // Cmd+Shift+J (Mac) or Ctrl+Shift+J (Windows/Linux) to toggle diagnostics
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.shiftKey &&
-        e.key === "J" &&
-        isTauri() &&
-        coreFeatures.diagnostics
-      ) {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "J" && coreFeatures.diagnostics) {
         e.preventDefault();
         if (isBottomPaneVisible && bottomPaneActiveTab === "diagnostics") {
           setIsBottomPaneVisible(false);
