@@ -4,6 +4,8 @@ export interface FileEntry {
   isDir: boolean;
   children?: FileEntry[];
   expanded?: boolean;
+  isEditing?: boolean;
+  isNewItem?: boolean;
 }
 
 export type VimMode = "normal" | "insert" | "visual";

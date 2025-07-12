@@ -373,38 +373,38 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
   );
 
   const handleCreateNewFileInDirectory = useCallback(
-    async (directoryPath: string) => {
-      const fileName = prompt("Enter the name for the new file:");
-      if (!fileName) return;
+    async (directoryPath: string, fileName?: string) => {
+      console.log("🔧 handleCreateNewFileInDirectory called with:", directoryPath, fileName);
+
+      // If no fileName provided, use the old prompt method for backward compatibility
+      if (!fileName) {
+        fileName = prompt("Enter the name for the new file:");
+        if (!fileName) return;
+      }
 
       try {
         const newFilePath = directoryPath ? `${directoryPath}/${fileName}` : fileName;
+        console.log("📁 Creating new file:", newFilePath);
 
         // Create an empty file
         await writeFile(newFilePath, "");
+        console.log("✅ File created successfully");
 
         // Invalidate project files cache since we added a new file
         invalidateProjectFilesCache();
 
-        // If it's the root directory, just refresh the entire file tree
-        if (
-          !directoryPath ||
-          files.some(f => f.path.split("/").slice(0, -1).join("/") === directoryPath)
-        ) {
-          // Refresh the root directory
-          const entries = await readDirectory(directoryPath || ".");
-          const updatedFileTree = (entries as any[]).map((entry: any) => ({
-            name: entry.name || "Unknown",
-            path: entry.path || (directoryPath ? `${directoryPath}/${entry.name}` : entry.name),
-            isDir: entry.is_dir || false,
-            expanded: false,
-            children: undefined,
-          }));
-          setFiles(updatedFileTree);
-        } else {
-          // Refresh the specific directory
-          await refreshDirectory(directoryPath);
-        }
+        // Always refresh the root directory to ensure UI updates
+        console.log("🔄 Refreshing file tree from root:", rootFolderPath);
+        const entries = await readDirectory(rootFolderPath || ".");
+        const updatedFileTree = (entries as any[]).map((entry: any) => ({
+          name: entry.name || "Unknown",
+          path: entry.path || (rootFolderPath ? `${rootFolderPath}/${entry.name}` : entry.name),
+          isDir: entry.is_dir || false,
+          expanded: false,
+          children: undefined,
+        }));
+        setFiles(updatedFileTree);
+        console.log("✅ File tree updated with", updatedFileTree.length, "items");
 
         // Open the new file in a buffer
         openBuffer(newFilePath, fileName, "", false, false, false, false);
@@ -413,48 +413,48 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
         alert("Failed to create file");
       }
     },
-    [files, openBuffer, refreshDirectory, invalidateProjectFilesCache],
+    [files, openBuffer, refreshDirectory, invalidateProjectFilesCache, rootFolderPath],
   );
 
   const handleCreateNewFolderInDirectory = useCallback(
-    async (directoryPath: string) => {
-      const folderName = prompt("Enter the name for the new folder:");
-      if (!folderName) return;
+    async (directoryPath: string, folderName?: string) => {
+      console.log("🔧 handleCreateNewFolderInDirectory called with:", directoryPath, folderName);
+
+      // If no folderName provided, use the old prompt method for backward compatibility
+      if (!folderName) {
+        folderName = prompt("Enter the name for the new folder:");
+        if (!folderName) return;
+      }
 
       try {
         const newFolderPath = directoryPath ? `${directoryPath}/${folderName}` : folderName;
+        console.log("📁 Creating new folder:", newFolderPath);
 
         // Create the directory
         await createDirectory(newFolderPath);
+        console.log("✅ Folder created successfully");
 
         // Invalidate project files cache since we added a new folder
         invalidateProjectFilesCache();
 
-        // If it's the root directory, just refresh the entire file tree
-        if (
-          !directoryPath ||
-          files.some(f => f.path.split("/").slice(0, -1).join("/") === directoryPath)
-        ) {
-          // Refresh the root directory
-          const entries = await readDirectory(directoryPath || ".");
-          const updatedFileTree = (entries as any[]).map((entry: any) => ({
-            name: entry.name || "Unknown",
-            path: entry.path || (directoryPath ? `${directoryPath}/${entry.name}` : entry.name),
-            isDir: entry.is_dir || false,
-            expanded: false,
-            children: undefined,
-          }));
-          setFiles(updatedFileTree);
-        } else {
-          // Refresh the specific directory
-          await refreshDirectory(directoryPath);
-        }
+        // Always refresh the root directory to ensure UI updates
+        console.log("🔄 Refreshing file tree from root:", rootFolderPath);
+        const entries = await readDirectory(rootFolderPath || ".");
+        const updatedFileTree = (entries as any[]).map((entry: any) => ({
+          name: entry.name || "Unknown",
+          path: entry.path || (rootFolderPath ? `${rootFolderPath}/${entry.name}` : entry.name),
+          isDir: entry.is_dir || false,
+          expanded: false,
+          children: undefined,
+        }));
+        setFiles(updatedFileTree);
+        console.log("✅ File tree updated with", updatedFileTree.length, "items");
       } catch (error) {
         console.error("Error creating new folder:", error);
         alert("Failed to create folder");
       }
     },
-    [files, refreshDirectory, invalidateProjectFilesCache],
+    [files, refreshDirectory, invalidateProjectFilesCache, rootFolderPath],
   );
 
   const handleDeletePath = useCallback(

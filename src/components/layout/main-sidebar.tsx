@@ -41,6 +41,7 @@ interface MainSidebarProps {
   onFileSelect: (path: string, isDir: boolean, line?: number, column?: number) => void;
   onCreateNewFileInDirectory: (path: string) => void;
   onDeletePath: (path: string) => void;
+  onUpdateFiles: (files: FileEntry[]) => void;
   onProjectNameMenuOpen: (event: React.MouseEvent) => void;
 
   // Project name
@@ -68,6 +69,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
       onFileSelect,
       onCreateNewFileInDirectory,
       onDeletePath,
+      onUpdateFiles,
       onProjectNameMenuOpen,
       projectName,
     },
@@ -171,6 +173,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
               onCreateNewFileInDirectory={onCreateNewFileInDirectory}
               onCreateNewFolderInDirectory={onCreateNewFolderInDirectory}
               onDeletePath={onDeletePath}
+              onUpdateFiles={onUpdateFiles}
             />
           )}
         </div>

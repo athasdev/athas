@@ -87,7 +87,6 @@ export const ProjectNameMenu = ({
         }}
         className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
       >
-        <span>📁</span>
         Add Folder to Workspace
       </button>
 
@@ -100,7 +99,6 @@ export const ProjectNameMenu = ({
         }}
         className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
       >
-        <span>📂</span>
         Collapse All Folders
       </button>
 
@@ -121,7 +119,6 @@ export const ProjectNameMenu = ({
               }}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
             >
-              <span>📁</span>
               <div className="flex min-w-0 flex-1 flex-col items-start">
                 <span className="truncate font-medium">{folder.name}</span>
               </div>

@@ -933,6 +933,7 @@ function App() {
                       }
                       onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
                       onDeletePath={(path: string) => handleDeletePath(path, false)}
+                      onUpdateFiles={setFiles}
                       onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
                       projectName={getProjectName()}
                     />
@@ -1187,6 +1188,7 @@ function App() {
                       }
                       onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
                       onDeletePath={(path: string) => handleDeletePath(path, false)}
+                      onUpdateFiles={setFiles}
                       onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
                       projectName={getProjectName()}
                     />
