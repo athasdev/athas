@@ -209,7 +209,7 @@ export default function ToolCallDisplay({
       className={cn(
         "tool-call-card rounded-lg border transition-all duration-200",
         isStreaming && "animate-pulse",
-        error && "border-red-500/50 tool-error",
+        error && "tool-error border-red-500/50",
         !isStreaming && !error && output && "tool-success",
       )}
       style={{
@@ -219,14 +219,14 @@ export default function ToolCallDisplay({
     >
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-3 py-2 flex items-center gap-2 text-left hover:bg-[var(--hover-color)] transition-colors rounded-lg"
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[var(--hover-color)]"
       >
-        <div className="flex items-center gap-2 flex-1">
+        <div className="flex flex-1 items-center gap-2">
           <Icon
             size={14}
             className={cn(error ? "text-red-500" : "", isStreaming && "tool-icon-running")}
           />
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="font-medium">{toolName}</span>
               <span className="text-xs opacity-60">({category})</span>
@@ -241,19 +241,19 @@ export default function ToolCallDisplay({
               )}
               {error && <AlertCircle size={12} className="text-red-500" />}
             </div>
-            <div className="text-xs opacity-75 truncate">{formatInput(input)}</div>
+            <div className="truncate text-xs opacity-75">{formatInput(input)}</div>
           </div>
         </div>
         {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       </button>
 
       {isExpanded && (
-        <div className="tool-expand-content px-3 pb-3 space-y-2">
+        <div className="tool-expand-content space-y-2 px-3 pb-3">
           {/* Input section */}
           <div>
-            <div className="text-xs font-medium mb-1 opacity-60">Input:</div>
+            <div className="mb-1 font-medium text-xs opacity-60">Input:</div>
             <pre
-              className="text-xs p-2 rounded overflow-x-auto"
+              className="overflow-x-auto rounded p-2 text-xs"
               style={{
                 background: "var(--primary-bg)",
                 border: "1px solid var(--border-color)",
@@ -266,9 +266,9 @@ export default function ToolCallDisplay({
           {/* Output section */}
           {output && (
             <div>
-              <div className="text-xs font-medium mb-1 opacity-60">Output:</div>
+              <div className="mb-1 font-medium text-xs opacity-60">Output:</div>
               <pre
-                className="text-xs p-2 rounded overflow-x-auto max-h-48"
+                className="max-h-48 overflow-x-auto rounded p-2 text-xs"
                 style={{
                   background: "var(--primary-bg)",
                   border: "1px solid var(--border-color)",
@@ -282,9 +282,9 @@ export default function ToolCallDisplay({
           {/* Error section */}
           {error && (
             <div>
-              <div className="text-xs font-medium mb-1 text-red-500">Error:</div>
+              <div className="mb-1 font-medium text-red-500 text-xs">Error:</div>
               <div
-                className="text-xs p-2 rounded text-red-400"
+                className="rounded p-2 text-red-400 text-xs"
                 style={{
                   background: "rgba(239, 68, 68, 0.1)",
                   border: "1px solid rgba(239, 68, 68, 0.3)",

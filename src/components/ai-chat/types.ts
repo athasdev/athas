@@ -35,6 +35,7 @@ export interface ContextInfo {
   selectedFiles?: string[];
   projectRoot?: string;
   language?: string;
+  providerId?: string;
 }
 
 export interface AIChatProps {

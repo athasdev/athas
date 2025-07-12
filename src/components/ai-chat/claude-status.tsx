@@ -108,12 +108,12 @@ export default function ClaudeStatusIndicator({
   const isInterceptorRunning = status?.interceptor_running || false;
 
   return (
-    <div className="flex items-center gap-2 px-2 py-1 rounded text-xs">
+    <div className="flex items-center gap-2 rounded px-2 py-1 text-xs">
       {/* Status indicator */}
       <div className="flex items-center gap-1.5">
         <div
           className={cn(
-            "w-2 h-2 rounded-full",
+            "h-2 w-2 rounded-full",
             isRunning && isConnected ? "bg-green-500" : isRunning ? "bg-yellow-500" : "bg-gray-500",
           )}
         />
@@ -151,8 +151,8 @@ export default function ClaudeStatusIndicator({
       {/* Detailed status on hover */}
       {status && (
         <div className="group relative">
-          <Activity size={12} className="text-[--text-lighter] cursor-help" />
-          <div className="absolute bottom-full right-0 mb-1 hidden group-hover:block bg-[--bg-secondary] border border-[--border] rounded px-2 py-1 text-xs whitespace-nowrap z-50">
+          <Activity size={12} className="cursor-help text-[--text-lighter]" />
+          <div className="absolute right-0 bottom-full z-50 mb-1 hidden whitespace-nowrap rounded border border-[--border] bg-[--bg-secondary] px-2 py-1 text-xs group-hover:block">
             <div>Claude: {isRunning ? "Running" : "Stopped"}</div>
             <div>Interceptor: {isInterceptorRunning ? "Running" : "Stopped"}</div>
             <div>WebSocket: {isConnected ? "Connected" : "Disconnected"}</div>

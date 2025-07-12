@@ -297,6 +297,7 @@ export default function AIChat({
       openBuffers: getSelectedBuffers,
       selectedFiles,
       projectRoot: rootFolderPath,
+      providerId: currentProviderId,
     };
 
     if (activeBuffer) {
@@ -327,7 +328,7 @@ export default function AIChat({
     }
 
     return context;
-  }, [activeBuffer, getSelectedBuffers, selectedFiles, rootFolderPath]);
+  }, [activeBuffer, getSelectedBuffers, selectedFiles, rootFolderPath, currentProviderId]);
 
   // Stop streaming response
   const stopStreaming = () => {
@@ -768,7 +769,7 @@ export default function AIChat({
 
                 {/* Tool Calls */}
                 {message.toolCalls && message.toolCalls.length > 0 && (
-                  <div className="space-y-2 mb-3">
+                  <div className="mb-3 space-y-2">
                     {message.toolCalls!.map((toolCall, index) => (
                       <ToolCallDisplay
                         key={`${message.id}-tool-${index}`}
@@ -784,11 +785,11 @@ export default function AIChat({
 
                 {/* AI Message Content */}
                 {message.content && (
-                  <div className="leading-relaxed pr-1">
+                  <div className="pr-1 leading-relaxed">
                     <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
 
                     {message.isStreaming && (
-                      <span className="inline-block w-2 h-4 animate-pulse ml-1 bg-[var(--text-lighter)]" />
+                      <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-[var(--text-lighter)]" />
                     )}
                   </div>
                 )}
@@ -934,7 +935,7 @@ export default function AIChat({
                 {estimatedTokens.toLocaleString()}/{(maxTokens / 1000).toFixed(0)}k tokens
               </span>
             </div>
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="ml-auto flex items-center gap-2">
               <ClaudeStatusIndicator
                 isActive={currentProviderId === "claude-code"}
                 workspacePath={rootFolderPath}
