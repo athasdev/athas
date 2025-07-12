@@ -19,7 +19,6 @@ export const useEditorKeyboard = (
   const value = useCodeEditorStore(state => state.value);
   const undo = useCodeEditorStore(state => state.undo);
   const redo = useCodeEditorStore(state => state.redo);
-  const pushToHistory = useCodeEditorStore(state => state.pushToHistory);
 
   // Store actions
   const nextLspCompletion = useCodeEditorStore(state => state.nextLspCompletion);
@@ -71,20 +70,8 @@ export const useEditorKeyboard = (
         return;
       }
 
-      // Push to history before making changes
-      const shouldPushHistory =
-        e.key === "Enter" ||
-        e.key === "Tab" ||
-        e.key === "Backspace" ||
-        e.key === "Delete" ||
-        (e.key.length === 1 && !cmdKey); // Single character input
-
-      if (shouldPushHistory) {
-        pushToHistory({
-          content: currentValue,
-          cursorPosition: selectionStart,
-        });
-      }
+      // History is now handled in handleContentChange to avoid duplicates
+      // Remove the pushToHistory calls from here
 
       // Handle LSP completion navigation
       if (isLspCompletionVisible && lspCompletions.length > 0) {
@@ -274,7 +261,6 @@ export const useEditorKeyboard = (
       onKeyDown,
       undo,
       redo,
-      pushToHistory,
     ],
   );
 

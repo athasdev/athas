@@ -650,13 +650,15 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
         const newValue = e.target.value;
         const cursorPos = e.target.selectionStart;
 
-        // Push the current state to history before updating
-        pushToHistory({
-          content: value,
-          cursorPosition: cursorPos,
-        });
+        // Only push to history if not from undo/redo operation
+        const { isUndoRedoInProgress } = useCodeEditorStore.getState();
+        if (!isUndoRedoInProgress) {
+          pushToHistory({
+            content: value,
+            cursorPosition: cursorPos,
+          });
+        }
 
-        // Update the value
         setValue(newValue);
         onChange(newValue);
       },

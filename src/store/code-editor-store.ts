@@ -72,6 +72,7 @@ interface CodeEditorState {
   // Add undo/redo state
   undoStack: HistoryState[];
   redoStack: HistoryState[];
+  isUndoRedoInProgress: boolean; // Add flag to prevent loops
   pushToHistory: (state: HistoryState) => void;
   undo: () => void;
   redo: () => void;
@@ -182,6 +183,7 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
   // Add initial undo/redo state
   undoStack: [],
   redoStack: [],
+  isUndoRedoInProgress: false, // Add flag to prevent loops
 
   // Add undo/redo methods
   pushToHistory: (state: HistoryState) => {
@@ -194,8 +196,10 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
 
   // Update undo method to handle multiple steps
   undo: () => {
-    const { undoStack, redoStack, value, undoStepSize } = get();
-    if (undoStack.length === 0) return;
+    const { undoStack, redoStack, value } = get();
+    if (undoStack.length === 0) return; // Early return if nothing to undo
+
+    set({ isUndoRedoInProgress: true }); // Set flag to prevent loops
 
     const currentState = {
       content: value,
@@ -205,15 +209,14 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
           : 0,
     };
 
-    // Take multiple steps based on undoStepSize
-    const stepsToUndo = Math.min(undoStepSize, undoStack.length);
-    const statesToUndo = undoStack.slice(-stepsToUndo);
-    const prevState = statesToUndo[0]; // Use the oldest state in our step size
+    // Only undo one state at a time for more predictable behavior
+    const prevState = undoStack[undoStack.length - 1];
 
     set({
       value: prevState.content,
-      undoStack: undoStack.slice(0, -stepsToUndo),
-      redoStack: [...redoStack, currentState, ...statesToUndo.slice(1).reverse()],
+      undoStack: undoStack.slice(0, -1),
+      redoStack: [...redoStack, currentState],
+      isUndoRedoInProgress: false, // Clear flag
     });
 
     // Restore cursor position after state update
@@ -225,10 +228,12 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
     });
   },
 
-  // Update redo method to handle multiple steps
+  // Update redo method to match new undo behavior
   redo: () => {
-    const { undoStack, redoStack, value, undoStepSize } = get();
+    const { undoStack, redoStack, value } = get();
     if (redoStack.length === 0) return;
+
+    set({ isUndoRedoInProgress: true }); // Set flag to prevent loops
 
     const currentState = {
       content: value,
@@ -238,15 +243,14 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
           : 0,
     };
 
-    // Take multiple steps based on undoStepSize
-    const stepsToRedo = Math.min(undoStepSize, redoStack.length);
-    const statesToRedo = redoStack.slice(-stepsToRedo);
-    const nextState = statesToRedo[0]; // Use the oldest state in our step size
+    // Only redo one state at a time
+    const nextState = redoStack[redoStack.length - 1];
 
     set({
       value: nextState.content,
-      undoStack: [...undoStack, currentState, ...statesToRedo.slice(1).reverse()],
-      redoStack: redoStack.slice(0, -stepsToRedo),
+      undoStack: [...undoStack, currentState],
+      redoStack: redoStack.slice(0, -1),
+      isUndoRedoInProgress: false, // Clear flag
     });
 
     // Restore cursor position after state update
