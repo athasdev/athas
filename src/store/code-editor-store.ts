@@ -24,6 +24,12 @@ interface HistoryState {
   cursorPosition: number;
 }
 
+// Add per-file history interface
+interface FileHistory {
+  undoStack: HistoryState[];
+  redoStack: HistoryState[];
+}
+
 interface CodeEditorState {
   // Core Editor State
   value: string;
@@ -70,8 +76,7 @@ interface CodeEditorState {
   isTyping: boolean;
 
   // Add undo/redo state
-  undoStack: HistoryState[];
-  redoStack: HistoryState[];
+  fileHistories: Map<string, FileHistory>; // Per-file history
   isUndoRedoInProgress: boolean; // Add flag to prevent loops
   pushToHistory: (state: HistoryState) => void;
   undo: () => void;
@@ -181,23 +186,29 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
   isTyping: false,
 
   // Add initial undo/redo state
-  undoStack: [],
-  redoStack: [],
+  fileHistories: new Map(),
   isUndoRedoInProgress: false, // Add flag to prevent loops
 
   // Add undo/redo methods
   pushToHistory: (state: HistoryState) => {
-    const { undoStack } = get();
+    const { fileHistories } = get();
+    const filePath = get().filePath;
+    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
+
     set({
-      undoStack: [...undoStack, state],
-      redoStack: [], // Clear redo stack when new change is made
+      fileHistories: new Map(fileHistories).set(filePath, {
+        undoStack: [...fileHistory.undoStack, state],
+        redoStack: [], // Clear redo stack when new change is made
+      }),
     });
   },
 
   // Update undo method to handle multiple steps
   undo: () => {
-    const { undoStack, redoStack, value } = get();
-    if (undoStack.length === 0) return; // Early return if nothing to undo
+    const { fileHistories, filePath, value } = get();
+    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
+
+    if (fileHistory.undoStack.length === 0) return; // Early return if nothing to undo
 
     set({ isUndoRedoInProgress: true }); // Set flag to prevent loops
 
@@ -210,12 +221,14 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
     };
 
     // Only undo one state at a time for more predictable behavior
-    const prevState = undoStack[undoStack.length - 1];
+    const prevState = fileHistory.undoStack[fileHistory.undoStack.length - 1];
 
     set({
       value: prevState.content,
-      undoStack: undoStack.slice(0, -1),
-      redoStack: [...redoStack, currentState],
+      fileHistories: new Map(fileHistories).set(filePath, {
+        undoStack: fileHistory.undoStack.slice(0, -1),
+        redoStack: [...fileHistory.redoStack, currentState],
+      }),
       isUndoRedoInProgress: false, // Clear flag
     });
 
@@ -230,8 +243,10 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
 
   // Update redo method to match new undo behavior
   redo: () => {
-    const { undoStack, redoStack, value } = get();
-    if (redoStack.length === 0) return;
+    const { fileHistories, filePath, value } = get();
+    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
+
+    if (fileHistory.redoStack.length === 0) return;
 
     set({ isUndoRedoInProgress: true }); // Set flag to prevent loops
 
@@ -244,12 +259,14 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
     };
 
     // Only redo one state at a time
-    const nextState = redoStack[redoStack.length - 1];
+    const nextState = fileHistory.redoStack[fileHistory.redoStack.length - 1];
 
     set({
       value: nextState.content,
-      undoStack: [...undoStack, currentState],
-      redoStack: redoStack.slice(0, -1),
+      fileHistories: new Map(fileHistories).set(filePath, {
+        undoStack: [...fileHistory.undoStack, currentState],
+        redoStack: fileHistory.redoStack.slice(0, -1),
+      }),
       isUndoRedoInProgress: false, // Clear flag
     });
 
@@ -262,8 +279,16 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
     });
   },
 
-  canUndo: () => get().undoStack.length > 0,
-  canRedo: () => get().redoStack.length > 0,
+  canUndo: () => {
+    const { fileHistories, filePath } = get();
+    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
+    return fileHistory.undoStack.length > 0;
+  },
+  canRedo: () => {
+    const { fileHistories, filePath } = get();
+    const fileHistory = fileHistories.get(filePath) || { undoStack: [], redoStack: [] };
+    return fileHistory.redoStack.length > 0;
+  },
 
   // Core Editor Actions
   setValue: (value: string) => set({ value }),
