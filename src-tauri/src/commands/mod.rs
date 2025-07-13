@@ -4,6 +4,7 @@ pub mod fs;
 pub mod git;
 pub mod github;
 pub mod terminal;
+pub mod theme;
 pub mod watcher;
 pub mod window;
 
@@ -13,5 +14,6 @@ pub use fs::*;
 pub use git::*;
 pub use github::*;
 pub use terminal::*;
+pub use theme::*;
 pub use watcher::*;
 pub use window::*;

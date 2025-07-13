@@ -209,7 +209,12 @@ fn main() {
             start_claude_code,
             stop_claude_code,
             send_claude_input,
-            get_claude_status
+            get_claude_status,
+            // Theme commands
+            get_system_theme,
+            start_theme_monitoring,
+            stop_theme_monitoring,
+            trigger_theme_detection
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

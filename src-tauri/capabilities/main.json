@@ -41,6 +41,37 @@
             "org.gnome.desktop.interface",
             { "validator": "(gtk-theme|color-scheme)" }
           ]
+        },
+        {
+          "name": "kreadconfig5",
+          "cmd": "kreadconfig5",
+          "args": [
+            "--file",
+            "kdeglobals",
+            "--group",
+            "General",
+            "--key",
+            "ColorScheme"
+          ]
+        },
+        {
+          "name": "defaults",
+          "cmd": "defaults",
+          "args": [
+            "read",
+            "-g",
+            "AppleInterfaceStyle"
+          ]
+        },
+        {
+          "name": "reg",
+          "cmd": "reg",
+          "args": [
+            "query",
+            "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+            "/v",
+            "AppsUseLightTheme"
+          ]
         }
       ]
     }

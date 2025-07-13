@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useState } from "react";
 import type { ThemeType } from "../types/theme";
 
@@ -119,67 +121,10 @@ const getSystemThemeSync = (): "light" | "dark" => {
 
 const getSystemTheme = async (): Promise<"light" | "dark"> => {
   try {
-    const { platform } = await import("@tauri-apps/plugin-os");
-    const platformName = platform();
-
-    if (platformName === "linux") {
-      return await getLinuxSystemTheme();
-    }
-
-    // for other platforms, use matchMedia
-    if (typeof window !== "undefined" && window.matchMedia) {
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      return mediaQuery.matches ? "dark" : "light";
-    }
-
-    return "dark";
+    const theme = await invoke<string>("get_system_theme");
+    return theme === "dark" ? "dark" : "light";
   } catch (error) {
     console.error("Error detecting system theme:", error);
-    return getSystemThemeSync();
-  }
-};
-
-const getLinuxSystemTheme = async (): Promise<"light" | "dark"> => {
-  try {
-    const { Command } = await import("@tauri-apps/plugin-shell");
-
-    try {
-      const colorSchemeResult = await Command.create("gsettings", [
-        "get",
-        "org.gnome.desktop.interface",
-        "color-scheme",
-      ]).execute();
-
-      if (colorSchemeResult.code === 0 && colorSchemeResult.stdout) {
-        const output = colorSchemeResult.stdout.trim().replace(/'/g, "");
-        console.log("GNOME color-scheme:", output);
-
-        if (output === "prefer-dark") return "dark";
-        if (output === "prefer-light") return "light";
-      }
-    } catch (error) {
-      console.warn("gsettings color-scheme failed:", error);
-    }
-
-    try {
-      const themeResult = await Command.create("gsettings", [
-        "get",
-        "org.gnome.desktop.interface",
-        "gtk-theme",
-      ]).execute();
-
-      if (themeResult.code === 0 && themeResult.stdout) {
-        const theme = themeResult.stdout.toLowerCase();
-        console.log("GNOME gtk-theme:", theme);
-        return theme.includes("dark") ? "dark" : "light";
-      }
-    } catch (error) {
-      console.warn("gsettings gtk-theme failed:", error);
-    }
-
-    return getSystemThemeSync();
-  } catch (error) {
-    console.error("Linux theme detection failed:", error);
     return getSystemThemeSync();
   }
 };
@@ -202,6 +147,9 @@ const applyInitialTheme = async () => {
         console.log("Correcting theme to:", correctedTheme);
         applySpecificTheme(correctedTheme);
       }
+
+      // Start theme monitoring for auto mode
+      await invoke("start_theme_monitoring");
     } catch (error) {
       console.error("Error with async theme detection:", error);
     }
@@ -218,51 +166,48 @@ export const useSettings = () => {
   useEffect(() => {
     if (settings.theme !== "auto") {
       applySpecificTheme(settings.theme);
+      // Stop monitoring when not in auto mode
+      invoke("stop_theme_monitoring").catch(console.error);
       return;
     }
 
-    let mounted = true;
+    let unlistenThemeChange: (() => void) | null = null;
 
-    const updateSystemTheme = async () => {
+    // Set up event listener for system theme changes
+    const setupThemeListener = async () => {
       try {
-        const detectedTheme = await getSystemTheme();
-        if (mounted) {
+        // Start monitoring
+        await invoke("start_theme_monitoring");
+
+        // Listen for theme change events
+        const unlisten = await listen<string>("system-theme-changed", event => {
+          console.log("System theme changed to:", event.payload);
           const themeToApply =
-            detectedTheme === "dark" ? settings.autoThemeDark : settings.autoThemeLight;
+            event.payload === "dark" ? settings.autoThemeDark : settings.autoThemeLight;
           applySpecificTheme(themeToApply);
-        }
+        });
+
+        unlistenThemeChange = unlisten;
+
+        // Initial theme detection
+        const detectedTheme = await getSystemTheme();
+        const themeToApply =
+          detectedTheme === "dark" ? settings.autoThemeDark : settings.autoThemeLight;
+        applySpecificTheme(themeToApply);
       } catch (error) {
-        console.error("Error updating system theme:", error);
+        console.error("Error setting up theme monitoring:", error);
       }
     };
 
-    updateSystemTheme();
-
-    // Set up polling for theme changes (since Linux might not have reliable events)
-    const interval = setInterval(updateSystemTheme, 5000); // Check every 5 seconds
-
-    // Also try to listen for system theme changes using matchMedia as backup
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleMediaChange = () => {
-      if (mounted) {
-        updateSystemTheme();
-      }
-    };
-
-    try {
-      mediaQuery.addEventListener("change", handleMediaChange);
-    } catch (_error) {
-      console.log("matchMedia not available, using polling only");
-    }
+    setupThemeListener();
 
     return () => {
-      mounted = false;
-      clearInterval(interval);
-      try {
-        mediaQuery.removeEventListener("change", handleMediaChange);
-      } catch (_error) {
-        // Ignore cleanup errors
+      // Clean up event listener
+      if (unlistenThemeChange) {
+        unlistenThemeChange();
       }
+      // Stop monitoring when component unmounts or theme changes
+      invoke("stop_theme_monitoring").catch(console.error);
     };
   }, [settings.theme, settings.autoThemeLight, settings.autoThemeDark]);
 
