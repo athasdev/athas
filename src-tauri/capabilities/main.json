@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2/capability",
-  "identifier": "main-capability", 
+  "identifier": "main-capability",
   "description": "Capability for all windows",
   "windows": ["*"],
   "permissions": [
@@ -8,7 +8,7 @@
     "core:window:default",
     "core:window:allow-start-dragging",
     "core:window:allow-close",
-    "core:window:allow-minimize", 
+    "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-internal-toggle-maximize",
     "core:window:allow-is-maximized",
@@ -32,8 +32,17 @@
           "name": "sh",
           "cmd": "sh",
           "args": ["-c", { "validator": ".*" }]
+        },
+        {
+          "name": "gsettings",
+          "cmd": "gsettings",
+          "args": [
+            "get",
+            "org.gnome.desktop.interface",
+            { "validator": "(gtk-theme|color-scheme)" }
+          ]
         }
       ]
     }
   ]
-} 
+}
