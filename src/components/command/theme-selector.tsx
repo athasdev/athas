@@ -1,6 +1,6 @@
 import { Monitor, Moon, Sun, X } from "lucide-react";
 import type React from "react";
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { ThemeType } from "../../types/theme";
 
 interface ThemeInfo {
@@ -251,15 +251,12 @@ const ThemeSelector = forwardRef<ThemeSelectorRef, ThemeSelectorProps>(
   ({ isVisible, onClose, onThemeChange, currentTheme }, ref) => {
     const [query, setQuery] = useState("");
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [initialTheme, setInitialTheme] = useState(currentTheme);
     const inputRef = useRef<HTMLInputElement>(null);
     const resultsRef = useRef<HTMLDivElement>(null);
 
     useImperativeHandle(ref, () => ({
-      focus: () => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      },
+      focus: () => inputRef.current?.focus(),
     }));
 
     // Filter themes based on query
@@ -284,49 +281,55 @@ const ThemeSelector = forwardRef<ThemeSelectorRef, ThemeSelectorProps>(
 
     // Handle keyboard navigation
     useEffect(() => {
-      if (!isVisible) return;
+      if (isVisible) {
+        setInitialTheme(currentTheme);
+        setQuery("");
 
-      const handleKeyDown = (e: KeyboardEvent) => {
-        switch (e.key) {
-          case "ArrowDown":
-            e.preventDefault();
-            setSelectedIndex(prev => (prev < filteredThemes.length - 1 ? prev + 1 : prev));
-            break;
-          case "ArrowUp":
-            e.preventDefault();
-            setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev));
-            break;
-          case "Enter":
-            e.preventDefault();
-            if (filteredThemes[selectedIndex]) {
-              onThemeChange(filteredThemes[selectedIndex].id);
-              onClose();
-            }
-            break;
-          case "Escape":
-            e.preventDefault();
-            onClose();
-            break;
+        const initialIndex = THEME_DEFINITIONS.findIndex(t => t.id === currentTheme);
+        setSelectedIndex(initialIndex >= 0 ? initialIndex : 0);
+
+        requestAnimationFrame(() => inputRef.current?.focus());
+      }
+    }, [isVisible]);
+
+    const handleKeyDown = useCallback(
+      (e: KeyboardEvent) => {
+        if (!filteredThemes.length) return;
+
+        let nextIndex = selectedIndex;
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          nextIndex = (selectedIndex + 1) % filteredThemes.length;
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          nextIndex = (selectedIndex - 1 + filteredThemes.length) % filteredThemes.length;
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          onThemeChange(filteredThemes[selectedIndex].id);
+          onClose();
+          return;
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          onThemeChange(initialTheme!);
+          onClose();
+          return;
         }
-      };
 
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }, [isVisible, filteredThemes, selectedIndex, onThemeChange, onClose]);
+        if (nextIndex !== selectedIndex) {
+          setSelectedIndex(nextIndex);
+          onThemeChange(filteredThemes[nextIndex].id);
+        }
+      },
+      [selectedIndex, filteredThemes, onThemeChange, onClose, initialTheme],
+    );
 
     // Reset state when visibility changes
     useEffect(() => {
       if (isVisible) {
-        setQuery("");
-        setSelectedIndex(0);
-        // Immediate focus without delay for better UX
-        requestAnimationFrame(() => {
-          if (inputRef.current) {
-            inputRef.current.focus();
-          }
-        });
+        document.addEventListener("keydown", handleKeyDown);
+        return () => document.removeEventListener("keydown", handleKeyDown);
       }
-    }, [isVisible]);
+    }, [isVisible, handleKeyDown]);
 
     // Update selected index when query changes
     useEffect(() => {
@@ -335,20 +338,16 @@ const ThemeSelector = forwardRef<ThemeSelectorRef, ThemeSelectorProps>(
 
     // Scroll selected item into view
     useEffect(() => {
-      if (resultsRef.current && filteredThemes.length > 0) {
-        const selectedElement = resultsRef.current.querySelector(
-          `[data-index="${selectedIndex}"]`,
-        ) as HTMLElement;
-        if (selectedElement) {
-          selectedElement.scrollIntoView({
-            block: "nearest",
-            behavior: "instant",
-          });
-        }
-      }
+      const selectedElement = resultsRef.current?.querySelector(`[data-index="${selectedIndex}"]`);
+      selectedElement?.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }, [selectedIndex]);
 
     if (!isVisible) return null;
+
+    const handleClose = () => {
+      onThemeChange(initialTheme!);
+      onClose();
+    };
 
     return (
       <div className="-translate-x-1/2 fixed top-12 left-1/2 z-[9999] transform">
@@ -363,7 +362,7 @@ const ThemeSelector = forwardRef<ThemeSelectorRef, ThemeSelectorProps>(
               placeholder="Search themes..."
               className="flex-1 bg-transparent text-sm text-text placeholder-text-lighter outline-none"
             />
-            <button onClick={onClose} className="rounded p-1 transition-colors hover:bg-hover">
+            <button onClick={handleClose} className="rounded p-1 transition-colors hover:bg-hover">
               <X size={14} className="text-text-lighter" />
             </button>
           </div>
@@ -379,10 +378,10 @@ const ThemeSelector = forwardRef<ThemeSelectorRef, ThemeSelectorProps>(
                     <div className="mb-2 px-2 font-medium text-text-lighter text-xs uppercase tracking-wide">
                       {category}
                     </div>
-                    {themes.map((theme, _themeIndex) => {
+                    {themes.map(theme => {
                       const globalIndex = filteredThemes.indexOf(theme);
                       const isSelected = globalIndex === selectedIndex;
-                      const isCurrent = theme.id === currentTheme;
+                      const isCurrent = theme.id === initialTheme;
 
                       return (
                         <button
@@ -392,13 +391,13 @@ const ThemeSelector = forwardRef<ThemeSelectorRef, ThemeSelectorProps>(
                             onThemeChange(theme.id);
                             onClose();
                           }}
-                          className={`flex w-full cursor-pointer items-center gap-3 rounded px-3 py-1.5 text-left transition-colors ${
-                            isSelected ? "bg-selected text-text" : "text-text hover:bg-hover"
-                          }`}
                           onMouseEnter={() => {
                             setSelectedIndex(globalIndex);
                             onThemeChange(theme.id);
                           }}
+                          className={`flex w-full cursor-pointer items-center gap-3 rounded px-3 py-1.5 text-left transition-colors ${
+                            isSelected ? "bg-selected text-text" : "text-text hover:bg-hover"
+                          }`}
                         >
                           <div className="flex-shrink-0 text-text-lighter">
                             {theme.icon || <Moon size={16} />}
