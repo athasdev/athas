@@ -29,6 +29,8 @@ export default function BreadcrumbContainer({
       filePath={activeBuffer.path}
       rootPath={rootFolderPath}
       onNavigate={handleNavigate}
+      isOutlineVisible={false}
+      onToggleOutline={() => {}}
     />
   );
 }

@@ -7,7 +7,7 @@ export function SyntaxHighlight() {
   const { highlightRef } = useEditorInstanceStore();
 
   // Initialize PrismJS highlighting
-  useCodeHighlighting(highlightRef);
+  useCodeHighlighting(highlightRef || { current: null });
   const getEditorStyles = {
     fontSize: `${fontSize}px`,
     tabSize: tabSize,

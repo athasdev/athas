@@ -1,6 +1,6 @@
 import type React from "react";
 import { useCallback } from "react";
-import type { CodeEditorRef } from "../components/code-editor";
+import type { CodeEditorRef } from "../components/editor/code-editor";
 import type { VimMode } from "../types/app";
 import { getFilenameFromPath, isImageFile, isSQLiteFile } from "../utils/file-utils";
 import type { GitDiff, GitDiffLine } from "../utils/git";
@@ -193,7 +193,15 @@ export const useFileSelection = ({
                 }
 
                 textarea.focus();
-                textarea.setSelectionRange(targetPosition, targetPosition);
+                if (
+                  "setSelectionRange" in textarea &&
+                  typeof textarea.setSelectionRange === "function"
+                ) {
+                  (textarea as unknown as HTMLTextAreaElement).setSelectionRange(
+                    targetPosition,
+                    targetPosition,
+                  );
+                }
 
                 // Scroll to the line
                 const lineHeight = 20; // Approximate line height

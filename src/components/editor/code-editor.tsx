@@ -18,6 +18,7 @@ import { HoverTooltip } from "./hover-tooltip";
 import { LineNumbers } from "./line-numbers";
 import { QuickEditInline } from "./quick-edit-inline";
 import { VimCommandLine } from "./vim-command-line";
+// import type { VimCommandLineRef } from "../vim-command-line"; // Unused for now
 
 // Import language definitions
 import "prismjs/components/prism-bash";
@@ -51,7 +52,7 @@ interface CodeEditorProps {
   className?: string;
   filename?: string;
   vimEnabled?: boolean;
-  vimMode?: "normal" | "insert" | "visual";
+  vimMode?: "normal" | "insert" | "visual" | "visual-line" | "visual-block" | "command";
   searchQuery?: string;
   searchMatches?: { start: number; end: number }[];
   currentMatchIndex?: number;
@@ -72,6 +73,7 @@ interface CodeEditorProps {
 
 export interface CodeEditorRef {
   editor: HTMLDivElement | null;
+  textarea: HTMLDivElement | null;
 }
 
 // Main CodeEditor Component
@@ -111,15 +113,16 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
     const highlightRef = useRef<HTMLPreElement | null>(null);
     const lineNumbersRef = useRef<HTMLDivElement | null>(null);
     const mountedRef = useRef(true);
-    const _vimCommandLineRef = useRef<VimCommandLineRef>(null);
+    // const vimCommandLineRef = useRef<VimCommandLineRef>(null); // Unused for now
 
     // Store subscriptions - only what we need
     const language = useCodeEditorStore(state => state.language);
-    const _lspCompletions = useCodeEditorStore(state => state.lspCompletions);
-    const _selectedLspIndex = useCodeEditorStore(state => state.selectedLspIndex);
-    const _isLspCompletionVisible = useCodeEditorStore(state => state.isLspCompletionVisible);
-    const _completionPosition = useCodeEditorStore(state => state.completionPosition);
-    const _hoverInfo = useCodeEditorStore(state => state.hoverInfo);
+    // LSP state - unused for now but kept for future implementation
+    // const lspCompletions = useCodeEditorStore(state => state.lspCompletions);
+    // const selectedLspIndex = useCodeEditorStore(state => state.selectedLspIndex);
+    // const isLspCompletionVisible = useCodeEditorStore(state => state.isLspCompletionVisible);
+    // const completionPosition = useCodeEditorStore(state => state.completionPosition);
+    // const hoverInfo = useCodeEditorStore(state => state.hoverInfo);
 
     // Store actions for AI completion
     const setCurrentCompletion = useCodeEditorStore(state => state.setCurrentCompletion);
@@ -147,7 +150,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
     });
 
     // LSP completion hook
-    const { handleLspCompletion, applyLspCompletion, handleCompletionClose } = useLspCompletion({
+    const { handleLspCompletion } = useLspCompletion({
       getCompletions,
       isLanguageSupported,
       filePath,
@@ -178,7 +181,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
         setVimCommandLine(true, initialCommand || "");
       },
     );
-    const { handleScroll, handleCursorPositionChange, handleUserInteraction } = useEditorScroll(
+    const { handleScroll, handleUserInteraction } = useEditorScroll(
       editorRef,
       highlightRef,
       lineNumbersRef,
@@ -247,6 +250,7 @@ const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
     // Handle imperative ref
     useImperativeHandle(ref, () => ({
       editor: editorRef.current as HTMLDivElement | null,
+      textarea: editorRef.current as HTMLDivElement | null,
     }));
 
     // Cleanup on unmount

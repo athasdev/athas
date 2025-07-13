@@ -7,7 +7,7 @@ interface EditorConfig {
   lineNumbers: boolean;
   theme: string;
   vimEnabled: boolean;
-  vimMode: "normal" | "insert" | "visual";
+  vimMode: "normal" | "insert" | "visual" | "visual-line" | "visual-block" | "command";
   aiCompletion: boolean;
 }
 
@@ -19,7 +19,9 @@ interface EditorConfigState extends EditorConfig {
   setLineNumbers: (show: boolean) => void;
   setTheme: (theme: string) => void;
   setVimEnabled: (enabled: boolean) => void;
-  setVimMode: (mode: "normal" | "insert" | "visual") => void;
+  setVimMode: (
+    mode: "normal" | "insert" | "visual" | "visual-line" | "visual-block" | "command",
+  ) => void;
   setAiCompletion: (enabled: boolean) => void;
 
   // Bulk configuration update

@@ -51,7 +51,6 @@ const FileTree = ({
   onDeletePath,
   onGenerateImage,
   onUpdateFiles,
-  onCopyPath,
   onCutPath,
   onRenamePath,
   onDuplicatePath,

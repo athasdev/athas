@@ -7,9 +7,7 @@ export function CompletionDropdown() {
     selectedLspIndex,
     completionPosition,
     setLspCompletion,
-    onChange,
     editorRef,
-    value,
   } = useEditorInstanceStore();
 
   if (!isLspCompletionVisible) return null;
@@ -23,9 +21,9 @@ export function CompletionDropdown() {
     }
   };
 
-  const _handleClose = () => {
-    setLspCompletion(false);
-  };
+  // const handleClose = () => {
+  //   setLspCompletion(false);
+  // };
 
   return (
     <div

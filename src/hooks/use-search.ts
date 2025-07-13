@@ -1,6 +1,6 @@
 import type React from "react";
 import { useCallback, useState } from "react";
-import type { CodeEditorRef } from "../components/code-editor";
+import type { CodeEditorRef } from "../components/editor/code-editor";
 import type { SearchState } from "../types/app";
 import type { Buffer } from "../types/buffer";
 
@@ -53,7 +53,10 @@ export const useSearch = ({ activeBuffer, codeEditorRef }: UseSearchProps) => {
       const textarea = codeEditorRef.current?.textarea;
       if (!textarea) return;
 
-      const currentPos = textarea.selectionStart;
+      const currentPos =
+        "selectionStart" in textarea
+          ? (textarea as unknown as HTMLTextAreaElement).selectionStart
+          : 0;
       let targetMatch = 0;
 
       if (direction === "next") {
@@ -73,7 +76,12 @@ export const useSearch = ({ activeBuffer, codeEditorRef }: UseSearchProps) => {
 
       const match = matches[targetMatch];
       if (match && match.index !== undefined) {
-        textarea.setSelectionRange(match.index, match.index + match[0].length);
+        if ("setSelectionRange" in textarea && typeof textarea.setSelectionRange === "function") {
+          (textarea as unknown as HTMLTextAreaElement).setSelectionRange(
+            match.index,
+            match.index + match[0].length,
+          );
+        }
         // Only focus the textarea when explicitly navigating, not when typing
         if (shouldFocus) {
           textarea.focus();

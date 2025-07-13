@@ -55,7 +55,7 @@ interface CodeEditorState {
 
   // Vim State
   vimEnabled: boolean;
-  vimMode: "normal" | "insert" | "visual";
+  vimMode: "normal" | "insert" | "visual" | "visual-line" | "visual-block" | "command";
   vimRegister: string;
 
   // UI State
@@ -96,7 +96,9 @@ interface CodeEditorState {
 
   // Actions - Vim
   setVimEnabled: (enabled: boolean) => void;
-  setVimMode: (mode: "normal" | "insert" | "visual") => void;
+  setVimMode: (
+    mode: "normal" | "insert" | "visual" | "visual-line" | "visual-block" | "command",
+  ) => void;
   setVimRegister: (register: string) => void;
 
   // Actions - UI
@@ -194,7 +196,8 @@ export const useCodeEditorStore = create<CodeEditorState>((set, get) => ({
 
   // Vim Actions
   setVimEnabled: (enabled: boolean) => set({ vimEnabled: enabled }),
-  setVimMode: (mode: "normal" | "insert" | "visual") => set({ vimMode: mode }),
+  setVimMode: (mode: "normal" | "insert" | "visual" | "visual-line" | "visual-block" | "command") =>
+    set({ vimMode: mode }),
   setVimRegister: (register: string) => set({ vimRegister: register }),
 
   // UI Actions

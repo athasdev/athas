@@ -291,9 +291,11 @@ export const commands: VimCommand[] = [
     mode: ["insert", "visual", "visual-line", "command"],
     execute: context => {
       context.setState({ mode: "normal", visualStart: undefined });
-      if (context.textarea.selectionStart !== context.textarea.selectionEnd) {
-        if ("setSelectionRange" in context.textarea) {
-          context.textarea.setSelectionRange(context.cursorPosition, context.cursorPosition);
+      if ("selectionStart" in context.textarea && "selectionEnd" in context.textarea) {
+        if (context.textarea.selectionStart !== context.textarea.selectionEnd) {
+          if ("setSelectionRange" in context.textarea) {
+            context.textarea.setSelectionRange(context.cursorPosition, context.cursorPosition);
+          }
         }
       }
     },
@@ -305,8 +307,12 @@ export const commands: VimCommand[] = [
     key: "d",
     mode: ["visual", "visual-line"],
     execute: context => {
-      const start = Math.min(context.textarea.selectionStart, context.textarea.selectionEnd);
-      const end = Math.max(context.textarea.selectionStart, context.textarea.selectionEnd);
+      let start = 0;
+      let end = 0;
+      if ("selectionStart" in context.textarea && "selectionEnd" in context.textarea) {
+        start = Math.min(context.textarea.selectionStart, context.textarea.selectionEnd);
+        end = Math.max(context.textarea.selectionStart, context.textarea.selectionEnd);
+      }
       const deletedText = context.content.slice(start, end);
       const newContent = context.content.slice(0, start) + context.content.slice(end);
       context.updateContent(newContent);
@@ -319,8 +325,12 @@ export const commands: VimCommand[] = [
     key: "y",
     mode: ["visual", "visual-line"],
     execute: context => {
-      const start = Math.min(context.textarea.selectionStart, context.textarea.selectionEnd);
-      const end = Math.max(context.textarea.selectionStart, context.textarea.selectionEnd);
+      let start = 0;
+      let end = 0;
+      if ("selectionStart" in context.textarea && "selectionEnd" in context.textarea) {
+        start = Math.min(context.textarea.selectionStart, context.textarea.selectionEnd);
+        end = Math.max(context.textarea.selectionStart, context.textarea.selectionEnd);
+      }
       const yankedText = context.content.slice(start, end);
       context.setState({ register: yankedText, mode: "normal", visualStart: undefined });
       context.setCursorPosition(start);
@@ -331,8 +341,12 @@ export const commands: VimCommand[] = [
     key: "c",
     mode: ["visual", "visual-line"],
     execute: context => {
-      const start = Math.min(context.textarea.selectionStart, context.textarea.selectionEnd);
-      const end = Math.max(context.textarea.selectionStart, context.textarea.selectionEnd);
+      let start = 0;
+      let end = 0;
+      if ("selectionStart" in context.textarea && "selectionEnd" in context.textarea) {
+        start = Math.min(context.textarea.selectionStart, context.textarea.selectionEnd);
+        end = Math.max(context.textarea.selectionStart, context.textarea.selectionEnd);
+      }
       const deletedText = context.content.slice(start, end);
       const newContent = context.content.slice(0, start) + context.content.slice(end);
       context.updateContent(newContent);

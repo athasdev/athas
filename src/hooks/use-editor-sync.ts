@@ -11,7 +11,7 @@ interface UseEditorSyncProps {
   lineNumbers: boolean;
   disabled: boolean;
   vimEnabled: boolean;
-  vimMode: "normal" | "insert" | "visual";
+  vimMode?: "normal" | "insert" | "visual" | "visual-line" | "visual-block" | "command";
   aiCompletion: boolean;
   searchQuery: string;
   searchMatches: { start: number; end: number }[];
@@ -72,7 +72,9 @@ export const useEditorSync = (props: UseEditorSyncProps) => {
   }, [props.vimEnabled, setVimEnabled]);
 
   useEffect(() => {
-    setVimMode(props.vimMode);
+    if (props.vimMode) {
+      setVimMode(props.vimMode);
+    }
   }, [props.vimMode, setVimMode]);
 
   useEffect(() => {

@@ -38,6 +38,7 @@ import { useRemoteConnection } from "./hooks/use-remote-connection";
 import { useSearch } from "./hooks/use-search";
 import { useSettings } from "./hooks/use-settings";
 import { useVim } from "./hooks/use-vim";
+import { useCodeEditorStore } from "./stores/code-editor-store";
 import {
   cleanupFileWatcherListener,
   initializeFileWatcherListener,
@@ -131,27 +132,65 @@ function App() {
 
   const activeBuffer = getActiveBuffer();
 
-  // VIM functionality (moved here after useBuffers to access updateBufferContent)
-  const {
+  // Import vim state from stores
+  const { vimEnabled, vimMode, setVimEnabled, setVimMode, setCursorPosition } =
+    useCodeEditorStore();
+
+  // Create a ref that points to the editor div
+  const editorDivRef = useRef<HTMLDivElement>(null!);
+
+  // Initialize vim engine
+  const vim = useVim(
+    editorDivRef,
+    activeBuffer?.content || "",
+    (content: string) => {
+      if (activeBuffer) {
+        updateBufferContent(activeBuffer.id, content);
+      }
+    },
     vimEnabled,
-    vimMode,
-    cursorPosition,
-    setVimMode,
     setCursorPosition,
-    toggleVimMode,
-    handleVimKeyDown,
-    updateCursorPosition,
-  } = useVim({ activeBuffer, updateBufferContent, codeEditorRef });
+    setVimMode,
+    () => {}, // onShowCommandLine - to be implemented
+  );
+
+  // Vim helper functions
+  const toggleVimMode = useCallback(() => {
+    setVimEnabled(!vimEnabled);
+    if (!vimEnabled) {
+      setVimMode("normal");
+    }
+  }, [vimEnabled, setVimEnabled, setVimMode]);
+
+  const handleVimKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (vimEnabled && vim.vimEngine && codeEditorRef.current?.editor) {
+        const editor = codeEditorRef.current.editor;
+        const content = activeBuffer?.content || "";
+        const handled = vim.vimEngine.handleKeyDown(e, editor, content);
+        if (handled) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    },
+    [vimEnabled, vim.vimEngine, codeEditorRef, activeBuffer?.content],
+  );
+
+  const updateCursorPosition = useCallback(() => {
+    // This is called from file selection to reset cursor position
+    setCursorPosition(0);
+  }, [setCursorPosition]);
 
   // Apply vim mode from settings
   useEffect(() => {
     if (settings.vimMode !== vimEnabled) {
+      setVimEnabled(settings.vimMode);
       if (settings.vimMode) {
-        // Enable vim mode if it's enabled in settings but not in vim hook
-        // This would need to be handled by the vim hook itself
+        setVimMode("normal");
       }
     }
-  }, [settings.vimMode, vimEnabled]);
+  }, [settings.vimMode, vimEnabled, setVimEnabled, setVimMode]);
 
   const [allProjectFiles, setAllProjectFiles] = useState<FileEntry[]>([]);
   const [_isDraggingTab, setIsDraggingTab] = useState(false);
@@ -1107,7 +1146,6 @@ function App() {
                     activeBuffer={activeBuffer}
                     rootFolderPath={rootFolderPath}
                     onFileSelect={handleFileSelect}
-                    setIsRightPaneVisible={uiState.setIsRightPaneVisible}
                   />
                 )}
 
@@ -1173,7 +1211,6 @@ function App() {
                     filename={getFilenameFromPath(activeBuffer.path)}
                     vimEnabled={vimEnabled}
                     vimMode={vimMode}
-                    cursorPosition={cursorPosition}
                     searchQuery={searchState.query}
                     searchMatches={searchState.matches}
                     currentMatchIndex={searchState.currentMatch - 1}

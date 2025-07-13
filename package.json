@@ -55,7 +55,7 @@
     "vite": "^6.3.5"
   },
   "simple-git-hooks": {
-    "pre-commit": "bunx concurrently './scripts/format-staged-rust.sh' './scripts/format-staged-biome.sh && bun run lint:staged'",
+    "pre-commit": "bunx concurrently --names \"rust,ts\" --prefix-colors \"yellow,cyan\" './scripts/format-staged-rust.sh' './scripts/format-staged-biome.sh && bun run lint:staged && bun typecheck'",
     "commit-msg": "bun commitlint --edit $1"
   },
   "lint-staged": {

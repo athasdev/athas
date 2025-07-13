@@ -9,8 +9,6 @@ export function QuickEditInline() {
     editorRef,
     value,
     onChange,
-    filename,
-    filePath,
   } = useEditorInstanceStore();
 
   const handleClose = () => {
