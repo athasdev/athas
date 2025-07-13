@@ -1,5 +1,14 @@
-import React from "react";
-import { Buffer } from "../../types/buffer";
+import type React from "react";
+import type { Buffer } from "../../types/buffer";
+
+export interface ToolCall {
+  name: string;
+  input: any;
+  output?: any;
+  error?: string;
+  timestamp: Date;
+  isComplete?: boolean;
+}
 
 export interface Message {
   id: string;
@@ -7,6 +16,9 @@ export interface Message {
   role: "user" | "assistant" | "system";
   timestamp: Date;
   isStreaming?: boolean;
+  isToolUse?: boolean;
+  toolName?: string;
+  toolCalls?: ToolCall[];
 }
 
 export interface Chat {
@@ -23,6 +35,7 @@ export interface ContextInfo {
   selectedFiles?: string[];
   projectRoot?: string;
   language?: string;
+  providerId?: string;
 }
 
 export interface AIChatProps {

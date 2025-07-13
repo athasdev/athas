@@ -1,5 +1,6 @@
-import React, { useEffect } from "react";
-import { RecentFolder } from "../types/recent-folders";
+import type React from "react";
+import { useEffect } from "react";
+import type { RecentFolder } from "../types/recent-folders";
 
 interface UseContextMenusProps {
   folderHeaderContextMenu: { x: number; y: number } | null;
@@ -70,7 +71,7 @@ export const ProjectNameMenu = ({
 
   return (
     <div
-      className="fixed bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-md shadow-lg z-50 py-1 min-w-[200px]"
+      className="fixed z-50 min-w-[200px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
       style={{
         left: projectNameMenu.x,
         top: projectNameMenu.y,
@@ -84,9 +85,8 @@ export const ProjectNameMenu = ({
           onOpenFolder();
           onCloseMenu();
         }}
-        className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
       >
-        <span>📁</span>
         Add Folder to Workspace
       </button>
 
@@ -97,16 +97,15 @@ export const ProjectNameMenu = ({
           onCollapseAllFolders();
           onCloseMenu();
         }}
-        className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
       >
-        <span>📂</span>
         Collapse All Folders
       </button>
 
       {recentFolders.length > 0 && (
         <>
-          <div className="border-t border-[var(--border-color)] my-1"></div>
-          <div className="px-3 py-1 text-xs font-mono text-[var(--text-lighter)] uppercase tracking-wide">
+          <div className="my-1 border-border border-t"></div>
+          <div className="px-3 py-1 font-mono text-text-lighter text-xs uppercase tracking-wide">
             Recent Folders
           </div>
           {recentFolders.slice(0, 5).map(folder => (
@@ -118,10 +117,9 @@ export const ProjectNameMenu = ({
                 onOpenRecentFolder(folder.path);
                 onCloseMenu();
               }}
-              className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
             >
-              <span>📁</span>
-              <div className="flex flex-col items-start min-w-0 flex-1">
+              <div className="flex min-w-0 flex-1 flex-col items-start">
                 <span className="truncate font-medium">{folder.name}</span>
               </div>
             </button>

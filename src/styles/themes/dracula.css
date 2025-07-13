@@ -1,0 +1,73 @@
+/* Force Dracula theme */
+.force-dracula {
+    --tw-primary-bg: #282a36;
+    --tw-secondary-bg: #44475a;
+    --tw-text: #f8f8f2;
+    --tw-text-light: #bd93f9;
+    --tw-text-lighter: #6272a4;
+    --tw-border: #6272a4;
+    --tw-hover: #44475a;
+    --tw-selected: #6272a4;
+
+    /* Diagnostic colors */
+    --tw-error: #ff5555;
+    --tw-warning: #ffb86c;
+    --tw-info: #8be9fd;
+
+    /* Syntax highlighting colors - Dracula theme */
+    --tw-syntax-comment: #6272a4;
+    --tw-syntax-keyword: #ff79c6;
+    --tw-syntax-string: #f1fa8c;
+    --tw-syntax-number: #bd93f9;
+    --tw-syntax-function: #8be9fd;
+    --tw-syntax-variable: #ffb86c;
+    --tw-syntax-tag: #50fa7b;
+    --tw-syntax-attribute: #8be9fd;
+    --tw-syntax-punctuation: #f8f8f2;
+}
+
+/* Theme: Dracula (duplicate for consistency) */
+.force-dracula {
+    --tw-primary-bg: #282a36;
+    --tw-secondary-bg: #2f3144;
+    --tw-hover: #44475a;
+    --tw-selected: #44475a;
+    --tw-border: #44475a;
+    --tw-text: #f8f8f2;
+    --tw-text-lighter: #6272a4;
+    --tw-accent: #bd93f9;
+
+    /* Syntax highlighting */
+    --comment: #6272a4;
+    --keyword: #ff79c6;
+    --string: #f1fa8c;
+    --number: #bd93f9;
+    --function: #50fa7b;
+    --variable: #f8f8f2;
+    --tag: #8be9fd;
+    --attribute: #ffb86c;
+    --punctuation: #f8f8f2;
+}
+
+/* Dracula Soft */
+.force-dracula-soft {
+    --tw-primary-bg: #282a36;
+    --tw-secondary-bg: #22232e;
+    --tw-hover: #383a4c;
+    --tw-selected: #44475a;
+    --tw-border: #44475a;
+    --tw-text: #f8f8f2;
+    --tw-text-lighter: #6272a4;
+    --tw-accent: #bd93f9;
+
+    /* Syntax highlighting */
+    --comment: #6272a4;
+    --keyword: #ff79c6;
+    --string: #f1fa8c;
+    --number: #bd93f9;
+    --function: #50fa7b;
+    --variable: #f8f8f2;
+    --tag: #8be9fd;
+    --attribute: #ffb86c;
+    --punctuation: #f8f8f2;
+}

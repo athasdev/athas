@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FileEntry } from "../types/app";
+import type { FileEntry } from "../types/app";
 
 interface RemoteConnectionState {
   isRemoteWindow: boolean;

@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import { CompletionItem, Diagnostic, Hover } from "vscode-languageserver-protocol";
+import type { CompletionItem, Diagnostic, Hover } from "vscode-languageserver-protocol";
 
-import { CompletionResponse, LSPClientEvents, LSPConfig } from "./types";
+import type { CompletionResponse, LSPClientEvents, LSPConfig } from "./types";
 
 export class LSPClient {
   private processId: number | null = null;
@@ -22,6 +22,7 @@ export class LSPClient {
           command: this.config.command,
           args: this.config.args,
           working_dir: workspaceRoot,
+          initialization_options: this.config.initializationOptions || null,
         },
       });
 

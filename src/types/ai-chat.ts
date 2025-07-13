@@ -1,16 +1,16 @@
 export interface AIUserMessage {
-    role: "user";
-    content: string;
+  role: "user";
+  content: string;
 }
 
 export interface AIAssistantMessage {
-    role: "assistant";
-    content: string;
+  role: "assistant";
+  content: string;
 }
 
 export interface AISystemMessage {
-    role: "system";
-    content: string;
+  role: "system";
+  content: string;
 }
 
 export type AIMessage = AIUserMessage | AIAssistantMessage | AISystemMessage;

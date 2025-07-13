@@ -1,0 +1,68 @@
+/* Theme: Tokyo Night (duplicate for consistency) */
+.force-tokyo-night {
+    --tw-primary-bg: #1a1b26;
+    --tw-secondary-bg: #24283b;
+    --tw-hover: #2f334d;
+    --tw-selected: #3b4261;
+    --tw-border: #3b4261;
+    --tw-text: #c0caf5;
+    --tw-text-lighter: #565f89;
+    --tw-accent: #7aa2f7;
+
+    /* Syntax highlighting */
+    --comment: #565f89;
+    --keyword: #bb9af7;
+    --string: #9ece6a;
+    --number: #ff9e64;
+    --function: #7aa2f7;
+    --variable: #c0caf5;
+    --tag: #7dcfff;
+    --attribute: #ff9e64;
+    --punctuation: #89ddff;
+}
+
+/* Tokyo Night Storm */
+.force-tokyo-night-storm {
+    --tw-primary-bg: #24283b;
+    --tw-secondary-bg: #1f2335;
+    --tw-hover: #2f334d;
+    --tw-selected: #3b4261;
+    --tw-border: #3b4261;
+    --tw-text: #c0caf5;
+    --tw-text-lighter: #565f89;
+    --tw-accent: #7aa2f7;
+
+    /* Syntax highlighting */
+    --comment: #565f89;
+    --keyword: #bb9af7;
+    --string: #9ece6a;
+    --number: #ff9e64;
+    --function: #7aa2f7;
+    --variable: #c0caf5;
+    --tag: #7dcfff;
+    --attribute: #ff9e64;
+    --punctuation: #89ddff;
+}
+
+/* Tokyo Night Light */
+.force-tokyo-night-light {
+    --tw-primary-bg: #d5d6db;
+    --tw-secondary-bg: #cbccd1;
+    --tw-hover: #888c97;
+    --tw-selected: #9699a3;
+    --tw-border: #9699a3;
+    --tw-text: #343b58;
+    --tw-text-lighter: #4c5372;
+    --tw-accent: #34548a;
+
+    /* Syntax highlighting */
+    --comment: #5c6370;
+    --keyword: #5a4a78;
+    --string: #485e30;
+    --number: #8f5535;
+    --function: #34548a;
+    --variable: #343b58;
+    --tag: #2b5d63;
+    --attribute: #8f5535;
+    --punctuation: #2b5d63;
+}

@@ -1,0 +1,25 @@
+/* Aura */
+.force-aura {
+    --tw-primary-bg: #15141b;
+    --tw-secondary-bg: #111018;
+    --tw-text: #e0def4;
+    --tw-text-light: #a1a1c9;
+    --tw-text-lighter: #6e6a86;
+    --tw-border: #222222;
+    --tw-hover: #2a283e;
+    --tw-selected: rgba(80, 250, 123, 0.08);
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: #222222;
+    --scrollbar-thumb-hover: #6d58cb;
+
+    /* Syntax highlighting colors - Aura theme */
+    --tw-syntax-comment: #6e6a86;
+    --tw-syntax-keyword: #6d58cb;
+    --tw-syntax-string: #5eecb5;
+    --tw-syntax-number: #f6c177;
+    --tw-syntax-function: #9ccfd8;
+    --tw-syntax-variable: #6d58cb;
+    --tw-syntax-tag: #6d58cb;
+    --tw-syntax-attribute: #a575ad;
+    --tw-syntax-punctuation: #a575ad;
+}

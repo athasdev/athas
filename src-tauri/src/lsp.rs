@@ -1,6 +1,6 @@
 use anyhow::{Context, bail};
 use lsp_types::notification::{self, Notification};
-use lsp_types::request::{Completion, Initialize, HoverRequest};
+use lsp_types::request::{Completion, HoverRequest, Initialize};
 use lsp_types::{
     ClientCapabilities, ClientInfo, CodeActionCapabilityResolveSupport,
     CodeActionClientCapabilities, CodeActionKind, CodeActionKindLiteralSupport,
@@ -10,7 +10,7 @@ use lsp_types::{
     DiagnosticTag, DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities,
     DidCloseTextDocumentParams, DidOpenTextDocumentParams, DocumentSymbolClientCapabilities,
     DynamicRegistrationClientCapabilities, FailureHandlingKind, GotoCapability,
-    HoverClientCapabilities, InitializeParams, InitializedParams, InsertTextMode,
+    HoverClientCapabilities, HoverParams, InitializeParams, InitializedParams, InsertTextMode,
     InsertTextModeSupport, LogMessageParams, MarkupKind, MessageActionItemCapabilities,
     ParameterInformationSettings, PartialResultParams, Position, PrepareSupportDefaultBehavior,
     PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, ResourceOperationKind,
@@ -21,7 +21,7 @@ use lsp_types::{
     TextDocumentPositionParams, TextDocumentSyncClientCapabilities, TraceValue,
     VersionedTextDocumentIdentifier, WindowClientCapabilities, WorkDoneProgressParams,
     WorkspaceClientCapabilities, WorkspaceEditClientCapabilities, WorkspaceFolder,
-    WorkspaceSymbolClientCapabilities, HoverParams,
+    WorkspaceSymbolClientCapabilities,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -127,7 +127,7 @@ async fn handle_responses(
     pending_requests: Arc<Mutex<HashMap<i32, PendingRequest>>>,
     diagnostics_tx: mpsc::UnboundedSender<(String, Vec<Diagnostic>)>,
 ) {
-    println!("handle_responses");
+    log::debug!("handle_responses");
     let mut buffer = String::new();
     loop {
         buffer.clear();
@@ -137,7 +137,7 @@ async fn handle_responses(
         loop {
             match reader.read_line(&mut buffer).await {
                 Ok(0) => {
-                    eprintln!("lsp stdout stream close.");
+                    log::error!("lsp stdout stream close.");
                     return;
                 }
                 Ok(_) => {
@@ -151,7 +151,7 @@ async fn handle_responses(
                     buffer.clear();
                 }
                 Err(e) => {
-                    eprintln!("error reading from lsp stdout: {e}");
+                    log::error!("error reading from lsp stdout: {e}");
                     return;
                 }
             }
@@ -164,7 +164,7 @@ async fn handle_responses(
                 if let Ok(message) = serde_json::from_slice::<serde_json::Value>(&body_buf) {
                     handle_message(message, &pending_requests, &diagnostics_tx).await;
                 } else {
-                    eprintln!("failed to parse lsp payload");
+                    log::error!("failed to parse lsp payload");
                 }
             }
         }
@@ -198,7 +198,7 @@ async fn handle_message(
                 if let Ok(params) =
                     serde_json::from_value::<LogMessageParams>(message["params"].clone())
                 {
-                    println!("[LSP LOG]: {}", params.message);
+                    log::info!("[LSP LOG]: {}", params.message);
                 }
             }
             _ => {}
@@ -212,6 +212,7 @@ pub struct StartLSPRequest {
     command: String,
     args: Vec<String>,
     working_dir: String,
+    initialization_options: Option<serde_json::Value>,
 }
 
 #[tauri::command]
@@ -220,12 +221,12 @@ pub async fn start_lsp_server(
     state: State<'_, LSPState>,
     app_handle: AppHandle,
 ) -> Result<u32, String> {
-    println!("starting lsp server for {}", request.language);
+    log::info!("starting lsp server for {}", request.language);
     let mut processes = state.processes.lock().await;
 
     // Stop existing process if any
     if let Some(existing) = processes.remove(&request.language) {
-        println!("stopping existing lsp server for {}", request.language);
+        log::info!("stopping existing lsp server for {}", request.language);
         let mut process = existing.lock().await;
         let _ = process.process.kill().await;
     }
@@ -273,7 +274,7 @@ pub async fn start_lsp_server(
 
     let initialize_params = InitializeParams {
         process_id: Some(pid),
-        initialization_options: None,
+        initialization_options: request.initialization_options,
         capabilities: ClientCapabilities {
             workspace: Some(WorkspaceClientCapabilities {
                 apply_edit: Some(true),
@@ -695,7 +696,9 @@ pub async fn lsp_hover(
         if let Ok(result) = lsp_process.send_request::<HoverRequest>(params).await {
             if let Some(hover) = result {
                 // Convert the hover result to a JSON value for easier handling on the frontend
-                Ok(Some(serde_json::to_value(hover).map_err(|e| e.to_string())?))
+                Ok(Some(
+                    serde_json::to_value(hover).map_err(|e| e.to_string())?,
+                ))
             } else {
                 Ok(None)
             }

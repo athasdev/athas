@@ -1,15 +1,12 @@
-import React, { useRef, useEffect } from "react";
-import { Search, X, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import type React from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "../utils/cn";
 
 interface FindBarProps {
   isVisible: boolean;
   onClose: () => void;
-  onSearch: (
-    query: string,
-    direction: "next" | "previous",
-    shouldFocus?: boolean,
-  ) => void;
+  onSearch: (query: string, direction: "next" | "previous", shouldFocus?: boolean) => void;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   currentMatch: number;
@@ -62,9 +59,9 @@ const FindBar = ({
   }
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-[var(--secondary-bg)] border-b border-[var(--border-color)] text-sm">
-      <div className="flex items-center gap-2 flex-1">
-        <Search size={14} className="text-[var(--text-lighter)]" />
+    <div className="flex items-center gap-2 border-border border-b bg-secondary-bg px-4 py-2 text-sm">
+      <div className="flex flex-1 items-center gap-2">
+        <Search size={14} className="text-text-lighter" />
         <input
           ref={inputRef}
           type="text"
@@ -72,14 +69,12 @@ const FindBar = ({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Find in file..."
-          className="flex-1 bg-[var(--primary-bg)] text-[var(--text-color)] border border-[var(--border-color)] rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="flex-1 rounded border border-border bg-primary-bg px-2 py-1 font-mono text-text text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
 
         {searchQuery && (
-          <div className="flex items-center gap-1 text-xs text-[var(--text-lighter)] font-mono">
-            <span>
-              {totalMatches > 0 ? `${currentMatch}/${totalMatches}` : "0/0"}
-            </span>
+          <div className="flex items-center gap-1 font-mono text-text-lighter text-xs">
+            <span>{totalMatches > 0 ? `${currentMatch}/${totalMatches}` : "0/0"}</span>
           </div>
         )}
       </div>
@@ -89,32 +84,30 @@ const FindBar = ({
           onClick={() => onSearch(searchQuery, "previous", true)}
           disabled={!searchQuery || totalMatches === 0}
           className={cn(
-            "p-1 rounded hover:bg-[var(--hover-color)] transition-colors duration-150",
-            (!searchQuery || totalMatches === 0) &&
-              "opacity-50 cursor-not-allowed",
+            "rounded p-1 transition-colors duration-150 hover:bg-hover",
+            (!searchQuery || totalMatches === 0) && "cursor-not-allowed opacity-50",
           )}
           title="Previous match (Shift+Enter)"
         >
-          <ChevronUp size={14} className="text-[var(--text-lighter)]" />
+          <ChevronUp size={14} className="text-text-lighter" />
         </button>
         <button
           onClick={() => onSearch(searchQuery, "next", true)}
           disabled={!searchQuery || totalMatches === 0}
           className={cn(
-            "p-1 rounded hover:bg-[var(--hover-color)] transition-colors duration-150",
-            (!searchQuery || totalMatches === 0) &&
-              "opacity-50 cursor-not-allowed",
+            "rounded p-1 transition-colors duration-150 hover:bg-hover",
+            (!searchQuery || totalMatches === 0) && "cursor-not-allowed opacity-50",
           )}
           title="Next match (Enter)"
         >
-          <ChevronDown size={14} className="text-[var(--text-lighter)]" />
+          <ChevronDown size={14} className="text-text-lighter" />
         </button>
         <button
           onClick={onClose}
-          className="p-1 rounded hover:bg-[var(--hover-color)] transition-colors duration-150 ml-1"
+          className="ml-1 rounded p-1 transition-colors duration-150 hover:bg-hover"
           title="Close (Escape)"
         >
-          <X size={14} className="text-[var(--text-lighter)]" />
+          <X size={14} className="text-text-lighter" />
         </button>
       </div>
     </div>

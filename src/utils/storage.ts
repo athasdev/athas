@@ -10,7 +10,7 @@ export const clearLocalStorageByPrefix = (prefix: string): void => {
 
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key && key.startsWith(prefix)) {
+    if (key?.startsWith(prefix)) {
       keysToRemove.push(key);
     }
   }

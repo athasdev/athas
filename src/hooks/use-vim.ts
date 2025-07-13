@@ -1,7 +1,8 @@
-import React, { useCallback, useState } from "react";
-import { CodeEditorRef } from "../components/code-editor";
-import { VimMode } from "../types/app";
-import { Buffer } from "../types/buffer";
+import type React from "react";
+import { useCallback, useState } from "react";
+import type { CodeEditorRef } from "../components/code-editor";
+import type { VimMode } from "../types/app";
+import type { Buffer } from "../types/buffer";
 
 interface UseVimProps {
   activeBuffer: Buffer | null;
@@ -243,8 +244,8 @@ export const useVim = ({ activeBuffer, updateBufferContent, codeEditorRef }: Use
             // Substitute character (delete char and insert)
             if (selectionStart < activeBuffer.content.length) {
               const newContent =
-                activeBuffer.content.slice(0, selectionStart)
-                + activeBuffer.content.slice(selectionStart + 1);
+                activeBuffer.content.slice(0, selectionStart) +
+                activeBuffer.content.slice(selectionStart + 1);
               updateBufferContent(activeBuffer.id, newContent);
               setVimMode("insert");
             }
@@ -258,8 +259,8 @@ export const useVim = ({ activeBuffer, updateBufferContent, codeEditorRef }: Use
             const substituteLineEndPos =
               currentLineEnd === -1 ? activeBuffer.content.length : currentLineEnd;
             const substituteContent =
-              activeBuffer.content.slice(0, currentLineStart)
-              + activeBuffer.content.slice(substituteLineEndPos);
+              activeBuffer.content.slice(0, currentLineStart) +
+              activeBuffer.content.slice(substituteLineEndPos);
             updateBufferContent(activeBuffer.id, substituteContent);
             textarea.setSelectionRange(currentLineStart, currentLineStart);
             setVimMode("insert");
@@ -271,9 +272,9 @@ export const useVim = ({ activeBuffer, updateBufferContent, codeEditorRef }: Use
             const nextLinePos = activeBuffer.content.indexOf("\n", selectionStart);
             const insertPos = nextLinePos === -1 ? activeBuffer.content.length : nextLinePos;
             const newContent =
-              activeBuffer.content.slice(0, insertPos)
-              + "\n"
-              + activeBuffer.content.slice(insertPos);
+              activeBuffer.content.slice(0, insertPos) +
+              "\n" +
+              activeBuffer.content.slice(insertPos);
             updateBufferContent(activeBuffer.id, newContent);
             setTimeout(() => {
               textarea.setSelectionRange(insertPos + 1, insertPos + 1);
@@ -286,9 +287,9 @@ export const useVim = ({ activeBuffer, updateBufferContent, codeEditorRef }: Use
             const currentLineStartO =
               activeBuffer.content.substring(0, selectionStart).lastIndexOf("\n") + 1;
             const newContentAbove =
-              activeBuffer.content.slice(0, currentLineStartO)
-              + "\n"
-              + activeBuffer.content.slice(currentLineStartO);
+              activeBuffer.content.slice(0, currentLineStartO) +
+              "\n" +
+              activeBuffer.content.slice(currentLineStartO);
             updateBufferContent(activeBuffer.id, newContentAbove);
             setTimeout(() => {
               textarea.setSelectionRange(currentLineStartO, currentLineStartO);
@@ -473,8 +474,8 @@ export const useVim = ({ activeBuffer, updateBufferContent, codeEditorRef }: Use
             // Delete character under cursor
             if (selectionStart < activeBuffer.content.length) {
               const newContent =
-                activeBuffer.content.slice(0, selectionStart)
-                + activeBuffer.content.slice(selectionStart + 1);
+                activeBuffer.content.slice(0, selectionStart) +
+                activeBuffer.content.slice(selectionStart + 1);
               updateBufferContent(activeBuffer.id, newContent);
             }
             break;
@@ -483,8 +484,8 @@ export const useVim = ({ activeBuffer, updateBufferContent, codeEditorRef }: Use
             // Delete character before cursor
             if (selectionStart > 0) {
               const newContent =
-                activeBuffer.content.slice(0, selectionStart - 1)
-                + activeBuffer.content.slice(selectionStart);
+                activeBuffer.content.slice(0, selectionStart - 1) +
+                activeBuffer.content.slice(selectionStart);
               updateBufferContent(activeBuffer.id, newContent);
               textarea.setSelectionRange(selectionStart - 1, selectionStart - 1);
             }
@@ -515,9 +516,9 @@ export const useVim = ({ activeBuffer, updateBufferContent, codeEditorRef }: Use
             // Paste after cursor
             if (vimRegister) {
               const newContentP =
-                activeBuffer.content.slice(0, selectionStart + 1)
-                + vimRegister
-                + activeBuffer.content.slice(selectionStart + 1);
+                activeBuffer.content.slice(0, selectionStart + 1) +
+                vimRegister +
+                activeBuffer.content.slice(selectionStart + 1);
               updateBufferContent(activeBuffer.id, newContentP);
               textarea.setSelectionRange(
                 selectionStart + 1 + vimRegister.length,
@@ -530,9 +531,9 @@ export const useVim = ({ activeBuffer, updateBufferContent, codeEditorRef }: Use
             // Paste before cursor
             if (vimRegister) {
               const newContentP =
-                activeBuffer.content.slice(0, selectionStart)
-                + vimRegister
-                + activeBuffer.content.slice(selectionStart);
+                activeBuffer.content.slice(0, selectionStart) +
+                vimRegister +
+                activeBuffer.content.slice(selectionStart);
               updateBufferContent(activeBuffer.id, newContentP);
               textarea.setSelectionRange(
                 selectionStart + vimRegister.length,
@@ -625,8 +626,8 @@ export const useVim = ({ activeBuffer, updateBufferContent, codeEditorRef }: Use
           case "x": {
             // Delete selection
             const newContent =
-              activeBuffer.content.slice(0, selectionStart)
-              + activeBuffer.content.slice(selectionEnd);
+              activeBuffer.content.slice(0, selectionStart) +
+              activeBuffer.content.slice(selectionEnd);
             updateBufferContent(activeBuffer.id, newContent);
             textarea.setSelectionRange(selectionStart, selectionStart);
             setVimMode("normal");
@@ -635,8 +636,8 @@ export const useVim = ({ activeBuffer, updateBufferContent, codeEditorRef }: Use
           case "c": {
             // Change selection (delete and enter insert mode)
             const changeContent =
-              activeBuffer.content.slice(0, selectionStart)
-              + activeBuffer.content.slice(selectionEnd);
+              activeBuffer.content.slice(0, selectionStart) +
+              activeBuffer.content.slice(selectionEnd);
             updateBufferContent(activeBuffer.id, changeContent);
             textarea.setSelectionRange(selectionStart, selectionStart);
             setVimMode("insert");

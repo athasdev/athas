@@ -1,0 +1,22 @@
+/* Theme: SynthWave 84 */
+.force-synthwave-84 {
+    --tw-color-primary-bg: #262335;
+    --tw-color-secondary-bg: #2a2139;
+    --tw-color-hover: #34294f;
+    --tw-color-selected: #463465;
+    --tw-color-border: #463465;
+    --tw-color-text: #f9f9f9;
+    --tw-color-text-lighter: #9e8cac;
+    --tw-color-accent: #ff7edb;
+
+    /* Syntax highlighting */
+    --comment: #9e8cac;
+    --keyword: #fede5d;
+    --string: #ff8b39;
+    --number: #f97e72;
+    --function: #36f9f6;
+    --variable: #ff7edb;
+    --tag: #ff7edb;
+    --attribute: #ff8b39;
+    --punctuation: #f9f9f9;
+}

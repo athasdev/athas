@@ -1,21 +1,21 @@
-import { useState } from "react";
 import {
-  Upload,
+  Archive,
   Download,
   GitPullRequest,
-  RotateCcw,
-  Settings,
-  Archive,
-  Tag,
-  Server,
   RefreshCw,
+  RotateCcw,
+  Server,
+  Settings,
+  Tag,
+  Upload,
 } from "lucide-react";
+import { useState } from "react";
 import {
-  pushChanges,
-  pullChanges,
-  fetchChanges,
   discardAllChanges,
+  fetchChanges,
   initRepository,
+  pullChanges,
+  pushChanges,
 } from "../../utils/git";
 
 interface GitActionsMenuProps {
@@ -45,7 +45,7 @@ const GitActionsMenu = ({
 
   const handleAction = async (action: () => Promise<boolean>, actionName: string) => {
     if (!repoPath) return;
-    
+
     setIsLoading(true);
     try {
       const success = await action();
@@ -77,13 +77,15 @@ const GitActionsMenu = ({
 
   const handleDiscardAllChanges = async () => {
     if (!repoPath) return;
-    
-    const confirmed = confirm("Are you sure you want to discard all changes? This cannot be undone.");
+
+    const confirmed = confirm(
+      "Are you sure you want to discard all changes? This cannot be undone.",
+    );
     if (!confirmed) {
       onClose();
       return;
     }
-    
+
     handleAction(() => discardAllChanges(repoPath!), "Discard all changes");
   };
 
@@ -117,12 +119,12 @@ const GitActionsMenu = ({
 
   return (
     <div
-      className="fixed bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-md shadow-lg z-50 py-1 min-w-[180px]"
+      className="fixed z-50 min-w-[180px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
       style={{
         left: position.x,
         top: position.y,
       }}
-      onMouseDown={(e) => {
+      onMouseDown={e => {
         e.stopPropagation();
       }}
     >
@@ -130,109 +132,109 @@ const GitActionsMenu = ({
         <>
           {/* Basic Git Operations */}
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handlePush();
             }}
             disabled={isLoading}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2 disabled:opacity-50"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <Upload size={12} />
             Push Changes
           </button>
-          
+
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handlePull();
             }}
             disabled={isLoading}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2 disabled:opacity-50"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <Download size={12} />
             Pull Changes
           </button>
-          
+
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleFetch();
             }}
             disabled={isLoading}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2 disabled:opacity-50"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <GitPullRequest size={12} />
             Fetch
           </button>
-          
-          <div className="border-t border-[var(--border-color)] my-1"></div>
-          
+
+          <div className="my-1 border-border border-t"></div>
+
           {/* Advanced Operations */}
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleStashManager();
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <Archive size={12} />
             Manage Stashes
           </button>
-          
+
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleRemoteManager();
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <Server size={12} />
             Manage Remotes
           </button>
-          
+
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleTagManager();
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <Tag size={12} />
             Manage Tags
           </button>
-          
-          <div className="border-t border-[var(--border-color)] my-1"></div>
-          
+
+          <div className="my-1 border-border border-t"></div>
+
           {/* Refresh */}
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleRefresh();
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <RefreshCw size={12} />
             Refresh Status
           </button>
-          
-          <div className="border-t border-[var(--border-color)] my-1"></div>
-          
+
+          <div className="my-1 border-border border-t"></div>
+
           {/* Destructive Operations */}
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleDiscardAllChanges();
             }}
             disabled={isLoading}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-red-400 hover:bg-[var(--hover-color)] flex items-center gap-2 disabled:opacity-50"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-red-400 text-xs hover:bg-hover disabled:opacity-50"
           >
             <RotateCcw size={12} />
             Discard All Changes
@@ -242,27 +244,27 @@ const GitActionsMenu = ({
         <>
           {/* No Git Repository */}
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleInitRepository();
             }}
             disabled={isLoading}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2 disabled:opacity-50"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <Settings size={12} />
             Initialize Repository
           </button>
-          
-          <div className="border-t border-[var(--border-color)] my-1"></div>
-          
+
+          <div className="my-1 border-border border-t"></div>
+
           <button
-            onMouseDown={(e) => {
+            onMouseDown={e => {
               e.preventDefault();
               e.stopPropagation();
               handleRefresh();
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <RefreshCw size={12} />
             Refresh Status
@@ -273,4 +275,4 @@ const GitActionsMenu = ({
   );
 };
 
-export default GitActionsMenu; 
+export default GitActionsMenu;

@@ -13,14 +13,14 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
+  type GitCommit,
+  type GitFile,
+  type GitStatus,
   getBranches,
   getCommitDiff,
   getFileDiff,
   getGitLog,
   getGitStatus,
-  GitCommit,
-  GitFile,
-  GitStatus,
 } from "../../utils/git";
 import { safeLocalStorageSetItem, truncateJsonArrayData } from "../../utils/storage";
 
@@ -162,6 +162,36 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
     }
   };
 
+  const handleOpenOriginalFile = async (filePath: string) => {
+    if (!repoPath || !onFileSelect) return;
+
+    try {
+      // Handle special Git path formats
+      let actualFilePath = filePath;
+
+      // Handle renamed files: "oldfile -> newfile"
+      if (filePath.includes(" -> ")) {
+        const parts = filePath.split(" -> ");
+        // For opening the file, always use the new name
+        actualFilePath = parts[1].trim();
+      }
+
+      // Handle quoted filenames: "\"filename\""
+      if (actualFilePath.startsWith('"') && actualFilePath.endsWith('"')) {
+        actualFilePath = actualFilePath.slice(1, -1);
+      }
+
+      // Construct the full path
+      const fullPath = `${repoPath}/${actualFilePath}`;
+
+      // Open the file directly (not as a diff)
+      onFileSelect(fullPath, false);
+    } catch (error) {
+      console.error("Error opening file:", error);
+      alert(`Failed to open file ${filePath}:\n${error}`);
+    }
+  };
+
   const handleViewFileDiff = async (filePath: string, staged: boolean = false) => {
     if (!repoPath || !onFileSelect) return;
 
@@ -234,10 +264,10 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
     if (!repoPath || !onFileSelect) return;
 
     try {
-      const diffs = await getCommitDiff(repoPath, commitHash, filePath);
+      const diffs = await getCommitDiff(repoPath, commitHash);
 
-      if (diffs.length > 0) {
-        const diff = diffs[0]; // For now, show first diff or specific file
+      if (diffs && diffs.length > 0) {
+        const diff = filePath ? diffs.find(d => d.file_path === filePath) || diffs[0] : diffs[0]; // Show specific file or first diff
         const diffFileName = `${diff.file_path.split("/").pop()}.diff`;
         const virtualPath = `diff://commit/${commitHash}/${diffFileName}`;
         const diffJson = JSON.stringify(diff);
@@ -277,17 +307,17 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
   const _getFileIcon = (file: GitFile) => {
     switch (file.status) {
       case "added":
-        return <FilePlus size={10} className="text-[var(--text-color)]" />;
+        return <FilePlus size={10} className="text-text" />;
       case "deleted":
-        return <FileX size={10} className="text-[var(--text-color)]" />;
+        return <FileX size={10} className="text-text" />;
       case "modified":
-        return <Edit3 size={10} className="text-[var(--text-color)]" />;
+        return <Edit3 size={10} className="text-text" />;
       case "untracked":
-        return <FileIcon size={10} className="text-[var(--text-lighter)]" />;
+        return <FileIcon size={10} className="text-text-lighter" />;
       case "renamed":
-        return <RotateCcw size={10} className="text-[var(--text-color)]" />;
+        return <RotateCcw size={10} className="text-text" />;
       default:
-        return <FileIcon size={10} className="text-[var(--text-lighter)]" />;
+        return <FileIcon size={10} className="text-text-lighter" />;
     }
   };
 
@@ -320,19 +350,19 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
         setShowGitActionsMenu(!showGitActionsMenu);
         setShowBranchDropdown(false);
       }}
-      className="flex items-center gap-1 text-xs text-[var(--text-color)] font-medium hover:bg-[var(--hover-color)] px-2 py-1.5 rounded cursor-pointer"
+      className="flex cursor-pointer items-center gap-1 rounded px-2 py-1.5 font-medium text-text text-xs hover:bg-hover"
       title="Git Actions"
     >
-      <GitBranch size={12} className="text-[var(--text-lighter)]" />
+      <GitBranch size={12} className="text-text-lighter" />
       <span>Git</span>
     </button>
   );
 
   const renderGitActionsMenu = () =>
-    showGitActionsMenu
-    && gitActionsMenuPosition && (
+    showGitActionsMenu &&
+    gitActionsMenuPosition && (
       <div
-        className="fixed bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-md shadow-lg z-50 py-1 min-w-[180px]"
+        className="fixed z-50 min-w-[180px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
         style={{
           left: gitActionsMenuPosition.x,
           top: gitActionsMenuPosition.y,
@@ -350,7 +380,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
                 handlePush();
                 setShowGitActionsMenu(false);
               }}
-              className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
             >
               <Upload size={12} />
               Push Changes
@@ -363,7 +393,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
                 handlePull();
                 setShowGitActionsMenu(false);
               }}
-              className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
             >
               <Download size={12} />
               Pull Changes
@@ -376,13 +406,13 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
                 handleFetch();
                 setShowGitActionsMenu(false);
               }}
-              className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
             >
               <GitPullRequest size={12} />
               Fetch
             </button>
 
-            <div className="border-t border-[var(--border-color)] my-1"></div>
+            <div className="my-1 border-border border-t"></div>
 
             <button
               onMouseDown={e => {
@@ -391,7 +421,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
                 handleDiscardAllChanges();
                 setShowGitActionsMenu(false);
               }}
-              className="w-full text-left px-3 py-1.5 text-xs font-mono text-red-400 hover:bg-[var(--hover-color)] flex items-center gap-2"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-red-400 text-xs hover:bg-hover"
             >
               <RotateCcw size={12} />
               Discard All Changes
@@ -407,7 +437,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
               handleInitRepository();
               setShowGitActionsMenu(false);
             }}
-            className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
           >
             <Settings size={12} />
             Initialize Repository
@@ -419,12 +449,12 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
   if (!repoPath) {
     return (
       <>
-        <div className="flex flex-col h-full bg-[var(--secondary-bg)]">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-color)]">
+        <div className="flex h-full flex-col bg-secondary-bg">
+          <div className="flex items-center gap-2 border-border border-b px-3 py-2">
             {renderGitButton()}
           </div>
-          <div className="flex-1 flex items-center justify-center p-4">
-            <div className="text-center text-[var(--text-lighter)] font-mono text-xs">
+          <div className="flex flex-1 items-center justify-center p-4">
+            <div className="text-center font-mono text-text-lighter text-xs">
               <div className="mb-1">No Git repository detected</div>
               <div className="text-[10px] opacity-75">Open a Git project folder</div>
             </div>
@@ -438,12 +468,12 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
   if (isLoading && !gitStatus) {
     return (
       <>
-        <div className="flex flex-col h-full bg-[var(--secondary-bg)]">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-color)]">
+        <div className="flex h-full flex-col bg-secondary-bg">
+          <div className="flex items-center gap-2 border-border border-b px-3 py-2">
             {renderGitButton()}
           </div>
-          <div className="flex-1 flex items-center justify-center p-4">
-            <div className="text-center text-[var(--text-lighter)] font-mono text-xs">
+          <div className="flex flex-1 items-center justify-center p-4">
+            <div className="text-center font-mono text-text-lighter text-xs">
               Loading Git status...
             </div>
           </div>
@@ -456,12 +486,12 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
   if (!gitStatus) {
     return (
       <>
-        <div className="flex flex-col h-full bg-[var(--secondary-bg)]">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-color)]">
+        <div className="flex h-full flex-col bg-secondary-bg">
+          <div className="flex items-center gap-2 border-border border-b px-3 py-2">
             {renderGitButton()}
           </div>
-          <div className="flex-1 flex items-center justify-center p-4">
-            <div className="text-center text-[var(--text-lighter)] font-mono text-xs">
+          <div className="flex flex-1 items-center justify-center p-4">
+            <div className="text-center font-mono text-text-lighter text-xs">
               <div className="mb-1">Not a Git repository</div>
               <div className="text-[10px] opacity-75">Initialize with: git init</div>
             </div>
@@ -476,9 +506,9 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
 
   return (
     <>
-      <div className="flex flex-col h-full bg-[var(--secondary-bg)] font-mono text-xs">
+      <div className="flex h-full flex-col bg-secondary-bg font-mono text-xs">
         {/* Header */}
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-color)]">
+        <div className="flex items-center gap-2 border-border border-b px-3 py-2">
           {renderGitButton()}
 
           <GitBranchManager
@@ -488,7 +518,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
           />
 
           {(gitStatus.ahead > 0 || gitStatus.behind > 0) && (
-            <span className="text-[10px] text-[var(--text-lighter)]">
+            <span className="text-[10px] text-text-lighter">
               {gitStatus.ahead > 0 && `↑${gitStatus.ahead}`}
               {gitStatus.ahead > 0 && gitStatus.behind > 0 && " "}
               {gitStatus.behind > 0 && `↓${gitStatus.behind}`}
@@ -500,7 +530,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
           <button
             onClick={loadGitData}
             disabled={isLoading}
-            className="p-1 text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors disabled:opacity-50"
+            className="p-1 text-text-lighter transition-colors hover:text-text disabled:opacity-50"
             title="Refresh"
           >
             <RefreshCw size={10} className={isLoading ? "animate-spin" : ""} />
@@ -508,10 +538,11 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto scrollbar-hidden">
+        <div className="scrollbar-hidden flex-1 overflow-y-auto">
           <GitStatusPanel
             files={gitStatus.files}
             onFileSelect={handleViewFileDiff}
+            onOpenFile={handleOpenOriginalFile}
             onRefresh={loadGitData}
             repoPath={repoPath}
           />

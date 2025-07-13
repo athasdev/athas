@@ -1,14 +1,18 @@
+
 import { AlertCircle, ArrowLeftRight, Terminal as TerminalIcon, Palette } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import AIChat from "./components/ai-chat/ai-chat";
 import BottomPane from "./components/bottom-pane";
-import CodeEditor, { CodeEditorRef } from "./components/code-editor";
-import CommandBar from "./components/command-bar";
-import CommandPalette, { CommandPaletteRef } from "./components/command-palette";
-import { Diagnostic } from "./components/diagnostics/diagnostics-pane";
+import CodeEditor, { type CodeEditorRef } from "./components/code-editor";
+import CommandBar from "./components/command/command-bar";
+import CommandPalette, { type CommandPaletteRef } from "./components/command/command-palette";
+import type { Diagnostic } from "./components/diagnostics/diagnostics-pane";
 import DiffViewer from "./components/diff-viewer";
 import BreadcrumbContainer from "./components/editor/breadcrumbs/breadcrumb-container";
 import ExtensionsView from "./components/extensions-view";
+import FileReloadToast from "./components/file-reload-toast";
 import FindBar from "./components/find-bar";
 import GitHubCopilotSettings from "./components/github-copilot-settings";
 import ImageViewer from "./components/image-viewer";
@@ -16,7 +20,7 @@ import { MainSidebar } from "./components/layout/main-sidebar";
 import QuickEditInline from "./components/quick-edit-modal";
 import ResizableRightPane from "./components/resizable-right-pane";
 import ResizableSidebar from "./components/resizable-sidebar";
-import { SearchViewRef } from "./components/search-view";
+import type { SearchViewRef } from "./components/search-view";
 import SQLiteViewer from "./components/sqlite-viewer";
 import TabBar from "./components/tab-bar";
 import CustomTitleBar from "./components/window/custom-title-bar";
@@ -30,19 +34,24 @@ import { useFolderOperations } from "./hooks/use-folder-operations";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { useLSP } from "./hooks/use-lsp";
 import { useMenuEvents } from "./hooks/use-menu-events";
+import { useQuickEdit } from "./hooks/use-quick-edit";
 import { useRecentFolders } from "./hooks/use-recent-folders";
 import { useRemoteConnection } from "./hooks/use-remote-connection";
 import { useSearch } from "./hooks/use-search";
 import { useSettings } from "./hooks/use-settings";
-import { useUIState } from "./store/ui-state";
 import { useVim } from "./hooks/use-vim";
-import { FileEntry } from "./types/app";
-import { CoreFeaturesState, DEFAULT_CORE_FEATURES } from "./types/core-features";
-import { ThemeType } from "./types/theme";
+import {
+  cleanupFileWatcherListener,
+  initializeFileWatcherListener,
+  useFileWatcherStore,
+} from "./store/file-watcher-store";
+import { useUIState } from "./store/ui-state";
+import type { FileEntry } from "./types/app";
+import { type CoreFeaturesState, DEFAULT_CORE_FEATURES } from "./types/core-features";
+import type { ThemeType } from "./types/theme";
 import { getFilenameFromPath, getLanguageFromFilename } from "./utils/file-utils";
-import { GitDiff } from "./utils/git";
-import { isMac, writeFile } from "./utils/platform";
-import { useQuickEdit } from "./hooks/use-quick-edit";
+import type { GitDiff } from "./utils/git";
+import { isMac, readFile, writeFile } from "./utils/platform";
 
 function App() {
   const uiState = useUIState();
@@ -164,7 +173,74 @@ function App() {
     handleCreateNewFolderInDirectory,
     handleDeletePath,
     handleCollapseAllFolders,
+    refreshDirectory,
   } = useFileOperations({ openBuffer });
+
+  // File watcher store - get external changes as array
+  const startWatching = useFileWatcherStore(state => state.startWatching);
+  const markPendingSave = useFileWatcherStore(state => state.markPendingSave);
+  // const clearPendingSave = useFileWatcherStore(state => state.clearPendingSave); // Reserved for future use
+  // const stopWatching = useFileWatcherStore((state) => state.stopWatching); // Reserved for future use
+
+  // Initialize file watcher listeners only once when app starts
+  useEffect(() => {
+    initializeFileWatcherListener();
+
+    return () => {
+      cleanupFileWatcherListener();
+    };
+  }, []); // Only run once on mount
+
+  // Listen for file external changes
+  useEffect(() => {
+    const handleFileExternalChange = (event: CustomEvent) => {
+      const { path, changeType } = event.detail;
+
+      // Check if this file is open in any buffer
+      const buffer = buffers.find(b => b.path === path);
+
+      if (buffer && changeType === "modified") {
+        // Auto-reload all files regardless of dirty state
+        readFile(path)
+          .then(content => {
+            updateBufferContent(buffer.id, content, false);
+            // Dispatch event for toast notification
+            window.dispatchEvent(new CustomEvent("file-reloaded", { detail: { path } }));
+          })
+          .catch(error => {
+            console.error("❌ Failed to auto-reload file:", path, error);
+          });
+      }
+
+      // If it's a directory change, refresh the file tree
+      if (changeType === "modified" && rootFolderPath && path.startsWith(rootFolderPath)) {
+        const dirPath = path.substring(0, path.lastIndexOf("/"));
+        refreshDirectory(dirPath);
+      }
+    };
+
+    window.addEventListener("file-external-change", handleFileExternalChange as any);
+
+    return () => {
+      window.removeEventListener("file-external-change", handleFileExternalChange as any);
+    };
+  }, [buffers, updateBufferContent, rootFolderPath, refreshDirectory]);
+
+  // Watch individual files based on open buffers
+  useEffect(() => {
+    const currentPaths = new Set(
+      buffers
+        .filter(buffer => !buffer.isVirtual && !buffer.path.startsWith("diff://"))
+        .map(buffer => buffer.path),
+    );
+
+    // Start watching new files
+    currentPaths.forEach(path => {
+      startWatching(path);
+    });
+
+    // TODO: Consider cleaning up watchers for closed files
+  }, [buffers, startWatching]);
 
   // Function to refresh all project files (needed by remote connection hook)
   const refreshAllProjectFiles = useCallback(async () => {
@@ -348,7 +424,7 @@ function App() {
 
         const pathParts = activeBuffer.path.replace("remote://", "").split("/");
         const connectionId = pathParts.shift();
-        const remotePath = "/" + pathParts.join("/");
+        const remotePath = `/${pathParts.join("/")}`;
 
         if (connectionId) {
           (async () => {
@@ -369,6 +445,8 @@ function App() {
       } else {
         (async () => {
           try {
+            // Mark as pending save before writing
+            markPendingSave(activeBuffer.path);
             await writeFile(activeBuffer.path, activeBuffer.content);
             markBufferDirty(activeBuffer.id, false);
           } catch (error) {
@@ -534,7 +612,7 @@ function App() {
       const line = prompt("Go to line:");
       if (line && codeEditorRef.current?.textarea) {
         const lineNumber = parseInt(line, 10);
-        if (!isNaN(lineNumber)) {
+        if (!Number.isNaN(lineNumber)) {
           const textarea = codeEditorRef.current.textarea;
           const lines = textarea.value.split("\n");
           let targetPosition = 0;
@@ -563,13 +641,20 @@ function App() {
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-    setIsBottomPaneVisible: uiState.setIsBottomPaneVisible,
+    setIsBottomPaneVisible: v =>
+      uiState.setIsBottomPaneVisible(typeof v === "function" ? v(uiState.isBottomPaneVisible) : v),
     setBottomPaneActiveTab: uiState.setBottomPaneActiveTab,
-    setIsSidebarVisible: uiState.setIsSidebarVisible,
+    setIsSidebarVisible: v =>
+      uiState.setIsSidebarVisible(typeof v === "function" ? v(uiState.isSidebarVisible) : v),
     setIsFindVisible,
-    setIsRightPaneVisible: uiState.setIsRightPaneVisible,
-    setIsCommandBarVisible: uiState.setIsCommandBarVisible,
-    setIsCommandPaletteVisible: uiState.setIsCommandPaletteVisible,
+    setIsRightPaneVisible: v =>
+      uiState.setIsRightPaneVisible(typeof v === "function" ? v(uiState.isRightPaneVisible) : v),
+    setIsCommandBarVisible: v =>
+      uiState.setIsCommandBarVisible(typeof v === "function" ? v(uiState.isCommandBarVisible) : v),
+    setIsCommandPaletteVisible: v =>
+      uiState.setIsCommandPaletteVisible(
+        typeof v === "function" ? v(uiState.isCommandPaletteVisible) : v,
+      ),
     setIsSearchViewActive: uiState.setIsSearchViewActive,
     focusSearchInput,
     focusCommandPalette,
@@ -629,6 +714,8 @@ function App() {
           }
           autoSaveTimeoutRef.current = setTimeout(async () => {
             try {
+              // Mark as pending save before auto-saving
+              markPendingSave(activeBuffer.path);
               await writeFile(activeBuffer.path, content);
               markBufferDirty(activeBuffer.id, false);
             } catch (error) {
@@ -639,7 +726,7 @@ function App() {
         }
       }
     },
-    [activeBuffer, updateBufferContent, markBufferDirty, settings.autoSave],
+    [activeBuffer, updateBufferContent, markBufferDirty, settings.autoSave, markPendingSave],
   );
 
   const handleTabClick = (bufferId: string) => {
@@ -732,17 +819,17 @@ function App() {
 
   // Check if we should show welcome screen (no folder open and not a remote window)
   const shouldShowWelcome =
-    files.length === 0
-    && !isRemoteWindow
-    && !remoteConnectionId
-    && !isRemoteFromUrl
-    && !remoteParam;
+    files.length === 0 &&
+    !isRemoteWindow &&
+    !remoteConnectionId &&
+    !isRemoteFromUrl &&
+    !remoteParam;
 
   if (shouldShowWelcome) {
     return (
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-transparent">
+      <div className="flex h-screen w-screen flex-col overflow-hidden bg-transparent">
         <div
-          className={`window-container flex flex-col h-full w-full bg-white overflow-hidden ${isMac() && "rounded-xl"}`}
+          className={`window-container flex h-full w-full flex-col overflow-hidden bg-white ${isMac() && "rounded-xl"}`}
         >
           <CustomTitleBar showMinimal={true} isWelcomeScreen={true} />
           <WelcomeScreen
@@ -756,9 +843,9 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-transparent">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-transparent">
       <div
-        className={`window-container flex flex-col h-full w-full bg-[var(--primary-bg)] overflow-hidden ${isMac() && "rounded-xl"}`}
+        className={`window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg ${isMac() && "rounded-xl"}`}
       >
         {/* Custom Titlebar */}
         <CustomTitleBar
@@ -786,11 +873,11 @@ function App() {
         />
 
         {/* Thin separator bar */}
-        <div className="h-px bg-[var(--border-color)] flex-shrink-0" />
+        <div className="h-px flex-shrink-0 bg-border" />
 
         {/* Main App Content */}
-        <div className="flex flex-col h-full w-full bg-[var(--primary-bg)] overflow-hidden">
-          <div className="flex flex-row flex-1 overflow-hidden custom-scrollbar-auto">
+        <div className="flex h-full w-full flex-col overflow-hidden bg-primary-bg">
+          <div className="custom-scrollbar-auto flex flex-1 flex-row overflow-hidden">
             {/* Left Side - AI Chat (when sidebar is on right) or File Tree (when sidebar is on left) */}
             {settings.sidebarPosition === "right"
               ? // AI Chat on left when sidebar is on right
@@ -845,6 +932,7 @@ function App() {
                       }
                       onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
                       onDeletePath={(path: string) => handleDeletePath(path, false)}
+                      onUpdateFiles={setFiles}
                       onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
                       projectName={getProjectName()}
                     />
@@ -852,7 +940,7 @@ function App() {
                 )}
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col bg-[var(--primary-bg)] h-full overflow-hidden">
+            <div className="flex h-full flex-1 flex-col overflow-hidden bg-primary-bg">
               {/* Tab Bar */}
               <TabBar
                 buffers={buffers}
@@ -867,11 +955,12 @@ function App() {
                 onTabDragStart={handleTabDragStart}
                 onTabDragEnd={handleTabDragEnd}
                 maxOpenTabs={maxOpenTabs}
+                externallyModifiedPaths={new Set()}
               />
 
               {/* Breadcrumb - Hidden in git view and extensions view */}
-              {!uiState.isGitViewActive
-                && activeBuffer?.path !== "extensions://language-servers" && (
+              {!uiState.isGitViewActive &&
+                activeBuffer?.path !== "extensions://language-servers" && (
                   <BreadcrumbContainer
                     activeBuffer={activeBuffer}
                     rootFolderPath={rootFolderPath}
@@ -965,14 +1054,14 @@ function App() {
                   />
                 )
               ) : (
-                <div className="flex items-center justify-center flex-1 p-4 text-[var(--text-lighter)] font-mono text-sm">
+                <div className="flex flex-1 items-center justify-center p-4 font-mono text-sm text-text-lighter">
                   Select a file to edit...
                 </div>
               )}
 
               {/* Footer with indicators */}
-              <div className="flex items-center justify-between px-4 py-2 bg-[var(--secondary-bg)] min-h-[40px] border-t border-[var(--border-color)]">
-                <div className="flex items-center gap-4 font-mono text-xs text-[var(--text-lighter)]">
+              <div className="flex min-h-[40px] items-center justify-between border-border border-t bg-secondary-bg px-4 py-2">
+                <div className="flex items-center gap-4 font-mono text-text-lighter text-xs">
                   {activeBuffer && (
                     <>
                       <span>{activeBuffer.content.split("\n").length} lines</span>
@@ -991,14 +1080,14 @@ function App() {
                       onClick={() => {
                         uiState.setBottomPaneActiveTab("terminal");
                         uiState.setIsBottomPaneVisible(
-                          !uiState.isBottomPaneVisible
-                            || uiState.bottomPaneActiveTab !== "terminal",
+                          !uiState.isBottomPaneVisible ||
+                            uiState.bottomPaneActiveTab !== "terminal",
                         );
                       }}
-                      className={`flex items-center gap-1 px-2 py-1 border rounded transition-colors ${
+                      className={`flex items-center gap-1 rounded border px-2 py-1 transition-colors ${
                         uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"
-                          ? "bg-[var(--selected-color)] border-[var(--border-color)] text-[var(--text-color)]"
-                          : "bg-[var(--primary-bg)] border-[var(--border-color)] text-[var(--text-lighter)] hover:bg-[var(--hover-color)]"
+                          ? "border-border bg-selected text-text"
+                          : "border-border bg-primary-bg text-text-lighter hover:bg-hover"
                       }`}
                       title="Toggle Terminal"
                     >
@@ -1012,33 +1101,33 @@ function App() {
                       onClick={() => {
                         uiState.setBottomPaneActiveTab("diagnostics");
                         uiState.setIsBottomPaneVisible(
-                          !uiState.isBottomPaneVisible
-                            || uiState.bottomPaneActiveTab !== "diagnostics",
+                          !uiState.isBottomPaneVisible ||
+                            uiState.bottomPaneActiveTab !== "diagnostics",
                         );
                       }}
-                      className={`flex items-center gap-1 px-2 py-1 border rounded transition-colors ${
+                      className={`flex items-center gap-1 rounded border px-2 py-1 transition-colors ${
                         uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"
-                          ? "bg-[var(--selected-color)] border-[var(--border-color)] text-[var(--text-color)]"
+                          ? "border-border bg-selected text-text"
                           : diagnostics.length > 0
-                            ? "bg-[var(--primary-bg)] border-red-300 text-red-600 hover:bg-red-50"
-                            : "bg-[var(--primary-bg)] border-[var(--border-color)] text-[var(--text-lighter)] hover:bg-[var(--hover-color)]"
+                            ? "border-red-300 bg-primary-bg text-red-600 hover:bg-red-50"
+                            : "border-border bg-primary-bg text-text-lighter hover:bg-hover"
                       }`}
                       title="Toggle Problems Panel"
                     >
                       <AlertCircle size={12} />
                       {diagnostics.length > 0 && (
-                        <span className="text-xs rounded text-center leading-none">
+                        <span className="rounded text-center text-xs leading-none">
                           {diagnostics.length}
                         </span>
                       )}
                     </button>
                   )}
                 </div>
-                <div className="flex items-center gap-4 font-mono text-xs text-[var(--text-lighter)]">
+                <div className="flex items-center gap-4 font-mono text-text-lighter text-xs">
                   {/* Sidebar Position Toggle */}
                   <button
                     onClick={handleToggleSidebarPosition}
-                    className="cursor-pointer flex items-center gap-1 px-2 py-1 bg-[var(--primary-bg)] border border-[var(--border-color)] rounded hover:bg-[var(--hover-color)] transition-colors"
+                    className="flex cursor-pointer items-center gap-1 rounded border border-border bg-primary-bg px-2 py-1 transition-colors hover:bg-hover"
                     title={`Switch sidebar to ${settings.sidebarPosition === "left" ? "right" : "left"} (Cmd+Shift+B)`}
                   >
                     <ArrowLeftRight size={12} />
@@ -1047,10 +1136,10 @@ function App() {
                   {activeBuffer && !activeBuffer.isSQLite && (
                     <button
                       onClick={() => uiState.setIsGitHubCopilotSettingsVisible(true)}
-                      className="cursor-pointer flex items-center gap-1 px-2 py-1 bg-[var(--primary-bg)] border border-[var(--border-color)] rounded hover:bg-[var(--hover-color)] transition-colors"
+                      className="flex cursor-pointer items-center gap-1 rounded border border-border bg-primary-bg px-2 py-1 transition-colors hover:bg-hover"
                       title="AI Code Completion Settings"
                     >
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-blue-500"></div>
                       <span>AI Assist</span>
                     </button>
                   )}
@@ -1099,6 +1188,7 @@ function App() {
                       }
                       onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
                       onDeletePath={(path: string) => handleDeletePath(path, false)}
+                      onUpdateFiles={setFiles}
                       onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
                       projectName={getProjectName()}
                     />
@@ -1133,13 +1223,7 @@ function App() {
             onTabChange={tab => uiState.setBottomPaneActiveTab(tab)}
             diagnostics={diagnostics}
             onDiagnosticClick={handleDiagnosticClick}
-            currentDirectory={
-              files.length > 0
-                ? typeof files[0]?.path === "string"
-                  ? files[0].path.split("/").slice(0, -1).join("/")
-                  : undefined
-                : undefined
-            }
+            currentDirectory={rootFolderPath}
             showTerminal={coreFeatures.terminal}
             showDiagnostics={coreFeatures.diagnostics}
           />
@@ -1179,6 +1263,7 @@ function App() {
               );
             }}
             onThemeChange={handleThemeChange}
+            currentTheme={settings.theme}
             onQuickEditInline={handleQuickEdit}
           />
 
@@ -1212,6 +1297,9 @@ function App() {
             onOpenRecentFolder={handleOpenRecentFolder}
             onCloseMenu={() => uiState.setProjectNameMenu(null)}
           />
+
+          {/* Subtle reload notifications */}
+          <FileReloadToast />
         </div>
       </div>
     </div>

@@ -9,8 +9,9 @@ import {
   Square,
   X,
 } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AI_PROVIDERS, getModelById } from "../../types/ai-provider";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AI_PROVIDERS, getModelById, getProviderById } from "../../types/ai-provider";
 import {
   getChatCompletionStream,
   getProviderApiToken,
@@ -25,8 +26,10 @@ import ModelProviderSelector from "../model-provider-selector";
 import OutlineView from "../outline-view";
 import Button from "../ui/button";
 import ChatHistoryModal from "./chat-history-modal";
+import ClaudeStatusIndicator from "./claude-status";
 import MarkdownRenderer from "./markdown-renderer";
-import { AIChatProps, Chat, ContextInfo, Message } from "./types";
+import ToolCallDisplay from "./tool-call-display";
+import type { AIChatProps, Chat, ContextInfo, Message } from "./types";
 import { formatTime } from "./utils";
 
 export default function AIChat({
@@ -76,8 +79,8 @@ export default function AIChat({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        contextDropdownRef.current
-        && !contextDropdownRef.current.contains(event.target as Node)
+        contextDropdownRef.current &&
+        !contextDropdownRef.current.contains(event.target as Node)
       ) {
         setIsContextDropdownOpen(false);
       }
@@ -99,6 +102,10 @@ export default function AIChat({
           messages: chat.messages.map((msg: any) => ({
             ...msg,
             timestamp: new Date(msg.timestamp),
+            toolCalls: msg.toolCalls?.map((tc: any) => ({
+              ...tc,
+              timestamp: new Date(tc.timestamp),
+            })),
           })),
         }));
         setChats(parsedChats);
@@ -171,7 +178,7 @@ export default function AIChat({
 
   // Update chat title based on first message
   const updateChatTitle = (chatId: string, firstMessage: string) => {
-    const title = firstMessage.length > 50 ? firstMessage.substring(0, 50) + "..." : firstMessage;
+    const title = firstMessage.length > 50 ? `${firstMessage.substring(0, 50)}...` : firstMessage;
 
     setChats(prev => prev.map(chat => (chat.id === chatId ? { ...chat, title } : chat)));
   };
@@ -195,6 +202,12 @@ export default function AIChat({
 
   const checkApiKey = useCallback(async () => {
     try {
+      // Claude Code doesn't require an API key in the frontend
+      if (currentProviderId === "claude-code") {
+        setHasApiKey(true);
+        return;
+      }
+
       const token = await getProviderApiToken(currentProviderId);
       setHasApiKey(!!token);
     } catch (error) {
@@ -208,6 +221,12 @@ export default function AIChat({
 
     for (const provider of AI_PROVIDERS) {
       try {
+        // Claude Code doesn't require an API key in the frontend
+        if (provider.id === "claude-code") {
+          newApiKeyMap.set(provider.id, true);
+          continue;
+        }
+
         const token = await getProviderApiToken(provider.id);
         newApiKeyMap.set(provider.id, !!token);
       } catch (_error) {
@@ -278,6 +297,7 @@ export default function AIChat({
       openBuffers: getSelectedBuffers,
       selectedFiles,
       projectRoot: rootFolderPath,
+      providerId: currentProviderId,
     };
 
     if (activeBuffer) {
@@ -308,7 +328,7 @@ export default function AIChat({
     }
 
     return context;
-  }, [activeBuffer, getSelectedBuffers, selectedFiles, rootFolderPath]);
+  }, [activeBuffer, getSelectedBuffers, selectedFiles, rootFolderPath, currentProviderId]);
 
   // Stop streaming response
   const stopStreaming = () => {
@@ -388,6 +408,7 @@ export default function AIChat({
         }));
 
       const enhancedMessage = userMessage.content;
+      let currentAssistantMessageId = assistantMessageId;
 
       await getChatCompletionStream(
         currentProviderId,
@@ -402,7 +423,7 @@ export default function AIChat({
                 ? {
                     ...chat,
                     messages: chat.messages.map(msg =>
-                      msg.id === assistantMessageId
+                      msg.id === currentAssistantMessageId
                         ? { ...msg, content: msg.content + chunk }
                         : msg,
                     ),
@@ -419,7 +440,7 @@ export default function AIChat({
                 ? {
                     ...chat,
                     messages: chat.messages.map(msg =>
-                      msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg,
+                      msg.id === currentAssistantMessageId ? { ...msg, isStreaming: false } : msg,
                     ),
                     lastMessageAt: new Date(),
                   }
@@ -439,7 +460,7 @@ export default function AIChat({
                 ? {
                     ...chat,
                     messages: chat.messages.map(msg =>
-                      msg.id === assistantMessageId
+                      msg.id === currentAssistantMessageId
                         ? {
                             ...msg,
                             content: msg.content || `Error: ${error}`,
@@ -456,6 +477,85 @@ export default function AIChat({
           abortControllerRef.current = null;
         },
         conversationContext, // Pass conversation history for context
+        // onNewMessage - create a new assistant message
+        () => {
+          const newMessageId = Date.now().toString();
+          const newAssistantMessage: Message = {
+            id: newMessageId,
+            content: "",
+            role: "assistant",
+            timestamp: new Date(),
+            isStreaming: true,
+          };
+
+          setChats(prev =>
+            prev.map(chat =>
+              chat.id === chatId
+                ? {
+                    ...chat,
+                    messages: [...chat.messages, newAssistantMessage],
+                  }
+                : chat,
+            ),
+          );
+
+          // Update the current message ID to append chunks to the new message
+          currentAssistantMessageId = newMessageId;
+          setStreamingMessageId(newMessageId);
+        },
+        // onToolUse - mark the current message as tool use
+        (toolName: string, toolInput?: any) => {
+          setChats(prev =>
+            prev.map(chat =>
+              chat.id === chatId
+                ? {
+                    ...chat,
+                    messages: chat.messages.map(msg =>
+                      msg.id === currentAssistantMessageId
+                        ? {
+                            ...msg,
+                            isToolUse: true,
+                            toolName,
+                            toolCalls: [
+                              ...(msg.toolCalls || []),
+                              {
+                                name: toolName,
+                                input: toolInput,
+                                timestamp: new Date(),
+                              },
+                            ],
+                          }
+                        : msg,
+                    ),
+                  }
+                : chat,
+            ),
+          );
+        },
+        // onToolComplete - mark tool as complete
+        (toolName: string) => {
+          setChats(prev =>
+            prev.map(chat =>
+              chat.id === chatId
+                ? {
+                    ...chat,
+                    messages: chat.messages.map(msg =>
+                      msg.id === currentAssistantMessageId
+                        ? {
+                            ...msg,
+                            toolCalls: msg.toolCalls?.map(tc =>
+                              tc.name === toolName && !tc.isComplete
+                                ? { ...tc, isComplete: true }
+                                : tc,
+                            ),
+                          }
+                        : msg,
+                    ),
+                  }
+                : chat,
+            ),
+          );
+        },
       );
     } catch (error) {
       console.error("Failed to start streaming:", error);
@@ -570,11 +670,7 @@ export default function AIChat({
 
   return (
     <div
-      className={cn(
-        "flex flex-col h-full font-mono text-xs",
-        "bg-[var(--primary-bg)] text-[var(--text-color)]",
-        className,
-      )}
+      className={cn("flex h-full flex-col font-mono text-xs", "bg-primary-bg text-text", className)}
       style={{
         background: "var(--primary-bg)",
         color: "var(--text-color)",
@@ -590,7 +686,7 @@ export default function AIChat({
       >
         <button
           onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-          className="p-1 rounded transition-colors hover:bg-[var(--hover-color)]"
+          className="rounded p-1 transition-colors hover:bg-hover"
           style={{ color: "var(--text-lighter)" }}
           title="Toggle chat history"
         >
@@ -600,7 +696,7 @@ export default function AIChat({
         <div className="flex-1" />
         <button
           onClick={createNewChat}
-          className="flex items-center gap-1 px-2 py-1 rounded transition-colors hover:bg-[var(--hover-color)]"
+          className="flex items-center gap-1 rounded px-2 py-1 transition-colors hover:bg-hover"
           style={{ color: "var(--text-lighter)" }}
           title="New chat"
         >
@@ -609,9 +705,9 @@ export default function AIChat({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div className="custom-scrollbar flex-1 overflow-y-auto">
         {messages.length === 0 && (
-          <div className="flex items-center justify-center h-full p-4 text-center">
+          <div className="flex h-full items-center justify-center p-4 text-center">
             <div>
               <Bot size={24} className="mx-auto mb-2 opacity-50" />
               <div className="text-sm">AI Assistant</div>
@@ -622,67 +718,89 @@ export default function AIChat({
           </div>
         )}
 
-        {messages.map(message => (
-          <div
-            key={message.id}
-            className={`p-3 ${message.role === "user" ? "flex justify-end" : ""}`}
-          >
-            {message.role === "user" ? (
-              /* User Message - Subtle Chat Bubble */
-              <div className="max-w-[80%] flex flex-col items-end">
-                <div
-                  className="px-3 py-2 rounded-lg rounded-br-none"
-                  style={{
-                    background: "var(--secondary-bg)",
-                    border: "1px solid var(--border-color)",
-                  }}
-                >
-                  <div className="whitespace-pre-wrap break-words">{message.content}</div>
-                </div>
-                <div className="mt-1 px-1" style={{ color: "var(--text-lighter)" }}>
-                  {formatTime(message.timestamp)}
-                </div>
-              </div>
-            ) : (
-              /* Assistant Message - Full Width with Header */
-              <div className="w-full">
-                {/* AI Message Header */}
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="flex items-center gap-1" style={{ color: "var(--text-lighter)" }}>
-                    <Bot size={10} />
-                    <span>ai</span>
-                    {message.isStreaming && (
-                      <div className="flex items-center gap-1 ml-1">
-                        <span className="w-1 h-1 rounded-full animate-pulse bg-[var(--text-lighter)]" />
-                        <span
-                          className="w-1 h-1 rounded-full animate-pulse bg-[var(--text-lighter)]"
-                          style={{ animationDelay: "0.2s" }}
-                        />
-                        <span
-                          className="w-1 h-1 rounded-full animate-pulse bg-[var(--text-lighter)]"
-                          style={{ animationDelay: "0.4s" }}
-                        />
-                      </div>
-                    )}
+        {messages.map((message, index) => {
+          // Check if this is the first assistant message in a sequence
+          const isFirstAssistantInSequence =
+            message.role === "assistant" &&
+            (index === 0 || messages[index - 1].role !== "assistant");
+
+          return (
+            <div
+              key={message.id}
+              className={`${message.role === "user" ? "flex justify-end p-3" : "p-3"}`}
+            >
+              {message.role === "user" ? (
+                /* User Message - Subtle Chat Bubble */
+                <div className="flex max-w-[80%] flex-col items-end">
+                  <div
+                    className="rounded-lg rounded-br-none px-3 py-2"
+                    style={{
+                      background: "var(--secondary-bg)",
+                      border: "1px solid var(--border-color)",
+                    }}
+                  >
+                    <div className="whitespace-pre-wrap break-words">{message.content}</div>
                   </div>
-                  <div className="flex-1" />
-                  <span style={{ color: "var(--text-lighter)" }}>
-                    {formatTime(message.timestamp)}
-                  </span>
                 </div>
+              ) : (
+                /* Assistant Message - Full Width with Header */
+                <div className="w-full">
+                  {/* AI Message Header - Only show for first message in sequence */}
+                  {isFirstAssistantInSequence && (
+                    <div className="mb-2 flex items-center gap-2">
+                      <div
+                        className="flex items-center gap-1"
+                        style={{ color: "var(--text-lighter)" }}
+                      >
+                        <span>{getProviderById(currentProviderId)?.name || currentProviderId}</span>
+                        {message.isStreaming && (
+                          <div className="ml-1 flex items-center gap-1">
+                            <span className="h-1 w-1 animate-pulse rounded-full bg-text-lighter" />
+                            <span
+                              className="h-1 w-1 animate-pulse rounded-full bg-text-lighter"
+                              style={{ animationDelay: "0.2s" }}
+                            />
+                            <span
+                              className="h-1 w-1 animate-pulse rounded-full bg-text-lighter"
+                              style={{ animationDelay: "0.4s" }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-                {/* AI Message Content */}
-                <div className="leading-relaxed pr-1">
-                  <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
+                  {/* Tool Calls */}
+                  {message.toolCalls && message.toolCalls.length > 0 && (
+                    <div className="mb-3 space-y-2">
+                      {message.toolCalls!.map((toolCall, toolIndex) => (
+                        <ToolCallDisplay
+                          key={`${message.id}-tool-${toolIndex}`}
+                          toolName={toolCall.name}
+                          input={toolCall.input}
+                          output={toolCall.output}
+                          error={toolCall.error}
+                          isStreaming={!toolCall.isComplete && message.isStreaming}
+                        />
+                      ))}
+                    </div>
+                  )}
 
-                  {message.isStreaming && (
-                    <span className="inline-block w-2 h-4 animate-pulse ml-1 bg-[var(--text-lighter)]" />
+                  {/* AI Message Content */}
+                  {message.content && (
+                    <div className="pr-1 leading-relaxed">
+                      <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
+
+                      {message.isStreaming && (
+                        <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-[var(--text-lighter)]" />
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
 
         <div ref={messagesEndRef} />
       </div>
@@ -702,7 +820,7 @@ export default function AIChat({
               <div className="relative" ref={contextDropdownRef}>
                 <button
                   onClick={() => setIsContextDropdownOpen(!isContextDropdownOpen)}
-                  className="flex items-center gap-1 px-2 pt-2 rounded transition-colors hover:bg-[var(--hover-color)]"
+                  className="flex items-center gap-1 rounded px-2 pt-2 transition-colors hover:bg-hover"
                   style={{ color: "var(--text-lighter)" }}
                   title="Add context files"
                 >
@@ -713,18 +831,18 @@ export default function AIChat({
 
                 {isContextDropdownOpen && (
                   <div
-                    className="absolute top-full left-0 mt-1 w-64 max-h-64 overflow-y-auto rounded shadow-lg z-50"
+                    className="absolute top-full left-0 z-50 mt-1 max-h-64 w-64 overflow-y-auto rounded shadow-lg"
                     style={{
                       background: "var(--primary-bg)",
                       border: "1px solid var(--border-color)",
                     }}
                   >
                     <div className="p-2">
-                      <div className="text-xs mb-2" style={{ color: "var(--text-lighter)" }}>
+                      <div className="mb-2 text-xs" style={{ color: "var(--text-lighter)" }}>
                         Select files to include as context:
                       </div>
                       {buffers.length === 0 ? (
-                        <div className="text-xs p-2" style={{ color: "var(--text-lighter)" }}>
+                        <div className="p-2 text-xs" style={{ color: "var(--text-lighter)" }}>
                           No files available
                         </div>
                       ) : (
@@ -732,15 +850,15 @@ export default function AIChat({
                           {buffers.map(buffer => (
                             <label
                               key={buffer.id}
-                              className="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[var(--hover-color)]"
+                              className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-hover"
                             >
                               <input
                                 type="checkbox"
                                 checked={selectedBufferIds.has(buffer.id)}
                                 onChange={() => toggleBufferSelection(buffer.id)}
-                                className="w-3 h-3"
+                                className="h-3 w-3"
                               />
-                              <div className="flex items-center gap-1 flex-1 min-w-0">
+                              <div className="flex min-w-0 flex-1 items-center gap-1">
                                 {buffer.isSQLite ? <Database size={10} /> : <FileText size={10} />}
                                 <span className="truncate text-xs">{buffer.name}</span>
                               </div>
@@ -759,21 +877,21 @@ export default function AIChat({
         {/* Context badges */}
         {selectedBufferIds.size > 0 && (
           <div className="px-3 py-2">
-            <div className="flex items-center gap-1 flex-wrap">
+            <div className="flex flex-wrap items-center gap-1">
               {Array.from(selectedBufferIds).map(bufferId => {
                 const buffer = buffers.find(b => b.id === bufferId);
                 if (!buffer) return null;
                 return (
                   <div
                     key={bufferId}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-xs"
+                    className="flex items-center gap-1 rounded px-2 py-1 text-xs"
                     style={{
                       background: "var(--hover-color)",
                       border: "1px solid var(--border-color)",
                     }}
                   >
                     {buffer.isSQLite ? <Database size={8} /> : <FileText size={8} />}
-                    <span className="truncate max-w-20">{buffer.name}</span>
+                    <span className="max-w-20 truncate">{buffer.name}</span>
                     <button
                       onClick={() => toggleBufferSelection(bufferId)}
                       className="transition-colors hover:text-red-400"
@@ -799,7 +917,7 @@ export default function AIChat({
                 hasApiKey ? "Ask about your code..." : "Configure API key to enable AI chat..."
               }
               disabled={isTyping || !hasApiKey}
-              className="flex-1 resize-none px-3 py-2 rounded focus:outline-none min-h-[60px] disabled:opacity-50"
+              className="min-h-[60px] flex-1 resize-none rounded px-3 py-2 focus:outline-none disabled:opacity-50"
               style={{
                 background: "var(--primary-bg)",
                 border: "1px solid var(--border-color)",
@@ -807,7 +925,7 @@ export default function AIChat({
               }}
             />
           </div>
-          <div className="flex items-center justify-between mt-2">
+          <div className="mt-2 flex items-center justify-between">
             <div className="hidden sm:block" style={{ color: "var(--text-lighter)" }}>
               <span
                 className={
@@ -821,7 +939,11 @@ export default function AIChat({
                 {estimatedTokens.toLocaleString()}/{(maxTokens / 1000).toFixed(0)}k tokens
               </span>
             </div>
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="ml-auto flex items-center gap-2">
+              <ClaudeStatusIndicator
+                isActive={currentProviderId === "claude-code"}
+                workspacePath={rootFolderPath}
+              />
               <ModelProviderSelector
                 currentProviderId={currentProviderId}
                 currentModelId={currentModelId}
@@ -835,7 +957,7 @@ export default function AIChat({
                   disabled={(!input.trim() && !isTyping) || !hasApiKey}
                   onClick={isTyping && streamingMessageId ? stopStreaming : sendMessage}
                   className={cn(
-                    "rounded flex items-center justify-center p-0",
+                    "flex items-center justify-center rounded p-0",
                     "send-button-hover button-transition",
                     isTyping && streamingMessageId && !isSendAnimating && "button-morphing",
                   )}

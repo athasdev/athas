@@ -1,0 +1,27 @@
+/* Force Midnight dark theme */
+.force-midnight {
+    --tw-primary-bg: #111111;
+    --tw-secondary-bg: #111111;
+    --tw-text: #ffffff;
+    --tw-text-light: #a1a1a1;
+    --tw-text-lighter: #737373;
+    --tw-border: transparent;
+    --tw-hover: #1a1a1a;
+    --tw-selected: #262626;
+
+    /* More muted, professional diagnostic colors */
+    --tw-error: #dc3545;
+    --tw-warning: #e67e22;
+    --tw-info: #17a2b8;
+
+    /* Syntax highlighting colors - Midnight Dark theme */
+    --tw-syntax-comment: #6b7280;
+    --tw-syntax-keyword: #f59e0b;
+    --tw-syntax-string: #10b981;
+    --tw-syntax-number: #3b82f6;
+    --tw-syntax-function: #8b5cf6;
+    --tw-syntax-variable: #f97316;
+    --tw-syntax-tag: #06b6d4;
+    --tw-syntax-attribute: #8b5cf6;
+    --tw-syntax-punctuation: #a1a1a1;
+}

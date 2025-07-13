@@ -1,13 +1,13 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
-import { useState, useEffect } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Download, Info } from 'lucide-react';
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { Download, Info, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface ImageViewerProps {
   imagePath: string;
 }
 
 const ImageViewer = ({ imagePath }: ImageViewerProps) => {
-  const [imageUrl, setImageUrl] = useState<string>('');
+  const [imageUrl, setImageUrl] = useState<string>("");
   const [imageError, setImageError] = useState<boolean>(false);
   const [imageLoading, setImageLoading] = useState<boolean>(true);
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
@@ -18,33 +18,33 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
     const loadImage = async () => {
       setImageLoading(true);
       setImageError(false);
-      
+
       try {
         let url: string;
-        
-        if (imagePath.startsWith('http')) {
+
+        if (imagePath.startsWith("http")) {
           url = imagePath;
         } else {
           url = convertFileSrc(imagePath);
-          console.log('Converted URL:', url);
+          console.log("Converted URL:", url);
         }
-        
+
         const img = new Image();
         img.onload = () => {
-          console.log('Image loaded successfully');
+          console.log("Image loaded successfully");
           setImageSize({ width: img.width, height: img.height });
           setImageLoading(false);
         };
-        img.onerror = (e) => {
-          console.error('Error loading image:', e);
-          console.error('Failed URL:', url);
+        img.onerror = e => {
+          console.error("Error loading image:", e);
+          console.error("Failed URL:", url);
           setImageError(true);
           setImageLoading(false);
         };
         img.src = url;
         setImageUrl(url);
       } catch (error) {
-        console.error('Error in loadImage:', error);
+        console.error("Error in loadImage:", error);
         setImageError(true);
         setImageLoading(false);
       }
@@ -66,26 +66,26 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
   };
 
   const handleDownload = () => {
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = imageUrl;
-    link.download = imagePath.split('/').pop() || 'image';
+    link.download = imagePath.split("/").pop() || "image";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const getFileExtension = (path: string): string => {
-    return path.split('.').pop()?.toUpperCase() || 'UNKNOWN';
+    return path.split(".").pop()?.toUpperCase() || "UNKNOWN";
   };
 
   if (imageError) {
     return (
-      <div className="flex flex-col h-full">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-red-500 p-4 text-center">
-            <p className="text-lg font-semibold mb-2">Error loading image</p>
-            <p className="text-sm opacity-80">Could not load {imagePath.split('/').pop()}</p>
-            <p className="text-xs mt-2 opacity-60">Please check the console for more details.</p>
+      <div className="flex h-full flex-col">
+        <div className="flex flex-1 items-center justify-center">
+          <div className="p-4 text-center text-red-500">
+            <p className="mb-2 font-semibold text-lg">Error loading image</p>
+            <p className="text-sm opacity-80">Could not load {imagePath.split("/").pop()}</p>
+            <p className="mt-2 text-xs opacity-60">Please check the console for more details.</p>
           </div>
         </div>
       </div>
@@ -94,10 +94,10 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
 
   if (imageLoading) {
     return (
-      <div className="flex flex-col h-full">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="p-4 text-[var(--text-lighter)]">
-            <div className="animate-spin w-8 h-8 border-2 border-[var(--border-color)] border-t-[var(--text-color)] rounded-full mx-auto mb-4"></div>
+      <div className="flex h-full flex-col">
+        <div className="flex flex-1 items-center justify-center">
+          <div className="p-4 text-text-lighter">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-border border-t-text"></div>
             <p>Loading image...</p>
           </div>
         </div>
@@ -106,55 +106,55 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[var(--primary-bg)]">
+    <div className="flex h-full flex-col bg-primary-bg">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[var(--secondary-bg)] border-b border-[var(--border-color)] shrink-0">
+      <div className="flex shrink-0 items-center justify-between border-border border-b bg-secondary-bg px-4 py-2">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs text-[var(--text-lighter)]">
-            {imagePath.split('/').pop()} • {getFileExtension(imagePath)}
+          <span className="font-mono text-text-lighter text-xs">
+            {imagePath.split("/").pop()} • {getFileExtension(imagePath)}
           </span>
           {imageSize && (
-            <span className="font-mono text-xs text-[var(--text-lighter)]">
+            <span className="font-mono text-text-lighter text-xs">
               • {imageSize.width}×{imageSize.height}
             </span>
           )}
         </div>
-        
+
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowInfo(!showInfo)}
-            className="p-1 hover:bg-[var(--hover-color)] rounded text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+            className="rounded p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             title="Toggle Info"
           >
             <Info size={14} />
           </button>
           <button
             onClick={handleZoomOut}
-            className="p-1 hover:bg-[var(--hover-color)] rounded text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+            className="rounded p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             title="Zoom Out"
           >
             <ZoomOut size={14} />
           </button>
-          <span className="font-mono text-xs text-[var(--text-lighter)] px-2 min-w-[60px] text-center">
+          <span className="min-w-[60px] px-2 text-center font-mono text-text-lighter text-xs">
             {Math.round(zoom * 100)}%
           </span>
           <button
             onClick={handleZoomIn}
-            className="p-1 hover:bg-[var(--hover-color)] rounded text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+            className="rounded p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             title="Zoom In"
           >
             <ZoomIn size={14} />
           </button>
           <button
             onClick={handleResetZoom}
-            className="p-1 hover:bg-[var(--hover-color)] rounded text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+            className="rounded p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             title="Reset Zoom"
           >
             <RotateCcw size={14} />
           </button>
           <button
             onClick={handleDownload}
-            className="p-1 hover:bg-[var(--hover-color)] rounded text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+            className="rounded p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             title="Download"
           >
             <Download size={14} />
@@ -163,16 +163,16 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
       </div>
 
       {/* Image Content */}
-      <div className="flex-1 overflow-auto relative bg-[var(--editor-bg)] flex items-center justify-center">
+      <div className="relative flex flex-1 items-center justify-center overflow-auto bg-[var(--editor-bg)]">
         <div className="p-4">
           <img
             src={imageUrl}
             alt="Preview"
             className="object-contain transition-transform duration-200 ease-out"
-            style={{ 
+            style={{
               transform: `scale(${zoom})`,
-              maxWidth: zoom <= 1 ? '100%' : 'none',
-              maxHeight: zoom <= 1 ? '100%' : 'none'
+              maxWidth: zoom <= 1 ? "100%" : "none",
+              maxHeight: zoom <= 1 ? "100%" : "none",
             }}
           />
         </div>
@@ -180,10 +180,12 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
 
       {/* Footer/Info Panel */}
       {showInfo && imageSize && (
-        <div className="px-4 py-2 bg-[var(--secondary-bg)] border-t border-[var(--border-color)] shrink-0">
-          <div className="flex items-center justify-between font-mono text-xs text-[var(--text-lighter)]">
+        <div className="shrink-0 border-border border-t bg-secondary-bg px-4 py-2">
+          <div className="flex items-center justify-between font-mono text-text-lighter text-xs">
             <div className="flex items-center gap-4">
-              <span>Dimensions: {imageSize.width}×{imageSize.height}</span>
+              <span>
+                Dimensions: {imageSize.width}×{imageSize.height}
+              </span>
               <span>Zoom: {Math.round(zoom * 100)}%</span>
               <span>Type: {getFileExtension(imagePath)}</span>
             </div>
@@ -197,4 +199,4 @@ const ImageViewer = ({ imagePath }: ImageViewerProps) => {
   );
 };
 
-export default ImageViewer; 
+export default ImageViewer;

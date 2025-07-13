@@ -1,0 +1,114 @@
+/* Theme: Catppuccin */
+.force-catppuccin {
+    --tw-primary-bg: #1e1e2e;
+    --tw-secondary-bg: #24273a;
+    --tw-hover: #313244;
+    --tw-selected: #45475a;
+    --tw-border: #45475a;
+    --tw-text: #cdd6f4;
+    --tw-text-lighter: #6c7086;
+    --tw-accent: #89b4fa;
+
+    /* Syntax highlighting */
+    --comment: #6c7086;
+    --keyword: #cba6f7;
+    --string: #a6e3a1;
+    --number: #fab387;
+    --function: #89b4fa;
+    --variable: #cdd6f4;
+    --tag: #94e2d5;
+    --attribute: #f5c2e7;
+    --punctuation: #89dceb;
+}
+
+/* Catppuccin Mocha */
+.force-catppuccin-mocha {
+    --tw-primary-bg: #1e1e2e;
+    --tw-secondary-bg: #181825;
+    --tw-hover: #313244;
+    --tw-selected: #45475a;
+    --tw-border: #45475a;
+    --tw-text: #cdd6f4;
+    --tw-text-lighter: #6c7086;
+    --tw-accent: #89b4fa;
+
+    /* Syntax highlighting */
+    --comment: #6c7086;
+    --keyword: #cba6f7;
+    --string: #a6e3a1;
+    --number: #fab387;
+    --function: #89b4fa;
+    --variable: #cdd6f4;
+    --tag: #94e2d5;
+    --attribute: #f5c2e7;
+    --punctuation: #89dceb;
+}
+
+/* Catppuccin Macchiato */
+.force-catppuccin-macchiato {
+    --tw-primary-bg: #24273a;
+    --tw-secondary-bg: #1e2030;
+    --tw-hover: #363a4f;
+    --tw-selected: #494d64;
+    --tw-border: #494d64;
+    --tw-text: #cad3f5;
+    --tw-text-lighter: #8087a2;
+    --tw-accent: #8aadf4;
+
+    /* Syntax highlighting */
+    --comment: #8087a2;
+    --keyword: #c6a0f6;
+    --string: #a6da95;
+    --number: #f5a97f;
+    --function: #8aadf4;
+    --variable: #cad3f5;
+    --tag: #8bd5ca;
+    --attribute: #f5bde6;
+    --punctuation: #91d7e3;
+}
+
+/* Catppuccin Frappé */
+.force-catppuccin-frappe {
+    --tw-primary-bg: #303446;
+    --tw-secondary-bg: #292c3c;
+    --tw-hover: #414559;
+    --tw-selected: #51576d;
+    --tw-border: #51576d;
+    --tw-text: #c6d0f5;
+    --tw-text-lighter: #838ba7;
+    --tw-accent: #8caaee;
+
+    /* Syntax highlighting */
+    --comment: #838ba7;
+    --keyword: #ca9ee6;
+    --string: #a6d189;
+    --number: #ef9f76;
+    --function: #8caaee;
+    --variable: #c6d0f5;
+    --tag: #81c8be;
+    --attribute: #f4b8e4;
+    --punctuation: #99d1db;
+}
+
+/* Catppuccin Latte */
+.force-catppuccin-latte {
+    --tw-primary-bg: #eff1f5;
+    --tw-secondary-bg: #e6e9ef;
+    --tw-hover: #ccd0da;
+    --tw-selected: #bcc0cc;
+    --tw-border: #bcc0cc;
+    --tw-text: #4c4f69;
+    --tw-text-lighter: #9ca0b0;
+    --tw-accent: #1e66f5;
+
+    /* Syntax highlighting */
+    --comment: #9ca0b0;
+    --keyword: #8839ef;
+    --string: #40a02b;
+    --number: #fe640b;
+    --function: #1e66f5;
+    --variable: #4c4f69;
+    --tag: #179299;
+    --attribute: #ea76cb;
+    --punctuation: #04a5e5;
+}

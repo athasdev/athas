@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { FileEntry } from "../types/app";
+import type { FileEntry } from "../types/app";
 
 interface UseFolderOperationsProps {
   isRemoteWindow: boolean;

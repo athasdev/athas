@@ -1,7 +1,7 @@
 import { Code, Package, Palette, Search, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CoreFeature } from "../types/core-features";
-import { ThemeType } from "../types/theme";
+import type { CoreFeature } from "../types/core-features";
+import type { ThemeType } from "../types/theme";
 import Button from "./ui/button";
 
 interface Extension {
@@ -326,19 +326,19 @@ interface ExtensionCardProps {
 
 const ExtensionCard = ({ extension, onToggle, isActive }: ExtensionCardProps) => {
   return (
-    <div className="flex flex-col gap-2 p-4 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-lg">
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-secondary-bg p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-[var(--text-color)]">{extension.name}</h3>
+        <h3 className="font-medium text-sm text-text">{extension.name}</h3>
         <Button
           onClick={onToggle}
           variant={isActive ? "default" : "outline"}
           size="xs"
-          className="text-xs font-normal opacity-80 hover:opacity-100"
+          className="font-normal text-xs opacity-80 hover:opacity-100"
         >
           {isActive ? "Disable" : "Enable"}
         </Button>
       </div>
-      <p className="text-xs text-[var(--text-lighter)]">{extension.description}</p>
+      <p className="text-text-lighter text-xs">{extension.description}</p>
     </div>
   );
 };
@@ -352,22 +352,22 @@ const CoreFeatureCard = ({ feature, onToggle }: CoreFeatureCardProps) => {
   const Icon = feature.icon;
 
   return (
-    <div className="flex flex-col gap-2 p-4 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-lg">
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-secondary-bg p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Icon size={16} className="text-[var(--text-lighter)]" />
-          <h3 className="text-sm font-medium text-[var(--text-color)]">{feature.name}</h3>
+          <Icon size={16} className="text-text-lighter" />
+          <h3 className="font-medium text-sm text-text">{feature.name}</h3>
         </div>
         <Button
           onClick={onToggle}
           variant={feature.enabled ? "default" : "outline"}
           size="xs"
-          className="text-xs font-normal opacity-80 hover:opacity-100"
+          className="font-normal text-xs opacity-80 hover:opacity-100"
         >
           {feature.enabled ? "Enabled" : "Disabled"}
         </Button>
       </div>
-      <p className="text-xs text-[var(--text-lighter)]">{feature.description}</p>
+      <p className="text-text-lighter text-xs">{feature.description}</p>
     </div>
   );
 };
@@ -418,8 +418,8 @@ export default function ExtensionsView({
 
   const filteredExtensions = extensions.filter(extension => {
     const matchesSearch =
-      extension.name.toLowerCase().includes(searchQuery.toLowerCase())
-      || extension.description.toLowerCase().includes(searchQuery.toLowerCase());
+      extension.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      extension.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === "all" || extension.category === activeTab;
     return matchesSearch && matchesTab;
   });
@@ -427,18 +427,18 @@ export default function ExtensionsView({
   const filteredCoreFeatures =
     coreFeatures?.filter(feature => {
       const matchesSearch =
-        feature.name.toLowerCase().includes(searchQuery.toLowerCase())
-        || feature.description.toLowerCase().includes(searchQuery.toLowerCase());
+        feature.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        feature.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesSearch;
     }) || [];
 
   return (
-    <div className="flex flex-col h-full bg-[var(--primary-bg)]">
-      <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
-        <h2 className="text-lg font-semibold text-[var(--text-color)]">Extensions</h2>
+    <div className="flex h-full flex-col bg-primary-bg">
+      <div className="flex items-center justify-between border-border border-b p-4">
+        <h2 className="font-semibold text-lg text-text">Extensions</h2>
         <div className="relative w-64">
           <Search
-            className="absolute left-2 top-1/2 transform -translate-y-1/2 text-[var(--text-lighter)]"
+            className="-translate-y-1/2 absolute top-1/2 left-2 transform text-text-lighter"
             size={16}
           />
           <input
@@ -446,7 +446,7 @@ export default function ExtensionsView({
             placeholder="Search extensions..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-4 text-xs py-1.5 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded text-[var(--text-color)] placeholder-[var(--text-lighter)] focus:outline-none focus:border-[var(--accent-color)]"
+            className="w-full rounded border border-border bg-secondary-bg py-1.5 pr-4 pl-8 text-text text-xs placeholder-text-lighter focus:border-accent focus:outline-none"
           />
         </div>
       </div>
@@ -457,7 +457,7 @@ export default function ExtensionsView({
           variant="ghost"
           size="sm"
           data-active={activeTab === "all"}
-          className={`text-xs ${activeTab === "all" ? "bg-[var(--hover-color)]" : ""}`}
+          className={`text-xs ${activeTab === "all" ? "bg-hover" : ""}`}
         >
           All
         </Button>
@@ -466,7 +466,7 @@ export default function ExtensionsView({
           variant="ghost"
           size="sm"
           data-active={activeTab === "core"}
-          className={`text-xs flex items-center gap-1 ${activeTab === "core" ? "bg-[var(--hover-color)]" : ""}`}
+          className={`flex items-center gap-1 text-xs ${activeTab === "core" ? "bg-hover" : ""}`}
         >
           <Settings size={14} />
           Core
@@ -476,7 +476,7 @@ export default function ExtensionsView({
           variant="ghost"
           size="sm"
           data-active={activeTab === "language-server"}
-          className={`text-xs flex items-center gap-1 ${activeTab === "language-server" ? "bg-[var(--hover-color)]" : ""}`}
+          className={`flex items-center gap-1 text-xs ${activeTab === "language-server" ? "bg-hover" : ""}`}
         >
           <Code size={14} />
           Language Servers
@@ -486,7 +486,7 @@ export default function ExtensionsView({
           variant="ghost"
           size="sm"
           data-active={activeTab === "theme"}
-          className={`text-xs flex items-center gap-1 ${activeTab === "theme" ? "bg-[var(--hover-color)]" : ""}`}
+          className={`flex items-center gap-1 text-xs ${activeTab === "theme" ? "bg-hover" : ""}`}
         >
           <Palette size={14} />
           Themes
@@ -495,17 +495,17 @@ export default function ExtensionsView({
 
       <div className="flex-1 overflow-auto p-4">
         {/* Core Features */}
-        {(activeTab === "all" || activeTab === "core")
-          && coreFeatures
-          && coreFeatures.length > 0 && (
+        {(activeTab === "all" || activeTab === "core") &&
+          coreFeatures &&
+          coreFeatures.length > 0 && (
             <div className="mb-6">
               {activeTab === "all" && (
-                <h3 className="text-sm font-medium text-[var(--text-color)] mb-3 flex items-center gap-2">
+                <h3 className="mb-3 flex items-center gap-2 font-medium text-sm text-text">
                   <Settings size={16} />
                   Core Features
                 </h3>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+              <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredCoreFeatures.map(feature => (
                   <CoreFeatureCard
                     key={feature.id}
@@ -521,12 +521,12 @@ export default function ExtensionsView({
         {activeTab !== "core" && (
           <div>
             {activeTab === "all" && filteredExtensions.length > 0 && (
-              <h3 className="text-sm font-medium text-[var(--text-color)] mb-3 flex items-center gap-2">
+              <h3 className="mb-3 flex items-center gap-2 font-medium text-sm text-text">
                 <Package size={16} />
                 Extensions
               </h3>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredExtensions.map(extension => (
                 <ExtensionCard
                   key={extension.id}
@@ -540,12 +540,12 @@ export default function ExtensionsView({
         )}
 
         {/* No results */}
-        {((activeTab === "core" && filteredCoreFeatures.length === 0)
-          || (activeTab !== "core" && activeTab !== "all" && filteredExtensions.length === 0)
-          || (activeTab === "all"
-            && filteredCoreFeatures.length === 0
-            && filteredExtensions.length === 0)) && (
-          <div className="text-center py-8 text-[var(--text-lighter)]">
+        {((activeTab === "core" && filteredCoreFeatures.length === 0) ||
+          (activeTab !== "core" && activeTab !== "all" && filteredExtensions.length === 0) ||
+          (activeTab === "all" &&
+            filteredCoreFeatures.length === 0 &&
+            filteredExtensions.length === 0)) && (
+          <div className="py-8 text-center text-text-lighter">
             <Package size={24} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm">No items found matching your search.</p>
           </div>

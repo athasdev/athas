@@ -22,6 +22,20 @@ export interface ProviderConfig {
 
 export const AI_PROVIDERS: ModelProvider[] = [
   {
+    id: "claude-code",
+    name: "Claude Code (Local)",
+    apiUrl: "local",
+    requiresApiKey: false,
+    models: [
+      {
+        id: "claude-code",
+        name: "Claude Code",
+        maxTokens: 200000,
+        description: "Claude running locally via Claude Code CLI",
+      },
+    ],
+  },
+  {
     id: "openai",
     name: "OpenAI",
     apiUrl: "https://api.openai.com/v1/chat/completions",
@@ -206,13 +220,10 @@ export const AI_PROVIDERS: ModelProvider[] = [
 ];
 
 export const getProviderById = (id: string): ModelProvider | undefined => {
-  return AI_PROVIDERS.find((provider) => provider.id === id);
+  return AI_PROVIDERS.find(provider => provider.id === id);
 };
 
-export const getModelById = (
-  providerId: string,
-  modelId: string,
-): Model | undefined => {
+export const getModelById = (providerId: string, modelId: string): Model | undefined => {
   const provider = getProviderById(providerId);
-  return provider?.models.find((model) => model.id === modelId);
+  return provider?.models.find(model => model.id === modelId);
 };

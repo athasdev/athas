@@ -25,16 +25,14 @@ export const SidebarPaneSelector = ({
   const isFilesActive = !isGitViewActive && !isSearchViewActive && !isRemoteViewActive;
 
   return (
-    <div className="flex gap-1 p-2 border-b border-[var(--border-color)]">
+    <div className="flex gap-1 border-border border-b p-2">
       <Button
         onClick={() => onViewChange("files")}
         variant="ghost"
         size="sm"
         data-active={isFilesActive}
-        className={`text-xs flex items-center justify-center w-8 h-8 rounded ${
-          isFilesActive
-            ? "bg-[var(--hover-color)] text-[var(--text-color)]"
-            : "hover:bg-[var(--hover-color)]"
+        className={`flex h-8 w-8 items-center justify-center rounded text-xs ${
+          isFilesActive ? "bg-hover text-text" : "hover:bg-hover"
         }`}
         title="File Explorer"
       >
@@ -47,10 +45,8 @@ export const SidebarPaneSelector = ({
           variant="ghost"
           size="sm"
           data-active={isSearchViewActive}
-          className={`text-xs flex items-center justify-center w-8 h-8 rounded ${
-            isSearchViewActive
-              ? "bg-[var(--hover-color)] text-[var(--text-color)]"
-              : "hover:bg-[var(--hover-color)]"
+          className={`flex h-8 w-8 items-center justify-center rounded text-xs ${
+            isSearchViewActive ? "bg-hover text-text" : "hover:bg-hover"
           }`}
           title="Search"
         >
@@ -64,10 +60,8 @@ export const SidebarPaneSelector = ({
           variant="ghost"
           size="sm"
           data-active={isGitViewActive}
-          className={`text-xs flex items-center justify-center w-8 h-8 rounded ${
-            isGitViewActive
-              ? "bg-[var(--hover-color)] text-[var(--text-color)]"
-              : "hover:bg-[var(--hover-color)]"
+          className={`flex h-8 w-8 items-center justify-center rounded text-xs ${
+            isGitViewActive ? "bg-hover text-text" : "hover:bg-hover"
           }`}
           title="Git Source Control"
         >
@@ -81,10 +75,8 @@ export const SidebarPaneSelector = ({
           variant="ghost"
           size="sm"
           data-active={isRemoteViewActive}
-          className={`text-xs flex items-center justify-center w-8 h-8 rounded ${
-            isRemoteViewActive
-              ? "bg-[var(--hover-color)] text-[var(--text-color)]"
-              : "hover:bg-[var(--hover-color)]"
+          className={`flex h-8 w-8 items-center justify-center rounded text-xs ${
+            isRemoteViewActive ? "bg-hover text-text" : "hover:bg-hover"
           }`}
           title="Remote Connections"
         >
@@ -96,7 +88,7 @@ export const SidebarPaneSelector = ({
         onClick={onOpenExtensions}
         variant="ghost"
         size="sm"
-        className="text-xs flex items-center justify-center w-8 h-8 rounded hover:bg-[var(--hover-color)]"
+        className="flex h-8 w-8 items-center justify-center rounded text-xs hover:bg-hover"
         title="Extensions"
       >
         <Package size={14} />

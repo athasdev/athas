@@ -1,10 +1,11 @@
 import { FilePlus, FolderOpen, FolderPlus, Server } from "lucide-react";
-import React, { forwardRef } from "react";
-import { FileEntry } from "../../types/app";
+import type React from "react";
+import { forwardRef } from "react";
+import type { FileEntry } from "../../types/app";
 import FileTree from "../file-tree";
 import GitView from "../git/git-view";
 import RemoteConnectionView from "../remote/remote-connection-view";
-import SearchView, { SearchViewRef } from "../search-view";
+import SearchView, { type SearchViewRef } from "../search-view";
 import Button from "../ui/button";
 import { SidebarPaneSelector } from "./sidebar-pane-selector";
 
@@ -40,6 +41,7 @@ interface MainSidebarProps {
   onFileSelect: (path: string, isDir: boolean, line?: number, column?: number) => void;
   onCreateNewFileInDirectory: (path: string) => void;
   onDeletePath: (path: string) => void;
+  onUpdateFiles: (files: FileEntry[]) => void;
   onProjectNameMenuOpen: (event: React.MouseEvent) => void;
 
   // Project name
@@ -67,6 +69,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
       onFileSelect,
       onCreateNewFileInDirectory,
       onDeletePath,
+      onUpdateFiles,
       onProjectNameMenuOpen,
       projectName,
     },
@@ -76,7 +79,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
       !isGitViewActive && !isSearchViewActive && !isRemoteViewActive && !isRemoteWindow;
 
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex h-full flex-col">
         {/* Pane Selection Row */}
         <SidebarPaneSelector
           isGitViewActive={isGitViewActive}
@@ -89,10 +92,10 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
 
         {/* Remote Window Header */}
         {isRemoteWindow && remoteConnectionName && (
-          <div className="flex items-center px-3 py-1.5 border-b border-[var(--border-color)] bg-[var(--secondary-bg)]">
-            <Server size={12} className="text-[var(--text-lighter)] mr-2" />
+          <div className="flex items-center border-border border-b bg-secondary-bg px-3 py-1.5">
+            <Server size={12} className="mr-2 text-text-lighter" />
             <span
-              className="text-xs font-medium text-[var(--text-color)] cursor-pointer hover:bg-[var(--hover-color)] px-2 py-1 rounded flex-1"
+              className="flex-1 cursor-pointer rounded px-2 py-1 font-medium text-text text-xs hover:bg-hover"
               onClick={onProjectNameMenuOpen}
               onContextMenu={onProjectNameMenuOpen}
               title="Click for workspace options"
@@ -104,9 +107,9 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
 
         {/* File Tree Header */}
         {showFileTreeHeader && (
-          <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-color)] bg-[var(--secondary-bg)]">
+          <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-3 py-2">
             <h3
-              className="font-mono text-xs font-medium text-[var(--text-color)] tracking-wide cursor-pointer hover:bg-[var(--hover-color)] px-2 py-1 rounded"
+              className="cursor-pointer rounded px-2 py-1 font-medium font-mono text-text text-xs tracking-wide hover:bg-hover"
               onClick={onProjectNameMenuOpen}
               onContextMenu={onProjectNameMenuOpen}
               title="Click for workspace options"
@@ -118,7 +121,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
                 onClick={onOpenFolder}
                 variant="ghost"
                 size="sm"
-                className="text-xs flex items-center justify-center w-6 h-6 rounded hover:bg-[var(--hover-color)]"
+                className="flex h-6 w-6 items-center justify-center rounded text-xs hover:bg-hover"
                 title="Open Folder"
               >
                 <FolderOpen size={12} />
@@ -127,7 +130,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
                 onClick={onCreateNewFile}
                 variant="ghost"
                 size="sm"
-                className="text-xs flex items-center justify-center w-6 h-6 rounded hover:bg-[var(--hover-color)]"
+                className="flex h-6 w-6 items-center justify-center rounded text-xs hover:bg-hover"
                 title="New File"
               >
                 <FilePlus size={12} />
@@ -140,7 +143,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
                 }}
                 variant="ghost"
                 size="sm"
-                className="text-xs flex items-center justify-center w-6 h-6 rounded hover:bg-[var(--hover-color)]"
+                className="flex h-6 w-6 items-center justify-center rounded text-xs hover:bg-hover"
                 title="New Folder"
               >
                 <FolderPlus size={12} />
@@ -170,6 +173,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
               onCreateNewFileInDirectory={onCreateNewFileInDirectory}
               onCreateNewFolderInDirectory={onCreateNewFolderInDirectory}
               onDeletePath={onDeletePath}
+              onUpdateFiles={onUpdateFiles}
             />
           )}
         </div>

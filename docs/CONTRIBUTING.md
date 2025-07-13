@@ -15,24 +15,63 @@ For larger changes (e.g., new lint rules, new functionality, new configuration o
 If you have suggestions on how we might improve the contributing documentation, let us know!
 
 # Prerequisites
-Athas is a tauri project, so you need to install bun and rust.
+
+Athas is a Tauri project using Bun as package manager and Biome for linting/formatting.
 
 - [Rust](https://rustup.rs) with `cargo`, `rustfmt`, and `clippy`
 - [Tauri CLI](https://tauri.app) → `cargo install tauri-cli`
-- [Node.js ≥ 18](https://nodejs.org) and a package manager (`npm`, `pnpm`, or `yarn`)
-- Frontend framework CLI (e.g., Vite, Vue CLI, etc.)
-- Optional: `eslint`, `prettier`, and testing tools (`vitest`, `jest`, etc.)
+- [Bun](https://bun.sh) as package manager
+- [Node.js ≥ 18](https://nodejs.org)
 
-Check with: `node -v`, `cargo --version`, `tauri --version`
+Check with: `node -v`, `cargo --version`, `tauri --version`, `bun --version`
 
 # Development
+
 After cloning the repository, run Athas locally from the repository root with:
 
 ```bash
 bun install
 bun run tauri dev
 ```
-Prior to opening a pull request, ensure that your code has been auto-formatted, and that it passes both the lint and test validation checks
-These checks will run on GitHub Actions when you open your pull request, but running them locally will save you time and expedite the merge process.
-Note: Make sure the app don't crash when you run `bun run tauri dev`
-Please follow the PR templete when you are opening a pull request.
+
+## Code Quality
+
+Before opening a pull request, ensure your code passes all checks:
+
+```bash
+bun run check     # Run typecheck and biome check
+bun run fix       # Auto-fix formatting and linting issues
+```
+
+Available commands:
+
+- `bun run format` - Format code with Biome
+- `bun run lint` - Lint code with Biome
+- `bun run typecheck` - Run TypeScript type checking
+- `bun run check` - Run both typecheck and biome check
+- `bun run fix` - Auto-fix formatting and linting issues
+
+# Pull Request Guidelines
+
+## Commit History
+
+To maintain a clean commit history:
+
+1. **Squash commits** into logical, compact commits before opening your PR
+2. **Rebase on origin/master** to avoid merge conflicts:
+   ```bash
+   git fetch origin
+   git rebase origin/master
+   ```
+3. Each commit should represent a single logical change
+4. Use descriptive commit messages following conventional commits format
+
+## Before Submitting
+
+- Ensure the app runs without crashing: `bun run tauri dev`
+- All checks pass: `bun run check`
+- Your branch is rebased on the latest master
+- Commits are squashed into logical units
+- Follow the PR template when opening your pull request
+
+This helps maintainers review and merge your contributions efficiently without resolving conflicts.

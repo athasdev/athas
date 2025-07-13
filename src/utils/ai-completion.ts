@@ -1,5 +1,3 @@
-import { isTauri } from "./platform";
-
 export interface CompletionRequest {
   code: string;
   language: string;
@@ -24,11 +22,6 @@ const AI_CONFIG = {
 export const getOpenAICompletion = async (
   request: CompletionRequest,
 ): Promise<CompletionResponse | null> => {
-  if (!isTauri()) {
-    console.log("❌ Not in Tauri environment, skipping OpenAI API");
-    return null;
-  }
-
   try {
     // Get API key from storage (we'll use the same storage as GitHub token for now)
     const apiKey = await getGitHubToken(); // Reusing the same storage
@@ -115,13 +108,7 @@ export const getGitHubCopilotCompletion = async (
 // Get GitHub token from secure storage
 const getGitHubToken = async (): Promise<string | null> => {
   try {
-    // Try to get from Tauri secure storage first
-    if (isTauri()) {
-      return await getTokenFromTauriStorage();
-    }
-
-    // No fallback in browser environment
-    return null;
+    return await getTokenFromTauriStorage();
   } catch (error) {
     console.error("Error getting GitHub token:", error);
     return null;
@@ -142,10 +129,6 @@ const getTokenFromTauriStorage = async (): Promise<string | null> => {
 
 // Store GitHub token securely
 export const storeGitHubToken = async (token: string): Promise<void> => {
-  if (!isTauri()) {
-    throw new Error("Token storage only available in Tauri environment");
-  }
-
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("store_github_token", { token });
@@ -157,10 +140,6 @@ export const storeGitHubToken = async (token: string): Promise<void> => {
 
 // Remove GitHub token from storage
 export const removeGitHubToken = async (): Promise<void> => {
-  if (!isTauri()) {
-    throw new Error("Token removal only available in Tauri environment");
-  }
-
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("remove_github_token");
@@ -183,13 +162,13 @@ const preparePromptForCompletion = (request: CompletionRequest): string => {
     .slice(currentLineIndex + 1, Math.min(lines.length, currentLineIndex + 6))
     .join("\n");
 
-  return contextBefore + "|CURSOR|" + contextAfter;
+  return `${contextBefore}|CURSOR|${contextAfter}`;
 };
 
 // Legacy function for compatibility
 // @ts-ignore Ignoring this unused function for now in case it's needed later
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const preparePromptForCopilot = (request: CompletionRequest): string => {
+const _preparePromptForCopilot = (request: CompletionRequest): string => {
   return preparePromptForCompletion(request);
 };
 
@@ -200,14 +179,14 @@ export const getAICompletion = async (
   console.log("🤖 AI Completion Request:", {
     language: request.language,
     filename: request.filename,
-    linePrefix: getCurrentLine(request).trim().substring(0, 20) + "...",
+    linePrefix: `${getCurrentLine(request).trim().substring(0, 20)}...`,
   });
 
   // Try OpenAI first
   let completion = await getOpenAICompletion(request);
 
   if (completion) {
-    console.log("✅ OpenAI completion received:", completion.completion.substring(0, 50) + "...");
+    console.log("✅ OpenAI completion received:", `${completion.completion.substring(0, 50)}...`);
     return completion;
   }
 
@@ -241,9 +220,9 @@ const getFallbackCompletion = (request: CompletionRequest): CompletionResponse |
       request.code.substring(0, request.cursorPosition).split("\n").length - 1;
     const currentLine = lines[currentLineIndex] || "";
     const cursorInLine =
-      request.cursorPosition
-      - request.code.substring(0, request.cursorPosition).lastIndexOf("\n")
-      - 1;
+      request.cursorPosition -
+      request.code.substring(0, request.cursorPosition).lastIndexOf("\n") -
+      1;
     const linePrefix = currentLine.substring(0, cursorInLine);
 
     console.log("📝 Current line prefix:", linePrefix);
@@ -371,9 +350,9 @@ export const requestCompletion = (
   });
 
   if (
-    timeSinceLastRequest < 100 // Reduced from 500ms
-    || request.code === lastRequestCode
-    || currentLine.trim().length < 3
+    timeSinceLastRequest < 100 || // Reduced from 500ms
+    request.code === lastRequestCode ||
+    currentLine.trim().length < 3
   ) {
     console.log("🚫 Completion request blocked:", {
       tooSoon: timeSinceLastRequest < 100,
@@ -383,7 +362,7 @@ export const requestCompletion = (
     return;
   }
 
-  console.log("✅ Completion request approved, waiting:", delay + "ms");
+  console.log("✅ Completion request approved, waiting:", `${delay}ms`);
 
   completionTimeout = setTimeout(async () => {
     lastRequestTime = Date.now();

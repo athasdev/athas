@@ -6,7 +6,7 @@ export interface RemoteConnection {
   username: string;
   password?: string;
   keyPath?: string;
-  type: 'ssh' | 'sftp';
+  type: "ssh" | "sftp";
   isConnected: boolean;
   lastConnected?: string;
 }
@@ -18,5 +18,5 @@ export interface RemoteConnectionFormData {
   username: string;
   password?: string;
   keyPath?: string;
-  type: 'ssh' | 'sftp';
-} 
+  type: "ssh" | "sftp";
+}

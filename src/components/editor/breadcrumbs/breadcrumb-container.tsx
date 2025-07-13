@@ -1,6 +1,6 @@
 import React from "react";
 import { useBreadcrumbToggles } from "../../../hooks/use-breadcrumb-toggles";
-import { Buffer } from "../../../types/buffer";
+import type { Buffer } from "../../../types/buffer";
 import Breadcrumb from "./breadcrumb";
 
 interface BreadcrumbContainerProps {

@@ -4,6 +4,8 @@ export interface FileEntry {
   isDir: boolean;
   children?: FileEntry[];
   expanded?: boolean;
+  isEditing?: boolean;
+  isNewItem?: boolean;
 }
 
 export type VimMode = "normal" | "insert" | "visual";
@@ -20,4 +22,4 @@ export interface SearchState {
   currentMatch: number;
   totalMatches: number;
   matches: { start: number; end: number }[];
-} 
+}

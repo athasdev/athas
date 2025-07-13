@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { BottomPaneTab, QuickEditSelection } from "../types/ui-state";
+import type { BottomPaneTab, QuickEditSelection } from "../types/ui-state";
 
 interface UIState {
   // UI State

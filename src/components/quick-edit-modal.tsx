@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
 import { Loader2, X } from "lucide-react";
-import { getProviderApiToken } from "../utils/ai-chat";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { AI_PROVIDERS, getModelById } from "../types/ai-provider";
+import { getProviderApiToken } from "../utils/ai-chat";
 import ModelProviderSelector from "./model-provider-selector";
 
 interface QuickEditInlineProps {
@@ -165,7 +166,7 @@ Return only the edited code, nothing else:`,
   return (
     <div
       ref={containerRef}
-      className="fixed z-50 bg-white border border-[var(--border-color)] rounded-md shadow-xl"
+      className="fixed z-50 rounded-md border border-border bg-white shadow-xl"
       style={{
         minWidth: "40%",
         maxWidth: "100%",
@@ -183,18 +184,18 @@ Return only the edited code, nothing else:`,
           onKeyDown={handleKeyDown}
           placeholder="Describe your changes (Enter to run, esc to close)"
           disabled={isStreaming}
-          className="flex-1 rounded px-2 py-2 text-xs text-[var(--text-color)] placeholder-[var(--text-lighter)] outline-none transition-all"
+          className="flex-1 rounded px-2 py-2 text-text text-xs placeholder-text-lighter outline-none transition-all"
           style={{
             fontSize: "14px",
             minHeight: "2.2em",
             fontWeight: 400,
           }}
         />
-        <div className="flex items-center gap-1 flex-shrink-0 ml-1">
-          {isStreaming && <Loader2 size={16} className="text-[var(--text-lighter)] animate-spin" />}
+        <div className="ml-1 flex flex-shrink-0 items-center gap-1">
+          {isStreaming && <Loader2 size={16} className="animate-spin text-text-lighter" />}
           <button
             onClick={handleClose}
-            className="text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors p-1"
+            className="p-1 text-text-lighter transition-colors hover:text-text"
             disabled={isStreaming}
             tabIndex={-1}
             aria-label="Close"

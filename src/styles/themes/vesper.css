@@ -1,0 +1,51 @@
+/* Force Vesper theme */
+.force-vesper {
+    --tw-primary-bg: #18181b;
+    --tw-secondary-bg: #0D0D0E;
+    --tw-text: #e6e6e6;
+    --tw-text-light: #6e6e8a;
+    --tw-text-lighter: #44444a;
+    --tw-border: #44444a;
+    --tw-hover: #16213e;
+    --tw-selected: rgba(127, 255, 212, 0.08);
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: #44444a;
+    --scrollbar-thumb-hover: #7fffd4;
+
+    /* Syntax highlighting colors - Vesper theme */
+    --tw-syntax-comment: #6e6e8a;
+    --tw-syntax-keyword: #ffb86b;
+    --tw-syntax-string: #aafac8;
+    --tw-syntax-number: #ffb6b6;
+    --tw-syntax-function: #8be9fd;
+    --tw-syntax-variable: #b5e8e0;
+    --tw-syntax-tag: #ffd6a5;
+    --tw-syntax-attribute: #f1fa8c;
+    --tw-syntax-punctuation: #b0b0c3;
+}
+
+/* Vesper (duplicate) */
+.force-vesper {
+    --tw-primary-bg: #18181a;
+    --tw-secondary-bg: #0D0D0E;
+    --tw-text: #e6e6e6;
+    --tw-text-light: #6e6e8a;
+    --tw-text-lighter: #44444a;
+    --tw-border: #44444a;
+    --tw-hover: #16213e;
+    --tw-selected: rgba(127, 255, 212, 0.08);
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: #44444a;
+    --scrollbar-thumb-hover: #7fffd4;
+
+    /* Syntax highlighting colors - Vesper theme */
+    --tw-syntax-comment: #6e6e8a;
+    --tw-syntax-keyword: #ffb86b;
+    --tw-syntax-string: #aafac8;
+    --tw-syntax-number: #ffb6b6;
+    --tw-syntax-function: #8be9fd;
+    --tw-syntax-variable: #b5e8e0;
+    --tw-syntax-tag: #ffd6a5;
+    --tw-syntax-attribute: #f1fa8c;
+    --tw-syntax-punctuation: #b0b0c3;
+}

@@ -1,0 +1,73 @@
+/* Force One Dark theme */
+.force-one-dark {
+    --tw-primary-bg: #282c34;
+    --tw-secondary-bg: #21252b;
+    --tw-text: #abb2bf;
+    --tw-text-light: #5c6370;
+    --tw-text-lighter: #5c6370;
+    --tw-border: #3e4451;
+    --tw-hover: #2c323c;
+    --tw-selected: #3e4451;
+
+    /* Syntax highlighting colors - One Dark theme */
+    --tw-syntax-comment: #5c6370;
+    --tw-syntax-keyword: #c678dd;
+    --tw-syntax-string: #98c379;
+    --tw-syntax-number: #d19a66;
+    --tw-syntax-function: #61afef;
+    --tw-syntax-variable: #e06c75;
+    --tw-syntax-tag: #e06c75;
+    --tw-syntax-attribute: #61afef;
+    --tw-syntax-punctuation: #abb2bf;
+}
+
+/* Theme: One Dark Pro */
+.force-one-dark-pro {
+    --tw-primary-bg: #282c34;
+    --tw-secondary-bg: #21252b;
+    --tw-hover: #2c313a;
+    --tw-selected: #3e4451;
+    --tw-border: #3e4451;
+    --tw-text: #abb2bf;
+    --tw-text-lighter: #5c6370;
+    --tw-accent: #61afef;
+
+    /* Diagnostic colors */
+    --tw-error: #e06c75;
+    --tw-warning: #e5c07b;
+    --tw-info: #61afef;
+
+    /* Syntax highlighting */
+    --comment: #5c6370;
+    --keyword: #c678dd;
+    --string: #98c379;
+    --number: #d19a66;
+    --function: #61afef;
+    --variable: #e06c75;
+    --tag: #e06c75;
+    --attribute: #d19a66;
+    --punctuation: #abb2bf;
+}
+
+/* One Light Pro */
+.force-one-light-pro {
+    --tw-primary-bg: #fafafa;
+    --tw-secondary-bg: #f0f0f0;
+    --tw-hover: #e5e5e6;
+    --tw-selected: #d4d4d5;
+    --tw-border: #d4d4d5;
+    --tw-text: #383a42;
+    --tw-text-lighter: #a0a1a7;
+    --tw-accent: #4078f2;
+
+    /* Syntax highlighting */
+    --comment: #a0a1a7;
+    --keyword: #a626a4;
+    --string: #50a14f;
+    --number: #986801;
+    --function: #4078f2;
+    --variable: #e45649;
+    --tag: #e45649;
+    --attribute: #986801;
+    --punctuation: #383a42;
+}

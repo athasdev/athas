@@ -1,0 +1,73 @@
+/* Force Nord theme */
+.force-nord {
+    --tw-primary-bg: #2e3440;
+    --tw-secondary-bg: #3b4252;
+    --tw-text: #eceff4;
+    --tw-text-light: #d8dee9;
+    --tw-text-lighter: #4c566a;
+    --tw-border: #4c566a;
+    --tw-hover: #434c5e;
+    --tw-selected: #4c566a;
+
+    /* Diagnostic colors */
+    --tw-error: #bf616a;
+    --tw-warning: #ebcb8b;
+    --tw-info: #5e81ac;
+
+    /* Syntax highlighting colors - Nord theme */
+    --tw-syntax-comment: #616e87;
+    --tw-syntax-keyword: #81a1c1;
+    --tw-syntax-string: #a3be8c;
+    --tw-syntax-number: #b48ead;
+    --tw-syntax-function: #88c0d0;
+    --tw-syntax-variable: #ebcb8b;
+    --tw-syntax-tag: #8fbcbb;
+    --tw-syntax-attribute: #88c0d0;
+    --tw-syntax-punctuation: #eceff4;
+}
+
+/* Theme: Nord (duplicate for consistency) */
+.force-nord {
+    --tw-primary-bg: #2e3440;
+    --tw-secondary-bg: #3b4252;
+    --tw-hover: #434c5e;
+    --tw-selected: #4c566a;
+    --tw-border: #4c566a;
+    --tw-text: #eceff4;
+    --tw-text-lighter: #7b88a1;
+    --tw-accent: #88c0d0;
+
+    /* Syntax highlighting */
+    --comment: #4c566a;
+    --keyword: #81a1c1;
+    --string: #a3be8c;
+    --number: #b48ead;
+    --function: #88c0d0;
+    --variable: #d8dee9;
+    --tag: #8fbcbb;
+    --attribute: #d08770;
+    --punctuation: #eceff4;
+}
+
+/* Nord Light */
+.force-nord-light {
+    --tw-primary-bg: #eceff4;
+    --tw-secondary-bg: #e5e9f0;
+    --tw-hover: #d8dee9;
+    --tw-selected: #4c566a;
+    --tw-border: #4c566a;
+    --tw-text: #2e3440;
+    --tw-text-lighter: #4c566a;
+    --tw-accent: #5e81ac;
+
+    /* Syntax highlighting */
+    --comment: #4c566a;
+    --keyword: #81a1c1;
+    --string: #a3be8c;
+    --number: #b48ead;
+    --function: #88c0d0;
+    --variable: #2e3440;
+    --tag: #8fbcbb;
+    --attribute: #d08770;
+    --punctuation: #2e3440;
+}
