@@ -4,48 +4,76 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "build:web": "tsc && vite build",
-    "build:tauri": "tauri build",
-    "preview": "vite preview",
+    "__what_is_this": "this is a retarded way to add comments in json files that don't support comments",
+
+    "__tauri": "this will allow you to use 'bun tauri <whatever>' instead of 'bunx tauri <whatever>'",
     "tauri": "tauri",
-    "typecheck": "bun tsc --noEmit",
-    "lint": "bun eslint . --ext .ts,.tsx",
-    "lint:fix": "bun eslint . --ext .ts,.tsx --fix"
+
+    "__typecheck": "this will only typecheck the typescript files",
+    "typecheck": "tsc --noEmit",
+
+    "__check": "this will check formatting and linting",
+    "check": "biome check",
+
+    "__check:all": "composite of 'tsc --noEmit' and 'biome check'",
+    "check:all": "bun typecheck && bun check",
+
+    "__check:fix": "wil fix formatting and linting if possible",
+    "check:fix": "biome check --write --unsafe",
+
+    "__clean": "this will clean and rebuild the project. both rust and js",
+    "clean": "concurrently --names \"node,rust\" --prefix-colors \"cyan,yellow\" \"rimraf dist build node_modules bun.lockb && bun install\" \"cargo clean && cargo build\"",
+
+    "__prepare": "this will install git hooks after you do 'bun install'",
+    "prepare": "simple-git-hooks",
+
+    "commitlint": "commitlint --edit"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.5.0",
-    "@tauri-apps/plugin-dialog": "^2.2.2",
-    "@tauri-apps/plugin-fs": "^2.3.0",
-    "@tauri-apps/plugin-http": "^2.4.4",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-fs": "^2",
+    "@tauri-apps/plugin-http": "^2",
     "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-os": "^2.2.1",
-    "@tauri-apps/plugin-shell": "^2.0.0",
-    "@tauri-apps/plugin-window-state": "~2",
+    "@tauri-apps/plugin-os": "^2",
+    "@tauri-apps/plugin-process": "^2",
+    "@tauri-apps/plugin-shell": "^2",
+    "@tauri-apps/plugin-window-state": "^2",
     "@types/prismjs": "^1.26.5",
     "ansi-to-html": "^0.7.2",
     "clsx": "^2.1.1",
     "lucide-react": "^0.511.0",
+    "material-file-icons": "^2.4.0",
     "prismjs": "^1.30.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "vscode-languageserver-protocol": "^3.17.5"
+    "vscode-languageserver-protocol": "^3.17.5",
+    "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.1.1",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@tailwindcss/vite": "^4.1.8",
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
-    "@typescript-eslint/eslint-plugin": "^8.35.0",
-    "@typescript-eslint/parser": "^8.35.0",
     "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.30.0",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "globals": "^16.2.0",
+    "concurrently": "^9.2.0",
+    "lint-staged": "^16.1.2",
+    "rimraf": "^6.0.1",
+    "simple-git-hooks": "^2.13.0",
     "tailwindcss": "^4.1.8",
     "typescript": "~5.6.2",
     "vite": "^6.3.5"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "bunx concurrently --names \"rust,ts\" --prefix-colors \"yellow,cyan\" './scripts/format-staged-rust.sh' './scripts/format-staged-biome.sh && bun check:all'",
+    "commit-msg": "bun commitlint --edit $1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json}": [
+      "biome check --no-errors-on-unmatched"
+    ]
   }
 }

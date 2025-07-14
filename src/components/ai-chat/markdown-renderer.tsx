@@ -1,31 +1,31 @@
-import React from "react";
 import Prism from "prismjs";
-import { MarkdownRendererProps } from "./types";
+import type React from "react";
+import type { MarkdownRendererProps } from "./types";
 import { mapLanguage } from "./utils";
 
 // Import common language components
-import "prismjs/components/prism-javascript";
-import "prismjs/components/prism-typescript";
-import "prismjs/components/prism-jsx";
-import "prismjs/components/prism-tsx";
-import "prismjs/components/prism-python";
-import "prismjs/components/prism-java";
+import "prismjs/components/prism-bash";
 import "prismjs/components/prism-c";
 import "prismjs/components/prism-cpp";
 import "prismjs/components/prism-csharp";
-import "prismjs/components/prism-php";
-import "prismjs/components/prism-ruby";
-import "prismjs/components/prism-go";
-import "prismjs/components/prism-rust";
-import "prismjs/components/prism-sql";
-import "prismjs/components/prism-json";
 import "prismjs/components/prism-css";
-import "prismjs/components/prism-scss";
-import "prismjs/components/prism-bash";
-import "prismjs/components/prism-shell-session";
+import "prismjs/components/prism-go";
+import "prismjs/components/prism-java";
+import "prismjs/components/prism-javascript";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-jsx";
 import "prismjs/components/prism-markdown";
-import "prismjs/components/prism-yaml";
+import "prismjs/components/prism-php";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-ruby";
+import "prismjs/components/prism-rust";
+import "prismjs/components/prism-scss";
+import "prismjs/components/prism-shell-session";
+import "prismjs/components/prism-sql";
 import "prismjs/components/prism-toml";
+import "prismjs/components/prism-tsx";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-yaml";
 
 // Simple markdown renderer for AI responses
 export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRendererProps) {
@@ -47,30 +47,22 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
         let highlightedCode = code;
         if (language && Prism.languages[prismLanguage]) {
           try {
-            highlightedCode = Prism.highlight(
-              code,
-              Prism.languages[prismLanguage],
-              prismLanguage,
-            );
-          } catch (e) {
+            highlightedCode = Prism.highlight(code, Prism.languages[prismLanguage], prismLanguage);
+          } catch (_e) {
             // Fallback to plain text if highlighting fails
             highlightedCode = code;
           }
         }
 
         return (
-          <div key={index} className="relative group my-2">
-            <pre className="bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded p-2 overflow-x-auto max-w-full">
-              <div className="flex items-center justify-between mb-1">
-                {language && (
-                  <div className="text-xs text-[var(--text-lighter)] font-mono">
-                    {language}
-                  </div>
-                )}
+          <div key={index} className="group relative my-2">
+            <pre className="max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
+              <div className="mb-1 flex items-center justify-between">
+                {language && <div className="font-mono text-text-lighter text-xs">{language}</div>}
                 {onApplyCode && code.trim() && (
                   <button
                     onClick={() => onApplyCode(code)}
-                    className="text-xs px-2 py-1 bg-[var(--primary-bg)] hover:bg-[var(--hover-color)] text-[var(--text-color)] border border-[var(--border-color)] rounded font-mono transition-colors opacity-0 group-hover:opacity-100 whitespace-nowrap"
+                    className="whitespace-nowrap rounded border border-border bg-primary-bg px-2 py-1 font-mono text-text text-xs opacity-0 transition-colors hover:bg-hover group-hover:opacity-100"
                     title="Apply this code to current buffer"
                   >
                     Apply
@@ -78,7 +70,7 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
                 )}
               </div>
               <code
-                className="text-xs font-mono text-[var(--text-color)] block whitespace-pre-wrap break-all"
+                className="block whitespace-pre-wrap break-all font-mono text-text text-xs"
                 dangerouslySetInnerHTML={{ __html: highlightedCode }}
               />
             </pre>
@@ -105,7 +97,7 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
       if (currentList.type && currentList.items.length > 0) {
         const ListComponent = currentList.type === "ol" ? "ol" : "ul";
         elements.push(
-          <ListComponent key={`list-${elements.length}`} className="ml-4 my-2">
+          <ListComponent key={`list-${elements.length}`} className="my-2 ml-4">
             {currentList.items.map((item, index) => (
               <li key={index} className="my-1">
                 {renderInlineFormatting(item)}
@@ -131,7 +123,7 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
       }
     };
 
-    lines.forEach((line) => {
+    lines.forEach(line => {
       const trimmedLine = line.trim();
 
       // Check for numbered lists (e.g., "1. ", "2. ", etc.)
@@ -187,7 +179,7 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
         return (
           <code
             key={index}
-            className="bg-[var(--secondary-bg)] px-1 rounded text-xs font-mono border border-[var(--border-color)]"
+            className="rounded border border-border bg-secondary-bg px-1 font-mono text-xs"
           >
             {code}
           </code>
@@ -197,11 +189,7 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
       // Handle bold text (**text**)
       const boldParts = part.split(/(\*\*[^*]+\*\*)/g);
       return boldParts.map((boldPart, boldIndex) => {
-        if (
-          boldPart.startsWith("**") &&
-          boldPart.endsWith("**") &&
-          boldPart.length > 4
-        ) {
+        if (boldPart.startsWith("**") && boldPart.endsWith("**") && boldPart.length > 4) {
           return (
             <strong key={`${index}-${boldIndex}`} className="font-semibold">
               {boldPart.slice(2, -2)}
@@ -219,24 +207,17 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
             !italicPart.startsWith("**")
           ) {
             return (
-              <em
-                key={`${index}-${boldIndex}-${italicIndex}`}
-                className="italic"
-              >
+              <em key={`${index}-${boldIndex}-${italicIndex}`} className="italic">
                 {italicPart.slice(1, -1)}
               </em>
             );
           }
 
-          return (
-            <span key={`${index}-${boldIndex}-${italicIndex}`}>
-              {italicPart}
-            </span>
-          );
+          return <span key={`${index}-${boldIndex}-${italicIndex}`}>{italicPart}</span>;
         });
       });
     });
   };
 
   return <div className="whitespace-pre-wrap">{renderContent(content)}</div>;
-} 
+}

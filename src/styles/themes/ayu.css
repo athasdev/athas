@@ -1,0 +1,91 @@
+/* Force Ayu theme */
+.force-ayu {
+    --tw-primary-bg: #0f1419;
+    --tw-secondary-bg: #1a1f2c;
+    --tw-text: #e6e1cf;
+    --tw-text-light: #a6b3cc;
+    --tw-text-lighter: #5c6773;
+    --tw-border: #2d3640;
+    --tw-hover: #1a1f2c;
+    --tw-selected: #2d3640;
+
+    /* Syntax highlighting colors - Ayu theme */
+    --tw-syntax-comment: #5c6773;
+    --tw-syntax-keyword: #ff7733;
+    --tw-syntax-string: #c2d94c;
+    --tw-syntax-number: #d4bfff;
+    --tw-syntax-function: #5ccfe6;
+    --tw-syntax-variable: #ffb454;
+    --tw-syntax-tag: #ff7733;
+    --tw-syntax-attribute: #5ccfe6;
+    --tw-syntax-punctuation: #e6e1cf;
+}
+
+/* Theme: Ayu Dark */
+.force-ayu-dark {
+    --tw-primary-bg: #0a0e14;
+    --tw-secondary-bg: #11151c;
+    --tw-hover: #1a1f29;
+    --tw-selected: #232834;
+    --tw-border: #232834;
+    --tw-text: #b3b1ad;
+    --tw-text-lighter: #626a73;
+    --tw-accent: #e6b450;
+
+    /* Syntax highlighting */
+    --comment: #626a73;
+    --keyword: #ff8f40;
+    --string: #c2d94c;
+    --number: #ff8f40;
+    --function: #39bae6;
+    --variable: #b3b1ad;
+    --tag: #39bae6;
+    --attribute: #ffb454;
+    --punctuation: #b3b1ad;
+}
+
+/* Ayu Mirage */
+.force-ayu-mirage {
+    --tw-primary-bg: #1f2430;
+    --tw-secondary-bg: #191e2a;
+    --tw-hover: #242936;
+    --tw-selected: #2a3546;
+    --tw-border: #2a3546;
+    --tw-text: #cccac2;
+    --tw-text-lighter: #707a8c;
+    --tw-accent: #ffcc66;
+
+    /* Syntax highlighting */
+    --comment: #707a8c;
+    --keyword: #ffa759;
+    --string: #bae67e;
+    --number: #ffa759;
+    --function: #73d0ff;
+    --variable: #cccac2;
+    --tag: #73d0ff;
+    --attribute: #ffd580;
+    --punctuation: #cccac2;
+}
+
+/* Ayu Light */
+.force-ayu-light {
+    --tw-primary-bg: #fafafa;
+    --tw-secondary-bg: #f3f4f5;
+    --tw-hover: #f0f0f0;
+    --tw-selected: #e8e8e8;
+    --tw-border: #e8e8e8;
+    --tw-text: #5c6773;
+    --tw-text-lighter: #abb0b6;
+    --tw-accent: #ff9940;
+
+    /* Syntax highlighting */
+    --comment: #abb0b6;
+    --keyword: #fa8d3e;
+    --string: #86b300;
+    --number: #fa8d3e;
+    --function: #55b4d4;
+    --variable: #5c6773;
+    --tag: #55b4d4;
+    --attribute: #f2ae49;
+    --punctuation: #5c6773;
+}

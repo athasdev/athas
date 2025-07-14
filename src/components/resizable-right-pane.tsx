@@ -1,5 +1,6 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { cn } from '../utils/cn';
+import type React from "react";
+import { useCallback, useRef, useState } from "react";
+import { cn } from "../utils/cn";
 
 interface ResizableRightPaneProps {
   children: React.ReactNode;
@@ -8,6 +9,9 @@ interface ResizableRightPaneProps {
   maxWidth?: number;
   className?: string;
   isVisible?: boolean;
+  position?: "left" | "right";
+  width?: number;
+  onWidthChange?: (width: number) => void;
 }
 
 const ResizableRightPane = ({
@@ -16,39 +20,57 @@ const ResizableRightPane = ({
   minWidth = 200,
   maxWidth = 600,
   className,
-  isVisible = true
+  isVisible = true,
+  position = "right",
+  width: controlledWidth,
+  onWidthChange,
 }: ResizableRightPaneProps) => {
-  const [width, setWidth] = useState(defaultWidth);
+  const [internalWidth, setInternalWidth] = useState(defaultWidth);
   const [isResizing, setIsResizing] = useState(false);
   const paneRef = useRef<HTMLDivElement>(null);
   const resizerRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
+  const width = controlledWidth ?? internalWidth;
+  const setWidth = (newWidth: number) => {
+    if (onWidthChange) {
+      onWidthChange(newWidth);
+    } else {
+      setInternalWidth(newWidth);
+    }
+  };
 
-    const startX = e.clientX;
-    const startWidth = width;
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = startX - e.clientX; // Reverse direction for right pane
-      const newWidth = Math.min(Math.max(startWidth + deltaX, minWidth), maxWidth);
-      setWidth(newWidth);
-    };
+      const startX = e.clientX;
+      const startWidth = width;
 
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
+      const handleMouseMove = (e: MouseEvent) => {
+        const deltaX =
+          position === "right"
+            ? startX - e.clientX // Reverse direction for right pane
+            : e.clientX - startX; // Normal direction for left pane
+        const newWidth = Math.min(Math.max(startWidth + deltaX, minWidth), maxWidth);
+        setWidth(newWidth);
+      };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  }, [width, minWidth, maxWidth]);
+      const handleMouseUp = () => {
+        setIsResizing(false);
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [width, minWidth, maxWidth, position],
+  );
 
   if (!isVisible) {
     return null;
@@ -60,8 +82,9 @@ const ResizableRightPane = ({
         ref={paneRef}
         style={{ width: `${width}px` }}
         className={cn(
-          'bg-[var(--secondary-bg)] flex flex-col flex-1 border-l border-[var(--border-color)] relative',
-          className
+          "relative flex flex-1 flex-col bg-secondary-bg",
+          position === "right" ? "border-border border-l" : "border-border border-r",
+          className,
         )}
       >
         {/* Resize Handle */}
@@ -69,17 +92,23 @@ const ResizableRightPane = ({
           ref={resizerRef}
           onMouseDown={handleMouseDown}
           className={cn(
-            'absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-blue-500/30 transition-colors duration-150 group',
-            isResizing && 'bg-blue-500/50'
+            "group absolute top-0 h-full w-1 cursor-col-resize transition-colors duration-150 hover:bg-blue-500/30",
+            position === "right" ? "left-0" : "right-0",
+            isResizing && "bg-blue-500/50",
           )}
         >
-          <div className="absolute top-0 left-0 w-[3px] h-full translate-x-[1px] opacity-0 group-hover:opacity-100 bg-blue-500 transition-opacity duration-150" />
+          <div
+            className={cn(
+              "absolute top-0 h-full w-[3px] bg-blue-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100",
+              position === "right" ? "left-0 translate-x-[1px]" : "-translate-x-[1px] right-0",
+            )}
+          />
         </div>
-        
+
         {children}
       </div>
     </div>
   );
 };
 
-export default ResizableRightPane; 
+export default ResizableRightPane;

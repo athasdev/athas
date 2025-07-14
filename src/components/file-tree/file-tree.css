@@ -1,0 +1,36 @@
+/* Hide scrollbar for Chrome, Safari and Opera */
+.file-tree-container::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.file-tree-container {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+  scrollbar-color: transparent transparent !important;
+}
+
+/* Additional webkit scrollbar hiding */
+.file-tree-container::-webkit-scrollbar-track {
+  display: none !important;
+  background: transparent !important;
+}
+
+.file-tree-container::-webkit-scrollbar-thumb {
+  display: none !important;
+  background: transparent !important;
+}
+
+.file-tree-container::-webkit-scrollbar-corner {
+  display: none !important;
+  background: transparent !important;
+}
+
+/* Ensure scrolling still works */
+.file-tree-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+}

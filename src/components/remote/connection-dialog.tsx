@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { X, Server, CheckCircle, AlertCircle, Eye, EyeOff, Save } from "lucide-react";
-import Button from "../button";
-import Dropdown from "../dropdown";
-import { RemoteConnection, RemoteConnectionFormData } from "./types";
+import { AlertCircle, CheckCircle, Eye, EyeOff, Save, Server, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import Button from "../ui/button";
+import Dropdown from "../ui/dropdown";
+import type { RemoteConnection, RemoteConnectionFormData } from "./types";
 
 interface ConnectionDialogProps {
   isOpen: boolean;
@@ -18,24 +18,22 @@ const ConnectionDialog = ({
   editingConnection = null,
 }: ConnectionDialogProps) => {
   const [formData, setFormData] = useState<RemoteConnectionFormData>({
-    name: '',
-    host: '',
+    name: "",
+    host: "",
     port: 22,
-    username: '',
-    password: '',
-    keyPath: '',
-    type: 'ssh'
+    username: "",
+    password: "",
+    keyPath: "",
+    type: "ssh",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
-  const [validationStatus, setValidationStatus] = useState<
-    "idle" | "valid" | "invalid"
-  >("idle");
+  const [validationStatus, setValidationStatus] = useState<"idle" | "valid" | "invalid">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
   const connectionTypeOptions = [
-    { value: 'ssh', label: 'SSH' },
-    { value: 'sftp', label: 'SFTP' }
+    { value: "ssh", label: "SSH" },
+    { value: "sftp", label: "SFTP" },
   ];
 
   useEffect(() => {
@@ -46,19 +44,19 @@ const ConnectionDialog = ({
           host: editingConnection.host,
           port: editingConnection.port,
           username: editingConnection.username,
-          password: editingConnection.password || '',
-          keyPath: editingConnection.keyPath || '',
-          type: editingConnection.type
+          password: editingConnection.password || "",
+          keyPath: editingConnection.keyPath || "",
+          type: editingConnection.type,
         });
       } else {
         setFormData({
-          name: '',
-          host: '',
+          name: "",
+          host: "",
           port: 22,
-          username: '',
-          password: '',
-          keyPath: '',
-          type: 'ssh'
+          username: "",
+          password: "",
+          keyPath: "",
+          type: "ssh",
         });
       }
       setValidationStatus("idle");
@@ -71,13 +69,13 @@ const ConnectionDialog = ({
   useEffect(() => {
     if (isOpen) {
       const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') {
+        if (event.key === "Escape") {
           onClose();
         }
       };
 
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
     }
   }, [isOpen, onClose]);
 
@@ -106,7 +104,7 @@ const ConnectionDialog = ({
         setValidationStatus("invalid");
         setErrorMessage("Failed to save connection. Please try again.");
       }
-    } catch (error) {
+    } catch (_error) {
       setValidationStatus("invalid");
       setErrorMessage("An error occurred while saving the connection.");
     } finally {
@@ -123,45 +121,42 @@ const ConnectionDialog = ({
   const isFormValid = formData.name.trim() && formData.host.trim() && formData.username.trim();
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 rounded-xl overflow-hidden">
-      <div className="bg-[var(--primary-bg)] border border-[var(--border-color)] rounded-lg w-[480px] max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden rounded-xl bg-black/50">
+      <div className="flex max-h-[90vh] w-[480px] flex-col rounded-lg border border-border bg-primary-bg">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
+        <div className="flex items-center justify-between border-border border-b p-4">
           <div className="flex items-center gap-2">
-            <Server size={16} className="text-[var(--text-color)]" />
-            <h3 className="font-mono text-sm text-[var(--text-color)]">
-              {editingConnection ? 'Edit Connection' : 'New Remote Connection'}
+            <Server size={16} className="text-text" />
+            <h3 className="font-mono text-sm text-text">
+              {editingConnection ? "Edit Connection" : "New Remote Connection"}
             </h3>
           </div>
-          <button
-            onClick={onClose}
-            className="text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
-          >
+          <button onClick={onClose} className="text-text-lighter transition-colors hover:text-text">
             <X size={16} />
           </button>
         </div>
 
-        <div className="p-4 space-y-4 flex-1 overflow-y-auto">
-          <div className="text-xs text-[var(--text-lighter)] leading-relaxed">
-            {editingConnection 
-              ? 'Update your remote connection settings.'
-              : 'Connect to remote servers via SSH or SFTP.'
-            }
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="text-text-lighter text-xs leading-relaxed">
+            {editingConnection
+              ? "Update your remote connection settings."
+              : "Connect to remote servers via SSH or SFTP."}
           </div>
 
           {/* Connection Form */}
           <div className="space-y-4">
             {/* Connection Name */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-color)]">
+              <label htmlFor="connection-name" className="font-medium text-text text-xs">
                 Connection Name *
               </label>
               <input
+                id="connection-name"
                 type="text"
                 value={formData.name}
-                onChange={(e) => updateFormData({ name: e.target.value })}
+                onChange={e => updateFormData({ name: e.target.value })}
                 placeholder="My Server"
-                className="w-full px-3 py-2 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded text-xs text-[var(--text-color)] focus:outline-none focus:border-blue-500 placeholder-[var(--text-lighter)]"
+                className="w-full rounded border border-border bg-secondary-bg px-3 py-2 text-text text-xs placeholder-text-lighter focus:border-blue-500 focus:outline-none"
                 disabled={isValidating}
               />
             </div>
@@ -169,41 +164,43 @@ const ConnectionDialog = ({
             {/* Host, Port, Type */}
             <div className="grid grid-cols-12 gap-3">
               <div className="col-span-6 space-y-2">
-                <label className="text-xs font-medium text-[var(--text-color)]">
+                <label htmlFor="host" className="font-medium text-text text-xs">
                   Host *
                 </label>
                 <input
+                  id="host"
                   type="text"
                   value={formData.host}
-                  onChange={(e) => updateFormData({ host: e.target.value })}
+                  onChange={e => updateFormData({ host: e.target.value })}
                   placeholder="192.168.1.100"
-                  className="w-full px-3 py-2 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded text-xs text-[var(--text-color)] focus:outline-none focus:border-blue-500 placeholder-[var(--text-lighter)]"
+                  className="w-full rounded border border-border bg-secondary-bg px-3 py-2 text-text text-xs placeholder-text-lighter focus:border-blue-500 focus:outline-none"
                   disabled={isValidating}
                 />
               </div>
               <div className="col-span-3 space-y-2">
-                <label className="text-xs font-medium text-[var(--text-color)]">
+                <label htmlFor="port" className="font-medium text-text text-xs">
                   Port
                 </label>
                 <input
+                  id="port"
                   type="number"
                   value={formData.port}
-                  onChange={(e) => updateFormData({ port: parseInt(e.target.value) || 22 })}
+                  onChange={e => updateFormData({ port: parseInt(e.target.value) || 22 })}
                   placeholder="22"
                   min="1"
                   max="65535"
-                  className="w-full px-3 py-2 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded text-xs text-[var(--text-color)] focus:outline-none focus:border-blue-500 placeholder-[var(--text-lighter)]"
+                  className="w-full rounded border border-border bg-secondary-bg px-3 py-2 text-text text-xs placeholder-text-lighter focus:border-blue-500 focus:outline-none"
                   disabled={isValidating}
                 />
               </div>
               <div className="col-span-3 space-y-2">
-                <label className="text-xs font-medium text-[var(--text-color)]">
+                <label htmlFor="type" className="font-medium text-text text-xs">
                   Type
                 </label>
                 <Dropdown
                   value={formData.type}
                   options={connectionTypeOptions}
-                  onChange={(value) => updateFormData({ type: value as 'ssh' | 'sftp' })}
+                  onChange={value => updateFormData({ type: value as "ssh" | "sftp" })}
                   className="text-xs"
                 />
               </div>
@@ -211,37 +208,39 @@ const ConnectionDialog = ({
 
             {/* Username */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-color)]">
+              <label htmlFor="username" className="font-medium text-text text-xs">
                 Username *
               </label>
               <input
+                id="username"
                 type="text"
                 value={formData.username}
-                onChange={(e) => updateFormData({ username: e.target.value })}
+                onChange={e => updateFormData({ username: e.target.value })}
                 placeholder="root"
-                className="w-full px-3 py-2 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded text-xs text-[var(--text-color)] focus:outline-none focus:border-blue-500 placeholder-[var(--text-lighter)]"
+                className="w-full rounded border border-border bg-secondary-bg px-3 py-2 text-text text-xs placeholder-text-lighter focus:border-blue-500 focus:outline-none"
                 disabled={isValidating}
               />
             </div>
 
             {/* Password */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-color)]">
+              <label htmlFor="password" className="font-medium text-text text-xs">
                 Password (optional)
               </label>
               <div className="relative">
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
-                  onChange={(e) => updateFormData({ password: e.target.value })}
+                  onChange={e => updateFormData({ password: e.target.value })}
                   placeholder="Leave empty to use key authentication"
-                  className="w-full px-3 py-2 pr-10 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded text-xs text-[var(--text-color)] focus:outline-none focus:border-blue-500 placeholder-[var(--text-lighter)]"
+                  className="w-full rounded border border-border bg-secondary-bg px-3 py-2 pr-10 text-text text-xs placeholder-text-lighter focus:border-blue-500 focus:outline-none"
                   disabled={isValidating}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--text-lighter)] hover:text-[var(--text-color)] transition-colors"
+                  className="-translate-y-1/2 absolute top-1/2 right-3 transform text-text-lighter transition-colors hover:text-text"
                 >
                   {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
@@ -250,15 +249,16 @@ const ConnectionDialog = ({
 
             {/* Private Key Path */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-color)]">
+              <label htmlFor="keypath" className="font-medium text-text text-xs">
                 Private Key Path (optional)
               </label>
               <input
+                id="keypath"
                 type="text"
                 value={formData.keyPath}
-                onChange={(e) => updateFormData({ keyPath: e.target.value })}
+                onChange={e => updateFormData({ keyPath: e.target.value })}
                 placeholder="~/.ssh/id_rsa"
-                className="w-full px-3 py-2 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded text-xs text-[var(--text-color)] focus:outline-none focus:border-blue-500 placeholder-[var(--text-lighter)]"
+                className="w-full rounded border border-border bg-secondary-bg px-3 py-2 text-text text-xs placeholder-text-lighter focus:border-blue-500 focus:outline-none"
                 disabled={isValidating}
               />
             </div>
@@ -266,36 +266,29 @@ const ConnectionDialog = ({
 
           {/* Validation Status */}
           {validationStatus === "valid" && (
-            <div className="flex items-center gap-2 text-xs text-green-500">
+            <div className="flex items-center gap-2 text-green-500 text-xs">
               <CheckCircle size={12} />
               Connection saved successfully!
             </div>
           )}
 
           {validationStatus === "invalid" && (
-            <div className="flex items-center gap-2 text-xs text-red-500">
+            <div className="flex items-center gap-2 text-red-500 text-xs">
               <AlertCircle size={12} />
               {errorMessage}
             </div>
           )}
-
-       
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 p-4 border-t border-[var(--border-color)]">
-          <Button
-            onClick={handleSave}
-            disabled={!isFormValid || isValidating}
-            className="flex-1"
-          >
+        <div className="flex gap-2 border-border border-t p-4">
+          <Button onClick={handleSave} disabled={!isFormValid || isValidating} className="flex-1">
             <Save size={14} className="mr-2" />
             {isValidating
               ? "Saving..."
               : editingConnection
                 ? "Update Connection"
-                : "Save Connection"
-            }
+                : "Save Connection"}
           </Button>
           <Button onClick={onClose} variant="ghost" className="px-4">
             Cancel
@@ -306,4 +299,4 @@ const ConnectionDialog = ({
   );
 };
 
-export default ConnectionDialog; 
+export default ConnectionDialog;

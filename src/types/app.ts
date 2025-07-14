@@ -4,9 +4,11 @@ export interface FileEntry {
   isDir: boolean;
   children?: FileEntry[];
   expanded?: boolean;
+  isEditing?: boolean;
+  isNewItem?: boolean;
 }
 
-export type VimMode = "normal" | "insert" | "visual";
+export type VimMode = "normal" | "insert" | "visual" | "visual-line" | "visual-block";
 
 export interface ContextMenuState {
   x: number;
@@ -20,4 +22,4 @@ export interface SearchState {
   currentMatch: number;
   totalMatches: number;
   matches: { start: number; end: number }[];
-} 
+}

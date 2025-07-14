@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "athas-code",
+  "productName": "Athas",
   "version": "0.1.0",
   "identifier": "com.athas-code.app",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "vite",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "tsc && vite build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -21,9 +21,9 @@
         "resizable": true,
         "fullscreen": false,
         "center": true,
-        "minWidth": 800,
-        "minHeight": 600,
-        "shadow": false
+        "minWidth": 400,
+        "minHeight": 400,
+        "shadow": true
       }
     ],
     "security": {

@@ -1,7 +1,13 @@
-import { useState, useCallback } from "react";
-import { openFolder, readDirectory, writeFile } from "../utils/platform";
-import { FileEntry } from "../types/app";
+import { useCallback, useState } from "react";
+import type { FileEntry } from "../types/app";
 import { getRootPath } from "../utils/file-utils";
+import {
+  createDirectory,
+  deletePath,
+  openFolder,
+  readDirectory,
+  writeFile,
+} from "../utils/platform";
 
 interface UseFileOperationsProps {
   openBuffer: (
@@ -18,7 +24,7 @@ interface UseFileOperationsProps {
 export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [rootFolderPath, setRootFolderPath] = useState<string>("");
-  
+
   // Cache for project files to avoid unnecessary re-scanning
   const [projectFilesCache, setProjectFilesCache] = useState<{
     path: string;
@@ -32,9 +38,11 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
 
     // Check cache first (cache for 30 seconds)
     const now = Date.now();
-    if (projectFilesCache && 
-        projectFilesCache.path === rootFolderPath && 
-        now - projectFilesCache.timestamp < 30000) {
+    if (
+      projectFilesCache &&
+      projectFilesCache.path === rootFolderPath &&
+      now - projectFilesCache.timestamp < 30000
+    ) {
       console.log(`📋 Using cached project files: ${projectFilesCache.files.length} files`);
       return projectFilesCache.files;
     }
@@ -44,80 +52,99 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
     // Common directories and patterns to ignore for performance
     const IGNORE_PATTERNS = [
       // Dependencies
-      'node_modules',
-      'vendor',
-      '.pnpm',
-      '.yarn',
-      
+      "node_modules",
+      "vendor",
+      ".pnpm",
+      ".yarn",
+
       // Version control
-      '.git',
-      '.svn',
-      '.hg',
-      
+      ".git",
+      ".svn",
+      ".hg",
+
       // Build outputs
-      'dist',
-      'build',
-      'out',
-      'target',
-      '.next',
-      '.nuxt',
-      
+      "dist",
+      "build",
+      "out",
+      "target",
+      ".next",
+      ".nuxt",
+
       // Cache/temp directories
-      '.cache',
-      'tmp',
-      'temp',
-      '.tmp',
-      '.DS_Store',
-      'Thumbs.db',
-      
+      ".cache",
+      "tmp",
+      "temp",
+      ".tmp",
+      ".DS_Store",
+      "Thumbs.db",
+
       // IDE/Editor files
-      '.vscode',
-      '.idea',
-      '*.swp',
-      '*.swo',
-      '*~',
-      
+      ".vscode",
+      ".idea",
+      "*.swp",
+      "*.swo",
+      "*~",
+
       // Logs
-      'logs',
-      '*.log',
-      
+      "logs",
+      "*.log",
+
       // OS generated files
-      '.Spotlight-V100',
-      '.Trashes',
-      'ehthumbs.db',
-      
+      ".Spotlight-V100",
+      ".Trashes",
+      "ehthumbs.db",
+
       // Package manager locks (large files)
-      'package-lock.json',
-      'yarn.lock',
-      'pnpm-lock.yaml',
-      'Cargo.lock',
+      "package-lock.json",
+      "yarn.lock",
+      "pnpm-lock.yaml",
+      "Cargo.lock",
     ];
 
     const IGNORE_FILE_EXTENSIONS = [
       // Binary files
-      '.exe', '.dll', '.so', '.dylib',
-      '.bin', '.obj', '.o', '.a',
-      
+      ".exe",
+      ".dll",
+      ".so",
+      ".dylib",
+      ".bin",
+      ".obj",
+      ".o",
+      ".a",
+
       // Large media files
-      '.mov', '.mp4', '.avi', '.mkv',
-      '.wav', '.mp3', '.flac',
-      '.psd', '.ai', '.sketch',
-      
+      ".mov",
+      ".mp4",
+      ".avi",
+      ".mkv",
+      ".wav",
+      ".mp3",
+      ".flac",
+      ".psd",
+      ".ai",
+      ".sketch",
+
       // Archives
-      '.zip', '.rar', '.7z', '.tar', '.gz',
-      
+      ".zip",
+      ".rar",
+      ".7z",
+      ".tar",
+      ".gz",
+
       // Database files
-      '.db', '.sqlite', '.sqlite3',
+      ".db",
+      ".sqlite",
+      ".sqlite3",
     ];
 
     const shouldIgnore = (name: string, isDir: boolean): boolean => {
       const lowerName = name.toLowerCase();
-      
+
       // Check ignore patterns
       for (const pattern of IGNORE_PATTERNS) {
-        if (pattern.includes('*')) {
+        if (pattern.includes("*")) {
           // Simple glob pattern matching
-          const regexPattern = pattern.replace(/\*/g, '.*');
+          const regexPattern = pattern.replace(/\*/g, ".*");
           if (new RegExp(`^${regexPattern}$`).test(lowerName)) {
             return true;
           }
@@ -125,20 +152,25 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
           return true;
         }
       }
-      
+
       // Check file extensions (only for files, not directories)
       if (!isDir) {
-        const extension = name.substring(name.lastIndexOf('.')).toLowerCase();
+        const extension = name.substring(name.lastIndexOf(".")).toLowerCase();
         if (IGNORE_FILE_EXTENSIONS.includes(extension)) {
           return true;
         }
       }
-      
+
       // Skip hidden files/folders (starting with .) except important ones
-      if (name.startsWith('.') && name !== '.env' && name !== '.gitignore' && name !== '.editorconfig') {
+      if (
+        name.startsWith(".") &&
+        name !== ".env" &&
+        name !== ".gitignore" &&
+        name !== ".editorconfig"
+      ) {
         return true;
       }
-      
+
       return false;
     };
 
@@ -183,7 +215,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
           if (allFiles.length % 500 === 0) {
             // Use requestIdleCallback for better performance when available
             await new Promise(resolve => {
-              if ('requestIdleCallback' in window) {
+              if ("requestIdleCallback" in window) {
                 requestIdleCallback(resolve, { timeout: 16 });
               } else {
                 requestAnimationFrame(resolve);
@@ -203,19 +235,21 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
 
     console.log(`🔍 Starting project file scan for: ${rootFolderPath}`);
     const startTime = Date.now();
-    
+
     await scanDirectory(rootFolderPath);
-    
+
     const endTime = Date.now();
-    console.log(`✅ File scan completed: ${allFiles.length} files found in ${endTime - startTime}ms`);
-    
+    console.log(
+      `✅ File scan completed: ${allFiles.length} files found in ${endTime - startTime}ms`,
+    );
+
     // Cache the results
     setProjectFilesCache({
       path: rootFolderPath,
       files: allFiles,
       timestamp: now,
     });
-    
+
     return allFiles;
   }, [rootFolderPath, projectFilesCache]);
 
@@ -224,23 +258,17 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
       const selected = await openFolder();
 
       if (selected) {
-        // For both web and Tauri, we can now just read the directory
-        const path = typeof selected === "string" ? selected : "";
-
         // Store the root folder path
-        setRootFolderPath(path);
-        
+        setRootFolderPath(selected);
+
         // Clear the cache when changing folders
         setProjectFilesCache(null);
 
-        const entries = await readDirectory(path);
+        const entries = await readDirectory(selected);
         const fileTree = (entries as any[]).map((entry: any) => ({
           name: entry.name || "Unknown",
           path:
-            entry.path ||
-            (typeof selected === "string"
-              ? `${selected}/${entry.name}`
-              : entry.name),
+            entry.path || (typeof selected === "string" ? `${selected}/${entry.name}` : entry.name),
           isDir: entry.is_dir || false,
           expanded: false,
           children: undefined,
@@ -262,7 +290,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
     async (folderPath: string) => {
       const updateFiles = async (items: FileEntry[]): Promise<FileEntry[]> => {
         return Promise.all(
-          items.map(async (item) => {
+          items.map(async item => {
             if (item.path === folderPath && item.isDir) {
               if (!item.expanded) {
                 // Expand folder - load children
@@ -306,7 +334,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
     async (directoryPath: string) => {
       const updateFiles = async (items: FileEntry[]): Promise<FileEntry[]> => {
         return Promise.all(
-          items.map(async (item) => {
+          items.map(async item => {
             if (item.path === directoryPath && item.isDir) {
               // Refresh this directory
               try {
@@ -342,44 +370,38 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
   );
 
   const handleCreateNewFileInDirectory = useCallback(
-    async (directoryPath: string) => {
-      const fileName = prompt("Enter the name for the new file:");
-      if (!fileName) return;
+    async (directoryPath: string, fileName?: string) => {
+      console.log("🔧 handleCreateNewFileInDirectory called with:", directoryPath, fileName);
+
+      // If no fileName provided, use the old prompt method for backward compatibility
+      if (!fileName) {
+        fileName = prompt("Enter the name for the new file:") ?? undefined;
+        if (!fileName) return;
+      }
 
       try {
-        const newFilePath = directoryPath
-          ? `${directoryPath}/${fileName}`
-          : fileName;
+        const newFilePath = directoryPath ? `${directoryPath}/${fileName}` : fileName;
+        console.log("📁 Creating new file:", newFilePath);
 
         // Create an empty file
         await writeFile(newFilePath, "");
+        console.log("✅ File created successfully");
 
         // Invalidate project files cache since we added a new file
         invalidateProjectFilesCache();
 
-        // If it's the root directory, just refresh the entire file tree
-        if (
-          !directoryPath ||
-          files.some(
-            (f) => f.path.split("/").slice(0, -1).join("/") === directoryPath,
-          )
-        ) {
-          // Refresh the root directory
-          const entries = await readDirectory(directoryPath || ".");
-          const updatedFileTree = (entries as any[]).map((entry: any) => ({
-            name: entry.name || "Unknown",
-            path:
-              entry.path ||
-              (directoryPath ? `${directoryPath}/${entry.name}` : entry.name),
-            isDir: entry.is_dir || false,
-            expanded: false,
-            children: undefined,
-          }));
-          setFiles(updatedFileTree);
-        } else {
-          // Refresh the specific directory
-          await refreshDirectory(directoryPath);
-        }
+        // Always refresh the root directory to ensure UI updates
+        console.log("🔄 Refreshing file tree from root:", rootFolderPath);
+        const entries = await readDirectory(rootFolderPath || ".");
+        const updatedFileTree = (entries as any[]).map((entry: any) => ({
+          name: entry.name || "Unknown",
+          path: entry.path || (rootFolderPath ? `${rootFolderPath}/${entry.name}` : entry.name),
+          isDir: entry.is_dir || false,
+          expanded: false,
+          children: undefined,
+        }));
+        setFiles(updatedFileTree);
+        console.log("✅ File tree updated with", updatedFileTree.length, "items");
 
         // Open the new file in a buffer
         openBuffer(newFilePath, fileName, "", false, false, false, false);
@@ -388,7 +410,89 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
         alert("Failed to create file");
       }
     },
-    [files, openBuffer, refreshDirectory, invalidateProjectFilesCache],
+    [files, openBuffer, refreshDirectory, invalidateProjectFilesCache, rootFolderPath],
+  );
+
+  const handleCreateNewFolderInDirectory = useCallback(
+    async (directoryPath: string, folderName?: string) => {
+      console.log("🔧 handleCreateNewFolderInDirectory called with:", directoryPath, folderName);
+
+      // If no folderName provided, use the old prompt method for backward compatibility
+      if (!folderName) {
+        folderName = prompt("Enter the name for the new folder:") ?? undefined;
+        if (!folderName) return;
+      }
+
+      try {
+        const newFolderPath = directoryPath ? `${directoryPath}/${folderName}` : folderName;
+        console.log("📁 Creating new folder:", newFolderPath);
+
+        // Create the directory
+        await createDirectory(newFolderPath);
+        console.log("✅ Folder created successfully");
+
+        // Invalidate project files cache since we added a new folder
+        invalidateProjectFilesCache();
+
+        // Always refresh the root directory to ensure UI updates
+        console.log("🔄 Refreshing file tree from root:", rootFolderPath);
+        const entries = await readDirectory(rootFolderPath || ".");
+        const updatedFileTree = (entries as any[]).map((entry: any) => ({
+          name: entry.name || "Unknown",
+          path: entry.path || (rootFolderPath ? `${rootFolderPath}/${entry.name}` : entry.name),
+          isDir: entry.is_dir || false,
+          expanded: false,
+          children: undefined,
+        }));
+        setFiles(updatedFileTree);
+        console.log("✅ File tree updated with", updatedFileTree.length, "items");
+      } catch (error) {
+        console.error("Error creating new folder:", error);
+        alert("Failed to create folder");
+      }
+    },
+    [files, refreshDirectory, invalidateProjectFilesCache, rootFolderPath],
+  );
+
+  const handleDeletePath = useCallback(
+    async (targetPath: string, isDirectory: boolean) => {
+      const itemType = isDirectory ? "folder" : "file";
+      const confirmMessage = isDirectory
+        ? `Are you sure you want to delete the folder "${targetPath.split("/").pop()}" and all its contents? This action cannot be undone.`
+        : `Are you sure you want to delete the file "${targetPath.split("/").pop()}"? This action cannot be undone.`;
+
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+
+      try {
+        // Delete the file or directory
+        await deletePath(targetPath);
+
+        invalidateProjectFilesCache();
+
+        const parentPath = targetPath.split("/").slice(0, -1).join("/");
+
+        if (!parentPath) {
+          // If deleting from root, refresh the entire file tree
+          const entries = await readDirectory(".");
+          const updatedFileTree = (entries as any[]).map((entry: any) => ({
+            name: entry.name || "Unknown",
+            path: entry.path || entry.name,
+            isDir: entry.is_dir || false,
+            expanded: false,
+            children: undefined,
+          }));
+          setFiles(updatedFileTree);
+        } else {
+          await refreshDirectory(parentPath);
+        }
+      } catch (error) {
+        console.error(`Error deleting ${itemType}:`, error);
+        alert(`Failed to delete ${itemType}`);
+      }
+    },
+    [files, refreshDirectory, invalidateProjectFilesCache],
   );
 
   const handleCreateNewFile = useCallback(async () => {
@@ -403,7 +507,7 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
 
   const handleCollapseAllFolders = useCallback(() => {
     const collapseFiles = (items: FileEntry[]): FileEntry[] => {
-      return items.map((item) => {
+      return items.map(item => {
         if (item.isDir) {
           return {
             ...item,
@@ -419,15 +523,40 @@ export const useFileOperations = ({ openBuffer }: UseFileOperationsProps) => {
     setFiles(updatedFiles);
   }, [files]);
 
+  // Function to open a folder directly by path (for recent folders)
+  const handleOpenFolderByPath = useCallback(async (folderPath: string) => {
+    try {
+      setRootFolderPath(folderPath);
+      setProjectFilesCache(null);
+
+      const entries = await readDirectory(folderPath);
+      const fileTree = (entries as any[]).map((entry: any) => ({
+        name: entry.name || "Unknown",
+        path: entry.path || `${folderPath}/${entry.name}`,
+        isDir: entry.is_dir || false,
+        expanded: false,
+        children: undefined,
+      }));
+      setFiles(fileTree);
+      return true;
+    } catch (error) {
+      console.error("Error opening folder by path:", error);
+      return false;
+    }
+  }, []);
+
   return {
     files,
     setFiles,
     rootFolderPath,
     getAllProjectFiles,
     handleOpenFolder,
+    handleOpenFolderByPath,
     handleFolderToggle,
     handleCreateNewFile,
     handleCreateNewFileInDirectory,
+    handleCreateNewFolderInDirectory,
+    handleDeletePath,
     refreshDirectory,
     handleCollapseAllFolders,
     invalidateProjectFilesCache,

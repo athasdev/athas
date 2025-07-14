@@ -1,35 +1,104 @@
-use tauri::menu::{MenuBuilder, SubmenuBuilder};
+use tauri::menu::{AboutMetadata, MenuBuilder, MenuItem, SubmenuBuilder};
 
 pub fn create_menu<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
 ) -> Result<tauri::menu::Menu<R>, tauri::Error> {
-    // File menu
-    let file_menu = SubmenuBuilder::new(app, "File")
-        .text("new_file", "New File")
-        .text("open_folder", "Open Folder")
+    // App menu (macOS style - first menu with app name)
+    let app_menu = SubmenuBuilder::new(app, "Athas")
+        .about(Some(AboutMetadata {
+            name: Some("Athas".to_string()),
+            version: Some(env!("CARGO_PKG_VERSION").to_string()),
+            ..Default::default()
+        }))
         .separator()
-        .text("save", "Save")
-        .text("save_as", "Save As...")
+        .services()
         .separator()
-        .text("close_tab", "Close Tab")
+        .hide()
+        .hide_others()
+        .show_all()
         .separator()
-        .text("quit", "Quit")
+        .item(&MenuItem::with_id(
+            app,
+            "quit_app",
+            "Quit Athas",
+            true,
+            Some("CmdOrCtrl+Q"),
+        )?)
         .build()?;
 
-    // Edit menu
-    let edit_menu = SubmenuBuilder::new(app, "Edit")
-        .text("undo", "Undo")
-        .text("redo", "Redo")
+    // File menu with cross-platform keyboard shortcuts
+    let file_menu = SubmenuBuilder::new(app, "File")
+        .item(&MenuItem::with_id(
+            app,
+            "new_file",
+            "New File",
+            true,
+            Some("CmdOrCtrl+N"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "open_folder",
+            "Open Folder",
+            true,
+            Some("CmdOrCtrl+O"),
+        )?)
         .separator()
-        .copy()
+        .item(&MenuItem::with_id(
+            app,
+            "save",
+            "Save",
+            true,
+            Some("CmdOrCtrl+S"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "save_as",
+            "Save As...",
+            true,
+            Some("CmdOrCtrl+Shift+S"),
+        )?)
+        .separator()
+        .item(&MenuItem::with_id(
+            app,
+            "close_tab",
+            "Close Tab",
+            true,
+            Some("CmdOrCtrl+W"),
+        )?)
+        .build()?;
+
+    // Edit menu with native macOS items
+    let edit_menu = SubmenuBuilder::new(app, "Edit")
+        .undo()
+        .redo()
+        .separator()
         .cut()
+        .copy()
         .paste()
         .select_all()
         .separator()
-        .text("find", "Find")
-        .text("find_replace", "Find and Replace")
+        .item(&MenuItem::with_id(
+            app,
+            "find",
+            "Find",
+            true,
+            Some("CmdOrCtrl+F"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "find_replace",
+            "Find and Replace",
+            true,
+            Some("CmdOrCtrl+Option+F"),
+        )?)
         .separator()
-        .text("command_palette", "Command Palette")
+        .item(&MenuItem::with_id(
+            app,
+            "command_palette",
+            "Command Palette",
+            true,
+            Some("CmdOrCtrl+Shift+P"),
+        )?)
         .build()?;
 
     // Theme submenu
@@ -48,9 +117,27 @@ pub fn create_menu<R: tauri::Runtime>(
 
     // View menu
     let view_menu = SubmenuBuilder::new(app, "View")
-        .text("toggle_sidebar", "Toggle Sidebar")
-        .text("toggle_terminal", "Toggle Terminal")
-        .text("toggle_ai_chat", "Toggle AI Chat")
+        .item(&MenuItem::with_id(
+            app,
+            "toggle_sidebar",
+            "Toggle Sidebar",
+            true,
+            Some("CmdOrCtrl+B"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "toggle_terminal",
+            "Toggle Terminal",
+            true,
+            Some("CmdOrCtrl+J"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "toggle_ai_chat",
+            "Toggle AI Chat",
+            true,
+            Some("CmdOrCtrl+R"),
+        )?)
         .separator()
         .text("split_editor", "Split Editor")
         .separator()
@@ -59,24 +146,61 @@ pub fn create_menu<R: tauri::Runtime>(
         .item(&theme_menu)
         .build()?;
 
-    // Go menu
+    // Go menu with navigation shortcuts
     let go_menu = SubmenuBuilder::new(app, "Go")
-        .text("go_to_file", "Go to File")
-        .text("go_to_line", "Go to Line")
+        .item(&MenuItem::with_id(
+            app,
+            "go_to_file",
+            "Go to File",
+            true,
+            Some("CmdOrCtrl+P"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "go_to_line",
+            "Go to Line",
+            true,
+            Some("CmdOrCtrl+G"),
+        )?)
         .separator()
-        .text("next_tab", "Next Tab")
-        .text("prev_tab", "Previous Tab")
+        .item(&MenuItem::with_id(
+            app,
+            "next_tab",
+            "Next Tab",
+            true,
+            Some("CmdOrCtrl+Option+Right"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "prev_tab",
+            "Previous Tab",
+            true,
+            Some("CmdOrCtrl+Option+Left"),
+        )?)
+        .build()?;
+
+    // Window menu (macOS convention)
+    let window_menu = SubmenuBuilder::new(app, "Window")
+        .minimize()
+        .separator()
+        .close_window()
         .build()?;
 
     // Help menu
     let help_menu = SubmenuBuilder::new(app, "Help")
         .text("help", "Help")
-        .separator()
-        .text("about", "About Athas")
         .build()?;
 
-    // Main menu
+    // Main menu - include app menu first for macOS convention
     MenuBuilder::new(app)
-        .items(&[&file_menu, &edit_menu, &view_menu, &go_menu, &help_menu])
+        .items(&[
+            &app_menu,
+            &file_menu,
+            &edit_menu,
+            &view_menu,
+            &go_menu,
+            &window_menu,
+            &help_menu,
+        ])
         .build()
 }

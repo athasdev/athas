@@ -1,16 +1,5 @@
-import React from "react";
-import {
-  Folder,
-  FolderOpen,
-  FileText,
-  FileCode,
-  FileImage,
-  FileVideo,
-  FileAudio,
-  File,
-  Settings,
-  Database,
-} from "lucide-react";
+import { Folder, FolderOpen } from "lucide-react";
+import { getIcon } from "material-file-icons";
 
 interface FileIconProps {
   fileName: string;
@@ -25,113 +14,34 @@ const FileIcon = ({
   isDir,
   isExpanded = false,
   size = 14,
-  className = "text-[var(--text-lighter)]",
+  className = "text-text-lighter",
 }: FileIconProps) => {
+  // Use Lucide icons for directories
   if (isDir) {
-    return isExpanded ? (
-      <FolderOpen size={size} className={className} />
-    ) : (
-      <Folder size={size} className={className} />
-    );
+    const Icon = isExpanded ? FolderOpen : Folder;
+    return <Icon className={className} size={size} />;
   }
 
-  const lowerFileName = fileName.toLowerCase();
-  const extension = fileName.split(".").pop()?.toLowerCase();
-  const iconProps = { size, className };
-  
-  // Handle compound extensions like .html.erb
-  if (lowerFileName.endsWith('.html.erb')) {
-    return <FileCode {...iconProps} />;
-  }
+  // Get the icon from material-file-icons for files
+  const icon = getIcon(fileName);
 
-  switch (extension) {
-    case "js":
-    case "jsx":
-    case "ts":
-    case "tsx":
-    case "py":
-    case "rb":
-    case "php":
-    case "java":
-    case "cpp":
-    case "c":
-    case "cs":
-    case "go":
-    case "rs":
-    case "swift":
-    case "kt":
-    case "scala":
-    case "html":
-    case "css":
-    case "scss":
-    case "sass":
-    case "less":
-    case "vue":
-    case "svelte":
-    case "erb":
-      return <FileCode {...iconProps} />;
+  // Always render in monochrome
+  const svgContent = icon.svg
+    .replace(/fill="[^"]*"/g, 'fill="currentColor"')
+    .replace(/stroke="[^"]*"/g, 'stroke="currentColor"');
 
-    case "md":
-    case "txt":
-    case "rtf":
-    case "doc":
-    case "docx":
-      return <FileText {...iconProps} />;
-
-    case "png":
-    case "jpg":
-    case "jpeg":
-    case "gif":
-    case "svg":
-    case "webp":
-    case "ico":
-    case "bmp":
-    case "tiff":
-    case "tif":
-    case "avif":
-    case "heic":
-    case "heif":
-    case "jfif":
-    case "pjpeg":
-    case "pjp":
-    case "apng":
-      return <FileImage {...iconProps} />;
-
-    case "sqlite":
-    case "db":
-    case "sqlite3":
-      return <Database {...iconProps} />;
-
-    case "mp4":
-    case "avi":
-    case "mov":
-    case "wmv":
-    case "flv":
-    case "webm":
-    case "mkv":
-      return <FileVideo {...iconProps} />;
-
-    case "mp3":
-    case "wav":
-    case "flac":
-    case "aac":
-    case "ogg":
-    case "m4a":
-      return <FileAudio {...iconProps} />;
-
-    case "json":
-    case "xml":
-    case "yaml":
-    case "yml":
-    case "toml":
-    case "ini":
-    case "cfg":
-    case "conf":
-      return <Settings {...iconProps} />;
-
-    default:
-      return <File {...iconProps} />;
-  }
+  return (
+    <span
+      className={className}
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        display: "inline-block",
+        lineHeight: 0,
+      }}
+      dangerouslySetInnerHTML={{ __html: svgContent }}
+    />
+  );
 };
 
 export default FileIcon;

@@ -1,19 +1,25 @@
-import { useState, useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { platform } from "@tauri-apps/plugin-os";
-import { Minus, Maximize2, Minimize2, X, Settings } from "lucide-react";
+import { Bot, Maximize2, Minimize2, Minus, Settings, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface CustomTitleBarProps {
   title?: string;
   projectName?: string;
   showMinimal?: boolean;
+  isWelcomeScreen?: boolean;
   onSettingsClick?: () => void;
+  onAIChatClick?: () => void;
+  isAIChatVisible?: boolean;
 }
 
 const CustomTitleBar = ({
   projectName,
   showMinimal = false,
+  isWelcomeScreen = false,
   onSettingsClick,
+  onAIChatClick,
+  isAIChatVisible = false,
 }: CustomTitleBarProps) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
@@ -34,10 +40,7 @@ const CustomTitleBar = ({
         setCurrentPlatform(platformName);
       } catch (error) {
         console.error("Error getting platform:", error);
-        if (
-          typeof navigator !== "undefined" &&
-          navigator.userAgent.includes("Mac")
-        ) {
+        if (typeof navigator !== "undefined" && navigator.userAgent.includes("Mac")) {
           setCurrentPlatform("macos");
         }
       }
@@ -89,41 +92,45 @@ const CustomTitleBar = ({
   const isMacOS = currentPlatform === "macos";
 
   if (showMinimal) {
+    const backgroundClass = isWelcomeScreen
+      ? "bg-paper-bg"
+      : isMacOS
+        ? "bg-primary-bg"
+        : "bg-secondary-bg backdrop-blur-sm";
+
     return (
       <div
         data-tauri-drag-region
-        className={`flex items-center justify-between select-none relative z-50 ${
-          isMacOS
-            ? "h-11 bg-transparent"
-            : "h-7 bg-[var(--secondary-bg)] backdrop-blur-sm border-b border-[var(--border-color)]"
-        }`}
+        className={`relative z-50 flex select-none items-center justify-between ${
+          isMacOS ? "h-11" : "h-7"
+        } ${backgroundClass}`}
       >
         {/* macOS traffic light controls */}
         {isMacOS && (
           <div className="flex items-center space-x-2 pl-4">
             <button
               onClick={handleClose}
-              className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center group"
+              className="group flex h-3 w-3 items-center justify-center rounded-full bg-red-500 transition-colors hover:bg-red-600"
               title="Close"
             >
-              <X className="w-2 h-2 text-red-900 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <X className="h-2 w-2 text-red-900 opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
             <button
               onClick={handleMinimize}
-              className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 transition-colors flex items-center justify-center group"
+              className="group flex h-3 w-3 items-center justify-center rounded-full bg-yellow-500 transition-colors hover:bg-yellow-600"
               title="Minimize"
             >
-              <Minus className="w-2 h-2 text-yellow-900 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Minus className="h-2 w-2 text-yellow-900 opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
             <button
               onClick={handleToggleMaximize}
-              className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center group"
+              className="group flex h-3 w-3 items-center justify-center rounded-full bg-green-500 transition-colors hover:bg-green-600"
               title={isMaximized ? "Restore" : "Maximize"}
             >
               {isMaximized ? (
-                <Minimize2 className="w-2 h-2 text-green-900 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Minimize2 className="h-2 w-2 text-green-900 opacity-0 transition-opacity group-hover:opacity-100" />
               ) : (
-                <Maximize2 className="w-2 h-2 text-green-900 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Maximize2 className="h-2 w-2 text-green-900 opacity-0 transition-opacity group-hover:opacity-100" />
               )}
             </button>
           </div>
@@ -136,28 +143,28 @@ const CustomTitleBar = ({
           <div className="flex items-center">
             <button
               onClick={handleMinimize}
-              className="w-10 h-7 flex items-center justify-center hover:bg-[var(--hover-color)] transition-colors"
+              className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
               title="Minimize"
             >
-              <Minus className="w-3.5 h-3.5 text-[var(--text-lighter)]" />
+              <Minus className="h-3.5 w-3.5 text-text-lighter" />
             </button>
             <button
               onClick={handleToggleMaximize}
-              className="w-10 h-7 flex items-center justify-center hover:bg-[var(--hover-color)] transition-colors"
+              className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
               title={isMaximized ? "Restore" : "Maximize"}
             >
               {isMaximized ? (
-                <Minimize2 className="w-3.5 h-3.5 text-[var(--text-lighter)]" />
+                <Minimize2 className="h-3.5 w-3.5 text-text-lighter" />
               ) : (
-                <Maximize2 className="w-3.5 h-3.5 text-[var(--text-lighter)]" />
+                <Maximize2 className="h-3.5 w-3.5 text-text-lighter" />
               )}
             </button>
             <button
               onClick={handleClose}
-              className="w-10 h-7 flex items-center justify-center hover:bg-red-600 transition-colors group"
+              className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-red-600"
               title="Close"
             >
-              <X className="w-3.5 h-3.5 text-[var(--text-lighter)] group-hover:text-white" />
+              <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
             </button>
           </div>
         )}
@@ -170,55 +177,68 @@ const CustomTitleBar = ({
     return (
       <div
         data-tauri-drag-region
-        className="flex items-center justify-between select-none relative z-50 h-11 bg-transparent"
+        className="relative z-50 flex h-11 select-none items-center justify-between bg-primary-bg"
       >
         {/* macOS traffic light controls */}
         <div className="flex items-center space-x-2 pl-4">
           <button
             onClick={handleClose}
-            className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center group"
+            className="group flex h-3 w-3 items-center justify-center rounded-full bg-red-500 transition-colors hover:bg-red-600"
             title="Close"
           >
-            <X className="w-2 h-2 text-red-900 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <X className="h-2 w-2 text-red-900 opacity-0 transition-opacity group-hover:opacity-100" />
           </button>
           <button
             onClick={handleMinimize}
-            className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 transition-colors flex items-center justify-center group"
+            className="group flex h-3 w-3 items-center justify-center rounded-full bg-yellow-500 transition-colors hover:bg-yellow-600"
             title="Minimize"
           >
-            <Minus className="w-2 h-2 text-yellow-900 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Minus className="h-2 w-2 text-yellow-900 opacity-0 transition-opacity group-hover:opacity-100" />
           </button>
           <button
             onClick={handleToggleMaximize}
-            className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center group"
+            className="group flex h-3 w-3 items-center justify-center rounded-full bg-green-500 transition-colors hover:bg-green-600"
             title={isMaximized ? "Restore" : "Maximize"}
           >
             {isMaximized ? (
-              <Minimize2 className="w-2 h-2 text-green-900 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Minimize2 className="h-2 w-2 text-green-900 opacity-0 transition-opacity group-hover:opacity-100" />
             ) : (
-              <Maximize2 className="w-2 h-2 text-green-900 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Maximize2 className="h-2 w-2 text-green-900 opacity-0 transition-opacity group-hover:opacity-100" />
             )}
           </button>
         </div>
 
         {/* Center - Project name for macOS */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center pointer-events-none">
+        <div className="-translate-x-1/2 pointer-events-none absolute left-1/2 flex transform items-center">
           {projectName && (
-            <span className="text-[var(--text-color)] text-xs font-medium truncate max-w-60 text-center">
+            <span className="max-w-60 truncate text-center font-medium text-text text-xs">
               {projectName}
             </span>
           )}
         </div>
 
-        {/* Settings button */}
+        {/* Settings and AI Chat buttons */}
         <div className="flex items-center">
+          {onAIChatClick && (
+            <button
+              onClick={onAIChatClick}
+              className={`mr-2 flex h-6 w-6 items-center justify-center rounded transition-colors ${
+                isAIChatVisible
+                  ? "bg-hover text-text"
+                  : "text-text-lighter hover:bg-hover hover:text-text"
+              }`}
+              title="Toggle AI Chat"
+            >
+              <Bot className="h-3 w-3" />
+            </button>
+          )}
           {onSettingsClick && (
             <button
               onClick={onSettingsClick}
-              className="w-6 h-6 flex items-center justify-center hover:bg-[var(--hover-color)] transition-colors rounded mr-4"
+              className="mr-4 flex h-6 w-6 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"
               title="Settings"
             >
-              <Settings className="w-3 h-3 text-[var(--text-lighter)] hover:text-[var(--text-color)]" />
+              <Settings className="h-3 w-3" />
             </button>
           )}
         </div>
@@ -230,27 +250,39 @@ const CustomTitleBar = ({
   return (
     <div
       data-tauri-drag-region
-      className="flex items-center justify-between select-none relative z-50 h-7 bg-[var(--secondary-bg)] backdrop-blur-sm border-b border-[var(--border-color)]"
+      className="relative z-50 flex h-7 select-none items-center justify-between bg-secondary-bg backdrop-blur-sm"
     >
       {/* Left side */}
-      <div className="flex items-center px-2 flex-1">
+      <div className="flex flex-1 items-center px-2">
         {projectName && (
-          <span className="text-[var(--text-color)] text-xs font-medium truncate max-w-96">
-            {projectName}
-          </span>
+          <span className="max-w-96 truncate font-medium text-text text-xs">{projectName}</span>
         )}
       </div>
 
       {/* Right side */}
       <div className="flex items-center">
+        {/* AI Chat button */}
+        {onAIChatClick && (
+          <button
+            onClick={onAIChatClick}
+            className={`mr-1 flex h-7 w-7 items-center justify-center rounded transition-colors ${
+              isAIChatVisible
+                ? "bg-hover text-text"
+                : "text-text-lighter hover:bg-hover hover:text-text"
+            }`}
+            title="Toggle AI Chat"
+          >
+            <Bot className="h-3.5 w-3.5" />
+          </button>
+        )}
         {/* Settings button */}
         {onSettingsClick && (
           <button
             onClick={onSettingsClick}
-            className="w-7 h-7 flex items-center justify-center hover:bg-[var(--hover-color)] transition-colors rounded mr-2"
+            className="mr-2 flex h-7 w-7 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"
             title="Settings"
           >
-            <Settings className="w-3.5 h-3.5 text-[var(--text-lighter)] hover:text-[var(--text-color)]" />
+            <Settings className="h-3.5 w-3.5" />
           </button>
         )}
 
@@ -259,28 +291,28 @@ const CustomTitleBar = ({
           <>
             <button
               onClick={handleMinimize}
-              className="w-10 h-7 flex items-center justify-center hover:bg-[var(--hover-color)] transition-colors"
+              className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
               title="Minimize"
             >
-              <Minus className="w-3.5 h-3.5 text-[var(--text-lighter)]" />
+              <Minus className="h-3.5 w-3.5 text-text-lighter" />
             </button>
             <button
               onClick={handleToggleMaximize}
-              className="w-10 h-7 flex items-center justify-center hover:bg-[var(--hover-color)] transition-colors"
+              className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
               title={isMaximized ? "Restore" : "Maximize"}
             >
               {isMaximized ? (
-                <Minimize2 className="w-3.5 h-3.5 text-[var(--text-lighter)]" />
+                <Minimize2 className="h-3.5 w-3.5 text-text-lighter" />
               ) : (
-                <Maximize2 className="w-3.5 h-3.5 text-[var(--text-lighter)]" />
+                <Maximize2 className="h-3.5 w-3.5 text-text-lighter" />
               )}
             </button>
             <button
               onClick={handleClose}
-              className="w-10 h-7 flex items-center justify-center hover:bg-red-600 transition-colors group"
+              className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-red-600"
               title="Close"
             >
-              <X className="w-3.5 h-3.5 text-[var(--text-lighter)] group-hover:text-white" />
+              <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
             </button>
           </>
         }

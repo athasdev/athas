@@ -1,8 +1,13 @@
 /// <reference types="vite/client" />
 
-// Tauri type declarations for cross-platform support
-declare global {
-  interface Window {
-    __TAURI__?: any;
-  }
+interface Window {
+  electron: {
+    showContextMenu: (type: string, data?: any) => void;
+    getPath: (path: string) => Promise<string>;
+    shell: {
+      openExternal: (url: string) => Promise<void>;
+      showItemInFolder: (path: string) => void;
+      openPath: (path: string) => Promise<string>;
+    };
+  };
 }

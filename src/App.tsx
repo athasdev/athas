@@ -1,104 +1,75 @@
-import {
-  AlertCircle,
-  Bug,
-  FilePlus,
-  Folder,
-  FolderOpen,
-  GitBranch,
-  MessageSquare,
-  Package,
-  Search,
-  Server,
-  Terminal as TerminalIcon,
-} from "lucide-react";
-
-import { readFile, writeFile, isMac } from "./utils/platform";
-import { BottomPaneTab, QuickEditSelection } from "./types/ui-state";
-import CodeEditor, { CodeEditorRef } from "./components/code-editor";
-import CommandPalette, { CommandPaletteRef } from "./components/command-palette";
-import { CoreFeature, CoreFeaturesState, DEFAULT_CORE_FEATURES } from "./types/core-features";
-import SearchView, { SearchViewRef } from "./components/search-view";
-import {
-  getFilenameFromPath,
-  getLanguageFromFilename,
-  isImageFile,
-  isSQLiteFile,
-} from "./utils/file-utils";
+import { AlertCircle, ArrowLeftRight, Terminal as TerminalIcon } from "lucide-react";
+import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-
 import AIChat from "./components/ai-chat/ai-chat";
 import BottomPane from "./components/bottom-pane";
-import Button from "./components/button";
-import CommandBar from "./components/command-bar";
-import CustomTitleBar from "./components/window/custom-title-bar";
-import { Diagnostic } from "./components/diagnostics-pane";
+import CommandBar from "./components/command/command-bar";
+import CommandPalette, { type CommandPaletteRef } from "./components/command/command-palette";
+import type { Diagnostic } from "./components/diagnostics/diagnostics-pane";
 import DiffViewer from "./components/diff-viewer";
+import BreadcrumbContainer from "./components/editor/breadcrumbs/breadcrumb-container";
+import CodeEditor, { type CodeEditorRef } from "./components/editor/code-editor";
 import ExtensionsView from "./components/extensions-view";
-import { FileEntry } from "./types/app";
-import FileTree from "./components/file-tree";
+import FileReloadToast from "./components/file-reload-toast";
 import FindBar from "./components/find-bar";
-import { GitDiff } from "./utils/git";
 import GitHubCopilotSettings from "./components/github-copilot-settings";
-import GitView from "./components/git-view";
-import ImageGenerationModal from "./components/image-generation-modal";
 import ImageViewer from "./components/image-viewer";
+import { MainSidebar } from "./components/layout/main-sidebar";
 import QuickEditInline from "./components/quick-edit-modal";
-import { RecentFolder } from "./types/recent-folders";
-import RemoteConnectionView from "./components/remote/remote-connection-view";
 import ResizableRightPane from "./components/resizable-right-pane";
 import ResizableSidebar from "./components/resizable-sidebar";
+import type { SearchViewRef } from "./components/search-view";
 import SQLiteViewer from "./components/sqlite-viewer";
 import TabBar from "./components/tab-bar";
-import { ThemeType } from "./types/theme";
-import WelcomeScreen from "./components/welcome-screen";
-import { useBreadcrumbToggles } from "./hooks/use-breadcrumb-toggles";
+import CustomTitleBar from "./components/window/custom-title-bar";
+import WelcomeScreen from "./components/window/welcome-screen";
+import { createCoreFeaturesList, handleCoreFeatureToggle } from "./constants/core-features";
 import { useBuffers } from "./hooks/use-buffers";
+import { ProjectNameMenu, useContextMenus } from "./hooks/use-context-menus";
 import { useFileOperations } from "./hooks/use-file-operations";
+import { useFileSelection } from "./hooks/use-file-selection";
+import { useFolderOperations } from "./hooks/use-folder-operations";
 import { useKeyboardShortcuts } from "./hooks/use-keyboard-shortcuts";
 import { useLSP } from "./hooks/use-lsp";
 import { useMenuEvents } from "./hooks/use-menu-events";
+import { useQuickEdit } from "./hooks/use-quick-edit";
+import { useRecentFolders } from "./hooks/use-recent-folders";
 import { useRemoteConnection } from "./hooks/use-remote-connection";
 import { useSearch } from "./hooks/use-search";
+import { useSettings } from "./hooks/use-settings";
 import { useVim } from "./hooks/use-vim";
+import { useCodeEditorStore } from "./stores/code-editor-store";
+import {
+  cleanupFileWatcherListener,
+  initializeFileWatcherListener,
+  useFileWatcherStore,
+} from "./stores/file-watcher-store";
+import { usePersistentSettingsStore } from "./stores/persistent-settings-store";
+import { useUIState } from "./stores/ui-state";
+import type { FileEntry } from "./types/app";
+import { type CoreFeaturesState, DEFAULT_CORE_FEATURES } from "./types/core-features";
+import type { ThemeType } from "./types/theme";
+import { getFilenameFromPath, getLanguageFromFilename } from "./utils/file-utils";
+import type { GitDiff } from "./utils/git";
+import { isMac, readFile, writeFile } from "./utils/platform";
 
 function App() {
-  const {
-    isOutlineVisible,
-    isMinimapVisible,
-    toggleOutline,
-    toggleMinimap,
-    setIsOutlineVisible
-  } = useBreadcrumbToggles()
+  const uiState = useUIState();
+  const { settings, updateSetting, updateSettingsFromJSON } = useSettings();
+  const quickEdit = useQuickEdit();
+  const { aiChatWidth, setAIChatWidth, isAIChatVisible, setIsAIChatVisible } =
+    usePersistentSettingsStore();
 
-  // UI State
-  const [isSidebarVisible, setIsSidebarVisible] = useState<boolean>(true);
-  const [isRightPaneVisible, setIsRightPaneVisible] = useState<boolean>(false);
-  const [isCommandBarVisible, setIsCommandBarVisible] =
-    useState<boolean>(false);
-  const [isCommandPaletteVisible, setIsCommandPaletteVisible] =
-    useState<boolean>(false);
-
-  const [isGitViewActive, setIsGitViewActive] = useState<boolean>(false);
-  const [isSearchViewActive, setIsSearchViewActive] = useState<boolean>(false);
-  const [isRemoteViewActive, setIsRemoteViewActive] = useState<boolean>(false);
-  const [isGitHubCopilotSettingsVisible, setIsGitHubCopilotSettingsVisible] =
-    useState<boolean>(false);
-  const [recentFolders, setRecentFolders] = useState<RecentFolder[]>([]);
-  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
-  const [isBottomPaneVisible, setIsBottomPaneVisible] =
-    useState<boolean>(false);
-  const [bottomPaneActiveTab, setBottomPaneActiveTab] = useState<BottomPaneTab>("terminal");
-  const [currentTheme, setCurrentTheme] = useState<ThemeType>(() => {
-    const savedTheme = localStorage.getItem("athas-code-theme");
-    return (savedTheme as ThemeType) || "auto";
+  // Context menus hook
+  const contextMenus = useContextMenus({
+    folderHeaderContextMenu: uiState.folderHeaderContextMenu,
+    projectNameMenu: uiState.projectNameMenu,
+    setFolderHeaderContextMenu: uiState.setFolderHeaderContextMenu,
+    setProjectNameMenu: uiState.setProjectNameMenu,
   });
-  const [fontSize, setFontSize] = useState<number>(14);
-  const [tabSize, setTabSize] = useState<number>(2);
-  const [wordWrap, setWordWrap] = useState<boolean>(true);
-  const [lineNumbers, setLineNumbers] = useState<boolean>(true);
-  const [autoSave, setAutoSave] = useState<boolean>(true);
-  const [vimModeEnabled, setVimModeEnabled] = useState<boolean>(false);
-  const [aiCompletion, setAiCompletion] = useState<boolean>(true);
+
+  // Legacy state that still needs to be managed here
+  const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
   const [coreFeatures, setCoreFeatures] = useState<CoreFeaturesState>(() => {
     const saved = localStorage.getItem("athas-code-core-features");
     if (saved) {
@@ -110,147 +81,52 @@ function App() {
     }
     return DEFAULT_CORE_FEATURES;
   });
+  const [maxOpenTabs, setMaxOpenTabs] = useState<number>(10);
 
-  const [isQuickEditVisible, setIsQuickEditVisible] = useState<boolean>(false);
-  const [quickEditSelection, setQuickEditSelection] = useState<QuickEditSelection>({
-    text: "",
-    start: 0,
-    end: 0,
-    cursorPosition: { x: 0, y: 0 }
-  });
-
-  // State for folder header context menu
-  const [folderHeaderContextMenu, setFolderHeaderContextMenu] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-
-  // State for project name menu (unified for both left and right click)
-  const [projectNameMenu, setProjectNameMenu] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
+  // Recent folders management
+  const { recentFolders, addToRecents } = useRecentFolders();
 
   const codeEditorRef = useRef<CodeEditorRef>(null);
   const searchViewRef = useRef<SearchViewRef>(null);
   const commandPaletteRef = useRef<CommandPaletteRef>(null);
 
+  // Autosave timeout ref for proper cleanup
+  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Apply platform-specific CSS class on mount
   useEffect(() => {
     if (isMac()) {
-      document.documentElement.classList.add('platform-macos');
+      document.documentElement.classList.add("platform-macos");
     } else {
-      document.documentElement.classList.add('platform-other');
+      document.documentElement.classList.add("platform-other");
     }
 
     // Cleanup on unmount
     return () => {
-      document.documentElement.classList.remove('platform-macos', 'platform-other');
-    };
-  }, []);
-
-  // Load recent folders from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem("athas-code-recent-folders");
-    if (stored) {
-      try {
-        setRecentFolders(JSON.parse(stored));
-      } catch (error) {
-        console.error("Error loading recent folders:", error);
+      document.documentElement.classList.remove("platform-macos", "platform-other");
+      // Clean up autosave timeout on unmount
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
       }
-    }
+    };
   }, []);
 
-
-
-  // Save recent folders to localStorage
-  const saveRecentFolders = (folders: RecentFolder[]) => {
-    try {
-      localStorage.setItem(
-        "athas-code-recent-folders",
-        JSON.stringify(folders),
-      );
-      setRecentFolders(folders);
-    } catch (error) {
-      console.error("Error saving recent folders:", error);
+  // Initialize AI chat visibility from persistent store
+  useEffect(() => {
+    if (isAIChatVisible !== uiState.isRightPaneVisible) {
+      uiState.setIsRightPaneVisible(isAIChatVisible);
     }
-  };
+  }, []); // Only run once on mount
 
-  // Handle core feature toggle
-  const handleCoreFeatureToggle = (featureId: string, enabled: boolean) => {
-    const newFeatures = { ...coreFeatures, [featureId]: enabled };
-    setCoreFeatures(newFeatures);
-    try {
-      localStorage.setItem("athas-code-core-features", JSON.stringify(newFeatures));
-    } catch (error) {
-      console.error("Error saving core features:", error);
-    }
-  };
+  // Save AI chat visibility when it changes
+  useEffect(() => {
+    setIsAIChatVisible(uiState.isRightPaneVisible);
+  }, [uiState.isRightPaneVisible, setIsAIChatVisible]);
 
-  // Create core features array for extensions view
-  const coreFeaturesList: CoreFeature[] = [
-    {
-      id: "git",
-      name: "Git Integration",
-      description: "Source control management with Git repositories",
-      icon: GitBranch,
-      enabled: coreFeatures.git,
-    },
-    {
-      id: "remote",
-      name: "Remote Development",
-      description: "Connect to remote servers via SSH",
-      icon: Server,
-      enabled: coreFeatures.remote,
-    },
-    {
-      id: "terminal",
-      name: "Integrated Terminal",
-      description: "Built-in terminal for command line operations",
-      icon: TerminalIcon,
-      enabled: coreFeatures.terminal,
-    },
-    {
-      id: "search",
-      name: "Global Search",
-      description: "Search across files and folders in workspace",
-      icon: Search,
-      enabled: coreFeatures.search,
-    },
-    {
-      id: "diagnostics",
-      name: "Diagnostics & Problems",
-      description: "Code diagnostics and error reporting",
-      icon: Bug,
-      enabled: coreFeatures.diagnostics,
-    },
-    {
-      id: "aiChat",
-      name: "AI Assistant",
-      description: "AI-powered code assistance and chat",
-      icon: MessageSquare,
-      enabled: coreFeatures.aiChat,
-    },
-  ];
-
-  // Add a folder to recents
-  const addToRecents = (folderPath: string) => {
-    const folderName = folderPath.split("/").pop() || folderPath;
-    const now = new Date();
-    const timeString = now.toLocaleString();
-
-    const newFolder: RecentFolder = {
-      name: folderName,
-      path: folderPath,
-      lastOpened: timeString,
-    };
-
-    const updatedRecents = [
-      newFolder,
-      ...recentFolders.filter((f) => f.path !== folderPath),
-    ].slice(0, 5); // Keep only 5 most recent
-
-    saveRecentFolders(updatedRecents);
+  // Core features handling
+  const coreFeaturesList = createCoreFeaturesList(coreFeatures);
+  const handleCoreFeatureToggleLocal = (featureId: string, enabled: boolean) => {
+    handleCoreFeatureToggle(featureId, enabled, coreFeatures, setCoreFeatures);
   };
 
   // Buffer management
@@ -271,23 +147,68 @@ function App() {
 
   const activeBuffer = getActiveBuffer();
 
-  // VIM functionality (moved here after useBuffers to access updateBufferContent)
-  const {
+  // Import vim state from stores
+  const { vimEnabled, vimMode, setVimEnabled, setVimMode, setCursorPosition } =
+    useCodeEditorStore();
+
+  // Create a ref that points to the editor div
+  const editorDivRef = useRef<HTMLDivElement>(null!);
+
+  // Initialize vim engine
+  const vim = useVim(
+    editorDivRef,
+    activeBuffer?.content || "",
+    (content: string) => {
+      if (activeBuffer) {
+        updateBufferContent(activeBuffer.id, content);
+      }
+    },
     vimEnabled,
-    vimMode,
-    cursorPosition,
-    setVimMode,
     setCursorPosition,
-    toggleVimMode,
-    handleVimKeyDown,
-    updateCursorPosition,
-  } = useVim({ activeBuffer, updateBufferContent, codeEditorRef });
+    setVimMode,
+    () => {}, // onShowCommandLine - to be implemented
+  );
 
-  // State for all project files (for command palette)
+  // Vim helper functions
+  const toggleVimMode = useCallback(() => {
+    setVimEnabled(!vimEnabled);
+    if (!vimEnabled) {
+      setVimMode("normal");
+    }
+  }, [vimEnabled, setVimEnabled, setVimMode]);
+
+  const handleVimKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (vimEnabled && vim.vimEngine && codeEditorRef.current?.editor) {
+        const editor = codeEditorRef.current.editor;
+        const content = activeBuffer?.content || "";
+        const handled = vim.vimEngine.handleKeyDown(e, editor, content);
+        if (handled) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    },
+    [vimEnabled, vim.vimEngine, codeEditorRef, activeBuffer?.content],
+  );
+
+  const updateCursorPosition = useCallback(() => {
+    // This is called from file selection to reset cursor position
+    setCursorPosition(0);
+  }, [setCursorPosition]);
+
+  // Apply vim mode from settings
+  useEffect(() => {
+    if (settings.vimMode !== vimEnabled) {
+      setVimEnabled(settings.vimMode);
+      if (settings.vimMode) {
+        setVimMode("normal");
+      }
+    }
+  }, [settings.vimMode, vimEnabled, setVimEnabled, setVimMode]);
+
   const [allProjectFiles, setAllProjectFiles] = useState<FileEntry[]>([]);
-
-  // State for tab dragging across panes
-  const [isDraggingTab, setIsDraggingTab] = useState(false);
+  const [_isDraggingTab, setIsDraggingTab] = useState(false);
 
   // File operations with proper callback
   const {
@@ -296,30 +217,91 @@ function App() {
     rootFolderPath,
     getAllProjectFiles,
     handleOpenFolder,
+    handleOpenFolderByPath,
     handleFolderToggle: localHandleFolderToggle,
     handleCreateNewFile,
     handleCreateNewFileInDirectory,
-    refreshDirectory,
+    handleCreateNewFolderInDirectory,
+    handleDeletePath,
     handleCollapseAllFolders,
+    refreshDirectory,
   } = useFileOperations({ openBuffer });
+
+  // File watcher store - get external changes as array
+  const startWatching = useFileWatcherStore(state => state.startWatching);
+  const markPendingSave = useFileWatcherStore(state => state.markPendingSave);
+  // const clearPendingSave = useFileWatcherStore(state => state.clearPendingSave); // Reserved for future use
+  // const stopWatching = useFileWatcherStore((state) => state.stopWatching); // Reserved for future use
+
+  // Initialize file watcher listeners only once when app starts
+  useEffect(() => {
+    initializeFileWatcherListener();
+
+    return () => {
+      cleanupFileWatcherListener();
+    };
+  }, []); // Only run once on mount
+
+  // Listen for file external changes
+  useEffect(() => {
+    const handleFileExternalChange = (event: CustomEvent) => {
+      const { path, changeType } = event.detail;
+
+      // Check if this file is open in any buffer
+      const buffer = buffers.find(b => b.path === path);
+
+      if (buffer && changeType === "modified") {
+        // Auto-reload all files regardless of dirty state
+        readFile(path)
+          .then(content => {
+            updateBufferContent(buffer.id, content, false);
+            // Dispatch event for toast notification
+            window.dispatchEvent(new CustomEvent("file-reloaded", { detail: { path } }));
+          })
+          .catch(error => {
+            console.error("❌ Failed to auto-reload file:", path, error);
+          });
+      }
+
+      // If it's a directory change, refresh the file tree
+      if (changeType === "modified" && rootFolderPath && path.startsWith(rootFolderPath)) {
+        const dirPath = path.substring(0, path.lastIndexOf("/"));
+        refreshDirectory(dirPath);
+      }
+    };
+
+    window.addEventListener("file-external-change", handleFileExternalChange as any);
+
+    return () => {
+      window.removeEventListener("file-external-change", handleFileExternalChange as any);
+    };
+  }, [buffers, updateBufferContent, rootFolderPath, refreshDirectory]);
+
+  // Watch individual files based on open buffers
+  useEffect(() => {
+    const currentPaths = new Set(
+      buffers
+        .filter(buffer => !buffer.isVirtual && !buffer.path.startsWith("diff://"))
+        .map(buffer => buffer.path),
+    );
+
+    // Start watching new files
+    currentPaths.forEach(path => {
+      startWatching(path);
+    });
+
+    // TODO: Consider cleaning up watchers for closed files
+  }, [buffers, startWatching]);
 
   // Function to refresh all project files (needed by remote connection hook)
   const refreshAllProjectFiles = useCallback(async () => {
-    console.log("refreshAllProjectFiles called:", {
-      rootFolderPath,
-    });
-
     if (rootFolderPath && getAllProjectFiles) {
       try {
-        console.log("Refreshing local project files...");
         const projectFiles = await getAllProjectFiles();
-        console.log(`Setting ${projectFiles.length} local project files`);
         setAllProjectFiles(projectFiles);
       } catch (error) {
         console.error("Error refreshing all project files:", error);
       }
-    } else {
-      console.log("No conditions met for refreshing project files");
     }
   }, [rootFolderPath, getAllProjectFiles]);
 
@@ -329,9 +311,32 @@ function App() {
     remoteConnectionId,
     remoteConnectionName,
     handleRemoteFileSelect: remoteFileSelect,
+    handleRemoteFolderToggle,
+    handleRemoteCollapseAllFolders,
   } = useRemoteConnection(files, setFiles);
 
+  // Unified folder operations (handles both local and remote)
+  const { handleFolderToggle, handleCollapseAllFolders: handleCollapseAllFoldersComplete } =
+    useFolderOperations({
+      isRemoteWindow,
+      remoteConnectionId,
+      files,
+      setFiles,
+      localHandleFolderToggle,
+      localHandleCollapseAllFolders: handleCollapseAllFolders,
+      handleRemoteFolderToggle,
+      handleRemoteCollapseAllFolders,
+    });
 
+  // File selection functionality
+  const { handleFileSelect } = useFileSelection({
+    openBuffer,
+    handleFolderToggle,
+    vimEnabled,
+    setVimMode,
+    updateCursorPosition,
+    codeEditorRef,
+  });
 
   // LSP integration (after rootFolderPath is available)
   const {
@@ -341,33 +346,21 @@ function App() {
     getCompletions,
     getHover,
     isLanguageSupported,
-    isReady,
   } = useLSP({
     workspaceRoot: rootFolderPath || undefined,
-    onDiagnostics: (diagnostics) => {
+    onDiagnostics: diagnostics => {
       setDiagnostics(diagnostics);
     },
   });
 
   // Function to refresh all project files - handles only local files (remote has no indexing)
   const refreshAllProjectFilesComplete = useCallback(async () => {
-    console.log("refreshAllProjectFiles called:", {
-      isRemoteWindow,
-      rootFolderPath,
-    });
-
     if (!isRemoteWindow) {
-      // Handle local files only - remote files are browsed directly without indexing
       refreshAllProjectFiles();
     } else {
-      // For remote connections, no project-wide file indexing
       setAllProjectFiles([]);
     }
-  }, [
-    rootFolderPath,
-    isRemoteWindow,
-    refreshAllProjectFiles,
-  ]);
+  }, [isRemoteWindow, refreshAllProjectFiles]);
 
   // Load all project files when root folder changes or remote connection changes
   useEffect(() => {
@@ -380,15 +373,15 @@ function App() {
       return remoteConnectionName;
     }
 
-    if (isGitViewActive) {
+    if (uiState.isGitViewActive) {
       return "Source Control";
     }
 
-    if (isSearchViewActive) {
+    if (uiState.isSearchViewActive) {
       return "Search";
     }
 
-    if (isRemoteViewActive) {
+    if (uiState.isRemoteViewActive) {
       return "Remote";
     }
 
@@ -405,159 +398,26 @@ function App() {
 
   // Handle opening Extensions as a buffer
   const handleOpenExtensions = () => {
-    // Create a virtual Extensions buffer
-    openBuffer(
-      "extensions://language-servers",
-      "Extensions",
-      "", // Empty content since it's handled by the component
-      false, // not SQLite
-      false, // not image
-      false, // not diff
-      true, // is virtual
-    );
+    openBuffer("extensions://language-servers", "Extensions", "", false, false, false, true);
   };
-
-  // Custom folder toggle that works with both local and remote files
-  const handleFolderToggle = useCallback(
-    async (folderPath: string) => {
-      if (isRemoteWindow && remoteConnectionId) {
-        // Handle remote folder toggle
-        const updateFiles = async (
-          items: FileEntry[],
-        ): Promise<FileEntry[]> => {
-          return Promise.all(
-            items.map(async (item) => {
-              if (item.path === folderPath && item.isDir) {
-                if (!item.expanded) {
-                  // Expand folder - load children from remote
-                  try {
-                    const { invoke } = await import("@tauri-apps/api/core");
-                    const remoteFiles = await invoke<any[]>(
-                      "ssh_list_directory",
-                      {
-                        connectionId: remoteConnectionId,
-                        path: item.path,
-                      },
-                    );
-
-                    const children: FileEntry[] = remoteFiles.map((file) => ({
-                      name: file.name,
-                      path: file.path,
-                      isDir: file.is_dir,
-                      expanded: false,
-                      children: undefined,
-                    }));
-
-                    return { ...item, expanded: true, children };
-                  } catch (error) {
-                    console.error("Error reading remote directory:", error);
-                    return { ...item, expanded: true, children: [] };
-                  }
-                } else {
-                  // Collapse folder
-                  return { ...item, expanded: false };
-                }
-              } else if (item.children) {
-                // Recursively update children
-                const updatedChildren = await updateFiles(item.children);
-                return { ...item, children: updatedChildren };
-              }
-              return item;
-            }),
-          );
-        };
-
-        const updatedFiles = await updateFiles(files);
-        setFiles(updatedFiles);
-      } else {
-        // Use local folder toggle
-        await localHandleFolderToggle(folderPath);
-      }
-    },
-    [
-      isRemoteWindow,
-      remoteConnectionId,
-      files,
-      setFiles,
-      localHandleFolderToggle,
-    ],
-  );
-
-  // Collapse all folders (works for both local and remote)
-  const handleCollapseAllFoldersComplete = useCallback(() => {
-    if (isRemoteWindow && remoteConnectionId) {
-      // Handle remote collapse all
-      const collapseFiles = (items: FileEntry[]): FileEntry[] => {
-        return items.map((item) => {
-          if (item.isDir) {
-            return {
-              ...item,
-              expanded: false,
-              children: item.children ? collapseFiles(item.children) : undefined,
-            };
-          }
-          return item;
-        });
-      };
-
-      const updatedFiles = collapseFiles(files);
-      setFiles(updatedFiles);
-    } else {
-      // Use local collapse all
-      handleCollapseAllFolders();
-    }
-  }, [isRemoteWindow, remoteConnectionId, files, setFiles, handleCollapseAllFolders]);
-
-
 
   // Track when a new folder is opened and add to recents
   useEffect(() => {
     if (rootFolderPath) {
       addToRecents(rootFolderPath);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rootFolderPath]);
 
-  // Add mock diagnostics for testing
-  useEffect(() => {
-    if (activeBuffer && activeBuffer.path.endsWith(".rb")) {
-      const mockDiagnostics: Diagnostic[] = [
-        {
-          severity: "error",
-          line: 5,
-          column: 10,
-          message: "Undefined variable `user`",
-          source: "ruby-lsp",
-          code: "undefined_variable",
-        },
-        {
-          severity: "warning",
-          line: 12,
-          column: 5,
-          message: "Unused variable `temp`",
-          source: "ruby-lsp",
-          code: "unused_variable",
-        },
-        {
-          severity: "info",
-          line: 20,
-          column: 1,
-          message: "Consider using a more descriptive variable name",
-          source: "rubocop",
-        },
-      ];
-      handleDiagnosticsUpdate(mockDiagnostics);
-    } else {
-      setDiagnostics([]);
-    }
-  }, [activeBuffer]);
-
-  // Handle opening a recent folder
   const handleOpenRecentFolder = async (path: string) => {
-    // In a real implementation, you would open the specific folder path
-    // For now, we'll just trigger the open folder dialog and update recents
-    console.log("Opening recent folder:", path);
-    addToRecents(path);
-    await handleOpenFolder();
+    const success = await handleOpenFolderByPath(path);
+
+    if (success) {
+      addToRecents(path);
+    } else {
+      console.log("Failed to open recent folder, falling back to dialog");
+      await handleOpenFolder();
+    }
   };
 
   // Search functionality
@@ -569,10 +429,6 @@ function App() {
     handleSearchQueryChange,
     handleFindClose,
   } = useSearch({ activeBuffer, codeEditorRef });
-
-
-
-
 
   // Function to focus search input
   const focusSearchInput = () => {
@@ -593,59 +449,33 @@ function App() {
     if (!activeBuffer) return;
 
     if (activeBuffer.isVirtual) {
-      // Handle virtual file saves
       if (activeBuffer.path === "settings://user-settings.json") {
-        // Apply settings on save
-        try {
-          const settings = JSON.parse(activeBuffer.content);
-
-          // Apply all settings
-          if (settings.theme !== undefined) {
-            handleThemeChange(settings.theme);
-          }
-          if (settings.fontSize !== undefined) {
-            setFontSize(settings.fontSize);
-          }
-          if (settings.tabSize !== undefined) {
-            setTabSize(settings.tabSize);
-          }
-          if (settings.wordWrap !== undefined) {
-            setWordWrap(settings.wordWrap);
-          }
-          if (settings.lineNumbers !== undefined) {
-            setLineNumbers(settings.lineNumbers);
-          }
-          if (settings.autoSave !== undefined) {
-            setAutoSave(settings.autoSave);
-          }
-          if (settings.vimMode !== undefined) {
-            setVimModeEnabled(settings.vimMode);
-          }
-          if (settings.aiCompletion !== undefined) {
-            setAiCompletion(settings.aiCompletion);
-          }
-
+        const success = updateSettingsFromJSON(activeBuffer.content);
+        if (success) {
           markBufferDirty(activeBuffer.id, false);
           console.log("Settings applied successfully");
-        } catch (error) {
-          console.error("Invalid settings JSON:", error);
+
+          try {
+            const parsedSettings = JSON.parse(activeBuffer.content);
+            if (parsedSettings.maxOpenTabs !== undefined) {
+              setMaxOpenTabs(parsedSettings.maxOpenTabs);
+            }
+          } catch (_error) {
+            // Already handled in updateSettingsFromJSON
+          }
+        } else {
           markBufferDirty(activeBuffer.id, true);
         }
       } else {
-        // Other virtual files - just mark as clean
         markBufferDirty(activeBuffer.id, false);
       }
     } else {
-      // Regular files - save to disk
       if (activeBuffer.path.startsWith("remote://")) {
-        // For remote files, mark as dirty first, then save directly via SSH
         markBufferDirty(activeBuffer.id, true);
 
-        const pathParts = activeBuffer.path
-          .replace("remote://", "")
-          .split("/");
+        const pathParts = activeBuffer.path.replace("remote://", "").split("/");
         const connectionId = pathParts.shift();
-        const remotePath = "/" + pathParts.join("/");
+        const remotePath = `/${pathParts.join("/")}`;
 
         if (connectionId) {
           (async () => {
@@ -664,9 +494,10 @@ function App() {
           })();
         }
       } else {
-        // Local files - save directly
         (async () => {
           try {
+            // Mark as pending save before writing
+            markPendingSave(activeBuffer.path);
             await writeFile(activeBuffer.path, activeBuffer.content);
             markBufferDirty(activeBuffer.id, false);
           } catch (error) {
@@ -679,121 +510,170 @@ function App() {
   };
 
   const handleQuickEdit = () => {
-    if (!activeBuffer || !codeEditorRef.current?.textarea) return;
+    if (!activeBuffer || !codeEditorRef.current?.editor) return;
 
-    const textarea = codeEditorRef.current.textarea;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = textarea.value.substring(start, end);
+    const editor = codeEditorRef.current.editor;
+    const selection = window.getSelection();
+    if (!selection) return;
 
-    // Get cursor position relative to viewport
-    const textareaRect = textarea.getBoundingClientRect();
-    const scrollLeft = textarea.scrollLeft;
-    const scrollTop = textarea.scrollTop;
+    const selectedText = selection.toString();
+    const editorRect = editor.getBoundingClientRect();
+    const scrollLeft = editor.scrollLeft;
+    const scrollTop = editor.scrollTop;
 
-    // Calculate approximate cursor position within textarea
-    const textBeforeCursor = textarea.value.substring(0, start);
-    const lines = textBeforeCursor.split("\n");
-    const currentLine = lines.length - 1;
-    const currentColumn = lines[currentLine].length;
+    // Get cursor position for contenteditable
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
 
-    // Rough estimation of character position (this could be improved with better calculation)
-    const lineHeight = 20; // Approximate line height
-    const charWidth = 8; // Approximate character width
+    const cursorX = rect.left - editorRect.left + scrollLeft;
+    const cursorY = rect.top - editorRect.top + scrollTop;
 
-    const cursorX = textareaRect.left + currentColumn * charWidth - scrollLeft;
-    const cursorY = textareaRect.top + currentLine * lineHeight - scrollTop;
+    let text = selectedText;
+    let selectionRange = { start: 0, end: 0 };
 
-    // If no text is selected, select the current line
-    if (start === end) {
-      const lines = textarea.value.split("\n");
+    if (selectedText) {
+      // Use selected text
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(editor);
+      preCaretRange.setEnd(range.startContainer, range.startOffset);
+      const start = preCaretRange.toString().length;
+      const end = start + selectedText.length;
+      selectionRange = { start, end };
+    } else {
+      // Select current line if no selection
+      const lines = activeBuffer.content.split("\n");
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(editor);
+      preCaretRange.setEnd(range.startContainer, range.startOffset);
+      const cursorPos = preCaretRange.toString().length;
+
       let currentPos = 0;
       let lineIndex = 0;
-
-      // Find which line the cursor is on
       for (let i = 0; i < lines.length; i++) {
-        if (currentPos + lines[i].length >= start) {
+        if (currentPos + lines[i].length >= cursorPos) {
           lineIndex = i;
           break;
         }
-        currentPos += lines[i].length + 1; // +1 for newline
+        currentPos += lines[i].length + 1;
       }
 
       const lineStart = currentPos;
       const lineEnd = currentPos + lines[lineIndex].length;
-      const lineText = lines[lineIndex];
-
-      setQuickEditSelection({
-        text: lineText,
-        start: lineStart,
-        end: lineEnd,
-        cursorPosition: { x: cursorX, y: cursorY },
-      });
-    } else {
-      setQuickEditSelection({
-        text: selectedText,
-        start,
-        end,
-        cursorPosition: { x: cursorX, y: cursorY },
-      });
+      text = lines[lineIndex];
+      selectionRange = { start: lineStart, end: lineEnd };
     }
 
-    setIsQuickEditVisible(true);
+    quickEdit.openQuickEdit({
+      text,
+      cursorPosition: { x: cursorX, y: cursorY },
+      selectionRange,
+    });
   };
 
   const handleQuickEditApply = (editedText: string) => {
-    if (!activeBuffer || !codeEditorRef.current?.textarea) return;
+    if (!activeBuffer || !codeEditorRef.current?.editor) return;
 
-    const textarea = codeEditorRef.current.textarea;
-    const { start, end } = quickEditSelection;
+    const editor = codeEditorRef.current.editor;
+    const { start, end } = quickEdit.selectionRange;
 
-    // Replace the selected text with the edited text
     const newContent =
-      activeBuffer.content.substring(0, start) +
-      editedText +
-      activeBuffer.content.substring(end);
+      activeBuffer.content.substring(0, start) + editedText + activeBuffer.content.substring(end);
 
-    // Update the buffer content
     updateBufferContent(activeBuffer.id, newContent);
 
-    // Update the textarea selection to show the new text - use requestAnimationFrame for immediate execution
     requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start, start + editedText.length);
+      editor.focus();
+      // Set cursor position in contenteditable
+      const range = document.createRange();
+      const textNodes: Text[] = [];
+      const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, null);
+      let node: Node | null = walker.nextNode();
+      while (node) {
+        textNodes.push(node as Text);
+        node = walker.nextNode();
+      }
+
+      let currentPos = 0;
+      const targetStart = start;
+      const targetEnd = start + editedText.length;
+
+      for (const textNode of textNodes) {
+        const nodeLength = textNode.textContent?.length || 0;
+        if (currentPos + nodeLength >= targetStart) {
+          const startOffset = targetStart - currentPos;
+          const endOffset = Math.min(targetEnd - currentPos, nodeLength);
+          range.setStart(textNode, startOffset);
+          range.setEnd(textNode, endOffset);
+          const selection = window.getSelection();
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          break;
+        }
+        currentPos += nodeLength;
+      }
     });
 
-    setIsQuickEditVisible(false);
+    quickEdit.closeQuickEdit();
   };
 
   const handleQuickEditClose = () => {
-    setIsQuickEditVisible(false);
+    quickEdit.closeQuickEdit();
+  };
+
+  const handleToggleSidebarPosition = () => {
+    const newPosition = settings.sidebarPosition === "left" ? "right" : "left";
+    updateSetting("sidebarPosition", newPosition);
   };
 
   const handleApplyCodeFromChat = (code: string) => {
-    if (!activeBuffer || !codeEditorRef.current?.textarea) return;
+    if (!activeBuffer || !codeEditorRef.current?.editor) return;
 
-    const textarea = codeEditorRef.current.textarea;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const editor = codeEditorRef.current.editor;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
 
-    // If text is selected, replace it. Otherwise, insert at cursor position
+    const range = selection.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(editor);
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+    const start = preCaretRange.toString().length;
+    const end = start + selection.toString().length;
+
     const newContent =
-      activeBuffer.content.substring(0, start) +
-      code +
-      activeBuffer.content.substring(end);
+      activeBuffer.content.substring(0, start) + code + activeBuffer.content.substring(end);
 
-    // Update the buffer content
     updateBufferContent(activeBuffer.id, newContent);
 
-    // Focus and position cursor after inserted code - use requestAnimationFrame for immediate execution
     requestAnimationFrame(() => {
-      textarea.focus();
+      editor.focus();
+      // Set cursor position after the inserted code
       const newCursorPosition = start + code.length;
-      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+      const textNodes: Text[] = [];
+      const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, null);
+      let node: Node | null = walker.nextNode();
+      while (node) {
+        textNodes.push(node as Text);
+        node = walker.nextNode();
+      }
+
+      let currentPos = 0;
+      for (const textNode of textNodes) {
+        const nodeLength = textNode.textContent?.length || 0;
+        if (currentPos + nodeLength >= newCursorPosition) {
+          const newRange = document.createRange();
+          const offset = newCursorPosition - currentPos;
+          newRange.setStart(textNode, Math.min(offset, nodeLength));
+          newRange.setEnd(textNode, Math.min(offset, nodeLength));
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+          break;
+        }
+        currentPos += nodeLength;
+      }
     });
   };
-
-
 
   // Menu events hook - placed after all dependencies are defined
   useMenuEvents({
@@ -809,12 +689,12 @@ function App() {
       }
     },
     onUndo: () => {
-      if (codeEditorRef.current?.textarea) {
+      if (codeEditorRef.current?.editor) {
         document.execCommand("undo");
       }
     },
     onRedo: () => {
-      if (codeEditorRef.current?.textarea) {
+      if (codeEditorRef.current?.editor) {
         document.execCommand("redo");
       }
     },
@@ -825,45 +705,69 @@ function App() {
       setIsFindVisible(true);
     },
     onCommandPalette: () => {
-      setIsCommandPaletteVisible(true);
+      uiState.setIsCommandPaletteVisible(true);
     },
     onToggleSidebar: () => {
-      setIsSidebarVisible(!isSidebarVisible);
+      uiState.setIsSidebarVisible(!uiState.isSidebarVisible);
     },
     onToggleTerminal: () => {
-      setBottomPaneActiveTab("terminal");
-      setIsBottomPaneVisible(
-        !isBottomPaneVisible || bottomPaneActiveTab !== "terminal",
+      uiState.setBottomPaneActiveTab("terminal");
+      uiState.setIsBottomPaneVisible(
+        !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "terminal",
       );
     },
     onToggleAiChat: () => {
-      setIsRightPaneVisible(!isRightPaneVisible);
+      uiState.setIsRightPaneVisible(!uiState.isRightPaneVisible);
     },
     onSplitEditor: () => {
       console.log("Split editor triggered from menu");
-      // TODO: Implement split editor functionality
     },
     onToggleVim: () => {
       toggleVimMode();
     },
     onGoToFile: () => {
-      setIsCommandBarVisible(true);
+      uiState.setIsCommandBarVisible(true);
     },
     onGoToLine: () => {
       const line = prompt("Go to line:");
-      if (line && codeEditorRef.current?.textarea) {
+      if (line && codeEditorRef.current?.editor) {
         const lineNumber = parseInt(line, 10);
-        if (!isNaN(lineNumber)) {
-          const textarea = codeEditorRef.current.textarea;
-          const lines = textarea.value.split("\n");
+        if (!Number.isNaN(lineNumber)) {
+          const editor = codeEditorRef.current.editor;
+          const lines = activeBuffer?.content.split("\n") || [];
           let targetPosition = 0;
 
           for (let i = 0; i < lineNumber - 1 && i < lines.length; i++) {
             targetPosition += lines[i].length + 1;
           }
 
-          textarea.focus();
-          textarea.setSelectionRange(targetPosition, targetPosition);
+          editor.focus();
+          // Set cursor position in contenteditable
+          const textNodes: Text[] = [];
+          const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, null);
+          let node: Node | null = walker.nextNode();
+          while (node) {
+            textNodes.push(node as Text);
+            node = walker.nextNode();
+          }
+
+          let currentPos = 0;
+          for (const textNode of textNodes) {
+            const nodeLength = textNode.textContent?.length || 0;
+            if (currentPos + nodeLength >= targetPosition) {
+              const range = document.createRange();
+              const offset = targetPosition - currentPos;
+              range.setStart(textNode, Math.min(offset, nodeLength));
+              range.setEnd(textNode, Math.min(offset, nodeLength));
+              const selection = window.getSelection();
+              if (selection) {
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
+              break;
+            }
+            currentPos += nodeLength;
+          }
         }
       }
     },
@@ -873,7 +777,7 @@ function App() {
       handleThemeChange(theme as ThemeType);
     },
     onAbout: () => {
-      alert("athas-code - A modern code editor built with Tauri and React");
+      // Native About dialog is handled by the menu system
     },
     onHelp: () => {
       console.log("Help triggered from menu");
@@ -882,14 +786,21 @@ function App() {
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-    setIsBottomPaneVisible,
-    setBottomPaneActiveTab,
-    setIsSidebarVisible,
+    setIsBottomPaneVisible: v =>
+      uiState.setIsBottomPaneVisible(typeof v === "function" ? v(uiState.isBottomPaneVisible) : v),
+    setBottomPaneActiveTab: uiState.setBottomPaneActiveTab,
+    setIsSidebarVisible: v =>
+      uiState.setIsSidebarVisible(typeof v === "function" ? v(uiState.isSidebarVisible) : v),
     setIsFindVisible,
-    setIsRightPaneVisible,
-    setIsCommandBarVisible,
-    setIsCommandPaletteVisible,
-    setIsSearchViewActive,
+    setIsRightPaneVisible: v =>
+      uiState.setIsRightPaneVisible(typeof v === "function" ? v(uiState.isRightPaneVisible) : v),
+    setIsCommandBarVisible: v =>
+      uiState.setIsCommandBarVisible(typeof v === "function" ? v(uiState.isCommandBarVisible) : v),
+    setIsCommandPaletteVisible: v =>
+      uiState.setIsCommandPaletteVisible(
+        typeof v === "function" ? v(uiState.isCommandPaletteVisible) : v,
+      ),
+    setIsSearchViewActive: uiState.setIsSearchViewActive,
     focusSearchInput,
     focusCommandPalette,
     activeBuffer,
@@ -898,184 +809,96 @@ function App() {
     switchToPreviousBuffer,
     buffers,
     setActiveBuffer,
-    isBottomPaneVisible,
-    bottomPaneActiveTab,
+    isBottomPaneVisible: uiState.isBottomPaneVisible,
+    bottomPaneActiveTab: uiState.bottomPaneActiveTab,
     onSave: handleSave,
     onQuickEdit: handleQuickEdit,
+    onToggleSidebarPosition: handleToggleSidebarPosition,
     coreFeatures,
   });
 
-
-
-  // Handle clicking outside context menu to close it
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      setFolderHeaderContextMenu(null);
-      setProjectNameMenu(null);
-    };
-
-    if (folderHeaderContextMenu || projectNameMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
-      };
-    }
-  }, [folderHeaderContextMenu, projectNameMenu]);
-
   useEffect(() => {
     const handleNavigateToLine = (event: CustomEvent) => {
-      const { line } = event.detail
-      if (codeEditorRef.current?.textarea) {
-        const textarea = codeEditorRef.current.textarea
-        const lines = textarea.value.split('\n')
-        let targetPosition = 0
+      const { line } = event.detail;
+      if (codeEditorRef.current?.editor) {
+        const editor = codeEditorRef.current.editor;
+        const lines = activeBuffer?.content.split("\n") || [];
+        let targetPosition = 0;
 
         for (let i = 0; i < line - 1 && i < lines.length; i++) {
-          targetPosition += lines[i].length + 1
+          targetPosition += lines[i].length + 1;
         }
 
-        textarea.focus()
-        textarea.setSelectionRange(targetPosition, targetPosition)
-        const lineHeight = 20
-        const scrollTop = Math.max(0, (line - 1) * lineHeight - textarea.clientHeight / 2)
-        textarea.scrollTop = scrollTop
-      }
-    }
+        editor.focus();
+        // Set cursor position in contenteditable
+        const textNodes: Text[] = [];
+        const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, null);
+        let node: Node | null = walker.nextNode();
+        while (node) {
+          textNodes.push(node as Text);
+          node = walker.nextNode();
+        }
 
-    window.addEventListener('navigate-to-line', handleNavigateToLine as EventListener)
-    return () => {
-      window.removeEventListener('navigate-to-line', handleNavigateToLine as EventListener)
-    }
-  }, [])
-
-  const handleFileSelect = async (
-    path: string,
-    isDir: boolean,
-    line?: number,
-    column?: number,
-  ) => {
-    if (isDir) {
-      handleFolderToggle(path);
-      return;
-    }
-
-    const fileName = getFilenameFromPath(path);
-
-    // Handle virtual diff files
-    if (path.startsWith("diff://")) {
-      const diffContent = localStorage.getItem(`diff-content-${path}`);
-      if (diffContent) {
-        openBuffer(path, fileName, diffContent, false, false, true, true); // Mark as diff and virtual
-        return;
-      } else {
-        openBuffer(
-          path,
-          fileName,
-          "No diff content available",
-          false,
-          false,
-          true,
-          true,
-        );
-        return;
-      }
-    }
-
-    if (isSQLiteFile(path)) {
-      openBuffer(path, fileName, "", true, false, false, false);
-    } else if (isImageFile(path)) {
-      openBuffer(path, fileName, "", false, true, false, false);
-    } else {
-      try {
-        const content = await readFile(path);
-
-        // Ensure content is not empty/undefined
-        const safeContent = content || "";
-        openBuffer(path, fileName, safeContent, false, false, false, false);
-
-        // Navigate to specific line/column if provided
-        if (line && column) {
-          // Use requestAnimationFrame for immediate but smooth execution
-          requestAnimationFrame(() => {
-            if (codeEditorRef.current?.textarea) {
-              const textarea = codeEditorRef.current.textarea;
-              const lines = content.split("\n");
-              let targetPosition = 0;
-
-              // Calculate position based on line and column
-              for (let i = 0; i < line - 1 && i < lines.length; i++) {
-                targetPosition += lines[i].length + 1; // +1 for newline
-              }
-              if (column) {
-                targetPosition += Math.min(
-                  column - 1,
-                  lines[line - 1]?.length || 0,
-                );
-              }
-
-              textarea.focus();
-              textarea.setSelectionRange(targetPosition, targetPosition);
-
-              // Scroll to the line
-              const lineHeight = 20; // Approximate line height
-              const scrollTop = Math.max(
-                0,
-                (line - 1) * lineHeight - textarea.clientHeight / 2,
-              );
-              textarea.scrollTop = scrollTop;
+        let currentPos = 0;
+        for (const textNode of textNodes) {
+          const nodeLength = textNode.textContent?.length || 0;
+          if (currentPos + nodeLength >= targetPosition) {
+            const range = document.createRange();
+            const offset = targetPosition - currentPos;
+            range.setStart(textNode, Math.min(offset, nodeLength));
+            range.setEnd(textNode, Math.min(offset, nodeLength));
+            const selection = window.getSelection();
+            if (selection) {
+              selection.removeAllRanges();
+              selection.addRange(range);
             }
-          });
-        }
-
-        // Reset vim mode when opening new file
-        if (vimEnabled) {
-          setVimMode("normal");
-          // Update cursor position immediately after vim mode change
-          requestAnimationFrame(() => {
-            updateCursorPosition();
-          });
-        }
-      } catch (error) {
-        console.error("Error reading file:", error);
-        openBuffer(
-          path,
-          fileName,
-          `Error reading file: ${error}`,
-          false,
-          false,
-          false,
-          false,
-        );
-      }
-    }
-  };
-
-  // Immediate buffer update for responsive typing - NO auto-saving for remote files
-  const handleContentChange = useCallback((content: string) => {
-    if (!activeBuffer) return;
-
-    const isRemoteFile = activeBuffer.path.startsWith("remote://");
-
-    if (isRemoteFile) {
-      // For remote files, use direct synchronous update to avoid any React delays
-      updateBufferContent(activeBuffer.id, content, false);
-    } else {
-      // For local files, update content and auto-save
-      updateBufferContent(activeBuffer.id, content, true);
-      if (!activeBuffer.isVirtual) {
-        // Auto-save local files with small debounce
-        setTimeout(async () => {
-          try {
-            await writeFile(activeBuffer.path, content);
-            markBufferDirty(activeBuffer.id, false);
-          } catch (error) {
-            console.error("Error saving local file:", error);
-            markBufferDirty(activeBuffer.id, true);
+            break;
           }
-        }, 100);
+          currentPos += nodeLength;
+        }
+
+        const lineHeight = 20;
+        const scrollTop = Math.max(0, (line - 1) * lineHeight - editor.clientHeight / 2);
+        editor.scrollTop = scrollTop;
       }
-    }
-  }, [activeBuffer, updateBufferContent, markBufferDirty]);
+    };
+
+    window.addEventListener("navigate-to-line", handleNavigateToLine as any);
+    return () => {
+      window.removeEventListener("navigate-to-line", handleNavigateToLine as any);
+    };
+  }, [activeBuffer]);
+
+  const handleContentChange = useCallback(
+    (content: string) => {
+      if (!activeBuffer) return;
+      const isRemoteFile = activeBuffer.path.startsWith("remote://");
+
+      if (isRemoteFile) {
+        updateBufferContent(activeBuffer.id, content, false);
+      } else {
+        updateBufferContent(activeBuffer.id, content, true);
+
+        if (!activeBuffer.isVirtual && settings.autoSave) {
+          if (autoSaveTimeoutRef.current) {
+            clearTimeout(autoSaveTimeoutRef.current);
+          }
+          autoSaveTimeoutRef.current = setTimeout(async () => {
+            try {
+              // Mark as pending save before auto-saving
+              markPendingSave(activeBuffer.path);
+              await writeFile(activeBuffer.path, content);
+              markBufferDirty(activeBuffer.id, false);
+            } catch (error) {
+              console.error("Error saving local file:", error);
+              markBufferDirty(activeBuffer.id, true);
+            }
+          }, 150);
+        }
+      }
+    },
+    [activeBuffer, updateBufferContent, markBufferDirty, settings.autoSave, markPendingSave],
+  );
 
   const handleTabClick = (bufferId: string) => {
     setActiveBuffer(bufferId);
@@ -1087,7 +910,7 @@ function App() {
   };
 
   const handleTabPin = (bufferId: string) => {
-    const buffer = buffers.find((b) => b.id === bufferId);
+    const buffer = buffers.find(b => b.id === bufferId);
     if (buffer) {
       updateBuffer({
         ...buffer,
@@ -1097,30 +920,26 @@ function App() {
   };
 
   const handleCloseOtherTabs = (keepBufferId: string) => {
-    const buffersToClose = buffers.filter(
-      (b) => b.id !== keepBufferId && !b.isPinned,
-    );
-    buffersToClose.forEach((buffer) => closeBuffer(buffer.id));
+    const buffersToClose = buffers.filter(b => b.id !== keepBufferId && !b.isPinned);
+    buffersToClose.forEach(buffer => closeBuffer(buffer.id));
   };
 
   const handleCloseAllTabs = () => {
-    const buffersToClose = buffers.filter((b) => !b.isPinned);
-    buffersToClose.forEach((buffer) => closeBuffer(buffer.id));
+    const buffersToClose = buffers.filter(b => !b.isPinned);
+    buffersToClose.forEach(buffer => closeBuffer(buffer.id));
   };
 
   const handleCloseTabsToRight = (bufferId: string) => {
-    const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
+    const bufferIndex = buffers.findIndex(b => b.id === bufferId);
     if (bufferIndex === -1) return;
 
-    const buffersToClose = buffers
-      .slice(bufferIndex + 1)
-      .filter((b) => !b.isPinned);
-    buffersToClose.forEach((buffer) => closeBuffer(buffer.id));
+    const buffersToClose = buffers.slice(bufferIndex + 1).filter(b => !b.isPinned);
+    buffersToClose.forEach(buffer => closeBuffer(buffer.id));
   };
 
   // Split view handlers (simplified for performance)
   // Handle tab drag start
-  const handleTabDragStart = (bufferId: string, paneId?: string) => {
+  const handleTabDragStart = () => {
     setIsDraggingTab(true);
   };
 
@@ -1131,89 +950,63 @@ function App() {
 
   // Command bar handlers
   const handleCommandBarClose = () => {
-    setIsCommandBarVisible(false);
+    uiState.setIsCommandBarVisible(false);
   };
 
   const handleCommandBarFileSelect = async (path: string) => {
     await handleFileSelect(path, false);
-    setIsCommandBarVisible(false);
+    uiState.setIsCommandBarVisible(false);
   };
 
   // Command palette handlers
   const handleCommandPaletteClose = () => {
-    setIsCommandPaletteVisible(false);
+    uiState.setIsCommandPaletteVisible(false);
   };
 
-  const handleThemeChange = (theme: ThemeType) => {
-    setCurrentTheme(theme);
-    localStorage.setItem("athas-code-theme", theme);
-
-    // Apply theme to document
-    const html = document.documentElement;
-    html.classList.remove(
-      "force-light",
-      "force-dark",
-      "force-midnight",
-      "force-catppuccin-mocha",
-      "force-catppuccin-macchiato",
-      "force-catppuccin-frappe",
-      "force-catppuccin-latte",
-      "force-tokyo-night",
-      "force-tokyo-night-storm",
-      "force-tokyo-night-light",
-      "force-dracula",
-      "force-dracula-soft",
-      "force-nord",
-      "force-nord-light",
-      "force-github-dark",
-      "force-github-dark-dimmed",
-      "force-github-light",
-      "force-one-dark-pro",
-      "force-one-light-pro",
-      "force-material-deep-ocean",
-      "force-material-palenight",
-      "force-material-lighter",
-      "force-gruvbox-dark",
-      "force-gruvbox-light",
-      "force-solarized-dark",
-      "force-solarized-light",
-      "force-synthwave-84",
-      "force-monokai-pro",
-      "force-ayu-dark",
-      "force-ayu-mirage",
-      "force-ayu-light",
-      "force-vercel-dark",
-    );
-
-    if (theme !== "auto") {
-      html.classList.add(`force-${theme}`);
-    }
-  };
-
-  // Diagnostics handlers
-  const handleDiagnosticsUpdate = (newDiagnostics: Diagnostic[]) => {
-    setDiagnostics(newDiagnostics);
-    // Don't auto-open diagnostics pane anymore
+  const handleThemeChange = (theme: string) => {
+    updateSetting("theme", theme as any);
   };
 
   const handleDiagnosticClick = (diagnostic: Diagnostic) => {
-    // Navigate to the diagnostic location
-    if (codeEditorRef.current?.textarea) {
-      const textarea = codeEditorRef.current.textarea;
-      const lines = textarea.value.split("\n");
+    if (codeEditorRef.current?.editor) {
+      const editor = codeEditorRef.current.editor;
+      const lines = activeBuffer?.content.split("\n") || [];
       let targetPosition = 0;
 
       for (let i = 0; i < diagnostic.line - 1 && i < lines.length; i++) {
-        targetPosition += lines[i].length + 1; // +1 for newline
+        targetPosition += lines[i].length + 1;
       }
       targetPosition += diagnostic.column - 1;
 
-      textarea.focus();
-      textarea.setSelectionRange(targetPosition, targetPosition);
+      editor.focus();
+      // Set cursor position in contenteditable
+      const textNodes: Text[] = [];
+      const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, null);
+      let node: Node | null = walker.nextNode();
+      while (node) {
+        textNodes.push(node as Text);
+        node = walker.nextNode();
+      }
+
+      let currentPos = 0;
+      for (const textNode of textNodes) {
+        const nodeLength = textNode.textContent?.length || 0;
+        if (currentPos + nodeLength >= targetPosition) {
+          const range = document.createRange();
+          const offset = targetPosition - currentPos;
+          range.setStart(textNode, Math.min(offset, nodeLength));
+          range.setEnd(textNode, Math.min(offset, nodeLength));
+          const selection = window.getSelection();
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          break;
+        }
+        currentPos += nodeLength;
+      }
     }
   };
-
-
 
   // Determine what to show: remote window, welcome screen, or main app
   const urlParams = new URLSearchParams(window.location.search);
@@ -1228,64 +1021,13 @@ function App() {
     !isRemoteFromUrl &&
     !remoteParam;
 
-  // Debug logging
-  console.log("Debug: shouldShowWelcome =", shouldShowWelcome);
-  console.log("Debug: files.length =", files.length);
-  console.log("Debug: isRemoteWindow =", isRemoteWindow);
-
-  // Image Generation Modal state
-  const [isImageGenerationModalOpen, setIsImageGenerationModalOpen] =
-    useState(false);
-  const [imageGenerationFolder, setImageGenerationFolder] =
-    useState<string>("");
-
-  // Handle image generation request
-  const handleGenerateImage = (folderPath: string) => {
-    setImageGenerationFolder(folderPath);
-    setIsImageGenerationModalOpen(true);
-  };
-
-  // Handle image generation completion
-  const handleImageGenerated = async (imagePath: string) => {
-    // Refresh the directory that contains the new image
-    try {
-      await refreshDirectory(imageGenerationFolder);
-    } catch (error) {
-      console.error(
-        "Error refreshing directory after image generation:",
-        error,
-      );
-    }
-  };
-
-  // Handle creating new folder
-  const handleCreateNewFolder = async () => {
-    const folderName = prompt("Enter the name for the new folder:");
-    if (!folderName) return;
-
-    try {
-      const newFolderPath = rootFolderPath
-        ? `${rootFolderPath}/${folderName}`
-        : folderName;
-
-      // Create the directory by writing a placeholder file and then removing it
-      // This is a workaround since create_directory might not be implemented
-      const placeholderPath = `${newFolderPath}/.gitkeep`;
-      await writeFile(placeholderPath, "");
-
-      // Refresh the file tree
-      await refreshDirectory(rootFolderPath || ".");
-    } catch (error) {
-      console.error("Error creating new folder:", error);
-      alert("Failed to create folder. This feature may not be fully implemented yet.");
-    }
-  };
-
   if (shouldShowWelcome) {
     return (
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-transparent">
-        <div className={`window-container flex flex-col h-full w-full bg-[var(--primary-bg)] overflow-hidden ${isMac() && 'rounded-xl'}`}>
-          <CustomTitleBar showMinimal={true} />
+      <div className="flex h-screen w-screen flex-col overflow-hidden bg-transparent">
+        <div
+          className={`window-container flex h-full w-full flex-col overflow-hidden bg-white ${isMac() && "rounded-xl"}`}
+        >
+          <CustomTitleBar showMinimal={true} isWelcomeScreen={true} />
           <WelcomeScreen
             onOpenFolder={handleOpenFolder}
             recentFolders={recentFolders}
@@ -1297,25 +1039,21 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-transparent">
-      <div className={`window-container flex flex-col h-full w-full bg-[var(--primary-bg)] overflow-hidden ${isMac() && 'rounded-xl'}`}>
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-transparent">
+      <div
+        className={`window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg ${isMac() && "rounded-xl"}`}
+      >
         {/* Custom Titlebar */}
         <CustomTitleBar
-          projectName={
-            getProjectName() !== "Explorer" ? getProjectName() : undefined
-          }
+          projectName={getProjectName() !== "Explorer" ? getProjectName() : undefined}
+          onAIChatClick={() => uiState.toggleRightPane()}
+          isAIChatVisible={uiState.isRightPaneVisible}
           onSettingsClick={() => {
             // Create settings JSON buffer with current values
             const settingsContent = JSON.stringify(
               {
-                theme: currentTheme,
-                fontSize: fontSize,
-                tabSize: tabSize,
-                wordWrap: wordWrap,
-                lineNumbers: lineNumbers,
-                autoSave: autoSave,
-                vimMode: vimModeEnabled,
-                aiCompletion: aiCompletion,
+                ...settings,
+                maxOpenTabs: maxOpenTabs,
               },
               null,
               2,
@@ -1333,241 +1071,77 @@ function App() {
         />
 
         {/* Thin separator bar */}
-        <div className="h-px bg-[var(--border-color)] flex-shrink-0" />
+        <div className="h-px flex-shrink-0 bg-border" />
 
         {/* Main App Content */}
-        <div className="flex flex-col h-full w-full bg-[var(--primary-bg)] overflow-hidden">
-          <div className="flex flex-row flex-1 overflow-hidden custom-scrollbar-auto">
-            {/* Left Sidebar */}
-            {isSidebarVisible && (
-              <ResizableSidebar
-                defaultWidth={220}
-                minWidth={180}
-                maxWidth={400}
-              >
-                <div className="flex flex-col h-full">
-                  {/* Pane Selection Row */}
-                  <div className="flex gap-1 p-2 border-b border-[var(--border-color)]">
-                    <Button
-                      onClick={() => {
-                        setIsGitViewActive(false);
-                        setIsSearchViewActive(false);
-                        setIsRemoteViewActive(false);
-                      }}
-                      variant="ghost"
-                      size="sm"
-                      data-active={
-                        !isGitViewActive &&
-                        !isSearchViewActive &&
-                        !isRemoteViewActive
-                      }
-                      className={`text-xs flex items-center justify-center w-8 h-8 rounded ${!isGitViewActive &&
-                        !isSearchViewActive &&
-                        !isRemoteViewActive
-                        ? "bg-[var(--hover-color)] text-[var(--text-color)]"
-                        : "hover:bg-[var(--hover-color)]"
-                        }`}
-                      title="File Explorer"
-                    >
-                      <Folder size={14} />
-                    </Button>
-                    {coreFeatures.search && (
-                      <Button
-                        onClick={() => {
-                          setIsSearchViewActive(true);
-                          setIsGitViewActive(false);
-                          setIsRemoteViewActive(false);
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        data-active={isSearchViewActive}
-                        className={`text-xs flex items-center justify-center w-8 h-8 rounded ${isSearchViewActive
-                          ? "bg-[var(--hover-color)] text-[var(--text-color)]"
-                          : "hover:bg-[var(--hover-color)]"
-                          }`}
-                        title="Search"
-                      >
-                        <Search size={14} />
-                      </Button>
-                    )}
-                    {coreFeatures.git && (
-                      <Button
-                        onClick={() => {
-                          setIsGitViewActive(true);
-                          setIsSearchViewActive(false);
-                          setIsRemoteViewActive(false);
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        data-active={isGitViewActive}
-                        className={`text-xs flex items-center justify-center w-8 h-8 rounded ${isGitViewActive
-                          ? "bg-[var(--hover-color)] text-[var(--text-color)]"
-                          : "hover:bg-[var(--hover-color)]"
-                          }`}
-                        title="Git Source Control"
-                      >
-                        <GitBranch size={14} />
-                      </Button>
-                    )}
-                    {coreFeatures.remote && (
-                      <Button
-                        onClick={() => {
-                          setIsRemoteViewActive(true);
-                          setIsGitViewActive(false);
-                          setIsSearchViewActive(false);
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        data-active={isRemoteViewActive}
-                        className={`text-xs flex items-center justify-center w-8 h-8 rounded ${isRemoteViewActive
-                          ? "bg-[var(--hover-color)] text-[var(--text-color)]"
-                          : "hover:bg-[var(--hover-color)]"
-                          }`}
-                        title="Remote Connections"
-                      >
-                        <Server size={14} />
-                      </Button>
-                    )}
-                    <Button
-                      onClick={handleOpenExtensions}
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs flex items-center justify-center w-8 h-8 rounded hover:bg-[var(--hover-color)]"
-                      title="Extensions"
-                    >
-                      <Package size={14} />
-                    </Button>
-                  </div>
-
-                  {/* Remote Window Header */}
-                  {isRemoteWindow && remoteConnectionName && (
-                    <div className="flex items-center px-3 py-1.5 border-b border-[var(--border-color)] bg-[var(--secondary-bg)]">
-                      <Server
-                        size={12}
-                        className="text-[var(--text-lighter)] mr-2"
-                      />
-                      <span
-                        className="text-xs font-medium text-[var(--text-color)] cursor-pointer hover:bg-[var(--hover-color)] px-2 py-1 rounded flex-1"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setProjectNameMenu({
-                            x: e.currentTarget.getBoundingClientRect().left,
-                            y: e.currentTarget.getBoundingClientRect().bottom + 5,
-                          });
-                        }}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setProjectNameMenu({
-                            x: e.currentTarget.getBoundingClientRect().left,
-                            y: e.currentTarget.getBoundingClientRect().bottom + 5,
-                          });
-                        }}
-                        title="Click for workspace options"
-                      >
-                        {remoteConnectionName}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Pane Title and Action Buttons Row - Only show for file tree view */}
-                  {!isGitViewActive &&
-                    !isSearchViewActive &&
-                    !isRemoteViewActive &&
-                    !isRemoteWindow && (
-                      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-color)] bg-[var(--secondary-bg)]">
-                        <h3
-                          className="font-mono text-xs font-medium text-[var(--text-color)] tracking-wide cursor-pointer hover:bg-[var(--hover-color)] px-2 py-1 rounded"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setProjectNameMenu({
-                              x: e.currentTarget.getBoundingClientRect().left,
-                              y: e.currentTarget.getBoundingClientRect().bottom + 5,
-                            });
-                          }}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setProjectNameMenu({
-                              x: e.currentTarget.getBoundingClientRect().left,
-                              y: e.currentTarget.getBoundingClientRect().bottom + 5,
-                            });
-                          }}
-                          title="Click for workspace options"
-                        >
-                          {getProjectName()}
-                        </h3>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            onClick={handleOpenFolder}
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs flex items-center justify-center w-6 h-6 rounded hover:bg-[var(--hover-color)]"
-                            title="Open Folder"
-                          >
-                            <FolderOpen size={12} />
-                          </Button>
-                          <Button
-                            onClick={handleCreateNewFile}
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs flex items-center justify-center w-6 h-6 rounded hover:bg-[var(--hover-color)]"
-                            title="New File"
-                          >
-                            <FilePlus size={12} />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                  {/* Main Content Area */}
-                  <div className="flex-1 overflow-auto">
-                    {isGitViewActive && coreFeatures.git ? (
-                      <GitView
-                        repoPath={rootFolderPath}
-                        onFileSelect={handleFileSelect}
-                      />
-                    ) : isSearchViewActive && coreFeatures.search ? (
-                      <SearchView
-                        ref={searchViewRef}
-                        rootFolderPath={rootFolderPath}
-                        allProjectFiles={allProjectFiles}
-                        onFileSelect={(path, line, column) =>
-                          handleFileSelect(path, false, line, column)
-                        }
-                      />
-                    ) : isRemoteViewActive && coreFeatures.remote ? (
-                      <RemoteConnectionView onFileSelect={handleFileSelect} />
-                    ) : (
-                      <FileTree
-                        files={files}
-                        activeBufferPath={activeBuffer?.path}
-                        onFileSelect={
-                          isRemoteWindow
-                            ? async (path: string, isDir: boolean) => {
+        <div className="flex h-full w-full flex-col overflow-hidden bg-primary-bg">
+          <div className="custom-scrollbar-auto flex flex-1 flex-row overflow-hidden">
+            {/* Left Side - AI Chat (when sidebar is on right) or File Tree (when sidebar is on left) */}
+            {settings.sidebarPosition === "right"
+              ? // AI Chat on left when sidebar is on right
+                coreFeatures.aiChat && (
+                  <ResizableRightPane
+                    isVisible={uiState.isRightPaneVisible}
+                    defaultWidth={300}
+                    minWidth={280}
+                    maxWidth={600}
+                    position="left"
+                    width={aiChatWidth}
+                    onWidthChange={setAIChatWidth}
+                  >
+                    <AIChat
+                      activeBuffer={activeBuffer}
+                      buffers={buffers}
+                      rootFolderPath={rootFolderPath}
+                      selectedFiles={[]}
+                      allProjectFiles={allProjectFiles}
+                      mode="chat"
+                      onApplyCode={handleApplyCodeFromChat}
+                    />
+                  </ResizableRightPane>
+                )
+              : // File Tree on left when sidebar is on left
+                uiState.isSidebarVisible && (
+                  <ResizableSidebar defaultWidth={220} minWidth={200} maxWidth={400}>
+                    <MainSidebar
+                      ref={searchViewRef}
+                      isGitViewActive={uiState.isGitViewActive}
+                      isSearchViewActive={uiState.isSearchViewActive}
+                      isRemoteViewActive={uiState.isRemoteViewActive}
+                      isRemoteWindow={isRemoteWindow}
+                      remoteConnectionName={remoteConnectionName || undefined}
+                      coreFeatures={coreFeatures}
+                      files={files}
+                      rootFolderPath={rootFolderPath}
+                      allProjectFiles={allProjectFiles}
+                      activeBufferPath={activeBuffer?.path}
+                      onViewChange={uiState.setActiveView}
+                      onOpenExtensions={handleOpenExtensions}
+                      onOpenFolder={handleOpenFolder}
+                      onCreateNewFile={handleCreateNewFile}
+                      onCreateNewFolderInDirectory={handleCreateNewFolderInDirectory}
+                      onFileSelect={
+                        isRemoteWindow
+                          ? async (path: string, isDir: boolean) => {
                               if (isDir) {
                                 await handleFolderToggle(path);
                               } else {
                                 await remoteFileSelect(path, isDir, openBuffer);
                               }
                             }
-                            : handleFileSelect
-                        }
-                        onCreateNewFileInDirectory={
-                          handleCreateNewFileInDirectory
-                        }
-                        onGenerateImage={handleGenerateImage}
-                      />
-                    )}
-                  </div>
-                </div>
-              </ResizableSidebar>
-            )}
+                          : handleFileSelect
+                      }
+                      onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
+                      onDeletePath={(path: string) => handleDeletePath(path, false)}
+                      onUpdateFiles={setFiles}
+                      onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
+                      projectName={getProjectName()}
+                    />
+                  </ResizableSidebar>
+                )}
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col bg-[var(--primary-bg)] h-full overflow-hidden">
+            <div className="flex h-full flex-1 flex-col overflow-hidden bg-primary-bg">
               {/* Tab Bar */}
               <TabBar
                 buffers={buffers}
@@ -1581,28 +1155,20 @@ function App() {
                 onCloseTabsToRight={handleCloseTabsToRight}
                 onTabDragStart={handleTabDragStart}
                 onTabDragEnd={handleTabDragEnd}
+                maxOpenTabs={maxOpenTabs}
+                externallyModifiedPaths={new Set()}
               />
 
-              {/* {!isSplitViewEnabled && activeBuffer && (
-                <Breadcrumb
-                  filePath={activeBuffer.path}
-                  rootPath={rootFolderPath}
-                  onNavigate={(path: string) => console.log("Navigate to:", path)}
-                  isOutlineVisible={isOutlineVisible}
-                  isMinimapVisible={isMinimapVisible}
-                  onToggleOutline={() => {
-                    if (isOutlineVisible) {
-                      setIsOutlineVisible(false)
-                      setIsRightPaneVisible(false)
-                    } else {
-                      setIsOutlineVisible(true)
-                      setIsRightPaneVisible(true)
-                    }
-                  }}
-                  onToggleMinimap={toggleMinimap}
-                />
-              )}
- */}
+              {/* Breadcrumb - Hidden in git view and extensions view */}
+              {!uiState.isGitViewActive &&
+                activeBuffer?.path !== "extensions://language-servers" && (
+                  <BreadcrumbContainer
+                    activeBuffer={activeBuffer}
+                    rootFolderPath={rootFolderPath}
+                    onFileSelect={handleFileSelect}
+                  />
+                )}
+
               {/* Find Bar */}
               <FindBar
                 isVisible={isFindVisible}
@@ -1634,77 +1200,67 @@ function App() {
                   />
                 ) : activeBuffer.path === "extensions://language-servers" ? (
                   <ExtensionsView
-                    onServerInstall={(server) => {
+                    onServerInstall={server => {
                       console.log("Installing server:", server.name);
                       // Here you would integrate with the LSP system
                     }}
-                    onServerUninstall={(serverId) => {
+                    onServerUninstall={serverId => {
                       console.log("Uninstalling server:", serverId);
                       // Here you would clean up the LSP system
                     }}
                     onThemeChange={handleThemeChange}
-                    currentTheme={currentTheme}
+                    currentTheme={settings.theme}
                     coreFeatures={coreFeaturesList}
-                    onCoreFeatureToggle={handleCoreFeatureToggle}
+                    onCoreFeatureToggle={handleCoreFeatureToggleLocal}
                   />
                 ) : (
                   <CodeEditor
                     value={activeBuffer.content}
-                    onChange={(content) =>
-                      vimMode === "insert" || !vimEnabled
-                        ? handleContentChange(content)
-                        : undefined
+                    onChange={content =>
+                      vimMode === "insert" || !vimEnabled ? handleContentChange(content) : undefined
                     }
                     onKeyDown={handleVimKeyDown}
-                    onCursorPositionChange={(position) => {
+                    onCursorPositionChange={position => {
                       if (vimEnabled) {
                         setCursorPosition(position);
                       }
                     }}
                     placeholder="Select a file to edit..."
                     disabled={!activeBuffer}
-                    className={
-                      vimEnabled && vimMode === "visual"
-                        ? "vim-visual-selection"
-                        : ""
-                    }
+                    className={vimEnabled && vimMode === "visual" ? "vim-visual-selection" : ""}
                     filename={getFilenameFromPath(activeBuffer.path)}
                     vimEnabled={vimEnabled}
                     vimMode={vimMode}
-                    cursorPosition={cursorPosition}
                     searchQuery={searchState.query}
                     searchMatches={searchState.matches}
                     currentMatchIndex={searchState.currentMatch - 1}
                     filePath={activeBuffer.path}
-                    fontSize={fontSize}
-                    tabSize={tabSize}
-                    wordWrap={wordWrap}
-                    lineNumbers={lineNumbers}
+                    fontSize={settings.fontSize}
+                    tabSize={settings.tabSize}
+                    wordWrap={settings.wordWrap}
+                    lineNumbers={settings.lineNumbers}
                     ref={codeEditorRef}
-                    aiCompletion={aiCompletion}
-                    minimap={isMinimapVisible}
-                    getCompletions={getCompletions}
-                    getHover={getHover}
-                    isLanguageSupported={isLanguageSupported}
-                    openDocument={openDocument}
-                    changeDocument={changeDocument}
-                    closeDocument={closeDocument}
+                    aiCompletion={settings.aiCompletion}
+                    getCompletions={getCompletions || undefined}
+                    getHover={getHover || undefined}
+                    isLanguageSupported={isLanguageSupported || (() => false)}
+                    openDocument={openDocument || undefined}
+                    changeDocument={changeDocument || undefined}
+                    closeDocument={closeDocument || undefined}
                   />
                 )
               ) : (
-                <div className="flex items-center justify-center flex-1 p-4 text-[var(--text-lighter)] font-mono text-sm">
+                <div className="flex flex-1 items-center justify-center p-4 font-mono text-sm text-text-lighter">
                   Select a file to edit...
                 </div>
               )}
 
               {/* Footer with indicators */}
-              <div className="flex items-center justify-between px-4 py-2 bg-[var(--secondary-bg)] min-h-[40px] border-t border-[var(--border-color)]">
-                <div className="flex items-center gap-4 font-mono text-xs text-[var(--text-lighter)]">
+              <div className="flex min-h-[40px] items-center justify-between border-border border-t bg-secondary-bg px-4 py-2">
+                <div className="flex items-center gap-4 font-mono text-text-lighter text-xs">
                   {activeBuffer && (
                     <>
-                      <span>
-                        {activeBuffer.content.split("\n").length} lines
-                      </span>
+                      <span>{activeBuffer.content.split("\n").length} lines</span>
                       {(() => {
                         const language = getLanguageFromFilename(
                           getFilenameFromPath(activeBuffer.path),
@@ -1718,16 +1274,17 @@ function App() {
                   {coreFeatures.terminal && (
                     <button
                       onClick={() => {
-                        setBottomPaneActiveTab("terminal");
-                        setIsBottomPaneVisible(
-                          !isBottomPaneVisible ||
-                          bottomPaneActiveTab !== "terminal",
+                        uiState.setBottomPaneActiveTab("terminal");
+                        uiState.setIsBottomPaneVisible(
+                          !uiState.isBottomPaneVisible ||
+                            uiState.bottomPaneActiveTab !== "terminal",
                         );
                       }}
-                      className={`flex items-center gap-1 px-2 py-1 border rounded transition-colors ${isBottomPaneVisible && bottomPaneActiveTab === "terminal"
-                        ? "bg-[var(--selected-color)] border-[var(--border-color)] text-[var(--text-color)]"
-                        : "bg-[var(--primary-bg)] border-[var(--border-color)] text-[var(--text-lighter)] hover:bg-[var(--hover-color)]"
-                        }`}
+                      className={`flex items-center gap-1 rounded border px-2 py-1 transition-colors ${
+                        uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"
+                          ? "border-border bg-selected text-text"
+                          : "border-border bg-primary-bg text-text-lighter hover:bg-hover"
+                      }`}
                       title="Toggle Terminal"
                     >
                       <TerminalIcon size={12} />
@@ -1738,88 +1295,141 @@ function App() {
                   {coreFeatures.diagnostics && (
                     <button
                       onClick={() => {
-                        setBottomPaneActiveTab("diagnostics");
-                        setIsBottomPaneVisible(
-                          !isBottomPaneVisible ||
-                          bottomPaneActiveTab !== "diagnostics",
+                        uiState.setBottomPaneActiveTab("diagnostics");
+                        uiState.setIsBottomPaneVisible(
+                          !uiState.isBottomPaneVisible ||
+                            uiState.bottomPaneActiveTab !== "diagnostics",
                         );
                       }}
-                      className={`flex items-center gap-1 px-2 py-1 border rounded transition-colors ${isBottomPaneVisible &&
-                        bottomPaneActiveTab === "diagnostics"
-                        ? "bg-[var(--selected-color)] border-[var(--border-color)] text-[var(--text-color)]"
-                        : diagnostics.length > 0
-                          ? "bg-[var(--primary-bg)] border-red-300 text-red-600 hover:bg-red-50"
-                          : "bg-[var(--primary-bg)] border-[var(--border-color)] text-[var(--text-lighter)] hover:bg-[var(--hover-color)]"
-                        }`}
+                      className={`flex items-center gap-1 rounded border px-2 py-1 transition-colors ${
+                        uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"
+                          ? "border-border bg-selected text-text"
+                          : diagnostics.length > 0
+                            ? "border-red-300 bg-primary-bg text-red-600 hover:bg-red-50"
+                            : "border-border bg-primary-bg text-text-lighter hover:bg-hover"
+                      }`}
                       title="Toggle Problems Panel"
                     >
                       <AlertCircle size={12} />
                       {diagnostics.length > 0 && (
-                        <span className="text-xs rounded text-center leading-none">
+                        <span className="rounded text-center text-xs leading-none">
                           {diagnostics.length}
                         </span>
                       )}
                     </button>
                   )}
                 </div>
-                <div className="flex items-center gap-4 font-mono text-xs text-[var(--text-lighter)]">
+                <div className="flex items-center gap-4 font-mono text-text-lighter text-xs">
+                  {/* Sidebar Position Toggle */}
+                  <button
+                    onClick={handleToggleSidebarPosition}
+                    className="flex cursor-pointer items-center gap-1 rounded border border-border bg-primary-bg px-2 py-1 transition-colors hover:bg-hover"
+                    title={`Switch sidebar to ${settings.sidebarPosition === "left" ? "right" : "left"} (Cmd+Shift+B)`}
+                  >
+                    <ArrowLeftRight size={12} />
+                  </button>
+
                   {activeBuffer && !activeBuffer.isSQLite && (
                     <button
-                      onClick={() => setIsGitHubCopilotSettingsVisible(true)}
-                      className="flex items-center gap-1 px-2 py-1 bg-[var(--primary-bg)] border border-[var(--border-color)] rounded hover:bg-[var(--hover-color)] transition-colors"
+                      onClick={() => uiState.setIsGitHubCopilotSettingsVisible(true)}
+                      className="flex cursor-pointer items-center gap-1 rounded border border-border bg-primary-bg px-2 py-1 transition-colors hover:bg-hover"
                       title="AI Code Completion Settings"
                     >
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-blue-500"></div>
                       <span>AI Assist</span>
                     </button>
                   )}
-
                 </div>
               </div>
             </div>
 
-            {/* Right Pane */}
-            {coreFeatures.aiChat && (
-              <ResizableRightPane
-                isVisible={isRightPaneVisible}
-                defaultWidth={300}
-                minWidth={200}
-                maxWidth={600}
-              >
-                <AIChat
-                  activeBuffer={activeBuffer}
-                  buffers={buffers}
-                  rootFolderPath={rootFolderPath}
-                  selectedFiles={[]}
-                  mode="chat"
-                  onApplyCode={handleApplyCodeFromChat}
-                />
-              </ResizableRightPane>
-            )}
+            {/* Right Side - File Tree (when sidebar is on right) or AI Chat (when sidebar is on left) */}
+            {settings.sidebarPosition === "right"
+              ? // File Tree on right when sidebar is on right
+                uiState.isSidebarVisible && (
+                  <ResizableRightPane
+                    isVisible={true}
+                    defaultWidth={220}
+                    minWidth={200}
+                    maxWidth={400}
+                    position="right"
+                  >
+                    <MainSidebar
+                      ref={searchViewRef}
+                      isGitViewActive={uiState.isGitViewActive}
+                      isSearchViewActive={uiState.isSearchViewActive}
+                      isRemoteViewActive={uiState.isRemoteViewActive}
+                      isRemoteWindow={isRemoteWindow}
+                      remoteConnectionName={remoteConnectionName || undefined}
+                      coreFeatures={coreFeatures}
+                      files={files}
+                      rootFolderPath={rootFolderPath}
+                      allProjectFiles={allProjectFiles}
+                      activeBufferPath={activeBuffer?.path}
+                      onViewChange={uiState.setActiveView}
+                      onOpenExtensions={handleOpenExtensions}
+                      onOpenFolder={handleOpenFolder}
+                      onCreateNewFile={handleCreateNewFile}
+                      onCreateNewFolderInDirectory={handleCreateNewFolderInDirectory}
+                      onFileSelect={
+                        isRemoteWindow
+                          ? async (path: string, isDir: boolean) => {
+                              if (isDir) {
+                                await handleFolderToggle(path);
+                              } else {
+                                await remoteFileSelect(path, isDir, openBuffer);
+                              }
+                            }
+                          : handleFileSelect
+                      }
+                      onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
+                      onDeletePath={(path: string) => handleDeletePath(path, false)}
+                      onUpdateFiles={setFiles}
+                      onProjectNameMenuOpen={contextMenus.handleProjectNameMenuOpen}
+                      projectName={getProjectName()}
+                    />
+                  </ResizableRightPane>
+                )
+              : // AI Chat on right when sidebar is on left
+                coreFeatures.aiChat && (
+                  <ResizableRightPane
+                    isVisible={uiState.isRightPaneVisible}
+                    defaultWidth={300}
+                    minWidth={280}
+                    maxWidth={600}
+                    position="right"
+                    width={aiChatWidth}
+                    onWidthChange={setAIChatWidth}
+                  >
+                    <AIChat
+                      activeBuffer={activeBuffer}
+                      buffers={buffers}
+                      rootFolderPath={rootFolderPath}
+                      selectedFiles={[]}
+                      allProjectFiles={allProjectFiles}
+                      mode="chat"
+                      onApplyCode={handleApplyCodeFromChat}
+                    />
+                  </ResizableRightPane>
+                )}
           </div>
 
           {/* Bottom Pane */}
           <BottomPane
-            isVisible={isBottomPaneVisible}
-            onClose={() => setIsBottomPaneVisible(false)}
-            activeTab={bottomPaneActiveTab}
-            onTabChange={(tab) => setBottomPaneActiveTab(tab)}
+            isVisible={uiState.isBottomPaneVisible}
+            onClose={() => uiState.setIsBottomPaneVisible(false)}
+            activeTab={uiState.bottomPaneActiveTab}
+            onTabChange={tab => uiState.setBottomPaneActiveTab(tab)}
             diagnostics={diagnostics}
             onDiagnosticClick={handleDiagnosticClick}
-            currentDirectory={
-              files.length > 0
-                ? typeof files[0]?.path === "string"
-                  ? files[0].path.split("/").slice(0, -1).join("/")
-                  : undefined
-                : undefined
-            }
+            currentDirectory={rootFolderPath}
             showTerminal={coreFeatures.terminal}
             showDiagnostics={coreFeatures.diagnostics}
           />
 
           {/* Command Bar */}
           <CommandBar
-            isVisible={isCommandBarVisible}
+            isVisible={uiState.isCommandBarVisible}
             onClose={handleCommandBarClose}
             files={allProjectFiles}
             onFileSelect={handleCommandBarFileSelect}
@@ -1829,20 +1439,14 @@ function App() {
           {/* Command Palette */}
           <CommandPalette
             ref={commandPaletteRef}
-            isVisible={isCommandPaletteVisible}
+            isVisible={uiState.isCommandPaletteVisible}
             onClose={handleCommandPaletteClose}
             onOpenSettings={() => {
               // Create settings JSON buffer with current values
               const settingsContent = JSON.stringify(
                 {
-                  theme: currentTheme,
-                  fontSize: fontSize,
-                  tabSize: tabSize,
-                  wordWrap: wordWrap,
-                  lineNumbers: lineNumbers,
-                  autoSave: autoSave,
-                  vimMode: vimModeEnabled,
-                  aiCompletion: aiCompletion,
+                  ...settings,
+                  maxOpenTabs: maxOpenTabs,
                 },
                 null,
                 2,
@@ -1858,110 +1462,45 @@ function App() {
               );
             }}
             onThemeChange={handleThemeChange}
+            currentTheme={settings.theme}
+            onQuickEditInline={handleQuickEdit}
+            onToggleVimMode={toggleVimMode}
+            vimEnabled={vimEnabled}
           />
 
           {/* GitHub Copilot Settings */}
           <GitHubCopilotSettings
-            isVisible={isGitHubCopilotSettingsVisible}
-            onClose={() => setIsGitHubCopilotSettingsVisible(false)}
+            isVisible={uiState.isGitHubCopilotSettingsVisible}
+            onClose={() => uiState.setIsGitHubCopilotSettingsVisible(false)}
           />
 
           {/* Quick Edit Inline */}
           <QuickEditInline
-            isOpen={isQuickEditVisible}
+            isOpen={quickEdit.isOpen}
             onClose={handleQuickEditClose}
             onApplyEdit={handleQuickEditApply}
-            selectedText={quickEditSelection.text}
-            cursorPosition={quickEditSelection.cursorPosition}
-            filename={
-              activeBuffer ? getFilenameFromPath(activeBuffer.path) : undefined
-            }
+            selectedText={quickEdit.selectedText}
+            cursorPosition={quickEdit.cursorPosition}
+            filename={activeBuffer ? getFilenameFromPath(activeBuffer.path) : undefined}
             language={
               activeBuffer
-                ? getLanguageFromFilename(
-                  getFilenameFromPath(activeBuffer.path),
-                )
+                ? getLanguageFromFilename(getFilenameFromPath(activeBuffer.path))
                 : undefined
             }
           />
 
-
-
           {/* Project Name Menu (Unified) */}
-          {projectNameMenu && (
-            <div
-              className="fixed bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-md shadow-lg z-50 py-1 min-w-[200px]"
-              style={{
-                left: projectNameMenu.x,
-                top: projectNameMenu.y,
-              }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-              }}
-            >
-              <button
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleOpenFolder();
-                  setProjectNameMenu(null);
-                }}
-                className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
-              >
-                <FilePlus size={12} />
-                Add Folder to Workspace
-              </button>
-
-              <button
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleCollapseAllFoldersComplete();
-                  setProjectNameMenu(null);
-                }}
-                className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
-              >
-                <Folder size={12} />
-                Collapse All Folders
-              </button>
-
-              {recentFolders.length > 0 && (
-                <>
-                  <div className="border-t border-[var(--border-color)] my-1"></div>
-                  <div className="px-3 py-1 text-xs font-mono text-[var(--text-lighter)] uppercase tracking-wide">
-                    Recent Folders
-                  </div>
-                  {recentFolders.slice(0, 5).map((folder, index) => (
-                    <button
-                      key={folder.path}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleOpenRecentFolder(folder.path);
-                        setProjectNameMenu(null);
-                      }}
-                      className="w-full text-left px-3 py-1.5 text-xs font-mono text-[var(--text-color)] hover:bg-[var(--hover-color)] flex items-center gap-2"
-                    >
-                      <Folder size={12} />
-                      <div className="flex flex-col items-start min-w-0 flex-1">
-                        <span className="truncate font-medium">{folder.name}</span>
-                      </div>
-                    </button>
-                  ))}
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Image Generation Modal */}
-          <ImageGenerationModal
-            isOpen={isImageGenerationModalOpen}
-            onClose={() => setIsImageGenerationModalOpen(false)}
-            targetFolder={imageGenerationFolder}
-            onImageGenerated={handleImageGenerated}
+          <ProjectNameMenu
+            projectNameMenu={uiState.projectNameMenu}
+            recentFolders={recentFolders}
+            onOpenFolder={handleOpenFolder}
+            onCollapseAllFolders={handleCollapseAllFoldersComplete}
+            onOpenRecentFolder={handleOpenRecentFolder}
+            onCloseMenu={() => uiState.setProjectNameMenu(null)}
           />
 
-
+          {/* Subtle reload notifications */}
+          <FileReloadToast />
         </div>
       </div>
     </div>

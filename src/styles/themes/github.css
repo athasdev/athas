@@ -1,0 +1,101 @@
+/* Force GitHub theme */
+.force-github {
+    --tw-primary-bg: #ffffff;
+    --tw-secondary-bg: #f6f8fa;
+    --tw-text: #24292e;
+    --tw-text-light: #586069;
+    --tw-text-lighter: #6a737d;
+    --tw-border: #e1e4e8;
+    --tw-hover: #f6f8fa;
+    --tw-selected: #e1e4e8;
+
+    /* Syntax highlighting colors - GitHub theme */
+    --tw-syntax-comment: #6a737d;
+    --tw-syntax-keyword: #d73a49;
+    --tw-syntax-string: #032f62;
+    --tw-syntax-number: #005cc5;
+    --tw-syntax-function: #6f42c1;
+    --tw-syntax-variable: #e36209;
+    --tw-syntax-tag: #22863a;
+    --tw-syntax-attribute: #6f42c1;
+    --tw-syntax-punctuation: #24292e;
+}
+
+/* Theme: GitHub Dark */
+.force-github-dark {
+    --tw-primary-bg: #0d1117;
+    --tw-secondary-bg: #161b22;
+    --tw-hover: #21262d;
+    --tw-selected: #30363d;
+    --tw-border: #30363d;
+    --tw-text: #c9d1d9;
+    --tw-text-lighter: #8b949e;
+    --tw-accent: #58a6ff;
+
+    /* Diagnostic colors */
+    --tw-error: #f85149;
+    --tw-warning: #d29922;
+    --tw-info: #58a6ff;
+
+    /* Syntax highlighting */
+    --comment: #8b949e;
+    --keyword: #ff7b72;
+    --string: #a5d6ff;
+    --number: #79c0ff;
+    --function: #d2a8ff;
+    --variable: #c9d1d9;
+    --tag: #7ee787;
+    --attribute: #ffa657;
+    --punctuation: #c9d1d9;
+}
+
+/* Theme: GitHub Light */
+.force-github-light {
+    --tw-primary-bg: #ffffff;
+    --tw-secondary-bg: #f6f8fa;
+    --tw-hover: #f3f4f6;
+    --tw-selected: #e1e4e8;
+    --tw-border: #e1e4e8;
+    --tw-text: #24292e;
+    --tw-text-lighter: #6a737d;
+    --tw-accent: #0366d6;
+
+    /* Diagnostic colors */
+    --tw-error: #d1242f;
+    --tw-warning: #bf8700;
+    --tw-info: #0366d6;
+
+    /* Syntax highlighting */
+    --comment: #6a737d;
+    --keyword: #d73a49;
+    --string: #032f62;
+    --number: #005cc5;
+    --function: #6f42c1;
+    --variable: #24292e;
+    --tag: #22863a;
+    --attribute: #e36209;
+    --punctuation: #24292e;
+}
+
+/* GitHub Dark Dimmed */
+.force-github-dark-dimmed {
+    --tw-primary-bg: #22272e;
+    --tw-secondary-bg: #2d333b;
+    --tw-hover: #373e47;
+    --tw-selected: #444c56;
+    --tw-border: #444c56;
+    --tw-text: #adbac7;
+    --tw-text-lighter: #768390;
+    --tw-accent: #539bf5;
+
+    /* Syntax highlighting */
+    --comment: #768390;
+    --keyword: #f47067;
+    --string: #96d0ff;
+    --number: #6cb6ff;
+    --function: #dcbdfb;
+    --variable: #adbac7;
+    --tag: #8ddb8c;
+    --attribute: #f69d50;
+    --punctuation: #adbac7;
+}

@@ -3,9 +3,10 @@ name = "athas-code"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
-edition = "2021"
+edition = "2024"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lints]
+workspace = true
 
 [lib]
 name = "athas_text_lib"
@@ -15,31 +16,45 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["protocol-asset", "macos-private-api"] }
-tauri-plugin-opener = "2"
-tauri-plugin-dialog = "2"
-tauri-plugin-fs = "2"
-tauri-plugin-shell = "2"
-tauri-plugin-store = "2"
-tauri-plugin-os = "2"
-tauri-plugin-http = "2"
+anyhow = "1.0"
+base64 = "0.21"
+chrono = { version = "0.4.41", features = ["serde"] }
+colored = "3.0.0"
+crossbeam-channel = "0.5"
+env_logger = "0.11.8"
+futures-util = "0.3"
+git2 = "0.18"
+interceptor = { path = "../interceptor" }
+lazy_static = "1.4"
+log = "0.4.27"
+lsp-types = { version = "0.95", features = ["proposed"] }
+notify = "8.1.0"
+notify-debouncer-mini = "0.6.0"
+portable-pty = "0.8"
+rusqlite = { version = "0.29.0", features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-rusqlite = { version = "0.29.0", features = ["bundled"] }
-git2 = "0.18"
-window-vibrancy = "0.6.0"
-uuid = { version = "1.0", features = ["v4"] }
 ssh2 = "0.9"
+tauri = { version = "2", features = ["protocol-asset", "macos-private-api"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-http = "2"
+tauri-plugin-log = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-os = "2"
+tauri-plugin-process = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-store = "2"
 tokio = { version = "1.0", features = ["full"] }
-async-std = "1.12"
-lazy_static = "1.4"
-portable-pty = "0.8"
-anyhow = "1.0"
+unicode-width = "0.2.1"
+url = "2.5"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+vt100 = "0.15"
+window-vibrancy = "0.6.0"
+
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-window-state = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-cocoa = "0.25.0"
-objc = "0.2.7"
 rand = "0.8.5"

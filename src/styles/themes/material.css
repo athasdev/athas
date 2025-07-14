@@ -1,0 +1,91 @@
+/* Force Material theme */
+.force-material {
+    --tw-primary-bg: #263238;
+    --tw-secondary-bg: #37474f;
+    --tw-text: #eceff1;
+    --tw-text-light: #b0bec5;
+    --tw-text-lighter: #78909c;
+    --tw-border: #455a64;
+    --tw-hover: #37474f;
+    --tw-selected: #455a64;
+
+    /* Syntax highlighting colors - Material theme */
+    --tw-syntax-comment: #546e7a;
+    --tw-syntax-keyword: #c792ea;
+    --tw-syntax-string: #c3e88d;
+    --tw-syntax-number: #f78c6c;
+    --tw-syntax-function: #82aaff;
+    --tw-syntax-variable: #f07178;
+    --tw-syntax-tag: #ff5370;
+    --tw-syntax-attribute: #82aaff;
+    --tw-syntax-punctuation: #eceff1;
+}
+
+/* Theme: Material Deep Ocean */
+.force-material-deep-ocean {
+    --tw-primary-bg: #0f111a;
+    --tw-secondary-bg: #181a1f;
+    --tw-hover: #1c1f2b;
+    --tw-selected: #232637;
+    --tw-border: #232637;
+    --tw-text: #8f93a2;
+    --tw-text-lighter: #464b5d;
+    --tw-accent: #84ffff;
+
+    /* Syntax highlighting */
+    --comment: #464b5d;
+    --keyword: #c792ea;
+    --string: #c3e88d;
+    --number: #f78c6c;
+    --function: #82aaff;
+    --variable: #8f93a2;
+    --tag: #f07178;
+    --attribute: #ffcb6b;
+    --punctuation: #89ddff;
+}
+
+/* Theme: Material Palenight */
+.force-material-palenight {
+    --tw-primary-bg: #292d3e;
+    --tw-secondary-bg: #2f3347;
+    --tw-hover: #383c4a;
+    --tw-selected: #434758;
+    --tw-border: #434758;
+    --tw-text: #a6accd;
+    --tw-text-lighter: #676e95;
+    --tw-accent: #82aaff;
+
+    /* Syntax highlighting */
+    --comment: #676e95;
+    --keyword: #c792ea;
+    --string: #c3e88d;
+    --number: #f78c6c;
+    --function: #82aaff;
+    --variable: #a6accd;
+    --tag: #f07178;
+    --attribute: #ffcb6b;
+    --punctuation: #89ddff;
+}
+
+/* Material Lighter */
+.force-material-lighter {
+    --tw-primary-bg: #fafafa;
+    --tw-secondary-bg: #f4f4f4;
+    --tw-hover: #e7e7e7;
+    --tw-selected: #d3d3d3;
+    --tw-border: #d3d3d3;
+    --tw-text: #90a4ae;
+    --tw-text-lighter: #ccd7da;
+    --tw-accent: #39adb5;
+
+    /* Syntax highlighting */
+    --comment: #ccd7da;
+    --keyword: #7c4dff;
+    --string: #91b859;
+    --number: #f76d47;
+    --function: #6182b8;
+    --variable: #90a4ae;
+    --tag: #e53935;
+    --attribute: #f76d47;
+    --punctuation: #39adb5;
+}

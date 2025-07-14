@@ -1,33 +1,19 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
-import {
-  Bot,
-  Database,
-  FileText,
-  X,
-  Plus,
-  ChevronDown,
-  Square,
-  MessageSquare,
-  Send,
-} from "lucide-react";
+import { Bot, MessageSquare, Plus } from "lucide-react";
+import type React from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { useAIChatStore } from "../../stores/ai-chat-store";
+import { usePersistentSettingsStore } from "../../stores/persistent-settings-store";
+import { getProviderById } from "../../types/ai-provider";
+import { getChatCompletionStream } from "../../utils/ai-chat";
 import { cn } from "../../utils/cn";
-import {
-  getProviderApiToken,
-  getChatCompletionStream,
-  storeProviderApiToken,
-  removeProviderApiToken,
-  validateProviderApiKey,
-} from "../../utils/ai-chat";
-import { AI_PROVIDERS, getModelById } from "../../types/ai-provider";
-import ModelProviderSelector from "../model-provider-selector";
 import ApiKeyModal from "../api-key-modal";
-import Button from "../button";
-import MarkdownRenderer from "./markdown-renderer";
+import AIChatInputBar from "./ai-chat-input-bar";
 import ChatHistoryModal from "./chat-history-modal";
-import { AIChatProps, Message, Chat, ContextInfo } from "./types";
+import MarkdownRenderer from "./markdown-renderer";
+import { parseMentionsAndLoadFiles } from "./mention-utils";
+import ToolCallDisplay from "./tool-call-display";
+import type { AIChatProps, ContextInfo, Message } from "./types";
 import { formatTime } from "./utils";
-import OutlineView from "../outline-view";
-import { getLanguageFromFilename } from "../../utils/file-utils";
 
 export default function AIChat({
   className,
@@ -35,261 +21,83 @@ export default function AIChat({
   buffers = [],
   rootFolderPath,
   selectedFiles = [],
-  mode,
+  allProjectFiles = [],
+  mode: _,
   onApplyCode,
 }: AIChatProps) {
-  // Chat History State
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const [isChatHistoryVisible, setIsChatHistoryVisible] = useState(false);
+  // Provider and Model State from persistent store
+  const { aiProviderId, aiModelId, setAIProviderAndModel } = usePersistentSettingsStore();
 
-  // Provider and Model State
-  const [currentProviderId, setCurrentProviderId] = useState("openai");
-  const [currentModelId, setCurrentModelId] = useState("gpt-4o-mini");
-  const [providerApiKeys, setProviderApiKeys] = useState<Map<string, boolean>>(
-    new Map(),
-  );
-  const [apiKeyModalState, setApiKeyModalState] = useState<{
-    isOpen: boolean;
-    providerId: string | null;
-  }>({ isOpen: false, providerId: null });
+  // Get store state selectively to avoid re-renders
+  const input = useAIChatStore(state => state.input);
+  const selectedBufferIds = useAIChatStore(state => state.selectedBufferIds);
+  const hasApiKey = useAIChatStore(state => state.hasApiKey);
+  const chats = useAIChatStore(state => state.chats);
+  const currentChatId = useAIChatStore(state => state.currentChatId);
+  const isChatHistoryVisible = useAIChatStore(state => state.isChatHistoryVisible);
+  const apiKeyModalState = useAIChatStore(state => state.apiKeyModalState);
 
-  // Chat State
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(false);
-  const [selectedBufferIds, setSelectedBufferIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [isContextDropdownOpen, setIsContextDropdownOpen] = useState(false);
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
-    null,
-  );
-  const [isSendAnimating, setIsSendAnimating] = useState(false);
+  // Get store actions (these are stable references)
+  const autoSelectBuffer = useAIChatStore(state => state.autoSelectBuffer);
+  const checkApiKey = useAIChatStore(state => state.checkApiKey);
+  const checkAllProviderApiKeys = useAIChatStore(state => state.checkAllProviderApiKeys);
+  const setInput = useAIChatStore(state => state.setInput);
+  const setIsTyping = useAIChatStore(state => state.setIsTyping);
+  const setStreamingMessageId = useAIChatStore(state => state.setStreamingMessageId);
+  const createNewChat = useAIChatStore(state => state.createNewChat);
+  const deleteChat = useAIChatStore(state => state.deleteChat);
+  const updateChatTitle = useAIChatStore(state => state.updateChatTitle);
+  const addMessage = useAIChatStore(state => state.addMessage);
+  const updateMessage = useAIChatStore(state => state.updateMessage);
+  const setIsChatHistoryVisible = useAIChatStore(state => state.setIsChatHistoryVisible);
+  const setApiKeyModalState = useAIChatStore(state => state.setApiKeyModalState);
+  const saveApiKey = useAIChatStore(state => state.saveApiKey);
+  const removeApiKey = useAIChatStore(state => state.removeApiKey);
+  const hasProviderApiKey = useAIChatStore(state => state.hasProviderApiKey);
+  const getCurrentChat = useAIChatStore(state => state.getCurrentChat);
+  const getCurrentMessages = useAIChatStore(state => state.getCurrentMessages);
+  const switchToChat = useAIChatStore(state => state.switchToChat);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const contextDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Get current chat
-  const currentChat = chats.find((chat) => chat.id === currentChatId);
-  const messages = currentChat?.messages || [];
-
-  // Theme detection removed - was causing unnecessary re-renders
-
-  // Click outside handler for context dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        contextDropdownRef.current &&
-        !contextDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsContextDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Load chats from localStorage on mount
-  useEffect(() => {
-    const savedChats = localStorage.getItem("athas-code-ai-chats");
-    if (savedChats) {
-      try {
-              const parsedChats = JSON.parse(savedChats).map((chat: any) => ({
-        ...chat,
-        createdAt: new Date(chat.createdAt),
-        lastMessageAt: new Date(chat.lastMessageAt),
-        messages: chat.messages.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        })),
-      }));
-        setChats(parsedChats);
-
-        // Set the most recent chat as current
-        if (parsedChats.length > 0) {
-          const mostRecent = parsedChats.sort(
-            (a: Chat, b: Chat) =>
-              b.lastMessageAt.getTime() - a.lastMessageAt.getTime(),
-          )[0];
-          setCurrentChatId(mostRecent.id);
-        }
-      } catch (error) {
-        console.error("Error loading chat history:", error);
-      }
-    }
-  }, []);
-
-  // Save chats to localStorage whenever chats change (debounced)
-  useEffect(() => {
-    if (chats.length > 0) {
-      const timeoutId = setTimeout(() => {
-        localStorage.setItem("athas-code-ai-chats", JSON.stringify(chats));
-      }, 1000); // Debounce localStorage writes by 1 second
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [chats]);
-
-  // Create a new chat
-  const createNewChat = () => {
-    const newChat: Chat = {
-      id: Date.now().toString(),
-      title: "New Chat",
-      messages: [],
-      createdAt: new Date(),
-      lastMessageAt: new Date(),
-    };
-
-    setChats((prev) => [newChat, ...prev]);
-    setCurrentChatId(newChat.id);
-    setIsChatHistoryVisible(false);
-  };
-
-  // Switch to a different chat
-  const switchToChat = (chatId: string) => {
-    setCurrentChatId(chatId);
-    setIsChatHistoryVisible(false);
-    // Stop any current streaming
-    stopStreaming();
-  };
-
-  // Delete a chat
-  const deleteChat = (chatId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    setChats((prev) => prev.filter((chat) => chat.id !== chatId));
-
-    // If we deleted the current chat, switch to the most recent one or create new
-    if (chatId === currentChatId) {
-      const remainingChats = chats.filter((chat) => chat.id !== chatId);
-      if (remainingChats.length > 0) {
-        const mostRecent = remainingChats.sort(
-          (a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime(),
-        )[0];
-        setCurrentChatId(mostRecent.id);
-      } else {
-        setCurrentChatId(null);
-      }
-    }
-  };
-
-  // Update chat title based on first message
-  const updateChatTitle = (chatId: string, firstMessage: string) => {
-    const title =
-      firstMessage.length > 50
-        ? firstMessage.substring(0, 50) + "..."
-        : firstMessage;
-
-    setChats((prev) =>
-      prev.map((chat) => (chat.id === chatId ? { ...chat, title } : chat)),
-    );
-  };
-
-  // Update messages in current chat
-  const updateMessages = (newMessages: Message[]) => {
-    if (!currentChatId) return;
-
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === currentChatId
-          ? {
-              ...chat,
-              messages: newMessages,
-              lastMessageAt: new Date(),
-            }
-          : chat,
-      ),
-    );
-  };
-
-  // Check for API key on mount
-  useEffect(() => {
-    checkApiKey();
-  }, []);
+  // Get current chat and messages directly from store
+  const currentChat = getCurrentChat();
+  const messages = getCurrentMessages();
 
   // Auto-select active buffer when it changes
   useEffect(() => {
     if (activeBuffer) {
-      setSelectedBufferIds((prev) => new Set([...prev, activeBuffer.id]));
+      autoSelectBuffer(activeBuffer.id);
     }
-  }, [activeBuffer?.id]);
+  }, [activeBuffer, autoSelectBuffer]);
 
-  const checkApiKey = async () => {
-    try {
-      const token = await getProviderApiToken(currentProviderId);
-      setHasApiKey(!!token);
-    } catch (error) {
-      console.error("Error checking API key:", error);
-      setHasApiKey(false);
-    }
-  };
-
-  const checkAllProviderApiKeys = async () => {
-    const newApiKeyMap = new Map<string, boolean>();
-
-    for (const provider of AI_PROVIDERS) {
-      try {
-        const token = await getProviderApiToken(provider.id);
-        newApiKeyMap.set(provider.id, !!token);
-      } catch (error) {
-        newApiKeyMap.set(provider.id, false);
-      }
-    }
-
-    setProviderApiKeys(newApiKeyMap);
-  };
-
-  // Check for API key on mount and when provider changes
+  // Check API keys on mount and when provider changes
   useEffect(() => {
-    checkApiKey();
-  }, [currentProviderId]);
-
-  // Check all provider API keys on mount
-  useEffect(() => {
+    checkApiKey(aiProviderId);
     checkAllProviderApiKeys();
+  }, [aiProviderId, checkApiKey, checkAllProviderApiKeys]);
+
+  // Wrapper for deleteChat to handle event
+  const handleDeleteChat = (chatId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    deleteChat(chatId);
+  };
+
+  // Scroll to bottom helper
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  // Auto-scroll to bottom when new messages are added
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // Get selected buffers for context (memoized)
-  const getSelectedBuffers = useMemo(() => {
-    return buffers.filter((buffer) => selectedBufferIds.has(buffer.id));
-  }, [buffers, selectedBufferIds]);
-
-  // Calculate approximate tokens (memoized)
-  const calculateTokens = useMemo(() => {
-    let totalChars = input.length;
-
-    // Add characters from selected buffers (approximate)
-    getSelectedBuffers.forEach((buffer) => {
-      if (buffer.content && !buffer.isSQLite) {
-        totalChars += buffer.content.length;
-      }
-    });
-
-    // Rough approximation: 1 token ≈ 4 characters for English text
-    const estimatedTokens = Math.ceil(totalChars / 4);
-
-    // Get max tokens from current model
-    const currentModel = getModelById(currentProviderId, currentModelId);
-    const maxTokens = currentModel?.maxTokens || 4096; // Fallback to 4k tokens
-
-    return { estimatedTokens, maxTokens };
-  }, [input, getSelectedBuffers, currentProviderId, currentModelId]);
-
-  // Build context information for the AI (memoized)
-  const buildContext = useMemo((): ContextInfo => {
+  // Build context information for the AI (simplified, no memoization needed)
+  const buildContext = (): ContextInfo => {
+    const selectedBuffers = buffers.filter(buffer => selectedBufferIds.has(buffer.id));
     const context: ContextInfo = {
       activeBuffer: activeBuffer || undefined,
-      openBuffers: getSelectedBuffers,
+      openBuffers: selectedBuffers,
       selectedFiles,
       projectRoot: rootFolderPath,
+      providerId: aiProviderId,
     };
 
     if (activeBuffer) {
@@ -320,7 +128,7 @@ export default function AIChat({
     }
 
     return context;
-  }, [activeBuffer, getSelectedBuffers, selectedFiles, rootFolderPath]);
+  };
 
   // Stop streaming response
   const stopStreaming = () => {
@@ -335,31 +143,19 @@ export default function AIChat({
   const sendMessage = async () => {
     if (!input.trim() || !hasApiKey) return;
 
-    // Trigger send animation
-    setIsSendAnimating(true);
-    
-    // Reset animation after the flying animation completes
-    setTimeout(() => setIsSendAnimating(false), 800);
-
     // Create a new chat if we don't have one
     let chatId = currentChatId;
     if (!chatId) {
-      const newChat: Chat = {
-        id: Date.now().toString(),
-        title: "New Chat",
-        messages: [],
-        createdAt: new Date(),
-        lastMessageAt: new Date(),
-      };
-      setChats((prev) => [newChat, ...prev]);
-      chatId = newChat.id;
-      setCurrentChatId(chatId);
+      chatId = createNewChat();
     }
 
-    const context = buildContext;
+    // Parse @ mentions and load referenced files
+    const { processedMessage } = await parseMentionsAndLoadFiles(input.trim(), allProjectFiles);
+
+    const context = buildContext();
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: input.trim(),
+      content: input.trim(), // Show original message to user
       role: "user",
       timestamp: new Date(),
     };
@@ -374,17 +170,25 @@ export default function AIChat({
       isStreaming: true,
     };
 
-    const newMessages = [...messages, userMessage, assistantMessage];
-    updateMessages(newMessages);
+    // Add messages to chat
+    addMessage(chatId, userMessage);
+    addMessage(chatId, assistantMessage);
 
     // Update chat title if this is the first message
     if (messages.length === 0) {
-      updateChatTitle(chatId, userMessage.content);
+      const title =
+        userMessage.content.length > 50
+          ? `${userMessage.content.substring(0, 50)}...`
+          : userMessage.content;
+      updateChatTitle(chatId, title);
     }
 
     setInput("");
     setIsTyping(true);
     setStreamingMessageId(assistantMessageId);
+
+    // Scroll to bottom after adding messages
+    requestAnimationFrame(scrollToBottom);
 
     // Create abort controller for this request
     abortControllerRef.current = new AbortController();
@@ -393,53 +197,34 @@ export default function AIChat({
       // Build conversation context - include previous messages for continuity
       // Filter out system messages to avoid the linter error
       const conversationContext = messages
-        .filter((msg) => msg.role !== "system")
-        .map((msg) => ({
+        .filter(msg => msg.role !== "system")
+        .map(msg => ({
           role: msg.role as "user" | "assistant",
           content: msg.content,
         }));
 
-      const enhancedMessage = userMessage.content;
+      // Use the processed message with file contents for the AI
+      const enhancedMessage = processedMessage;
+      let currentAssistantMessageId = assistantMessageId;
 
       await getChatCompletionStream(
-        currentProviderId,
-        currentModelId,
+        aiProviderId,
+        aiModelId,
         enhancedMessage,
         context,
         // onChunk - update the streaming message
         (chunk: string) => {
-          setChats((prev) =>
-            prev.map((chat) =>
-              chat.id === chatId
-                ? {
-                    ...chat,
-                    messages: chat.messages.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: msg.content + chunk }
-                        : msg,
-                    ),
-                  }
-                : chat,
-            ),
-          );
+          const currentMessages = getCurrentMessages();
+          const currentMsg = currentMessages.find(m => m.id === currentAssistantMessageId);
+          updateMessage(chatId, currentAssistantMessageId, {
+            content: (currentMsg?.content || "") + chunk,
+          });
+          // Scroll during streaming
+          requestAnimationFrame(scrollToBottom);
         },
         // onComplete - mark streaming as finished
         () => {
-          setChats((prev) =>
-            prev.map((chat) =>
-              chat.id === chatId
-                ? {
-                    ...chat,
-                    messages: chat.messages.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, isStreaming: false }
-                        : msg,
-                    ),
-                    lastMessageAt: new Date(),
-                  }
-                : chat,
-            ),
-          );
+          updateMessage(chatId, currentAssistantMessageId, { isStreaming: false });
           setIsTyping(false);
           setStreamingMessageId(null);
           abortControllerRef.current = null;
@@ -447,80 +232,78 @@ export default function AIChat({
         // onError - handle errors
         (error: string) => {
           console.error("Streaming error:", error);
-          setChats((prev) =>
-            prev.map((chat) =>
-              chat.id === chatId
-                ? {
-                    ...chat,
-                    messages: chat.messages.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? {
-                            ...msg,
-                            content: msg.content || `Error: ${error}`,
-                            isStreaming: false,
-                          }
-                        : msg,
-                    ),
-                  }
-                : chat,
-            ),
-          );
+          const currentMessages = getCurrentMessages();
+          const currentMsg = currentMessages.find(m => m.id === currentAssistantMessageId);
+          updateMessage(chatId, currentAssistantMessageId, {
+            content: currentMsg?.content || `Error: ${error}`,
+            isStreaming: false,
+          });
           setIsTyping(false);
           setStreamingMessageId(null);
           abortControllerRef.current = null;
         },
         conversationContext, // Pass conversation history for context
+        // onNewMessage - create a new assistant message
+        () => {
+          const newMessageId = Date.now().toString();
+          const newAssistantMessage: Message = {
+            id: newMessageId,
+            content: "",
+            role: "assistant",
+            timestamp: new Date(),
+            isStreaming: true,
+          };
+
+          addMessage(chatId, newAssistantMessage);
+
+          // Update the current message ID to append chunks to the new message
+          currentAssistantMessageId = newMessageId;
+          setStreamingMessageId(newMessageId);
+          requestAnimationFrame(scrollToBottom);
+        },
+        // onToolUse - mark the current message as tool use
+        (toolName: string, toolInput?: any) => {
+          const currentMessages = getCurrentMessages();
+          const currentMsg = currentMessages.find(m => m.id === currentAssistantMessageId);
+          updateMessage(chatId, currentAssistantMessageId, {
+            isToolUse: true,
+            toolName,
+            toolCalls: [
+              ...(currentMsg?.toolCalls || []),
+              {
+                name: toolName,
+                input: toolInput,
+                timestamp: new Date(),
+              },
+            ],
+          });
+        },
+        // onToolComplete - mark tool as complete
+        (toolName: string) => {
+          const currentMessages = getCurrentMessages();
+          const currentMsg = currentMessages.find(m => m.id === currentAssistantMessageId);
+          updateMessage(chatId, currentAssistantMessageId, {
+            toolCalls: currentMsg?.toolCalls?.map(tc =>
+              tc.name === toolName && !tc.isComplete ? { ...tc, isComplete: true } : tc,
+            ),
+          });
+        },
       );
     } catch (error) {
       console.error("Failed to start streaming:", error);
-      setChats((prev) =>
-        prev.map((chat) =>
-          chat.id === chatId
-            ? {
-                ...chat,
-                messages: chat.messages.map((msg) =>
-                  msg.id === assistantMessageId
-                    ? {
-                        ...msg,
-                        content:
-                          "Error: Failed to connect to AI service. Please check your API key and try again.",
-                        isStreaming: false,
-                      }
-                    : msg,
-                ),
-              }
-            : chat,
-        ),
-      );
+      updateMessage(chatId, assistantMessageId, {
+        content: "Error: Failed to connect to AI service. Please check your API key and try again.",
+        isStreaming: false,
+      });
       setIsTyping(false);
       setStreamingMessageId(null);
       abortControllerRef.current = null;
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  const toggleBufferSelection = (bufferId: string) => {
-    setSelectedBufferIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(bufferId)) {
-        newSet.delete(bufferId);
-      } else {
-        newSet.add(bufferId);
-      }
-      return newSet;
-    });
-  };
-
   // Handle provider/model selection
   const handleProviderChange = (providerId: string, modelId: string) => {
-    setCurrentProviderId(providerId);
-    setCurrentModelId(modelId);
+    setAIProviderAndModel(providerId, modelId);
   };
 
   // Handle API key request
@@ -528,68 +311,11 @@ export default function AIChat({
     setApiKeyModalState({ isOpen: true, providerId });
   };
 
-  // Check if provider has API key
-  const hasProviderApiKey = (providerId: string): boolean => {
-    return providerApiKeys.get(providerId) || false;
-  };
-
-  // Handle API key save
-  const handleApiKeySave = async (
-    providerId: string,
-    apiKey: string,
-  ): Promise<boolean> => {
-    try {
-      const isValid = await validateProviderApiKey(providerId, apiKey);
-      if (isValid) {
-        await storeProviderApiToken(providerId, apiKey);
-        await checkAllProviderApiKeys(); // Refresh all keys
-        await checkApiKey(); // Refresh current provider key
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Error saving API key:", error);
-      return false;
-    }
-  };
-
-  // Handle API key removal
-  const handleApiKeyRemove = async (providerId: string): Promise<void> => {
-    try {
-      await removeProviderApiToken(providerId);
-      await checkAllProviderApiKeys(); // Refresh all keys
-      await checkApiKey(); // Refresh current provider key
-    } catch (error) {
-      console.error("Error removing API key:", error);
-      throw error;
-    }
-  };
-
-  const { estimatedTokens, maxTokens } = calculateTokens;
-
-  if (mode === "outline") {
-    const handleOutlineItemClick = (line: number) => {
-      const event = new CustomEvent('navigate-to-line', { 
-        detail: { line } 
-      })
-      window.dispatchEvent(event)
-    }
-
-    return (
-      <OutlineView
-        content={activeBuffer?.content}
-        language={activeBuffer ? getLanguageFromFilename(activeBuffer.name) : undefined}
-        onItemClick={handleOutlineItemClick}
-        className={className}
-      />
-    );
-  }
-
   return (
     <div
       className={cn(
-        "flex flex-col h-full font-mono text-xs",
-        "bg-[var(--primary-bg)] text-[var(--text-color)]",
+        "ai-chat-container flex h-full flex-col font-mono text-xs",
+        "bg-primary-bg text-text",
         className,
       )}
       style={{
@@ -607,19 +333,17 @@ export default function AIChat({
       >
         <button
           onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-          className="p-1 rounded transition-colors hover:bg-[var(--hover-color)]"
+          className="rounded p-1 transition-colors hover:bg-hover"
           style={{ color: "var(--text-lighter)" }}
           title="Toggle chat history"
         >
           <MessageSquare size={14} />
         </button>
-        <span className="font-medium">
-          {currentChat ? currentChat.title : "New Chat"}
-        </span>
+        <span className="font-medium">{currentChat ? currentChat.title : "New Chat"}</span>
         <div className="flex-1" />
         <button
-          onClick={createNewChat}
-          className="flex items-center gap-1 px-2 py-1 rounded transition-colors hover:bg-[var(--hover-color)]"
+          onClick={() => createNewChat()}
+          className="flex items-center gap-1 rounded px-2 py-1 transition-colors hover:bg-hover"
           style={{ color: "var(--text-lighter)" }}
           title="New chat"
         >
@@ -628,9 +352,9 @@ export default function AIChat({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div className="custom-scrollbar flex-1 overflow-y-auto">
         {messages.length === 0 && (
-          <div className="flex items-center justify-center h-full p-4 text-center">
+          <div className="flex h-full items-center justify-center p-4 text-center">
             <div>
               <Bot size={24} className="mx-auto mb-2 opacity-50" />
               <div className="text-sm">AI Assistant</div>
@@ -641,307 +365,114 @@ export default function AIChat({
           </div>
         )}
 
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`p-3 ${message.role === "user" ? "flex justify-end" : ""}`}
-          >
-            {message.role === "user" ? (
-              /* User Message - Subtle Chat Bubble */
-              <div className="max-w-[80%] flex flex-col items-end">
-                <div
-                  className="px-3 py-2 rounded-lg rounded-br-none"
-                  style={{
-                    background: "var(--secondary-bg)",
-                    border: "1px solid var(--border-color)",
-                  }}
-                >
-                  <div className="whitespace-pre-wrap break-words">
-                    {message.content}
-                  </div>
-                </div>
-                <div
-                  className="mt-1 px-1"
-                  style={{ color: "var(--text-lighter)" }}
-                >
-                  {formatTime(message.timestamp)}
-                </div>
-              </div>
-            ) : (
-              /* Assistant Message - Full Width with Header */
-              <div className="w-full">
-                {/* AI Message Header */}
-                <div className="flex items-center gap-2 mb-2">
+        {messages.map((message, index) => {
+          // Check if this is the first assistant message in a sequence
+          const isFirstAssistantInSequence =
+            message.role === "assistant" &&
+            (index === 0 || messages[index - 1].role !== "assistant");
+
+          return (
+            <div
+              key={message.id}
+              className={`${message.role === "user" ? "flex justify-end p-3" : "p-3"}`}
+            >
+              {message.role === "user" ? (
+                /* User Message - Subtle Chat Bubble */
+                <div className="flex max-w-[80%] flex-col items-end">
                   <div
-                    className="flex items-center gap-1"
-                    style={{ color: "var(--text-lighter)" }}
+                    className="rounded-lg rounded-br-none px-3 py-2"
+                    style={{
+                      background: "var(--secondary-bg)",
+                      border: "1px solid var(--border-color)",
+                    }}
                   >
-                    <Bot size={10} />
-                    <span>ai</span>
-                    {message.isStreaming && (
-                      <div className="flex items-center gap-1 ml-1">
-                        <span className="w-1 h-1 rounded-full animate-pulse bg-[var(--text-lighter)]" />
-                        <span
-                          className="w-1 h-1 rounded-full animate-pulse bg-[var(--text-lighter)]"
-                          style={{ animationDelay: "0.2s" }}
-                        />
-                        <span
-                          className="w-1 h-1 rounded-full animate-pulse bg-[var(--text-lighter)]"
-                          style={{ animationDelay: "0.4s" }}
-                        />
-                      </div>
-                    )}
+                    <div className="whitespace-pre-wrap break-words">{message.content}</div>
                   </div>
-                  <div className="flex-1" />
-                  <span style={{ color: "var(--text-lighter)" }}>
-                    {formatTime(message.timestamp)}
-                  </span>
                 </div>
+              ) : (
+                /* Assistant Message - Full Width with Header */
+                <div className="w-full">
+                  {/* AI Message Header - Only show for first message in sequence */}
+                  {isFirstAssistantInSequence && (
+                    <div className="mb-2 flex items-center gap-2">
+                      <div
+                        className="flex items-center gap-1"
+                        style={{ color: "var(--text-lighter)" }}
+                      >
+                        <span>{getProviderById(aiProviderId)?.name || aiProviderId}</span>
+                        {message.isStreaming && (
+                          <div className="ml-1 flex items-center gap-1">
+                            <span className="h-1 w-1 animate-pulse rounded-full bg-text-lighter" />
+                            <span
+                              className="h-1 w-1 animate-pulse rounded-full bg-text-lighter"
+                              style={{ animationDelay: "0.2s" }}
+                            />
+                            <span
+                              className="h-1 w-1 animate-pulse rounded-full bg-text-lighter"
+                              style={{ animationDelay: "0.4s" }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-                {/* AI Message Content */}
-                <div className="leading-relaxed pr-1">
-                  <MarkdownRenderer
-                    content={message.content}
-                    onApplyCode={onApplyCode}
-                  />
+                  {/* Tool Calls */}
+                  {message.toolCalls && message.toolCalls.length > 0 && (
+                    <div className="mb-3 space-y-2">
+                      {message.toolCalls!.map((toolCall, toolIndex) => (
+                        <ToolCallDisplay
+                          key={`${message.id}-tool-${toolIndex}`}
+                          toolName={toolCall.name}
+                          input={toolCall.input}
+                          output={toolCall.output}
+                          error={toolCall.error}
+                          isStreaming={!toolCall.isComplete && message.isStreaming}
+                        />
+                      ))}
+                    </div>
+                  )}
 
-                  {message.isStreaming && (
-                    <span className="inline-block w-2 h-4 animate-pulse ml-1 bg-[var(--text-lighter)]" />
+                  {/* AI Message Content */}
+                  {message.content && (
+                    <div className="pr-1 leading-relaxed">
+                      <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
+
+                      {message.isStreaming && (
+                        <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-[var(--text-lighter)]" />
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div
-        style={{
-          background: "var(--secondary-bg)",
-          borderTop: "1px solid var(--border-color)",
-        }}
-      >
-        {/* Model Provider Selector and Mode Toggle */}
-        <div className="px-2 py-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {/* Context Selector Dropdown */}
-              <div className="relative" ref={contextDropdownRef}>
-                <button
-                  onClick={() =>
-                    setIsContextDropdownOpen(!isContextDropdownOpen)
-                  }
-                  className="flex items-center gap-1 px-2 pt-2 rounded transition-colors hover:bg-[var(--hover-color)]"
-                  style={{ color: "var(--text-lighter)" }}
-                  title="Add context files"
-                >
-                  <FileText size={12} />
-                  <span>Context ({selectedBufferIds.size})</span>
-                  <ChevronDown size={10} />
-                </button>
-
-                {isContextDropdownOpen && (
-                  <div
-                    className="absolute top-full left-0 mt-1 w-64 max-h-64 overflow-y-auto rounded shadow-lg z-50"
-                    style={{
-                      background: "var(--primary-bg)",
-                      border: "1px solid var(--border-color)",
-                    }}
-                  >
-                    <div className="p-2">
-                      <div
-                        className="text-xs mb-2"
-                        style={{ color: "var(--text-lighter)" }}
-                      >
-                        Select files to include as context:
-                      </div>
-                      {buffers.length === 0 ? (
-                        <div
-                          className="text-xs p-2"
-                          style={{ color: "var(--text-lighter)" }}
-                        >
-                          No files available
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          {buffers.map((buffer) => (
-                            <label
-                              key={buffer.id}
-                              className="flex items-center gap-2 p-1 rounded cursor-pointer hover:bg-[var(--hover-color)]"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedBufferIds.has(buffer.id)}
-                                onChange={() =>
-                                  toggleBufferSelection(buffer.id)
-                                }
-                                className="w-3 h-3"
-                              />
-                              <div className="flex items-center gap-1 flex-1 min-w-0">
-                                {buffer.isSQLite ? (
-                                  <Database size={10} />
-                                ) : (
-                                  <FileText size={10} />
-                                )}
-                                <span className="truncate text-xs">
-                                  {buffer.name}
-                                </span>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Context badges */}
-        {selectedBufferIds.size > 0 && (
-          <div className="px-3 py-2">
-            <div className="flex items-center gap-1 flex-wrap">
-              {Array.from(selectedBufferIds).map((bufferId) => {
-                const buffer = buffers.find((b) => b.id === bufferId);
-                if (!buffer) return null;
-                return (
-                  <div
-                    key={bufferId}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-xs"
-                    style={{
-                      background: "var(--hover-color)",
-                      border: "1px solid var(--border-color)",
-                    }}
-                  >
-                    {buffer.isSQLite ? (
-                      <Database size={8} />
-                    ) : (
-                      <FileText size={8} />
-                    )}
-                    <span className="truncate max-w-20">{buffer.name}</span>
-                    <button
-                      onClick={() => toggleBufferSelection(bufferId)}
-                      className="transition-colors hover:text-red-400"
-                      style={{ color: "var(--text-lighter)" }}
-                    >
-                      <X size={8} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        <div className="p-3">
-          <div className="flex gap-2">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                hasApiKey
-                  ? "Ask about your code..."
-                  : "Configure API key to enable AI chat..."
-              }
-              disabled={isTyping || !hasApiKey}
-              className="flex-1 resize-none px-3 py-2 rounded focus:outline-none min-h-[60px] disabled:opacity-50"
-              style={{
-                background: "var(--primary-bg)",
-                border: "1px solid var(--border-color)",
-                color: "var(--text-color)",
-              }}
-            />
-          </div>
-          <div className="flex items-center justify-between mt-2">
-            <div
-              className="hidden sm:block"
-              style={{ color: "var(--text-lighter)" }}
-            >
-              <span
-                className={
-                  estimatedTokens > maxTokens * 0.8
-                    ? "text-orange-400"
-                    : estimatedTokens > maxTokens * 0.9
-                      ? "text-red-400"
-                      : ""
-                }
-              >
-                {estimatedTokens.toLocaleString()}/
-                {(maxTokens / 1000).toFixed(0)}k tokens
-              </span>
-            </div>
-            <div className="flex items-center gap-2 ml-auto">
-              <ModelProviderSelector
-                currentProviderId={currentProviderId}
-                currentModelId={currentModelId}
-                onProviderChange={handleProviderChange}
-                onApiKeyRequest={handleApiKeyRequest}
-                hasApiKey={hasProviderApiKey}
-              />
-              <div className="flex items-center gap-1">
-                <Button
-                  type="submit"
-                  disabled={(!input.trim() && !isTyping) || !hasApiKey}
-                  onClick={isTyping && streamingMessageId ? stopStreaming : sendMessage}
-                  className={cn(
-                    "rounded flex items-center justify-center p-0",
-                    "send-button-hover button-transition",
-                    (isTyping && streamingMessageId && !isSendAnimating) && "button-morphing"
-                  )}
-                  style={{
-                    color: isTyping && streamingMessageId 
-                      ? "rgb(59, 130, 246)"
-                      : input.trim() && !isTyping && hasApiKey
-                        ? "white"
-                        : "var(--text-lighter)",
-                    border: isTyping && streamingMessageId 
-                      ? "1px solid rgba(59, 130, 246, 0.3)"
-                      : "1px solid transparent",
-                    cursor: (!input.trim() && !isTyping) || !hasApiKey
-                      ? "not-allowed"
-                      : "pointer",
-                  }}
-                  title={isTyping && streamingMessageId ? "Stop generation" : "Send message"}
-                >
-                  {isTyping && streamingMessageId && !isSendAnimating ? (
-                    <Square 
-                      size={10} 
-                      className="transition-all duration-300"
-                    />
-                  ) : (
-                    <Send 
-                      size={10} 
-                      className={cn(
-                        "send-icon transition-all duration-200",
-                        isSendAnimating && "flying"
-                      )}
-                    />
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* AI Chat Input Bar */}
+      <AIChatInputBar
+        buffers={buffers}
+        allProjectFiles={allProjectFiles}
+        rootFolderPath={rootFolderPath}
+        onSendMessage={sendMessage}
+        onStopStreaming={stopStreaming}
+        onApiKeyRequest={handleApiKeyRequest}
+        onProviderChange={handleProviderChange}
+        hasProviderApiKey={hasProviderApiKey}
+      />
 
       {/* API Key Modal */}
       <ApiKeyModal
         isOpen={apiKeyModalState.isOpen}
         onClose={() => setApiKeyModalState({ isOpen: false, providerId: null })}
         providerId={apiKeyModalState.providerId || ""}
-        onSave={handleApiKeySave}
-        onRemove={handleApiKeyRemove}
+        onSave={saveApiKey}
+        onRemove={removeApiKey}
         hasExistingKey={
-          apiKeyModalState.providerId
-            ? hasProviderApiKey(apiKeyModalState.providerId)
-            : false
+          apiKeyModalState.providerId ? hasProviderApiKey(apiKeyModalState.providerId) : false
         }
       />
 
@@ -952,7 +483,7 @@ export default function AIChat({
         chats={chats}
         currentChatId={currentChatId}
         onSwitchToChat={switchToChat}
-        onDeleteChat={deleteChat}
+        onDeleteChat={handleDeleteChat}
         formatTime={formatTime}
       />
     </div>

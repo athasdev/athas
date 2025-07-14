@@ -1,5 +1,62 @@
-import { useEffect } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { useEffect, useRef } from "react";
+
+function cleanupMenuListeners() {
+  if (!listenersAreSetup) return;
+
+  cleanupFunctions.forEach(cleanup => cleanup());
+
+  cleanupFunctions = [];
+  listenersAreSetup = false;
+  currentHandlers = null;
+}
+
+let listenersAreSetup = false;
+let currentHandlers: any = null;
+let cleanupFunctions: UnlistenFn[] = [];
+
+async function setupMenuListeners(handlers: any) {
+  if (listenersAreSetup) {
+    currentHandlers = handlers;
+    return;
+  }
+
+  listenersAreSetup = true;
+  currentHandlers = handlers;
+
+  const removeListeners = await Promise.all([
+    listen("menu_new_file", () => currentHandlers.current.onNewFile()),
+    listen("menu_open_folder", () => currentHandlers.current.onOpenFolder()),
+    listen("menu_save", () => currentHandlers.current.onSave()),
+    listen("menu_save_as", () => currentHandlers.current.onSaveAs()),
+    listen("menu_close_tab", () => currentHandlers.current.onCloseTab()),
+    listen("menu_undo", () => currentHandlers.current.onUndo()),
+    listen("menu_redo", () => currentHandlers.current.onRedo()),
+    listen("menu_find", () => currentHandlers.current.onFind()),
+    listen("menu_find_replace", () => currentHandlers.current.onFindReplace()),
+    listen("menu_command_palette", () => currentHandlers.current.onCommandPalette()),
+    listen("menu_toggle_sidebar", () => currentHandlers.current.onToggleSidebar()),
+    listen("menu_toggle_terminal", () => currentHandlers.current.onToggleTerminal()),
+    listen("menu_toggle_ai_chat", () => currentHandlers.current.onToggleAiChat()),
+    listen("menu_split_editor", () => currentHandlers.current.onSplitEditor()),
+    listen("menu_toggle_vim", () => currentHandlers.current.onToggleVim()),
+    listen("menu_go_to_file", () => currentHandlers.current.onGoToFile()),
+    listen("menu_go_to_line", () => currentHandlers.current.onGoToLine()),
+    listen("menu_next_tab", () => currentHandlers.current.onNextTab()),
+    listen("menu_prev_tab", () => currentHandlers.current.onPrevTab()),
+    listen("menu_theme_change", event => {
+      currentHandlers.current.onThemeChange(event.payload as string);
+    }),
+    listen("menu_about", () => {
+      currentHandlers.current.onAbout();
+    }),
+    listen("menu_help", () => currentHandlers.current.onHelp()),
+  ]);
+
+  cleanupFunctions = removeListeners;
+
+  window.addEventListener("beforeunload", cleanupMenuListeners);
+}
 
 interface UseMenuEventsProps {
   onNewFile: () => void;
@@ -27,38 +84,13 @@ interface UseMenuEventsProps {
 }
 
 export function useMenuEvents(props: UseMenuEventsProps) {
-  useEffect(() => {
-    const unlistenPromises = [
-      listen("menu_new_file", () => props.onNewFile()),
-      listen("menu_open_folder", () => props.onOpenFolder()),
-      listen("menu_save", () => props.onSave()),
-      listen("menu_save_as", () => props.onSaveAs()),
-      listen("menu_close_tab", () => props.onCloseTab()),
-      listen("menu_undo", () => props.onUndo()),
-      listen("menu_redo", () => props.onRedo()),
-      listen("menu_find", () => props.onFind()),
-      listen("menu_find_replace", () => props.onFindReplace()),
-      listen("menu_command_palette", () => props.onCommandPalette()),
-      listen("menu_toggle_sidebar", () => props.onToggleSidebar()),
-      listen("menu_toggle_terminal", () => props.onToggleTerminal()),
-      listen("menu_toggle_ai_chat", () => props.onToggleAiChat()),
-      listen("menu_split_editor", () => props.onSplitEditor()),
-      listen("menu_toggle_vim", () => props.onToggleVim()),
-      listen("menu_go_to_file", () => props.onGoToFile()),
-      listen("menu_go_to_line", () => props.onGoToLine()),
-      listen("menu_next_tab", () => props.onNextTab()),
-      listen("menu_prev_tab", () => props.onPrevTab()),
-      listen("menu_theme_change", (event) => {
-        props.onThemeChange(event.payload as string);
-      }),
-      listen("menu_about", () => props.onAbout()),
-      listen("menu_help", () => props.onHelp()),
-    ];
+  const handlersRef = useRef(props);
 
-    return () => {
-      Promise.all(unlistenPromises).then((unlisteners) => {
-        unlisteners.forEach((unlisten) => unlisten());
-      });
-    };
-  }, [props]);
+  handlersRef.current = props;
+
+  useEffect(() => {
+    setupMenuListeners(handlersRef);
+
+    return () => {};
+  }, []);
 }

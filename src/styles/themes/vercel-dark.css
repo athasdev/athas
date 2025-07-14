@@ -1,0 +1,285 @@
+/* Vercel Dark - Based on official Geist Design System */
+.force-vercel-dark {
+    /* Core backgrounds following Geist color scale */
+    --tw-primary-bg: #000000;
+    /* Background 1 - Pure black like vercel.com */
+    --tw-secondary-bg: #0a0a0a;
+    /* Background 2 - Subtle elevation */
+    --tw-hover: #1a1a1a;
+    /* Color 1 - Hover background */
+    --tw-selected: #2a2a2a;
+    /* Color 2 - Active background */
+
+    /* Border colors following Geist scale */
+    --tw-border: #333333;
+    /* Color 4 - Default border */
+
+    /* Text colors following Geist scale */
+    --tw-text: #fafafa;
+    /* Color 10 - Primary text (high contrast) */
+    --tw-text-light: #a1a1a1;
+    /* Color 9 - Secondary text */
+    --tw-text-lighter: #666666;
+    /* Dimmed text for less important content */
+
+    /* Vercel brand accent */
+    --tw-accent: #0070f3;
+    /* Official Vercel blue */
+
+    /* Enhanced syntax highlighting inspired by Vercel's code blocks */
+    --comment: #666666;
+    /* Subtle gray for comments */
+    --keyword: #0070f3;
+    /* Vercel blue for keywords */
+    --string: #50e3c2;
+    /* Cyan for strings */
+    --number: #f81ce5;
+    /* Magenta for numbers */
+    --function: #79ffe1;
+    /* Bright cyan for functions */
+    --variable: #fafafa;
+    /* Primary text color for variables */
+    --tag: #ff0080;
+    /* Hot pink for tags */
+    --attribute: #f81ce5;
+    /* Magenta for attributes */
+    --punctuation: #a1a1a1;
+    /* Secondary text for punctuation */
+
+    /* Additional Vercel-specific colors */
+    --color-success: #00d9ff;
+    /* Vercel success cyan */
+    --tw-warning: #f5a623;
+    /* Vercel warning orange */
+    --tw-error: #ff0080;
+    /* Vercel error pink */
+    --tw-info: #0070f3;
+    /* Vercel info blue */
+
+    /* Component-specific overrides for better Vercel feel */
+    --tab-active-bg: #000000;
+    /* Active tabs pure black */
+    --tab-inactive-bg: #0a0a0a;
+    /* Inactive tabs slightly elevated */
+    --sidebar-bg: #0a0a0a;
+    /* Sidebar with subtle elevation */
+    --editor-bg: #000000;
+    /* Editor pure black */
+    --terminal-bg: #000000;
+    /* Terminal pure black */
+
+    /* Enhanced contrast ratios */
+    --high-contrast-bg: #ffffff;
+    /* Pure white for high contrast elements */
+    --high-contrast-text: #000000;
+    /* Pure black text on white */
+
+    /* Scrollbar colors */
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: #333333;
+    --scrollbar-thumb-hover: #555555;
+}
+
+/* Vercel Dark Theme Component Enhancements */
+.force-vercel-dark .tab-bar {
+    background: var(--sidebar-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.force-vercel-dark .tab.active {
+    background: var(--tab-active-bg);
+    border-bottom: 2px solid var(--accent-color);
+    color: var(--text-color);
+}
+
+.force-vercel-dark .tab:not(.active) {
+    background: var(--tab-inactive-bg);
+    color: var(--text-light);
+}
+
+.force-vercel-dark .tab:not(.active):hover {
+    background: var(--hover-color);
+    color: var(--text-color);
+}
+
+/* Enhanced sidebar styling for Vercel theme */
+.force-vercel-dark .sidebar {
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+}
+
+/* Terminal styling with Vercel feel */
+.force-vercel-dark .terminal {
+    background: var(--terminal-bg);
+    color: var(--text-color);
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+}
+
+/* Code editor with pure black background */
+.force-vercel-dark .code-editor {
+    background: var(--editor-bg);
+}
+
+/* File tree styling */
+.force-vercel-dark .file-tree-item:hover {
+    background: var(--hover-color);
+}
+
+.force-vercel-dark .file-tree-item.selected {
+    background: var(--selected-color);
+    color: var(--text-color);
+}
+
+/* Button styling with Vercel design language */
+.force-vercel-dark .button-primary {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.force-vercel-dark .button-primary:hover {
+    background: #0366d6;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 112, 243, 0.4);
+}
+
+.force-vercel-dark .button-secondary {
+    background: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.force-vercel-dark .button-secondary:hover {
+    background: var(--hover-color);
+    border-color: var(--text-lighter);
+}
+
+/* Status indicators */
+.force-vercel-dark .status-success {
+    color: var(--success-color);
+}
+
+.force-vercel-dark .status-warning {
+    color: var(--warning-color);
+}
+
+.force-vercel-dark .status-error {
+    color: var(--error-color);
+}
+
+.force-vercel-dark .status-info {
+    color: var(--info-color);
+}
+
+/* Enhanced scrollbar for Vercel theme */
+.force-vercel-dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+.force-vercel-dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 4px;
+}
+
+.force-vercel-dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}
+
+/* Command palette styling */
+.force-vercel-dark .command-palette {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+}
+
+.force-vercel-dark .command-palette-item:hover {
+    background: var(--hover-color);
+}
+
+.force-vercel-dark .command-palette-item.selected {
+    background: var(--selected-color);
+}
+
+/* Modal and dialog styling */
+.force-vercel-dark .modal {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.9);
+}
+
+/* Input field styling - excluding code editor textarea */
+.force-vercel-dark input:not([class*="editor"]),
+.force-vercel-dark select {
+    background: var(--primary-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    transition: border-color 0.2s ease;
+}
+
+.force-vercel-dark input:not([class*="editor"]):focus,
+.force-vercel-dark select:focus {
+    border-color: var(--accent-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 112, 243, 0.2);
+}
+
+/* Only style specific form textareas, not editor textareas */
+.force-vercel-dark .form-textarea,
+.force-vercel-dark .input-textarea {
+    background: var(--primary-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    transition: border-color 0.2s ease;
+}
+
+.force-vercel-dark .form-textarea:focus,
+.force-vercel-dark .input-textarea:focus {
+    border-color: var(--accent-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 112, 243, 0.2);
+}
+
+/* Breadcrumb styling */
+.force-vercel-dark .breadcrumb {
+    color: var(--text-light);
+}
+
+.force-vercel-dark .breadcrumb-separator {
+    color: var(--text-lighter);
+}
+
+.force-vercel-dark .breadcrumb-item:hover {
+    color: var(--text-color);
+}
+
+/* Find bar styling */
+.force-vercel-dark .find-bar {
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+
+/* Diagnostic overlay styling */
+.force-vercel-dark .diagnostic-error {
+    border-left: 3px solid var(--error-color);
+    background: rgba(255, 0, 128, 0.1);
+}
+
+.force-vercel-dark .diagnostic-warning {
+    border-left: 3px solid var(--warning-color);
+    background: rgba(245, 166, 35, 0.1);
+}
+
+.force-vercel-dark .diagnostic-info {
+    border-left: 3px solid var(--info-color);
+    background: rgba(0, 112, 243, 0.1);
+}

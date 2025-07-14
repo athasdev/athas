@@ -38,6 +38,7 @@ export const getLanguageFromFilename = (filename: string): string => {
     php4: "PHP",
     php5: "PHP",
     php7: "PHP",
+    csharp: "C#",
   };
   return languageMap[ext || ""] || "Text";
 };

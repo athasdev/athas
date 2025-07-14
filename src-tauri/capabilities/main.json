@@ -25,6 +25,7 @@
     "fs:allow-write-text-file",
     "http:default",
     "http:allow-fetch",
+    "process:allow-exit",
     {
       "identifier": "shell:allow-execute",
       "allow": [

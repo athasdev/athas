@@ -1,4 +1,15 @@
-import { Buffer } from "../../types/buffer";
+import type React from "react";
+import type { FileEntry } from "../../types/app";
+import type { Buffer } from "../../types/buffer";
+
+export interface ToolCall {
+  name: string;
+  input: any;
+  output?: any;
+  error?: string;
+  timestamp: Date;
+  isComplete?: boolean;
+}
 
 export interface Message {
   id: string;
@@ -6,6 +17,9 @@ export interface Message {
   role: "user" | "assistant" | "system";
   timestamp: Date;
   isStreaming?: boolean;
+  isToolUse?: boolean;
+  toolName?: string;
+  toolCalls?: ToolCall[];
 }
 
 export interface Chat {
@@ -22,6 +36,7 @@ export interface ContextInfo {
   selectedFiles?: string[];
   projectRoot?: string;
   language?: string;
+  providerId?: string;
 }
 
 export interface AIChatProps {
@@ -31,6 +46,7 @@ export interface AIChatProps {
   buffers?: Buffer[];
   rootFolderPath?: string;
   selectedFiles?: string[];
+  allProjectFiles?: FileEntry[];
   mode: "chat";
   // Buffer update functions
   onApplyCode?: (code: string) => void;
@@ -62,4 +78,15 @@ export interface MarkdownRendererProps {
 export interface ModeSelectorProps {
   mode: "chat";
   onModeChange: (mode: "chat") => void;
-} 
+}
+
+export interface AIChatInputBarProps {
+  buffers: Buffer[];
+  allProjectFiles: FileEntry[];
+  rootFolderPath?: string;
+  onSendMessage: () => Promise<void>;
+  onStopStreaming: () => void;
+  onApiKeyRequest: (providerId: string) => void;
+  onProviderChange: (providerId: string, modelId: string) => void;
+  hasProviderApiKey: (providerId: string) => boolean;
+}

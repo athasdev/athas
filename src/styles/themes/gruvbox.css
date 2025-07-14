@@ -1,0 +1,45 @@
+/* Theme: Gruvbox */
+.force-gruvbox {
+    --tw-primary-bg: #282828;
+    --tw-secondary-bg: #32302f;
+    --tw-hover: #3c3836;
+    --tw-selected: #504945;
+    --tw-border: #504945;
+    --tw-text: #ebdbb2;
+    --tw-text-lighter: #928374;
+    --tw-accent: #83a598;
+
+    /* Syntax highlighting */
+    --comment: #928374;
+    --keyword: #fb4934;
+    --string: #b8bb26;
+    --number: #d3869b;
+    --function: #8ec07c;
+    --variable: #ebdbb2;
+    --tag: #83a598;
+    --attribute: #fe8019;
+    --punctuation: #ebdbb2;
+}
+
+/* Gruvbox Light */
+.force-gruvbox-light {
+    --tw-primary-bg: #fbf1c7;
+    --tw-secondary-bg: #f2e5bc;
+    --tw-hover: #ebdbb2;
+    --tw-selected: #d5c4a1;
+    --tw-border: #d5c4a1;
+    --tw-text: #3c3836;
+    --tw-text-lighter: #928374;
+    --tw-accent: #076678;
+
+    /* Syntax highlighting */
+    --comment: #928374;
+    --keyword: #9d0006;
+    --string: #79740e;
+    --number: #8f3f71;
+    --function: #076678;
+    --variable: #3c3836;
+    --tag: #427b58;
+    --attribute: #af3a03;
+    --punctuation: #3c3836;
+}

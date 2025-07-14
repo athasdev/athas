@@ -1,0 +1,45 @@
+/* Force Monokai Pro theme */
+.force-monokai {
+    --tw-primary-bg: #2d2a2e;
+    --tw-secondary-bg: #403e41;
+    --tw-text: #fce566;
+    --tw-text-light: #a9dc76;
+    --tw-text-lighter: #78dce8;
+    --tw-border: #5b595c;
+    --tw-hover: #363437;
+    --tw-selected: #5b595c;
+
+    /* Syntax highlighting colors - Monokai Pro theme */
+    --tw-syntax-comment: #727072;
+    --tw-syntax-keyword: #ff6188;
+    --tw-syntax-string: #a9dc76;
+    --tw-syntax-number: #ab9df2;
+    --tw-syntax-function: #78dce8;
+    --tw-syntax-variable: #fce566;
+    --tw-syntax-tag: #ffd866;
+    --tw-syntax-attribute: #78dce8;
+    --tw-syntax-punctuation: #f8f8f2;
+}
+
+/* Theme: Monokai Pro */
+.force-monokai-pro {
+    --tw-primary-bg: #2d2a2e;
+    --tw-secondary-bg: #353236;
+    --tw-hover: #403e41;
+    --tw-selected: #4a474b;
+    --tw-border: #4a474b;
+    --tw-text: #fcfcfa;
+    --tw-text-lighter: #727072;
+    --tw-accent: #a9dc76;
+
+    /* Syntax highlighting */
+    --comment: #727072;
+    --keyword: #ff6188;
+    --string: #ffd866;
+    --number: #ab9df2;
+    --function: #a9dc76;
+    --variable: #fcfcfa;
+    --tag: #ff6188;
+    --attribute: #78dce8;
+    --punctuation: #939293;
+}

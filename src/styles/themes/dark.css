@@ -1,0 +1,45 @@
+/* Force dark theme */
+.force-dark {
+    --tw-primary-bg: #1a1a1a;
+    --tw-secondary-bg: #2a2a2a;
+    --tw-text: #e5e5e5;
+    --tw-text-light: #b3b3b3;
+    --tw-text-lighter: #808080;
+    --tw-border: #404040;
+    --tw-hover: #333333;
+    --tw-selected: #404040;
+
+    /* Paper/Welcome screen specific colors - Dark */
+    --tw-paper-bg: #1a1a1a;
+    --tw-paper-button-bg: #2a2a2a;
+    --tw-paper-button-border: rgb(80 80 80 / 0.6);
+    --tw-paper-button-hover-bg: #333333;
+    --tw-paper-button-hover-border: rgb(100 100 100 / 0.7);
+    --tw-paper-recent-bg: #2a2a2a;
+    --tw-paper-recent-border: rgb(60 60 60 / 0.5);
+    --tw-paper-recent-hover-bg: #333333;
+    --tw-paper-recent-hover-border: rgb(80 80 80 / 0.6);
+    --tw-paper-text-primary: #e5e5e5;
+    --tw-paper-text-secondary: #b3b3b3;
+    --tw-paper-text-light: #808080;
+    --tw-paper-texture-overlay: rgb(100 100 100 / 0.02);
+
+    /* Accent color - Dark */
+    --tw-accent: #60a5fa;
+
+    /* Diagnostic colors */
+    --tw-error: #f87171;
+    --tw-warning: #fbbf24;
+    --tw-info: #60a5fa;
+
+    /* Syntax highlighting colors - Dark theme */
+    --tw-syntax-comment: #8b949e;
+    --tw-syntax-keyword: #ff7b72;
+    --tw-syntax-string: #a5d6ff;
+    --tw-syntax-number: #79c0ff;
+    --tw-syntax-function: #d2a8ff;
+    --tw-syntax-variable: #ffa657;
+    --tw-syntax-tag: #7ee787;
+    --tw-syntax-attribute: #d2a8ff;
+    --tw-syntax-punctuation: #b3b3b3;
+}

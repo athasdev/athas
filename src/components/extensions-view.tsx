@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { Search, Package, Code, Palette, CheckCircle2, GitBranch, Server, Terminal, Settings, FileText } from "lucide-react";
-import Button from "./button";
-import { CoreFeature } from "../types/core-features";
+import { Code, Package, Palette, Search, Settings } from "lucide-react";
+import { useEffect, useState } from "react";
+import type { CoreFeature } from "../types/core-features";
+import type { ThemeType } from "../types/theme";
+import Button from "./ui/button";
 
 interface Extension {
   id: string;
@@ -20,42 +21,6 @@ interface ExtensionsViewProps {
   coreFeatures?: CoreFeature[];
   onCoreFeatureToggle?: (featureId: string, enabled: boolean) => void;
 }
-
-// Add the ThemeType definition
-type ThemeType =
-  | "auto"
-  | "light"
-  | "dark"
-  | "midnight"
-  | "catppuccin-mocha"
-  | "catppuccin-macchiato"
-  | "catppuccin-frappe"
-  | "catppuccin-latte"
-  | "tokyo-night"
-  | "tokyo-night-storm"
-  | "tokyo-night-light"
-  | "dracula"
-  | "dracula-soft"
-  | "nord"
-  | "nord-light"
-  | "github-dark"
-  | "github-dark-dimmed"
-  | "github-light"
-  | "one-dark-pro"
-  | "one-light-pro"
-  | "material-deep-ocean"
-  | "material-palenight"
-  | "material-lighter"
-  | "gruvbox-dark"
-  | "gruvbox-light"
-  | "solarized-dark"
-  | "solarized-light"
-  | "synthwave-84"
-  | "monokai-pro"
-  | "ayu-dark"
-  | "ayu-mirage"
-  | "ayu-light"
-  | "vercel-dark";
 
 const AVAILABLE_EXTENSIONS: Extension[] = [
   // Language Servers
@@ -246,6 +211,7 @@ const AVAILABLE_EXTENSIONS: Extension[] = [
     status: "inactive",
     themeId: "material-palenight",
   },
+
   {
     id: "material-lighter",
     name: "Material Lighter",
@@ -334,6 +300,22 @@ const AVAILABLE_EXTENSIONS: Extension[] = [
     status: "inactive",
     themeId: "vercel-dark",
   },
+  {
+    id: "vesper",
+    name: "Vesper",
+    description: "Dark theme with deep oranges and greens",
+    category: "theme",
+    status: "inactive",
+    themeId: "vesper",
+  },
+  {
+    id: "aura",
+    name: "Aura",
+    description: "A beautiful dark theme with purple and green",
+    category: "theme",
+    status: "inactive",
+    themeId: "aura",
+  },
 ];
 
 interface ExtensionCardProps {
@@ -342,29 +324,21 @@ interface ExtensionCardProps {
   isActive: boolean;
 }
 
-const ExtensionCard = ({
-  extension,
-  onToggle,
-  isActive,
-}: ExtensionCardProps) => {
+const ExtensionCard = ({ extension, onToggle, isActive }: ExtensionCardProps) => {
   return (
-    <div className="flex flex-col gap-2 p-4 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-lg">
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-secondary-bg p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-[var(--text-color)]">
-          {extension.name}
-        </h3>
+        <h3 className="font-medium text-sm text-text">{extension.name}</h3>
         <Button
           onClick={onToggle}
           variant={isActive ? "default" : "outline"}
           size="xs"
-          className="text-xs font-normal opacity-80 hover:opacity-100"
+          className="font-normal text-xs opacity-80 hover:opacity-100"
         >
           {isActive ? "Disable" : "Enable"}
         </Button>
       </div>
-      <p className="text-xs text-[var(--text-lighter)]">
-        {extension.description}
-      </p>
+      <p className="text-text-lighter text-xs">{extension.description}</p>
     </div>
   );
 };
@@ -376,28 +350,24 @@ interface CoreFeatureCardProps {
 
 const CoreFeatureCard = ({ feature, onToggle }: CoreFeatureCardProps) => {
   const Icon = feature.icon;
-  
+
   return (
-    <div className="flex flex-col gap-2 p-4 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-lg">
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-secondary-bg p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Icon size={16} className="text-[var(--text-lighter)]" />
-          <h3 className="text-sm font-medium text-[var(--text-color)]">
-            {feature.name}
-          </h3>
+          <Icon size={16} className="text-text-lighter" />
+          <h3 className="font-medium text-sm text-text">{feature.name}</h3>
         </div>
         <Button
           onClick={onToggle}
           variant={feature.enabled ? "default" : "outline"}
           size="xs"
-          className="text-xs font-normal opacity-80 hover:opacity-100"
+          className="font-normal text-xs opacity-80 hover:opacity-100"
         >
           {feature.enabled ? "Enabled" : "Disabled"}
         </Button>
       </div>
-      <p className="text-xs text-[var(--text-lighter)]">
-        {feature.description}
-      </p>
+      <p className="text-text-lighter text-xs">{feature.description}</p>
     </div>
   );
 };
@@ -411,29 +381,21 @@ export default function ExtensionsView({
   onCoreFeatureToggle,
 }: ExtensionsViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<
-    "all" | "core" | "language-server" | "theme"
-  >("all");
+  const [activeTab, setActiveTab] = useState<"all" | "core" | "language-server" | "theme">("all");
   const [extensions, setExtensions] = useState<Extension[]>(() => {
     // Initialize extensions with the current theme state
-    return AVAILABLE_EXTENSIONS.map((ext) => ({
+    return AVAILABLE_EXTENSIONS.map(ext => ({
       ...ext,
-      status:
-        ext.category === "theme" && ext.themeId === currentTheme
-          ? "active"
-          : "inactive",
+      status: ext.category === "theme" && ext.themeId === currentTheme ? "active" : "inactive",
     }));
   });
 
   // Update extension states when currentTheme changes
   useEffect(() => {
-    setExtensions((prev) =>
-      prev.map((ext) => ({
+    setExtensions(prev =>
+      prev.map(ext => ({
         ...ext,
-        status:
-          ext.category === "theme" && ext.themeId === currentTheme
-            ? "active"
-            : "inactive",
+        status: ext.category === "theme" && ext.themeId === currentTheme ? "active" : "inactive",
       })),
     );
   }, [currentTheme]);
@@ -449,12 +411,12 @@ export default function ExtensionsView({
       // For themes, we just need to call onThemeChange
       // The status will be updated via the useEffect above
       onThemeChange(
-        extension.status === "inactive" ? extension.themeId! : "auto",
+        extension.status === "inactive" ? (extension.themeId as ThemeType) : ("auto" as ThemeType),
       );
     }
   };
 
-  const filteredExtensions = extensions.filter((extension) => {
+  const filteredExtensions = extensions.filter(extension => {
     const matchesSearch =
       extension.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       extension.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -462,30 +424,29 @@ export default function ExtensionsView({
     return matchesSearch && matchesTab;
   });
 
-  const filteredCoreFeatures = coreFeatures?.filter((feature) => {
-    const matchesSearch =
-      feature.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      feature.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  }) || [];
+  const filteredCoreFeatures =
+    coreFeatures?.filter(feature => {
+      const matchesSearch =
+        feature.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        feature.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSearch;
+    }) || [];
 
   return (
-    <div className="flex flex-col h-full bg-[var(--primary-bg)]">
-      <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
-        <h2 className="text-lg font-semibold text-[var(--text-color)]">
-          Extensions
-        </h2>
+    <div className="flex h-full flex-col bg-primary-bg">
+      <div className="flex items-center justify-between border-border border-b p-4">
+        <h2 className="font-semibold text-lg text-text">Extensions</h2>
         <div className="relative w-64">
           <Search
-            className="absolute left-2 top-1/2 transform -translate-y-1/2 text-[var(--text-lighter)]"
+            className="-translate-y-1/2 absolute top-1/2 left-2 transform text-text-lighter"
             size={16}
           />
           <input
             type="text"
             placeholder="Search extensions..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-4 text-xs py-1.5 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded text-[var(--text-color)] placeholder-[var(--text-lighter)] focus:outline-none focus:border-[var(--accent-color)]"
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full rounded border border-border bg-secondary-bg py-1.5 pr-4 pl-8 text-text text-xs placeholder-text-lighter focus:border-accent focus:outline-none"
           />
         </div>
       </div>
@@ -496,7 +457,7 @@ export default function ExtensionsView({
           variant="ghost"
           size="sm"
           data-active={activeTab === "all"}
-          className={`text-xs ${activeTab === "all" ? "bg-[var(--hover-color)]" : ""}`}
+          className={`text-xs ${activeTab === "all" ? "bg-hover" : ""}`}
         >
           All
         </Button>
@@ -505,7 +466,7 @@ export default function ExtensionsView({
           variant="ghost"
           size="sm"
           data-active={activeTab === "core"}
-          className={`text-xs flex items-center gap-1 ${activeTab === "core" ? "bg-[var(--hover-color)]" : ""}`}
+          className={`flex items-center gap-1 text-xs ${activeTab === "core" ? "bg-hover" : ""}`}
         >
           <Settings size={14} />
           Core
@@ -515,7 +476,7 @@ export default function ExtensionsView({
           variant="ghost"
           size="sm"
           data-active={activeTab === "language-server"}
-          className={`text-xs flex items-center gap-1 ${activeTab === "language-server" ? "bg-[var(--hover-color)]" : ""}`}
+          className={`flex items-center gap-1 text-xs ${activeTab === "language-server" ? "bg-hover" : ""}`}
         >
           <Code size={14} />
           Language Servers
@@ -525,7 +486,7 @@ export default function ExtensionsView({
           variant="ghost"
           size="sm"
           data-active={activeTab === "theme"}
-          className={`text-xs flex items-center gap-1 ${activeTab === "theme" ? "bg-[var(--hover-color)]" : ""}`}
+          className={`flex items-center gap-1 text-xs ${activeTab === "theme" ? "bg-hover" : ""}`}
         >
           <Palette size={14} />
           Themes
@@ -534,37 +495,39 @@ export default function ExtensionsView({
 
       <div className="flex-1 overflow-auto p-4">
         {/* Core Features */}
-        {(activeTab === "all" || activeTab === "core") && coreFeatures && coreFeatures.length > 0 && (
-          <div className="mb-6">
-            {activeTab === "all" && (
-              <h3 className="text-sm font-medium text-[var(--text-color)] mb-3 flex items-center gap-2">
-                <Settings size={16} />
-                Core Features
-              </h3>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-              {filteredCoreFeatures.map((feature) => (
-                <CoreFeatureCard
-                  key={feature.id}
-                  feature={feature}
-                  onToggle={() => onCoreFeatureToggle?.(feature.id, !feature.enabled)}
-                />
-              ))}
+        {(activeTab === "all" || activeTab === "core") &&
+          coreFeatures &&
+          coreFeatures.length > 0 && (
+            <div className="mb-6">
+              {activeTab === "all" && (
+                <h3 className="mb-3 flex items-center gap-2 font-medium text-sm text-text">
+                  <Settings size={16} />
+                  Core Features
+                </h3>
+              )}
+              <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredCoreFeatures.map(feature => (
+                  <CoreFeatureCard
+                    key={feature.id}
+                    feature={feature}
+                    onToggle={() => onCoreFeatureToggle?.(feature.id, !feature.enabled)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Extensions */}
         {activeTab !== "core" && (
           <div>
             {activeTab === "all" && filteredExtensions.length > 0 && (
-              <h3 className="text-sm font-medium text-[var(--text-color)] mb-3 flex items-center gap-2">
+              <h3 className="mb-3 flex items-center gap-2 font-medium text-sm text-text">
                 <Package size={16} />
                 Extensions
               </h3>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredExtensions.map((extension) => (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredExtensions.map(extension => (
                 <ExtensionCard
                   key={extension.id}
                   extension={extension}
@@ -579,8 +542,10 @@ export default function ExtensionsView({
         {/* No results */}
         {((activeTab === "core" && filteredCoreFeatures.length === 0) ||
           (activeTab !== "core" && activeTab !== "all" && filteredExtensions.length === 0) ||
-          (activeTab === "all" && filteredCoreFeatures.length === 0 && filteredExtensions.length === 0)) && (
-          <div className="text-center py-8 text-[var(--text-lighter)]">
+          (activeTab === "all" &&
+            filteredCoreFeatures.length === 0 &&
+            filteredExtensions.length === 0)) && (
+          <div className="py-8 text-center text-text-lighter">
             <Package size={24} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm">No items found matching your search.</p>
           </div>
