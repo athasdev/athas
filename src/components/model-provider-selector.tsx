@@ -59,7 +59,7 @@ const ModelProviderSelector = ({
       {/* Current Selection Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex min-w-[160px] items-center gap-1.5 rounded border border-border bg-secondary-bg px-2 py-1 font-mono text-xs transition-colors hover:bg-hover"
+        className="flex min-w-[160px] items-center gap-1.5 rounded bg-transparent px-2 py-1 font-mono text-xs transition-colors hover:bg-hover"
       >
         <Bot size={10} className="text-text-lighter" />
         <div className="min-w-0 flex-1 text-left">

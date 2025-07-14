@@ -1,4 +1,13 @@
-import { Pin, PinOff, Plus, Terminal as TerminalIcon, X } from "lucide-react";
+import {
+  Maximize2,
+  Minimize2,
+  Pin,
+  PinOff,
+  Plus,
+  SplitSquareHorizontal,
+  Terminal as TerminalIcon,
+  X,
+} from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import type { Terminal } from "../../types/terminal";
@@ -131,6 +140,10 @@ interface TerminalTabBarProps {
   onCloseAllTabs?: () => void;
   onCloseTabsToRight?: (terminalId: string) => void;
   onRenameTerminal?: (terminalId: string) => void;
+  onSplitView?: () => void;
+  onFullScreen?: () => void;
+  isFullScreen?: boolean;
+  onClosePanel?: () => void;
 }
 
 const TerminalTabBar = ({
@@ -145,6 +158,10 @@ const TerminalTabBar = ({
   onCloseAllTabs,
   onCloseTabsToRight,
   onRenameTerminal,
+  onSplitView,
+  onFullScreen,
+  isFullScreen = false,
+  onClosePanel,
 }: TerminalTabBarProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -277,64 +294,99 @@ const TerminalTabBar = ({
     <>
       <div
         ref={tabBarRef}
-        className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border flex min-h-[28px] items-center overflow-x-auto border-border border-b bg-secondary-bg px-0.5"
+        className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border flex min-h-[24px] items-center justify-between overflow-x-auto border-border border-b bg-secondary-bg px-1"
         style={{
           scrollbarWidth: "thin",
           scrollbarGutter: "stable",
         }}
       >
-        {sortedTerminals.map((terminal, index) => {
-          const isActive = terminal.id === activeTerminalId;
-          const isDraggedOver = dropTarget === index && isDragging;
-          const isDraggedItem = draggedIndex === index && isDragging;
+        {/* Left side - Terminal tabs */}
+        <div className="flex items-center overflow-x-auto">
+          {sortedTerminals.map((terminal, index) => {
+            const isActive = terminal.id === activeTerminalId;
+            const isDraggedOver = dropTarget === index && isDragging;
+            const isDraggedItem = draggedIndex === index && isDragging;
 
-          return (
-            <div
-              key={terminal.id}
-              className={cn(
-                "flex min-w-0 max-w-[180px] cursor-pointer select-none items-center gap-1 border-border border-r px-1.5 py-1 text-xs transition-all duration-150",
-                isActive
-                  ? "bg-selected text-text"
-                  : "text-text-lighter hover:bg-hover hover:text-text",
-                isDraggedItem && "scale-95 opacity-50",
-                isDraggedOver && "border-blue-500/50 bg-blue-500/20",
-                terminal.isPinned && "border-l-2 border-l-blue-500",
-              )}
-              onMouseDown={e => handleMouseDown(e, index)}
-              onClick={() => onTabClick(terminal.id)}
-              onContextMenu={e => handleContextMenu(e, terminal)}
-              title={`${terminal.name}\n${terminal.currentDirectory}`}
-            >
-              <TerminalIcon size={12} className="flex-shrink-0" />
-
-              <span className="truncate font-mono text-xs">{terminal.name}</span>
-
-              {terminal.isPinned && <Pin size={12} className="flex-shrink-0 text-blue-400" />}
-
-              <button
-                onClick={e => {
-                  e.stopPropagation();
-                  onTabClose(terminal.id, e);
-                }}
-                className="flex-shrink-0 cursor-pointer rounded p-0.5 opacity-60 transition-colors hover:bg-border hover:text-red-400 hover:opacity-100"
-                title="Close Terminal"
+            return (
+              <div
+                key={terminal.id}
+                className={cn(
+                  "flex min-w-0 max-w-[140px] cursor-pointer select-none items-center gap-1 px-2 py-1 text-xs transition-all duration-150",
+                  isActive
+                    ? "bg-selected text-text"
+                    : "text-text-lighter hover:bg-hover hover:text-text",
+                  isDraggedItem && "scale-95 opacity-50",
+                  isDraggedOver && "bg-blue-500/20",
+                  terminal.isPinned && "border-l-2 border-l-blue-500",
+                )}
+                onMouseDown={e => handleMouseDown(e, index)}
+                onClick={() => onTabClick(terminal.id)}
+                onContextMenu={e => handleContextMenu(e, terminal)}
+                title={`${terminal.name}\n${terminal.currentDirectory}`}
               >
-                <X size={12} />
-              </button>
-            </div>
-          );
-        })}
+                <span className="truncate font-mono text-xs">{terminal.name}</span>
+                {terminal.isPinned && <Pin size={10} className="flex-shrink-0 text-blue-400" />}
+                <button
+                  onClick={e => {
+                    e.stopPropagation();
+                    onTabClose(terminal.id, e);
+                  }}
+                  className="flex-shrink-0 cursor-pointer rounded p-0.5 opacity-60 transition-colors hover:bg-border hover:text-red-400 hover:opacity-100"
+                  title="Close Terminal"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
 
-        {/* New Terminal Button */}
-        {onNewTerminal && (
-          <button
-            onClick={onNewTerminal}
-            className="ml-0.5 flex flex-shrink-0 cursor-pointer items-center gap-0.5 rounded p-1.5 text-text-lighter text-xs transition-colors hover:bg-hover"
-            title="New Terminal (Cmd+T)"
-          >
-            <Plus size={12} />
-          </button>
-        )}
+        {/* Right side - Action buttons */}
+        <div className="flex items-center gap-0.5">
+          {/* New Terminal Button */}
+          {onNewTerminal && (
+            <button
+              onClick={onNewTerminal}
+              className="flex flex-shrink-0 cursor-pointer items-center rounded p-1 text-text-lighter transition-colors hover:bg-hover"
+              title="New Terminal (Cmd+T)"
+            >
+              <Plus size={12} />
+            </button>
+          )}
+
+          {/* Split View Button */}
+          {onSplitView && (
+            <button
+              onClick={onSplitView}
+              className="flex flex-shrink-0 cursor-pointer items-center rounded p-1 text-text-lighter transition-colors hover:bg-hover"
+              title="Split Terminal View"
+            >
+              <SplitSquareHorizontal size={12} />
+            </button>
+          )}
+
+          {/* Full Screen Button */}
+          {onFullScreen && (
+            <button
+              onClick={onFullScreen}
+              className="flex flex-shrink-0 cursor-pointer items-center rounded p-1 text-text-lighter transition-colors hover:bg-hover"
+              title={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
+            >
+              {isFullScreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+            </button>
+          )}
+
+          {/* Close Panel Button */}
+          {onClosePanel && (
+            <button
+              onClick={onClosePanel}
+              className="flex flex-shrink-0 cursor-pointer items-center rounded p-1 text-text-lighter transition-colors hover:bg-hover"
+              title="Close Panel"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
       </div>
 
       <TerminalContextMenu

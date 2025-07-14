@@ -1,9 +1,8 @@
 import { ChevronDown, Database, FileText, Send, Square, X } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useAIChatStore } from "../../stores/ai-chat-store";
 import { usePersistentSettingsStore } from "../../stores/persistent-settings-store";
-import { getModelById } from "../../types/ai-provider";
 import { cn } from "../../utils/cn";
 import ModelProviderSelector from "../model-provider-selector";
 import Button from "../ui/button";
@@ -47,32 +46,6 @@ export default function AIChatInputBar({
     selectPrevious,
     getFilteredFiles,
   } = useAIChatStore();
-
-  // Get selected buffers for context (memoized)
-  const getSelectedBuffers = useMemo(() => {
-    return buffers.filter(buffer => selectedBufferIds.has(buffer.id));
-  }, [buffers, selectedBufferIds]);
-
-  // Calculate approximate tokens (memoized)
-  const calculateTokens = useMemo(() => {
-    let totalChars = input.length;
-
-    // Add characters from selected buffers (approximate)
-    getSelectedBuffers.forEach(buffer => {
-      if (buffer.content && !buffer.isSQLite) {
-        totalChars += buffer.content.length;
-      }
-    });
-
-    // Rough approximation: 1 token ≈ 4 characters for English text
-    const estimatedTokens = Math.ceil(totalChars / 4);
-
-    // Get max tokens from current model
-    const currentModel = getModelById(aiProviderId, aiModelId);
-    const maxTokens = currentModel?.maxTokens || 4096; // Fallback to 4k tokens
-
-    return { estimatedTokens, maxTokens };
-  }, [input, getSelectedBuffers, aiProviderId, aiModelId]);
 
   // Function to recalculate mention dropdown position
   const recalculateMentionPosition = useCallback(() => {
@@ -255,27 +228,18 @@ export default function AIChatInputBar({
     await onSendMessage();
   };
 
-  const { estimatedTokens, maxTokens } = calculateTokens;
-
   return (
-    <div
-      ref={aiChatContainerRef}
-      style={{
-        background: "var(--secondary-bg)",
-        borderTop: "1px solid var(--border-color)",
-      }}
-    >
+    <div ref={aiChatContainerRef} className="border-border border-t bg-terniary-bg">
       {/* Model Provider Selector and Mode Toggle */}
       {aiProviderId !== "claude-code" && (
-        <div className="px-2 py-1">
+        <div className="border-border border-b bg-secondary-bg px-2 py-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {/* Context Selector Dropdown */}
               <div className="relative" ref={contextDropdownRef}>
                 <button
                   onClick={() => setIsContextDropdownOpen(!isContextDropdownOpen)}
-                  className="flex items-center gap-1 rounded px-2 pt-2 transition-colors hover:bg-hover"
-                  style={{ color: "var(--text-lighter)" }}
+                  className="flex items-center gap-1 rounded px-2 py-1 text-text-lighter text-xs transition-colors hover:bg-hover hover:text-text"
                   title="Add context files"
                 >
                   <FileText size={12} />
@@ -284,21 +248,13 @@ export default function AIChatInputBar({
                 </button>
 
                 {isContextDropdownOpen && (
-                  <div
-                    className="absolute top-full left-0 z-50 mt-1 max-h-64 w-64 overflow-y-auto rounded shadow-lg"
-                    style={{
-                      background: "var(--primary-bg)",
-                      border: "1px solid var(--border-color)",
-                    }}
-                  >
+                  <div className="absolute top-full left-0 z-50 mt-1 max-h-64 w-64 overflow-y-auto rounded border border-border bg-primary-bg shadow-lg">
                     <div className="p-2">
-                      <div className="mb-2 text-xs" style={{ color: "var(--text-lighter)" }}>
+                      <div className="mb-2 text-text-lighter text-xs">
                         Select files to include as context:
                       </div>
                       {buffers.length === 0 ? (
-                        <div className="p-2 text-xs" style={{ color: "var(--text-lighter)" }}>
-                          No files available
-                        </div>
+                        <div className="p-2 text-text-lighter text-xs">No files available</div>
                       ) : (
                         <div className="space-y-1">
                           {buffers.map(buffer => (
@@ -331,7 +287,7 @@ export default function AIChatInputBar({
 
       {/* Context badges */}
       {aiProviderId !== "claude-code" && selectedBufferIds.size > 0 && (
-        <div className="px-3 py-2">
+        <div className="border-border border-b bg-secondary-bg px-2 py-1.5">
           <div className="flex flex-wrap items-center gap-1">
             {Array.from(selectedBufferIds).map(bufferId => {
               const buffer = buffers.find(b => b.id === bufferId);
@@ -339,18 +295,13 @@ export default function AIChatInputBar({
               return (
                 <div
                   key={bufferId}
-                  className="flex items-center gap-1 rounded px-2 py-1 text-xs"
-                  style={{
-                    background: "var(--hover-color)",
-                    border: "1px solid var(--border-color)",
-                  }}
+                  className="flex items-center gap-1 rounded border border-border bg-hover px-2 py-1 text-xs"
                 >
                   {buffer.isSQLite ? <Database size={8} /> : <FileText size={8} />}
                   <span className="max-w-20 truncate">{buffer.name}</span>
                   <button
                     onClick={() => toggleBufferSelection(bufferId)}
-                    className="transition-colors hover:text-red-400"
-                    style={{ color: "var(--text-lighter)" }}
+                    className="text-text-lighter transition-colors hover:text-red-400"
                   >
                     <X size={8} />
                   </button>
@@ -361,7 +312,7 @@ export default function AIChatInputBar({
         </div>
       )}
 
-      <div className="p-3">
+      <div className="px-2 py-1.5">
         <div className="flex gap-2">
           <textarea
             ref={inputRef}
@@ -372,29 +323,11 @@ export default function AIChatInputBar({
               hasApiKey ? "Ask about your code..." : "Configure API key to enable AI chat..."
             }
             disabled={isTyping || !hasApiKey}
-            className="min-h-[60px] flex-1 resize-none rounded px-3 py-2 focus:outline-none disabled:opacity-50"
-            style={{
-              background: "var(--primary-bg)",
-              border: "1px solid var(--border-color)",
-              color: "var(--text-color)",
-            }}
+            className="min-h-[60px] flex-1 resize-none border-none bg-transparent px-3 py-2 text-text text-xs focus:outline-none disabled:opacity-50"
           />
         </div>
         <div className="mt-2 flex items-center justify-between">
-          <div className="hidden sm:block" style={{ color: "var(--text-lighter)" }}>
-            <span
-              className={
-                estimatedTokens > maxTokens * 0.8
-                  ? "text-orange-400"
-                  : estimatedTokens > maxTokens * 0.9
-                    ? "text-red-400"
-                    : ""
-              }
-            >
-              {estimatedTokens.toLocaleString()}/{(maxTokens / 1000).toFixed(0)}k tokens
-            </span>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-0.5">
             <ClaudeStatusIndicator
               isActive={aiProviderId === "claude-code"}
               workspacePath={rootFolderPath}
@@ -406,44 +339,36 @@ export default function AIChatInputBar({
               onApiKeyRequest={onApiKeyRequest}
               hasApiKey={hasProviderApiKey}
             />
-            <div className="flex items-center gap-1">
-              <Button
-                type="submit"
-                disabled={(!input.trim() && !isTyping) || !hasApiKey}
-                onClick={isTyping && streamingMessageId ? onStopStreaming : handleSendMessage}
-                className={cn(
-                  "flex items-center justify-center rounded p-0",
-                  "send-button-hover button-transition",
-                  isTyping && streamingMessageId && !isSendAnimating && "button-morphing",
-                )}
-                style={{
-                  color:
-                    isTyping && streamingMessageId
-                      ? "rgb(59, 130, 246)"
-                      : input.trim() && !isTyping && hasApiKey
-                        ? "white"
-                        : "var(--text-lighter)",
-                  border:
-                    isTyping && streamingMessageId
-                      ? "1px solid rgba(59, 130, 246, 0.3)"
-                      : "1px solid transparent",
-                  cursor: (!input.trim() && !isTyping) || !hasApiKey ? "not-allowed" : "pointer",
-                }}
-                title={isTyping && streamingMessageId ? "Stop generation" : "Send message"}
-              >
-                {isTyping && streamingMessageId && !isSendAnimating ? (
-                  <Square size={10} className="transition-all duration-300" />
-                ) : (
-                  <Send
-                    size={10}
-                    className={cn(
-                      "send-icon transition-all duration-200",
-                      isSendAnimating && "flying",
-                    )}
-                  />
-                )}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              disabled={(!input.trim() && !isTyping) || !hasApiKey}
+              onClick={isTyping && streamingMessageId ? onStopStreaming : handleSendMessage}
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded p-0 text-text-lighter hover:bg-hover hover:text-text",
+                "send-button-hover button-transition",
+                isTyping && streamingMessageId && !isSendAnimating && "button-morphing",
+                input.trim() &&
+                  !isTyping &&
+                  hasApiKey &&
+                  "bg-blue-500 text-white hover:bg-blue-600",
+                (!input.trim() && !isTyping) || !hasApiKey
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer",
+              )}
+              title={isTyping && streamingMessageId ? "Stop generation" : "Send message"}
+            >
+              {isTyping && streamingMessageId && !isSendAnimating ? (
+                <Square size={14} className="transition-all duration-300" />
+              ) : (
+                <Send
+                  size={14}
+                  className={cn(
+                    "send-icon transition-all duration-200",
+                    isSendAnimating && "flying",
+                  )}
+                />
+              )}
+            </Button>
           </div>
         </div>
       </div>

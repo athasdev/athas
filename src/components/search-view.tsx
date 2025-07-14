@@ -294,76 +294,90 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
 
     return (
       <div className="flex h-full flex-col">
-        {/* Search Input */}
-        <div className="border-border border-b p-3">
-          <div className="relative">
-            <Search
-              size={14}
-              className="-translate-y-1/2 absolute top-1/2 left-2 transform text-text-lighter"
-            />
+        {/* Search Input and Options */}
+        <div className="border-border border-b bg-secondary-bg px-2 py-1.5">
+          <div className="relative flex w-full items-center gap-1">
+            <span className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-text-lighter">
+              <Search size={12} />
+            </span>
             <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search in files..."
-              className="w-full rounded border border-border bg-primary-bg py-2 pr-8 pl-8 text-text text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="h-7 flex-1 border-none bg-transparent pr-6 pl-7 text-text text-xs focus:outline-none focus:ring-0"
+              style={{
+                borderRadius: 0,
+                boxShadow: "none",
+              }}
             />
             {searchQuery && (
               <button
                 onClick={clearSearch}
-                className="-translate-y-1/2 absolute top-1/2 right-2 transform text-text-lighter hover:text-text"
+                className="-translate-y-1/2 absolute top-1/2 right-[4.5rem] text-text-lighter hover:text-text"
+                tabIndex={-1}
+                style={{
+                  padding: 0,
+                  margin: 0,
+                  height: "1rem",
+                  width: "1rem",
+                }}
               >
-                <X size={12} />
+                <X size={10} />
               </button>
             )}
-          </div>
-
-          {/* Search Options */}
-          <div className="mt-2 flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCaseSensitive(!caseSensitive)}
-              className={`px-2 py-1 text-xs ${caseSensitive ? "bg-selected" : ""}`}
-              title="Match Case"
-            >
-              Aa
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setWholeWord(!wholeWord)}
-              className={`px-2 py-1 text-xs ${wholeWord ? "bg-selected" : ""}`}
-              title="Match Whole Word"
-            >
-              Ab
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setUseRegex(!useRegex)}
-              className={`px-2 py-1 text-xs ${useRegex ? "bg-selected" : ""}`}
-              title="Use Regular Expression"
-            >
-              .*
-            </Button>
+            <div className="ml-auto flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCaseSensitive(!caseSensitive)}
+                className={`h-5 w-5 px-0.5 py-0.5 text-xs ${caseSensitive ? "bg-selected text-text" : "text-text-lighter hover:bg-hover hover:text-text"}`}
+                title="Match Case"
+                tabIndex={0}
+                style={{ minWidth: "unset" }}
+              >
+                Aa
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setWholeWord(!wholeWord)}
+                className={`h-5 w-5 px-0.5 py-0.5 text-xs ${wholeWord ? "bg-selected text-text" : "text-text-lighter hover:bg-hover hover:text-text"}`}
+                title="Match Whole Word"
+                tabIndex={0}
+                style={{ minWidth: "unset" }}
+              >
+                Ab
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setUseRegex(!useRegex)}
+                className={`h-5 w-5 px-0.5 py-0.5 text-xs ${useRegex ? "bg-selected text-text" : "text-text-lighter hover:bg-hover hover:text-text"}`}
+                title="Use Regular Expression"
+                tabIndex={0}
+                style={{ minWidth: "unset" }}
+              >
+                .*
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Search Results */}
         <div className="custom-scrollbar flex-1 overflow-auto">
           {isSearching && (
-            <div className="p-4 text-center text-text-lighter text-xs">Searching...</div>
+            <div className="p-3 text-center text-text-lighter text-xs">Searching...</div>
           )}
 
           {!isSearching && searchQuery && searchResults.length === 0 && (
-            <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
+            <div className="p-3 text-center text-text-lighter text-xs">No results found</div>
           )}
 
           {!isSearching && searchResults.length > 0 && (
             <div className="p-2">
-              <div className="mb-2 px-1 text-text-lighter text-xs">
+              <div className="mb-2 px-2 text-text-lighter text-xs">
                 {searchResults.length >= MAX_RESULTS ? `${MAX_RESULTS}+` : searchResults.length}{" "}
                 result{searchResults.length !== 1 ? "s" : ""} in{" "}
                 {Object.keys(groupedResults).length} file
@@ -378,7 +392,7 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
                   {/* File Header */}
                   <button
                     onClick={() => handleFileToggle(filePath)}
-                    className="flex w-full items-center gap-1 rounded p-1 text-left hover:bg-hover"
+                    className="flex w-full items-center gap-1 rounded px-1 py-1 text-left hover:bg-hover"
                   >
                     {expandedFiles.has(filePath) ? (
                       <ChevronDown size={12} className="text-text-lighter" />
@@ -399,12 +413,12 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
 
                   {/* Results */}
                   {expandedFiles.has(filePath) && (
-                    <div className="ml-6 space-y-1">
+                    <div className="ml-6 space-y-0.5">
                       {results.map((result, index) => (
                         <button
                           key={index}
                           onClick={() => handleResultClick(result)}
-                          className="flex w-full items-start gap-2 rounded p-1 text-left hover:bg-hover"
+                          className="flex w-full items-start gap-2 rounded px-1 py-1 text-left hover:bg-hover"
                         >
                           <span className="min-w-[2rem] text-right text-text-lighter text-xs">
                             {result.line}
@@ -422,7 +436,7 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
           )}
 
           {!searchQuery && !isSearching && (
-            <div className="p-4 text-center text-text-lighter text-xs">
+            <div className="p-3 text-center text-text-lighter text-xs">
               Enter a search term to find text across your project files
             </div>
           )}

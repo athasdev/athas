@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { getCursorPosition } from "../../hooks/use-vim";
 import { useCodeEditorStore } from "../../stores/code-editor-store";
 import { useEditorConfigStore } from "../../stores/editor-config";
 import { useEditorInstanceStore } from "../../stores/editor-instance";
@@ -137,13 +138,21 @@ export function EditorInput() {
     }
   }, [codeEditorValue, editorRef]);
 
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const handleCursorPositionChange = () => {
     if (editorRef?.current) {
-      // Use the getCursorPosition utility for contenteditable
-      const position = 0; // Simplified for now
+      const position = getCursorPosition(editorRef.current);
       onCursorPositionChange?.(position);
-
-      // Trigger LSP completion if supported and in insert mode (or vim disabled)
+    }
+  };
+  const triggerLsp = () => {
+    if (!editorRef?.current) return;
+    const position = getCursorPosition(editorRef.current);
+    const lastChar = codeEditorValue.charAt(position - 1);
+    const delay = /[.::>()<]/.test(lastChar) ? 50 : 300;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      const currentPosition = getCursorPosition(editorRef.current!);
       const isRemoteFile = filePath?.startsWith("remote://");
       if (
         !isRemoteFile &&
@@ -151,9 +160,9 @@ export function EditorInput() {
         isLanguageSupported?.(filePath || "") &&
         (!vimEnabled || vimMode === "insert")
       ) {
-        handleLspCompletion(position, editorRef);
+        handleLspCompletion(currentPosition, editorRef!);
       }
-    }
+    }, delay);
   };
 
   return (
@@ -171,7 +180,10 @@ export function EditorInput() {
         handleUserInteraction();
         handleKeyDown(e);
       }}
-      onKeyUp={handleCursorPositionChange}
+      onKeyUp={() => {
+        handleCursorPositionChange();
+        triggerLsp();
+      }}
       onClick={() => {
         handleUserInteraction();
         handleCursorPositionChange();

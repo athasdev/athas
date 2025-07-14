@@ -1,54 +1,47 @@
-import { create } from "zustand";
+import { create, type ExtractState } from "zustand";
+import { combine } from "zustand/middleware";
 
-interface EditorConfig {
-  fontSize: number;
-  tabSize: number;
-  wordWrap: boolean;
-  lineNumbers: boolean;
-  theme: string;
-  vimEnabled: boolean;
-  vimMode: "normal" | "insert" | "visual" | "visual-line" | "visual-block" | "command";
-  aiCompletion: boolean;
-}
+type VimMode = "normal" | "insert" | "visual" | "visual-line" | "visual-block" | "command";
 
-interface EditorConfigState extends EditorConfig {
-  // Actions
-  setFontSize: (size: number) => void;
-  setTabSize: (size: number) => void;
-  setWordWrap: (wrap: boolean) => void;
-  setLineNumbers: (show: boolean) => void;
-  setTheme: (theme: string) => void;
-  setVimEnabled: (enabled: boolean) => void;
-  setVimMode: (
-    mode: "normal" | "insert" | "visual" | "visual-line" | "visual-block" | "command",
-  ) => void;
-  setAiCompletion: (enabled: boolean) => void;
-
-  // Bulk configuration update
-  updateConfig: (config: Partial<EditorConfig>) => void;
-}
-
-// Global editor configuration store
-export const useEditorConfigStore = create<EditorConfigState>(set => ({
-  // Default configuration
+const initialState = {
   fontSize: 14,
   tabSize: 2,
   wordWrap: true,
   lineNumbers: true,
   theme: "auto",
   vimEnabled: false,
-  vimMode: "normal",
+  vimMode: "normal" as VimMode,
   aiCompletion: true,
+};
 
-  // Actions
-  setFontSize: size => set({ fontSize: size }),
-  setTabSize: size => set({ tabSize: size }),
-  setWordWrap: wrap => set({ wordWrap: wrap }),
-  setLineNumbers: show => set({ lineNumbers: show }),
-  setTheme: theme => set({ theme }),
-  setVimEnabled: enabled => set({ vimEnabled: enabled }),
-  setVimMode: mode => set({ vimMode: mode }),
-  setAiCompletion: enabled => set({ aiCompletion: enabled }),
+// Global editor configuration store
+export const useEditorConfigStore = create(
+  combine(initialState, set => ({
+    // Actions
+    setFontSize: (size: number) => set({ fontSize: size }),
+    setTabSize: (size: number) => set({ tabSize: size }),
+    setWordWrap: (wrap: boolean) => set({ wordWrap: wrap }),
+    setLineNumbers: (show: boolean) => set({ lineNumbers: show }),
+    setTheme: (theme: string) => set({ theme }),
+    setVimEnabled: (enabled: boolean) => set({ vimEnabled: enabled }),
+    setVimMode: (mode: VimMode) => set({ vimMode: mode }),
+    setAiCompletion: (enabled: boolean) => set({ aiCompletion: enabled }),
 
-  updateConfig: config => set(state => ({ ...state, ...config })),
-}));
+    // Bulk configuration update
+    updateConfig: (config: Partial<typeof initialState>) => set(state => ({ ...state, ...config })),
+  })),
+);
+
+export type EditorConfigState = ExtractState<typeof useEditorConfigStore>;
+export type EditorConfig = Omit<
+  EditorConfigState,
+  | "setFontSize"
+  | "setTabSize"
+  | "setWordWrap"
+  | "setLineNumbers"
+  | "setTheme"
+  | "setVimEnabled"
+  | "setVimMode"
+  | "setAiCompletion"
+  | "updateConfig"
+>;

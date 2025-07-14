@@ -1,3 +1,4 @@
+import { ClockIcon } from "lucide-react";
 import type React from "react";
 import { useEffect } from "react";
 import type { RecentFolder } from "../types/recent-folders";
@@ -105,7 +106,8 @@ export const ProjectNameMenu = ({
       {recentFolders.length > 0 && (
         <>
           <div className="my-1 border-border border-t"></div>
-          <div className="px-3 py-1 font-mono text-text-lighter text-xs uppercase tracking-wide">
+          <div className="flex items-center gap-1 px-3 py-1 font-mono text-text-lighter text-xs tracking-wide">
+            <ClockIcon size="10" />
             Recent Folders
           </div>
           {recentFolders.slice(0, 5).map(folder => (

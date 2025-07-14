@@ -1,4 +1,3 @@
-import { AlertCircle, ArrowLeftRight, Terminal as TerminalIcon } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import AIChat from "./components/ai-chat/ai-chat";
@@ -9,6 +8,7 @@ import type { Diagnostic } from "./components/diagnostics/diagnostics-pane";
 import DiffViewer from "./components/diff-viewer";
 import BreadcrumbContainer from "./components/editor/breadcrumbs/breadcrumb-container";
 import CodeEditor, { type CodeEditorRef } from "./components/editor/code-editor";
+import EditorFooter from "./components/editor-footer";
 import ExtensionsView from "./components/extensions-view";
 import FileReloadToast from "./components/file-reload-toast";
 import FindBar from "./components/find-bar";
@@ -82,6 +82,7 @@ function App() {
     return DEFAULT_CORE_FEATURES;
   });
   const [maxOpenTabs, setMaxOpenTabs] = useState<number>(10);
+  const [isTerminalFullScreen, setIsTerminalFullScreen] = useState(false);
 
   // Recent folders management
   const { recentFolders, addToRecents } = useRecentFolders();
@@ -1254,93 +1255,6 @@ function App() {
                   Select a file to edit...
                 </div>
               )}
-
-              {/* Footer with indicators */}
-              <div className="flex min-h-[40px] items-center justify-between border-border border-t bg-secondary-bg px-4 py-2">
-                <div className="flex items-center gap-4 font-mono text-text-lighter text-xs">
-                  {activeBuffer && (
-                    <>
-                      <span>{activeBuffer.content.split("\n").length} lines</span>
-                      {(() => {
-                        const language = getLanguageFromFilename(
-                          getFilenameFromPath(activeBuffer.path),
-                        );
-                        return language !== "Text" && <span>{language}</span>;
-                      })()}
-                    </>
-                  )}
-
-                  {/* Terminal indicator */}
-                  {coreFeatures.terminal && (
-                    <button
-                      onClick={() => {
-                        uiState.setBottomPaneActiveTab("terminal");
-                        uiState.setIsBottomPaneVisible(
-                          !uiState.isBottomPaneVisible ||
-                            uiState.bottomPaneActiveTab !== "terminal",
-                        );
-                      }}
-                      className={`flex items-center gap-1 rounded border px-2 py-1 transition-colors ${
-                        uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"
-                          ? "border-border bg-selected text-text"
-                          : "border-border bg-primary-bg text-text-lighter hover:bg-hover"
-                      }`}
-                      title="Toggle Terminal"
-                    >
-                      <TerminalIcon size={12} />
-                    </button>
-                  )}
-
-                  {/* Diagnostics indicator */}
-                  {coreFeatures.diagnostics && (
-                    <button
-                      onClick={() => {
-                        uiState.setBottomPaneActiveTab("diagnostics");
-                        uiState.setIsBottomPaneVisible(
-                          !uiState.isBottomPaneVisible ||
-                            uiState.bottomPaneActiveTab !== "diagnostics",
-                        );
-                      }}
-                      className={`flex items-center gap-1 rounded border px-2 py-1 transition-colors ${
-                        uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"
-                          ? "border-border bg-selected text-text"
-                          : diagnostics.length > 0
-                            ? "border-red-300 bg-primary-bg text-red-600 hover:bg-red-50"
-                            : "border-border bg-primary-bg text-text-lighter hover:bg-hover"
-                      }`}
-                      title="Toggle Problems Panel"
-                    >
-                      <AlertCircle size={12} />
-                      {diagnostics.length > 0 && (
-                        <span className="rounded text-center text-xs leading-none">
-                          {diagnostics.length}
-                        </span>
-                      )}
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-4 font-mono text-text-lighter text-xs">
-                  {/* Sidebar Position Toggle */}
-                  <button
-                    onClick={handleToggleSidebarPosition}
-                    className="flex cursor-pointer items-center gap-1 rounded border border-border bg-primary-bg px-2 py-1 transition-colors hover:bg-hover"
-                    title={`Switch sidebar to ${settings.sidebarPosition === "left" ? "right" : "left"} (Cmd+Shift+B)`}
-                  >
-                    <ArrowLeftRight size={12} />
-                  </button>
-
-                  {activeBuffer && !activeBuffer.isSQLite && (
-                    <button
-                      onClick={() => uiState.setIsGitHubCopilotSettingsVisible(true)}
-                      className="flex cursor-pointer items-center gap-1 rounded border border-border bg-primary-bg px-2 py-1 transition-colors hover:bg-hover"
-                      title="AI Code Completion Settings"
-                    >
-                      <div className="h-2 w-2 animate-pulse rounded-full bg-blue-500"></div>
-                      <span>AI Assist</span>
-                    </button>
-                  )}
-                </div>
-              </div>
             </div>
 
             {/* Right Side - File Tree (when sidebar is on right) or AI Chat (when sidebar is on left) */}
@@ -1417,7 +1331,10 @@ function App() {
           {/* Bottom Pane */}
           <BottomPane
             isVisible={uiState.isBottomPaneVisible}
-            onClose={() => uiState.setIsBottomPaneVisible(false)}
+            onClose={() => {
+              uiState.setIsBottomPaneVisible(false);
+              setIsTerminalFullScreen(false);
+            }}
             activeTab={uiState.bottomPaneActiveTab}
             onTabChange={tab => uiState.setBottomPaneActiveTab(tab)}
             diagnostics={diagnostics}
@@ -1425,6 +1342,19 @@ function App() {
             currentDirectory={rootFolderPath}
             showTerminal={coreFeatures.terminal}
             showDiagnostics={coreFeatures.diagnostics}
+            onFullScreen={() => setIsTerminalFullScreen(prev => !prev)}
+            isFullScreen={isTerminalFullScreen}
+          />
+
+          {/* Editor Footer */}
+          <EditorFooter
+            activeBuffer={activeBuffer}
+            coreFeatures={coreFeatures}
+            diagnostics={diagnostics}
+            uiState={uiState}
+            settings={settings}
+            onToggleSidebarPosition={handleToggleSidebarPosition}
+            onOpenGitHubCopilotSettings={() => uiState.setIsGitHubCopilotSettingsVisible(true)}
           />
 
           {/* Command Bar */}

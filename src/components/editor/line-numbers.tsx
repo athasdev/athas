@@ -19,7 +19,7 @@ export function LineNumbers() {
 
   return (
     <div
-      className="relative flex-shrink-0 overflow-hidden border-border border-r bg-secondary-bg"
+      className="relative flex-shrink-0 overflow-hidden border-border border-r bg-terniary-bg"
       style={{ width: containerWidth }}
     >
       <div

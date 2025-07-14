@@ -450,8 +450,8 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
     return (
       <>
         <div className="flex h-full flex-col bg-secondary-bg">
-          <div className="flex items-center gap-2 border-border border-b px-3 py-2">
-            {renderGitButton()}
+          <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-2 py-1.5">
+            <div className="flex items-center gap-2">{renderGitButton()}</div>
           </div>
           <div className="flex flex-1 items-center justify-center p-4">
             <div className="text-center font-mono text-text-lighter text-xs">
@@ -469,8 +469,8 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
     return (
       <>
         <div className="flex h-full flex-col bg-secondary-bg">
-          <div className="flex items-center gap-2 border-border border-b px-3 py-2">
-            {renderGitButton()}
+          <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-2 py-1.5">
+            <div className="flex items-center gap-2">{renderGitButton()}</div>
           </div>
           <div className="flex flex-1 items-center justify-center p-4">
             <div className="text-center font-mono text-text-lighter text-xs">
@@ -487,8 +487,8 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
     return (
       <>
         <div className="flex h-full flex-col bg-secondary-bg">
-          <div className="flex items-center gap-2 border-border border-b px-3 py-2">
-            {renderGitButton()}
+          <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-2 py-1.5">
+            <div className="flex items-center gap-2">{renderGitButton()}</div>
           </div>
           <div className="flex flex-1 items-center justify-center p-4">
             <div className="text-center font-mono text-text-lighter text-xs">
@@ -508,33 +508,35 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
     <>
       <div className="flex h-full flex-col bg-secondary-bg font-mono text-xs">
         {/* Header */}
-        <div className="flex items-center gap-2 border-border border-b px-3 py-2">
-          {renderGitButton()}
+        <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-2 py-1.5">
+          <div className="flex items-center gap-2">
+            {renderGitButton()}
 
-          <GitBranchManager
-            currentBranch={gitStatus.branch}
-            repoPath={repoPath}
-            onBranchChange={loadGitData}
-          />
+            <GitBranchManager
+              currentBranch={gitStatus.branch}
+              repoPath={repoPath}
+              onBranchChange={loadGitData}
+            />
 
-          {(gitStatus.ahead > 0 || gitStatus.behind > 0) && (
-            <span className="text-[10px] text-text-lighter">
-              {gitStatus.ahead > 0 && `↑${gitStatus.ahead}`}
-              {gitStatus.ahead > 0 && gitStatus.behind > 0 && " "}
-              {gitStatus.behind > 0 && `↓${gitStatus.behind}`}
-            </span>
-          )}
+            {(gitStatus.ahead > 0 || gitStatus.behind > 0) && (
+              <span className="text-[10px] text-text-lighter">
+                {gitStatus.ahead > 0 && `↑${gitStatus.ahead}`}
+                {gitStatus.ahead > 0 && gitStatus.behind > 0 && " "}
+                {gitStatus.behind > 0 && `↓${gitStatus.behind}`}
+              </span>
+            )}
+          </div>
 
-          <div className="flex-1" />
-
-          <button
-            onClick={loadGitData}
-            disabled={isLoading}
-            className="p-1 text-text-lighter transition-colors hover:text-text disabled:opacity-50"
-            title="Refresh"
-          >
-            <RefreshCw size={10} className={isLoading ? "animate-spin" : ""} />
-          </button>
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={loadGitData}
+              disabled={isLoading}
+              className="flex h-5 w-5 items-center justify-center rounded p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:opacity-50"
+              title="Refresh"
+            >
+              <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
+            </button>
+          </div>
         </div>
 
         {/* Content */}

@@ -59,9 +59,9 @@ const FindBar = ({
   }
 
   return (
-    <div className="flex items-center gap-2 border-border border-b bg-secondary-bg px-4 py-2 text-sm">
+    <div className="flex items-center gap-2 border-border border-b bg-secondary-bg px-2 py-1.5">
       <div className="flex flex-1 items-center gap-2">
-        <Search size={14} className="text-text-lighter" />
+        <Search size={12} className="text-text-lighter" />
         <input
           ref={inputRef}
           type="text"
@@ -69,7 +69,7 @@ const FindBar = ({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Find in file..."
-          className="flex-1 rounded border border-border bg-primary-bg px-2 py-1 font-mono text-text text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="flex-1 border-none bg-transparent font-mono text-text text-xs focus:outline-none focus:ring-0"
         />
 
         {searchQuery && (
@@ -79,35 +79,35 @@ const FindBar = ({
         )}
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <button
           onClick={() => onSearch(searchQuery, "previous", true)}
           disabled={!searchQuery || totalMatches === 0}
           className={cn(
-            "rounded p-1 transition-colors duration-150 hover:bg-hover",
+            "flex h-5 w-5 items-center justify-center rounded p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
             (!searchQuery || totalMatches === 0) && "cursor-not-allowed opacity-50",
           )}
           title="Previous match (Shift+Enter)"
         >
-          <ChevronUp size={14} className="text-text-lighter" />
+          <ChevronUp size={12} />
         </button>
         <button
           onClick={() => onSearch(searchQuery, "next", true)}
           disabled={!searchQuery || totalMatches === 0}
           className={cn(
-            "rounded p-1 transition-colors duration-150 hover:bg-hover",
+            "flex h-5 w-5 items-center justify-center rounded p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
             (!searchQuery || totalMatches === 0) && "cursor-not-allowed opacity-50",
           )}
           title="Next match (Enter)"
         >
-          <ChevronDown size={14} className="text-text-lighter" />
+          <ChevronDown size={12} />
         </button>
         <button
           onClick={onClose}
-          className="ml-1 rounded p-1 transition-colors duration-150 hover:bg-hover"
+          className="flex h-5 w-5 items-center justify-center rounded p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
           title="Close (Escape)"
         >
-          <X size={14} className="text-text-lighter" />
+          <X size={12} />
         </button>
       </div>
     </div>

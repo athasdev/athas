@@ -55,19 +55,16 @@ const ConnectionList = ({
   return (
     <div className="flex h-full flex-col bg-secondary-bg">
       {/* Header */}
-      <div className="flex items-center justify-between border-border border-b px-3 py-2">
-        <div className="flex items-center gap-2">
-          <Server size={14} className="text-text-lighter" />
-          <span className="font-medium text-sm text-text">Remote</span>
-        </div>
+      <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-2 py-1.5">
+        <h3 className="font-medium font-mono text-text text-xs tracking-wide">Remote</h3>
         <Button
           onClick={onAddNew}
           variant="ghost"
           size="sm"
-          className="h-7 w-7 p-0 transition-colors hover:bg-hover"
+          className="flex h-5 w-5 items-center justify-center rounded p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
           title="Add Remote Connection"
         >
-          <Plus size={14} />
+          <Plus size={12} />
         </Button>
       </div>
 

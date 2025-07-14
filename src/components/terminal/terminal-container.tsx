@@ -7,9 +7,18 @@ import TerminalTabBar from "./terminal-tab-bar";
 interface TerminalContainerProps {
   currentDirectory?: string;
   className?: string;
+  onClosePanel?: () => void;
+  onFullScreen?: () => void;
+  isFullScreen?: boolean;
 }
 
-const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalContainerProps) => {
+const TerminalContainer = ({
+  currentDirectory = "/",
+  className = "",
+  onClosePanel,
+  onFullScreen,
+  isFullScreen = false,
+}: TerminalContainerProps) => {
   const {
     terminals,
     activeTerminalId,
@@ -27,6 +36,7 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
 
   const [renamingTerminalId, setRenamingTerminalId] = useState<string | null>(null);
   const [newTerminalName, setNewTerminalName] = useState("");
+  const [isSplitView, setIsSplitView] = useState(false);
   const hasInitializedRef = useRef(false);
 
   const handleNewTerminal = useCallback(() => {
@@ -115,6 +125,18 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
     setRenamingTerminalId(null);
     setNewTerminalName("");
   }, []);
+
+  const handleSplitView = useCallback(() => {
+    // Only allow split view if there are at least 2 terminals
+    if (terminals.length >= 2) {
+      setIsSplitView(prev => !prev);
+    } else {
+      // Create a new terminal if there's only one
+      const dirName = currentDirectory.split("/").pop() || "terminal";
+      createTerminal(dirName, currentDirectory);
+      setTimeout(() => setIsSplitView(true), 100);
+    }
+  }, [terminals.length, currentDirectory, createTerminal]);
 
   const handleDirectoryChange = useCallback(
     (terminalId: string, directory: string) => {
@@ -291,19 +313,59 @@ const TerminalContainer = ({ currentDirectory = "/", className = "" }: TerminalC
         onCloseAllTabs={handleCloseAllTabs}
         onCloseTabsToRight={handleCloseTabsToRight}
         onRenameTerminal={handleRenameTerminal}
+        onSplitView={handleSplitView}
+        onFullScreen={onFullScreen}
+        isFullScreen={isFullScreen}
+        onClosePanel={onClosePanel}
       />
 
       {/* Terminal Sessions */}
-      <div className="relative flex-1">
-        {terminals.map(terminal => (
-          <TerminalSession
-            key={terminal.id}
-            terminal={terminal}
-            isActive={terminal.id === activeTerminalId}
-            onDirectoryChange={handleDirectoryChange}
-            onActivity={handleActivity}
-          />
-        ))}
+      <div className="relative flex-1 overflow-hidden">
+        {isSplitView ? (
+          // Split view: Show active terminal on left, other terminals on right
+          <div className="flex h-full">
+            <div className="w-1/2 overflow-hidden border-border border-r">
+              {terminals.map(
+                terminal =>
+                  terminal.id === activeTerminalId && (
+                    <TerminalSession
+                      key={terminal.id}
+                      terminal={terminal}
+                      isActive={true}
+                      onDirectoryChange={handleDirectoryChange}
+                      onActivity={handleActivity}
+                    />
+                  ),
+              )}
+            </div>
+            <div className="w-1/2 overflow-hidden">
+              {(() => {
+                const nextTerminal = terminals.find(t => t.id !== activeTerminalId);
+                if (!nextTerminal) return null;
+                return (
+                  <TerminalSession
+                    key={nextTerminal.id}
+                    terminal={nextTerminal}
+                    isActive={true}
+                    onDirectoryChange={handleDirectoryChange}
+                    onActivity={handleActivity}
+                  />
+                );
+              })()}
+            </div>
+          </div>
+        ) : (
+          // Normal view: Show only active terminal
+          terminals.map(terminal => (
+            <TerminalSession
+              key={terminal.id}
+              terminal={terminal}
+              isActive={terminal.id === activeTerminalId}
+              onDirectoryChange={handleDirectoryChange}
+              onActivity={handleActivity}
+            />
+          ))
+        )}
       </div>
 
       {/* Rename Modal */}

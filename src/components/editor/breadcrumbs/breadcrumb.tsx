@@ -33,7 +33,7 @@ export default function Breadcrumb({ filePath, rootPath, onNavigate }: Breadcrum
   if (segments.length === 0) return null;
 
   return (
-    <div className="flex min-h-[28px] items-center justify-between border-border border-b bg-secondary-bg px-3 py-1">
+    <div className="flex min-h-[28px] items-center justify-between border-border border-b bg-terniary-bg px-3 py-1">
       <div className="flex items-center gap-0.5 overflow-hidden font-mono text-text-lighter text-xs">
         {segments.map((segment, index) => (
           <div key={index} className="flex min-w-0 items-center gap-0.5">

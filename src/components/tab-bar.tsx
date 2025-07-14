@@ -426,7 +426,7 @@ const TabBar = ({
                   draggable={true}
                   onDragStart={e => handleDragStart(e, index)}
                   onDragEnd={handleDragEnd}
-                  className={`group relative flex flex-shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap border-border border-r px-3 py-1.5 transition-colors duration-150 hover:bg-hover ${
+                  className={`group relative flex flex-shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap border-border border-r px-2 py-0.5 ${
                     isActive ? "border-b-2 border-b-accent bg-primary-bg" : "bg-secondary-bg"
                   } ${buffer.isPinned ? "border-l-2 border-l-blue-500" : ""} `}
                   style={{ minWidth: "120px", maxWidth: "400px" }}

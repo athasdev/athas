@@ -1,139 +1,29 @@
 import type { RefObject } from "react";
-import { create } from "zustand";
+import { create, type ExtractState } from "zustand";
+import { combine } from "zustand/middleware";
 
-interface EditorInstanceState {
-  // Content
-  value: string;
-  onChange: (value: string) => void;
-
-  // File info
-  filePath: string;
-  filename: string;
-
-  // Refs - these are set per editor instance
-  editorRef: RefObject<HTMLDivElement | null> | null;
-  highlightRef: RefObject<HTMLPreElement | null> | null;
-  lineNumbersRef: RefObject<HTMLDivElement | null> | null;
-
-  // LSP completion state
-  isLspCompletionVisible: boolean;
-  lspCompletions: any[];
-  selectedLspIndex: number;
-  completionPosition: { x: number; y: number };
-
-  // Hover state
-  hoverInfo: any;
-
-  // Vim command line state
-  isVimCommandLineVisible: boolean;
-  vimCommandLineInitialCommand: string;
-
-  // Inline assistant state
-  isInlineAssistantVisible: boolean;
-  selectedText: string;
-  assistantCursorPosition: { x: number; y: number };
-
-  // Event handlers
-  handleUserInteraction: () => void;
-  handleScroll: (e: React.UIEvent<HTMLDivElement>) => void;
-  handleHover: (e: React.MouseEvent<HTMLDivElement>) => void;
-  handleMouseEnter: (e: React.MouseEvent<HTMLDivElement>) => void;
-  handleMouseLeave: (e: React.MouseEvent<HTMLDivElement>) => void;
-  onCursorPositionChange?: (position: number) => void;
-  onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
-
-  // LSP
-  isLanguageSupported?: (filePath: string) => boolean;
-  handleLspCompletion: (pos: number, editorRef: RefObject<HTMLDivElement | null>) => void;
-
-  // Inline assistant
-  setSelectedText: (text: string) => void;
-  setAssistantCursorPosition: (pos: { x: number; y: number }) => void;
-  setIsInlineAssistantVisible: (visible: boolean) => void;
-
-  // Vim
-  vimEngine?: any;
-
-  // UI props
-  placeholder?: string;
-  disabled: boolean;
-  className?: string;
-
-  // Actions to update instance
-  setRefs: (refs: {
-    editorRef: RefObject<HTMLDivElement | null>;
-    highlightRef: RefObject<HTMLPreElement | null>;
-    lineNumbersRef: RefObject<HTMLDivElement | null>;
-  }) => void;
-  setContent: (value: string, onChange: (value: string) => void) => void;
-  setFileInfo: (filePath: string, filename: string) => void;
-  setHandlers: (
-    handlers: Partial<
-      Pick<
-        EditorInstanceState,
-        | "handleUserInteraction"
-        | "handleScroll"
-        | "handleHover"
-        | "handleMouseEnter"
-        | "handleMouseLeave"
-        | "onCursorPositionChange"
-        | "onKeyDown"
-        | "isLanguageSupported"
-        | "handleLspCompletion"
-        | "setSelectedText"
-        | "setAssistantCursorPosition"
-        | "setIsInlineAssistantVisible"
-        | "vimEngine"
-      >
-    >,
-  ) => void;
-  setUIProps: (props: { placeholder?: string; disabled: boolean; className?: string }) => void;
-
-  // LSP actions
-  setLspCompletion: (
-    visible: boolean,
-    completions?: any[],
-    selectedIndex?: number,
-    position?: { x: number; y: number },
-  ) => void;
-
-  // Hover actions
-  setHoverInfo: (info: any) => void;
-
-  // Vim command line actions
-  setVimCommandLine: (visible: boolean, initialCommand?: string) => void;
-
-  // Inline assistant actions
-  setInlineAssistant: (
-    visible: boolean,
-    selectedText?: string,
-    position?: { x: number; y: number },
-  ) => void;
-}
-
-// Current editor instance store
-export const useEditorInstanceStore = create<EditorInstanceState>(set => ({
+const initialState = {
   // Content
   value: "",
-  onChange: () => {},
+  onChange: (() => {}) as (value: string) => void,
 
   // File info
   filePath: "",
   filename: "",
 
-  // Refs
-  editorRef: null,
-  highlightRef: null,
-  lineNumbersRef: null,
+  // Refs - these are set per editor instance
+  editorRef: null as RefObject<HTMLDivElement | null> | null,
+  highlightRef: null as RefObject<HTMLPreElement | null> | null,
+  lineNumbersRef: null as RefObject<HTMLDivElement | null> | null,
 
   // LSP completion state
   isLspCompletionVisible: false,
-  lspCompletions: [],
+  lspCompletions: [] as any[],
   selectedLspIndex: 0,
   completionPosition: { x: 0, y: 0 },
 
   // Hover state
-  hoverInfo: null,
+  hoverInfo: null as any,
 
   // Vim command line state
   isVimCommandLineVisible: false,
@@ -144,51 +34,103 @@ export const useEditorInstanceStore = create<EditorInstanceState>(set => ({
   selectedText: "",
   assistantCursorPosition: { x: 0, y: 0 },
 
-  // Event handlers - defaults
-  handleUserInteraction: () => {},
-  handleScroll: () => {},
-  handleHover: () => {},
-  handleMouseEnter: () => {},
-  handleMouseLeave: () => {},
-  handleLspCompletion: () => {},
-  setSelectedText: () => {},
-  setAssistantCursorPosition: () => {},
-  setIsInlineAssistantVisible: () => {},
+  // Event handlers
+  handleUserInteraction: (() => {}) as () => void,
+  handleScroll: (() => {}) as (e: React.UIEvent<HTMLDivElement>) => void,
+  handleHover: (() => {}) as (e: React.MouseEvent<HTMLDivElement>) => void,
+  handleMouseEnter: (() => {}) as (e: React.MouseEvent<HTMLDivElement>) => void,
+  handleMouseLeave: (() => {}) as (e: React.MouseEvent<HTMLDivElement>) => void,
+  onCursorPositionChange: undefined as ((position: number) => void) | undefined,
+  onKeyDown: undefined as ((e: React.KeyboardEvent<HTMLDivElement>) => void) | undefined,
+
+  // LSP
+  isLanguageSupported: undefined as ((filePath: string) => boolean) | undefined,
+  handleLspCompletion: (() => {}) as (
+    pos: number,
+    editorRef: RefObject<HTMLDivElement | null>,
+  ) => void,
+
+  // Inline assistant
+  setSelectedText: (() => {}) as (text: string) => void,
+  setAssistantCursorPosition: (() => {}) as (pos: { x: number; y: number }) => void,
+  setIsInlineAssistantVisible: (() => {}) as (visible: boolean) => void,
+
+  // Vim
+  vimEngine: undefined as any,
 
   // UI props
+  placeholder: undefined as string | undefined,
   disabled: false,
+  className: undefined as string | undefined,
+};
 
-  // Actions
-  setRefs: refs => set(refs),
-  setContent: (value, onChange) => set({ value, onChange }),
-  setFileInfo: (filePath, filename) => set({ filePath, filename }),
-  setHandlers: handlers => set(handlers),
-  setUIProps: props => set(props),
+// Current editor instance store
+export const useEditorInstanceStore = create(
+  combine(initialState, set => ({
+    // Actions
+    setRefs: (refs: {
+      editorRef: RefObject<HTMLDivElement | null>;
+      highlightRef: RefObject<HTMLPreElement | null>;
+      lineNumbersRef: RefObject<HTMLDivElement | null>;
+    }) => set(refs),
+    setContent: (value: string, onChange: (value: string) => void) => set({ value, onChange }),
+    setFileInfo: (filePath: string, filename: string) => set({ filePath, filename }),
+    setHandlers: (
+      handlers: Partial<{
+        handleUserInteraction: () => void;
+        handleScroll: (e: React.UIEvent<HTMLDivElement>) => void;
+        handleHover: (e: React.MouseEvent<HTMLDivElement>) => void;
+        handleMouseEnter: (e: React.MouseEvent<HTMLDivElement>) => void;
+        handleMouseLeave: (e: React.MouseEvent<HTMLDivElement>) => void;
+        onCursorPositionChange: (position: number) => void;
+        onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+        isLanguageSupported: (filePath: string) => boolean;
+        handleLspCompletion: (pos: number, editorRef: RefObject<HTMLDivElement | null>) => void;
+        setSelectedText: (text: string) => void;
+        setAssistantCursorPosition: (pos: { x: number; y: number }) => void;
+        setIsInlineAssistantVisible: (visible: boolean) => void;
+        vimEngine: any;
+      }>,
+    ) => set(handlers),
+    setUIProps: (props: { placeholder?: string; disabled: boolean; className?: string }) =>
+      set(props),
 
-  // LSP actions
-  setLspCompletion: (visible, completions = [], selectedIndex = 0, position = { x: 0, y: 0 }) =>
-    set({
-      isLspCompletionVisible: visible,
-      lspCompletions: completions,
-      selectedLspIndex: selectedIndex,
-      completionPosition: position,
-    }),
+    // LSP actions
+    setLspCompletion: (
+      visible: boolean,
+      completions: any[] = [],
+      selectedIndex: number = 0,
+      position: { x: number; y: number } = { x: 0, y: 0 },
+    ) =>
+      set({
+        isLspCompletionVisible: visible,
+        lspCompletions: completions,
+        selectedLspIndex: selectedIndex,
+        completionPosition: position,
+      }),
 
-  // Hover actions
-  setHoverInfo: info => set({ hoverInfo: info }),
+    // Hover actions
+    setHoverInfo: (info: any) => set({ hoverInfo: info }),
 
-  // Vim command line actions
-  setVimCommandLine: (visible, initialCommand = "") =>
-    set({
-      isVimCommandLineVisible: visible,
-      vimCommandLineInitialCommand: initialCommand,
-    }),
+    // Vim command line actions
+    setVimCommandLine: (visible: boolean, initialCommand: string = "") =>
+      set({
+        isVimCommandLineVisible: visible,
+        vimCommandLineInitialCommand: initialCommand,
+      }),
 
-  // Inline assistant actions
-  setInlineAssistant: (visible, selectedText = "", position = { x: 0, y: 0 }) =>
-    set({
-      isInlineAssistantVisible: visible,
-      selectedText,
-      assistantCursorPosition: position,
-    }),
-}));
+    // Inline assistant actions
+    setInlineAssistant: (
+      visible: boolean,
+      selectedText: string = "",
+      position: { x: number; y: number } = { x: 0, y: 0 },
+    ) =>
+      set({
+        isInlineAssistantVisible: visible,
+        selectedText,
+        assistantCursorPosition: position,
+      }),
+  })),
+);
+
+export type EditorInstanceState = ExtractState<typeof useEditorInstanceStore>;

@@ -92,7 +92,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
 
         {/* Remote Window Header */}
         {isRemoteWindow && remoteConnectionName && (
-          <div className="flex items-center border-border border-b bg-secondary-bg px-3 py-1.5">
+          <div className="flex items-center border-border border-b bg-secondary-bg px-2 py-1.5">
             <Server size={12} className="mr-2 text-text-lighter" />
             <span
               className="flex-1 cursor-pointer rounded px-2 py-1 font-medium text-text text-xs hover:bg-hover"
@@ -107,7 +107,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
 
         {/* File Tree Header */}
         {showFileTreeHeader && (
-          <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-3 py-2">
+          <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-2 py-1.5">
             <h3
               className="cursor-pointer rounded px-2 py-1 font-medium font-mono text-text text-xs tracking-wide hover:bg-hover"
               onClick={onProjectNameMenuOpen}
@@ -116,12 +116,12 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
             >
               {projectName}
             </h3>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               <Button
                 onClick={onOpenFolder}
                 variant="ghost"
                 size="sm"
-                className="flex h-6 w-6 items-center justify-center rounded text-xs hover:bg-hover"
+                className="flex h-5 w-5 items-center justify-center rounded p-0 text-text-lighter hover:bg-hover hover:text-text"
                 title="Open Folder"
               >
                 <FolderOpen size={12} />
@@ -130,7 +130,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
                 onClick={onCreateNewFile}
                 variant="ghost"
                 size="sm"
-                className="flex h-6 w-6 items-center justify-center rounded text-xs hover:bg-hover"
+                className="flex h-5 w-5 items-center justify-center rounded p-0 text-text-lighter hover:bg-hover hover:text-text"
                 title="New File"
               >
                 <FilePlus size={12} />
@@ -143,7 +143,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
                 }}
                 variant="ghost"
                 size="sm"
-                className="flex h-6 w-6 items-center justify-center rounded text-xs hover:bg-hover"
+                className="flex h-5 w-5 items-center justify-center rounded p-0 text-text-lighter hover:bg-hover hover:text-text"
                 title="New Folder"
               >
                 <FolderPlus size={12} />
