@@ -181,6 +181,7 @@ const CommandBar = ({
   const [recentFiles, setRecentFiles] = useState<string[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Initialize cache when component mounts
   useEffect(() => {
@@ -341,6 +342,22 @@ const CommandBar = ({
     [onFileSelect, onClose],
   );
 
+  // Auto-scroll selected item into view
+  useEffect(() => {
+    if (!isVisible || !scrollContainerRef.current) return;
+
+    const selectedElement = scrollContainerRef.current.querySelector(
+      `[data-item-index="${selectedIndex}"]`,
+    ) as HTMLElement;
+
+    if (selectedElement) {
+      selectedElement.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }, [selectedIndex, isVisible, recentFilesInResults, otherFiles]);
+
   // Handle arrow key navigation - separate effect after files are defined
   useEffect(() => {
     if (!isVisible) return;
@@ -348,12 +365,16 @@ const CommandBar = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       // Handle arrow key navigation
       const allResults = [...recentFilesInResults, ...otherFiles];
+      const totalItems = allResults.length;
+
+      if (totalItems === 0) return;
+
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex(prev => (prev < allResults.length - 1 ? prev + 1 : prev));
+        setSelectedIndex(prev => (prev + 1) % totalItems); // Circular navigation
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev));
+        setSelectedIndex(prev => (prev - 1 + totalItems) % totalItems); // Circular navigation
       } else if (e.key === "Enter") {
         e.preventDefault();
         if (allResults[selectedIndex]) {
@@ -398,7 +419,10 @@ const CommandBar = ({
           </div>
 
           {/* Command List */}
-          <div className="custom-scrollbar max-h-80 overflow-y-auto bg-transparent">
+          <div
+            ref={scrollContainerRef}
+            className="custom-scrollbar max-h-80 overflow-y-auto bg-transparent"
+          >
             {recentFilesInResults.length === 0 && otherFiles.length === 0 ? (
               <div className="px-4 py-6 text-center font-mono text-sm text-text-lighter">
                 {query ? "No matching files found" : "No files available"}
@@ -414,6 +438,7 @@ const CommandBar = ({
                       return (
                         <button
                           key={`recent-${file.path}`}
+                          data-item-index={globalIndex}
                           onClick={() => handleFileSelect(file.path)}
                           className={`m-0 flex w-full cursor-pointer items-center gap-2 rounded-none border-none px-3 py-1.5 font-mono transition-colors duration-150 ${
                             isSelected ? "bg-selected" : "bg-transparent hover:bg-hover"
@@ -450,6 +475,7 @@ const CommandBar = ({
                       return (
                         <button
                           key={`other-${file.path}`}
+                          data-item-index={globalIndex}
                           onClick={() => handleFileSelect(file.path)}
                           className={`m-0 flex w-full cursor-pointer items-center gap-2 rounded-none border-none px-3 py-1.5 font-mono transition-colors duration-150 ${
                             isSelected ? "bg-selected" : "bg-transparent hover:bg-hover"
