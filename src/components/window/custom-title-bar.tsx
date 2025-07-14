@@ -31,12 +31,14 @@ const CustomTitleBar = ({
   });
 
   useEffect(() => {
+    let unlisten: (() => void) | null = null;
+
     const initWindow = async () => {
       const window = getCurrentWindow();
       setCurrentWindow(window);
 
       try {
-        const platformName = platform();
+        const platformName = await platform();
         setCurrentPlatform(platformName);
       } catch (error) {
         console.error("Error getting platform:", error);
@@ -45,25 +47,34 @@ const CustomTitleBar = ({
         }
       }
 
-      const unlisten = await window.onResized(async () => {
-        const maximized = await window.isMaximized();
-        setIsMaximized(maximized);
-      });
-
       try {
         const maximized = await window.isMaximized();
         setIsMaximized(maximized);
-      } catch (error) {}
+      } catch (_error) {}
 
-      return () => {
-        unlisten();
-      };
+      try {
+        unlisten = await window.onResized(async () => {
+          const maximized = await window.isMaximized();
+          setIsMaximized(maximized);
+        });
+      } catch (error) {
+        console.error("Error setting up resize listener:", error);
+      }
     };
 
     initWindow();
+
+    return () => {
+      if (unlisten) unlisten();
+    };
   }, []);
 
   useEffect(() => {}, [isMaximized]);
+
+  useEffect(() => {
+    console.log("Platform:", currentPlatform);
+    console.log("Is maximized:", isMaximized);
+  }, [currentPlatform, isMaximized]);
 
   const handleMinimize = async () => {
     try {
