@@ -1,4 +1,4 @@
-import { ChevronDown, Database, FileText, Send, Square, X } from "lucide-react";
+import { Database, FileText, Send, Square, X } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
 import { useAIChatStore } from "../../stores/ai-chat-store";
@@ -21,7 +21,6 @@ export default function AIChatInputBar({
   hasProviderApiKey,
 }: AIChatInputBarProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const contextDropdownRef = useRef<HTMLDivElement>(null);
   const aiChatContainerRef = useRef<HTMLDivElement>(null);
 
   // Get state from stores
@@ -31,13 +30,11 @@ export default function AIChatInputBar({
     isTyping,
     streamingMessageId,
     selectedBufferIds,
-    isContextDropdownOpen,
     isSendAnimating,
     hasApiKey,
     mentionState,
     setInput,
     toggleBufferSelection,
-    setIsContextDropdownOpen,
     setIsSendAnimating,
     showMention,
     hideMention,
@@ -52,34 +49,14 @@ export default function AIChatInputBar({
     if (!mentionState.active || !inputRef.current) return;
 
     const textarea = inputRef.current;
-    const value = textarea.value;
-    const beforeCursor = value.slice(0, textarea.selectionStart);
-    const lastAtIndex = beforeCursor.lastIndexOf("@");
-
-    if (lastAtIndex === -1) return;
-
-    const textBeforeAt = value.slice(0, lastAtIndex);
-
-    // Create a temporary element to measure text position
-    const mirror = document.createElement("div");
-    mirror.style.position = "absolute";
-    mirror.style.visibility = "hidden";
-    mirror.style.whiteSpace = "pre-wrap";
-    mirror.style.font = window.getComputedStyle(textarea).font;
-    mirror.style.padding = window.getComputedStyle(textarea).padding;
-    mirror.style.width = `${textarea.clientWidth}px`;
-    mirror.textContent = `${textBeforeAt}@`;
-
-    document.body.appendChild(mirror);
-    document.body.removeChild(mirror);
-
     const textareaRect = textarea.getBoundingClientRect();
     const aiChatContainer = textarea.closest(".ai-chat-container");
     const containerRect = aiChatContainer?.getBoundingClientRect();
 
+    // Calculate position relative to the chat container
     const position = {
-      top: textareaRect.top - 240, // Position above the input area (above Context button)
-      left: containerRect ? containerRect.left : textareaRect.left, // Position at the left edge of the sidebar
+      top: textareaRect.top - 220, // Position above the input area with proper spacing
+      left: containerRect ? containerRect.left + 8 : textareaRect.left, // Align with container left edge with padding
     };
 
     updatePosition(position);
@@ -107,21 +84,6 @@ export default function AIChatInputBar({
       window.removeEventListener("resize", handleWindowResize);
     };
   }, [recalculateMentionPosition]);
-
-  // Click outside handler for context dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        contextDropdownRef.current &&
-        !contextDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsContextDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [setIsContextDropdownOpen]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (mentionState.active) {
@@ -164,29 +126,14 @@ export default function AIChatInputBar({
       if (!afterAt.includes(" ")) {
         // Get textarea position for dropdown
         const textarea = e.target;
-        const textBeforeAt = value.slice(0, lastAtIndex);
-
-        // Create a temporary element to measure text position
-        const mirror = document.createElement("div");
-        mirror.style.position = "absolute";
-        mirror.style.visibility = "hidden";
-        mirror.style.whiteSpace = "pre-wrap";
-        mirror.style.font = window.getComputedStyle(textarea).font;
-        mirror.style.padding = window.getComputedStyle(textarea).padding;
-        mirror.style.width = `${textarea.clientWidth}px`;
-        mirror.textContent = `${textBeforeAt}@`;
-
-        document.body.appendChild(mirror);
-        document.body.removeChild(mirror);
-
         const textareaRect = textarea.getBoundingClientRect();
-        // Get the AI chat container to position relative to it
         const aiChatContainer = textarea.closest(".ai-chat-container");
         const containerRect = aiChatContainer?.getBoundingClientRect();
 
+        // Calculate position relative to the chat container
         const position = {
-          top: textareaRect.top - 240, // Position above the input area (above Context button)
-          left: containerRect ? containerRect.left : textareaRect.left, // Position at the left edge of the sidebar
+          top: textareaRect.top - 220, // Position above the input area with proper spacing
+          left: containerRect ? containerRect.left + 8 : textareaRect.left, // Align with container left edge with padding
         };
 
         showMention(position, afterAt, lastAtIndex);
@@ -230,85 +177,21 @@ export default function AIChatInputBar({
 
   return (
     <div ref={aiChatContainerRef} className="border-border border-t bg-terniary-bg">
-      {/* Model Provider Selector and Mode Toggle */}
-      {aiProviderId !== "claude-code" && (
-        <div className="border-border border-b bg-secondary-bg px-2 py-1.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {/* Context Selector Dropdown */}
-              <div className="relative" ref={contextDropdownRef}>
-                <button
-                  onClick={() => setIsContextDropdownOpen(!isContextDropdownOpen)}
-                  className={cn(
-                    "flex items-center gap-1 rounded px-2 py-1",
-                    "text-text-lighter text-xs transition-colors",
-                    "hover:bg-hover hover:text-text",
-                  )}
-                  title="Add context files"
-                >
-                  <FileText size={12} />
-                  <span>Context ({selectedBufferIds.size})</span>
-                  <ChevronDown size={10} />
-                </button>
-
-                {isContextDropdownOpen && (
-                  <div
-                    className={cn(
-                      "absolute top-full left-0 z-50 mt-1",
-                      "max-h-64 w-64 overflow-y-auto rounded",
-                      "border border-border bg-primary-bg shadow-lg",
-                    )}
-                  >
-                    <div className="p-2">
-                      <div className="mb-2 text-text-lighter text-xs">
-                        Select files to include as context:
-                      </div>
-                      {buffers.length === 0 ? (
-                        <div className="p-2 text-text-lighter text-xs">No files available</div>
-                      ) : (
-                        <div className="space-y-1">
-                          {buffers.map(buffer => (
-                            <label
-                              key={buffer.id}
-                              className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-hover"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedBufferIds.has(buffer.id)}
-                                onChange={() => toggleBufferSelection(buffer.id)}
-                                className="h-3 w-3"
-                              />
-                              <div className="flex min-w-0 flex-1 items-center gap-1">
-                                {buffer.isSQLite ? <Database size={10} /> : <FileText size={10} />}
-                                <span className="truncate text-xs">{buffer.name}</span>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Context badges */}
       {aiProviderId !== "claude-code" && selectedBufferIds.size > 0 && (
-        <div className="border-border border-b bg-secondary-bg px-2 py-1.5">
+        <div className="border-border border-b bg-secondary-bg px-3 py-2">
           <div className="flex flex-wrap items-center gap-1">
+            <span className="mr-1 text-text-lighter text-xs">Context:</span>
             {Array.from(selectedBufferIds).map(bufferId => {
               const buffer = buffers.find(b => b.id === bufferId);
               if (!buffer) return null;
               return (
                 <div
                   key={bufferId}
-                  className="flex items-center gap-1 rounded border border-border bg-hover px-2 py-1 text-xs"
+                  className="flex items-center gap-1 rounded-md bg-hover px-2 py-1 text-xs"
                 >
                   {buffer.isSQLite ? <Database size={8} /> : <FileText size={8} />}
-                  <span className="max-w-20 truncate">{buffer.name}</span>
+                  <span className="max-w-24 truncate">{buffer.name}</span>
                   <button
                     onClick={() => toggleBufferSelection(bufferId)}
                     className="text-text-lighter transition-colors hover:text-red-400"

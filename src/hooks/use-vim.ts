@@ -35,19 +35,28 @@ export const useVim = (
 
 // Helper function to get cursor position in contenteditable
 export const getCursorPosition = (element: HTMLDivElement): number => {
+  if (!element) return 0;
+
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) return 0;
 
   const range = selection.getRangeAt(0);
   const preCaretRange = range.cloneRange();
-  preCaretRange.selectNodeContents(element);
-  preCaretRange.setEnd(range.endContainer, range.endOffset);
 
-  return preCaretRange.toString().length;
+  try {
+    preCaretRange.selectNodeContents(element);
+    preCaretRange.setEnd(range.endContainer, range.endOffset);
+    return preCaretRange.toString().length;
+  } catch (_e) {
+    // If the selection is outside the element, return 0
+    return 0;
+  }
 };
 
 // Helper function to set cursor position in contenteditable
 export const setCursorPosition = (element: HTMLDivElement, position: number): void => {
+  if (!element) return;
+
   const selection = window.getSelection();
   if (!selection) return;
 

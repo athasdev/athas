@@ -337,30 +337,122 @@ const storeCreator = combine(initialState, (set, get) => ({
     const { search } = get().mentionState;
     const query = search.toLowerCase();
 
-    if (!query) return allFiles.filter((file: FileEntry) => !file.isDir).slice(0, 5);
+    // Filter out directories and ignored files
+    const filteredFiles = allFiles.filter((file: FileEntry) => {
+      if (file.isDir) return false;
 
-    const scored = allFiles
-      .filter((file: FileEntry) => !file.isDir)
+      // Apply same ignore patterns as command bar
+      const fileName = file.path.split("/").pop() || "";
+      const fullPath = file.path.toLowerCase();
+
+      const IGNORED_PATTERNS = [
+        "node_modules",
+        ".npm",
+        ".yarn",
+        ".pnpm-store",
+        ".git",
+        ".svn",
+        ".hg",
+        "dist",
+        "build",
+        "out",
+        ".next",
+        ".nuxt",
+        ".output",
+        "target",
+        "bin",
+        "obj",
+        "*.swp",
+        "*.swo",
+        "*~",
+        ".DS_Store",
+        "Thumbs.db",
+        ".cache",
+        ".tmp",
+        ".temp",
+        "tmp",
+        "temp",
+        ".turbo",
+        "*.log",
+        "logs",
+        "coverage",
+        ".nyc_output",
+        ".sass-cache",
+        ".eslintcache",
+        ".parcel-cache",
+      ];
+
+      return !IGNORED_PATTERNS.some(pattern => {
+        if (pattern.includes("*")) {
+          const regex = new RegExp(pattern.replace(/\*/g, ".*"));
+          return regex.test(fileName.toLowerCase()) || regex.test(fullPath);
+        } else {
+          return (
+            fileName.toLowerCase() === pattern.toLowerCase() ||
+            fullPath.includes(`/${pattern.toLowerCase()}/`) ||
+            fullPath.endsWith(`/${pattern.toLowerCase()}`)
+          );
+        }
+      });
+    });
+
+    if (!query) return filteredFiles.slice(0, 10);
+
+    // Use fuzzy search scoring similar to command bar
+    const fuzzyScore = (text: string, query: string): number => {
+      if (!query) return 0;
+
+      const textLower = text.toLowerCase();
+      const queryLower = query.toLowerCase();
+
+      // Exact match gets highest score
+      if (textLower === queryLower) return 1000;
+
+      // Starts with query gets high score
+      if (textLower.startsWith(queryLower)) return 800;
+
+      // Contains query as substring gets medium score
+      if (textLower.includes(queryLower)) return 600;
+
+      // Fuzzy matching - check if all query characters exist in order
+      let textIndex = 0;
+      let queryIndex = 0;
+      let score = 0;
+      let consecutiveMatches = 0;
+
+      while (textIndex < textLower.length && queryIndex < queryLower.length) {
+        if (textLower[textIndex] === queryLower[queryIndex]) {
+          score += 10;
+          consecutiveMatches++;
+          if (consecutiveMatches > 1) {
+            score += consecutiveMatches * 2;
+          }
+          queryIndex++;
+        } else {
+          consecutiveMatches = 0;
+        }
+        textIndex++;
+      }
+
+      if (queryIndex === queryLower.length) {
+        score += Math.max(0, 100 - textLower.length);
+        return score;
+      }
+
+      return 0;
+    };
+
+    const scored = filteredFiles
       .map((file: FileEntry) => {
-        const name = file.name.toLowerCase();
-        const path = file.path.toLowerCase();
-
-        // Score based on match quality
-        let score = 0;
-        if (name === query) score = 100;
-        else if (name.startsWith(query)) score = 80;
-        else if (name.includes(query)) score = 60;
-        else if (path.includes(query)) score = 40;
-        else return null;
-
+        const nameScore = fuzzyScore(file.name, query);
+        const pathScore = fuzzyScore(file.path, query);
+        const score = Math.max(nameScore, pathScore);
         return { file, score };
       })
-      .filter(Boolean) as { file: FileEntry; score: number }[];
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score);
 
-    return scored
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5)
-      .map(({ file }) => file);
+    return scored.slice(0, 10).map(({ file }) => file);
   },
 
   // Helper getters

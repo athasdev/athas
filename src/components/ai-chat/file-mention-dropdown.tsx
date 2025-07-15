@@ -25,20 +25,37 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
 
   // Scroll selected item into view
   useEffect(() => {
-    const selectedItem = dropdownRef.current?.children[selectedIndex] as HTMLElement;
-    if (selectedItem) {
-      selectedItem.scrollIntoView({
-        block: "nearest",
-        inline: "nearest",
-      });
+    if (!dropdownRef.current || selectedIndex < 0) return;
+
+    const container = dropdownRef.current;
+    const itemsContainer = container.querySelector(".p-1") as HTMLElement;
+    if (!itemsContainer) return;
+
+    const selectedItem = itemsContainer.children[selectedIndex] as HTMLElement;
+    if (!selectedItem) return;
+
+    // Calculate positions relative to the scrollable container
+    const containerScrollTop = container.scrollTop;
+    const containerHeight = container.clientHeight;
+    const itemOffsetTop = selectedItem.offsetTop;
+    const itemHeight = selectedItem.offsetHeight;
+
+    // Check if item is above the visible area
+    if (itemOffsetTop < containerScrollTop) {
+      container.scrollTop = itemOffsetTop - 4; // 4px padding
+    }
+    // Check if item is below the visible area
+    else if (itemOffsetTop + itemHeight > containerScrollTop + containerHeight) {
+      container.scrollTop = itemOffsetTop + itemHeight - containerHeight + 4; // 4px padding
     }
   }, [selectedIndex]);
 
   // Adjust position to prevent overflow
   const adjustedPosition = useMemo(() => {
-    const dropdownWidth = 320;
-    const dropdownHeight = Math.min(filteredFiles.length * 32, 160); // 32px per item, max 5 items
-    const padding = 8;
+    const dropdownWidth = 280;
+    const itemHeight = 36; // Adjusted for better spacing
+    const dropdownHeight = Math.min(filteredFiles.length * itemHeight, 200); // Max 5-6 items
+    const padding = 16;
 
     let { top, left } = position;
 
@@ -52,8 +69,9 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       left = Math.max(padding, window.innerWidth - dropdownWidth - padding);
     }
 
+    // Position above the cursor by default (above the input area)
     if (top + dropdownHeight > window.innerHeight - padding) {
-      const abovePosition = top - dropdownHeight - 20;
+      const abovePosition = top - dropdownHeight - 40; // More space from input
       if (abovePosition >= padding) {
         top = abovePosition;
       } else {
@@ -64,6 +82,8 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
     return {
       top: Math.max(padding, top),
       left: Math.max(padding, left),
+      width: dropdownWidth,
+      height: dropdownHeight,
     };
   }, [position.top, position.left, filteredFiles.length]);
 
@@ -95,68 +115,70 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   }
 
   const getRelativePath = (fullPath: string): string => {
-    // Use rootFolderPath to calculate relative path
-    let relativePath = fullPath;
+    if (!rootFolderPath) return fullPath;
 
-    if (rootFolderPath && fullPath.startsWith(rootFolderPath)) {
-      relativePath = fullPath.slice(rootFolderPath.length);
-      // Remove leading slash if present
-      if (relativePath.startsWith("/")) {
-        relativePath = relativePath.slice(1);
-      }
-    } else if (fullPath.startsWith("/")) {
-      // If no rootFolderPath or path doesn't start with it, remove just the leading slash
-      relativePath = fullPath.slice(1);
+    const normalizedFullPath = fullPath.replace(/\\/g, "/");
+    const normalizedRootPath = rootFolderPath.replace(/\\/g, "/");
+
+    if (normalizedFullPath.startsWith(normalizedRootPath)) {
+      const relativePath = normalizedFullPath.substring(normalizedRootPath.length);
+      const cleanPath = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
+
+      // Get directory path without filename
+      const lastSlashIndex = cleanPath.lastIndexOf("/");
+      return lastSlashIndex > 0 ? cleanPath.substring(0, lastSlashIndex) : "";
     }
 
-    // Show max 40 chars, ellipsis in middle if too long
-    if (relativePath.length > 40) {
-      const start = relativePath.slice(0, 20);
-      const end = relativePath.slice(-17);
-      return `${start}...${end}`;
-    }
-    return relativePath;
+    return fullPath;
   };
 
   return (
     <div
       ref={dropdownRef}
-      className="scrollbar-hidden fixed z-[100] rounded-md border border-border bg-primary-bg shadow-lg"
+      className="scrollbar-hidden fixed z-[100] rounded-lg border border-border bg-primary-bg shadow-xl"
       style={{
         top: adjustedPosition.top,
         left: adjustedPosition.left,
-        maxHeight: "200px",
-        minWidth: "200px",
-        maxWidth: "320px",
+        width: adjustedPosition.width,
+        maxHeight: adjustedPosition.height,
         overflowY: "auto",
         overflowX: "hidden",
-        display: "block",
-        visibility: "visible",
         backdropFilter: "blur(8px)",
         animation: "fadeInUp 0.15s ease-out",
       }}
     >
-      {filteredFiles.map((file, index) => (
-        <div
-          key={file.path}
-          className={`flex cursor-pointer items-center gap-2 border-border border-b px-2 py-1.5 text-xs transition-all duration-100 last:border-b-0 ${
-            index === selectedIndex ? "bg-selected text-text shadow-sm" : "text-text hover:bg-hover"
-          }`}
-          onClick={e => {
-            e.preventDefault();
-            e.stopPropagation();
-            onSelect(file);
-          }}
-        >
-          <FileIcon fileName={file.name} isDir={false} size={11} className="flex-shrink-0" />
-          <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="truncate font-medium font-mono text-text text-xs">{file.name}</div>
-            <div className="mt-0.5 truncate text-[10px] text-text-lighter opacity-75">
-              {getRelativePath(file.path)}
+      <div className="p-0">
+        {filteredFiles.map((file, index) => (
+          <div
+            key={file.path}
+            className={`flex cursor-pointer items-center gap-2 rounded-none px-3 py-1.5 text-xs transition-colors duration-150 ${
+              index === selectedIndex ? "bg-selected" : "bg-transparent hover:bg-hover"
+            }`}
+            onClick={e => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSelect(file);
+            }}
+          >
+            <FileIcon
+              fileName={file.name}
+              isDir={false}
+              size={13}
+              className="flex-shrink-0 text-text-lighter"
+            />
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="truncate text-sm">
+                <span className="font-mono text-text">{file.name}</span>
+                {getRelativePath(file.path) && (
+                  <span className="ml-2 text-text-lighter text-xs opacity-60">
+                    {getRelativePath(file.path)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 });
