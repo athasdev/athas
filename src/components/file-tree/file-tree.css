@@ -35,4 +35,6 @@
   position: relative !important;
   will-change: transform !important;
   -webkit-overflow-scrolling: touch !important;
+  scroll-behavior: smooth !important;
+  scroll-snap-type: none !important;
 }

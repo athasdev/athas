@@ -399,8 +399,16 @@ const FileTree = ({
     if (!containerRef.current) return;
 
     e.preventDefault();
-    const delta = e.deltaY;
-    containerRef.current.scrollTop += delta;
+
+    // Calculate smooth scroll delta
+    const delta = e.deltaY * 0.5; // Reduce scroll speed for smoother feel
+
+    // Use requestAnimationFrame for smooth scrolling
+    requestAnimationFrame(() => {
+      if (containerRef.current) {
+        containerRef.current.scrollTop += delta;
+      }
+    });
   }, []);
 
   useEffect(() => {
