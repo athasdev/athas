@@ -1,36 +1,38 @@
-/* Hide scrollbar for Chrome, Safari and Opera */
+/* Customize scrollbar for Chrome, Safari and Opera */
 .file-tree-container::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  background: transparent !important;
+  width: 6px !important;
+  height: 6px !important;
+  display: block !important;
 }
 
-/* Hide scrollbar for IE, Edge and Firefox */
-.file-tree-container {
-  -ms-overflow-style: none !important;  /* IE and Edge */
-  scrollbar-width: none !important;  /* Firefox */
-  scrollbar-color: transparent transparent !important;
-}
-
-/* Additional webkit scrollbar hiding */
 .file-tree-container::-webkit-scrollbar-track {
-  display: none !important;
   background: transparent !important;
+  display: block !important;
 }
 
 .file-tree-container::-webkit-scrollbar-thumb {
-  display: none !important;
-  background: transparent !important;
+  background: rgba(155, 155, 155, 0.3) !important;
+  border-radius: 3px !important;
+  transition: background 0.2s ease !important;
+  display: block !important;
 }
 
-.file-tree-container::-webkit-scrollbar-corner {
-  display: none !important;
-  background: transparent !important;
+.file-tree-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(155, 155, 155, 0.5) !important;
 }
 
-/* Ensure scrolling still works */
+/* Customize scrollbar for Firefox */
 .file-tree-container {
-  overflow-y: auto;
-  overflow-x: hidden;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(155, 155, 155, 0.3) transparent !important;
+}
+
+/* Ensure smooth scrolling */
+.file-tree-container {
+  overflow-y: scroll !important;
+  overflow-x: hidden !important;
+  height: 100% !important;
+  position: relative !important;
+  will-change: transform !important;
+  -webkit-overflow-scrolling: touch !important;
 }

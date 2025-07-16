@@ -17,7 +17,7 @@ import {
   Upload,
 } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ContextMenuState, FileEntry } from "../../types/app";
 import FileIcon from "../file-icon";
 import "./file-tree.css";
@@ -65,6 +65,7 @@ const FileTree = ({
 }: FileTreeProps) => {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Use custom drag and drop
   const { dragState, startCustomDrag } = useCustomDragDrop(
@@ -394,28 +395,47 @@ const FileTree = ({
     }
   };
 
+  const handleWheel = useCallback((e: WheelEvent) => {
+    if (!containerRef.current) return;
+
+    e.preventDefault();
+    const delta = e.deltaY;
+    containerRef.current.scrollTop += delta;
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener("wheel", handleWheel);
+    };
+  }, [handleWheel]);
+
   return (
-    <>
-      <div
-        className={cn(
-          "file-tree-container flex flex-1 select-none",
-          "flex-col gap-0 p-2",
-          "min-h-full", // Ensure container takes full height
-          dragState.dragOverPath === "__ROOT__" &&
-            "!bg-accent !bg-opacity-10 !border-2 !border-accent !border-dashed",
-        )}
-        onDragOver={e => {
-          e.preventDefault();
-          if (draggedItem) {
-            e.dataTransfer.dropEffect = "move";
-          } else {
-            e.dataTransfer.dropEffect = "copy";
-          }
-        }}
-        onDrop={handleRootDrop}
-      >
-        {renderFileTree(files)}
-      </div>
+    <div
+      className={cn(
+        "file-tree-container flex flex-1 select-none",
+        "flex-col gap-0 p-2",
+        "min-h-full", // Ensure container takes full height
+        dragState.dragOverPath === "__ROOT__" &&
+          "!bg-accent !bg-opacity-10 !border-2 !border-accent !border-dashed",
+      )}
+      ref={containerRef}
+      onDragOver={e => {
+        e.preventDefault();
+        if (draggedItem) {
+          e.dataTransfer.dropEffect = "move";
+        } else {
+          e.dataTransfer.dropEffect = "copy";
+        }
+      }}
+      onDrop={handleRootDrop}
+      onContextMenu={e => e.preventDefault()}
+    >
+      {renderFileTree(files)}
 
       {contextMenu && (
         <div
@@ -802,7 +822,7 @@ const FileTree = ({
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
