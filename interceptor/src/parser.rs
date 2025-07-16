@@ -1,43 +1,39 @@
 use crate::types::{ChunkType, ContentBlock, Delta, ParsedResponse, StreamingChunk};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use thin_logger::log;
 
 impl ParsedResponse {
     fn append_content_block(&mut self, block: ContentBlock) {
-        self.content.get_or_insert_with(Vec::new).push(block);
+        self.content.push(block);
     }
 
     fn append_text_to_last_block(&mut self, text: &str) {
-        if let Some(content) = &mut self.content {
-            if let Some(last_block) = content.last_mut() {
-                if last_block.content_type == "text" {
-                    match &mut last_block.text {
-                        Some(existing_text) => existing_text.push_str(text),
-                        None => last_block.text = Some(text.to_string()),
-                    }
+        if let Some(last_block) = self.content.last_mut() {
+            if last_block.content_type == "text" {
+                match &mut last_block.text {
+                    Some(existing_text) => existing_text.push_str(text),
+                    None => last_block.text = Some(text.to_string()),
                 }
             }
         }
     }
 
     fn append_partial_json_to_last_block(&mut self, partial_json: &str) {
-        if let Some(content) = &mut self.content {
-            if let Some(last_block) = content.last_mut() {
-                if last_block.content_type == "tool_use" {
-                    // For tool_use blocks, accumulate partial JSON into a temporary string
-                    // We'll parse it when the block is complete
-                    match &mut last_block.input {
-                        Some(serde_json::Value::String(json_str)) => {
-                            json_str.push_str(partial_json);
-                        }
-                        Some(_) => {
-                            // this is being fired A LOT after every tool use and i don't know why (commenting it out for now)
-                            // log::warn!("Unexpected: tool_use block already has parsed input");
-                        }
-                        None => {
-                            last_block.input =
-                                Some(serde_json::Value::String(partial_json.to_string()));
-                        }
+        if let Some(last_block) = self.content.last_mut() {
+            if last_block.content_type == "tool_use" {
+                // For tool_use blocks, accumulate partial JSON into a temporary string
+                // We'll parse it when the block is complete
+                match &mut last_block.input {
+                    Some(serde_json::Value::String(json_str)) => {
+                        json_str.push_str(partial_json);
+                    }
+                    Some(_) => {
+                        // this is being fired A LOT after every tool use and i don't know why (commenting it out for now)
+                        // log::warn!("Unexpected: tool_use block already has parsed input");
+                    }
+                    None => {
+                        last_block.input =
+                            Some(serde_json::Value::String(partial_json.to_string()));
                     }
                 }
             }
@@ -45,23 +41,21 @@ impl ParsedResponse {
     }
 
     fn finalize_tool_use_block(&mut self) {
-        if let Some(content) = &mut self.content {
-            if let Some(last_block) = content.last_mut() {
-                if last_block.content_type == "tool_use" {
-                    // Parse accumulated JSON string into proper JSON value
-                    if let Some(serde_json::Value::String(json_str)) = &last_block.input {
-                        match serde_json::from_str::<serde_json::Value>(json_str) {
-                            Ok(parsed_json) => {
-                                last_block.input = Some(parsed_json);
-                            }
-                            Err(e) => {
-                                log::error!(
-                                    "Failed to parse tool_use input JSON: {} - Error: {}",
-                                    json_str,
-                                    e
-                                );
-                                // Keep the raw string on error
-                            }
+        if let Some(last_block) = self.content.last_mut() {
+            if last_block.content_type == "tool_use" {
+                // Parse accumulated JSON string into proper JSON value
+                if let Some(serde_json::Value::String(json_str)) = &last_block.input {
+                    match serde_json::from_str::<serde_json::Value>(json_str) {
+                        Ok(parsed_json) => {
+                            last_block.input = Some(parsed_json);
+                        }
+                        Err(e) => {
+                            log::error!(
+                                "Failed to parse tool_use input JSON: {} - Error: {}",
+                                json_str,
+                                e
+                            );
+                            // Keep the raw string on error
                         }
                     }
                 }
@@ -78,15 +72,16 @@ impl ParsedResponse {
 }
 
 fn process_message_start(chunk: &StreamingChunk) -> Option<ParsedResponse> {
-    chunk.message.as_ref().map(|message| {
-        ParsedResponse::builder()
-            .id(message.id.clone())
-            .response_type(message.message_type.clone())
-            .role(message.role.clone())
-            .model(message.model.clone())
-            .content(Vec::new())
-            .usage(message.usage.clone())
-            .build()
+    chunk.message.as_ref().map(|message| ParsedResponse {
+        id: message.id.clone(),
+        response_type: message.message_type.clone(),
+        role: message.role.clone(),
+        model: message.model.clone(),
+        content: Vec::new(),
+        usage: message.usage.clone(),
+        stop_reason: None,
+        stop_sequence: None,
+        error: None,
     })
 }
 
@@ -163,8 +158,4 @@ pub fn parse_streaming_response(
     }
 
     Ok((chunks, final_response))
-}
-
-pub fn parse_non_streaming_response(response_text: &str) -> Result<ParsedResponse> {
-    serde_json::from_str(response_text).context("Failed to parse response")
 }

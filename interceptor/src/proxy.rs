@@ -1,7 +1,7 @@
 use crate::{
     error::ProxyError,
     helpers::{extract_response_content, log_assistant_response, log_user_messages},
-    parser::{parse_non_streaming_response, parse_streaming_response},
+    parser::parse_streaming_response,
     state::InterceptorState,
     types::{
         ChunkType, ContentBlock, InterceptedRequest, InterceptorMessage, ParsedRequest,
@@ -27,21 +27,6 @@ use tokio_stream::wrappers::ReceiverStream;
 use uuid::Uuid;
 
 const ANTHROPIC_API_BASE: &str = "https://api.anthropic.com";
-
-/// Extracts and validates the request body
-async fn extract_request_body(request: Request) -> Result<Bytes> {
-    axum::body::to_bytes(request.into_body(), usize::MAX)
-        .await
-        .context("Failed to read request body")
-}
-
-/// Parses the request body into a ParsedRequest
-fn parse_request_body(body_bytes: &Bytes) -> Result<(String, ParsedRequest)> {
-    let body_str = String::from_utf8_lossy(body_bytes).to_string();
-    let parsed: ParsedRequest =
-        serde_json::from_str(&body_str).context("Failed to parse request")?;
-    Ok((body_str, parsed))
-}
 
 /// Builds headers for forwarding to Anthropic API
 fn build_forward_headers(headers: &HeaderMap) -> HeaderMap {
@@ -85,31 +70,14 @@ fn create_intercepted_request(
         headers: headers_map,
         parsed_response: None,
         raw_response: None,
-        streaming_chunks: None,
+        streaming_chunks: Vec::new(),
         duration_ms: None,
         error: None,
     }
 }
 
-/// Forwards the request to Anthropic API
-async fn forward_to_anthropic(
-    client: &reqwest::Client,
-    method: reqwest::Method,
-    url: &str,
-    headers: HeaderMap,
-    body: Bytes,
-) -> Result<reqwest::Response> {
-    client
-        .request(method, url)
-        .headers(headers)
-        .body(body.to_vec())
-        .send()
-        .await
-        .context("Failed to forward request to Anthropic")
-}
-
 /// Processes streaming response chunks
-async fn process_streaming_response(
+fn process_streaming_response(
     response: reqwest::Response,
     state: InterceptorState,
     request_id: Uuid,
@@ -218,7 +186,7 @@ async fn process_streaming_response(
 
         // Parse streaming response
         if let Ok((chunks, final_response)) = parse_streaming_response(&captured_response) {
-            intercepted.streaming_chunks = Some(chunks);
+            intercepted.streaming_chunks = chunks;
             intercepted.parsed_response = final_response;
         }
 
@@ -227,15 +195,13 @@ async fn process_streaming_response(
 
         // Log assistant response
         if let Some(ref parsed) = intercepted.parsed_response {
-            if let Some(ref content) = parsed.content {
-                let (text_parts, tool_uses) = extract_response_content(content);
-                log_assistant_response(
-                    &text_parts,
-                    &tool_uses,
-                    intercepted.duration_ms.unwrap_or(0),
-                    true, // streaming
-                );
-            }
+            let (text_parts, tool_uses) = extract_response_content(&parsed.content);
+            log_assistant_response(
+                &text_parts,
+                &tool_uses,
+                intercepted.duration_ms.unwrap_or(0),
+                true, // streaming
+            );
         }
 
         state.update_response(request_id, intercepted);
@@ -258,21 +224,23 @@ async fn process_non_streaming_response(
     let response_headers = response.headers().clone();
     let response_text = response.text().await.context("Failed to read response")?;
 
-    intercepted.parsed_response = parse_non_streaming_response(&response_text).ok();
+    intercepted.parsed_response = {
+        let response_text: &str = &response_text;
+        serde_json::from_str(response_text).context("Failed to parse response")
+    }
+    .ok();
     intercepted.raw_response = Some(response_text.clone());
     intercepted.duration_ms = Some(start_time.elapsed().as_millis() as u64);
 
     // Log assistant response
     if let Some(ref parsed) = intercepted.parsed_response {
-        if let Some(ref content) = parsed.content {
-            let (text_parts, tool_uses) = extract_response_content(content);
-            log_assistant_response(
-                &text_parts,
-                &tool_uses,
-                intercepted.duration_ms.unwrap_or(0),
-                false, // non-streaming
-            );
-        }
+        let (text_parts, tool_uses) = extract_response_content(&parsed.content);
+        log_assistant_response(
+            &text_parts,
+            &tool_uses,
+            intercepted.duration_ms.unwrap_or(0),
+            false, // non-streaming
+        );
     }
 
     state.update_response(request_id, intercepted);
@@ -320,20 +288,20 @@ pub async fn proxy_handler(
     debug!("Request {} -> {}", request_id, path);
 
     // Extract and parse request body
-    let body_bytes = extract_request_body(request).await.map_err(|e| {
-        error!("Failed to read request body: {}", e);
-        ProxyError::RequestBodyError(e.to_string())
-    })?;
+    let body_bytes = axum::body::to_bytes(request.into_body(), usize::MAX)
+        .await
+        .context("Failed to read request body")?;
 
-    let (body_str, parsed_request) = parse_request_body(&body_bytes).map_err(|e| {
-        error!("Failed to parse request: {}", e);
-        ProxyError::RequestParseError(e.to_string())
-    })?;
+    // Parse request body inline with proper UTF-8 validation
+    let body_str = std::str::from_utf8(&body_bytes)
+        .context("Request body is not valid UTF-8")?
+        .to_string();
+    let parsed_request: ParsedRequest =
+        serde_json::from_str(&body_str).context("Failed to parse request JSON")?;
 
     log_user_messages(&parsed_request.messages);
 
-    // Create intercepted request
-    let mut intercepted = create_intercepted_request(
+    let intercepted = create_intercepted_request(
         request_id,
         method_str.clone(),
         path.clone(),
@@ -351,39 +319,22 @@ pub async fn proxy_handler(
 
     debug!("Forward {} -> {}", request_id, url);
 
-    let method_reqwest = reqwest::Method::from_bytes(method.as_str().as_bytes()).map_err(|e| {
-        error!("Invalid HTTP method: {}", e);
-        ProxyError::InvalidMethod(e.to_string())
-    })?;
+    let method_reqwest =
+        reqwest::Method::from_bytes(method.as_str().as_bytes()).context("Invalid HTTP method")?;
 
-    let response = match forward_to_anthropic(
-        &client,
-        method_reqwest,
-        &url,
-        forward_headers,
-        body_bytes,
-    )
-    .await
-    {
-        Ok(resp) => resp,
-        Err(e) => {
-            let error = format!("Failed to forward request: {e}");
-            error!("Request error: {}", error);
-            intercepted.error = Some(error.clone());
-            intercepted.duration_ms = Some(start_time.elapsed().as_millis() as u64);
-            state.update_response(request_id, intercepted);
-            state.send_error(request_id, error);
-            return Err(ProxyError::ForwardError(
-                "Failed to forward request".to_string(),
-            ));
-        }
-    };
+    // we forward the request to anthropic in this block
+    let response = client
+        .request(method_reqwest, &url)
+        .headers(forward_headers)
+        .body(body_bytes.to_vec())
+        .send()
+        .await?;
 
     let status = response.status();
     debug!("Response {} - status: {}", request_id, status.as_u16());
 
     // Handle streaming vs non-streaming
-    let is_streaming = parsed_request.stream.unwrap_or(false);
+    let is_streaming = parsed_request.stream;
     info!(
         "{} Request {} - Mode: {}",
         if is_streaming { "🌊" } else { "📦" },
@@ -397,7 +348,7 @@ pub async fn proxy_handler(
 
     if is_streaming {
         let (rx, status, response_headers) =
-            process_streaming_response(response, state, request_id, start_time, intercepted).await;
+            process_streaming_response(response, state, request_id, start_time, intercepted);
 
         // Return streaming response
         let stream = ReceiverStream::new(rx);
@@ -410,24 +361,14 @@ pub async fn proxy_handler(
 
         Ok(builder.body(body).unwrap())
     } else {
-        match process_non_streaming_response(response, &state, request_id, start_time, intercepted)
-            .await
-        {
-            Ok((response_text, status, response_headers)) => {
-                let mut builder = Response::builder().status(status);
-                for (key, value) in response_headers.iter() {
-                    builder = builder.header(key, value);
-                }
-                Ok(builder.body(Body::from(response_text)).unwrap())
-            }
-            Err(e) => {
-                let error = format!("Failed to read response: {e}");
-                error!("Response error: {}", error);
-                state.send_error(request_id, error.clone());
-                Err(ProxyError::ResponseReadError(
-                    "Failed to read response".to_string(),
-                ))
-            }
+        let (response_text, status, response_headers) =
+            process_non_streaming_response(response, &state, request_id, start_time, intercepted)
+                .await?;
+
+        let mut builder = Response::builder().status(status);
+        for (key, value) in response_headers.iter() {
+            builder = builder.header(key, value);
         }
+        Ok(builder.body(Body::from(response_text)).unwrap())
     }
 }

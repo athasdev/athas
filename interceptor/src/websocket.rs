@@ -1,5 +1,9 @@
+use crate::types::InterceptorMessage;
 use axum::{
-    extract::{State, WebSocketUpgrade, ws::WebSocket},
+    extract::{
+        State, WebSocketUpgrade,
+        ws::{self, WebSocket},
+    },
     response::Response,
 };
 use dashmap::DashMap;
@@ -8,8 +12,6 @@ use std::sync::Arc;
 use thin_logger::log;
 use tokio::sync::mpsc;
 use uuid::Uuid;
-
-use crate::types::InterceptorMessage;
 
 pub type WsClients = Arc<DashMap<Uuid, mpsc::UnboundedSender<InterceptorMessage>>>;
 
@@ -54,7 +56,7 @@ pub async fn ws_handler(ws: WebSocketUpgrade, State(ws_state): State<WsState>) -
     ws.on_upgrade(|socket| handle_socket(socket, ws_state))
 }
 
-async fn handle_socket(socket: WebSocket, ws_state: WsState) {
+pub async fn handle_socket(socket: WebSocket, ws_state: WsState) {
     let client_id = Uuid::new_v4();
     log::debug!("WS client connected: {}", client_id);
 
@@ -66,11 +68,7 @@ async fn handle_socket(socket: WebSocket, ws_state: WsState) {
     let mut send_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if let Ok(serialized) = serde_json::to_string(&msg) {
-                if sender
-                    .send(axum::extract::ws::Message::Text(serialized))
-                    .await
-                    .is_err()
-                {
+                if sender.send(ws::Message::Text(serialized)).await.is_err() {
                     break;
                 }
             }
@@ -92,17 +90,4 @@ async fn handle_socket(socket: WebSocket, ws_state: WsState) {
 
     ws_state.clients.remove(&client_id);
     log::debug!("WS client disconnected: {}", client_id);
-}
-
-pub fn create_ws_broadcaster(
-    ws_state: WsState,
-    mut rx: mpsc::UnboundedReceiver<InterceptorMessage>,
-) -> tokio::task::JoinHandle<()> {
-    tokio::spawn(async move {
-        log::debug!("WebSocket broadcaster started");
-        while let Some(message) = rx.recv().await {
-            ws_state.broadcast(message);
-        }
-        log::debug!("WebSocket broadcaster ended");
-    })
 }

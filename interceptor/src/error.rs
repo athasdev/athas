@@ -3,39 +3,47 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use std::fmt;
+use thiserror::Error;
 
 /// Custom error type for the interceptor proxy
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ProxyError {
     /// Failed to read request body
+    #[error("Request body error: {0}")]
     RequestBodyError(String),
+
     /// Failed to parse request JSON
+    #[error("Request parse error: {0}")]
     RequestParseError(String),
+
     /// Invalid HTTP method
+    #[error("Invalid method: {0}")]
     InvalidMethod(String),
+
     /// Failed to forward request to Anthropic
+    #[error("Forward error: {0}")]
     ForwardError(String),
+
     /// Failed to read response from Anthropic
+    #[error("Response read error: {0}")]
     ResponseReadError(String),
+
     /// Internal server error
+    #[error("Internal error: {0}")]
     InternalError(String),
-}
 
-impl fmt::Display for ProxyError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ProxyError::RequestBodyError(msg) => write!(f, "Request body error: {}", msg),
-            ProxyError::RequestParseError(msg) => write!(f, "Request parse error: {}", msg),
-            ProxyError::InvalidMethod(msg) => write!(f, "Invalid method: {}", msg),
-            ProxyError::ForwardError(msg) => write!(f, "Forward error: {}", msg),
-            ProxyError::ResponseReadError(msg) => write!(f, "Response read error: {}", msg),
-            ProxyError::InternalError(msg) => write!(f, "Internal error: {}", msg),
-        }
-    }
-}
+    /// Reqwest error
+    #[error("HTTP client error")]
+    Reqwest(#[from] reqwest::Error),
 
-impl std::error::Error for ProxyError {}
+    /// Anyhow error for general error conversion
+    #[error(transparent)]
+    Anyhow(#[from] anyhow::Error),
+
+    /// Axum error
+    #[error("Axum error")]
+    Axum(#[from] axum::Error),
+}
 
 impl From<ProxyError> for Response<Body> {
     fn from(error: ProxyError) -> Self {
@@ -43,10 +51,12 @@ impl From<ProxyError> for Response<Body> {
             ProxyError::RequestBodyError(_)
             | ProxyError::RequestParseError(_)
             | ProxyError::InvalidMethod(_) => (StatusCode::BAD_REQUEST, error.to_string()),
-            ProxyError::ForwardError(_) | ProxyError::ResponseReadError(_) => {
-                (StatusCode::BAD_GATEWAY, error.to_string())
+            ProxyError::ForwardError(_)
+            | ProxyError::ResponseReadError(_)
+            | ProxyError::Reqwest(_) => (StatusCode::BAD_GATEWAY, error.to_string()),
+            ProxyError::InternalError(_) | ProxyError::Anyhow(_) | ProxyError::Axum(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
             }
-            ProxyError::InternalError(_) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()),
         };
 
         Response::builder()

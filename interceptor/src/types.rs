@@ -1,6 +1,6 @@
-use bon::Builder;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt;
 use strum::{Display, EnumString};
@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 // Base enums and simple types
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "lowercase")]
 pub enum Role {
     User,
     Assistant,
@@ -31,31 +31,37 @@ pub enum ClaudeModel {
 
 // Basic structs used by others
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ContentBlock {
     #[serde(rename = "type")]
     pub content_type: String,
     pub text: Option<String>,
     pub id: Option<String>,
     pub name: Option<String>,
-    pub input: Option<serde_json::Value>,
-    pub content: Option<serde_json::Value>,
+    pub input: Option<Value>,
+    pub content: Option<Value>,
     pub tool_use_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tool {
     pub name: String,
-    pub description: Option<String>,
-    pub input_schema: Option<serde_json::Value>,
+    pub description: String,
+    pub input_schema: Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Usage {
     pub input_tokens: u32,
     pub output_tokens: u32,
+    #[serde(default)]
+    pub cache_creation_input_tokens: u32,
+    #[serde(default)]
+    pub cache_read_input_tokens: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct ErrorResponse {
     #[serde(rename = "type")]
     pub error_type: String,
@@ -63,6 +69,7 @@ pub struct ErrorResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct SystemBlock {
     #[serde(rename = "type")]
     pub block_type: String,
@@ -96,24 +103,24 @@ pub struct ParsedRequest {
     pub model: ClaudeModel,
     pub messages: Vec<ParsedMessage>,
     pub system: Option<SystemPrompt>,
-    pub tools: Option<Vec<Tool>>,
+    pub tools: Vec<Tool>,
     pub temperature: Option<f32>,
     pub max_tokens: Option<u32>,
-    pub stream: Option<bool>,
+    #[serde(default)]
+    pub stream: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Builder)]
-#[builder(on(String, into))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParsedResponse {
-    pub id: Option<String>,
-    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    pub response_type: Option<String>,
-    pub role: Option<String>,
-    pub content: Option<Vec<ContentBlock>>,
-    pub model: Option<String>,
+    pub id: String,
+    #[serde(rename = "type")]
+    pub response_type: String,
+    pub role: String,
+    pub content: Vec<ContentBlock>,
+    pub model: String,
     pub stop_reason: Option<String>,
     pub stop_sequence: Option<String>,
-    pub usage: Option<Usage>,
+    pub usage: Usage,
     pub error: Option<ErrorResponse>,
 }
 
@@ -136,6 +143,7 @@ pub enum ChunkType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct Delta {
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub delta_type: Option<String>,
@@ -146,6 +154,7 @@ pub struct Delta {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct StreamMessage {
     pub id: String,
     #[serde(rename = "type")]
@@ -158,6 +167,7 @@ pub struct StreamMessage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct StreamingChunk {
     #[serde(rename = "type")]
     pub chunk_type: ChunkType,
@@ -180,7 +190,7 @@ pub struct InterceptedRequest {
     pub headers: HashMap<String, String>,
     pub parsed_response: Option<ParsedResponse>,
     pub raw_response: Option<String>,
-    pub streaming_chunks: Option<Vec<StreamingChunk>>,
+    pub streaming_chunks: Vec<StreamingChunk>,
     pub duration_ms: Option<u64>,
     pub error: Option<String>,
 }
@@ -218,12 +228,6 @@ impl fmt::Display for InterceptedRequest {
     }
 }
 
-impl fmt::Display for StreamingChunk {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.chunk_type)
-    }
-}
-
 impl InterceptorMessage {
     pub fn type_name(&self) -> &'static str {
         match self {
@@ -246,7 +250,7 @@ impl fmt::Display for InterceptorMessage {
             }
             InterceptorMessage::StreamChunk { request_id, chunk } => {
                 let short_id = request_id.to_string()[..8].to_string();
-                write!(f, "STREAM_CHUNK[{}]: {}", short_id, chunk)
+                write!(f, "STREAM_CHUNK[{}]: {}", short_id, chunk.chunk_type)
             }
             InterceptorMessage::Error { request_id, error } => {
                 let short_id = request_id.to_string()[..8].to_string();

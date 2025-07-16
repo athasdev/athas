@@ -1,7 +1,5 @@
 use anyhow::{Context, Result, bail};
-use interceptor::{
-    InterceptorMessage, start_proxy_server_with_ws, websocket::create_ws_broadcaster,
-};
+use interceptor::{InterceptorMessage, start_proxy_server_with_ws};
 use serde::Serialize;
 use std::process::Stdio;
 use tauri::{AppHandle, Emitter};
@@ -43,17 +41,22 @@ impl ClaudeCodeBridge {
 
         log::info!("Starting interceptor as embedded service...");
 
+        // todo: we shouldn't hardcode this
         let proxy_port = 3456;
 
         // Start the interceptor proxy server
         let (rx, ws_state, server_handle) = start_proxy_server_with_ws(proxy_port).await?;
 
         // Create channels for message distribution
-        let (broadcast_tx, broadcast_rx) = mpsc::unbounded_channel::<InterceptorMessage>();
+        let (broadcast_tx, mut broadcast_rx) = mpsc::unbounded_channel::<InterceptorMessage>();
         let app_handle = self.app_handle.clone();
 
         // Spawn WebSocket broadcaster
-        tokio::spawn(create_ws_broadcaster(ws_state, broadcast_rx));
+        tokio::spawn(async move {
+            while let Some(message) = broadcast_rx.recv().await {
+                ws_state.broadcast(message);
+            }
+        });
 
         // Spawn message handler that forwards to frontend
         let message_handler = tokio::spawn(async move {

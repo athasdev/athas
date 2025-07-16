@@ -1129,12 +1129,7 @@ function App() {
   if (shouldShowWelcome) {
     return (
       <div className={cn("flex h-screen w-screen flex-col overflow-hidden bg-transparent")}>
-        <div
-          className={cn(
-            "window-container flex h-full w-full flex-col overflow-hidden bg-white",
-            isMac() && "rounded-xl",
-          )}
-        >
+        <div className="window-container flex h-full w-full flex-col overflow-hidden bg-white">
           <CustomTitleBar showMinimal={true} isWelcomeScreen={true} />
           <WelcomeScreen
             onOpenFolder={handleOpenFolder}

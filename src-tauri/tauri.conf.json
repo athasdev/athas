@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Athas",
   "version": "0.1.0",
-  "identifier": "com.athas-code.app",
+  "identifier": "com.code.athas",
   "build": {
     "beforeDevCommand": "vite",
     "devUrl": "http://localhost:1420",
@@ -13,17 +13,23 @@
     "windows": [
       {
         "label": "main",
-        "title": "Athas",
+        "title": "",
         "width": 1200,
         "height": 800,
-        "decorations": false,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
         "transparent": true,
         "resizable": true,
         "fullscreen": false,
         "center": true,
         "minWidth": 400,
         "minHeight": 400,
-        "shadow": true
+        "shadow": true,
+        "trafficLightPosition": {
+          "x": 15,
+          "y": 13
+        }
       }
     ],
     "security": {

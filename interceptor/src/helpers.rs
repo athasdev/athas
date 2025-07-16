@@ -1,4 +1,4 @@
-use crate::types::{ContentBlock, MessageContent, Role};
+use crate::types::{ContentBlock, MessageContent, ParsedMessage, Role};
 use thin_logger::log::{debug, info};
 
 /// Extracts text content and tool results from message blocks
@@ -59,7 +59,7 @@ pub fn truncate_for_display(text: &str, max_length: usize) -> String {
 }
 
 /// Logs user messages from the request
-pub fn log_user_messages(messages: &[crate::types::ParsedMessage]) {
+pub fn log_user_messages(messages: &[ParsedMessage]) {
     for msg in messages {
         if matches!(msg.role, Role::User) {
             let content = match &msg.content {

@@ -1,13 +1,21 @@
-use anyhow::{Context, Result};
-use axum::{Router, routing::get};
-use std::net::SocketAddr;
-use thin_logger::log::{error, info};
-use tokio::sync::mpsc;
-
 use crate::{
+    proxy::proxy_handler,
     state::InterceptorState,
     types::InterceptorMessage,
-    websocket::{WsState, ws_handler},
+    websocket::{WsState, handle_socket},
+};
+use anyhow::{Context, Result};
+use axum::{
+    Router,
+    extract::{Request, State, WebSocketUpgrade},
+    http::{HeaderMap, Uri},
+    routing::get,
+};
+use thin_logger::log::{error, info};
+use tokio::{
+    net::TcpListener,
+    sync::mpsc::{UnboundedReceiver, unbounded_channel},
+    task::JoinHandle,
 };
 
 #[derive(Clone)]
@@ -19,11 +27,11 @@ pub struct AppState {
 pub async fn start_proxy_server_with_ws(
     proxy_port: u16,
 ) -> Result<(
-    mpsc::UnboundedReceiver<InterceptorMessage>,
+    UnboundedReceiver<InterceptorMessage>,
     WsState,
-    tokio::task::JoinHandle<()>,
+    JoinHandle<()>,
 )> {
-    let (tx, rx) = mpsc::unbounded_channel::<InterceptorMessage>();
+    let (tx, rx) = unbounded_channel::<InterceptorMessage>();
     let interceptor_state = InterceptorState::new(tx);
     let ws_state = WsState::new();
 
@@ -33,12 +41,25 @@ pub async fn start_proxy_server_with_ws(
     };
 
     let app = Router::new()
-        .route("/ws", get(ws_handler_wrapper))
-        .fallback(axum::routing::any(proxy_handler_wrapper))
+        .route("/ws", get(|ws: WebSocketUpgrade, State(app_state): State<AppState>| async move {
+            {
+                let State(ws_state) = State(app_state.ws);
+                async move {
+                    ws.on_upgrade(|socket| handle_socket(socket, ws_state))
+                }
+            }.await
+        }))
+        .fallback(axum::routing::any(
+            |State(app_state): State<AppState>,
+             uri: Uri,
+             headers: HeaderMap,
+             req: Request| async move {
+                proxy_handler(State(app_state.interceptor), uri, headers, req).await
+            },
+        ))
         .with_state(app_state);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], proxy_port));
-    let listener = tokio::net::TcpListener::bind(addr)
+    let listener = TcpListener::bind(format!("127.0.0.1:{proxy_port}"))
         .await
         .context("Failed to bind proxy server")?;
 
@@ -46,6 +67,7 @@ pub async fn start_proxy_server_with_ws(
         "Claude Code Proxy with WebSocket running on http://localhost:{}",
         proxy_port
     );
+
     info!("WebSocket endpoint: ws://localhost:{}/ws", proxy_port);
 
     let server_handle = tokio::spawn(async move {
@@ -55,27 +77,4 @@ pub async fn start_proxy_server_with_ws(
     });
 
     Ok((rx, ws_state, server_handle))
-}
-
-async fn ws_handler_wrapper(
-    ws: axum::extract::WebSocketUpgrade,
-    axum::extract::State(app_state): axum::extract::State<AppState>,
-) -> axum::response::Response {
-    ws_handler(ws, axum::extract::State(app_state.ws)).await
-}
-
-async fn proxy_handler_wrapper(
-    axum::extract::State(app_state): axum::extract::State<AppState>,
-    uri: axum::http::Uri,
-    headers: axum::http::HeaderMap,
-    req: axum::extract::Request,
-) -> impl axum::response::IntoResponse {
-    use crate::proxy::proxy_handler;
-    proxy_handler(
-        axum::extract::State(app_state.interceptor),
-        uri,
-        headers,
-        req,
-    )
-    .await
 }
