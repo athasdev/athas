@@ -52,31 +52,34 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
 
   // Adjust position to prevent overflow
   const adjustedPosition = useMemo(() => {
-    const dropdownWidth = 280;
-    const itemHeight = 36; // Adjusted for better spacing
-    const dropdownHeight = Math.min(filteredFiles.length * itemHeight, 200); // Max 5-6 items
+    const itemHeight = 32; // Adjusted for more compact spacing
+    const dropdownHeight = Math.min(filteredFiles.length * itemHeight, 320); // Show more items
     const padding = 16;
 
     let { top, left } = position;
 
-    // Ensure dropdown doesn't go off the left edge of the screen
+    // Find the AI chat container to get its width
+    const chatContainer = document.querySelector(".ai-chat-container") as HTMLElement;
+    const containerWidth = chatContainer ? chatContainer.offsetWidth : 400;
+    const dropdownWidth = Math.min(containerWidth * 0.9, 500); // 90% of container width, max 500px
+
+    // Ensure dropdown doesn't go off the left edge
     if (left < padding) {
       left = padding;
     }
 
-    // Ensure dropdown doesn't go off the right edge of the screen
+    // Ensure dropdown doesn't go off the right edge
     if (left + dropdownWidth > window.innerWidth - padding) {
       left = Math.max(padding, window.innerWidth - dropdownWidth - padding);
     }
 
-    // Position above the cursor by default (above the input area)
-    if (top + dropdownHeight > window.innerHeight - padding) {
-      const abovePosition = top - dropdownHeight - 40; // More space from input
-      if (abovePosition >= padding) {
-        top = abovePosition;
-      } else {
-        top = Math.max(padding, window.innerHeight - dropdownHeight - padding);
-      }
+    // Position just above the input area
+    const abovePosition = top - dropdownHeight - 4; // Very close to input
+    if (abovePosition >= padding) {
+      top = abovePosition;
+    } else {
+      // If not enough space above, position below
+      top = top + 40;
     }
 
     return {
@@ -126,7 +129,15 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
 
       // Get directory path without filename
       const lastSlashIndex = cleanPath.lastIndexOf("/");
-      return lastSlashIndex > 0 ? cleanPath.substring(0, lastSlashIndex) : "";
+      const dirPath = lastSlashIndex > 0 ? cleanPath.substring(0, lastSlashIndex) : "";
+
+      // Trim from beginning if too long (keep ending)
+      const maxLength = 35;
+      if (dirPath.length > maxLength) {
+        return `...${dirPath.substring(dirPath.length - maxLength)}`;
+      }
+
+      return dirPath;
     }
 
     return fullPath;
@@ -151,8 +162,10 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
         {filteredFiles.map((file, index) => (
           <div
             key={file.path}
-            className={`flex cursor-pointer items-center gap-2 rounded-none px-3 py-1.5 text-xs transition-colors duration-150 ${
-              index === selectedIndex ? "bg-selected" : "bg-transparent hover:bg-hover"
+            className={`flex cursor-pointer items-center gap-2 rounded-none px-2 py-1 text-xs transition-all duration-150 ${
+              index === selectedIndex
+                ? "border-blue-500 border-l-2 bg-blue-500/20 text-blue-300"
+                : "bg-transparent hover:bg-hover"
             }`}
             onClick={e => {
               e.preventDefault();
@@ -163,14 +176,20 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
             <FileIcon
               fileName={file.name}
               isDir={false}
-              size={13}
-              className="flex-shrink-0 text-text-lighter"
+              size={11}
+              className={`flex-shrink-0 ${index === selectedIndex ? "text-blue-400" : "text-text-lighter"}`}
             />
             <div className="min-w-0 flex-1 overflow-hidden">
-              <div className="truncate text-sm">
-                <span className="font-mono text-text">{file.name}</span>
+              <div className="truncate">
+                <span
+                  className={`font-mono ${index === selectedIndex ? "font-medium text-blue-200" : "text-text"}`}
+                >
+                  {file.name}
+                </span>
                 {getRelativePath(file.path) && (
-                  <span className="ml-2 text-text-lighter text-xs opacity-60">
+                  <span
+                    className={`ml-2 text-xs opacity-60 ${index === selectedIndex ? "text-blue-300/70" : "text-text-lighter"}`}
+                  >
                     {getRelativePath(file.path)}
                   </span>
                 )}

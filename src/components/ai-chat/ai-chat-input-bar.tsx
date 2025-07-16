@@ -7,6 +7,8 @@ import { cn } from "../../utils/cn";
 import ModelProviderSelector from "../model-provider-selector";
 import Button from "../ui/button";
 import ClaudeStatusIndicator from "./claude-status";
+import { ContextSelector } from "./context-selector/context-selector";
+import { useContextSelectorStore } from "./context-selector/context-selector-store";
 import { FileMentionDropdown } from "./file-mention-dropdown";
 import type { AIChatInputBarProps } from "./types";
 
@@ -44,6 +46,10 @@ export default function AIChatInputBar({
     getFilteredFiles,
   } = useAIChatStore();
 
+  // Get context selector state
+  const { contextState, showContextSelector, hideContextSelector, addWebUrl } =
+    useContextSelectorStore();
+
   // Function to recalculate mention dropdown position
   const recalculateMentionPosition = useCallback(() => {
     if (!mentionState.active || !inputRef.current) return;
@@ -55,7 +61,7 @@ export default function AIChatInputBar({
 
     // Calculate position relative to the chat container
     const position = {
-      top: textareaRect.top - 220, // Position above the input area with proper spacing
+      top: textareaRect.top, // Position just above the input area
       left: containerRect ? containerRect.left + 8 : textareaRect.left, // Align with container left edge with padding
     };
 
@@ -86,6 +92,11 @@ export default function AIChatInputBar({
   }, [recalculateMentionPosition]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // If context selector is open, let it handle the key events
+    if (contextState.isOpen) {
+      return;
+    }
+
     if (mentionState.active) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -132,16 +143,27 @@ export default function AIChatInputBar({
 
         // Calculate position relative to the chat container
         const position = {
-          top: textareaRect.top - 220, // Position above the input area with proper spacing
+          top: textareaRect.top, // Position just above the input area
           left: containerRect ? containerRect.left + 8 : textareaRect.left, // Align with container left edge with padding
         };
 
-        showMention(position, afterAt, lastAtIndex);
+        // Show new context selector instead of old file mention
+        if (afterAt.length === 0) {
+          // Just typed @, show context selector
+          showContextSelector(position);
+          hideMention();
+        } else {
+          // Typed @something, show old file mention for now (backward compatibility)
+          showMention(position, afterAt, lastAtIndex);
+          hideContextSelector();
+        }
       } else {
         hideMention();
+        hideContextSelector();
       }
     } else {
       hideMention();
+      hideContextSelector();
     }
   };
 
@@ -163,6 +185,66 @@ export default function AIChatInputBar({
     }, 0);
   };
 
+  // Handle context selector item selection
+  const handleContextItemSelect = (item: any) => {
+    // Find the current cursor position and last @ symbol
+    const cursorPos = inputRef.current?.selectionStart || 0;
+    const beforeCursor = input.slice(0, cursorPos);
+    const lastAtIndex = beforeCursor.lastIndexOf("@");
+
+    if (lastAtIndex !== -1) {
+      const beforeAt = input.slice(0, lastAtIndex);
+      const afterCursor = input.slice(cursorPos);
+
+      // Handle different item types
+      if (item.type === "url") {
+        const url = item.metadata?.url || item.description || item.name;
+        // Add to web provider history if it's a new URL
+        if (item.metadata?.isNew) {
+          addWebUrl(url);
+        }
+        const newInput = `${beforeAt}@${url} ${afterCursor}`;
+        setInput(newInput);
+
+        // Move cursor after the mention
+        setTimeout(() => {
+          if (inputRef.current) {
+            const newCursorPos = beforeAt.length + url.length + 2;
+            inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+            inputRef.current.focus();
+          }
+        }, 0);
+      } else if (item.type?.startsWith("git-")) {
+        // Handle git items - use the full item name
+        const gitContext = item.name;
+        const newInput = `${beforeAt}@${gitContext} ${afterCursor}`;
+        setInput(newInput);
+
+        // Move cursor after the mention
+        setTimeout(() => {
+          if (inputRef.current) {
+            const newCursorPos = beforeAt.length + gitContext.length + 2;
+            inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+            inputRef.current.focus();
+          }
+        }, 0);
+      } else {
+        // Handle files and other types
+        const newInput = `${beforeAt}@${item.name} ${afterCursor}`;
+        setInput(newInput);
+
+        // Move cursor after the mention
+        setTimeout(() => {
+          if (inputRef.current) {
+            const newCursorPos = beforeAt.length + item.name.length + 2;
+            inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+            inputRef.current.focus();
+          }
+        }, 0);
+      }
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!input.trim() || !hasApiKey) return;
 
@@ -179,7 +261,7 @@ export default function AIChatInputBar({
     <div ref={aiChatContainerRef} className="border-border border-t bg-terniary-bg">
       {/* Context badges */}
       {aiProviderId !== "claude-code" && selectedBufferIds.size > 0 && (
-        <div className="border-border border-b bg-secondary-bg px-3 py-2">
+        <div className="border-border border-b bg-secondary-bg px-3 py-1.5">
           <div className="flex flex-wrap items-center gap-1">
             <span className="mr-1 text-text-lighter text-xs">Context:</span>
             {Array.from(selectedBufferIds).map(bufferId => {
@@ -188,15 +270,15 @@ export default function AIChatInputBar({
               return (
                 <div
                   key={bufferId}
-                  className="flex items-center gap-1 rounded-md bg-hover px-2 py-1 text-xs"
+                  className="flex items-center gap-1 rounded border border-blue-500/30 bg-blue-500/20 px-1.5 py-0.5 text-blue-300 text-xs transition-all hover:bg-blue-500/30"
                 >
-                  {buffer.isSQLite ? <Database size={8} /> : <FileText size={8} />}
-                  <span className="max-w-24 truncate">{buffer.name}</span>
+                  {buffer.isSQLite ? <Database size={7} /> : <FileText size={7} />}
+                  <span className="max-w-20 truncate font-medium">{buffer.name}</span>
                   <button
                     onClick={() => toggleBufferSelection(bufferId)}
-                    className="text-text-lighter transition-colors hover:text-red-400"
+                    className="text-blue-300/70 transition-colors hover:text-red-400"
                   >
-                    <X size={8} />
+                    <X size={7} />
                   </button>
                 </div>
               );
@@ -278,6 +360,13 @@ export default function AIChatInputBar({
           rootFolderPath={rootFolderPath}
         />
       )}
+
+      {/* Context Selector */}
+      <ContextSelector
+        files={allProjectFiles}
+        onSelect={handleContextItemSelect}
+        rootFolderPath={rootFolderPath}
+      />
     </div>
   );
 }

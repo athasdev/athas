@@ -396,7 +396,7 @@ const storeCreator = combine(initialState, (set, get) => ({
       });
     });
 
-    if (!query) return filteredFiles.slice(0, 10);
+    if (!query) return filteredFiles.slice(0, 20);
 
     // Use fuzzy search scoring similar to command bar
     const fuzzyScore = (text: string, query: string): number => {
@@ -452,7 +452,7 @@ const storeCreator = combine(initialState, (set, get) => ({
       .filter(({ score }) => score > 0)
       .sort((a, b) => b.score - a.score);
 
-    return scored.slice(0, 10).map(({ file }) => file);
+    return scored.slice(0, 20).map(({ file }) => file);
   },
 
   // Helper getters

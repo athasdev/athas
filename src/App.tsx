@@ -1277,9 +1277,7 @@ function App() {
                   />
                 )
               ) : (
-                <div className="flex flex-1 items-center justify-center p-4 font-mono text-sm text-text-lighter">
-                  Select a file to edit...
-                </div>
+                <div className="flex flex-1 items-center justify-center p-4 font-mono text-sm text-text-lighter"></div>
               )}
             </div>
 
