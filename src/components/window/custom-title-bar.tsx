@@ -99,46 +99,6 @@ const CustomTitleBar = ({
           isMacOS ? "h-11" : "h-7"
         } ${backgroundClass}`}
       >
-        {/* macOS traffic light controls */}
-        {isMacOS && (
-          <div className="flex items-center space-x-2 pl-4">
-            <button
-              onClick={handleClose}
-              className={cn(
-                "group flex h-3 w-3 items-center justify-center rounded-full",
-                "bg-red-500 transition-colors hover:bg-red-600",
-              )}
-              title="Close"
-            >
-              <X className="h-2 w-2 text-red-900 opacity-0 transition-opacity group-hover:opacity-100" />
-            </button>
-            <button
-              onClick={handleMinimize}
-              className={cn(
-                "group flex h-3 w-3 items-center justify-center rounded-full",
-                "bg-yellow-500 transition-colors hover:bg-yellow-600",
-              )}
-              title="Minimize"
-            >
-              <Minus className="h-2 w-2 text-yellow-900 opacity-0 transition-opacity group-hover:opacity-100" />
-            </button>
-            <button
-              onClick={handleToggleMaximize}
-              className={cn(
-                "group flex h-3 w-3 items-center justify-center rounded-full",
-                "bg-green-500 transition-colors hover:bg-green-600",
-              )}
-              title={isMaximized ? "Restore" : "Maximize"}
-            >
-              {isMaximized ? (
-                <Minimize2 className="h-2 w-2 text-green-900 opacity-0 transition-opacity group-hover:opacity-100" />
-              ) : (
-                <Maximize2 className="h-2 w-2 text-green-900 opacity-0 transition-opacity group-hover:opacity-100" />
-              )}
-            </button>
-          </div>
-        )}
-
         <div className="flex-1" />
 
         {/* Windows controls */}
@@ -182,43 +142,8 @@ const CustomTitleBar = ({
         data-tauri-drag-region
         className="relative z-50 flex h-8 select-none items-center justify-between bg-primary-bg"
       >
-        {/* macOS traffic light controls */}
-        <div className="flex items-center space-x-2 pl-4">
-          <button
-            onClick={handleClose}
-            className={cn(
-              "group flex h-3 w-3 items-center justify-center rounded-full",
-              "bg-red-500 transition-colors hover:bg-red-600",
-            )}
-            title="Close"
-          >
-            <X className="h-2 w-2 text-red-900 opacity-0 transition-opacity group-hover:opacity-100" />
-          </button>
-          <button
-            onClick={handleMinimize}
-            className={cn(
-              "group flex h-3 w-3 items-center justify-center rounded-full",
-              "bg-yellow-500 transition-colors hover:bg-yellow-600",
-            )}
-            title="Minimize"
-          >
-            <Minus className="h-2 w-2 text-yellow-900 opacity-0 transition-opacity group-hover:opacity-100" />
-          </button>
-          <button
-            onClick={handleToggleMaximize}
-            className={cn(
-              "group flex h-3 w-3 items-center justify-center rounded-full",
-              "bg-green-500 transition-colors hover:bg-green-600",
-            )}
-            title={isMaximized ? "Restore" : "Maximize"}
-          >
-            {isMaximized ? (
-              <Minimize2 className="h-2 w-2 text-green-900 opacity-0 transition-opacity group-hover:opacity-100" />
-            ) : (
-              <Maximize2 className="h-2 w-2 text-green-900 opacity-0 transition-opacity group-hover:opacity-100" />
-            )}
-          </button>
-        </div>
+        {/* macOS traffic light space holder */}
+        <div className="flex items-center space-x-2 pl-4" />
 
         {/* Center - Project name for macOS */}
         <div className="-translate-x-1/2 pointer-events-none absolute left-1/2 flex transform items-center">
