@@ -33,13 +33,15 @@ export const useCustomDragDrop = (
       preview.style.position = "fixed";
       preview.style.pointerEvents = "none";
       preview.style.zIndex = "9999";
-      preview.style.opacity = "0.8";
-      preview.style.padding = "4px 8px";
-      preview.style.backgroundColor = "var(--color-secondary-bg)";
-      preview.style.border = "1px solid var(--color-border)";
-      preview.style.borderRadius = "4px";
+      preview.style.opacity = "0.95";
+      preview.style.padding = "6px 12px";
+      preview.style.backgroundColor = "var(--color-primary-bg)";
+      preview.style.border = "2px solid var(--color-accent)";
+      preview.style.borderRadius = "6px";
       preview.style.fontSize = "12px";
       preview.style.fontFamily = "monospace";
+      preview.style.color = "var(--color-text)";
+      preview.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
       preview.textContent = dragState.draggedItem?.name || "";
       document.body.appendChild(preview);
       dragPreviewRef.current = preview;
@@ -145,22 +147,9 @@ export const useCustomDragDrop = (
           console.log("File moved successfully");
 
           if (onFileMove) {
+            // The handleFileMove function will update the tree structure directly
+            // No need to refresh directories anymore
             onFileMove(sourcePath, newPath);
-          }
-
-          if (onRefreshDirectory) {
-            // Small delay to ensure file system operation is complete
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // Refresh source parent directory
-            const sourceParentPath =
-              sourcePath.split(pathSeparator).slice(0, -1).join(pathSeparator) ||
-              rootFolderPath ||
-              "";
-            await onRefreshDirectory(targetPath);
-            if (targetPath !== sourceParentPath) {
-              await onRefreshDirectory(sourceParentPath);
-            }
           }
         } catch (error) {
           console.error("Failed to move file:", error);
@@ -181,10 +170,13 @@ export const useCustomDragDrop = (
     if (dragState.isDragging) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
+      // Add mouseleave listener to clear drag state when mouse leaves window
+      document.addEventListener("mouseleave", handleMouseUp);
 
       return () => {
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
+        document.removeEventListener("mouseleave", handleMouseUp);
       };
     }
   }, [dragState, onFileMove, onRefreshDirectory, rootFolderPath]);

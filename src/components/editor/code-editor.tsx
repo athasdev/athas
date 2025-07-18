@@ -1,16 +1,16 @@
 import type React from "react";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import type { CompletionItem } from "vscode-languageserver-protocol";
 import { useCodeHighlighting } from "../../hooks/use-code-highlighting";
 import { useEditorScroll } from "../../hooks/use-editor-scroll";
 import { useEditorSync } from "../../hooks/use-editor-sync";
 import { useHover } from "../../hooks/use-hover";
 import { useLspCompletion } from "../../hooks/use-lsp-completion";
 import { useVim } from "../../hooks/use-vim";
+import { useAppStore } from "../../stores/app-store";
+import { useBufferStore } from "../../stores/buffer-store";
 import { useCodeEditorStore } from "../../stores/code-editor-store";
 import { useEditorConfigStore } from "../../stores/editor-config-store";
 import { useEditorInstanceStore } from "../../stores/editor-instance-store";
-import { requestCompletion } from "../../utils/ai-completion";
 import { CompletionDropdown } from "./completion-dropdown";
 import { EditorContent } from "./editor-content";
 import { EditorStyles } from "./editor-styles";
@@ -43,32 +43,12 @@ import "prismjs/components/prism-csharp";
 import "../../styles/prism-theme.css";
 
 interface CodeEditorProps {
-  value: string;
-  onChange: (value: string) => void;
+  // All props are now optional as we get most data from stores
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   onCursorPositionChange?: (position: number) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-  filename?: string;
-  vimEnabled?: boolean;
-  vimMode?: "normal" | "insert" | "visual" | "visual-line" | "visual-block" | "command";
-  searchQuery?: string;
-  searchMatches?: { start: number; end: number }[];
-  currentMatchIndex?: number;
-  filePath?: string;
-  fontSize?: number;
-  tabSize?: number;
-  wordWrap?: boolean;
-  lineNumbers?: boolean;
-  aiCompletion?: boolean;
-  // LSP functions passed from parent
-  getCompletions?: (filePath: string, line: number, character: number) => Promise<CompletionItem[]>;
-  getHover?: (filePath: string, line: number, character: number) => Promise<any>;
-  isLanguageSupported?: (filePath: string) => boolean;
-  openDocument?: (filePath: string, content: string) => Promise<void>;
-  changeDocument?: (filePath: string, content: string) => Promise<void>;
-  closeDocument?: (filePath: string) => Promise<void>;
 }
 
 export interface CodeEditorRef {
@@ -77,256 +57,186 @@ export interface CodeEditorRef {
 }
 
 // Main CodeEditor Component
-const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(
-  (
-    {
-      value,
-      onChange,
-      onKeyDown,
-      onCursorPositionChange,
-      placeholder,
-      disabled = false,
-      className,
-      filename = "",
-      vimEnabled = false,
-      vimMode = "normal",
-      searchQuery = "",
-      searchMatches = [],
-      currentMatchIndex = -1,
-      filePath = "",
-      fontSize = 14,
-      tabSize = 2,
-      wordWrap = false,
-      lineNumbers = true,
-      aiCompletion = false,
-      getCompletions,
-      getHover,
-      isLanguageSupported,
-      openDocument: _openDocument,
-      changeDocument: _changeDocument,
-      closeDocument: _closeDocument,
-    },
-    ref,
-  ) => {
-    // Refs
-    const editorRef = useRef<HTMLDivElement | null>(null);
-    const highlightRef = useRef<HTMLPreElement | null>(null);
-    const lineNumbersRef = useRef<HTMLDivElement | null>(null);
-    const mountedRef = useRef(true);
-    // const vimCommandLineRef = useRef<VimCommandLineRef>(null); // Unused for now
+const CodeEditor = forwardRef<CodeEditorRef, CodeEditorProps>(({ className }, ref) => {
+  // Refs - must be called unconditionally
+  const editorRef = useRef<HTMLDivElement>(null as any);
+  const highlightRef = useRef<HTMLPreElement | null>(null);
+  const lineNumbersRef = useRef<HTMLDivElement | null>(null);
+  const mountedRef = useRef(true);
 
-    // Store subscriptions - only what we need
-    const language = useCodeEditorStore(state => state.language);
-    // LSP state - unused for now but kept for future implementation
-    // const lspCompletions = useCodeEditorStore(state => state.lspCompletions);
-    // const selectedLspIndex = useCodeEditorStore(state => state.selectedLspIndex);
-    // const isLspCompletionVisible = useCodeEditorStore(state => state.isLspCompletionVisible);
-    // const completionPosition = useCodeEditorStore(state => state.completionPosition);
-    // const hoverInfo = useCodeEditorStore(state => state.hoverInfo);
+  // Get store actions
+  const { setRefs, setContent, setFileInfo } = useEditorInstanceStore();
 
-    // Store actions for AI completion
-    const setCurrentCompletion = useCodeEditorStore(state => state.setCurrentCompletion);
-    const setShowCompletion = useCodeEditorStore(state => state.setShowCompletion);
+  // Get data from stores
+  const activeBuffer = useBufferStore(state => state.getActiveBuffer());
+  const { handleContentChange } = useAppStore();
+  const { vimEnabled, vimMode, fontSize, tabSize, wordWrap, lineNumbers, aiCompletion } =
+    useEditorConfigStore();
+  const searchQuery = useCodeEditorStore(state => state.searchQuery);
+  const searchMatches = useCodeEditorStore(state => state.searchMatches);
+  const currentMatchIndex = useCodeEditorStore(state => state.currentMatchIndex);
 
-    // Initialize hooks
-    useCodeHighlighting(highlightRef);
+  // Extract values from active buffer or use defaults
+  const value = activeBuffer?.content || "";
+  const filePath = activeBuffer?.path || "";
+  const filename = activeBuffer?.name || "";
+  const onChange = activeBuffer ? handleContentChange : () => {};
 
-    // Sync props with store
-    useEditorSync({
-      value,
-      filename,
-      filePath,
-      fontSize,
-      tabSize,
-      wordWrap,
-      lineNumbers,
-      disabled,
-      vimEnabled,
-      vimMode,
-      aiCompletion,
-      searchQuery,
-      searchMatches,
-      currentMatchIndex,
-    });
-
-    // LSP completion hook
-    const { handleLspCompletion } = useLspCompletion({
-      getCompletions,
-      isLanguageSupported,
-      filePath,
-      value,
-      fontSize,
-      lineNumbers,
-    });
-
-    // Hover hook
-    const { handleHover, handleMouseLeave, handleMouseEnter } = useHover({
-      getHover,
-      isLanguageSupported,
-      filePath,
-      fontSize,
-      lineNumbers,
-    });
-
-    // Vim integration
-    const { vimEngine } = useVim(
-      editorRef as React.RefObject<HTMLDivElement>,
-      value,
-      onChange,
-      vimEnabled,
-      (pos: number) => onCursorPositionChange?.(pos),
-      () => {}, // Already synced via useEditorSync
-      (initialCommand?: string) => {
-        const { setVimCommandLine } = useEditorInstanceStore.getState();
-        setVimCommandLine(true, initialCommand || "");
-      },
-    );
-    const { handleScroll, handleUserInteraction } = useEditorScroll(
+  // Initialize refs in store
+  useEffect(() => {
+    setRefs({
       editorRef,
       highlightRef,
       lineNumbersRef,
-    );
+    });
+  }, [setRefs]);
 
-    // Initialize Zustand stores
-    const { updateConfig } = useEditorConfigStore();
-    const { setRefs, setContent, setFileInfo, setHandlers, setUIProps } = useEditorInstanceStore();
+  // Sync content and file info with editor instance store
+  useEffect(() => {
+    setContent(value, onChange);
+  }, [value, onChange, setContent]);
 
-    // Sync props with Zustand stores
-    useEffect(() => {
-      updateConfig({
-        fontSize,
-        tabSize,
-        wordWrap,
-        lineNumbers,
-        vimEnabled,
-        vimMode,
-        aiCompletion,
-      });
-    }, [fontSize, tabSize, wordWrap, lineNumbers, vimEnabled, vimMode, aiCompletion, updateConfig]);
+  useEffect(() => {
+    setFileInfo(filePath, filename);
+  }, [filePath, filename, setFileInfo]);
 
-    useEffect(() => {
-      setRefs({ editorRef, highlightRef, lineNumbersRef });
-    }, [setRefs]);
+  // Initialize hooks - must be called unconditionally
+  useCodeHighlighting(highlightRef);
 
-    useEffect(() => {
-      setContent(value, onChange);
-    }, [value, onChange, setContent]);
+  // Sync props with store
+  useEditorSync({
+    value,
+    filename,
+    filePath,
+    fontSize,
+    tabSize,
+    wordWrap,
+    lineNumbers,
+    disabled: false,
+    vimEnabled,
+    vimMode,
+    aiCompletion,
+    searchQuery,
+    searchMatches,
+    currentMatchIndex,
+  });
 
-    useEffect(() => {
-      setFileInfo(filePath, filename);
-    }, [filePath, filename, setFileInfo]);
+  // LSP completion hook - pass undefined for now as LSP functions come from parent
+  useLspCompletion({
+    getCompletions: undefined,
+    isLanguageSupported: () => false,
+    filePath,
+    value,
+    fontSize,
+    lineNumbers,
+  });
 
-    useEffect(() => {
-      setHandlers({
-        handleUserInteraction,
-        handleScroll,
-        handleHover,
-        handleMouseEnter,
-        handleMouseLeave,
-        onCursorPositionChange,
-        onKeyDown,
-        isLanguageSupported,
-        handleLspCompletion,
-        vimEngine,
-      });
-    }, [
-      handleUserInteraction,
-      handleScroll,
-      handleHover,
-      handleMouseEnter,
-      handleMouseLeave,
-      onCursorPositionChange,
-      onKeyDown,
-      isLanguageSupported,
-      handleLspCompletion,
-      vimEngine,
-      setHandlers,
-    ]);
+  // Hover hook - pass undefined for now as LSP functions come from parent
+  useHover({
+    getHover: undefined,
+    isLanguageSupported: () => false,
+    filePath,
+    fontSize,
+    lineNumbers,
+  });
 
-    useEffect(() => {
-      setUIProps({ placeholder, disabled, className });
-    }, [placeholder, disabled, className, setUIProps]);
+  // Vim integration
+  const { vimEngine } = useVim(
+    editorRef,
+    value,
+    onChange,
+    vimEnabled,
+    (_pos: number) => {},
+    () => {}, // onModeChange - Already synced via store
+    (initialCommand?: string) => {
+      // Implementation if needed
+      console.log("Vim command:", initialCommand);
+    },
+  );
 
-    // Handle imperative ref
-    useImperativeHandle(ref, () => ({
-      editor: editorRef.current as HTMLDivElement | null,
-      textarea: editorRef.current as HTMLDivElement | null,
-    }));
+  // Scroll management
+  const { handleScroll } = useEditorScroll(editorRef, highlightRef, lineNumbersRef);
 
-    // Cleanup on unmount
-    useEffect(() => {
-      return () => {
-        mountedRef.current = false;
-      };
-    }, []);
-
-    // Handle AI completion
-    useEffect(() => {
-      if (!aiCompletion || !editorRef.current) return;
-
-      const handleAiCompletion = async () => {
-        const editor = editorRef.current;
-        if (!editor) return;
-
-        const selection = window.getSelection();
-        if (!selection || selection.rangeCount === 0) return;
-
-        const range = selection.getRangeAt(0);
-        const cursorPos = range.startOffset;
-        const textBeforeCursor = value.substring(0, cursorPos);
-
-        if (textBeforeCursor.trim().length < 3) return;
-
-        try {
-          requestCompletion(
-            {
-              code: textBeforeCursor,
-              language,
-              filename: filename || "",
-              cursorPosition: cursorPos,
-            },
-            completion => {
-              if (completion?.completion) {
-                setCurrentCompletion(completion);
-                setShowCompletion(true);
-              }
-            },
-          );
-        } catch (error) {
-          console.error("AI completion error:", error);
+  // Effect to handle search navigation
+  useEffect(() => {
+    if (searchMatches.length > 0 && currentMatchIndex >= 0 && vimEngine) {
+      const match = searchMatches[currentMatchIndex];
+      if (match) {
+        vimEngine.setState({ cursorPosition: match.start });
+        // Scroll to position
+        if (editorRef.current) {
+          const editor = editorRef.current;
+          const textarea = editor.querySelector('[contenteditable="true"]') as HTMLDivElement;
+          if (textarea) {
+            textarea.focus();
+            // Implement scroll to cursor position
+          }
         }
-      };
+      }
+    }
+  }, [currentMatchIndex, searchMatches, vimEngine]);
 
-      const timeoutId = setTimeout(handleAiCompletion, 500);
-      return () => clearTimeout(timeoutId);
-    }, [value, language, aiCompletion, setCurrentCompletion, setShowCompletion, filename]);
+  // Cleanup
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
+  // Imperative handle
+  useImperativeHandle(
+    ref,
+    () => ({
+      editor: editorRef.current,
+      textarea: editorRef.current?.querySelector('[contenteditable="true"]') as HTMLDivElement,
+    }),
+    [],
+  );
+
+  // Early return if no active buffer - must be after all hooks
+  if (!activeBuffer) {
     return (
-      <div className="relative flex h-full flex-1 flex-col">
-        <EditorStyles />
-        <div className="relative flex h-full flex-1 overflow-hidden">
+      <div className="paper-text-secondary flex flex-1 items-center justify-center">
+        Select a file to edit...
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <EditorStyles />
+      <div
+        ref={editorRef}
+        className={`editor-container relative h-full overflow-hidden ${className || ""}`}
+        onScroll={handleScroll}
+      >
+        {/* Hover Tooltip */}
+        <HoverTooltip />
+
+        {/* Main editor layout */}
+        <div className="flex h-full">
           {/* Line numbers */}
           {lineNumbers && <LineNumbers />}
 
           {/* Editor content area */}
-          <EditorContent />
+          <div className="editor-wrapper relative flex-1 overflow-auto">
+            <EditorContent />
+
+            {/* Vim command line - positioned absolutely at bottom */}
+            {vimEnabled && vimMode === "command" && vimEngine && <VimCommandLine />}
+
+            {/* LSP Completion Dropdown - temporarily disabled */}
+            <CompletionDropdown />
+
+            {/* Quick Edit Inline */}
+            <QuickEditInline />
+          </div>
         </div>
-
-        {/* LSP Completion Dropdown */}
-        <CompletionDropdown />
-
-        {/* Hover Tooltip */}
-        <HoverTooltip />
-
-        {/* Vim Command Line */}
-        <VimCommandLine />
-
-        {/* Inline Assistant */}
-        <QuickEditInline />
       </div>
-    );
-  },
-);
+    </>
+  );
+});
 
 CodeEditor.displayName = "CodeEditor";
 

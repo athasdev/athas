@@ -2,26 +2,25 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { platform } from "@tauri-apps/plugin-os";
 import { Bot, Maximize2, Minimize2, Minus, Settings, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useBufferStore } from "@/stores/buffer-store";
+import { usePersistentSettingsStore } from "@/stores/persistent-settings-store";
+import { useProjectStore } from "@/stores/project-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { cn } from "@/utils/cn";
 
 interface CustomTitleBarProps {
   title?: string;
-  projectName?: string;
   showMinimal?: boolean;
   isWelcomeScreen?: boolean;
-  onSettingsClick?: () => void;
-  onAIChatClick?: () => void;
-  isAIChatVisible?: boolean;
 }
 
-const CustomTitleBar = ({
-  projectName,
-  showMinimal = false,
-  isWelcomeScreen = false,
-  onSettingsClick,
-  onAIChatClick,
-  isAIChatVisible = false,
-}: CustomTitleBarProps) => {
+const CustomTitleBar = ({ showMinimal = false, isWelcomeScreen = false }: CustomTitleBarProps) => {
+  const { getProjectName } = useProjectStore();
+  const { isAIChatVisible, setIsAIChatVisible } = usePersistentSettingsStore();
+  const { openBuffer } = useBufferStore();
+  const { getSettingsJSON } = useSettingsStore();
+
+  const projectName = getProjectName();
   const [isMaximized, setIsMaximized] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
   const [currentPlatform, setCurrentPlatform] = useState<string>(() => {
@@ -156,33 +155,42 @@ const CustomTitleBar = ({
 
         {/* Settings and AI Chat buttons */}
         <div className="flex items-center gap-0.5">
-          {onAIChatClick && (
-            <button
-              onClick={onAIChatClick}
-              className={`flex items-center justify-center rounded p-1 transition-colors ${
-                isAIChatVisible
-                  ? "bg-selected text-text"
-                  : "text-text-lighter hover:bg-hover hover:text-text"
-              }`}
-              style={{ minHeight: 0, minWidth: 0 }}
-              title="Toggle AI Chat"
-            >
-              <Bot size={14} />
-            </button>
-          )}
-          {onSettingsClick && (
-            <button
-              onClick={onSettingsClick}
-              className={cn(
-                "mr-4 flex items-center justify-center rounded p-1",
-                "text-text-lighter transition-colors hover:bg-hover hover:text-text",
-              )}
-              style={{ minHeight: 0, minWidth: 0 }}
-              title="Settings"
-            >
-              <Settings size={14} />
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setIsAIChatVisible(!isAIChatVisible);
+            }}
+            className={`flex items-center justify-center rounded p-1 transition-colors ${
+              isAIChatVisible
+                ? "bg-selected text-text"
+                : "text-text-lighter hover:bg-hover hover:text-text"
+            }`}
+            style={{ minHeight: 0, minWidth: 0 }}
+            title="Toggle AI Chat"
+          >
+            <Bot size={14} />
+          </button>
+          <button
+            onClick={() => {
+              const settingsContent = getSettingsJSON();
+              openBuffer(
+                "settings://user-settings.json",
+                "settings.json",
+                settingsContent,
+                false,
+                false,
+                false,
+                true,
+              );
+            }}
+            className={cn(
+              "mr-4 flex items-center justify-center rounded p-1",
+              "text-text-lighter transition-colors hover:bg-hover hover:text-text",
+            )}
+            style={{ minHeight: 0, minWidth: 0 }}
+            title="Settings"
+          >
+            <Settings size={14} />
+          </button>
         </div>
       </div>
     );
@@ -207,34 +215,43 @@ const CustomTitleBar = ({
       {/* Right side */}
       <div className="flex items-center gap-0.5">
         {/* AI Chat button */}
-        {onAIChatClick && (
-          <button
-            onClick={onAIChatClick}
-            className={`flex items-center justify-center rounded px-1 py-0.5 transition-colors ${
-              isAIChatVisible
-                ? "bg-selected text-text"
-                : "text-text-lighter hover:bg-hover hover:text-text"
-            }`}
-            style={{ minHeight: 0, minWidth: 0 }}
-            title="Toggle AI Chat"
-          >
-            <Bot size={12} />
-          </button>
-        )}
+        <button
+          onClick={() => {
+            setIsAIChatVisible(!isAIChatVisible);
+          }}
+          className={`flex items-center justify-center rounded px-1 py-0.5 transition-colors ${
+            isAIChatVisible
+              ? "bg-selected text-text"
+              : "text-text-lighter hover:bg-hover hover:text-text"
+          }`}
+          style={{ minHeight: 0, minWidth: 0 }}
+          title="Toggle AI Chat"
+        >
+          <Bot size={12} />
+        </button>
         {/* Settings button */}
-        {onSettingsClick && (
-          <button
-            onClick={onSettingsClick}
-            className={cn(
-              "mr-2 flex items-center justify-center rounded px-1 py-0.5",
-              "text-text-lighter transition-colors hover:bg-hover hover:text-text",
-            )}
-            style={{ minHeight: 0, minWidth: 0 }}
-            title="Settings"
-          >
-            <Settings size={12} />
-          </button>
-        )}
+        <button
+          onClick={() => {
+            const settingsContent = getSettingsJSON();
+            openBuffer(
+              "settings://user-settings.json",
+              "settings.json",
+              settingsContent,
+              false,
+              false,
+              false,
+              true,
+            );
+          }}
+          className={cn(
+            "mr-2 flex items-center justify-center rounded px-1 py-0.5",
+            "text-text-lighter transition-colors hover:bg-hover hover:text-text",
+          )}
+          style={{ minHeight: 0, minWidth: 0 }}
+          title="Settings"
+        >
+          <Settings size={12} />
+        </button>
 
         {/* Windows controls */}
         {

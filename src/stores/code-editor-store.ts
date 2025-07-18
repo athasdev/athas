@@ -171,6 +171,25 @@ export const useCodeEditorStore = create(
         set({ selectedLspIndex: prevIndex });
       }
     },
+
+    // Aliases for compatibility
+    searchNext: () => {
+      const state = get();
+      if (state.searchMatches.length > 0) {
+        const nextIndex = (state.currentMatchIndex + 1) % state.searchMatches.length;
+        set({ currentMatchIndex: nextIndex });
+      }
+    },
+    searchPrevious: () => {
+      const state = get();
+      if (state.searchMatches.length > 0) {
+        const prevIndex =
+          state.currentMatchIndex <= 0
+            ? state.searchMatches.length - 1
+            : state.currentMatchIndex - 1;
+        set({ currentMatchIndex: prevIndex });
+      }
+    },
   })),
 );
 

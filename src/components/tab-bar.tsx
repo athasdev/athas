@@ -1,25 +1,16 @@
 import { Database, Package, Pin, PinOff, X } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
+import { useBufferStore } from "../stores/buffer-store";
+import { useFileWatcherStore } from "../stores/file-watcher-store";
+import { usePersistentSettingsStore } from "../stores/persistent-settings-store";
 import type { Buffer } from "../types/buffer";
 import { getShortcutText } from "../utils/platform";
 import FileIcon from "./file-icon";
 
 interface TabBarProps {
-  buffers: Buffer[];
-  activeBufferId: string | null;
-  onTabClick: (bufferId: string) => void;
-  onTabClose: (bufferId: string, event: React.MouseEvent) => void;
-  onTabReorder?: (fromIndex: number, toIndex: number) => void;
-  onTabPin?: (bufferId: string) => void;
-  onCloseOtherTabs?: (bufferId: string) => void;
-  onCloseAllTabs?: () => void;
-  onCloseTabsToRight?: (bufferId: string) => void;
-  onTabDragStart?: (bufferId: string, paneId?: string) => void;
-  onTabDragEnd?: () => void;
-  paneId?: string; // For split view panes
-  maxOpenTabs: number; // Optional prop to limit open tabs
-  externallyModifiedPaths?: Set<string>; // Paths that have been modified externally
+  // All data now comes from stores, so no props needed
+  paneId?: string; // For split view panes (future feature)
 }
 
 interface ContextMenuProps {
@@ -134,22 +125,21 @@ const ContextMenu = ({
   );
 };
 
-const TabBar = ({
-  buffers,
-  activeBufferId,
-  onTabClick,
-  onTabClose,
-  onTabReorder,
-  onTabPin,
-  onCloseOtherTabs,
-  onCloseAllTabs,
-  onCloseTabsToRight,
-  onTabDragStart,
-  onTabDragEnd,
-  paneId,
-  maxOpenTabs,
-  externallyModifiedPaths = new Set(),
-}: TabBarProps) => {
+const TabBar = ({ paneId }: TabBarProps) => {
+  // Get everything from stores
+  const {
+    buffers,
+    activeBufferId,
+    handleTabClick,
+    handleTabClose,
+    handleTabPin,
+    handleCloseOtherTabs,
+    handleCloseAllTabs,
+    handleCloseTabsToRight,
+    reorderBuffers,
+  } = useBufferStore();
+  const { maxOpenTabs } = usePersistentSettingsStore();
+  const { externallyModifiedPaths } = useFileWatcherStore();
   const [isDragging, setIsDragging] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dropTarget, setDropTarget] = useState<number | null>(null);
@@ -181,18 +171,18 @@ const TabBar = ({
   }, [buffers]);
 
   useEffect(() => {
-    if (maxOpenTabs > 0 && buffers.length > maxOpenTabs && onTabClose) {
+    if (maxOpenTabs > 0 && buffers.length > maxOpenTabs && handleTabClose) {
       // Filter out pinned and active tabs
       const closableBuffers = buffers.filter(b => !b.isPinned && b.id !== activeBufferId);
 
       // Close oldest tabs until under limit (oldest = lowest index)
       let tabsToClose = buffers.length - maxOpenTabs;
       for (let i = 0; i < closableBuffers.length && tabsToClose > 0; i++) {
-        onTabClose(closableBuffers[i].id, new MouseEvent("click") as any);
+        handleTabClose(closableBuffers[i].id);
         tabsToClose--;
       }
     }
-  }, [buffers, maxOpenTabs, activeBufferId, onTabClose]);
+  }, [buffers, maxOpenTabs, activeBufferId, handleTabClose]);
 
   // Auto-scroll active tab into view
   useEffect(() => {
@@ -239,10 +229,8 @@ const TabBar = ({
     if (distance > 5 && !isDragging) {
       setIsDragging(true);
       // Notify parent about drag start
-      const draggedBuffer = sortedBuffers[draggedIndex];
-      if (onTabDragStart && draggedBuffer) {
-        onTabDragStart(draggedBuffer.id, paneId);
-      }
+      // const draggedBuffer = sortedBuffers[draggedIndex];
+      // TODO: Implement drag start handler if needed
     }
 
     if (isDragging) {
@@ -292,24 +280,26 @@ const TabBar = ({
 
   const handleMouseUp = () => {
     if (draggedIndex !== null) {
-      if (!isDraggedOutside && dropTarget !== null && dropTarget !== draggedIndex && onTabReorder) {
+      if (
+        !isDraggedOutside &&
+        dropTarget !== null &&
+        dropTarget !== draggedIndex &&
+        reorderBuffers
+      ) {
         // Adjust dropTarget if moving right (forward)
         let adjustedDropTarget = dropTarget;
         if (draggedIndex < dropTarget) {
           adjustedDropTarget = dropTarget - 1;
         }
         if (adjustedDropTarget !== draggedIndex) {
-          onTabReorder(draggedIndex, adjustedDropTarget);
+          reorderBuffers(draggedIndex, adjustedDropTarget);
           const movedBuffer = sortedBuffers[draggedIndex];
           if (movedBuffer) {
-            onTabClick(movedBuffer.id);
+            handleTabClick(movedBuffer.id);
           }
         }
       }
-      // Notify parent about drag end
-      if (onTabDragEnd) {
-        onTabDragEnd();
-      }
+      // TODO: Implement drag end handler if needed
     }
 
     setIsDragging(false);
@@ -357,9 +347,7 @@ const TabBar = ({
     setDragStartPosition(null);
     setDragCurrentPosition(null);
     setIsDraggedOutside(false);
-    if (onTabDragEnd) {
-      onTabDragEnd();
-    }
+    // TODO: Implement drag end handler if needed
   };
 
   const handleContextMenu = (e: React.MouseEvent, buffer: Buffer) => {
@@ -431,7 +419,7 @@ const TabBar = ({
                   onMouseDown={e => handleMouseDown(e, index)}
                   onClick={() => {
                     if (!isDragging) {
-                      onTabClick(buffer.id);
+                      handleTabClick(buffer.id);
                     }
                   }}
                   onContextMenu={e => handleContextMenu(e, buffer)}
@@ -477,7 +465,7 @@ const TabBar = ({
                     <button
                       onClick={e => {
                         e.stopPropagation();
-                        onTabClose(buffer.id, e);
+                        handleTabClose(buffer.id);
                       }}
                       className={cn(
                         "flex-shrink-0 cursor-pointer rounded p-0.5",
@@ -557,16 +545,16 @@ const TabBar = ({
         position={contextMenu.position}
         buffer={contextMenu.buffer}
         onClose={closeContextMenu}
-        onPin={onTabPin || (() => {})}
+        onPin={handleTabPin || (() => {})}
         onCloseTab={bufferId => {
           const buffer = buffers.find(b => b.id === bufferId);
           if (buffer) {
-            onTabClose(bufferId, {} as React.MouseEvent);
+            handleTabClose(bufferId);
           }
         }}
-        onCloseOthers={onCloseOtherTabs || (() => {})}
-        onCloseAll={onCloseAllTabs || (() => {})}
-        onCloseToRight={onCloseTabsToRight || (() => {})}
+        onCloseOthers={handleCloseOtherTabs || (() => {})}
+        onCloseAll={handleCloseAllTabs || (() => {})}
+        onCloseToRight={handleCloseTabsToRight || (() => {})}
       />
     </>
   );

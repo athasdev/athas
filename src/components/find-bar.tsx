@@ -1,27 +1,34 @@
 import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef } from "react";
+import { useCodeEditorStore } from "../stores/code-editor-store";
+import { useUIState } from "../stores/ui-state-store";
 import { cn } from "../utils/cn";
 
-interface FindBarProps {
-  isVisible: boolean;
-  onClose: () => void;
-  onSearch: (query: string, direction: "next" | "previous", shouldFocus?: boolean) => void;
-  searchQuery: string;
-  onSearchQueryChange: (query: string) => void;
-  currentMatch: number;
-  totalMatches: number;
-}
+const FindBar = () => {
+  // Get data from stores
+  const { isFindVisible, setIsFindVisible } = useUIState();
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchMatches,
+    currentMatchIndex,
+    searchNext,
+    searchPrevious,
+  } = useCodeEditorStore();
 
-const FindBar = ({
-  isVisible,
-  onClose,
-  onSearch,
-  searchQuery,
-  onSearchQueryChange,
-  currentMatch,
-  totalMatches,
-}: FindBarProps) => {
+  const isVisible = isFindVisible;
+  const onClose = () => setIsFindVisible(false);
+  const onSearchQueryChange = setSearchQuery;
+  const currentMatch = currentMatchIndex + 1;
+  const totalMatches = searchMatches.length;
+  const onSearch = (_query: string, direction: "next" | "previous", _shouldFocus?: boolean) => {
+    if (direction === "next") {
+      searchNext();
+    } else {
+      searchPrevious();
+    }
+  };
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus input when find bar becomes visible

@@ -1,15 +1,16 @@
 import { AlertCircle, CheckCircle, Key, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/utils/cn";
+import { useUIState } from "../stores/ui-state-store";
 import { removeGitHubToken, storeGitHubToken } from "../utils/ai-completion";
 import Button from "./ui/button";
 
-interface GitHubCopilotSettingsProps {
-  isVisible: boolean;
-  onClose: () => void;
-}
+const GitHubCopilotSettings = () => {
+  // Get data from stores
+  const { isGitHubCopilotSettingsVisible, setIsGitHubCopilotSettingsVisible } = useUIState();
 
-const GitHubCopilotSettings = ({ isVisible, onClose }: GitHubCopilotSettingsProps) => {
+  const isVisible = isGitHubCopilotSettingsVisible;
+  const onClose = () => setIsGitHubCopilotSettingsVisible(false);
   const [apiKey, setApiKey] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [validationStatus, setValidationStatus] = useState<"idle" | "valid" | "invalid">("idle");

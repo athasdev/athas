@@ -26,6 +26,7 @@ export const useEditorConfigStore = create(
     setVimEnabled: (enabled: boolean) => set({ vimEnabled: enabled }),
     setVimMode: (mode: VimMode) => set({ vimMode: mode }),
     setAiCompletion: (enabled: boolean) => set({ aiCompletion: enabled }),
+    toggleVim: () => set(state => ({ vimEnabled: !state.vimEnabled })),
 
     // Bulk configuration update
     updateConfig: (config: Partial<typeof initialState>) => set(state => ({ ...state, ...config })),

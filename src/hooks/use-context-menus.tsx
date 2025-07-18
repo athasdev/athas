@@ -2,6 +2,9 @@ import { ClockIcon } from "lucide-react";
 import type React from "react";
 import { useEffect } from "react";
 import { cn } from "@/utils/cn";
+import { useFileSystemStore } from "../stores/file-system-store";
+import { useRecentFoldersStore } from "../stores/recent-folders-store";
+import { useUIState } from "../stores/ui-state-store";
 import type { RecentFolder } from "../types/recent-folders";
 
 interface UseContextMenusProps {
@@ -13,7 +16,7 @@ interface UseContextMenusProps {
 
 export const useContextMenus = ({
   folderHeaderContextMenu,
-  projectNameMenu,
+  projectNameMenu: _projectNameMenu,
   setFolderHeaderContextMenu,
   setProjectNameMenu,
 }: UseContextMenusProps) => {
@@ -21,16 +24,15 @@ export const useContextMenus = ({
   useEffect(() => {
     const handleClickOutside = () => {
       setFolderHeaderContextMenu(null);
-      setProjectNameMenu(null);
     };
 
-    if (folderHeaderContextMenu || projectNameMenu) {
+    if (folderHeaderContextMenu) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
       };
     }
-  }, [folderHeaderContextMenu, projectNameMenu, setFolderHeaderContextMenu, setProjectNameMenu]);
+  }, [folderHeaderContextMenu, setFolderHeaderContextMenu]);
 
   const handleProjectNameMenuOpen = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -52,33 +54,50 @@ export const useContextMenus = ({
   };
 };
 
-interface ProjectNameMenuProps {
-  projectNameMenu: { x: number; y: number } | null;
-  recentFolders: RecentFolder[];
-  onOpenFolder: () => void;
-  onCollapseAllFolders: () => void;
-  onOpenRecentFolder: (path: string) => void;
-  onCloseMenu: () => void;
-}
+export const ProjectNameMenu = () => {
+  // Get data from stores
+  const { projectNameMenu, setProjectNameMenu } = useUIState();
+  const { handleOpenFolder, handleCollapseAllFolders } = useFileSystemStore();
+  const { recentFolders, openRecentFolder } = useRecentFoldersStore();
 
-export const ProjectNameMenu = ({
-  projectNameMenu,
-  recentFolders,
-  onOpenFolder,
-  onCollapseAllFolders,
-  onOpenRecentFolder,
-  onCloseMenu,
-}: ProjectNameMenuProps) => {
+  const onCloseMenu = () => setProjectNameMenu(null);
+  const onOpenFolder = handleOpenFolder;
+  const onCollapseAllFolders = handleCollapseAllFolders;
+  const onOpenRecentFolder = openRecentFolder;
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!projectNameMenu) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const menuEl = document.getElementById("project-name-menu");
+      if (menuEl && !menuEl.contains(target)) {
+        setProjectNameMenu(null);
+      }
+    };
+
+    // Small delay to avoid closing immediately on menu open
+    const timer = setTimeout(() => {
+      document.addEventListener("click", handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [projectNameMenu, setProjectNameMenu]);
+
   if (!projectNameMenu) return null;
 
   return (
     <div
+      id="project-name-menu"
       className="fixed z-50 min-w-[200px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
       style={{
         left: projectNameMenu.x,
         top: projectNameMenu.y,
       }}
-      onMouseDown={e => e.stopPropagation()}
     >
       <button
         onMouseDown={e => {
@@ -117,7 +136,7 @@ export const ProjectNameMenu = ({
             <ClockIcon size="10" />
             Recent Folders
           </div>
-          {recentFolders.slice(0, 5).map(folder => (
+          {recentFolders.slice(0, 5).map((folder: RecentFolder) => (
             <button
               key={folder.path}
               onMouseDown={e => {
