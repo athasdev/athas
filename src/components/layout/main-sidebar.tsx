@@ -1,6 +1,6 @@
 import { FilePlus, FolderOpen, FolderPlus, Server } from "lucide-react";
 import type React from "react";
-import { forwardRef } from "react";
+import { forwardRef, useMemo } from "react";
 import { cn } from "@/utils/cn";
 import { useProjectStore } from "../../stores/project-store";
 import { useSidebarStore } from "../../stores/sidebar-store";
@@ -48,6 +48,29 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
     // Get state from stores
     const { isGitViewActive, isSearchViewActive, isRemoteViewActive, setActiveView } = useUIState();
     const { files, rootFolderPath, allProjectFiles, getProjectName, setFiles } = useProjectStore();
+
+    // Sort files similar to VS Code: directories first, then files, each group alphabetically (case-insensitive, natural order)
+    const sortedFiles = useMemo(() => {
+      const sortEntries = (entries: FileEntry[]): FileEntry[] => {
+        return [...entries]
+          .sort((a, b) => {
+            if (a.isDir && !b.isDir) return -1; // directories before files
+            if (!a.isDir && b.isDir) return 1; // files after directories
+            // alphabetical sort, case-insensitive, with numeric ordering
+            return a.name.localeCompare(b.name, undefined, {
+              numeric: true,
+              sensitivity: "base",
+            });
+          })
+          .map(entry => ({
+            ...entry,
+            children: entry.children ? sortEntries(entry.children) : undefined,
+          }));
+      };
+
+      return sortEntries(files);
+    }, [files]);
+
     const { activeBufferPath, coreFeatures, isRemoteWindow, remoteConnectionName } =
       useSidebarStore();
     const showFileTreeHeader =
@@ -152,7 +175,7 @@ export const MainSidebar = forwardRef<SearchViewRef, MainSidebarProps>(
             <RemoteConnectionView onFileSelect={onFileSelect} />
           ) : (
             <FileTree
-              files={files}
+              files={sortedFiles}
               activeBufferPath={activeBufferPath}
               rootFolderPath={rootFolderPath}
               onFileSelect={onFileSelect}
