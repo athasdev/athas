@@ -1,42 +1,34 @@
 import type React from "react";
 import { useCallback, useRef, useState } from "react";
+import { usePersistentSettingsStore } from "../stores/persistent-settings-store";
 import { cn } from "../utils/cn";
+
+// Constants for resizable pane
+const MIN_WIDTH = 200;
+const MAX_WIDTH = 600;
 
 interface ResizableRightPaneProps {
   children: React.ReactNode;
-  defaultWidth?: number;
-  minWidth?: number;
-  maxWidth?: number;
   className?: string;
-  isVisible?: boolean;
   position?: "left" | "right";
-  width?: number;
-  onWidthChange?: (width: number) => void;
+  isVisible?: boolean;
 }
 
 const ResizableRightPane = ({
   children,
-  defaultWidth = 300,
-  minWidth = 200,
-  maxWidth = 600,
   className,
-  isVisible = true,
   position = "right",
-  width: controlledWidth,
-  onWidthChange,
+  isVisible = true,
 }: ResizableRightPaneProps) => {
-  const [internalWidth, setInternalWidth] = useState(defaultWidth);
+  const { aiChatWidth, setAIChatWidth } = usePersistentSettingsStore();
   const [isResizing, setIsResizing] = useState(false);
   const paneRef = useRef<HTMLDivElement>(null);
   const resizerRef = useRef<HTMLDivElement>(null);
 
-  const width = controlledWidth ?? internalWidth;
+  // Always use width from store
+  const width = aiChatWidth;
   const setWidth = (newWidth: number) => {
-    if (onWidthChange) {
-      onWidthChange(newWidth);
-    } else {
-      setInternalWidth(newWidth);
-    }
+    setAIChatWidth(newWidth);
   };
 
   const handleMouseDown = useCallback(
@@ -52,7 +44,7 @@ const ResizableRightPane = ({
           position === "right"
             ? startX - e.clientX // Reverse direction for right pane
             : e.clientX - startX; // Normal direction for left pane
-        const newWidth = Math.min(Math.max(startWidth + deltaX, minWidth), maxWidth);
+        const newWidth = Math.min(Math.max(startWidth + deltaX, MIN_WIDTH), MAX_WIDTH);
         setWidth(newWidth);
       };
 
@@ -69,7 +61,7 @@ const ResizableRightPane = ({
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     },
-    [width, minWidth, maxWidth, position],
+    [width, position],
   );
 
   if (!isVisible) {

@@ -5,9 +5,9 @@ import type { BottomPaneTab, QuickEditSelection } from "../types/ui-state";
 const initialState = {
   // UI State
   isSidebarVisible: true,
-  isRightPaneVisible: false,
   isCommandBarVisible: false,
   isCommandPaletteVisible: false,
+  isFindVisible: false,
 
   // View States
   isGitViewActive: false,
@@ -37,9 +37,9 @@ export const useUIState = create(
   combine(initialState, (set, _get) => ({
     // UI State actions
     setIsSidebarVisible: (v: boolean) => set({ isSidebarVisible: v }),
-    setIsRightPaneVisible: (v: boolean) => set({ isRightPaneVisible: v }),
     setIsCommandBarVisible: (v: boolean) => set({ isCommandBarVisible: v }),
     setIsCommandPaletteVisible: (v: boolean) => set({ isCommandPaletteVisible: v }),
+    setIsFindVisible: (v: boolean) => set({ isFindVisible: v }),
 
     // View State actions
     setIsGitViewActive: (v: boolean) => set({ isGitViewActive: v }),
@@ -62,7 +62,6 @@ export const useUIState = create(
 
     // Helper functions
     toggleSidebar: () => set(s => ({ isSidebarVisible: !s.isSidebarVisible })),
-    toggleRightPane: () => set(s => ({ isRightPaneVisible: !s.isRightPaneVisible })),
     toggleCommandBar: () => set(s => ({ isCommandBarVisible: !s.isCommandBarVisible })),
     toggleCommandPalette: () => set(s => ({ isCommandPaletteVisible: !s.isCommandPaletteVisible })),
     showBottomPane: (tab: BottomPaneTab) =>
@@ -76,6 +75,7 @@ export const useUIState = create(
         isCommandPaletteVisible: false,
         isGitHubCopilotSettingsVisible: false,
         isQuickEditVisible: false,
+        isFindVisible: false,
         folderHeaderContextMenu: null,
         projectNameMenu: null,
       }),

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ContextMenuState, FileEntry } from "../../types/app";
 import FileIcon from "../file-icon";
 import "./file-tree.css";
@@ -172,8 +173,23 @@ const FileTree = ({
     e.preventDefault();
     e.stopPropagation();
 
-    const x = Math.min(e.clientX, window.innerWidth - 250);
-    const y = Math.min(e.clientY, window.innerHeight - 400);
+    // Get the raw coordinates first
+    let x = e.pageX;
+    let y = e.pageY;
+
+    // Only adjust if the menu would go off-screen
+    const menuWidth = 250;
+    const menuHeight = 400; // approximate max height
+
+    // Adjust X if menu would go off right edge
+    if (x + menuWidth > window.innerWidth) {
+      x = window.innerWidth - menuWidth;
+    }
+
+    // Adjust Y if menu would go off bottom edge
+    if (y + menuHeight > window.innerHeight) {
+      y = window.innerHeight - menuHeight;
+    }
 
     setContextMenu({
       x: x,
@@ -445,140 +461,27 @@ const FileTree = ({
     >
       {renderFileTree(files)}
 
-      {contextMenu && (
-        <div
-          className={cn(
-            "context-menu fixed z-50 rounded-md border",
-            "border-border bg-secondary-bg py-1 shadow-lg",
-          )}
-          style={{
-            left: contextMenu.x,
-            top: contextMenu.y,
-            minWidth: "220px",
-          }}
-        >
-          {contextMenu.isDir && (
-            <>
-              <button
-                type="button"
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  startInlineEditing(contextMenu.path, false);
-                  setContextMenu(null);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5",
-                  "text-left font-mono text-text text-xs hover:bg-hover",
-                )}
-              >
-                <FilePlus size={12} />
-                New File
-              </button>
-              <button
-                type="button"
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (onCreateNewFolderInDirectory) {
-                    startInlineEditing(contextMenu.path, true);
-                  } else {
-                    console.log("New folder in:", contextMenu.path);
-                  }
-                  setContextMenu(null);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5",
-                  "text-left font-mono text-text text-xs hover:bg-hover",
-                )}
-              >
-                <FolderPlus size={12} />
-                New Folder
-              </button>
-              <button
-                type="button"
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (onUploadFile) {
-                    onUploadFile(contextMenu.path);
-                  } else {
-                    console.log("Upload files to:", contextMenu.path);
-                  }
-                  setContextMenu(null);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5",
-                  "text-left font-mono text-text text-xs hover:bg-hover",
-                )}
-              >
-                <Upload size={12} />
-                Upload Files
-              </button>
-              <button
-                type="button"
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (onRefreshDirectory) {
-                    onRefreshDirectory(contextMenu.path);
-                  } else {
-                    console.log("Refresh directory:", contextMenu.path);
-                  }
-                  setContextMenu(null);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5",
-                  "text-left font-mono text-text text-xs hover:bg-hover",
-                )}
-              >
-                <RefreshCw size={12} />
-                Refresh
-              </button>
-              <button
-                type="button"
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  // Use the Terminal app on macOS
-                  if (window.electron) {
-                    window.electron.shell.openPath(contextMenu.path);
-                  } else {
-                    console.log("Open in terminal:", contextMenu.path);
-                  }
-                  setContextMenu(null);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5",
-                  "text-left font-mono text-text text-xs hover:bg-hover",
-                )}
-              >
-                <Terminal size={12} />
-                Open in Terminal
-              </button>
-              <button
-                type="button"
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log("Find in folder:", contextMenu.path);
-                  setContextMenu(null);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5",
-                  "text-left font-mono text-text text-xs hover:bg-hover",
-                )}
-              >
-                <Search size={12} />
-                Find in Folder
-              </button>
-              {onGenerateImage && (
+      {contextMenu &&
+        createPortal(
+          <div
+            className={cn(
+              "context-menu fixed z-50 rounded-md border",
+              "border-border bg-secondary-bg py-1 shadow-lg",
+            )}
+            style={{
+              left: `${contextMenu.x}px`,
+              top: `${contextMenu.y}px`,
+              minWidth: "220px",
+            }}
+          >
+            {contextMenu.isDir && (
+              <>
                 <button
                   type="button"
                   onClick={e => {
                     e.preventDefault();
                     e.stopPropagation();
-                    onGenerateImage(contextMenu.path);
+                    startInlineEditing(contextMenu.path, false);
                     setContextMenu(null);
                   }}
                   className={cn(
@@ -586,250 +489,368 @@ const FileTree = ({
                     "text-left font-mono text-text text-xs hover:bg-hover",
                   )}
                 >
-                  <ImageIcon size={12} />
-                  Generate Image
+                  <FilePlus size={12} />
+                  New File
                 </button>
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (onCreateNewFolderInDirectory) {
+                      startInlineEditing(contextMenu.path, true);
+                    } else {
+                      console.log("New folder in:", contextMenu.path);
+                    }
+                    setContextMenu(null);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-1.5",
+                    "text-left font-mono text-text text-xs hover:bg-hover",
+                  )}
+                >
+                  <FolderPlus size={12} />
+                  New Folder
+                </button>
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (onUploadFile) {
+                      onUploadFile(contextMenu.path);
+                    } else {
+                      console.log("Upload files to:", contextMenu.path);
+                    }
+                    setContextMenu(null);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-1.5",
+                    "text-left font-mono text-text text-xs hover:bg-hover",
+                  )}
+                >
+                  <Upload size={12} />
+                  Upload Files
+                </button>
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (onRefreshDirectory) {
+                      onRefreshDirectory(contextMenu.path);
+                    } else {
+                      console.log("Refresh directory:", contextMenu.path);
+                    }
+                    setContextMenu(null);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-1.5",
+                    "text-left font-mono text-text text-xs hover:bg-hover",
+                  )}
+                >
+                  <RefreshCw size={12} />
+                  Refresh
+                </button>
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Use the Terminal app on macOS
+                    if (window.electron) {
+                      window.electron.shell.openPath(contextMenu.path);
+                    } else {
+                      console.log("Open in terminal:", contextMenu.path);
+                    }
+                    setContextMenu(null);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-1.5",
+                    "text-left font-mono text-text text-xs hover:bg-hover",
+                  )}
+                >
+                  <Terminal size={12} />
+                  Open in Terminal
+                </button>
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log("Find in folder:", contextMenu.path);
+                    setContextMenu(null);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-1.5",
+                    "text-left font-mono text-text text-xs hover:bg-hover",
+                  )}
+                >
+                  <Search size={12} />
+                  Find in Folder
+                </button>
+                {onGenerateImage && (
+                  <button
+                    type="button"
+                    onClick={e => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onGenerateImage(contextMenu.path);
+                      setContextMenu(null);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-3 py-1.5",
+                      "text-left font-mono text-text text-xs hover:bg-hover",
+                    )}
+                  >
+                    <ImageIcon size={12} />
+                    Generate Image
+                  </button>
+                )}
+                <div className="my-1 border-border border-t" />
+              </>
+            )}
+
+            {!contextMenu.isDir && (
+              <>
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log("Open file:", contextMenu.path);
+                    onFileSelect(contextMenu.path, false);
+                    setContextMenu(null);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-1.5",
+                    "text-left font-mono text-text text-xs hover:bg-hover",
+                  )}
+                >
+                  <FolderOpen size={12} />
+                  Open
+                </button>
+                <button
+                  type="button"
+                  onClick={async e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                      const response = await fetch(contextMenu.path);
+                      const content = await response.text();
+                      await navigator.clipboard.writeText(content);
+                      console.log("Copied file content to clipboard");
+                    } catch (error) {
+                      console.log("Failed to copy file content:", error);
+                    }
+                    setContextMenu(null);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-1.5",
+                    "text-left font-mono text-text text-xs hover:bg-hover",
+                  )}
+                >
+                  <Copy size={12} />
+                  Copy Content
+                </button>
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (onDuplicatePath) {
+                      onDuplicatePath(contextMenu.path);
+                    } else {
+                      console.log("Duplicate file:", contextMenu.path);
+                    }
+                    setContextMenu(null);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-1.5",
+                    "text-left font-mono text-text text-xs hover:bg-hover",
+                  )}
+                >
+                  <FileText size={12} />
+                  Duplicate
+                </button>
+                <button
+                  type="button"
+                  onClick={async e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                      const stats = await fetch(`file://${contextMenu.path}`, { method: "HEAD" });
+                      const size = stats.headers.get("content-length") || "Unknown";
+                      const fileName = contextMenu.path.split("/").pop() || "";
+                      const extension = fileName.includes(".")
+                        ? fileName.split(".").pop()
+                        : "No extension";
+                      alert(
+                        `File: ${fileName}\nPath: ${contextMenu.path}\nSize: ${size} bytes\nType: ${extension}`,
+                      );
+                    } catch (_error) {
+                      const fileName = contextMenu.path.split("/").pop() || "";
+                      alert(`File: ${fileName}\nPath: ${contextMenu.path}`);
+                    }
+                    setContextMenu(null);
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-1.5",
+                    "text-left font-mono text-text text-xs hover:bg-hover",
+                  )}
+                >
+                  <Info size={12} />
+                  Properties
+                </button>
+                <div className="my-1 border-border border-t" />
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={async e => {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                  await navigator.clipboard.writeText(contextMenu.path);
+                  console.log("Copied absolute path:", contextMenu.path);
+                } catch (error) {
+                  console.log("Failed to copy path:", error);
+                }
+                setContextMenu(null);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-1.5",
+                "text-left font-mono text-text text-xs hover:bg-hover",
               )}
-              <div className="my-1 border-border border-t" />
-            </>
-          )}
+            >
+              <Link size={12} />
+              Copy Path
+            </button>
 
-          {!contextMenu.isDir && (
-            <>
-              <button
-                type="button"
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log("Open file:", contextMenu.path);
-                  onFileSelect(contextMenu.path, false);
-                  setContextMenu(null);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5",
-                  "text-left font-mono text-text text-xs hover:bg-hover",
-                )}
-              >
-                <FolderOpen size={12} />
-                Open
-              </button>
-              <button
-                type="button"
-                onClick={async e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  try {
-                    const response = await fetch(contextMenu.path);
-                    const content = await response.text();
-                    await navigator.clipboard.writeText(content);
-                    console.log("Copied file content to clipboard");
-                  } catch (error) {
-                    console.log("Failed to copy file content:", error);
+            <button
+              type="button"
+              onClick={async e => {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                  let relativePath = contextMenu.path;
+                  if (rootFolderPath && contextMenu.path.startsWith(rootFolderPath)) {
+                    relativePath = contextMenu.path.substring(rootFolderPath.length + 1);
                   }
-                  setContextMenu(null);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5",
-                  "text-left font-mono text-text text-xs hover:bg-hover",
-                )}
-              >
-                <Copy size={12} />
-                Copy Content
-              </button>
-              <button
-                type="button"
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (onDuplicatePath) {
-                    onDuplicatePath(contextMenu.path);
-                  } else {
-                    console.log("Duplicate file:", contextMenu.path);
-                  }
-                  setContextMenu(null);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5",
-                  "text-left font-mono text-text text-xs hover:bg-hover",
-                )}
-              >
-                <FileText size={12} />
-                Duplicate
-              </button>
-              <button
-                type="button"
-                onClick={async e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  try {
-                    const stats = await fetch(`file://${contextMenu.path}`, { method: "HEAD" });
-                    const size = stats.headers.get("content-length") || "Unknown";
-                    const fileName = contextMenu.path.split("/").pop() || "";
-                    const extension = fileName.includes(".")
-                      ? fileName.split(".").pop()
-                      : "No extension";
-                    alert(
-                      `File: ${fileName}\nPath: ${contextMenu.path}\nSize: ${size} bytes\nType: ${extension}`,
-                    );
-                  } catch (_error) {
-                    const fileName = contextMenu.path.split("/").pop() || "";
-                    alert(`File: ${fileName}\nPath: ${contextMenu.path}`);
-                  }
-                  setContextMenu(null);
-                }}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5",
-                  "text-left font-mono text-text text-xs hover:bg-hover",
-                )}
-              >
-                <Info size={12} />
-                Properties
-              </button>
-              <div className="my-1 border-border border-t" />
-            </>
-          )}
-
-          <button
-            type="button"
-            onClick={async e => {
-              e.preventDefault();
-              e.stopPropagation();
-              try {
-                await navigator.clipboard.writeText(contextMenu.path);
-                console.log("Copied absolute path:", contextMenu.path);
-              } catch (error) {
-                console.log("Failed to copy path:", error);
-              }
-              setContextMenu(null);
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover",
-            )}
-          >
-            <Link size={12} />
-            Copy Path
-          </button>
-
-          <button
-            type="button"
-            onClick={async e => {
-              e.preventDefault();
-              e.stopPropagation();
-              try {
-                let relativePath = contextMenu.path;
-                if (rootFolderPath && contextMenu.path.startsWith(rootFolderPath)) {
-                  relativePath = contextMenu.path.substring(rootFolderPath.length + 1);
+                  await navigator.clipboard.writeText(relativePath);
+                  console.log("Copied relative path:", relativePath);
+                } catch (error) {
+                  console.log("Failed to copy relative path:", error);
                 }
-                await navigator.clipboard.writeText(relativePath);
-                console.log("Copied relative path:", relativePath);
-              } catch (error) {
-                console.log("Failed to copy relative path:", error);
-              }
-              setContextMenu(null);
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover",
-            )}
-          >
-            <FileText size={12} />
-            Copy Relative Path
-          </button>
+                setContextMenu(null);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-1.5",
+                "text-left font-mono text-text text-xs hover:bg-hover",
+              )}
+            >
+              <FileText size={12} />
+              Copy Relative Path
+            </button>
 
-          <button
-            type="button"
-            onClick={e => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (onCutPath) {
-                onCutPath(contextMenu.path);
-              } else {
-                console.log("Cut:", contextMenu.path);
-              }
-              setContextMenu(null);
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover",
-            )}
-          >
-            <Scissors size={12} />
-            Cut
-          </button>
-
-          <button
-            type="button"
-            onClick={e => {
-              e.preventDefault();
-              e.stopPropagation();
-              const newName = prompt("Enter new name:", contextMenu.path.split("/").pop() || "");
-              if (newName?.trim()) {
-                if (onRenamePath) {
-                  onRenamePath(contextMenu.path, newName.trim());
+            <button
+              type="button"
+              onClick={e => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onCutPath) {
+                  onCutPath(contextMenu.path);
                 } else {
-                  console.log("Rename:", contextMenu.path, "to", newName.trim());
+                  console.log("Cut:", contextMenu.path);
                 }
-              }
-              setContextMenu(null);
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover",
-            )}
-          >
-            <Edit size={12} />
-            Rename
-          </button>
+                setContextMenu(null);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-1.5",
+                "text-left font-mono text-text text-xs hover:bg-hover",
+              )}
+            >
+              <Scissors size={12} />
+              Cut
+            </button>
 
-          <button
-            type="button"
-            onClick={e => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (onRevealInFinder) {
-                onRevealInFinder(contextMenu.path);
-              } else if (window.electron) {
-                window.electron.shell.showItemInFolder(contextMenu.path);
-              } else {
-                // Fallback: try to open the parent directory
-                const parentDir = contextMenu.path.substring(0, contextMenu.path.lastIndexOf("/"));
-                window.open(`file://${parentDir}`, "_blank");
-              }
-              setContextMenu(null);
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover",
-            )}
-          >
-            <Eye size={12} />
-            Reveal in Finder
-          </button>
+            <button
+              type="button"
+              onClick={e => {
+                e.preventDefault();
+                e.stopPropagation();
+                const newName = prompt("Enter new name:", contextMenu.path.split("/").pop() || "");
+                if (newName?.trim()) {
+                  if (onRenamePath) {
+                    onRenamePath(contextMenu.path, newName.trim());
+                  } else {
+                    console.log("Rename:", contextMenu.path, "to", newName.trim());
+                  }
+                }
+                setContextMenu(null);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-1.5",
+                "text-left font-mono text-text text-xs hover:bg-hover",
+              )}
+            >
+              <Edit size={12} />
+              Rename
+            </button>
 
-          <div className="my-1 border-border border-t" />
-          <button
-            type="button"
-            onClick={e => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (onDeletePath) {
-                onDeletePath(contextMenu.path, contextMenu.isDir);
-              } else {
-                console.log("Delete:", contextMenu.path);
-              }
-              setContextMenu(null);
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover hover:text-red-500",
-            )}
-          >
-            <Trash size={12} />
-            Delete
-          </button>
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={e => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onRevealInFinder) {
+                  onRevealInFinder(contextMenu.path);
+                } else if (window.electron) {
+                  window.electron.shell.showItemInFolder(contextMenu.path);
+                } else {
+                  // Fallback: try to open the parent directory
+                  const parentDir = contextMenu.path.substring(
+                    0,
+                    contextMenu.path.lastIndexOf("/"),
+                  );
+                  window.open(`file://${parentDir}`, "_blank");
+                }
+                setContextMenu(null);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-1.5",
+                "text-left font-mono text-text text-xs hover:bg-hover",
+              )}
+            >
+              <Eye size={12} />
+              Reveal in Finder
+            </button>
+
+            <div className="my-1 border-border border-t" />
+            <button
+              type="button"
+              onClick={e => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onDeletePath) {
+                  onDeletePath(contextMenu.path, contextMenu.isDir);
+                } else {
+                  console.log("Delete:", contextMenu.path);
+                }
+                setContextMenu(null);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-1.5",
+                "text-left font-mono text-text text-xs hover:bg-hover hover:text-red-500",
+              )}
+            >
+              <Trash size={12} />
+              Delete
+            </button>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

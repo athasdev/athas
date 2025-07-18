@@ -1,5 +1,6 @@
 import { create, type ExtractState } from "zustand";
 import { combine, persist } from "zustand/middleware";
+import type { CoreFeaturesState } from "../types/core-features";
 
 const initialState = {
   // AI Chat Settings
@@ -9,6 +10,17 @@ const initialState = {
   isAIChatVisible: false,
   // Extensions Settings
   extensionsActiveTab: "all" as "all" | "core" | "language-server" | "theme",
+  // Tab Settings
+  maxOpenTabs: 10,
+  // Core Features
+  coreFeatures: {
+    git: true,
+    remote: true,
+    terminal: true,
+    search: true,
+    diagnostics: true,
+    aiChat: true,
+  } as CoreFeaturesState,
 };
 
 const storeCreator = combine(initialState, set => ({

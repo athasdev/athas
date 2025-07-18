@@ -1,41 +1,39 @@
 import { Loader2, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { useAppStore } from "../stores/app-store";
+import { useBufferStore } from "../stores/buffer-store";
+import { usePersistentSettingsStore } from "../stores/persistent-settings-store";
 import { AI_PROVIDERS, getModelById } from "../types/ai-provider";
 import { getProviderApiToken } from "../utils/ai-chat";
+import { getFilenameFromPath, getLanguageFromFilename } from "../utils/file-utils";
 import ModelProviderSelector from "./model-provider-selector";
 
-interface QuickEditInlineProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onApplyEdit: (editedText: string) => void;
-  selectedText: string;
-  cursorPosition: { x: number; y: number };
-  filename?: string;
-  language?: string;
-}
+const QuickEditInline = () => {
+  // Get data from stores
+  const { quickEditState, closeQuickEdit, applyQuickEdit } = useAppStore();
+  const { aiProviderId, aiModelId, setAIProviderAndModel } = usePersistentSettingsStore();
+  const activeBuffer = useBufferStore(state => state.getActiveBuffer());
 
-const QuickEditInline = ({
-  isOpen,
-  onClose,
-  onApplyEdit,
-  selectedText,
-  cursorPosition,
-  filename,
-  language,
-}: QuickEditInlineProps) => {
+  const isOpen = quickEditState.isOpen;
+  const onClose = closeQuickEdit;
+  const selectedText = quickEditState.selectedText;
+  const cursorPosition = quickEditState.cursorPosition;
+  const filename = activeBuffer ? getFilenameFromPath(activeBuffer.path) : undefined;
+  const language = activeBuffer && filename ? getLanguageFromFilename(filename) : undefined;
+  const onApplyEdit = (editedText: string) => {
+    applyQuickEdit(editedText);
+  };
   const [instruction, setInstruction] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Provider/model state for inline edit
-  const [providerId, setProviderId] = useState(
-    () => localStorage.getItem("ai-chat-provider") || "openai",
-  );
-  const [modelId, setModelId] = useState(
-    () => localStorage.getItem("ai-chat-model") || "gpt-3.5-turbo",
-  );
+  const providerId = aiProviderId;
+  const modelId = aiModelId;
+  const setProviderId = (id: string) => setAIProviderAndModel(id, modelId);
+  const setModelId = (id: string) => setAIProviderAndModel(providerId, id);
 
   useEffect(() => {
     if (isOpen) {

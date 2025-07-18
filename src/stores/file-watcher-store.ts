@@ -14,6 +14,7 @@ let unlistenFileChanged: UnlistenFn | null = null;
 const initialState = {
   watchedPaths: new Set<string>(),
   pendingSaves: new Map<string, number>(), // path -> timestamp
+  externallyModifiedPaths: new Set<string>(), // tracks files modified externally
 };
 
 export const useFileWatcherStore = create(
@@ -101,6 +102,7 @@ export const useFileWatcherStore = create(
       set({
         watchedPaths: new Set(),
         pendingSaves: new Map(),
+        externallyModifiedPaths: new Set(),
       });
     },
   })),

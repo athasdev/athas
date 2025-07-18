@@ -33,6 +33,7 @@
     "@tauri-apps/plugin-shell": "^2",
     "@tauri-apps/plugin-window-state": "^2",
     "@types/prismjs": "^1.26.5",
+    "@types/uuid": "^10.0.0",
     "ansi-to-html": "^0.7.2",
     "clsx": "^2.1.1",
     "immer": "^10.1.1",
@@ -41,6 +42,7 @@
     "prismjs": "^1.30.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "uuid": "^11.1.0",
     "vscode-languageserver-protocol": "^3.17.5",
     "zustand": "^5.0.6"
   },

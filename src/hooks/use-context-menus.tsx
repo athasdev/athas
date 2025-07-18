@@ -2,6 +2,9 @@ import { ClockIcon } from "lucide-react";
 import type React from "react";
 import { useEffect } from "react";
 import { cn } from "@/utils/cn";
+import { useFileSystemStore } from "../stores/file-system-store";
+import { useRecentFoldersStore } from "../stores/recent-folders-store";
+import { useUIState } from "../stores/ui-state-store";
 import type { RecentFolder } from "../types/recent-folders";
 
 interface UseContextMenusProps {
@@ -52,23 +55,16 @@ export const useContextMenus = ({
   };
 };
 
-interface ProjectNameMenuProps {
-  projectNameMenu: { x: number; y: number } | null;
-  recentFolders: RecentFolder[];
-  onOpenFolder: () => void;
-  onCollapseAllFolders: () => void;
-  onOpenRecentFolder: (path: string) => void;
-  onCloseMenu: () => void;
-}
+export const ProjectNameMenu = () => {
+  // Get data from stores
+  const { projectNameMenu, setProjectNameMenu } = useUIState();
+  const { handleOpenFolder, handleCollapseAllFolders } = useFileSystemStore();
+  const { recentFolders, openRecentFolder } = useRecentFoldersStore();
 
-export const ProjectNameMenu = ({
-  projectNameMenu,
-  recentFolders,
-  onOpenFolder,
-  onCollapseAllFolders,
-  onOpenRecentFolder,
-  onCloseMenu,
-}: ProjectNameMenuProps) => {
+  const onCloseMenu = () => setProjectNameMenu(null);
+  const onOpenFolder = handleOpenFolder;
+  const onCollapseAllFolders = handleCollapseAllFolders;
+  const onOpenRecentFolder = openRecentFolder;
   if (!projectNameMenu) return null;
 
   return (
@@ -117,7 +113,7 @@ export const ProjectNameMenu = ({
             <ClockIcon size="10" />
             Recent Folders
           </div>
-          {recentFolders.slice(0, 5).map(folder => (
+          {recentFolders.slice(0, 5).map((folder: RecentFolder) => (
             <button
               key={folder.path}
               onMouseDown={e => {

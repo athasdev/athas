@@ -1,14 +1,8 @@
 import { File, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
-
-interface CommandBarProps {
-  isVisible: boolean;
-  onClose: () => void;
-  files: Array<{ name: string; path: string; isDir: boolean }>;
-  onFileSelect: (path: string) => void;
-  rootFolderPath?: string;
-}
+import { useFileSystemStore } from "../../stores/file-system-store";
+import { useUIState } from "../../stores/ui-state-store";
 
 // Storage key for recently opened files
 const RECENT_FILES_KEY = "athas-recent-files";
@@ -171,23 +165,35 @@ const addToRecentFiles = (filePath: string) => {
   }, 0);
 };
 
-const CommandBar = ({
-  isVisible,
-  onClose,
-  files,
-  onFileSelect,
-  rootFolderPath,
-}: CommandBarProps) => {
+const CommandBar = () => {
+  // Get data from stores
+  const { isCommandBarVisible, setIsCommandBarVisible } = useUIState();
+  const { getAllProjectFiles, rootFolderPath } = useFileSystemStore();
+  const handleFileSelect = useFileSystemStore(state => state.handleFileSelect);
+
+  const isVisible = isCommandBarVisible;
+  const onClose = () => setIsCommandBarVisible(false);
+  const onFileSelect = (path: string) => handleFileSelect(path, false);
   const [query, setQuery] = useState("");
   const [recentFiles, setRecentFiles] = useState<string[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [files, setFiles] = useState<Array<{ name: string; path: string; isDir: boolean }>>([]);
 
-  // Initialize cache when component mounts
+  // Initialize cache and load files when component mounts
   useEffect(() => {
     initializeCache();
-  }, []);
+    // Load all project files asynchronously
+    getAllProjectFiles().then(allFiles => {
+      const formattedFiles = allFiles.map(file => ({
+        name: file.name,
+        path: file.path,
+        isDir: file.isDir,
+      }));
+      setFiles(formattedFiles);
+    });
+  }, [getAllProjectFiles]);
 
   // Update local state when command bar becomes visible
   useEffect(() => {
@@ -328,7 +334,7 @@ const CommandBar = ({
     };
   }, [files, recentFiles, query]);
 
-  const handleFileSelect = useCallback(
+  const handleItemSelect = useCallback(
     (path: string) => {
       // Update cache and state immediately
       addToRecentFiles(path);
@@ -337,7 +343,7 @@ const CommandBar = ({
         return [path, ...filtered].slice(0, 20);
       });
 
-      onFileSelect(path);
+      handleFileSelect(path, false);
       onClose();
     },
     [onFileSelect, onClose],
@@ -379,7 +385,7 @@ const CommandBar = ({
       } else if (e.key === "Enter") {
         e.preventDefault();
         if (allResults[selectedIndex]) {
-          handleFileSelect(allResults[selectedIndex].path);
+          handleItemSelect(allResults[selectedIndex].path);
         }
       }
     };
@@ -440,7 +446,7 @@ const CommandBar = ({
                         <button
                           key={`recent-${file.path}`}
                           data-item-index={globalIndex}
-                          onClick={() => handleFileSelect(file.path)}
+                          onClick={() => handleItemSelect(file.path)}
                           className={cn(
                             "m-0 flex w-full cursor-pointer items-center gap-2",
                             "rounded-none border-none px-3 py-1.5 font-mono",
@@ -480,7 +486,7 @@ const CommandBar = ({
                         <button
                           key={`other-${file.path}`}
                           data-item-index={globalIndex}
-                          onClick={() => handleFileSelect(file.path)}
+                          onClick={() => handleItemSelect(file.path)}
                           className={cn(
                             "m-0 flex w-full cursor-pointer items-center gap-2",
                             "rounded-none border-none px-3 py-1.5 font-mono",
