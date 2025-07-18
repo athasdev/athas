@@ -1,3 +1,4 @@
+import ignore from "ignore";
 import {
   Copy,
   Edit,
@@ -17,8 +18,9 @@ import {
   Upload,
 } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ContextMenuState, FileEntry } from "../../types/app";
+import { readDirectory, readFile } from "../../utils/platform";
 import FileIcon from "../file-icon";
 import "./file-tree.css";
 import { cn } from "@/utils/cn";
@@ -66,6 +68,72 @@ const FileTree = ({
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const [gitIgnore, setGitIgnore] = useState<ReturnType<typeof ignore> | null>(null);
+
+  useEffect(() => {
+    const loadGitignore = async () => {
+      if (!rootFolderPath) {
+        setGitIgnore(null);
+        return;
+      }
+
+      try {
+        await readDirectory(`${rootFolderPath}/.git`);
+
+        const content = await readFile(`${rootFolderPath}/.gitignore`);
+        const ig = ignore();
+        ig.add(
+          content
+            .split(/\r?\n/)
+            .map(l => l.trim())
+            .filter(l => l && !l.startsWith("#")),
+        );
+        setGitIgnore(ig);
+      } catch {
+        setGitIgnore(null);
+      }
+    };
+
+    loadGitignore();
+  }, [rootFolderPath]);
+
+  const isGitIgnored = useCallback(
+    (fullPath: string, isDir: boolean): boolean => {
+      if (!gitIgnore || !rootFolderPath) return false;
+
+      const normRoot = rootFolderPath.replace(/\\/g, "/");
+      let relative = fullPath.replace(/\\/g, "/");
+
+      if (relative.startsWith(normRoot)) {
+        relative = relative.slice(normRoot.length);
+      }
+
+      if (relative.startsWith("/")) relative = relative.slice(1);
+
+      if (isDir && !relative.endsWith("/")) relative += "/";
+
+      return gitIgnore.ignores(relative);
+    },
+    [gitIgnore, rootFolderPath],
+  );
+
+  // ─────────────────────────────────────────────────────────────────
+  // Pre-process files once per render
+  // ─────────────────────────────────────────────────────────────────
+  const filteredFiles = useMemo(() => {
+    const process = (items: FileEntry[]): FileEntry[] =>
+      items.map(item => {
+        const ignored = isGitIgnored(item.path, item.isDir);
+        return {
+          ...item,
+          ignored,
+          children: item.children ? process(item.children) : undefined,
+        };
+      });
+
+    return process(files);
+  }, [files, isGitIgnored]);
 
   // Use custom drag and drop
   const { dragState, startCustomDrag } = useCustomDragDrop(
@@ -286,6 +354,7 @@ const FileTree = ({
               dragState.dragOverPath === file.path &&
                 "!bg-accent !bg-opacity-20 !border-2 !border-accent !border-dashed",
               dragState.isDragging && "cursor-move",
+              file.ignored && "opacity-50",
             )}
             style={{
               paddingLeft: `${12 + depth * 20}px`,
@@ -443,7 +512,7 @@ const FileTree = ({
       onDrop={handleRootDrop}
       onContextMenu={e => e.preventDefault()}
     >
-      {renderFileTree(files)}
+      {renderFileTree(filteredFiles)}
 
       {contextMenu && (
         <div

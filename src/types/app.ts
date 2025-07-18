@@ -6,6 +6,7 @@ export interface FileEntry {
   expanded?: boolean;
   isEditing?: boolean;
   isNewItem?: boolean;
+  ignored?: boolean;
 }
 
 export type VimMode = "normal" | "insert" | "visual" | "visual-line" | "visual-block";
