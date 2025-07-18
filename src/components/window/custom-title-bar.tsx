@@ -83,6 +83,7 @@ const CustomTitleBar = ({ showMinimal = false, isWelcomeScreen = false }: Custom
   };
 
   const isMacOS = currentPlatform === "macos";
+  const isLinux = currentPlatform === "linux";
 
   if (showMinimal) {
     const backgroundClass = isWelcomeScreen
@@ -100,8 +101,8 @@ const CustomTitleBar = ({ showMinimal = false, isWelcomeScreen = false }: Custom
       >
         <div className="flex-1" />
 
-        {/* Windows controls */}
-        {!isMacOS && (
+        {/* Window controls - only show on Linux */}
+        {isLinux && (
           <div className="flex items-center">
             <button
               onClick={handleMinimize}
