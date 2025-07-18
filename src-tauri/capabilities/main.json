@@ -21,10 +21,8 @@
     "fs:default",
     {
       "identifier": "fs:scope",
-      "allow": [
-        { "path": "$HOME" },
-        { "path": "$HOME/**" }
-      ]
+      "allow": [{ "path": "$HOME/**" }],
+      "requireLiteralLeadingDot": false
     },
     "fs:allow-read-file",
     "fs:allow-write-file",
