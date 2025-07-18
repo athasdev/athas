@@ -25,7 +25,13 @@ const CustomTitleBar = ({ showMinimal = false, isWelcomeScreen = false }: Custom
   const [currentWindow, setCurrentWindow] = useState<any>(null);
   const [currentPlatform, setCurrentPlatform] = useState<string>(() => {
     if (typeof navigator !== "undefined") {
-      return navigator.userAgent.includes("Mac") ? "macos" : "other";
+      if (navigator.userAgent.includes("Mac")) {
+        return "macos";
+      } else if (navigator.userAgent.includes("Linux")) {
+        return "linux";
+      } else {
+        return "windows";
+      }
     }
     return "other";
   });
@@ -40,8 +46,14 @@ const CustomTitleBar = ({ showMinimal = false, isWelcomeScreen = false }: Custom
         setCurrentPlatform(platformName);
       } catch (error) {
         console.error("Error getting platform:", error);
-        if (typeof navigator !== "undefined" && navigator.userAgent.includes("Mac")) {
-          setCurrentPlatform("macos");
+        if (typeof navigator !== "undefined") {
+          if (navigator.userAgent.includes("Mac")) {
+            setCurrentPlatform("macos");
+          } else if (navigator.userAgent.includes("Linux")) {
+            setCurrentPlatform("linux");
+          } else {
+            setCurrentPlatform("windows");
+          }
         }
       }
 
@@ -86,11 +98,7 @@ const CustomTitleBar = ({ showMinimal = false, isWelcomeScreen = false }: Custom
   const isLinux = currentPlatform === "linux";
 
   if (showMinimal) {
-    const backgroundClass = isWelcomeScreen
-      ? "bg-paper-bg"
-      : isMacOS
-        ? "bg-primary-bg"
-        : "bg-secondary-bg backdrop-blur-sm";
+    const backgroundClass = isWelcomeScreen ? "bg-paper-bg" : "bg-primary-bg";
 
     return (
       <div
@@ -203,7 +211,7 @@ const CustomTitleBar = ({ showMinimal = false, isWelcomeScreen = false }: Custom
       data-tauri-drag-region
       className={cn(
         "relative z-50 flex h-7 select-none items-center justify-between",
-        "bg-secondary-bg backdrop-blur-sm",
+        "bg-primary-bg",
       )}
     >
       {/* Left side */}
@@ -254,9 +262,9 @@ const CustomTitleBar = ({ showMinimal = false, isWelcomeScreen = false }: Custom
           <Settings size={12} />
         </button>
 
-        {/* Windows controls */}
-        {
-          <>
+        {/* Window controls - only show on Linux */}
+        {isLinux && (
+          <div className="flex items-center">
             <button
               onClick={handleMinimize}
               className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
@@ -282,8 +290,8 @@ const CustomTitleBar = ({ showMinimal = false, isWelcomeScreen = false }: Custom
             >
               <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
             </button>
-          </>
-        }
+          </div>
+        )}
       </div>
     </div>
   );

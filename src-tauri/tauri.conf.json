@@ -19,7 +19,7 @@
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "transparent": true,
+        "transparent": false,
         "resizable": true,
         "fullscreen": false,
         "center": true,
@@ -34,10 +34,14 @@
     ],
     "security": {
       "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost",
-      "capabilities": ["main-capability"],
+      "capabilities": [
+        "main-capability"
+      ],
       "assetProtocol": {
         "enable": true,
-        "scope": ["**"]
+        "scope": [
+          "**"
+        ]
       }
     },
     "macOSPrivateApi": true

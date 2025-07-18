@@ -27,49 +27,49 @@
 
 /* Define custom Tailwind theme variables using @theme directive */
 @theme inline {
-  /* Main UI colors - reference CSS variables for dynamic theming */
-  --color-primary-bg: var(--tw-primary-bg);
-  --color-secondary-bg: var(--tw-secondary-bg);
-  --color-text: var(--tw-text);
-  --color-text-light: var(--tw-text-light);
-  --color-text-lighter: var(--tw-text-lighter);
-  --color-border: var(--tw-border);
-  --color-hover: var(--tw-hover);
-  --color-selected: var(--tw-selected);
+    /* Main UI colors - reference CSS variables for dynamic theming */
+    --color-primary-bg: var(--tw-primary-bg);
+    --color-secondary-bg: var(--tw-secondary-bg);
+    --color-text: var(--tw-text);
+    --color-text-light: var(--tw-text-light);
+    --color-text-lighter: var(--tw-text-lighter);
+    --color-border: var(--tw-border);
+    --color-hover: var(--tw-hover);
+    --color-selected: var(--tw-selected);
 
-  /* Paper/Welcome screen specific colors */
-  --color-paper-bg: var(--tw-paper-bg);
-  --color-paper-button-bg: var(--tw-paper-button-bg);
-  --color-paper-button-border: var(--tw-paper-button-border);
-  --color-paper-button-hover-bg: var(--tw-paper-button-hover-bg);
-  --color-paper-button-hover-border: var(--tw-paper-button-hover-border);
-  --color-paper-recent-bg: var(--tw-paper-recent-bg);
-  --color-paper-recent-border: var(--tw-paper-recent-border);
-  --color-paper-recent-hover-bg: var(--tw-paper-recent-hover-bg);
-  --color-paper-recent-hover-border: var(--tw-paper-recent-hover-border);
-  --color-paper-text-primary: var(--tw-paper-text-primary);
-  --color-paper-text-secondary: var(--tw-paper-text-secondary);
-  --color-paper-text-light: var(--tw-paper-text-light);
-  --color-paper-texture-overlay: var(--tw-paper-texture-overlay);
+    /* Paper/Welcome screen specific colors */
+    --color-paper-bg: var(--tw-paper-bg);
+    --color-paper-button-bg: var(--tw-paper-button-bg);
+    --color-paper-button-border: var(--tw-paper-button-border);
+    --color-paper-button-hover-bg: var(--tw-paper-button-hover-bg);
+    --color-paper-button-hover-border: var(--tw-paper-button-hover-border);
+    --color-paper-recent-bg: var(--tw-paper-recent-bg);
+    --color-paper-recent-border: var(--tw-paper-recent-border);
+    --color-paper-recent-hover-bg: var(--tw-paper-recent-hover-bg);
+    --color-paper-recent-hover-border: var(--tw-paper-recent-hover-border);
+    --color-paper-text-primary: var(--tw-paper-text-primary);
+    --color-paper-text-secondary: var(--tw-paper-text-secondary);
+    --color-paper-text-light: var(--tw-paper-text-light);
+    --color-paper-texture-overlay: var(--tw-paper-texture-overlay);
 
-  /* Accent color */
-  --color-accent: var(--tw-accent);
+    /* Accent color */
+    --color-accent: var(--tw-accent);
 
-  /* Diagnostic colors */
-  --color-error: var(--tw-error);
-  --color-warning: var(--tw-warning);
-  --color-info: var(--tw-info);
+    /* Diagnostic colors */
+    --color-error: var(--tw-error);
+    --color-warning: var(--tw-warning);
+    --color-info: var(--tw-info);
 
-  /* Syntax highlighting colors */
-  --color-syntax-comment: var(--tw-syntax-comment);
-  --color-syntax-keyword: var(--tw-syntax-keyword);
-  --color-syntax-string: var(--tw-syntax-string);
-  --color-syntax-number: var(--tw-syntax-number);
-  --color-syntax-function: var(--tw-syntax-function);
-  --color-syntax-variable: var(--tw-syntax-variable);
-  --color-syntax-tag: var(--tw-syntax-tag);
-  --color-syntax-attribute: var(--tw-syntax-attribute);
-  --color-syntax-punctuation: var(--tw-syntax-punctuation);
+    /* Syntax highlighting colors */
+    --color-syntax-comment: var(--tw-syntax-comment);
+    --color-syntax-keyword: var(--tw-syntax-keyword);
+    --color-syntax-string: var(--tw-syntax-string);
+    --color-syntax-number: var(--tw-syntax-number);
+    --color-syntax-function: var(--tw-syntax-function);
+    --color-syntax-variable: var(--tw-syntax-variable);
+    --color-syntax-tag: var(--tw-syntax-tag);
+    --color-syntax-attribute: var(--tw-syntax-attribute);
+    --color-syntax-punctuation: var(--tw-syntax-punctuation);
 }
 
 
@@ -114,101 +114,101 @@ button {
 
 /* CSS variables that themes can override */
 @layer base {
-:root {
-    /* Default light theme colors */
-    --tw-primary-bg: #ffffff;
-    --tw-secondary-bg: #f8f8f8;
-    --tw-text: #333333;
-    --tw-text-light: #666666;
-    --tw-text-lighter: #999999;
-    --tw-border: #e0e0e0;
-    --tw-hover: #f0f0f0;
-    --tw-selected: #e8e8e8;
-
-    /* Paper colors */
-    --tw-paper-bg: #ffffff;
-    --tw-paper-button-bg: #ffffff;
-    --tw-paper-button-border: rgb(180 180 180 / 0.4);
-    --tw-paper-button-hover-bg: #f8f8f8;
-    --tw-paper-button-hover-border: rgb(160 160 160 / 0.5);
-    --tw-paper-recent-bg: #ffffff;
-    --tw-paper-recent-border: rgb(220 220 220 / 0.3);
-    --tw-paper-recent-hover-bg: #f8f8f8;
-    --tw-paper-recent-hover-border: rgb(200 200 200 / 0.5);
-    --tw-paper-text-primary: #1a1a1a;
-    --tw-paper-text-secondary: #4a4a4a;
-    --tw-paper-text-light: #6a6a6a;
-    --tw-paper-texture-overlay: rgb(200 200 200 / 0.01);
-
-    /* Accent color */
-    --tw-accent: #3b82f6;
-
-    /* Diagnostic colors */
-    --tw-error: #c53030;
-    --tw-warning: #d69e2e;
-    --tw-info: #3182ce;
-
-    /* Syntax highlighting */
-    --tw-syntax-comment: #6a737d;
-    --tw-syntax-keyword: #d73a49;
-    --tw-syntax-string: #032f62;
-    --tw-syntax-number: #005cc5;
-    --tw-syntax-function: #6f42c1;
-    --tw-syntax-variable: #e36209;
-    --tw-syntax-tag: #22863a;
-    --tw-syntax-attribute: #6f42c1;
-    --tw-syntax-punctuation: #24292e;
-
-}
-
-@media (prefers-color-scheme: dark) {
     :root {
-        /* Override with dark theme colors when system is in dark mode */
-        --tw-primary-bg: #1a1a1a;
-        --tw-secondary-bg: #2a2a2a;
-        --tw-text: #e5e5e5;
-        --tw-text-light: #b3b3b3;
-        --tw-text-lighter: #808080;
-        --tw-border: #404040;
-        --tw-hover: #333333;
-        --tw-selected: #404040;
+        /* Default light theme colors */
+        --tw-primary-bg: #ffffff;
+        --tw-secondary-bg: #f8f8f8;
+        --tw-text: #333333;
+        --tw-text-light: #666666;
+        --tw-text-lighter: #999999;
+        --tw-border: #e0e0e0;
+        --tw-hover: #f0f0f0;
+        --tw-selected: #e8e8e8;
 
-        /* Paper/Welcome screen specific colors - Dark */
-        --tw-paper-bg: #1a1a1a;
-        --tw-paper-button-bg: #2a2a2a;
-        --tw-paper-button-border: rgb(80 80 80 / 0.6);
-        --tw-paper-button-hover-bg: #333333;
-        --tw-paper-button-hover-border: rgb(100 100 100 / 0.7);
-        --tw-paper-recent-bg: #2a2a2a;
-        --tw-paper-recent-border: rgb(60 60 60 / 0.5);
-        --tw-paper-recent-hover-bg: #333333;
-        --tw-paper-recent-hover-border: rgb(80 80 80 / 0.6);
-        --tw-paper-text-primary: #e5e5e5;
-        --tw-paper-text-secondary: #b3b3b3;
-        --tw-paper-text-light: #808080;
-        --tw-paper-texture-overlay: rgb(100 100 100 / 0.02);
+        /* Paper colors */
+        --tw-paper-bg: #ffffff;
+        --tw-paper-button-bg: #ffffff;
+        --tw-paper-button-border: rgb(180 180 180 / 0.4);
+        --tw-paper-button-hover-bg: #f8f8f8;
+        --tw-paper-button-hover-border: rgb(160 160 160 / 0.5);
+        --tw-paper-recent-bg: #ffffff;
+        --tw-paper-recent-border: rgb(220 220 220 / 0.3);
+        --tw-paper-recent-hover-bg: #f8f8f8;
+        --tw-paper-recent-hover-border: rgb(200 200 200 / 0.5);
+        --tw-paper-text-primary: #1a1a1a;
+        --tw-paper-text-secondary: #4a4a4a;
+        --tw-paper-text-light: #6a6a6a;
+        --tw-paper-texture-overlay: rgb(200 200 200 / 0.01);
 
-        /* Accent color - Dark */
-        --tw-accent: #60a5fa;
+        /* Accent color */
+        --tw-accent: #3b82f6;
 
         /* Diagnostic colors */
-        --tw-error: #f87171;
-        --tw-warning: #fbbf24;
-        --tw-info: #60a5fa;
+        --tw-error: #c53030;
+        --tw-warning: #d69e2e;
+        --tw-info: #3182ce;
 
-        /* Syntax highlighting colors - Dark theme */
-        --tw-syntax-comment: #8b949e;
-        --tw-syntax-keyword: #ff7b72;
-        --tw-syntax-string: #a5d6ff;
-        --tw-syntax-number: #79c0ff;
-        --tw-syntax-function: #d2a8ff;
-        --tw-syntax-variable: #ffa657;
-        --tw-syntax-tag: #7ee787;
-        --tw-syntax-attribute: #d2a8ff;
-        --tw-syntax-punctuation: #b3b3b3;
+        /* Syntax highlighting */
+        --tw-syntax-comment: #6a737d;
+        --tw-syntax-keyword: #d73a49;
+        --tw-syntax-string: #032f62;
+        --tw-syntax-number: #005cc5;
+        --tw-syntax-function: #6f42c1;
+        --tw-syntax-variable: #e36209;
+        --tw-syntax-tag: #22863a;
+        --tw-syntax-attribute: #6f42c1;
+        --tw-syntax-punctuation: #24292e;
 
     }
-}
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            /* Override with dark theme colors when system is in dark mode */
+            --tw-primary-bg: #1a1a1a;
+            --tw-secondary-bg: #2a2a2a;
+            --tw-text: #e5e5e5;
+            --tw-text-light: #b3b3b3;
+            --tw-text-lighter: #808080;
+            --tw-border: #404040;
+            --tw-hover: #333333;
+            --tw-selected: #404040;
+
+            /* Paper/Welcome screen specific colors - Dark */
+            --tw-paper-bg: #1a1a1a;
+            --tw-paper-button-bg: #2a2a2a;
+            --tw-paper-button-border: rgb(80 80 80 / 0.6);
+            --tw-paper-button-hover-bg: #333333;
+            --tw-paper-button-hover-border: rgb(100 100 100 / 0.7);
+            --tw-paper-recent-bg: #2a2a2a;
+            --tw-paper-recent-border: rgb(60 60 60 / 0.5);
+            --tw-paper-recent-hover-bg: #333333;
+            --tw-paper-recent-hover-border: rgb(80 80 80 / 0.6);
+            --tw-paper-text-primary: #e5e5e5;
+            --tw-paper-text-secondary: #b3b3b3;
+            --tw-paper-text-light: #808080;
+            --tw-paper-texture-overlay: rgb(100 100 100 / 0.02);
+
+            /* Accent color - Dark */
+            --tw-accent: #60a5fa;
+
+            /* Diagnostic colors */
+            --tw-error: #f87171;
+            --tw-warning: #fbbf24;
+            --tw-info: #60a5fa;
+
+            /* Syntax highlighting colors - Dark theme */
+            --tw-syntax-comment: #8b949e;
+            --tw-syntax-keyword: #ff7b72;
+            --tw-syntax-string: #a5d6ff;
+            --tw-syntax-number: #79c0ff;
+            --tw-syntax-function: #d2a8ff;
+            --tw-syntax-variable: #ffa657;
+            --tw-syntax-tag: #7ee787;
+            --tw-syntax-attribute: #d2a8ff;
+            --tw-syntax-punctuation: #b3b3b3;
+
+        }
+    }
 }
 
 /* Syntax highlighting styles */
@@ -507,7 +507,8 @@ button {
     overflow-y: hidden;
     scrollbar-width: thin;
     scrollbar-color: var(--color-border) transparent;
-    overscroll-behavior-x: contain; /* Prevent elastic scroll on tabs only */
+    overscroll-behavior-x: contain;
+    /* Prevent elastic scroll on tabs only */
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
 }
@@ -536,7 +537,7 @@ button {
 }
 
 /* Ensure tabs maintain consistent spacing */
-.tab-scroll-container > * {
+.tab-scroll-container>* {
     flex-shrink: 0;
 }
 
@@ -1005,4 +1006,3 @@ textarea::-webkit-scrollbar-thumb:hover {
     border-radius: 2px;
     padding: 0 2px;
 }
-

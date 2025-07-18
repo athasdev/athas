@@ -66,14 +66,30 @@ fn main() {
                 });
             }
 
-            #[cfg(target_os = "macos")]
-            {
-                use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
-                let window = app.get_webview_window("main").unwrap();
+            // Platform-specific window configuration
+            if let Some(window) = app.get_webview_window("main") {
+                #[cfg(target_os = "macos")]
+                {
+                    use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
 
-                // Apply vibrancy effect for macOS
-                apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(12.0))
-                    .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+                    // Apply vibrancy effect for macOS
+                    apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, Some(12.0))
+                        .expect(
+                            "Unsupported platform! 'apply_vibrancy' is only supported on macOS",
+                        );
+                }
+
+                #[cfg(target_os = "windows")]
+                {
+                    // Keep decorations enabled on Windows (native controls)
+                    let _ = window.set_decorations(true);
+                }
+
+                #[cfg(target_os = "linux")]
+                {
+                    // Disable decorations on Linux (use custom controls only)
+                    let _ = window.set_decorations(false);
+                }
             }
 
             app.on_menu_event(move |_app_handle: &tauri::AppHandle, event| {
