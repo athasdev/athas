@@ -46,6 +46,41 @@ export default function Breadcrumb({ filePath, rootPath, onNavigate }: Breadcrum
 
   const segments = getPathSegments();
 
+  const handleGoBack = async () => {
+    if (!dropdown || dropdown.navigationStack.length === 0) return;
+
+    const previousPath = dropdown.navigationStack[dropdown.navigationStack.length - 1];
+    try {
+      const entries = await readDirectory(previousPath);
+      const fileEntries: FileEntry[] = entries.map((entry: any) => ({
+        name: entry.name || "Unknown",
+        path: entry.path,
+        isDir: entry.is_dir || false,
+        expanded: false,
+        children: undefined,
+      }));
+
+      fileEntries.sort((a, b) => {
+        if (a.isDir && !b.isDir) return -1;
+        if (!a.isDir && b.isDir) return 1;
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+      });
+
+      setDropdown(prev =>
+        prev
+          ? {
+              ...prev,
+              items: fileEntries,
+              currentPath: previousPath,
+              navigationStack: prev.navigationStack.slice(0, -1),
+            }
+          : null,
+      );
+    } catch (error) {
+      console.error("Failed to go back:", error);
+    }
+  };
+
   const handleSegmentClick = async (segmentIndex: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -115,9 +150,13 @@ export default function Breadcrumb({ filePath, rootPath, onNavigate }: Breadcrum
       }
     };
 
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setDropdown(null);
+        if (dropdown && dropdown.navigationStack.length > 0) {
+          await handleGoBack();
+        } else {
+          setDropdown(null);
+        }
       }
     };
 
@@ -127,7 +166,7 @@ export default function Breadcrumb({ filePath, rootPath, onNavigate }: Breadcrum
       document.removeEventListener("click", handleClick);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [dropdown]);
 
   if (segments.length === 0) return null;
 
@@ -167,39 +206,7 @@ export default function Breadcrumb({ filePath, rootPath, onNavigate }: Breadcrum
             {/* Go back button when we have navigation history */}
             {dropdown.navigationStack.length > 0 && (
               <button
-                onClick={async () => {
-                  const previousPath =
-                    dropdown.navigationStack[dropdown.navigationStack.length - 1];
-                  try {
-                    const entries = await readDirectory(previousPath);
-                    const fileEntries: FileEntry[] = entries.map((entry: any) => ({
-                      name: entry.name || "Unknown",
-                      path: entry.path,
-                      isDir: entry.is_dir || false,
-                      expanded: false,
-                      children: undefined,
-                    }));
-
-                    fileEntries.sort((a, b) => {
-                      if (a.isDir && !b.isDir) return -1;
-                      if (!a.isDir && b.isDir) return 1;
-                      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-                    });
-
-                    setDropdown(prev =>
-                      prev
-                        ? {
-                            ...prev,
-                            items: fileEntries,
-                            currentPath: previousPath,
-                            navigationStack: prev.navigationStack.slice(0, -1),
-                          }
-                        : null,
-                    );
-                  } catch (error) {
-                    console.error("Failed to go back:", error);
-                  }
-                }}
+                onClick={handleGoBack}
                 className="flex w-full items-center gap-2 border-border border-b px-3 py-1.5 text-left font-mono text-text-lighter text-xs hover:bg-hover hover:text-text"
               >
                 <ArrowLeft size={12} className="flex-shrink-0" />
