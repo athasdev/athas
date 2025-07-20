@@ -27,14 +27,14 @@
   scrollbar-color: rgba(155, 155, 155, 0.3) transparent !important;
 }
 
-/* Ensure normal scrolling */
+/* Enable proper mouse wheel scrolling */
 .file-tree-container {
-  overflow-y: scroll !important;
+  overflow-y: auto !important;
   overflow-x: hidden !important;
   height: 100% !important;
   position: relative !important;
-  will-change: transform !important;
+  overscroll-behavior: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  scroll-behavior: auto !important;
-  scroll-snap-type: none !important;
+  scroll-behavior: smooth !important;
+  pointer-events: auto !important;
 }

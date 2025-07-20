@@ -73,6 +73,29 @@ const FileTree = ({
   const [gitIgnore, setGitIgnore] = useState<ReturnType<typeof ignore> | null>(null);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      const scrollSpeed = e.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? 1 : 10;
+      const scrollAmount = e.deltaY * scrollSpeed;
+
+      container.scrollTo({
+        top: container.scrollTop + scrollAmount,
+        behavior: "auto",
+      });
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
+
+  useEffect(() => {
     const loadGitignore = async () => {
       if (!rootFolderPath) {
         setGitIgnore(null);
@@ -517,8 +540,7 @@ const FileTree = ({
     <div
       className={cn(
         "file-tree-container flex flex-1 select-none",
-        "flex-col gap-0 p-2",
-        "min-h-full", // Ensure container takes full height
+        "flex-col gap-0 overflow-auto p-2",
         dragState.dragOverPath === "__ROOT__" &&
           "!bg-accent !bg-opacity-10 !border-2 !border-accent !border-dashed",
       )}
@@ -532,7 +554,6 @@ const FileTree = ({
         }
       }}
       onDrop={handleRootDrop}
-      onContextMenu={e => e.preventDefault()}
     >
       {renderFileTree(filteredFiles)}
 
