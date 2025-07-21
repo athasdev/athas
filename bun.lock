@@ -29,7 +29,7 @@
         "zustand": "^5.0.6",
       },
       "devDependencies": {
-        "@biomejs/biome": "^2.1.2",
+        "@biomejs/biome": "2.1.2",
         "@commitlint/cli": "^19.8.1",
         "@commitlint/config-conventional": "^19.8.1",
         "@tailwindcss/vite": "^4.1.11",
