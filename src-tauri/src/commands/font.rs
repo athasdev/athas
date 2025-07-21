@@ -717,6 +717,8 @@ pub async fn validate_font(font_family: String) -> Result<bool, String> {
                 return Ok(matched_family.to_lowercase() == font_family.to_lowercase());
             }
         }
+        // If fc-match failed or command failed, return false
+        return Ok(false);
     }
 
     #[cfg(not(target_os = "linux"))]
