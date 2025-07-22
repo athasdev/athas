@@ -18,6 +18,7 @@ export interface Settings {
   vimMode: boolean;
   aiCompletion: boolean;
   sidebarPosition: "left" | "right";
+  mouseWheelZoom: boolean;
 }
 
 const defaultSettings: Settings = {
@@ -33,6 +34,7 @@ const defaultSettings: Settings = {
   vimMode: false,
   aiCompletion: true,
   sidebarPosition: "left",
+  mouseWheelZoom: false,
 };
 
 // Theme class constants

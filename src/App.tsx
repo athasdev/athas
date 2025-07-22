@@ -11,6 +11,7 @@ import { useAppStore } from "./stores/app-store";
 import { useFileSystemStore } from "./stores/file-system-store";
 import { useFontStore } from "./stores/font-store";
 import { useRecentFoldersStore } from "./stores/recent-folders-store";
+import { useSettingsStore } from "./stores/settings-store";
 import { useZoomStore } from "./stores/zoom-store";
 import { cn } from "./utils/cn";
 import { isMac } from "./utils/platform";
@@ -23,7 +24,8 @@ function App() {
   const { cleanup } = useAppStore();
   const { recentFolders, openRecentFolder } = useRecentFoldersStore();
   const { loadAvailableFonts } = useFontStore();
-  const { zoomLevel } = useZoomStore();
+  const { zoomLevel, zoomIn, zoomOut } = useZoomStore();
+  const { settings } = useSettingsStore();
 
   // Platform-specific setup
   useEffect(() => {
@@ -43,6 +45,32 @@ function App() {
   useEffect(() => {
     loadAvailableFonts();
   }, [loadAvailableFonts]);
+
+  // Mouse wheel zoom functionality
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (!settings.mouseWheelZoom) return;
+
+      // Check if Ctrl/Cmd is held (common zoom modifier)
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+
+        if (e.deltaY < 0) {
+          // Scroll up = zoom in
+          zoomIn();
+        } else if (e.deltaY > 0) {
+          // Scroll down = zoom out
+          zoomOut();
+        }
+      }
+    };
+
+    window.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+    };
+  }, [settings.mouseWheelZoom, zoomIn, zoomOut]);
 
   // Initialize event listeners
   useFileWatcherEvents();

@@ -38,6 +38,16 @@ export const GeneralSettings = () => {
         </SettingRow>
       </Section>
 
+      <Section title="Zoom">
+        <SettingRow label="Mouse Wheel Zoom" description="Use mouse wheel to zoom in/out">
+          <Toggle
+            checked={settings.mouseWheelZoom}
+            onChange={checked => updateSetting("mouseWheelZoom", checked)}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
+
       <Section title="Quick Access">
         <SettingRow label="Open Settings" description="Keyboard shortcut to open settings">
           <KeybindingBadge keys={isMac ? ["⌘", ","] : ["Ctrl", ","]} />
@@ -45,6 +55,18 @@ export const GeneralSettings = () => {
 
         <SettingRow label="Toggle Sidebar" description="Show or hide the sidebar">
           <KeybindingBadge keys={isMac ? ["⌘", "B"] : ["Ctrl", "B"]} />
+        </SettingRow>
+
+        <SettingRow label="Zoom In" description="Increase zoom level">
+          <KeybindingBadge keys={isMac ? ["⌘", "+"] : ["Ctrl", "+"]} />
+        </SettingRow>
+
+        <SettingRow label="Zoom Out" description="Decrease zoom level">
+          <KeybindingBadge keys={isMac ? ["⌘", "-"] : ["Ctrl", "-"]} />
+        </SettingRow>
+
+        <SettingRow label="Reset Zoom" description="Reset zoom to 100%">
+          <KeybindingBadge keys={isMac ? ["⌘", "0"] : ["Ctrl", "0"]} />
         </SettingRow>
       </Section>
     </div>
