@@ -1,5 +1,6 @@
 import { exit } from "@tauri-apps/plugin-process";
 import { useEffect } from "react";
+import { useZoomStore } from "../stores/zoom-store";
 import type { Buffer } from "../types/buffer";
 import type { CoreFeaturesState } from "../types/core-features";
 import { isMac } from "../utils/platform";
@@ -57,6 +58,8 @@ export const useKeyboardShortcuts = ({
   onToggleSidebarPosition,
   coreFeatures,
 }: UseKeyboardShortcutsProps) => {
+  const { zoomIn, zoomOut, resetZoom } = useZoomStore();
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Terminal toggle is now handled by native menu accelerator on macOS
@@ -258,6 +261,25 @@ export const useKeyboardShortcuts = ({
       if (e.metaKey && e.key === "q" && isMac()) {
         e.preventDefault();
         exit(0);
+        return;
+      }
+
+      // Zoom controls
+      if ((e.metaKey || e.ctrlKey) && (e.key === "=" || e.key === "+")) {
+        e.preventDefault();
+        zoomIn();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "-") {
+        e.preventDefault();
+        zoomOut();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "0") {
+        e.preventDefault();
+        resetZoom();
         return;
       }
     };
