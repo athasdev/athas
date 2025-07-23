@@ -73,21 +73,12 @@ export function addFileToTree(
     const firstFilePath = files[0].path;
     // Extract the parent directory of the first file
     const rootDirFromFirstFile = firstFilePath.substring(0, firstFilePath.lastIndexOf("/"));
-
-    console.log("Root directory check:", {
-      parentPath,
-      rootDirFromFirstFile,
-      matches: parentPath === rootDirFromFirstFile,
-    });
-
     if (parentPath === rootDirFromFirstFile) {
       // Add to top level since parentPath is the root directory
-      console.log("Adding to top level (parentPath matches root)");
       return sortFileEntries([...files, newFile]);
     }
   }
 
-  console.log("Searching for directory in tree...");
   const result = files.map(file => {
     if (file.path === parentPath && file.isDir) {
       const children = sortFileEntries([...(file.children || []), newFile]);
