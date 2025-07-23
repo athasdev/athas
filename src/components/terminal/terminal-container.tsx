@@ -351,11 +351,11 @@ const TerminalContainer = ({
       />
 
       {/* Terminal Sessions */}
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative flex-1">
         {isSplitView ? (
           // Split view: Show active terminal on left, other terminals on right
           <div className="flex h-full">
-            <div className="w-1/2 overflow-hidden border-border border-r">
+            <div className="w-1/2 border-border border-r">
               {terminals.map(
                 terminal =>
                   terminal.id === activeTerminalId && (
@@ -370,7 +370,7 @@ const TerminalContainer = ({
                   ),
               )}
             </div>
-            <div className="w-1/2 overflow-hidden">
+            <div className="w-1/2">
               {(() => {
                 const nextTerminal = terminals.find(t => t.id !== activeTerminalId);
                 if (!nextTerminal) return null;

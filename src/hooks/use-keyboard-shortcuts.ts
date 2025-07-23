@@ -62,8 +62,27 @@ export const useKeyboardShortcuts = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Terminal toggle is now handled by native menu accelerator on macOS
-      // Only handle on non-macOS platforms
+      // Terminal toggle with Ctrl/Cmd + ` (backtick)
+      if ((e.metaKey || e.ctrlKey) && e.key === "`" && coreFeatures.terminal) {
+        e.preventDefault();
+        if (isBottomPaneVisible && bottomPaneActiveTab === "terminal") {
+          setIsBottomPaneVisible(false);
+        } else {
+          setBottomPaneActiveTab("terminal");
+          setIsBottomPaneVisible(true);
+          // Request terminal focus through UI state
+          setTimeout(() => {
+            if (requestTerminalFocus) {
+              requestTerminalFocus();
+            } else if (focusTerminal) {
+              focusTerminal();
+            }
+          }, 100);
+        }
+        return;
+      }
+
+      // Keep the old shortcut for backwards compatibility
       if ((e.metaKey || e.ctrlKey) && e.key === "j" && coreFeatures.terminal && !isMac()) {
         e.preventDefault();
         if (isBottomPaneVisible && bottomPaneActiveTab === "terminal") {

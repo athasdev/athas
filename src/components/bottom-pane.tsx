@@ -67,9 +67,10 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
   return (
     <div
       className={cn(
-        "z-50 flex flex-col border-border border-t bg-secondary-bg",
+        "z-50 flex flex-col border-border border-t bg-secondary-bg shadow-2xl",
         isFullScreen ? "fixed inset-x-0" : "relative",
         !isBottomPaneVisible && "hidden",
+        "transition-all duration-200 ease-in-out",
       )}
       style={{
         height: isFullScreen ? `calc(100vh - ${totalReservedHeight}px)` : `${height}px`,
@@ -97,7 +98,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1">
         {/* Terminal Container - Always mounted to preserve terminal sessions */}
         {coreFeatures.terminal && (
           <TerminalContainer

@@ -372,8 +372,8 @@ const TerminalTabBar = ({
         ref={tabBarRef}
         className={cn(
           "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border",
-          "flex min-h-[24px] items-center justify-between overflow-x-auto",
-          "border-border border-b bg-secondary-bg px-1",
+          "flex min-h-[28px] items-center justify-between overflow-x-auto",
+          "border-border border-b bg-[#161b22] px-1",
         )}
         style={{
           scrollbarWidth: "thin",
@@ -403,8 +403,10 @@ const TerminalTabBar = ({
                   ref={el => {
                     tabRefs.current[index] = el;
                   }}
-                  className={`group relative flex flex-shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap px-2 py-0.5 ${
-                    isActive ? "bg-primary-bg" : "bg-secondary-bg"
+                  className={`group relative flex flex-shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-t-md px-3 py-1 transition-all duration-150 ${
+                    isActive
+                      ? "bg-[#0d1117] text-[#c9d1d9]"
+                      : "bg-transparent text-[#8b949e] hover:text-[#c9d1d9]"
                   } ${terminal.isPinned ? "border-l-2 border-l-blue-500" : ""}`}
                   style={{ minWidth: "120px", maxWidth: "200px" }}
                   onMouseDown={e => handleMouseDown(e, index)}
@@ -417,7 +419,9 @@ const TerminalTabBar = ({
                   title={`${terminal.name}\n${terminal.currentDirectory}`}
                 >
                   {/* Active tab indicator */}
-                  {isActive && <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-accent" />}
+                  {isActive && (
+                    <div className="absolute right-0 bottom-0 left-0 h-[2px] bg-[#58a6ff]" />
+                  )}
 
                   {/* Terminal Icon */}
                   <div className="flex-shrink-0">

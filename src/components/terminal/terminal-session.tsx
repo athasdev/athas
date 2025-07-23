@@ -3,8 +3,9 @@ import { listen } from "@tauri-apps/api/event";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
-import { colorToCSS } from "@/utils/terminal-colors";
 import type { Terminal as TerminalType } from "../../types/terminal";
+import { TerminalRenderer } from "./terminal-renderer";
+import { VirtualizedTerminal } from "./terminal-virtualizer";
 
 interface TerminalSessionProps {
   terminal: TerminalType;
@@ -104,12 +105,29 @@ const TerminalSession = ({
           setIsConnected(true);
 
           // Listen for terminal events
+          // Batch screen updates for performance
+          let updateTimeout: NodeJS.Timeout | null = null;
+          let pendingUpdate: TerminalEvent | null = null;
+
           const unlisten = await listen(`terminal-event-${id}`, (event: any) => {
             const terminalEvent = event.payload as TerminalEvent;
             if (terminalEvent.type === "screenUpdate") {
-              setScreen(terminalEvent.screen);
-              setCursorLine(terminalEvent.cursor_line);
-              setCursorCol(terminalEvent.cursor_col);
+              pendingUpdate = terminalEvent;
+
+              // Clear existing timeout
+              if (updateTimeout) {
+                clearTimeout(updateTimeout);
+              }
+
+              // Batch updates with a 10ms delay
+              updateTimeout = setTimeout(() => {
+                if (pendingUpdate) {
+                  setScreen(pendingUpdate.screen);
+                  setCursorLine(pendingUpdate.cursor_line);
+                  setCursorCol(pendingUpdate.cursor_col);
+                  pendingUpdate = null;
+                }
+              }, 10);
             }
             if (onActivity) {
               onActivity(terminal.id);
@@ -198,9 +216,24 @@ const TerminalSession = ({
       }
     };
 
-    terminal.addEventListener("scroll", handleScroll);
+    // Handle mouse wheel events
+    const handleWheel = (e: WheelEvent) => {
+      // Allow natural scrolling
+      const { scrollTop, scrollHeight, clientHeight } = terminal;
+      const maxScroll = scrollHeight - clientHeight;
+
+      // Check if we can scroll in the direction of the wheel
+      if ((e.deltaY > 0 && scrollTop < maxScroll) || (e.deltaY < 0 && scrollTop > 0)) {
+        handleScroll();
+      }
+    };
+
+    terminal.addEventListener("scroll", handleScroll, { passive: true });
+    terminal.addEventListener("wheel", handleWheel, { passive: true });
+
     return () => {
       terminal.removeEventListener("scroll", handleScroll);
+      terminal.removeEventListener("wheel", handleWheel);
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
@@ -238,12 +271,12 @@ const TerminalSession = ({
   // Send input to terminal
   const sendInput = useCallback(
     async (data: string) => {
-      if (connectionId && isConnected) {
-        try {
-          await invoke("send_terminal_data", { connectionId, data });
-        } catch (error) {
-          console.error("Failed to send data to terminal:", error);
-        }
+      if (!connectionId || !isConnected) return;
+
+      try {
+        await invoke("send_terminal_data", { connectionId, data });
+      } catch (error) {
+        console.error("Failed to send data to terminal:", error);
       }
     },
     [connectionId, isConnected],
@@ -264,8 +297,12 @@ const TerminalSession = ({
       // Allow global shortcuts to bubble up - don't prevent default for these combinations
       if (e.metaKey || e.ctrlKey) {
         // Check for global shortcuts that should bubble up
-        if (e.key === "j" || e.key === "J") {
+        if (e.key === "`" || e.key === "~") {
           // Terminal toggle - let it bubble up
+          return;
+        }
+        if (e.key === "j" || e.key === "J") {
+          // Terminal toggle (old shortcut) - let it bubble up
           return;
         }
 
@@ -406,11 +443,7 @@ const TerminalSession = ({
       }
 
       if (data) {
-        try {
-          await sendInput(data);
-        } catch (error) {
-          console.error("Failed to send input:", error);
-        }
+        sendInput(data);
       }
     },
     [isConnected, connectionId, sendInput],
@@ -432,122 +465,6 @@ const TerminalSession = ({
     };
   }, [connectionId]);
 
-  // Enhanced terminal line rendering with smart highlighting
-  const renderTerminalLine = (line: LineItem[], lineIndex: number) => {
-    if (!line || line.length === 0) {
-      return (
-        <div key={lineIndex} className="h-[14px]">
-          &nbsp;
-        </div>
-      );
-    }
-
-    // Apply smart highlighting based on content patterns
-    const enhancedLine = line.map((item, itemIndex) => {
-      let className = "inline";
-      const style: React.CSSProperties = {};
-
-      if (item.is_bold) className += " font-bold";
-      if (item.is_italic) className += " italic";
-      if (item.is_underline) className += " underline";
-
-      // Enhanced color handling
-      const fgColor = colorToCSS(item.foreground_color);
-      const bgColor = colorToCSS(item.background_color);
-
-      if (fgColor) {
-        style.color = fgColor;
-      }
-      if (bgColor) {
-        style.backgroundColor = bgColor;
-      }
-
-      // Smart highlighting enhancements
-      const lexeme = item.lexeme || " ";
-      const enhancedLexeme = lexeme;
-
-      // Only apply enhancements if there's no existing color
-      if (!fgColor) {
-        // File extensions
-        if (lexeme.match(/\.(js|ts|tsx|jsx)$/)) {
-          style.color = "#f0db4f";
-        } else if (lexeme.match(/\.(py)$/)) {
-          style.color = "#3776ab";
-        } else if (lexeme.match(/\.(rs)$/)) {
-          style.color = "#dea584";
-        } else if (lexeme.match(/\.(json)$/)) {
-          style.color = "#cbcb41";
-        } else if (lexeme.match(/\.(md)$/)) {
-          style.color = "#083fa1";
-        }
-
-        // Directory indicators
-        else if (lexeme.startsWith("drwx")) {
-          style.color = "#58a6ff";
-        }
-
-        // Error patterns
-        else if (lexeme.match(/(error|Error|ERROR|failed|Failed|FAILED|fatal|Fatal|FATAL)/)) {
-          style.color = "#f85149";
-          className += " font-bold";
-        }
-
-        // Warning patterns
-        else if (lexeme.match(/(warning|Warning|WARNING|warn|Warn|WARN)/)) {
-          style.color = "#f0883e";
-          className += " font-bold";
-        }
-
-        // Success patterns
-        else if (
-          lexeme.match(/(success|Success|SUCCESS|done|Done|DONE|completed|Completed|COMPLETED)/)
-        ) {
-          style.color = "#3fb950";
-          className += " font-bold";
-        }
-
-        // Git branch indicators
-        else if (lexeme.match(/\(.*\)/)) {
-          style.color = "#9a9a9a";
-        }
-      }
-
-      // Check for Nerd Font characters in Private Use Area (U+E000-U+F8FF)
-      const codePoints = Array.from(item.lexeme || "").map(char => char.codePointAt(0));
-      const hasNerdFont = codePoints.some(cp => cp && cp >= 0xe000 && cp <= 0xf8ff);
-
-      if (hasNerdFont) {
-        // Nerd Font characters need explicit font-family to render correctly
-        const nerdFontStyle = {
-          ...style,
-          fontFamily:
-            "'JetBrainsMono Nerd Font', 'FiraCode Nerd Font', 'Hack Nerd Font', monospace",
-        };
-
-        return (
-          <span key={itemIndex} className={className} style={nerdFontStyle}>
-            {item.lexeme}
-          </span>
-        );
-      }
-
-      return (
-        <span key={itemIndex} className={className} style={style}>
-          {enhancedLexeme}
-        </span>
-      );
-    });
-
-    return (
-      <div
-        key={lineIndex}
-        className={cn("h-[14px] whitespace-pre font-mono text-xs leading-[14px]")}
-      >
-        {enhancedLine}
-      </div>
-    );
-  };
-
   return (
     <div
       ref={sessionRef}
@@ -559,9 +476,15 @@ const TerminalSession = ({
         <div
           ref={terminalRef}
           className={cn(
-            "terminal-content relative flex-1 cursor-text overflow-hidden",
-            "bg-primary-bg p-3 font-mono text-text text-xs",
+            "terminal-content relative flex-1 cursor-text overflow-auto",
+            "bg-[#0d1117] p-3 font-mono text-[#c9d1d9] text-xs",
+            "rounded-b-md",
           )}
+          style={{
+            fontFamily:
+              "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
+            lineHeight: "1.5",
+          }}
           onClick={() => {
             // Focus the hidden input when terminal is clicked
             if (inputRef.current) {
@@ -571,22 +494,17 @@ const TerminalSession = ({
         >
           {!isConnected ? (
             <div className="pt-4 text-center text-text-lighter">Connecting to terminal...</div>
+          ) : screen.length > 100 ? (
+            // Use virtualization for large outputs
+            <VirtualizedTerminal
+              screen={screen}
+              cursorLine={cursorLine}
+              cursorCol={cursorCol}
+              containerRef={terminalRef}
+            />
           ) : (
-            <div className="relative">
-              {screen.map((line, index) => renderTerminalLine(line, index))}
-
-              {/* Cursor */}
-              <div
-                className="absolute bg-text opacity-75"
-                style={{
-                  left: `${cursorCol * 7.2}px`,
-                  top: `${cursorLine * 14}px`,
-                  width: "7.2px",
-                  height: "14px",
-                  animation: "blink 1s infinite",
-                }}
-              />
-            </div>
+            // Use regular renderer for small outputs
+            <TerminalRenderer screen={screen} cursorLine={cursorLine} cursorCol={cursorCol} />
           )}
         </div>
       </div>
