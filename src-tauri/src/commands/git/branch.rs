@@ -1,7 +1,15 @@
 use crate::commands::git::IntoStringError;
 use anyhow::{Context, Result};
-use git2::{BranchType, Repository};
+use git2::{BranchType, Repository, Status};
+use serde::Serialize;
 use tauri::command;
+
+#[derive(Serialize)]
+pub struct CheckoutResult {
+    pub success: bool,
+    pub has_changes: bool,
+    pub message: String,
+}
 
 #[command]
 pub fn git_branches(repo_path: String) -> Result<Vec<String>, String> {
@@ -26,12 +34,35 @@ fn _git_branches(repo_path: String) -> Result<Vec<String>> {
 }
 
 #[command]
-pub fn git_checkout(repo_path: String, branch_name: String) -> Result<(), String> {
+pub fn git_checkout(repo_path: String, branch_name: String) -> Result<CheckoutResult, String> {
     _git_checkout(repo_path, branch_name).into_string_error()
 }
 
-fn _git_checkout(repo_path: String, branch_name: String) -> Result<()> {
+fn _git_checkout(repo_path: String, branch_name: String) -> Result<CheckoutResult> {
     let repo = Repository::open(&repo_path).context("Failed to open repository")?;
+
+    let statuses = repo
+        .statuses(None)
+        .context("Failed to get repository status")?;
+
+    let has_changes = statuses.iter().any(|entry| {
+        let flags = entry.status();
+        flags.contains(Status::WT_NEW)
+            || flags.contains(Status::WT_MODIFIED)
+            || flags.contains(Status::WT_DELETED)
+            || flags.contains(Status::WT_RENAMED)
+            || flags.contains(Status::WT_TYPECHANGE)
+    });
+
+    if has_changes {
+        return Ok(CheckoutResult {
+            success: false,
+            has_changes: true,
+            message:
+                "You have unstaged changes. Please stash or commit them before switching branches."
+                    .to_string(),
+        });
+    }
 
     let obj = repo
         .revparse_single(&format!("refs/heads/{}", branch_name))
@@ -43,7 +74,11 @@ fn _git_checkout(repo_path: String, branch_name: String) -> Result<()> {
     repo.set_head(&format!("refs/heads/{}", branch_name))
         .context("Failed to update HEAD")?;
 
-    Ok(())
+    Ok(CheckoutResult {
+        success: true,
+        has_changes: false,
+        message: format!("Successfully checked out to branch '{}'", branch_name),
+    })
 }
 
 #[command]

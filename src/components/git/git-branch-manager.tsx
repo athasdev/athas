@@ -1,7 +1,14 @@
 import { Check, ChevronDown, GitBranch, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useToast } from "@/contexts/toast-context";
 import { cn } from "@/utils/cn";
-import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../../utils/git";
+import {
+  checkoutBranch,
+  createBranch,
+  createStash,
+  deleteBranch,
+  getBranches,
+} from "../../utils/git";
 
 interface GitBranchManagerProps {
   currentBranch?: string;
@@ -14,6 +21,7 @@ const GitBranchManager = ({ currentBranch, repoPath, onBranchChange }: GitBranch
   const [showModal, setShowModal] = useState(false);
   const [newBranchName, setNewBranchName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadBranches();
@@ -48,10 +56,56 @@ const GitBranchManager = ({ currentBranch, repoPath, onBranchChange }: GitBranch
 
     setIsLoading(true);
     try {
-      const success = await checkoutBranch(repoPath, branchName);
-      if (success) {
+      const result = await checkoutBranch(repoPath, branchName);
+
+      if (result.hasChanges) {
+        showToast({
+          message: result.message,
+          type: "warning",
+          duration: 0, // Don't auto-dismiss
+          action: {
+            label: "Stash Changes",
+            onClick: async () => {
+              try {
+                const stashSuccess = await createStash(
+                  repoPath,
+                  `Switching to ${branchName}`,
+                  true,
+                );
+                if (stashSuccess) {
+                  // Try to checkout again after stashing
+                  const retryResult = await checkoutBranch(repoPath, branchName);
+                  if (retryResult.success) {
+                    showToast({
+                      message: "Changes stashed and branch switched successfully",
+                      type: "success",
+                    });
+                    setShowModal(false);
+                    onBranchChange?.();
+                  } else {
+                    showToast({
+                      message: "Failed to switch branch after stashing",
+                      type: "error",
+                    });
+                  }
+                }
+              } catch (_error) {
+                showToast({
+                  message: "Failed to stash changes",
+                  type: "error",
+                });
+              }
+            },
+          },
+        });
+      } else if (result.success) {
         setShowModal(false);
         onBranchChange?.();
+      } else {
+        showToast({
+          message: result.message,
+          type: "error",
+        });
       }
     } finally {
       setIsLoading(false);

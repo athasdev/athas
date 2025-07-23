@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { FontPreloader } from "./components/font-preloader";
 import { FontStyleInjector } from "./components/font-style-injector";
 import { MainLayout } from "./components/layout/main-layout";
+import { ToastContainer } from "./components/toast";
 import WelcomeScreen from "./components/window/welcome-screen";
 import { ZoomIndicator } from "./components/zoom-indicator";
 import { useFileWatcherEvents } from "./hooks/use-file-watcher-events";
@@ -99,6 +100,7 @@ function App() {
           />
         </div>
         <ZoomIndicator />
+        <ToastContainer />
       </div>
     );
   }
@@ -114,6 +116,7 @@ function App() {
         <MainLayout />
       </div>
       <ZoomIndicator />
+      <ToastContainer />
     </div>
   );
 }

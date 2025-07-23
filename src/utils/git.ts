@@ -121,13 +121,26 @@ export const getBranches = async (repoPath: string): Promise<string[]> => {
   }
 };
 
-export const checkoutBranch = async (repoPath: string, branchName: string): Promise<boolean> => {
+interface CheckoutResult {
+  success: boolean;
+  hasChanges: boolean;
+  message: string;
+}
+
+export const checkoutBranch = async (
+  repoPath: string,
+  branchName: string,
+): Promise<CheckoutResult> => {
   try {
-    await tauriInvoke("git_checkout", { repoPath, branchName });
-    return true;
+    const result = await tauriInvoke<CheckoutResult>("git_checkout", { repoPath, branchName });
+    return result;
   } catch (error) {
     console.error("Failed to checkout branch:", error);
-    return false;
+    return {
+      success: false,
+      hasChanges: false,
+      message: "Failed to checkout branch",
+    };
   }
 };
 
