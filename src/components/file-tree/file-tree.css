@@ -13,7 +13,6 @@
 .file-tree-container::-webkit-scrollbar-thumb {
   background: rgba(155, 155, 155, 0.3) !important;
   border-radius: 3px !important;
-  transition: background 0.2s ease !important;
   display: block !important;
 }
 
@@ -35,7 +34,7 @@
   position: relative !important;
   overscroll-behavior: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  scroll-behavior: smooth !important;
+  scroll-behavior: auto !important;
   pointer-events: auto !important;
 }
 

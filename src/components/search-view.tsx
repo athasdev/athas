@@ -1,5 +1,13 @@
 import { ChevronDown, ChevronRight, Search, X } from "lucide-react";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { cn } from "@/utils/cn";
 import type { FileEntry } from "../types/app";
 import { readFile } from "../utils/platform";
@@ -29,12 +37,17 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
     const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
     const [caseSensitive, setCaseSensitive] = useState(false);
     const [wholeWord, setWholeWord] = useState(false);
     const [useRegex, setUseRegex] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState(-1);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const searchContainerRef = useRef<HTMLDivElement>(null);
+    const resultRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
     // Expose focus method through ref
     useImperativeHandle(
@@ -66,10 +79,25 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
       {} as Record<string, SearchResult[]>,
     );
 
+    // Get flat list of all results for keyboard navigation
+    const flatResults = useMemo(() => {
+      const results: { file: string; result: SearchResult; index: number }[] = [];
+      Object.entries(groupedResults).forEach(([file, fileResults]) => {
+        if (expandedFiles.has(file)) {
+          fileResults.forEach((result, index) => {
+            results.push({ file, result, index });
+          });
+        }
+      });
+      return results;
+    }, [groupedResults, expandedFiles]);
+
     const performSearch = useCallback(
       async (query: string) => {
         if (!query.trim() || !rootFolderPath) {
           setSearchResults([]);
+          setHasSearched(false);
+          setSelectedIndex(-1);
           return;
         }
 
@@ -82,6 +110,8 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
         const signal = abortControllerRef.current.signal;
 
         setIsSearching(true);
+        setHasSearched(false);
+        setSelectedIndex(-1);
         const results: SearchResult[] = [];
 
         try {
@@ -222,6 +252,12 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
 
           if (!signal.aborted) {
             setSearchResults(results);
+            setHasSearched(true);
+            // Auto-expand first file with results
+            if (results.length > 0) {
+              const firstFile = results[0].file;
+              setExpandedFiles(new Set([firstFile]));
+            }
           }
         } catch (error) {
           if (!signal.aborted) {
@@ -262,6 +298,8 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
     const clearSearch = () => {
       setSearchQuery("");
       setSearchResults([]);
+      setHasSearched(false);
+      setSelectedIndex(-1);
       if (searchInputRef.current) {
         searchInputRef.current.focus();
       }
@@ -293,8 +331,69 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
       );
     };
 
+    // Keyboard navigation
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent) => {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setSelectedIndex(prev => {
+            const newIndex = Math.min(prev + 1, flatResults.length - 1);
+            // Scroll to the selected item
+            const key = `${flatResults[newIndex]?.file}-${flatResults[newIndex]?.index}`;
+            const element = resultRefs.current.get(key);
+            element?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            return newIndex;
+          });
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setSelectedIndex(prev => {
+            const newIndex = Math.max(prev - 1, -1);
+            if (newIndex >= 0) {
+              const key = `${flatResults[newIndex]?.file}-${flatResults[newIndex]?.index}`;
+              const element = resultRefs.current.get(key);
+              element?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
+            return newIndex;
+          });
+        } else if (e.key === "Enter" && selectedIndex >= 0 && flatResults[selectedIndex]) {
+          e.preventDefault();
+          handleResultClick(flatResults[selectedIndex].result);
+        }
+      },
+      [flatResults, selectedIndex, handleResultClick],
+    );
+
+    // Handle mouse wheel scrolling on the entire search container
+    useEffect(() => {
+      const scrollContainer = scrollContainerRef.current;
+      const searchContainer = searchContainerRef.current;
+      if (!scrollContainer || !searchContainer) return;
+
+      const handleWheel = (e: WheelEvent) => {
+        // Only handle if the event target is within the entire search view
+        if (searchContainer.contains(e.target as Node)) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          // Apply scroll to the results container with multiplier for faster scrolling
+          const scrollSpeed = 1.5; // Increase this for faster scrolling
+          const scrollAmount = e.deltaY * scrollSpeed;
+
+          // Use direct scrollTop manipulation for smoother performance
+          scrollContainer.scrollTop += scrollAmount;
+        }
+      };
+
+      // Add listener to the document to capture all wheel events
+      document.addEventListener("wheel", handleWheel, { passive: false, capture: true });
+
+      return () => {
+        document.removeEventListener("wheel", handleWheel, { capture: true });
+      };
+    }, []);
+
     return (
-      <div className="flex h-full flex-col">
+      <div ref={searchContainerRef} className="flex h-full flex-col" onKeyDown={handleKeyDown}>
         {/* Search Input and Options */}
         <div className="border-border border-b bg-secondary-bg px-2 py-1.5">
           <div className="relative flex w-full items-center gap-1">
@@ -382,12 +481,21 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
         </div>
 
         {/* Search Results */}
-        <div className="custom-scrollbar flex-1 overflow-auto">
+        <div
+          ref={scrollContainerRef}
+          className="custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden"
+          style={{
+            overscrollBehavior: "contain",
+            height: "100%",
+            position: "relative",
+            scrollBehavior: "auto", // Disable smooth scrolling for better performance
+          }}
+        >
           {isSearching && (
             <div className="p-3 text-center text-text-lighter text-xs">Searching...</div>
           )}
 
-          {!isSearching && searchQuery && searchResults.length === 0 && (
+          {!isSearching && hasSearched && searchQuery && searchResults.length === 0 && (
             <div className="p-3 text-center text-text-lighter text-xs">No results found</div>
           )}
 
@@ -430,20 +538,35 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
                   {/* Results */}
                   {expandedFiles.has(filePath) && (
                     <div className="ml-6 space-y-0.5">
-                      {results.map((result, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleResultClick(result)}
-                          className="flex w-full items-start gap-2 rounded px-1 py-1 text-left hover:bg-hover"
-                        >
-                          <span className="min-w-[2rem] text-right text-text-lighter text-xs">
-                            {result.line}
-                          </span>
-                          <span className="flex-1 truncate text-text text-xs">
-                            {highlightMatch(result.text, result.match)}
-                          </span>
-                        </button>
-                      ))}
+                      {results.map((result, index) => {
+                        const flatIndex = flatResults.findIndex(
+                          fr => fr.file === filePath && fr.index === index,
+                        );
+                        const isSelected = flatIndex === selectedIndex;
+                        const key = `${filePath}-${index}`;
+
+                        return (
+                          <button
+                            key={index}
+                            ref={el => {
+                              if (el) resultRefs.current.set(key, el);
+                              else resultRefs.current.delete(key);
+                            }}
+                            onClick={() => handleResultClick(result)}
+                            className={cn(
+                              "flex w-full items-start gap-2 rounded px-1 py-1 text-left hover:bg-hover",
+                              isSelected && "bg-selected",
+                            )}
+                          >
+                            <span className="min-w-[2rem] text-right text-text-lighter text-xs">
+                              {result.line}
+                            </span>
+                            <span className="flex-1 truncate text-text text-xs">
+                              {highlightMatch(result.text, result.match)}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

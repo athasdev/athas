@@ -1,18 +1,36 @@
 import { FilePlus, FolderOpen, FolderPlus, Server } from "lucide-react";
 import type React from "react";
-import { forwardRef } from "react";
+import { forwardRef, useMemo } from "react";
 import { cn } from "@/utils/cn";
 import { useBufferStore } from "../../stores/buffer-store";
 import { useFileSystemStore } from "../../stores/file-system-store";
 import { useProjectStore } from "../../stores/project-store";
 import { useSidebarStore } from "../../stores/sidebar-store";
 import { useUIState } from "../../stores/ui-state-store";
+import type { FileEntry } from "../../types/app";
 import FileTree from "../file-tree/file-tree";
 import GitView from "../git/git-view";
 import RemoteConnectionView from "../remote/remote-connection-view";
 import SearchView, { type SearchViewRef } from "../search-view";
 import Button from "../ui/button";
 import { SidebarPaneSelector } from "./sidebar-pane-selector";
+
+// Helper function to flatten the file tree
+const flattenFileTree = (files: FileEntry[]): FileEntry[] => {
+  const result: FileEntry[] = [];
+
+  const traverse = (entries: FileEntry[]) => {
+    for (const entry of entries) {
+      result.push(entry);
+      if (entry.isDir && entry.children) {
+        traverse(entry.children);
+      }
+    }
+  };
+
+  traverse(files);
+  return result;
+};
 
 export const MainSidebar = forwardRef<SearchViewRef>((_, ref) => {
   // Get state from stores
@@ -63,8 +81,10 @@ export const MainSidebar = forwardRef<SearchViewRef>((_, ref) => {
     setProjectNameMenu({ x: event.clientX, y: event.clientY });
   };
 
-  // TODO: Fix getAllProjectFiles - it returns a promise
-  const allProjectFiles: any[] = [];
+  // Get all project files by flattening the file tree
+  const allProjectFiles = useMemo(() => {
+    return flattenFileTree(files);
+  }, [files]);
 
   return (
     <div className="flex h-full flex-col">
@@ -150,7 +170,7 @@ export const MainSidebar = forwardRef<SearchViewRef>((_, ref) => {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-hidden">
         {isGitViewActive && coreFeatures.git ? (
           <GitView repoPath={rootFolderPath} onFileSelect={handleFileSelect} />
         ) : isSearchViewActive && coreFeatures.search ? (

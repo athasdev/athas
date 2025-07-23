@@ -73,20 +73,23 @@ const FileTree = ({
   const [gitIgnore, setGitIgnore] = useState<ReturnType<typeof ignore> | null>(null);
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
 
+  // Add a speed multiplier to the scrolling
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
+    // Much higher value for faster scrolling
+    const SCROLL_SPEED_MULTIPLIER = 1.5;
+
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
+      e.stopPropagation();
 
-      const scrollSpeed = e.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? 1 : 10;
-      const scrollAmount = e.deltaY * scrollSpeed;
+      // Simplified calculation for better performance
+      const scrollAmount = e.deltaY * SCROLL_SPEED_MULTIPLIER;
 
-      container.scrollTo({
-        top: container.scrollTop + scrollAmount,
-        behavior: "auto",
-      });
+      // Use direct scrollTop manipulation for smoother performance
+      container.scrollTop += scrollAmount;
     };
 
     container.addEventListener("wheel", handleWheel, { passive: false });
@@ -676,6 +679,10 @@ const FileTree = ({
           "!bg-accent !bg-opacity-10 !border-2 !border-accent !border-dashed",
       )}
       ref={containerRef}
+      style={{
+        scrollBehavior: "auto", // Disable smooth scrolling
+        overscrollBehavior: "contain",
+      }}
       onDragOver={e => {
         e.preventDefault();
         if (draggedItem) {
