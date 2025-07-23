@@ -20,14 +20,13 @@ import {
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { ContextMenuState, FileEntry } from "../../types/app";
-import { readDirectory, readFile } from "../../utils/platform";
-import FileIcon from "../file-icon";
-import "./file-tree.css";
 import { cn } from "@/utils/cn";
+import type { ContextMenuState, FileEntry } from "../../types/app";
 import { type GitFile, type GitStatus, getGitStatus } from "../../utils/git";
-import { moveFile } from "../../utils/platform";
+import { moveFile, readDirectory, readFile } from "../../utils/platform";
+import FileIcon from "../file-icon";
 import { useCustomDragDrop } from "./file-tree-custom-dnd";
+import "./file-tree.css";
 
 interface FileTreeProps {
   files: FileEntry[];
@@ -155,6 +154,9 @@ const FileTree = ({
       }
 
       if (relative.startsWith("/")) relative = relative.slice(1);
+
+      // Handle empty relative paths (like temporary items at root)
+      if (!relative || relative.trim() === "") return false;
 
       if (isDir && !relative.endsWith("/")) relative += "/";
 
@@ -342,7 +344,19 @@ const FileTree = ({
 
     if (newName.trim()) {
       // Create the actual file/folder
-      const parentPath = item.path.endsWith("/") ? item.path.slice(0, -1) : item.path;
+      let parentPath = item.path.endsWith("/") ? item.path.slice(0, -1) : item.path;
+
+      // Ensure parentPath is not empty - use rootFolderPath as fallback
+      if (!parentPath && rootFolderPath) {
+        parentPath = rootFolderPath;
+      }
+
+      if (!parentPath) {
+        console.error("Cannot determine parent path for file creation");
+        alert("Error: Cannot determine where to create the file");
+        return;
+      }
+
       if (item.isDir) {
         onCreateNewFolderInDirectory?.(parentPath, newName.trim());
       } else {

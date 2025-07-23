@@ -143,6 +143,7 @@ export const useFileSystemStore = create(
 
         handleCreateNewFile: async () => {
           const { rootFolderPath, files } = get();
+
           if (!rootFolderPath) {
             alert("Please open a folder first");
             return;
@@ -150,10 +151,18 @@ export const useFileSystemStore = create(
 
           const rootPath = getRootPath(files);
 
+          // Use rootFolderPath as fallback if rootPath is empty
+          const effectiveRootPath = rootPath || rootFolderPath;
+
+          if (!effectiveRootPath) {
+            alert("Unable to determine root folder path");
+            return;
+          }
+
           // Create a temporary new file item for inline editing
           const newItem: FileEntry = {
             name: "",
-            path: `${rootPath}/`,
+            path: `${effectiveRootPath}/`,
             isDir: false,
             isEditing: true,
             isNewItem: true,
@@ -172,7 +181,13 @@ export const useFileSystemStore = create(
           }
 
           const { useFileSystemActions } = await import("./file-system-actions");
-          return useFileSystemActions.getState().createFile(dirPath, fileName);
+          try {
+            const result = await useFileSystemActions.getState().createFile(dirPath, fileName);
+            return result;
+          } catch (error) {
+            console.error("Error in handleCreateNewFileInDirectory:", error);
+            alert(`Failed to create file: ${error}`);
+          }
         },
 
         handleCreateNewFolderInDirectory: async (dirPath: string, folderName?: string) => {
@@ -188,8 +203,12 @@ export const useFileSystemStore = create(
         handleDeletePath: async (targetPath: string, isDirectory: boolean) => {
           const itemType = isDirectory ? "folder" : "file";
           const confirmMessage = isDirectory
-            ? `Are you sure you want to delete the folder "${targetPath.split("/").pop()}" and all its contents? This action cannot be undone.`
-            : `Are you sure you want to delete the file "${targetPath.split("/").pop()}"? This action cannot be undone.`;
+            ? `Are you sure you want to delete the folder "${targetPath
+                .split("/")
+                .pop()}" and all its contents? This action cannot be undone.`
+            : `Are you sure you want to delete the file "${targetPath
+                .split("/")
+                .pop()}"? This action cannot be undone.`;
 
           try {
             const confirmed = await confirm(confirmMessage, {

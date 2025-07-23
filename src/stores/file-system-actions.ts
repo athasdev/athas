@@ -270,6 +270,7 @@ export const useFileSystemActions = create(
             };
 
             const updatedFiles = addFileToTree(fileSystemStore.files, directoryPath, newFile);
+
             fileSystemStore.setFiles(updatedFiles);
 
             return filePath;

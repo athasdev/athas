@@ -25,12 +25,26 @@ export async function writeFileContent(path: string, content: string): Promise<v
 }
 
 export async function createNewFile(directoryPath: string, fileName: string): Promise<string> {
+  if (!directoryPath || directoryPath.trim() === "") {
+    throw new Error("Directory path cannot be empty");
+  }
+  if (!fileName || fileName.trim() === "") {
+    throw new Error("File name cannot be empty");
+  }
+
   const filePath = `${directoryPath}/${fileName}`;
   await writeFileContent(filePath, "");
   return filePath;
 }
 
 export async function createNewDirectory(parentPath: string, folderName: string): Promise<string> {
+  if (!parentPath || parentPath.trim() === "") {
+    throw new Error("Parent path cannot be empty");
+  }
+  if (!folderName || folderName.trim() === "") {
+    throw new Error("Folder name cannot be empty");
+  }
+
   const folderPath = `${parentPath}/${folderName}`;
   await platformCreateDirectory(folderPath);
   return folderPath;

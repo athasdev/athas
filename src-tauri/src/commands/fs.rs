@@ -79,6 +79,10 @@ pub fn read_file_custom(path: String) -> Result<String, String> {
 
 #[command]
 pub fn write_file_custom(path: String, content: String) -> Result<(), String> {
+    if path.trim().is_empty() {
+        return Err("Path must not be empty".to_string());
+    }
+
     let file_path = Path::new(&path);
 
     match fs::write(file_path, content) {
@@ -89,6 +93,10 @@ pub fn write_file_custom(path: String, content: String) -> Result<(), String> {
 
 #[command]
 pub fn create_directory_custom(path: String) -> Result<(), String> {
+    if path.trim().is_empty() {
+        return Err("Path must not be empty".to_string());
+    }
+
     let dir_path = Path::new(&path);
 
     match fs::create_dir_all(dir_path) {
