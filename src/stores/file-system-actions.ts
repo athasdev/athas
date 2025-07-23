@@ -314,6 +314,16 @@ export const useFileSystemActions = create(
             const fileSystemStore = useFileSystemStore.getState();
             const updatedFiles = removeFileFromTree(fileSystemStore.files, path);
             fileSystemStore.setFiles(updatedFiles);
+
+            // Close any open buffers for this file
+            const { useBufferStore } = await import("./buffer-store");
+            const { buffers, closeBuffer } = useBufferStore.getState();
+
+            // Find and close any buffers with matching path
+            const buffersToClose = buffers.filter(buffer => buffer.path === path);
+            buffersToClose.forEach(buffer => {
+              closeBuffer(buffer.id);
+            });
           } catch (error) {
             console.error("Error deleting file:", error);
             throw error;
