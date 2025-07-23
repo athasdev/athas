@@ -320,7 +320,7 @@ impl TerminalConnection {
         let writer_for_responses = self.writer.clone();
 
         thread::spawn(move || {
-            let mut buffer = [0u8; 4096];
+            let mut buffer = [0u8; 65536]; // Increased from 4KB to 64KB for better performance
 
             loop {
                 match reader.read(&mut buffer) {
@@ -328,9 +328,7 @@ impl TerminalConnection {
                     Ok(n) => {
                         let data = &buffer[..n];
 
-                        // Optional: Debug logging for raw PTY output
-                        // log::debug!("Raw PTY data ({}): {:?}", n, String::from_utf8_lossy(data));
-
+                        // Process terminal data with minimal locking
                         let (events, responses) = {
                             let mut state = terminal_state.lock().unwrap();
                             let events = state.process_input(data);
@@ -340,18 +338,30 @@ impl TerminalConnection {
 
                         // CRITICAL: Send responses back to PTY immediately for TUI apps
                         if !responses.is_empty() {
-                            if let Ok(mut writer_guard) = writer_for_responses.try_lock() {
-                                if let Some(ref mut writer) = writer_guard.as_mut() {
-                                    for response in responses {
-                                        if let Err(e) = writer.write_all(response.as_bytes()) {
-                                            log::error!("Failed to write response to PTY: {}", e);
-                                            break;
-                                        }
-                                        if let Err(e) = writer.flush() {
-                                            log::error!("Failed to flush response to PTY: {}", e);
-                                            break;
+                            match writer_for_responses.try_lock() {
+                                Ok(mut writer_guard) => {
+                                    if let Some(ref mut writer) = writer_guard.as_mut() {
+                                        for response in responses {
+                                            if let Err(e) = writer.write_all(response.as_bytes()) {
+                                                log::error!(
+                                                    "Failed to write response to PTY: {}",
+                                                    e
+                                                );
+                                                break;
+                                            }
+                                            if let Err(e) = writer.flush() {
+                                                log::error!(
+                                                    "Failed to flush response to PTY: {}",
+                                                    e
+                                                );
+                                                break;
+                                            }
                                         }
                                     }
+                                }
+                                Err(_) => {
+                                    // Skip responses if we can't get lock to prevent blocking
+                                    log::debug!("Skipped PTY response due to lock contention");
                                 }
                             }
                         }
@@ -379,10 +389,18 @@ impl TerminalConnection {
     }
 
     pub fn send_input(&mut self, data: &str) -> Result<()> {
-        if let Ok(mut writer_guard) = self.writer.try_lock() {
-            if let Some(ref mut writer) = writer_guard.as_mut() {
-                writer.write_all(data.as_bytes())?;
-                writer.flush()?;
+        // Use non-blocking try_lock to avoid contention
+        match self.writer.try_lock() {
+            Ok(mut writer_guard) => {
+                if let Some(ref mut writer) = writer_guard.as_mut() {
+                    writer.write_all(data.as_bytes())?;
+                    writer.flush()?;
+                }
+            }
+            Err(_) => {
+                // If we can't get the lock immediately, queue the data
+                // This prevents blocking on mutex which causes lag
+                return Err(anyhow!("Terminal busy, please try again"));
             }
         }
         Ok(())
@@ -413,6 +431,8 @@ pub struct TerminalState {
     parser: Parser,
     rows: u16,
     cols: u16,
+    last_screen_hash: u64,
+    last_cursor_position: (u16, u16),
 }
 
 impl TerminalState {
@@ -421,6 +441,8 @@ impl TerminalState {
             parser: Parser::new(rows, cols, 10000), // 10k lines of scrollback
             rows,
             cols,
+            last_screen_hash: 0,
+            last_cursor_position: (0, 0),
         }
     }
 
@@ -442,9 +464,46 @@ impl TerminalState {
         self.build_screen_events()
     }
 
-    fn build_screen_events(&self) -> Vec<TerminalEvent> {
+    fn build_screen_events(&mut self) -> Vec<TerminalEvent> {
         let screen = self.parser.screen();
         let (cursor_line, cursor_col) = screen.cursor_position();
+
+        // Quick check for cursor-only updates
+        if self.last_cursor_position != (cursor_line, cursor_col) {
+            // Check if only cursor moved (common case)
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+            let mut hasher = DefaultHasher::new();
+
+            for row in 0..self.rows {
+                for col in 0..self.cols {
+                    if let Some(cell) = screen.cell(row, col) {
+                        cell.contents().hash(&mut hasher);
+                        cell.bold().hash(&mut hasher);
+                        cell.italic().hash(&mut hasher);
+                        cell.underline().hash(&mut hasher);
+                        format!("{:?}", cell.fgcolor()).hash(&mut hasher);
+                        format!("{:?}", cell.bgcolor()).hash(&mut hasher);
+                    }
+                }
+            }
+
+            let current_hash = hasher.finish();
+            let screen_changed = current_hash != self.last_screen_hash;
+
+            if !screen_changed {
+                // Only cursor moved, send lightweight cursor update
+                self.last_cursor_position = (cursor_line, cursor_col);
+                return vec![TerminalEvent::CursorMove {
+                    line: cursor_line,
+                    col: cursor_col,
+                }];
+            }
+
+            self.last_screen_hash = current_hash;
+        }
+
+        self.last_cursor_position = (cursor_line, cursor_col);
 
         let mut lines = Vec::with_capacity(self.rows as usize);
         for row in 0..self.rows {
@@ -470,6 +529,7 @@ impl TerminalState {
         self.parser.set_size(rows, cols);
         self.rows = rows;
         self.cols = cols;
+        self.last_screen_hash = 0; // Force full update after resize
     }
 
     pub fn take_pending_responses(&mut self) -> Vec<String> {

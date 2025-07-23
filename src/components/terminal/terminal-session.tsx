@@ -26,10 +26,12 @@ interface LineItem {
 }
 
 interface TerminalEvent {
-  type: "screenUpdate";
-  screen: LineItem[][];
-  cursor_line: number;
-  cursor_col: number;
+  type: "screenUpdate" | "cursorMove";
+  screen?: LineItem[][];
+  cursor_line?: number;
+  cursor_col?: number;
+  line?: number;
+  col?: number;
 }
 
 interface TerminalConfig {
@@ -104,31 +106,23 @@ const TerminalSession = ({
           setConnectionId(id);
           setIsConnected(true);
 
-          // Listen for terminal events
-          // Batch screen updates for performance
-          let updateTimeout: NodeJS.Timeout | null = null;
-          let pendingUpdate: TerminalEvent | null = null;
-
+          // Listen for terminal events with RAF for smooth rendering
           const unlisten = await listen(`terminal-event-${id}`, (event: any) => {
             const terminalEvent = event.payload as TerminalEvent;
-            if (terminalEvent.type === "screenUpdate") {
-              pendingUpdate = terminalEvent;
 
-              // Clear existing timeout
-              if (updateTimeout) {
-                clearTimeout(updateTimeout);
+            // Use requestAnimationFrame for smooth updates
+            requestAnimationFrame(() => {
+              if (terminalEvent.type === "screenUpdate" && terminalEvent.screen) {
+                setScreen(terminalEvent.screen);
+                setCursorLine(terminalEvent.cursor_line!);
+                setCursorCol(terminalEvent.cursor_col!);
+              } else if (terminalEvent.type === "cursorMove") {
+                // Lightweight cursor-only update
+                setCursorLine(terminalEvent.line!);
+                setCursorCol(terminalEvent.col!);
               }
+            });
 
-              // Batch updates with a 10ms delay
-              updateTimeout = setTimeout(() => {
-                if (pendingUpdate) {
-                  setScreen(pendingUpdate.screen);
-                  setCursorLine(pendingUpdate.cursor_line);
-                  setCursorCol(pendingUpdate.cursor_col);
-                  pendingUpdate = null;
-                }
-              }, 10);
-            }
             if (onActivity) {
               onActivity(terminal.id);
             }
@@ -177,14 +171,14 @@ const TerminalSession = ({
     }
   }, [isActive]);
 
-  // Auto-scroll to bottom when screen updates
+  // Auto-scroll to bottom when screen updates with RAF for smoothness
   useEffect(() => {
     if (terminalRef.current && isActive && !isUserScrolling) {
       const terminal = terminalRef.current;
-      // Use setTimeout to ensure the DOM has updated
-      setTimeout(() => {
+      // Use requestAnimationFrame for smooth scrolling
+      requestAnimationFrame(() => {
         terminal.scrollTop = terminal.scrollHeight;
-      }, 0);
+      });
     }
   }, [screen, isActive, isUserScrolling]);
 
@@ -240,8 +234,10 @@ const TerminalSession = ({
     };
   }, []);
 
-  // Handle terminal resize
+  // Handle terminal resize with debouncing
   useEffect(() => {
+    let resizeTimeout: NodeJS.Timeout | null = null;
+
     const handleResize = async () => {
       if (connectionId && terminalRef.current) {
         const size = calculateTerminalSize();
@@ -260,12 +256,25 @@ const TerminalSession = ({
       }
     };
 
-    const resizeObserver = new ResizeObserver(handleResize);
+    const debouncedResize = () => {
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+      // Debounce resize events by 100ms to avoid excessive calls
+      resizeTimeout = setTimeout(handleResize, 100);
+    };
+
+    const resizeObserver = new ResizeObserver(debouncedResize);
     if (terminalRef.current) {
       resizeObserver.observe(terminalRef.current);
     }
 
-    return () => resizeObserver.disconnect();
+    return () => {
+      resizeObserver.disconnect();
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+    };
   }, [connectionId, terminalSize, calculateTerminalSize]);
 
   // Send input to terminal
