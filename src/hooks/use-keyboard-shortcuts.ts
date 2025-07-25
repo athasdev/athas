@@ -70,14 +70,14 @@ export const useKeyboardShortcuts = ({
         } else {
           setBottomPaneActiveTab("terminal");
           setIsBottomPaneVisible(true);
-          // Request terminal focus through UI state
+          // Request terminal focus through UI state with longer delay to ensure terminal is ready
           setTimeout(() => {
             if (requestTerminalFocus) {
               requestTerminalFocus();
             } else if (focusTerminal) {
               focusTerminal();
             }
-          }, 100);
+          }, 250);
         }
         return;
       }
@@ -90,14 +90,14 @@ export const useKeyboardShortcuts = ({
         } else {
           setBottomPaneActiveTab("terminal");
           setIsBottomPaneVisible(true);
-          // Request terminal focus through UI state
+          // Request terminal focus through UI state with longer delay to ensure terminal is ready
           setTimeout(() => {
             if (requestTerminalFocus) {
               requestTerminalFocus();
             } else if (focusTerminal) {
               focusTerminal();
             }
-          }, 100);
+          }, 250);
         }
         return;
       }

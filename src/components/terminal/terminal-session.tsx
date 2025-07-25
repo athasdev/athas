@@ -8,7 +8,10 @@ interface TerminalSessionProps {
   isActive: boolean;
   onDirectoryChange?: (terminalId: string, directory: string) => void;
   onActivity?: (terminalId: string) => void;
-  onRegisterRef?: (terminalId: string, ref: { focus: () => void } | null) => void;
+  onRegisterRef?: (
+    terminalId: string,
+    ref: { focus: () => void; resize: () => void } | null,
+  ) => void;
 }
 
 const TerminalSession = ({
@@ -17,22 +20,27 @@ const TerminalSession = ({
   onActivity,
   onRegisterRef,
 }: TerminalSessionProps) => {
-  const terminalRef = useRef<any>(null);
+  const xtermRef = useRef<{ focus: () => void; resize: () => void } | null>(null);
 
   // Focus method that can be called externally
   const focusTerminal = useCallback(() => {
-    terminalRef.current?.focus();
+    xtermRef.current?.focus();
+  }, []);
+
+  // Resize method that can be called externally
+  const resizeTerminal = useCallback(() => {
+    xtermRef.current?.resize();
   }, []);
 
   // Register ref with parent
   useEffect(() => {
     if (onRegisterRef) {
-      onRegisterRef(terminal.id, { focus: focusTerminal });
+      onRegisterRef(terminal.id, { focus: focusTerminal, resize: resizeTerminal });
       return () => {
         onRegisterRef(terminal.id, null);
       };
     }
-  }, [terminal.id, onRegisterRef, focusTerminal]);
+  }, [terminal.id, onRegisterRef, focusTerminal, resizeTerminal]);
 
   // Handle activity tracking
   useEffect(() => {
@@ -42,19 +50,13 @@ const TerminalSession = ({
   }, [isActive, terminal.id, onActivity]);
 
   return (
-    <div className={`h-full ${isActive ? "block" : "hidden"}`} data-terminal-id={terminal.id}>
+    <div className="block h-full" data-terminal-id={terminal.id}>
       <TerminalErrorBoundary>
         <XtermTerminal
           sessionId={terminal.id}
           isActive={isActive}
-          onReady={() => {
-            // Store terminal reference
-            terminalRef.current = {
-              focus: () => {
-                const session = (window as any).terminalSessions?.[terminal.id];
-                session?.terminal?.focus();
-              },
-            };
+          onReady={(focusMethod, resizeMethod) => {
+            xtermRef.current = { focus: focusMethod, resize: resizeMethod };
           }}
         />
       </TerminalErrorBoundary>
