@@ -61,7 +61,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
   );
 
   const titleBarHeight = isMacOS ? 44 : 28; // h-11 for macOS, h-7 for Windows/Linux
-  const footerHeight = 40; // min-h-[40px]
+  const footerHeight = 32; // min-h-[32px] from editor-footer.tsx
   const totalReservedHeight = titleBarHeight + footerHeight;
 
   return (
