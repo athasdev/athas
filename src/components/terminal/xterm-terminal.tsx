@@ -21,7 +21,7 @@ import "./terminal.css";
 interface XtermTerminalProps {
   sessionId: string;
   isActive: boolean;
-  onReady?: (focusMethod: () => void, resizeMethod: () => void) => void;
+  onReady?: () => void;
 }
 
 interface TerminalTheme {
@@ -224,12 +224,6 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({ sessionId, isActiv
       searchAddonRef.current = searchAddon;
       serializeAddonRef.current = serializeAddon;
 
-      // Store in window for global access (for focus handling)
-      if (!(window as any).terminalSessions) {
-        (window as any).terminalSessions = {};
-      }
-      (window as any).terminalSessions[sessionId] = { terminal };
-
       // Create backend terminal connection
       try {
         // Check if we already have a connection
@@ -278,33 +272,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({ sessionId, isActiv
 
         setIsInitialized(true);
         isInitializingRef.current = false;
-
-        // Create focus and resize methods
-        const focusMethod = () => {
-          if (terminal && terminalRef.current) {
-            terminal.focus();
-          }
-        };
-
-        const resizeMethod = () => {
-          if (fitAddon && terminalRef.current) {
-            try {
-              fitAddon.fit();
-            } catch (e) {
-              console.warn("Failed to resize terminal:", e);
-            }
-          }
-        };
-
-        // Notify parent that terminal is ready
-        onReady?.(focusMethod, resizeMethod);
-
-        // Focus terminal if active
-        if (isActive) {
-          setTimeout(() => {
-            terminal.focus();
-          }, 100);
-        }
+        onReady?.();
       } catch (innerError) {
         console.error("Failed to create terminal connection:", innerError);
         terminal.writeln("\r\n\x1b[31mFailed to create terminal connection\x1b[0m");
@@ -320,12 +288,11 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({ sessionId, isActiv
     isInitialized,
     getTerminalTheme,
     updateSession,
+    onReady,
     fontSize,
     getSession,
     editorFontFamily,
     rootFolderPath,
-    isActive,
-    onReady,
   ]);
 
   // Handle terminal output
@@ -359,20 +326,20 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({ sessionId, isActiv
     fitAddonRef.current?.fit();
   }, [editorFontFamily, fontSize]);
 
-  // Initialize terminal ONCE
+  // Initialize terminal
   useEffect(() => {
     let mounted = true;
     let initTimer: NodeJS.Timeout;
 
     const init = async () => {
-      if (!mounted || !terminalRef.current) return;
+      if (!mounted) return;
 
-      // Only initialize after a short delay to ensure DOM is ready
+      // Only initialize after a short delay to ensure theme is loaded
       initTimer = setTimeout(() => {
-        if (mounted && !isInitialized && !isInitializingRef.current && terminalRef.current) {
+        if (mounted && !isInitialized) {
           initializeTerminal();
         }
-      }, 100);
+      }, 200);
     };
 
     init();
@@ -380,12 +347,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({ sessionId, isActiv
     return () => {
       mounted = false;
       clearTimeout(initTimer);
-    };
-  }, []); // Empty deps - initialize only once per mount
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
       // Clean up injected styles
       const styleId = `terminal-link-style-${sessionId}`;
       const style = document.getElementById(styleId);
@@ -406,59 +368,40 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({ sessionId, isActiv
         searchAddonRef.current = null;
         serializeAddonRef.current = null;
         setIsInitialized(false);
-        isInitializingRef.current = false;
-
-        // Clean up window.terminalSessions
-        if ((window as any).terminalSessions?.[sessionId]) {
-          delete (window as any).terminalSessions[sessionId];
-        }
       }
     };
-  }, [sessionId, getSession]);
+  }, []); // Remove dependencies to prevent re-initialization
 
   // Handle resize
   useEffect(() => {
     if (!fitAddonRef.current || !terminalRef.current || !isInitialized) return;
 
-    let resizeTimeout: NodeJS.Timeout;
-    const handleResize = () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        if (fitAddonRef.current && xtermRef.current && terminalRef.current) {
+    const resizeObserver = new ResizeObserver(() => {
+      // Debounce resize to avoid excessive calls
+      requestAnimationFrame(() => {
+        if (fitAddonRef.current && xtermRef.current) {
           try {
             fitAddonRef.current.fit();
           } catch (e) {
             console.warn("Failed to fit terminal:", e);
           }
         }
-      }, 50);
-    };
+      });
+    });
 
-    const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(terminalRef.current);
 
-    // Initial fit
-    handleResize();
-
     return () => {
-      clearTimeout(resizeTimeout);
       resizeObserver.disconnect();
     };
   }, [isInitialized]);
 
   // Handle focus
   useEffect(() => {
-    if (isActive && xtermRef.current && isInitialized) {
-      // Small delay to ensure terminal is fully ready
-      const focusTimer = setTimeout(() => {
-        if (xtermRef.current && isActive) {
-          xtermRef.current.focus();
-        }
-      }, 50);
-
-      return () => clearTimeout(focusTimer);
+    if (isActive && xtermRef.current) {
+      xtermRef.current.focus();
     }
-  }, [isActive, isInitialized]);
+  }, [isActive]);
 
   // Zoom handlers
   const handleZoomIn = useCallback(() => {
@@ -582,7 +525,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({ sessionId, isActiv
       <div
         ref={terminalRef}
         id={`terminal-${sessionId}`}
-        className={cn("xterm-container", "h-full w-full", "text-text")}
+        className={cn("xterm-container", "h-full w-full", "text-text", !isActive && "opacity-60")}
       />
     </div>
   );

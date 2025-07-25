@@ -43,7 +43,7 @@ const EditorFooter = () => {
               if (showingTerminal) {
                 setTimeout(() => {
                   uiState.requestTerminalFocus();
-                }, 250);
+                }, 100);
               }
             }}
             className={`flex items-center gap-0.5 rounded px-1 py-0.5 transition-colors ${

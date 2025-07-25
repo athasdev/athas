@@ -8,10 +8,7 @@ interface TerminalSessionProps {
   isActive: boolean;
   onDirectoryChange?: (terminalId: string, directory: string) => void;
   onActivity?: (terminalId: string) => void;
-  onRegisterRef?: (
-    terminalId: string,
-    ref: { focus: () => void; resize: () => void } | null,
-  ) => void;
+  onRegisterRef?: (terminalId: string, ref: { focus: () => void } | null) => void;
 }
 
 const TerminalSession = ({
@@ -20,27 +17,22 @@ const TerminalSession = ({
   onActivity,
   onRegisterRef,
 }: TerminalSessionProps) => {
-  const xtermRef = useRef<{ focus: () => void; resize: () => void } | null>(null);
+  const terminalRef = useRef<any>(null);
 
   // Focus method that can be called externally
   const focusTerminal = useCallback(() => {
-    xtermRef.current?.focus();
-  }, []);
-
-  // Resize method that can be called externally
-  const resizeTerminal = useCallback(() => {
-    xtermRef.current?.resize();
+    terminalRef.current?.focus();
   }, []);
 
   // Register ref with parent
   useEffect(() => {
     if (onRegisterRef) {
-      onRegisterRef(terminal.id, { focus: focusTerminal, resize: resizeTerminal });
+      onRegisterRef(terminal.id, { focus: focusTerminal });
       return () => {
         onRegisterRef(terminal.id, null);
       };
     }
-  }, [terminal.id, onRegisterRef, focusTerminal, resizeTerminal]);
+  }, [terminal.id, onRegisterRef, focusTerminal]);
 
   // Handle activity tracking
   useEffect(() => {
@@ -50,13 +42,19 @@ const TerminalSession = ({
   }, [isActive, terminal.id, onActivity]);
 
   return (
-    <div className="block h-full" data-terminal-id={terminal.id}>
+    <div className={`h-full ${isActive ? "block" : "hidden"}`} data-terminal-id={terminal.id}>
       <TerminalErrorBoundary>
         <XtermTerminal
           sessionId={terminal.id}
           isActive={isActive}
-          onReady={(focusMethod, resizeMethod) => {
-            xtermRef.current = { focus: focusMethod, resize: resizeMethod };
+          onReady={() => {
+            // Store terminal reference
+            terminalRef.current = {
+              focus: () => {
+                const session = (window as any).terminalSessions?.[terminal.id];
+                session?.terminal?.focus();
+              },
+            };
           }}
         />
       </TerminalErrorBoundary>
