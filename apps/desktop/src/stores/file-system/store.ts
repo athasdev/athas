@@ -40,96 +40,73 @@ import { useRecentFoldersStore } from "../recent-folders-store";
 import type { FsActions, FsState } from "./interface";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 
-const useFileSystemStoreBase = create<FsState & FsActions>()(
-  immer((set, get) => ({
-    // State
-    files: [],
-    rootFolderPath: undefined,
-    filesVersion: 0,
-    isFileTreeLoading: false,
-    isRemoteWindow: false,
-    remoteConnectionId: undefined,
-    remoteConnectionName: undefined,
-    projectFilesCache: undefined,
+export const useFileSystemStore = createSelectors(
+  create<FsState & FsActions>()(
+    immer((set, get) => ({
+      // State
+      files: [],
+      rootFolderPath: undefined,
+      filesVersion: 0,
+      isFileTreeLoading: false,
+      isRemoteWindow: false,
+      remoteConnectionId: undefined,
+      remoteConnectionName: undefined,
+      projectFilesCache: undefined,
 
-    // Actions
-    handleOpenFolder: async () => {
-      try {
+      // Actions
+      handleOpenFolder: async () => {
         set((state) => {
           state.isFileTreeLoading = true;
         });
 
         const selected = await openFolder();
 
-        if (selected) {
-          const entries = await readDirectoryContents(selected);
-          const fileTree = sortFileEntries(entries);
-
-          set((state) => {
-            state.isFileTreeLoading = false;
-            state.files = fileTree;
-            state.rootFolderPath = selected;
-            state.filesVersion = state.filesVersion + 1;
-            state.projectFilesCache = undefined;
-          });
-
-          // Clear tree UI state
-          useFileTreeStore.getState().collapseAll();
-
-          // Update project store
-          const { setRootFolderPath, setProjectName } = useProjectStore.getState();
-          setRootFolderPath(selected);
-          setProjectName(selected.split("/").pop() || "Project");
-
-          // Add to recent folders
-          const { addToRecents } = useRecentFoldersStore.getState();
-          addToRecents(selected);
-
-          // Start file watching
-          const { setProjectRoot } = useFileWatcherStore.getState();
-          await setProjectRoot(selected);
-
-          // Initialize git status
-          const gitStore = useGitStore.getState();
-          try {
-            const gitStatus = await getGitStatus(selected);
-            gitStore.actions.setGitStatus(gitStatus);
-          } catch (error) {
-            console.log("Not a git repository or git error:", error);
-          }
-
-          return true;
-        } else {
+        if (!selected) {
           set((state) => {
             state.isFileTreeLoading = false;
           });
           return false;
         }
-      } catch (error) {
-        console.error("Error opening folder:", error);
+
+        const entries = await readDirectoryContents(selected);
+        const fileTree = sortFileEntries(entries);
+
+        // Clear tree UI state
+        useFileTreeStore.getState().collapseAll();
+
+        // Update project store
+        const { setRootFolderPath, setProjectName } = useProjectStore.getState();
+        setRootFolderPath(selected);
+        setProjectName(selected.split("/").pop() || "Project");
+
+        // Add to recent folders
+        useRecentFoldersStore.getState().addToRecents(selected);
+
+        // Start file watching
+        await useFileWatcherStore.getState().setProjectRoot(selected);
+
+        // Initialize git status
+        const gitStatus = await getGitStatus(selected);
+        useGitStore.getState().actions.setGitStatus(gitStatus);
+
         set((state) => {
           state.isFileTreeLoading = false;
+          state.files = fileTree;
+          state.rootFolderPath = selected;
+          state.filesVersion++;
+          state.projectFilesCache = undefined;
         });
-        return false;
-      }
-    },
 
-    handleOpenFolderByPath: async (path: string) => {
-      try {
+        return true;
+      },
+
+      handleOpenFolderByPath: async (path: string) => {
         set((state) => {
           state.isFileTreeLoading = true;
         });
 
         const entries = await readDirectoryContents(path);
         const fileTree = sortFileEntries(entries);
-
-        set((state) => {
-          state.isFileTreeLoading = false;
-          state.files = fileTree;
-          state.rootFolderPath = path;
-          state.filesVersion = state.filesVersion + 1;
-          state.projectFilesCache = undefined;
-        });
 
         // Clear tree UI state
         useFileTreeStore.getState().collapseAll();
@@ -140,73 +117,66 @@ const useFileSystemStoreBase = create<FsState & FsActions>()(
         setProjectName(path.split("/").pop() || "Project");
 
         // Add to recent folders
-        const addToRecents = useRecentFoldersStore.getState().addToRecents;
-        addToRecents(path);
+        useRecentFoldersStore.getState().addToRecents(path);
 
         // Start file watching
-        const setProjectRoot = useFileWatcherStore.getState().setProjectRoot;
-        await setProjectRoot(path);
+        await useFileWatcherStore.getState().setProjectRoot(path);
 
         // Initialize git status
-        const gitStore = useGitStore.getState();
-        try {
-          const gitStatus = await getGitStatus(path);
-          gitStore.actions.setGitStatus(gitStatus);
-        } catch (error) {
-          console.log("Not a git repository or git error:", error);
-        }
+        const gitStatus = await getGitStatus(path);
+        useGitStore.getState().actions.setGitStatus(gitStatus);
 
-        return true;
-      } catch (error) {
-        console.error("Error opening folder by path:", error);
         set((state) => {
           state.isFileTreeLoading = false;
+          state.files = fileTree;
+          state.rootFolderPath = path;
+          state.filesVersion++;
+          state.projectFilesCache = undefined;
         });
-        return false;
-      }
-    },
 
-    handleFileSelect: async (
-      path: string,
-      isDir: boolean,
-      line?: number,
-      column?: number,
-      codeEditorRef?: React.RefObject<CodeEditorRef | null>,
-    ) => {
-      if (isDir) {
-        await get().toggleFolder(path);
-        return;
-      }
+        return true;
+      },
 
-      const fileName = getFilenameFromPath(path);
-      const { openBuffer } = useBufferStore.getState().actions;
-
-      // Handle virtual diff files
-      if (path.startsWith("diff://")) {
-        const match = path.match(/^diff:\/\/(staged|unstaged)\/(.+)$/);
-        let displayName = getFilenameFromPath(path);
-        if (match) {
-          const [, diffType, encodedPath] = match;
-          const decodedPath = decodeURIComponent(encodedPath);
-          displayName = `${getFilenameFromPath(decodedPath)} (${diffType})`;
+      handleFileSelect: async (
+        path: string,
+        isDir: boolean,
+        line?: number,
+        column?: number,
+        codeEditorRef?: React.RefObject<CodeEditorRef | null>,
+      ) => {
+        if (isDir) {
+          await get().toggleFolder(path);
+          return;
         }
 
-        const diffContent = localStorage.getItem(`diff-content-${path}`);
-        if (diffContent) {
-          openBuffer(path, displayName, diffContent, false, false, true, true);
+        const fileName = getFilenameFromPath(path);
+        const { openBuffer } = useBufferStore.getState().actions;
+
+        // Handle virtual diff files
+        if (path.startsWith("diff://")) {
+          const match = path.match(/^diff:\/\/(staged|unstaged)\/(.+)$/);
+          let displayName = getFilenameFromPath(path);
+          if (match) {
+            const [, diffType, encodedPath] = match;
+            const decodedPath = decodeURIComponent(encodedPath);
+            displayName = `${getFilenameFromPath(decodedPath)} (${diffType})`;
+          }
+
+          const diffContent = localStorage.getItem(`diff-content-${path}`);
+          if (diffContent) {
+            openBuffer(path, displayName, diffContent, false, false, true, true);
+          } else {
+            openBuffer(path, displayName, "No diff content available", false, false, true, true);
+          }
+          return;
+        }
+
+        // Handle special file types
+        if (isSQLiteFile(path)) {
+          openBuffer(path, fileName, "", false, true, false, false);
+        } else if (isImageFile(path)) {
+          openBuffer(path, fileName, "", true, false, false, false);
         } else {
-          openBuffer(path, displayName, "No diff content available", false, false, true, true);
-        }
-        return;
-      }
-
-      // Handle special file types
-      if (isSQLiteFile(path)) {
-        openBuffer(path, fileName, "", false, true, false, false);
-      } else if (isImageFile(path)) {
-        openBuffer(path, fileName, "", true, false, false, false);
-      } else {
-        try {
           const content = await readFileContent(path);
 
           // Check if this is a diff file
@@ -254,28 +224,23 @@ const useFileSystemStoreBase = create<FsState & FsActions>()(
               }
             });
           }
-        } catch (error) {
-          console.error("Error reading file:", error);
-          openBuffer(path, fileName, `Error reading file: ${error}`, false, false, false, false);
         }
-      }
-    },
+      },
 
-    toggleFolder: async (path: string) => {
-      const { isRemoteWindow, remoteConnectionId } = get();
+      toggleFolder: async (path: string) => {
+        const { isRemoteWindow, remoteConnectionId } = get();
 
-      if (isRemoteWindow && remoteConnectionId) {
-        // TODO: Implement remote folder operations
-        return;
-      }
+        if (isRemoteWindow && remoteConnectionId) {
+          // TODO: Implement remote folder operations
+          return;
+        }
 
-      const folder = findFileInTree(get().files, path);
+        const folder = findFileInTree(get().files, path);
 
-      if (!folder || !folder.isDir) return;
+        if (!folder || !folder.isDir) return;
 
-      if (!folder.expanded) {
-        // Expand folder - load children
-        try {
+        if (!folder.expanded) {
+          // Expand folder - load children
           const entries = await readDirectoryContents(folder.path);
           const updatedFiles = updateFileInTree(get().files, path, (item) => ({
             ...item,
@@ -283,97 +248,87 @@ const useFileSystemStoreBase = create<FsState & FsActions>()(
             children: sortFileEntries(entries),
           }));
 
+          useFileTreeStore.getState().toggleFolder(path);
+
           set((state) => {
             state.files = updatedFiles;
-            state.filesVersion = state.filesVersion + 1;
+            state.filesVersion++;
           });
+        } else {
+          // Collapse folder
+          const updatedFiles = updateFileInTree(get().files, path, (item) => ({
+            ...item,
+            expanded: false,
+          }));
 
           useFileTreeStore.getState().toggleFolder(path);
-        } catch (error) {
-          console.error("Error reading directory:", error);
+
+          set((state) => {
+            state.files = updatedFiles;
+            state.filesVersion++;
+          });
         }
-      } else {
-        // Collapse folder
-        const updatedFiles = updateFileInTree(get().files, path, (item) => ({
-          ...item,
-          expanded: false,
-        }));
+      },
 
+      handleCreateNewFile: async () => {
+        const { rootFolderPath, files } = get();
+
+        if (!rootFolderPath) {
+          alert("Please open a folder first");
+          return;
+        }
+
+        const rootPath = getRootPath(files);
+        const effectiveRootPath = rootPath || rootFolderPath;
+
+        if (!effectiveRootPath) {
+          alert("Unable to determine root folder path");
+          return;
+        }
+
+        // Create a temporary new file item for inline editing
+        const newItem: FileEntry = {
+          name: "",
+          path: `${effectiveRootPath}/`,
+          isDir: false,
+          isEditing: true,
+          isNewItem: true,
+        };
+
+        // Add the new item to the root level of the file tree
         set((state) => {
-          state.files = updatedFiles;
-          state.filesVersion = state.filesVersion + 1;
+          state.files = [...state.files, newItem];
         });
+      },
 
-        useFileTreeStore.getState().toggleFolder(path);
-      }
-    },
+      handleCreateNewFileInDirectory: async (dirPath: string, fileName?: string) => {
+        if (!fileName) {
+          fileName = prompt("Enter the name for the new file:") ?? undefined;
+          if (!fileName) return;
+        }
 
-    handleCreateNewFile: async () => {
-      const { rootFolderPath, files } = get();
+        return get().createFile(dirPath, fileName);
+      },
 
-      if (!rootFolderPath) {
-        alert("Please open a folder first");
-        return;
-      }
+      handleCreateNewFolderInDirectory: async (dirPath: string, folderName?: string) => {
+        if (!folderName) {
+          folderName = prompt("Enter the name for the new folder:") ?? undefined;
+          if (!folderName) return;
+        }
 
-      const rootPath = getRootPath(files);
-      const effectiveRootPath = rootPath || rootFolderPath;
+        return get().createDirectory(dirPath, folderName);
+      },
 
-      if (!effectiveRootPath) {
-        alert("Unable to determine root folder path");
-        return;
-      }
+      handleDeletePath: async (targetPath: string, isDirectory: boolean) => {
+        const itemType = isDirectory ? "folder" : "file";
+        const confirmMessage = isDirectory
+          ? `Are you sure you want to delete the folder "${targetPath
+              .split("/")
+              .pop()}" and all its contents? This action cannot be undone.`
+          : `Are you sure you want to delete the file "${targetPath
+              .split("/")
+              .pop()}"? This action cannot be undone.`;
 
-      // Create a temporary new file item for inline editing
-      const newItem: FileEntry = {
-        name: "",
-        path: `${effectiveRootPath}/`,
-        isDir: false,
-        isEditing: true,
-        isNewItem: true,
-      };
-
-      // Add the new item to the root level of the file tree
-      set((state) => {
-        state.files = [...state.files, newItem];
-      });
-    },
-
-    handleCreateNewFileInDirectory: async (dirPath: string, fileName?: string) => {
-      if (!fileName) {
-        fileName = prompt("Enter the name for the new file:") ?? undefined;
-        if (!fileName) return;
-      }
-
-      try {
-        const result = await get().createFile(dirPath, fileName);
-        return result;
-      } catch (error) {
-        console.error("Error in handleCreateNewFileInDirectory:", error);
-        alert(`Failed to create file: ${error}`);
-      }
-    },
-
-    handleCreateNewFolderInDirectory: async (dirPath: string, folderName?: string) => {
-      if (!folderName) {
-        folderName = prompt("Enter the name for the new folder:") ?? undefined;
-        if (!folderName) return;
-      }
-
-      return get().createDirectory(dirPath, folderName);
-    },
-
-    handleDeletePath: async (targetPath: string, isDirectory: boolean) => {
-      const itemType = isDirectory ? "folder" : "file";
-      const confirmMessage = isDirectory
-        ? `Are you sure you want to delete the folder "${targetPath
-            .split("/")
-            .pop()}" and all its contents? This action cannot be undone.`
-        : `Are you sure you want to delete the file "${targetPath
-            .split("/")
-            .pop()}"? This action cannot be undone.`;
-
-      try {
         const confirmed = await confirm(confirmMessage, {
           title: `Delete ${itemType}`,
           okLabel: "Delete",
@@ -381,35 +336,24 @@ const useFileSystemStoreBase = create<FsState & FsActions>()(
           kind: "warning",
         });
 
-        if (!confirmed) {
+        if (!confirmed) return;
+
+        return get().deleteFile(targetPath);
+      },
+
+      refreshDirectory: async (directoryPath: string) => {
+        const dirNode = findFileInTree(get().files, directoryPath);
+
+        // If directory is not in the tree or not expanded, skip refresh
+        if (!dirNode || !dirNode.isDir) {
           return;
         }
-      } catch (error) {
-        console.error("Error showing confirm dialog:", error);
-        return;
-      }
 
-      return get().deleteFile(targetPath);
-    },
+        // Only refresh if the directory is expanded (visible in the tree)
+        if (!dirNode.expanded) {
+          return;
+        }
 
-    refreshDirectory: async (directoryPath: string) => {
-      console.log(`🔄 Refreshing directory: ${directoryPath}`);
-
-      const dirNode = findFileInTree(get().files, directoryPath);
-
-      // If directory is not in the tree or not expanded, skip refresh
-      if (!dirNode || !dirNode.isDir) {
-        console.log(`📁 Directory ${directoryPath} not found or not a directory, skipping refresh`);
-        return;
-      }
-
-      // Only refresh if the directory is expanded (visible in the tree)
-      if (!dirNode.expanded) {
-        console.log(`📁 Directory ${directoryPath} is collapsed, skipping refresh`);
-        return;
-      }
-
-      try {
         // Read the directory contents
         const entries = await readDirectory(directoryPath);
 
@@ -419,100 +363,88 @@ const useFileSystemStoreBase = create<FsState & FsActions>()(
 
           if (updated) {
             // Successfully updated
-            state.filesVersion = state.filesVersion + 1;
-          } else {
-            console.error(`Failed to update directory ${directoryPath} in tree`);
+            state.filesVersion++;
           }
         });
-      } catch (error) {
-        console.error("Error reading directory:", error);
-      }
-    },
+      },
 
-    handleCollapseAllFolders: async () => {
-      const updatedFiles = collapseAllFolders(get().files);
+      handleCollapseAllFolders: async () => {
+        const updatedFiles = collapseAllFolders(get().files);
 
-      set((state) => {
-        state.files = updatedFiles;
-        state.filesVersion = state.filesVersion + 1;
-      });
-
-      useFileTreeStore.getState().collapseAll();
-    },
-
-    handleFileMove: async (oldPath: string, newPath: string) => {
-      console.log(`📁 Moving file from ${oldPath} to ${newPath}`);
-
-      const movedFile = findFileInTree(get().files, oldPath);
-      if (!movedFile) {
-        console.error(`Could not find ${oldPath} in file tree`);
-        return;
-      }
-
-      // Remove from old location
-      let updatedFiles = removeFileFromTree(get().files, oldPath);
-
-      // Update the file's path and name
-      const updatedMovedFile = {
-        ...movedFile,
-        path: newPath,
-        name: newPath.split("/").pop() || movedFile.name,
-      };
-
-      // Determine target directory from the new path
-      const targetDir =
-        newPath.substring(0, newPath.lastIndexOf("/")) || get().rootFolderPath || "/";
-
-      // Add to new location
-      updatedFiles = addFileToTree(updatedFiles, targetDir, updatedMovedFile);
-
-      set((state) => {
-        state.files = updatedFiles;
-        state.filesVersion = state.filesVersion + 1;
-        state.projectFilesCache = undefined;
-      });
-
-      // Update open buffers
-      const { buffers } = useBufferStore.getState();
-      const { updateBuffer } = useBufferStore.getState().actions;
-      const buffer = buffers.find((b) => b.path === oldPath);
-      if (buffer) {
-        const fileName = newPath.split("/").pop() || buffer.name;
-        updateBuffer({
-          ...buffer,
-          path: newPath,
-          name: fileName,
+        set((state) => {
+          state.files = updatedFiles;
+          state.filesVersion++;
         });
-      }
-    },
 
-    getAllProjectFiles: async (): Promise<FileEntry[]> => {
-      const { rootFolderPath, projectFilesCache } = get();
-      if (!rootFolderPath) return [];
+        useFileTreeStore.getState().collapseAll();
+      },
 
-      // Check cache first (cache for 30 seconds)
-      const now = Date.now();
-      if (
-        projectFilesCache &&
-        projectFilesCache.path === rootFolderPath &&
-        now - projectFilesCache.timestamp < 30000
-      ) {
-        console.log(`📋 Using cached project files: ${projectFilesCache.files.length} files`);
-        return projectFilesCache.files;
-      }
-
-      const allFiles: FileEntry[] = [];
-
-      const scanDirectory = async (directoryPath: string, depth: number = 0): Promise<void> => {
-        // Prevent infinite recursion and very deep scanning
-        if (depth > 10) {
-          console.warn(`Max depth reached for ${directoryPath}`);
+      handleFileMove: async (oldPath: string, newPath: string) => {
+        const movedFile = findFileInTree(get().files, oldPath);
+        if (!movedFile) {
           return;
         }
 
-        try {
+        // Remove from old location
+        let updatedFiles = removeFileFromTree(get().files, oldPath);
+
+        // Update the file's path and name
+        const updatedMovedFile = {
+          ...movedFile,
+          path: newPath,
+          name: newPath.split("/").pop() || movedFile.name,
+        };
+
+        // Determine target directory from the new path
+        const targetDir =
+          newPath.substring(0, newPath.lastIndexOf("/")) || get().rootFolderPath || "/";
+
+        // Add to new location
+        updatedFiles = addFileToTree(updatedFiles, targetDir, updatedMovedFile);
+
+        set((state) => {
+          state.files = updatedFiles;
+          state.filesVersion = state.filesVersion + 1;
+          state.projectFilesCache = undefined;
+        });
+
+        // Update open buffers
+        const { buffers } = useBufferStore.getState();
+        const { updateBuffer } = useBufferStore.getState().actions;
+        const buffer = buffers.find((b) => b.path === oldPath);
+        if (buffer) {
+          const fileName = newPath.split("/").pop() || buffer.name;
+          updateBuffer({
+            ...buffer,
+            path: newPath,
+            name: fileName,
+          });
+        }
+      },
+
+      getAllProjectFiles: async (): Promise<FileEntry[]> => {
+        const { rootFolderPath, projectFilesCache } = get();
+        if (!rootFolderPath) return [];
+
+        // Check cache first (cache for 30 seconds)
+        const now = Date.now();
+        if (
+          projectFilesCache &&
+          projectFilesCache.path === rootFolderPath &&
+          now - projectFilesCache.timestamp < 30000
+        ) {
+          return projectFilesCache.files;
+        }
+
+        const allFiles: FileEntry[] = [];
+
+        const scanDirectory = async (directoryPath: string, depth: number = 0): Promise<void> => {
+          // Prevent infinite recursion and very deep scanning
+          if (depth > 10) {
+            return;
+          }
+
           const entries = await readDirectory(directoryPath);
-          let ignoredCount = 0;
 
           for (const entry of entries as any[]) {
             const name = entry.name || "Unknown";
@@ -520,7 +452,6 @@ const useFileSystemStoreBase = create<FsState & FsActions>()(
 
             // Skip ignored files/directories
             if (shouldIgnore(name, isDir)) {
-              ignoredCount++;
               continue;
             }
 
@@ -552,43 +483,25 @@ const useFileSystemStoreBase = create<FsState & FsActions>()(
               });
             }
           }
-
-          // Log ignored items for very verbose debugging (only at root level)
-          if (depth === 0 && ignoredCount > 0) {
-            console.log(`🚫 Ignored ${ignoredCount} items in root directory for performance`);
-          }
-        } catch (error) {
-          console.error(`Error scanning directory ${directoryPath}:`, error);
-        }
-      };
-
-      console.log(`🔍 Starting project file scan for: ${rootFolderPath}`);
-      const startTime = Date.now();
-
-      await scanDirectory(rootFolderPath);
-
-      const endTime = Date.now();
-      console.log(
-        `✅ File scan completed: ${allFiles.length} files found in ${endTime - startTime}ms`,
-      );
-
-      // Cache the results
-      set((state) => {
-        state.projectFilesCache = {
-          path: rootFolderPath,
-          files: allFiles,
-          timestamp: now,
         };
-      });
 
-      return allFiles;
-    },
+        await scanDirectory(rootFolderPath);
 
-    createFile: async (directoryPath: string, fileName: string) => {
-      try {
+        // Cache the results
+        set((state) => {
+          state.projectFilesCache = {
+            path: rootFolderPath,
+            files: allFiles,
+            timestamp: now,
+          };
+        });
+
+        return allFiles;
+      },
+
+      createFile: async (directoryPath: string, fileName: string) => {
         const filePath = await createNewFile(directoryPath, fileName);
 
-        // Update file tree
         const newFile: FileEntry = {
           name: fileName,
           path: filePath,
@@ -596,25 +509,17 @@ const useFileSystemStoreBase = create<FsState & FsActions>()(
           expanded: false,
         };
 
-        const updatedFiles = addFileToTree(get().files, directoryPath, newFile);
-
         set((state) => {
-          state.files = updatedFiles;
-          state.filesVersion = state.filesVersion + 1;
+          state.files = addFileToTree(state.files, directoryPath, newFile);
+          state.filesVersion++;
         });
 
         return filePath;
-      } catch (error) {
-        console.error("Error creating file:", error);
-        throw error;
-      }
-    },
+      },
 
-    createDirectory: async (parentPath: string, folderName: string) => {
-      try {
+      createDirectory: async (parentPath: string, folderName: string) => {
         const folderPath = await createNewDirectory(parentPath, folderName);
 
-        // Update file tree
         const newFolder: FileEntry = {
           name: folderName,
           path: folderPath,
@@ -623,55 +528,35 @@ const useFileSystemStoreBase = create<FsState & FsActions>()(
           children: [],
         };
 
-        const updatedFiles = addFileToTree(get().files, parentPath, newFolder);
-
         set((state) => {
-          state.files = updatedFiles;
-          state.filesVersion = state.filesVersion + 1;
+          state.files = addFileToTree(state.files, parentPath, newFolder);
+          state.filesVersion++;
         });
 
         return folderPath;
-      } catch (error) {
-        console.error("Error creating directory:", error);
-        throw error;
-      }
-    },
+      },
 
-    deleteFile: async (path: string) => {
-      try {
+      deleteFile: async (path: string) => {
         await deleteFileOrDirectory(path);
 
-        // Update file tree
-        const updatedFiles = removeFileFromTree(get().files, path);
+        const { buffers, actions } = useBufferStore.getState();
+        buffers
+          .filter((buffer) => buffer.path === path)
+          .forEach((buffer) => actions.closeBuffer(buffer.id));
 
         set((state) => {
-          state.files = updatedFiles;
-          state.filesVersion = state.filesVersion + 1;
+          state.files = removeFileFromTree(state.files, path);
+          state.filesVersion++;
         });
+      },
 
-        // Close any open buffers for this file
-        const { buffers } = useBufferStore.getState();
-        const { closeBuffer } = useBufferStore.getState().actions;
-
-        // Find and close any buffers with matching path
-        const buffersToClose = buffers.filter((buffer) => buffer.path === path);
-        buffersToClose.forEach((buffer) => {
-          closeBuffer(buffer.id);
+      // Setter methods
+      setFiles: (newFiles: FileEntry[]) => {
+        set((state) => {
+          state.files = newFiles;
+          state.filesVersion++;
         });
-      } catch (error) {
-        console.error("Error deleting file:", error);
-        throw error;
-      }
-    },
-
-    // Setter methods
-    setFiles: (newFiles: FileEntry[]) => {
-      set((state) => {
-        state.files = newFiles;
-        state.filesVersion = state.filesVersion + 1;
-      });
-    },
-  })),
+      },
+    })),
+  ),
 );
-
-export const useFileSystemStore = createSelectors(useFileSystemStoreBase);
