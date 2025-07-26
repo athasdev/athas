@@ -1,72 +1,32 @@
 import { ChevronDown, ChevronRight, FileIcon, FilePlus, FileText, FileX } from "lucide-react";
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
+import type { GitDiff } from "../../utils/git";
 import { DiffHeader } from "./diff-header";
 import { useDiffViewState } from "./hooks/useDiffViewState";
 import { ImageDiffViewer } from "./image-diff-viewer";
 import { TextDiffViewer } from "./text-diff-viewer";
 import type { FileDiffSummary, MultiFileDiffViewerProps } from "./utils/types";
 
-export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerProps) {
-  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set());
-  const { showWhitespace, setShowWhitespace } = useDiffViewState();
+// Memoized file component to prevent unnecessary re-renders
+interface FileRowProps {
+  diff: GitDiff;
+  summary: FileDiffSummary;
+  showWhitespace: boolean;
+  commitHash: string;
+  initiallyCollapsed: boolean;
+}
 
-  // Calculate file summaries and auto-collapse logic
-  const fileSummaries: FileDiffSummary[] = useMemo(() => {
-    const summaries: FileDiffSummary[] = [];
-    const autoCollapseSet = new Set<string>();
+const FileRow = memo(function FileRow({
+  diff,
+  summary,
+  showWhitespace,
+  commitHash,
+  initiallyCollapsed,
+}: FileRowProps) {
+  const [isCollapsed, setIsCollapsed] = useState(initiallyCollapsed);
 
-    for (const diff of multiDiff.files) {
-      const additions = diff.lines.filter((line) => line.line_type === "added").length;
-      const deletions = diff.lines.filter((line) => line.line_type === "removed").length;
-      const totalLines = diff.lines.length;
-
-      // Auto-collapse criteria:
-      // 1. More than 100 lines of changes in a single file
-      // 2. More than 5 files total (collapse all but first 3)
-      // 3. Binary files (images) when there are multiple files
-      const shouldAutoCollapse = Boolean(
-        totalLines > 100 ||
-          (multiDiff.totalFiles > 5 && summaries.length >= 3) ||
-          (diff.is_binary && multiDiff.totalFiles > 1),
-      );
-
-      if (shouldAutoCollapse) {
-        autoCollapseSet.add(diff.file_path);
-      }
-
-      let status: "added" | "deleted" | "modified" | "renamed";
-      if (diff.is_new) status = "added";
-      else if (diff.is_deleted) status = "deleted";
-      else if (diff.is_renamed) status = "renamed";
-      else status = "modified";
-
-      summaries.push({
-        fileName: diff.file_path.split("/").pop() || diff.file_path,
-        filePath: diff.file_path,
-        status,
-        additions,
-        deletions,
-        isCollapsed: shouldAutoCollapse,
-        shouldAutoCollapse,
-      });
-    }
-
-    // Initialize collapsed state
-    setCollapsedFiles(autoCollapseSet);
-
-    return summaries;
-  }, [multiDiff]);
-
-  const toggleFileCollapse = (filePath: string) => {
-    setCollapsedFiles((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(filePath)) {
-        newSet.delete(filePath);
-      } else {
-        newSet.add(filePath);
-      }
-      return newSet;
-    });
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
   };
 
   const getStatusIcon = (status: FileDiffSummary["status"]) => {
@@ -95,13 +55,113 @@ export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerP
     }
   };
 
+  return (
+    <div className="border-border border-b last:border-b-0">
+      {/* File Header */}
+      <div
+        className="flex cursor-pointer items-center justify-between bg-secondary-bg px-4 py-2 hover:bg-hover"
+        onClick={toggleCollapse}
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {isCollapsed ? (
+            <ChevronRight size={12} className="flex-shrink-0 text-text-lighter" />
+          ) : (
+            <ChevronDown size={12} className="flex-shrink-0 text-text-lighter" />
+          )}
+          {getStatusIcon(summary.status)}
+          <span className="truncate font-mono text-text text-xs">{diff.file_path}</span>
+          {diff.is_renamed && diff.old_path && (
+            <span className="text-text-lighter text-xs">← {diff.old_path}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          {summary.shouldAutoCollapse && (
+            <span className="text-[10px] text-text-lighter italic">auto-collapsed</span>
+          )}
+          <span className={getStatusColor(summary.status)}>{summary.status.toUpperCase()}</span>
+          {summary.additions > 0 && <span className="text-green-400">+{summary.additions}</span>}
+          {summary.deletions > 0 && <span className="text-red-400">-{summary.deletions}</span>}
+        </div>
+      </div>
+
+      {/* File Content */}
+      {!isCollapsed && (
+        <div className="bg-primary-bg">
+          {diff.is_image ? (
+            <ImageDiffViewer
+              diff={diff}
+              fileName={summary.fileName}
+              onClose={() => {}} // Not used in multi-file context
+              commitHash={commitHash}
+            />
+          ) : (
+            <TextDiffViewer
+              diff={diff}
+              isStaged={false} // Commit diffs are not staged
+              viewMode="unified"
+              showWhitespace={showWhitespace}
+              // No staging actions for commit diffs
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+
+export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerProps) {
+  const [globalCollapsed, setGlobalCollapsed] = useState<"expanded" | "collapsed" | null>(null);
+  const { showWhitespace, setShowWhitespace } = useDiffViewState();
+
+  // Calculate file summaries and auto-collapse logic
+  const fileSummaries: FileDiffSummary[] = useMemo(() => {
+    const summaries: FileDiffSummary[] = [];
+
+    for (const diff of multiDiff.files) {
+      const additions = diff.lines.filter((line) => line.line_type === "added").length;
+      const deletions = diff.lines.filter((line) => line.line_type === "removed").length;
+      const totalLines = diff.lines.length;
+
+      // Auto-collapse criteria:
+      // 1. More than 100 lines of changes in a single file
+      // 2. More than 5 files total (collapse all but first 3)
+      // 3. Binary files (images) when there are multiple files
+      const shouldAutoCollapse = Boolean(
+        totalLines > 100 ||
+          (multiDiff.totalFiles > 5 && summaries.length >= 3) ||
+          (diff.is_binary && multiDiff.totalFiles > 1),
+      );
+
+      let status: "added" | "deleted" | "modified" | "renamed";
+      if (diff.is_new) status = "added";
+      else if (diff.is_deleted) status = "deleted";
+      else if (diff.is_renamed) status = "renamed";
+      else status = "modified";
+
+      summaries.push({
+        fileName: diff.file_path.split("/").pop() || diff.file_path,
+        filePath: diff.file_path,
+        status,
+        additions,
+        deletions,
+        isCollapsed: shouldAutoCollapse,
+        shouldAutoCollapse,
+      });
+    }
+
+    return summaries;
+  }, [multiDiff]);
+
   const expandAll = () => {
-    setCollapsedFiles(new Set());
+    setGlobalCollapsed("expanded");
+    // Reset after a frame to trigger re-render with new initial state
+    setTimeout(() => setGlobalCollapsed(null), 0);
   };
 
   const collapseAll = () => {
-    const allFiles = new Set(multiDiff.files.map((f) => f.file_path));
-    setCollapsedFiles(allFiles);
+    setGlobalCollapsed("collapsed");
+    // Reset after a frame to trigger re-render with new initial state
+    setTimeout(() => setGlobalCollapsed(null), 0);
   };
 
   return (
@@ -134,65 +194,24 @@ export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerP
       <div className="custom-scrollbar flex-1 overflow-y-auto">
         {multiDiff.files.map((diff, index) => {
           const summary = fileSummaries[index];
-          const isCollapsed = collapsedFiles.has(diff.file_path);
+
+          // Determine initial collapse state based on global state or auto-collapse
+          let initiallyCollapsed = summary.shouldAutoCollapse;
+          if (globalCollapsed === "expanded") {
+            initiallyCollapsed = false;
+          } else if (globalCollapsed === "collapsed") {
+            initiallyCollapsed = true;
+          }
 
           return (
-            <div key={diff.file_path} className="border-border border-b last:border-b-0">
-              {/* File Header */}
-              <div
-                className="flex cursor-pointer items-center justify-between bg-secondary-bg px-4 py-2 hover:bg-hover"
-                onClick={() => toggleFileCollapse(diff.file_path)}
-              >
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  {isCollapsed ? (
-                    <ChevronRight size={12} className="flex-shrink-0 text-text-lighter" />
-                  ) : (
-                    <ChevronDown size={12} className="flex-shrink-0 text-text-lighter" />
-                  )}
-                  {getStatusIcon(summary.status)}
-                  <span className="truncate font-mono text-text text-xs">{diff.file_path}</span>
-                  {diff.is_renamed && diff.old_path && (
-                    <span className="text-text-lighter text-xs">← {diff.old_path}</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  {summary.shouldAutoCollapse && (
-                    <span className="text-[10px] text-text-lighter italic">auto-collapsed</span>
-                  )}
-                  <span className={getStatusColor(summary.status)}>
-                    {summary.status.toUpperCase()}
-                  </span>
-                  {summary.additions > 0 && (
-                    <span className="text-green-400">+{summary.additions}</span>
-                  )}
-                  {summary.deletions > 0 && (
-                    <span className="text-red-400">-{summary.deletions}</span>
-                  )}
-                </div>
-              </div>
-
-              {/* File Content */}
-              {!isCollapsed && (
-                <div className="bg-primary-bg">
-                  {diff.is_image ? (
-                    <ImageDiffViewer
-                      diff={diff}
-                      fileName={summary.fileName}
-                      onClose={() => {}} // Not used in multi-file context
-                      commitHash={multiDiff.commitHash}
-                    />
-                  ) : (
-                    <TextDiffViewer
-                      diff={diff}
-                      isStaged={false} // Commit diffs are not staged
-                      viewMode="unified"
-                      showWhitespace={showWhitespace}
-                      // No staging actions for commit diffs
-                    />
-                  )}
-                </div>
-              )}
-            </div>
+            <FileRow
+              key={`${diff.file_path}-${globalCollapsed}`} // Key includes globalCollapsed to force re-mount when expand/collapse all is used
+              diff={diff}
+              summary={summary}
+              showWhitespace={showWhitespace}
+              commitHash={multiDiff.commitHash}
+              initiallyCollapsed={initiallyCollapsed}
+            />
           );
         })}
 

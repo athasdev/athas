@@ -1,4 +1,5 @@
 import { FileIcon } from "lucide-react";
+import { memo } from "react";
 import { cn } from "../../utils/cn";
 import { DiffHunkHeader } from "./diff-hunk-header";
 import { DiffLine } from "./diff-line";
@@ -6,7 +7,7 @@ import { useDiffViewState } from "./hooks/useDiffViewState";
 import { groupLinesIntoHunks } from "./utils/diff-helpers";
 import type { TextDiffViewerProps } from "./utils/types";
 
-export function TextDiffViewer({
+export const TextDiffViewer = memo(function TextDiffViewer({
   diff,
   isStaged,
   onStageHunk,
@@ -103,4 +104,4 @@ export function TextDiffViewer({
       </div>
     </>
   );
-}
+});

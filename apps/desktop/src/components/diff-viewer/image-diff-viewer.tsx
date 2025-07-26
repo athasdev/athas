@@ -1,5 +1,5 @@
 import { FileIcon, FilePlus, FileX, Minus, Plus, RotateCcw, X } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { cn } from "../../utils/cn";
 import Button from "../ui/button";
 import { getImgSrc } from "./utils/diff-helpers";
@@ -44,7 +44,12 @@ function StatusBadge({
   );
 }
 
-export function ImageDiffViewer({ diff, fileName, onClose, commitHash }: ImageDiffViewerProps) {
+export const ImageDiffViewer = memo(function ImageDiffViewer({
+  diff,
+  fileName,
+  onClose,
+  commitHash,
+}: ImageDiffViewerProps) {
   const [zoom, setZoom] = useState<number>(1);
 
   const displayFileName = fileName || diff.file_path.split("/").pop() || diff.file_path;
@@ -173,4 +178,4 @@ export function ImageDiffViewer({ diff, fileName, onClose, commitHash }: ImageDi
       </div>
     </div>
   );
-}
+});

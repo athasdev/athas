@@ -1,9 +1,16 @@
 import { Copy } from "lucide-react";
+import { memo } from "react";
 import { cn } from "../../utils/cn";
 import { copyLineContent } from "./utils/diff-helpers";
 import type { DiffLineProps } from "./utils/types";
 
-export function DiffLine({ line, index, hunkId, viewMode, showWhitespace }: DiffLineProps) {
+export const DiffLine = memo(function DiffLine({
+  line,
+  index,
+  hunkId,
+  viewMode,
+  showWhitespace,
+}: DiffLineProps) {
   const renderTextContent = (content: string) => {
     if (!content) return " ";
 
@@ -210,4 +217,4 @@ export function DiffLine({ line, index, hunkId, viewMode, showWhitespace }: Diff
       </div>
     </div>
   );
-}
+});
