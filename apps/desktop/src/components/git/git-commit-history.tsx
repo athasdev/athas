@@ -1,18 +1,96 @@
 import { ChevronDown, ChevronRight, Clock, Hash, User } from "lucide-react";
-import { useState } from "react";
-import { type GitCommit, getCommitDiff } from "../../utils/git";
+import { useEffect, useRef, useState } from "react";
+import { useGitStore } from "../../stores/git-store";
+import { getCommitDiff } from "../../utils/git";
 
 interface GitCommitHistoryProps {
-  commits: GitCommit[];
   onViewCommitDiff?: (commitHash: string, filePath?: string) => void;
   repoPath?: string;
 }
 
-const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHistoryProps) => {
+const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps) => {
+  const { commits, hasMoreCommits, isLoadingMoreCommits, actions } = useGitStore();
   const [expandedCommits, setExpandedCommits] = useState<Set<string>>(new Set());
   const [commitFiles, setCommitFiles] = useState<Record<string, any[]>>({});
   const [loadingCommits, setLoadingCommits] = useState<Set<string>>(new Set());
   const [copiedHashes, setCopiedHashes] = useState<Set<string>>(new Set());
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lastScrollTop = useRef(0);
+
+  // Set up scroll listener with proper timing and container checks
+  useEffect(() => {
+    if (!repoPath) return;
+
+    let scrollHandler: (() => void) | null = null;
+    let isListenerAttached = false;
+
+    const handleScroll = () => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isScrollingDown = scrollTop > lastScrollTop.current;
+      lastScrollTop.current = scrollTop;
+
+      const scrollPercent = (scrollTop + clientHeight) / scrollHeight;
+
+      if (isScrollingDown && scrollPercent >= 0.8) {
+        if (hasMoreCommits && !isLoadingMoreCommits) {
+          actions.loadMoreCommits(repoPath);
+        }
+      }
+    };
+
+    const setupScrollListener = () => {
+      const container = scrollContainerRef.current;
+      if (!container || isListenerAttached) return false;
+
+      // Only set up listener if container is scrollable and we have more commits to load
+      if (container.scrollHeight > container.clientHeight && hasMoreCommits) {
+        container.addEventListener("scroll", handleScroll);
+        isListenerAttached = true;
+        scrollHandler = handleScroll;
+        return true;
+      }
+      return false;
+    };
+
+    const removeScrollListener = () => {
+      const container = scrollContainerRef.current;
+      if (container && isListenerAttached && scrollHandler) {
+        container.removeEventListener("scroll", scrollHandler);
+        isListenerAttached = false;
+        scrollHandler = null;
+      }
+    };
+
+    // Reset scroll position when commits are reset
+    if (commits.length === 0) {
+      lastScrollTop.current = 0;
+    }
+
+    // Try to set up listener immediately
+    if (!setupScrollListener()) {
+      // If container wasn't ready, try again with timing strategies
+      const rafId = requestAnimationFrame(() => {
+        if (!setupScrollListener()) {
+          // Last resort: try after a short delay
+          const timeoutId = setTimeout(() => {
+            setupScrollListener();
+          }, 100);
+
+          return () => clearTimeout(timeoutId);
+        }
+      });
+
+      return () => {
+        cancelAnimationFrame(rafId);
+        removeScrollListener();
+      };
+    }
+
+    return removeScrollListener;
+  }, [commits.length, hasMoreCommits, isLoadingMoreCommits, repoPath, actions]);
 
   const toggleCommitExpansion = async (commitHash: string) => {
     const newExpanded = new Set(expandedCommits);
@@ -32,8 +110,7 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
             ...prev,
             [commitHash]: diffs || [],
           }));
-        } catch (error) {
-          console.error("Failed to load commit files:", error);
+        } catch {
         } finally {
           setLoadingCommits((prev) => {
             const newSet = new Set(prev);
@@ -121,7 +198,7 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
         <span>commits ({commits.length})</span>
       </div>
 
-      <div className="max-h-96 overflow-y-auto bg-primary-bg">
+      <div ref={scrollContainerRef} className="max-h-96 overflow-y-auto bg-primary-bg">
         {commits.map((commit) => {
           const isExpanded = expandedCommits.has(commit.hash);
           const files = commitFiles[commit.hash] || [];
@@ -190,7 +267,9 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
                           onClick={() => onViewCommitDiff?.(commit.hash, file.file_path)}
                         >
                           <span
-                            className={`font-mono ${getFileStatusColor(file.is_new ? "added" : file.is_deleted ? "deleted" : "modified")}`}
+                            className={`font-mono ${getFileStatusColor(
+                              file.is_new ? "added" : file.is_deleted ? "deleted" : "modified",
+                            )}`}
                           >
                             {file.is_new ? "A" : file.is_deleted ? "D" : "M"}
                           </span>
@@ -209,6 +288,20 @@ const GitCommitHistory = ({ commits, onViewCommitDiff, repoPath }: GitCommitHist
             </div>
           );
         })}
+
+        {/* Loading indicator */}
+        {isLoadingMoreCommits && (
+          <div className="border-border border-t bg-primary-bg px-3 py-2 text-center text-[10px] text-text-lighter">
+            Loading older commits...
+          </div>
+        )}
+
+        {/* End of history indicator */}
+        {!hasMoreCommits && commits.length > 0 && (
+          <div className="border-border border-t bg-primary-bg px-3 py-2 text-center text-[10px] text-text-lighter">
+            — end of history —
+          </div>
+        )}
       </div>
     </div>
   );

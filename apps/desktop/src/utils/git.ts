@@ -101,9 +101,9 @@ export const commitChanges = async (repoPath: string, message: string): Promise<
   }
 };
 
-export const getGitLog = async (repoPath: string, limit?: number): Promise<GitCommit[]> => {
+export const getGitLog = async (repoPath: string, limit = 50, skip = 0): Promise<GitCommit[]> => {
   try {
-    const commits = await tauriInvoke<GitCommit[]>("git_log", { repoPath, limit });
+    const commits = await tauriInvoke<GitCommit[]>("git_log", { repoPath, limit, skip });
     return commits;
   } catch (error) {
     console.error("Failed to get git log:", error);

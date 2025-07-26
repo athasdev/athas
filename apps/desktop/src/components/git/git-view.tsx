@@ -21,8 +21,8 @@ interface GitViewProps {
 }
 
 const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
-  const { gitStatus, commits, isLoadingGitData, isRefreshing, actions } = useGitStore();
-  const { setIsLoadingGitData, setIsRefreshing, updateGitData } = actions;
+  const { gitStatus, isLoadingGitData, isRefreshing, actions } = useGitStore();
+  const { setIsLoadingGitData, setIsRefreshing } = actions;
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showGitActionsMenu, setShowGitActionsMenu] = useState(false);
   const [gitActionsMenuPosition, setGitActionsMenuPosition] = useState<{
@@ -43,10 +43,11 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
     try {
       const [status, commits, branches] = await Promise.all([
         getGitStatus(repoPath),
-        getGitLog(repoPath, 50), // Limit to 50 recent commits
+        getGitLog(repoPath, 50, 0),
         getBranches(repoPath),
       ]);
-      updateGitData({ gitStatus: status, commits, branches });
+
+      actions.loadFreshGitData({ gitStatus: status, commits, branches });
 
       // Note: DiffViewer now handles its own refresh via git-status-changed event
     } catch (error) {
@@ -204,7 +205,9 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
         // Encode the full file path in the virtual path
         const encodedPath = encodeURIComponent(actualFilePath);
         const virtualPath = `diff://${staged ? "staged" : "unstaged"}/${encodedPath}`;
-        const displayName = `${actualFilePath.split("/").pop()} (${staged ? "staged" : "unstaged"})`;
+        const displayName = `${actualFilePath.split("/").pop()} (${
+          staged ? "staged" : "unstaged"
+        })`;
 
         // Open buffer with diff data directly
         useBufferStore.getState().actions.openBuffer(
@@ -401,11 +404,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
             repoPath={repoPath}
           />
 
-          <GitCommitHistory
-            commits={commits}
-            onViewCommitDiff={handleViewCommitDiff}
-            repoPath={repoPath}
-          />
+          <GitCommitHistory onViewCommitDiff={handleViewCommitDiff} repoPath={repoPath} />
         </div>
 
         {/* Commit Panel */}

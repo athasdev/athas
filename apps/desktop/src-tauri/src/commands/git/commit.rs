@@ -28,11 +28,15 @@ fn _git_commit(repo_path: String, message: String) -> Result<()> {
 }
 
 #[command]
-pub fn git_log(repo_path: String, limit: Option<u32>) -> Result<Vec<GitCommit>, String> {
-   _git_log(repo_path, limit).into_string_error()
+pub fn git_log(
+   repo_path: String,
+   limit: Option<u32>,
+   skip: Option<u32>,
+) -> Result<Vec<GitCommit>, String> {
+   _git_log(repo_path, limit, skip).into_string_error()
 }
 
-fn _git_log(repo_path: String, limit: Option<u32>) -> Result<Vec<GitCommit>> {
+fn _git_log(repo_path: String, limit: Option<u32>, skip: Option<u32>) -> Result<Vec<GitCommit>> {
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
    let mut revwalk = repo.revwalk().context("Failed to create revwalk")?;
 
@@ -41,14 +45,11 @@ fn _git_log(repo_path: String, limit: Option<u32>) -> Result<Vec<GitCommit>> {
       .set_sorting(Sort::TIME)
       .context("Failed to set sorting")?;
 
-   let limit = limit.unwrap_or(10) as usize;
+   let skip = skip.unwrap_or(0) as usize;
+   let limit = limit.unwrap_or(50) as usize;
    let mut commits = Vec::new();
 
-   for (idx, oid) in revwalk.enumerate() {
-      if idx >= limit {
-         break;
-      }
-
+   for (_idx, oid) in revwalk.enumerate().skip(skip).take(limit) {
       let oid = oid.context("Failed to get commit oid")?;
       let commit = repo.find_commit(oid).context("Failed to find commit")?;
 
