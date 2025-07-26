@@ -46,6 +46,7 @@ export interface DiffHunkHeaderProps {
   filePath: string;
   onStageHunk?: (hunk: GitHunk) => void;
   onUnstageHunk?: (hunk: GitHunk) => void;
+  isInMultiFileView?: boolean;
 }
 
 export interface DiffLineProps {
@@ -63,6 +64,7 @@ export interface TextDiffViewerProps {
   showWhitespace: boolean;
   onStageHunk?: (hunk: GitHunk) => void;
   onUnstageHunk?: (hunk: GitHunk) => void;
+  isInMultiFileView?: boolean;
 }
 
 export interface ImageDiffViewerProps {

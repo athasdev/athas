@@ -58,7 +58,7 @@ const FileRow = memo(function FileRow({
     <div className="border-border border-b last:border-b-0">
       {/* File Header */}
       <div
-        className="flex cursor-pointer items-center justify-between bg-secondary-bg px-4 py-2 hover:bg-hover"
+        className="sticky top-0 z-20 flex cursor-pointer select-none items-center justify-between bg-secondary-bg px-3 py-2 hover:bg-hover"
         onClick={toggleCollapse}
       >
         <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -99,6 +99,7 @@ const FileRow = memo(function FileRow({
               isStaged={false} // Commit diffs are not staged
               viewMode="unified"
               showWhitespace={showWhitespace}
+              isInMultiFileView={true}
               // No staging actions for commit diffs
             />
           )}

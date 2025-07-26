@@ -14,6 +14,7 @@ export const TextDiffViewer = memo(function TextDiffViewer({
   onUnstageHunk,
   viewMode,
   showWhitespace,
+  isInMultiFileView = false,
 }: TextDiffViewerProps) {
   const { isHunkCollapsed, toggleHunkCollapse } = useDiffViewState();
 
@@ -33,7 +34,7 @@ export const TextDiffViewer = memo(function TextDiffViewer({
     );
   }
 
-  return (
+  const diffContent = (
     <>
       {/* File path info for renames */}
       {diff.is_renamed && diff.old_path && diff.new_path && (
@@ -46,8 +47,10 @@ export const TextDiffViewer = memo(function TextDiffViewer({
       )}
 
       {/* Diff Content */}
-      <div className="custom-scrollbar flex-1 overflow-y-auto">
-        <div className="font-mono">
+      <div
+        className={cn("font-mono", !isInMultiFileView && "custom-scrollbar flex-1 overflow-y-auto")}
+      >
+        <div>
           {hunks.map((hunk) => (
             <div key={hunk.id} className="border-border border-b last:border-b-0">
               <DiffHunkHeader
@@ -58,6 +61,7 @@ export const TextDiffViewer = memo(function TextDiffViewer({
                 filePath={diff.file_path}
                 onStageHunk={onStageHunk}
                 onUnstageHunk={onUnstageHunk}
+                isInMultiFileView={isInMultiFileView}
               />
               {!isHunkCollapsed(hunk.id) && (
                 <div className="bg-primary-bg">
@@ -79,29 +83,33 @@ export const TextDiffViewer = memo(function TextDiffViewer({
       </div>
 
       {/* Summary Footer */}
-      <div className="border-border border-t bg-secondary-bg px-4 py-2">
-        <div className={cn("flex items-center gap-4 text-text-lighter text-xs")}>
-          <span>Total lines: {diff.lines.length}</span>
-          {addedLines > 0 && (
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-green-500"></span>
-              {addedLines} added
-            </span>
-          )}
-          {removedLines > 0 && (
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-red-500"></span>
-              {removedLines} removed
-            </span>
-          )}
-          {contextLines > 0 && (
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-gray-500"></span>
-              {contextLines} unchanged
-            </span>
-          )}
+      {!isInMultiFileView && (
+        <div className="border-border border-t bg-secondary-bg px-4 py-2">
+          <div className={cn("flex items-center gap-4 text-text-lighter text-xs")}>
+            <span>Total lines: {diff.lines.length}</span>
+            {addedLines > 0 && (
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                {addedLines} added
+              </span>
+            )}
+            {removedLines > 0 && (
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-red-500"></span>
+                {removedLines} removed
+              </span>
+            )}
+            {contextLines > 0 && (
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-gray-500"></span>
+                {contextLines} unchanged
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
+
+  return diffContent;
 });

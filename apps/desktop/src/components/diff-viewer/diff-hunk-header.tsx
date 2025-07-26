@@ -11,12 +11,15 @@ export function DiffHunkHeader({
   filePath,
   onStageHunk,
   onUnstageHunk,
+  isInMultiFileView = false,
 }: DiffHunkHeaderProps) {
   const addedCount = hunk.lines.filter((l) => l.line_type === "added").length;
   const removedCount = hunk.lines.filter((l) => l.line_type === "removed").length;
 
   return (
-    <div className="sticky top-0 z-10 border-border border-y bg-secondary-bg">
+    <div
+      className={`sticky ${isInMultiFileView ? "top-8" : "top-0"} z-10 border-border border-y bg-secondary-bg`}
+    >
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-2">
           <button
