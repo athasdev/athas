@@ -17,6 +17,9 @@ interface GitState {
   commitPageSize: number;
   hasMoreCommits: boolean;
   isLoadingMoreCommits: boolean;
+
+  // Track current repo to detect changes
+  currentRepoPath: string | null;
 }
 
 const initialState: GitState = {
@@ -28,6 +31,7 @@ const initialState: GitState = {
   commitPageSize: 50,
   hasMoreCommits: true,
   isLoadingMoreCommits: false,
+  currentRepoPath: null,
 };
 
 export const useGitStore = create(
@@ -54,6 +58,7 @@ export const useGitStore = create(
         gitStatus: GitStatus | null;
         commits: GitCommit[];
         branches: string[];
+        repoPath?: string;
       }) => {
         const state = get();
         set({
@@ -62,7 +67,86 @@ export const useGitStore = create(
           branches: data.branches,
           hasMoreCommits: data.commits.length >= state.commitPageSize,
           isLoadingMoreCommits: false,
+          currentRepoPath: data.repoPath || state.currentRepoPath,
         });
+      },
+
+      // New method to refresh git data while preserving loaded commits
+      refreshGitData: async (data: {
+        gitStatus: GitStatus | null;
+        branches: string[];
+        repoPath: string;
+      }) => {
+        const state = get();
+
+        // If repo path changed, reset everything
+        if (state.currentRepoPath !== data.repoPath) {
+          set({
+            gitStatus: data.gitStatus,
+            branches: data.branches,
+            commits: [],
+            hasMoreCommits: true,
+            currentRepoPath: data.repoPath,
+          });
+          return;
+        }
+
+        // Check for new commits by loading a small number from the beginning
+        try {
+          const recentCommits = await getGitLog(data.repoPath, 20, 0);
+
+          if (recentCommits.length === 0) {
+            // No commits in repo
+            set({
+              gitStatus: data.gitStatus,
+              branches: data.branches,
+              commits: [],
+              hasMoreCommits: false,
+            });
+            return;
+          }
+
+          const existingCommits = state.commits;
+
+          if (existingCommits.length === 0) {
+            // No existing commits, load initial set
+            const initialCommits = await getGitLog(data.repoPath, state.commitPageSize, 0);
+            set({
+              gitStatus: data.gitStatus,
+              branches: data.branches,
+              commits: initialCommits,
+              hasMoreCommits: initialCommits.length >= state.commitPageSize,
+            });
+            return;
+          }
+
+          // Find new commits by checking what's not in our existing list
+          const existingHashes = new Set(existingCommits.map((c) => c.hash));
+          const newCommits = recentCommits.filter((commit) => !existingHashes.has(commit.hash));
+
+          if (newCommits.length > 0) {
+            // Prepend new commits to existing ones
+            const updatedCommits = [...newCommits, ...existingCommits];
+            set({
+              gitStatus: data.gitStatus,
+              branches: data.branches,
+              commits: updatedCommits,
+            });
+          } else {
+            // No new commits, just update status and branches
+            set({
+              gitStatus: data.gitStatus,
+              branches: data.branches,
+            });
+          }
+        } catch (error) {
+          console.error("Failed to refresh git data:", error);
+          // Fall back to just updating status and branches
+          set({
+            gitStatus: data.gitStatus,
+            branches: data.branches,
+          });
+        }
       },
 
       resetCommits: () => set({ commits: [], hasMoreCommits: true }),

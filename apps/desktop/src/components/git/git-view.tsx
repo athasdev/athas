@@ -36,8 +36,8 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
   const [showRemoteManager, setShowRemoteManager] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
 
-  // Load Git status, commits, and branches
-  const loadGitData = useCallback(async () => {
+  // Initial load of Git data (only for first time or repo change)
+  const loadInitialGitData = useCallback(async () => {
     if (!repoPath) return;
 
     setIsLoadingGitData(true);
@@ -48,13 +48,35 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
         getBranches(repoPath),
       ]);
 
-      actions.loadFreshGitData({ gitStatus: status, commits, branches });
+      actions.loadFreshGitData({
+        gitStatus: status,
+        commits,
+        branches,
+        repoPath,
+      });
+    } catch (error) {
+      console.error("Failed to load initial git data:", error);
+    } finally {
+      setIsLoadingGitData(false);
+    }
+  }, [repoPath, actions, setIsLoadingGitData]);
+
+  // Smart refresh that preserves loaded commits
+  const refreshGitData = useCallback(async () => {
+    if (!repoPath) return;
+
+    try {
+      const [status, branches] = await Promise.all([getGitStatus(repoPath), getBranches(repoPath)]);
+
+      await actions.refreshGitData({
+        gitStatus: status,
+        branches,
+        repoPath,
+      });
 
       // Note: DiffViewer now handles its own refresh via git-status-changed event
     } catch (error) {
-      console.error("Failed to load git data:", error);
-    } finally {
-      setIsLoadingGitData(false);
+      console.error("Failed to refresh git data:", error);
     }
   }, [repoPath, actions]);
 
@@ -63,30 +85,30 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
     setIsRefreshing(true);
     try {
       await Promise.all([
-        loadGitData(),
+        refreshGitData(),
         new Promise((resolve) => setTimeout(resolve, 500)), // Minimum display time
       ]);
     } finally {
       setIsRefreshing(false);
     }
-  }, [loadGitData, actions]);
+  }, [refreshGitData, setIsRefreshing]);
 
   // Load git status on mount and when repo path changes
   useEffect(() => {
-    loadGitData();
-  }, [loadGitData]);
+    loadInitialGitData();
+  }, [loadInitialGitData]);
 
   // Listen for git status changes (from staging/unstaging hunks)
   useEffect(() => {
     const handleGitStatusChanged = () => {
-      loadGitData();
+      refreshGitData();
     };
 
     window.addEventListener("git-status-changed", handleGitStatusChanged);
     return () => {
       window.removeEventListener("git-status-changed", handleGitStatusChanged);
     };
-  }, [loadGitData]);
+  }, [refreshGitData]);
 
   // Listen for file changes and refresh git status
   useEffect(() => {
@@ -104,7 +126,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
 
         // Debounce the refresh to avoid too many calls
         refreshTimeout = setTimeout(() => {
-          loadGitData();
+          refreshGitData();
         }, 300);
       }
     };
@@ -117,7 +139,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
         clearTimeout(refreshTimeout);
       }
     };
-  }, [repoPath, loadGitData]);
+  }, [repoPath, refreshGitData]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -400,7 +422,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
             <GitBranchManager
               currentBranch={gitStatus.branch}
               repoPath={repoPath}
-              onBranchChange={loadGitData}
+              onBranchChange={refreshGitData}
             />
 
             {(gitStatus.ahead > 0 || gitStatus.behind > 0) && (
@@ -448,7 +470,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
         <GitCommitPanel
           stagedFilesCount={stagedFiles.length}
           repoPath={repoPath}
-          onCommitSuccess={loadGitData}
+          onCommitSuccess={refreshGitData}
         />
       </div>
 
