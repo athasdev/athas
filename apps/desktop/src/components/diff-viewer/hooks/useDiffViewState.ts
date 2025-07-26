@@ -15,6 +15,14 @@ export const useDiffViewState = (): UseDiffViewStateReturn => {
   const [viewMode, setViewMode] = useState<"unified" | "split">("unified");
   const [showWhitespace, setShowWhitespace] = useState(true);
 
+  const stableSetViewMode = useCallback((mode: "unified" | "split") => {
+    setViewMode(mode);
+  }, []);
+
+  const stableSetShowWhitespace = useCallback((show: boolean) => {
+    setShowWhitespace(show);
+  }, []);
+
   const toggleHunkCollapse = useCallback((hunkId: number) => {
     setCollapsedHunks((prev) => {
       const newSet = new Set(prev);
@@ -38,8 +46,8 @@ export const useDiffViewState = (): UseDiffViewStateReturn => {
     collapsedHunks,
     viewMode,
     showWhitespace,
-    setViewMode,
-    setShowWhitespace,
+    setViewMode: stableSetViewMode,
+    setShowWhitespace: stableSetShowWhitespace,
     toggleHunkCollapse,
     isHunkCollapsed,
   };

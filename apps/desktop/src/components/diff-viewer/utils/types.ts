@@ -92,6 +92,5 @@ export interface FileDiffSummary {
   status: "added" | "deleted" | "modified" | "renamed";
   additions: number;
   deletions: number;
-  isCollapsed: boolean;
   shouldAutoCollapse: boolean;
 }

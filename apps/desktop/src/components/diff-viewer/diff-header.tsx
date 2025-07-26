@@ -1,9 +1,10 @@
 import { Edit3, Eye, EyeOff, FileIcon, FilePlus, FileX, Hash, X } from "lucide-react";
+import { memo } from "react";
 import { cn } from "../../utils/cn";
 import { getFileStatus } from "./utils/diff-helpers";
 import type { DiffHeaderProps } from "./utils/types";
 
-export function DiffHeader({
+export const DiffHeader = memo(function DiffHeader({
   fileName,
   diff,
   viewMode,
@@ -168,4 +169,4 @@ export function DiffHeader({
       {renderRightContent()}
     </div>
   );
-}
+});

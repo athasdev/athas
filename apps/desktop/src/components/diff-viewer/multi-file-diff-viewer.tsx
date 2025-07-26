@@ -1,8 +1,7 @@
 import { ChevronDown, ChevronRight, FileIcon, FilePlus, FileText, FileX } from "lucide-react";
-import { memo, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import type { GitDiff } from "../../utils/git";
 import { DiffHeader } from "./diff-header";
-import { useDiffViewState } from "./hooks/useDiffViewState";
 import { ImageDiffViewer } from "./image-diff-viewer";
 import { TextDiffViewer } from "./text-diff-viewer";
 import type { FileDiffSummary, MultiFileDiffViewerProps } from "./utils/types";
@@ -109,7 +108,10 @@ const FileRow = memo(function FileRow({
   );
 });
 
-export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerProps) {
+export const MultiFileDiffViewer = memo(function MultiFileDiffViewer({
+  multiDiff,
+  onClose,
+}: MultiFileDiffViewerProps) {
   const [collapsedFiles, setCollapsedFiles] = useState<Map<string, boolean>>(() => {
     // Initialize with auto-collapse logic
     const initialState = new Map<string, boolean>();
@@ -132,7 +134,11 @@ export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerP
     });
     return initialState;
   });
-  const { showWhitespace, setShowWhitespace } = useDiffViewState();
+  const [showWhitespace, setShowWhitespace] = useState(false);
+
+  const stableSetShowWhitespace = useCallback((show: boolean) => {
+    setShowWhitespace(show);
+  }, []);
 
   // Calculate file summaries
   const fileSummaries: FileDiffSummary[] = useMemo(() => {
@@ -142,7 +148,6 @@ export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerP
       const additions = diff.lines.filter((line) => line.line_type === "added").length;
       const deletions = diff.lines.filter((line) => line.line_type === "removed").length;
       const totalLines = diff.lines.length;
-      const isCurrentlyCollapsed = collapsedFiles.get(diff.file_path) ?? false;
 
       // Auto-collapse criteria (for display purposes)
       const shouldAutoCollapse = Boolean(
@@ -163,29 +168,28 @@ export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerP
         status,
         additions,
         deletions,
-        isCollapsed: isCurrentlyCollapsed,
         shouldAutoCollapse,
       });
     }
 
     return summaries;
-  }, [multiDiff, collapsedFiles]);
+  }, [multiDiff]); // Removed collapsedFiles dependency
 
-  const expandAll = () => {
+  const expandAll = useCallback(() => {
     setCollapsedFiles(new Map(multiDiff.files.map((diff) => [diff.file_path, false])));
-  };
+  }, [multiDiff.files]);
 
-  const collapseAll = () => {
+  const collapseAll = useCallback(() => {
     setCollapsedFiles(new Map(multiDiff.files.map((diff) => [diff.file_path, true])));
-  };
+  }, [multiDiff.files]);
 
-  const toggleFileCollapse = (filePath: string) => {
+  const toggleFileCollapse = useCallback((filePath: string) => {
     setCollapsedFiles((prev) => {
       const newMap = new Map(prev);
       newMap.set(filePath, !prev.get(filePath));
       return newMap;
     });
-  };
+  }, []);
 
   return (
     <div className="flex h-full flex-col bg-primary-bg">
@@ -194,7 +198,7 @@ export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerP
         commitHash={multiDiff.commitHash}
         totalFiles={multiDiff.totalFiles}
         showWhitespace={showWhitespace}
-        onShowWhitespaceChange={setShowWhitespace}
+        onShowWhitespaceChange={stableSetShowWhitespace}
         onExpandAll={expandAll}
         onCollapseAll={collapseAll}
         onClose={onClose}
@@ -225,7 +229,7 @@ export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerP
               summary={summary}
               showWhitespace={showWhitespace}
               commitHash={multiDiff.commitHash}
-              isCollapsed={summary.isCollapsed}
+              isCollapsed={collapsedFiles.get(diff.file_path) ?? false}
               onToggleCollapse={toggleFileCollapse}
             />
           );
@@ -242,4 +246,4 @@ export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerP
       </div>
     </div>
   );
-}
+});

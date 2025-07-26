@@ -1,5 +1,5 @@
 import { RefreshCw, X } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useBufferStore } from "../../stores/buffer-store";
 import { cn } from "../../utils/cn";
 import { DiffHeader } from "./diff-header";
@@ -19,12 +19,17 @@ function DiffViewer({ onStageHunk, onUnstageHunk }: DiffViewerProps) {
   const { viewMode, setViewMode, showWhitespace, setShowWhitespace } = useDiffViewState();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const onClose = useCallback(() => {
+    if (activeBuffer) {
+      closeBuffer(activeBuffer.id);
+    }
+  }, [closeBuffer, activeBuffer?.id]);
+
   if (!activeBuffer || !activeBuffer.isDiff) {
     return null;
   }
 
   const fileName = activeBuffer.name;
-  const onClose = () => closeBuffer(activeBuffer.id);
 
   // Extract commit hash from path if this is a commit diff
   const commitPathMatch = activeBuffer.path?.match(/^diff:\/\/commit\/([a-f0-9]+)\//);
