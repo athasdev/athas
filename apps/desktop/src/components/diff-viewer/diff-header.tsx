@@ -56,11 +56,20 @@ export function DiffHeader({
     const removedLines = diff.lines.filter((line) => line.line_type === "removed").length;
     const hunks = diff.lines.filter((line) => line.line_type === "header").length;
 
+    const displayFileName = fileName || diff.file_path.split("/").pop() || diff.file_path;
+    const shouldShowPath = commitHash && diff.file_path && diff.file_path.includes("/");
+    const relativePath = shouldShowPath
+      ? diff.file_path.substring(0, diff.file_path.lastIndexOf("/"))
+      : null;
+
     return (
       <div className="flex items-center gap-2">
         {getFileIcon()}
         <div>
-          <h3 className="font-medium text-sm text-text">{fileName || diff.file_path}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium text-sm text-text">{displayFileName}</h3>
+            {relativePath && <span className="text-text-lighter text-xs">{relativePath}</span>}
+          </div>
           <div className="flex items-center gap-3 text-text-lighter text-xs">
             <span className="capitalize">{getFileStatus(diff)}</span>
             {removedLines > 0 && (

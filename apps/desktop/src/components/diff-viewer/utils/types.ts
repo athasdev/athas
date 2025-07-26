@@ -69,6 +69,7 @@ export interface ImageDiffViewerProps {
   diff: GitDiff;
   fileName: string;
   onClose: () => void;
+  commitHash?: string;
 }
 
 // New types for multi-file diff support

@@ -26,6 +26,10 @@ function DiffViewer({ onStageHunk, onUnstageHunk }: DiffViewerProps) {
   const fileName = activeBuffer.name;
   const onClose = () => closeBuffer(activeBuffer.id);
 
+  // Extract commit hash from path if this is a commit diff
+  const commitPathMatch = activeBuffer.path?.match(/^diff:\/\/commit\/([a-f0-9]+)\//);
+  const commitHash = commitPathMatch?.[1];
+
   // Check if this is a multi-file diff
   const isMultiFileDiff =
     activeBuffer.path?.startsWith("diff://commit/") &&
@@ -94,7 +98,9 @@ function DiffViewer({ onStageHunk, onUnstageHunk }: DiffViewerProps) {
 
   // Image diff
   if (diff.is_image) {
-    return <ImageDiffViewer diff={diff} fileName={fileName} onClose={onClose} />;
+    return (
+      <ImageDiffViewer diff={diff} fileName={fileName} onClose={onClose} commitHash={commitHash} />
+    );
   }
 
   // Text diff
@@ -108,6 +114,7 @@ function DiffViewer({ onStageHunk, onUnstageHunk }: DiffViewerProps) {
         onViewModeChange={setViewMode}
         onShowWhitespaceChange={setShowWhitespace}
         onClose={onClose}
+        commitHash={commitHash}
       />
       <TextDiffViewer
         diff={diff}

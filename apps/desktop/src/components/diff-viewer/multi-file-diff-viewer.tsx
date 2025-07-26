@@ -179,6 +179,7 @@ export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerP
                       diff={diff}
                       fileName={summary.fileName}
                       onClose={() => {}} // Not used in multi-file context
+                      commitHash={multiDiff.commitHash}
                     />
                   ) : (
                     <TextDiffViewer

@@ -44,11 +44,16 @@ function StatusBadge({
   );
 }
 
-export function ImageDiffViewer({ diff, fileName, onClose }: ImageDiffViewerProps) {
+export function ImageDiffViewer({ diff, fileName, onClose, commitHash }: ImageDiffViewerProps) {
   const [zoom, setZoom] = useState<number>(1);
 
-  const fileLabel = fileName || diff.file_path.split("/").pop();
-  const ext = fileLabel?.split(".").pop()?.toUpperCase() || "";
+  const displayFileName = fileName || diff.file_path.split("/").pop() || diff.file_path;
+  const shouldShowPath = commitHash && diff.file_path && diff.file_path.includes("/");
+  const relativePath = shouldShowPath
+    ? diff.file_path.substring(0, diff.file_path.lastIndexOf("/"))
+    : null;
+
+  const ext = displayFileName?.split(".").pop()?.toUpperCase() || "";
   const leftLabel = diff.is_deleted ? "Deleted Version" : "Previous Version";
   const rightLabel = diff.is_new ? "Added Version" : "New Version";
 
@@ -69,9 +74,12 @@ export function ImageDiffViewer({ diff, fileName, onClose }: ImageDiffViewerProp
           ) : (
             <FileIcon size={14} className="text-text" />
           )}
-          <span className="font-mono text-text text-xs">
-            {fileLabel} {ext && <>• {ext}</>}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-text text-xs">
+              {displayFileName} {ext && <>• {ext}</>}
+            </span>
+            {relativePath && <span className="text-text-lighter text-xs">in {relativePath}</span>}
+          </div>
           {diff.is_new && <StatusBadge text="ADDED" variant="added" />}
           {diff.is_deleted && <StatusBadge text="DELETED" variant="deleted" />}
           {!diff.is_new && !diff.is_deleted && <StatusBadge text="MODIFIED" variant="modified" />}
