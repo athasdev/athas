@@ -46,7 +46,7 @@ const CommitItem = memo(
         e.stopPropagation();
         onToggleExpansion(commit.hash);
       },
-      [commit.hash, onToggleExpansion]
+      [commit.hash, onToggleExpansion],
     );
 
     const _handleCopyClick = useCallback(() => {
@@ -123,7 +123,7 @@ const CommitItem = memo(
         )}
       </div>
     );
-  }
+  },
 );
 
 interface ExpandedCommitDetailsProps {
@@ -152,7 +152,7 @@ const ExpandedCommitDetails = memo(
       (filePath: string) => {
         onViewCommitDiff(commit.hash, filePath);
       },
-      [commit.hash, onViewCommitDiff]
+      [commit.hash, onViewCommitDiff],
     );
 
     if (isLoading) {
@@ -192,7 +192,7 @@ const ExpandedCommitDetails = memo(
         </div>
       </div>
     );
-  }
+  },
 );
 
 interface FileItemProps {
@@ -275,7 +275,7 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
         }
       });
     },
-    [commitFiles, repoPath]
+    [commitFiles, repoPath],
   );
 
   const copyCommitHash = useCallback((hash: string) => {
@@ -294,7 +294,7 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
     (commitHash: string, filePath?: string) => {
       onViewCommitDiff?.(commitHash, filePath);
     },
-    [onViewCommitDiff]
+    [onViewCommitDiff],
   );
 
   useEffect(() => {
