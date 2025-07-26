@@ -13,7 +13,8 @@ interface FileRowProps {
   summary: FileDiffSummary;
   showWhitespace: boolean;
   commitHash: string;
-  initiallyCollapsed: boolean;
+  isCollapsed: boolean;
+  onToggleCollapse: (filePath: string) => void;
 }
 
 const FileRow = memo(function FileRow({
@@ -21,12 +22,11 @@ const FileRow = memo(function FileRow({
   summary,
   showWhitespace,
   commitHash,
-  initiallyCollapsed,
+  isCollapsed,
+  onToggleCollapse,
 }: FileRowProps) {
-  const [isCollapsed, setIsCollapsed] = useState(initiallyCollapsed);
-
   const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
+    onToggleCollapse(diff.file_path);
   };
 
   const getStatusIcon = (status: FileDiffSummary["status"]) => {
@@ -110,10 +110,31 @@ const FileRow = memo(function FileRow({
 });
 
 export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerProps) {
-  const [globalCollapsed, setGlobalCollapsed] = useState<"expanded" | "collapsed" | null>(null);
+  const [collapsedFiles, setCollapsedFiles] = useState<Map<string, boolean>>(() => {
+    // Initialize with auto-collapse logic
+    const initialState = new Map<string, boolean>();
+    multiDiff.files.forEach((diff, index) => {
+      const _additions = diff.lines.filter((line) => line.line_type === "added").length;
+      const _deletions = diff.lines.filter((line) => line.line_type === "removed").length;
+      const totalLines = diff.lines.length;
+
+      // Auto-collapse criteria:
+      // 1. More than 100 lines of changes in a single file
+      // 2. More than 5 files total (collapse all but first 3)
+      // 3. Binary files (images) when there are multiple files
+      const shouldAutoCollapse = Boolean(
+        totalLines > 100 ||
+          (multiDiff.totalFiles > 5 && index >= 3) ||
+          (diff.is_binary && multiDiff.totalFiles > 1),
+      );
+
+      initialState.set(diff.file_path, shouldAutoCollapse);
+    });
+    return initialState;
+  });
   const { showWhitespace, setShowWhitespace } = useDiffViewState();
 
-  // Calculate file summaries and auto-collapse logic
+  // Calculate file summaries
   const fileSummaries: FileDiffSummary[] = useMemo(() => {
     const summaries: FileDiffSummary[] = [];
 
@@ -121,11 +142,9 @@ export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerP
       const additions = diff.lines.filter((line) => line.line_type === "added").length;
       const deletions = diff.lines.filter((line) => line.line_type === "removed").length;
       const totalLines = diff.lines.length;
+      const isCurrentlyCollapsed = collapsedFiles.get(diff.file_path) ?? false;
 
-      // Auto-collapse criteria:
-      // 1. More than 100 lines of changes in a single file
-      // 2. More than 5 files total (collapse all but first 3)
-      // 3. Binary files (images) when there are multiple files
+      // Auto-collapse criteria (for display purposes)
       const shouldAutoCollapse = Boolean(
         totalLines > 100 ||
           (multiDiff.totalFiles > 5 && summaries.length >= 3) ||
@@ -144,24 +163,28 @@ export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerP
         status,
         additions,
         deletions,
-        isCollapsed: shouldAutoCollapse,
+        isCollapsed: isCurrentlyCollapsed,
         shouldAutoCollapse,
       });
     }
 
     return summaries;
-  }, [multiDiff]);
+  }, [multiDiff, collapsedFiles]);
 
   const expandAll = () => {
-    setGlobalCollapsed("expanded");
-    // Reset after a frame to trigger re-render with new initial state
-    setTimeout(() => setGlobalCollapsed(null), 0);
+    setCollapsedFiles(new Map(multiDiff.files.map((diff) => [diff.file_path, false])));
   };
 
   const collapseAll = () => {
-    setGlobalCollapsed("collapsed");
-    // Reset after a frame to trigger re-render with new initial state
-    setTimeout(() => setGlobalCollapsed(null), 0);
+    setCollapsedFiles(new Map(multiDiff.files.map((diff) => [diff.file_path, true])));
+  };
+
+  const toggleFileCollapse = (filePath: string) => {
+    setCollapsedFiles((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(filePath, !prev.get(filePath));
+      return newMap;
+    });
   };
 
   return (
@@ -195,22 +218,15 @@ export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerP
         {multiDiff.files.map((diff, index) => {
           const summary = fileSummaries[index];
 
-          // Determine initial collapse state based on global state or auto-collapse
-          let initiallyCollapsed = summary.shouldAutoCollapse;
-          if (globalCollapsed === "expanded") {
-            initiallyCollapsed = false;
-          } else if (globalCollapsed === "collapsed") {
-            initiallyCollapsed = true;
-          }
-
           return (
             <FileRow
-              key={`${diff.file_path}-${globalCollapsed}`} // Key includes globalCollapsed to force re-mount when expand/collapse all is used
+              key={diff.file_path}
               diff={diff}
               summary={summary}
               showWhitespace={showWhitespace}
               commitHash={multiDiff.commitHash}
-              initiallyCollapsed={initiallyCollapsed}
+              isCollapsed={summary.isCollapsed}
+              onToggleCollapse={toggleFileCollapse}
             />
           );
         })}
