@@ -25,9 +25,12 @@ export function TextEditor() {
   const { getContent, setContent } = useEditorContentStore.use.actions();
   const { onChange, disabled, filePath, editorRef } = useEditorInstanceStore();
   const { setViewportHeight } = useEditorLayoutStore.use.actions();
+  const lineHeight =
+    EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER * useEditorSettingsStore.use.fontSize();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const localRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
 
   const { setCursorPosition, setSelection, setDesiredColumn } = useEditorCursorStore.use.actions();
   const currentDesiredColumn = useEditorCursorStore.use.desiredColumn?.() ?? undefined;
@@ -116,10 +119,26 @@ export function TextEditor() {
       // Update textarea selection
       textarea.selectionStart = textarea.selectionEnd = newOffset;
 
-      // Trigger selection change to update visual cursor
-      setTimeout(() => {
-        handleSelectionChange();
-      }, 0);
+      // Direct viewport scrolling for immediate response
+      if (viewportRef.current) {
+        const viewport = viewportRef.current;
+        const targetLineTop = targetLine * lineHeight;
+        const targetLineBottom = targetLineTop + lineHeight;
+        const currentScrollTop = viewport.scrollTop;
+        const viewportHeight = viewport.clientHeight;
+
+        // Use requestAnimationFrame for smooth scrolling
+        requestAnimationFrame(() => {
+          if (targetLineTop < currentScrollTop) {
+            viewport.scrollTop = targetLineTop;
+          } else if (targetLineBottom > currentScrollTop + viewportHeight) {
+            viewport.scrollTop = targetLineBottom - viewportHeight;
+          }
+        });
+      }
+
+      // Update cursor position immediately
+      handleSelectionChange();
 
       // Maintain desired column for subsequent arrow key presses
       if (currentDesiredColumn === undefined) {
@@ -148,7 +167,7 @@ export function TextEditor() {
   };
 
   // Handle cursor position changes
-  const handleSelectionChange = () => {
+  const handleSelectionChange = useCallback(() => {
     if (!textareaRef.current) return;
 
     const { selectionStart, selectionEnd } = textareaRef.current;
@@ -164,7 +183,7 @@ export function TextEditor() {
     } else {
       setSelection(undefined);
     }
-  };
+  }, [lines, setCursorPosition, setSelection]);
 
   // Focus textarea on mount and setup extension system
   useEffect(() => {
@@ -323,6 +342,7 @@ export function TextEditor() {
       <LineBasedEditor
         onPositionClick={handleLineBasedClick}
         onSelectionDrag={handleLineBasedSelection}
+        viewportRef={viewportRef}
       />
     </div>
   );

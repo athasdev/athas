@@ -15,11 +15,13 @@ import "../../../styles/token-theme.css";
 interface LineBasedEditorProps {
   onPositionClick?: (position: Position) => void;
   onSelectionDrag?: (start: Position, end: Position) => void;
+  viewportRef?: React.MutableRefObject<HTMLDivElement | null>;
 }
 
 export const LineBasedEditor = memo<LineBasedEditorProps>(
-  ({ onPositionClick, onSelectionDrag }) => {
+  ({ onPositionClick, onSelectionDrag, viewportRef }) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const internalViewportRef = useRef<HTMLDivElement>(null);
 
     const fontSize = useEditorSettingsStore.use.fontSize();
     const { scrollTop, scrollLeft, viewportHeight } = useEditorLayoutStore();
@@ -56,6 +58,13 @@ export const LineBasedEditor = memo<LineBasedEditorProps>(
       setScroll(newScrollTop, newScrollLeft);
     };
 
+    // Store viewport ref for parent access
+    useEffect(() => {
+      if (viewportRef && internalViewportRef.current) {
+        viewportRef.current = internalViewportRef.current;
+      }
+    }, [viewportRef]);
+
     return (
       <div
         ref={containerRef}
@@ -72,6 +81,7 @@ export const LineBasedEditor = memo<LineBasedEditorProps>(
         <EditorLayers>
           <EditorLayer type="base">
             <EditorViewport
+              ref={internalViewportRef}
               onScroll={handleScroll}
               onClick={handleClick}
               onMouseDown={handleMouseDown}

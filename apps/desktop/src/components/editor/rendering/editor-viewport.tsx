@@ -1,5 +1,5 @@
 import type React from "react";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, memo, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "../../../constants/editor-constants";
 import { useEditorLayout } from "../../../hooks/use-editor-layout";
 import { useEditorContentStore } from "../../../stores/editor-content-store";
@@ -16,132 +16,138 @@ interface EditorViewportProps {
   onMouseUp?: (e: React.MouseEvent<HTMLElement>) => void;
 }
 
-export const EditorViewport = memo<EditorViewportProps>(
-  ({ onScroll, onClick, onMouseDown, onMouseMove, onMouseUp }) => {
-    const selection = useEditorCursorStore.use.selection?.() ?? undefined;
-    const lineCount = useEditorContentStore((state) => state.lines.length);
-    const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
-    const scrollTop = useEditorLayoutStore.use.scrollTop();
-    const viewportHeight = useEditorLayoutStore.use.viewportHeight();
-    const { lineHeight, gutterWidth } = useEditorLayout();
+export const EditorViewport = memo(
+  forwardRef<HTMLDivElement, EditorViewportProps>(
+    ({ onScroll, onClick, onMouseDown, onMouseMove, onMouseUp }, ref) => {
+      const selection = useEditorCursorStore.use.selection?.() ?? undefined;
+      const lineCount = useEditorContentStore((state) => state.lines.length);
+      const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
+      const scrollTop = useEditorLayoutStore.use.scrollTop();
+      const viewportHeight = useEditorLayoutStore.use.viewportHeight();
+      const { lineHeight, gutterWidth } = useEditorLayout();
 
-    const selectedLines = useMemo(() => {
-      const lines = new Set<number>();
-      if (selection) {
-        for (let i = selection.start.line; i <= selection.end.line; i++) {
-          lines.add(i);
+      const selectedLines = useMemo(() => {
+        const lines = new Set<number>();
+        if (selection) {
+          for (let i = selection.start.line; i <= selection.end.line; i++) {
+            lines.add(i);
+          }
         }
-      }
-      return lines;
-    }, [selection]);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [, setIsScrolling] = useState(false);
-    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const [, forceUpdate] = useState({});
-    const isScrollingRef = useRef(false);
+        return lines;
+      }, [selection]);
+      const containerRef = useRef<HTMLDivElement>(null);
 
-    // Sync scroll position from prop only when not actively scrolling
-    useEffect(() => {
-      if (containerRef.current && !isScrollingRef.current) {
-        containerRef.current.scrollTop = scrollTop;
-      }
-    }, [scrollTop]);
+      // Expose the container ref to parent components
+      useImperativeHandle(ref, () => containerRef.current!, []);
 
-    const visibleRange = useMemo(() => {
-      // Use the actual scroll position from the DOM element if available
-      const actualScrollTop = containerRef.current?.scrollTop ?? scrollTop;
-      const startLine = Math.floor(actualScrollTop / lineHeight);
-      const endLine = Math.ceil((actualScrollTop + viewportHeight) / lineHeight);
-      // Dynamic overscan based on viewport size
-      const visibleLineCount = endLine - startLine;
-      const overscan = Math.max(
-        EDITOR_CONSTANTS.MIN_OVERSCAN_LINES,
-        Math.ceil(visibleLineCount * EDITOR_CONSTANTS.VIEWPORT_OVERSCAN_RATIO),
-      );
+      const [, setIsScrolling] = useState(false);
+      const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+      const [, forceUpdate] = useState({});
+      const isScrollingRef = useRef(false);
 
-      return {
-        start: Math.max(0, startLine - overscan),
-        end: Math.min(lineCount, endLine + overscan),
-      };
-    }, [scrollTop, lineHeight, viewportHeight, lineCount, forceUpdate]);
+      // Sync scroll position from prop only when not actively scrolling
+      useEffect(() => {
+        if (containerRef.current && !isScrollingRef.current) {
+          containerRef.current.scrollTop = scrollTop;
+        }
+      }, [scrollTop]);
 
-    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-      const target = e.currentTarget;
-      const newScrollTop = target.scrollTop;
-      const newScrollLeft = target.scrollLeft;
+      const visibleRange = useMemo(() => {
+        // Use the actual scroll position from the DOM element if available
+        const actualScrollTop = containerRef.current?.scrollTop ?? scrollTop;
+        const startLine = Math.floor(actualScrollTop / lineHeight);
+        const endLine = Math.ceil((actualScrollTop + viewportHeight) / lineHeight);
+        // Dynamic overscan based on viewport size
+        const visibleLineCount = endLine - startLine;
+        const overscan = Math.max(
+          EDITOR_CONSTANTS.MIN_OVERSCAN_LINES,
+          Math.ceil(visibleLineCount * EDITOR_CONSTANTS.VIEWPORT_OVERSCAN_RATIO),
+        );
 
-      isScrollingRef.current = true;
-      setIsScrolling(true);
+        return {
+          start: Math.max(0, startLine - overscan),
+          end: Math.min(lineCount, endLine + overscan),
+        };
+      }, [scrollTop, lineHeight, viewportHeight, lineCount, forceUpdate]);
 
-      // Force re-render to update visible range
-      forceUpdate({});
+      const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const target = e.currentTarget;
+        const newScrollTop = target.scrollTop;
+        const newScrollLeft = target.scrollLeft;
 
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
+        isScrollingRef.current = true;
+        setIsScrolling(true);
 
-      scrollTimeoutRef.current = setTimeout(() => {
-        setIsScrolling(false);
-        isScrollingRef.current = false;
-      }, 150);
+        // Force re-render to update visible range
+        forceUpdate({});
 
-      // Still notify parent component
-      onScroll?.(newScrollTop, newScrollLeft);
-    };
-
-    useEffect(() => {
-      return () => {
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
         }
+
+        scrollTimeoutRef.current = setTimeout(() => {
+          setIsScrolling(false);
+          isScrollingRef.current = false;
+        }, 150);
+
+        // Still notify parent component
+        onScroll?.(newScrollTop, newScrollLeft);
       };
-    }, []);
 
-    const totalHeight = lineCount * lineHeight;
+      useEffect(() => {
+        return () => {
+          if (scrollTimeoutRef.current) {
+            clearTimeout(scrollTimeoutRef.current);
+          }
+        };
+      }, []);
 
-    return (
-      <div
-        ref={containerRef}
-        className="editor-viewport"
-        onScroll={handleScroll}
-        style={{
-          position: "relative",
-          overflow: "auto",
-          height: `${viewportHeight}px`,
-        }}
-      >
+      const totalHeight = lineCount * lineHeight;
+
+      return (
         <div
-          className="editor-content"
+          ref={containerRef}
+          className="editor-viewport"
+          onScroll={handleScroll}
           style={{
             position: "relative",
-            height: `${totalHeight}px`,
-            minWidth: "100%",
+            overflow: "auto",
+            height: `${viewportHeight}px`,
           }}
-          onClick={onClick}
-          onMouseDown={onMouseDown}
-          onMouseMove={onMouseMove}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseUp}
         >
-          {/* Array.from creates an array of specified length, then maps over
+          <div
+            className="editor-content"
+            style={{
+              position: "relative",
+              height: `${totalHeight}px`,
+              minWidth: "100%",
+            }}
+            onClick={onClick}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseUp}
+          >
+            {/* Array.from creates an array of specified length, then maps over
               indices to generate line components */}
-          {Array.from({ length: visibleRange.end - visibleRange.start }, (_, i) => {
-            const idx = visibleRange.start + i;
-            return (
-              <LineWithContent
-                key={`line-${idx}`}
-                lineNumber={idx}
-                showLineNumbers={showLineNumbers}
-                gutterWidth={gutterWidth}
-                lineHeight={lineHeight}
-                isSelected={selectedLines.has(idx)}
-              />
-            );
-          })}
+            {Array.from({ length: visibleRange.end - visibleRange.start }, (_, i) => {
+              const idx = visibleRange.start + i;
+              return (
+                <LineWithContent
+                  key={`line-${idx}`}
+                  lineNumber={idx}
+                  showLineNumbers={showLineNumbers}
+                  gutterWidth={gutterWidth}
+                  lineHeight={lineHeight}
+                  isSelected={selectedLines.has(idx)}
+                />
+              );
+            })}
+          </div>
         </div>
-      </div>
-    );
-  },
+      );
+    },
+  ),
 );
 
 EditorViewport.displayName = "EditorViewport";
