@@ -12,10 +12,10 @@ const EMPTY_FILES_ARRAY: any[] = [];
 
 interface CommitItemProps {
   commit: any;
-  isExpanded: boolean;
-  files: any[];
-  isLoading: boolean;
-  isCopied: boolean;
+  expandedCommits: Set<string>;
+  commitFiles: Record<string, any[]>;
+  loadingCommits: Set<string>;
+  copiedHashes: Set<string>;
   onToggleExpansion: (commitHash: string) => void;
   onViewCommitDiff: (commitHash: string, filePath?: string) => void;
   onCopyHash: (hash: string) => void;
@@ -24,14 +24,19 @@ interface CommitItemProps {
 const CommitItem = memo(
   ({
     commit,
-    isExpanded,
-    files,
-    isLoading,
-    isCopied,
+    expandedCommits,
+    commitFiles,
+    loadingCommits,
+    copiedHashes,
     onToggleExpansion,
     onViewCommitDiff,
     onCopyHash,
   }: CommitItemProps) => {
+    const isExpanded = expandedCommits.has(commit.hash);
+    const files = commitFiles[commit.hash] || EMPTY_FILES_ARRAY;
+    const isLoading = loadingCommits.has(commit.hash);
+    const isCopied = copiedHashes.has(commit.hash);
+
     const handleCommitClick = useCallback(() => {
       onViewCommitDiff(commit.hash);
     }, [commit.hash, onViewCommitDiff]);
@@ -41,7 +46,7 @@ const CommitItem = memo(
         e.stopPropagation();
         onToggleExpansion(commit.hash);
       },
-      [commit.hash, onToggleExpansion],
+      [commit.hash, onToggleExpansion]
     );
 
     const _handleCopyClick = useCallback(() => {
@@ -118,7 +123,7 @@ const CommitItem = memo(
         )}
       </div>
     );
-  },
+  }
 );
 
 interface ExpandedCommitDetailsProps {
@@ -147,7 +152,7 @@ const ExpandedCommitDetails = memo(
       (filePath: string) => {
         onViewCommitDiff(commit.hash, filePath);
       },
-      [commit.hash, onViewCommitDiff],
+      [commit.hash, onViewCommitDiff]
     );
 
     if (isLoading) {
@@ -187,7 +192,7 @@ const ExpandedCommitDetails = memo(
         </div>
       </div>
     );
-  },
+  }
 );
 
 interface FileItemProps {
@@ -241,14 +246,11 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
         const newExpanded = new Set(prev);
 
         if (prev.has(commitHash)) {
-          // Collapse
           newExpanded.delete(commitHash);
           return newExpanded;
         } else {
-          // Expand
           newExpanded.add(commitHash);
 
-          // Load commit files if not already loaded
           if (!commitFiles[commitHash] && repoPath) {
             setLoadingCommits((prev) => new Set(prev).add(commitHash));
 
@@ -259,9 +261,7 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
                   [commitHash]: diffs || [],
                 }));
               })
-              .catch(() => {
-                // Silent fail
-              })
+              .catch(() => {})
               .finally(() => {
                 setLoadingCommits((prev) => {
                   const newSet = new Set(prev);
@@ -275,7 +275,7 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
         }
       });
     },
-    [commitFiles, repoPath],
+    [commitFiles, repoPath]
   );
 
   const copyCommitHash = useCallback((hash: string) => {
@@ -294,37 +294,8 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
     (commitHash: string, filePath?: string) => {
       onViewCommitDiff?.(commitHash, filePath);
     },
-    [onViewCommitDiff],
+    [onViewCommitDiff]
   );
-
-  const commitItems = useMemo(() => {
-    return commits.map((commit) => {
-      const files = commitFiles[commit.hash] || EMPTY_FILES_ARRAY;
-
-      return (
-        <CommitItem
-          key={commit.hash}
-          commit={commit}
-          isExpanded={expandedCommits.has(commit.hash)}
-          files={files}
-          isLoading={loadingCommits.has(commit.hash)}
-          isCopied={copiedHashes.has(commit.hash)}
-          onToggleExpansion={toggleCommitExpansion}
-          onViewCommitDiff={handleViewCommitDiff}
-          onCopyHash={copyCommitHash}
-        />
-      );
-    });
-  }, [
-    commits,
-    commitFiles,
-    expandedCommits,
-    loadingCommits,
-    copiedHashes,
-    toggleCommitExpansion,
-    handleViewCommitDiff,
-    copyCommitHash,
-  ]);
 
   useEffect(() => {
     if (!repoPath) return;
@@ -353,7 +324,6 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
       const container = scrollContainerRef.current;
       if (!container || isListenerAttached) return false;
 
-      // Only set up listener if container is scrollable and we have more commits to load
       if (container.scrollHeight > container.clientHeight && hasMoreCommits) {
         container.addEventListener("scroll", handleScroll);
         isListenerAttached = true;
@@ -372,17 +342,13 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
       }
     };
 
-    // Reset scroll position when commits are reset
     if (commits.length === 0) {
       lastScrollTop.current = 0;
     }
 
-    // Try to set up listener immediately
     if (!setupScrollListener()) {
-      // If container wasn't ready, try again with timing strategies
       const rafId = requestAnimationFrame(() => {
         if (!setupScrollListener()) {
-          // Last resort: try after a short delay
           const timeoutId = setTimeout(() => {
             setupScrollListener();
           }, 100);
@@ -422,16 +388,26 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
       </div>
 
       <div ref={scrollContainerRef} className="max-h-96 overflow-y-auto bg-primary-bg">
-        {commitItems}
+        {commits.map((commit) => (
+          <CommitItem
+            key={commit.hash}
+            commit={commit}
+            expandedCommits={expandedCommits}
+            commitFiles={commitFiles}
+            loadingCommits={loadingCommits}
+            copiedHashes={copiedHashes}
+            onToggleExpansion={toggleCommitExpansion}
+            onViewCommitDiff={handleViewCommitDiff}
+            onCopyHash={copyCommitHash}
+          />
+        ))}
 
-        {/* Loading indicator */}
         {isLoadingMoreCommits && (
           <div className="border-border border-t bg-primary-bg px-3 py-2 text-center text-[10px] text-text-lighter">
             Loading older commits...
           </div>
         )}
 
-        {/* End of history indicator */}
         {!hasMoreCommits && commits.length > 0 && (
           <div className="border-border border-t bg-primary-bg px-3 py-2 text-center text-[10px] text-text-lighter">
             — end of history —
