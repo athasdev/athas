@@ -60,17 +60,3 @@ export function groupLinesIntoHunks(lines: GitDiffLine[]): ParsedHunk[] {
 export function copyLineContent(content: string) {
   navigator.clipboard.writeText(content);
 }
-
-/**
- * Converts whitespace characters to visible representations
- * @param text The text to process
- * @returns Text with whitespace characters made visible
- */
-export function visualizeWhitespace(text: string): string {
-  return text
-    .replace(/\t/g, "→   ") // Tab to arrow + spaces
-    .replace(/ /g, "·") // Space to middle dot
-    .replace(/\r\n/g, "↵\r\n") // CRLF to return symbol + actual line break
-    .replace(/\n/g, "↵\n") // LF to return symbol + actual line break
-    .replace(/\r/g, "↵\r"); // CR to return symbol + actual line break
-}
