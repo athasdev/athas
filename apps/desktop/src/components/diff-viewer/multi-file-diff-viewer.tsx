@@ -1,22 +1,12 @@
-import {
-  ChevronDown,
-  ChevronRight,
-  Eye,
-  EyeOff,
-  FileIcon,
-  FilePlus,
-  FileText,
-  FileX,
-  Hash,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, FileIcon, FilePlus, FileText, FileX } from "lucide-react";
 import { useMemo, useState } from "react";
-import { cn } from "../../utils/cn";
+import { DiffHeader } from "./diff-header";
 import { useDiffViewState } from "./hooks/useDiffViewState";
 import { ImageDiffViewer } from "./image-diff-viewer";
 import { TextDiffViewer } from "./text-diff-viewer";
 import type { FileDiffSummary, MultiFileDiffViewerProps } from "./utils/types";
 
-export function MultiFileDiffViewer({ multiDiff }: MultiFileDiffViewerProps) {
+export function MultiFileDiffViewer({ multiDiff, onClose }: MultiFileDiffViewerProps) {
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set());
   const { showWhitespace, setShowWhitespace } = useDiffViewState();
 
@@ -117,44 +107,15 @@ export function MultiFileDiffViewer({ multiDiff }: MultiFileDiffViewerProps) {
   return (
     <div className="flex h-full flex-col bg-primary-bg">
       {/* Header */}
-      <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-4 py-2">
-        <div className="flex items-center gap-2">
-          <Hash size={16} className="text-text-lighter" />
-          <span className="font-medium text-sm text-text">
-            Commit {multiDiff.commitHash.substring(0, 7)}
-          </span>
-          <span className="text-text-lighter text-xs">
-            ({multiDiff.totalFiles} file{multiDiff.totalFiles !== 1 ? "s" : ""})
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowWhitespace(!showWhitespace)}
-            className={cn(
-              "rounded px-2 py-1 text-xs transition-colors",
-              showWhitespace
-                ? "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
-                : "bg-hover text-text hover:bg-border",
-            )}
-            title={showWhitespace ? "Hide whitespace" : "Show whitespace"}
-          >
-            {showWhitespace ? <Eye size={12} /> : <EyeOff size={12} />}
-            <span className="ml-1">Whitespace</span>
-          </button>
-          <button
-            onClick={expandAll}
-            className="rounded px-2 py-1 text-text-lighter text-xs hover:bg-hover hover:text-text"
-          >
-            Expand All
-          </button>
-          <button
-            onClick={collapseAll}
-            className="rounded px-2 py-1 text-text-lighter text-xs hover:bg-hover hover:text-text"
-          >
-            Collapse All
-          </button>
-        </div>
-      </div>
+      <DiffHeader
+        commitHash={multiDiff.commitHash}
+        totalFiles={multiDiff.totalFiles}
+        showWhitespace={showWhitespace}
+        onShowWhitespaceChange={setShowWhitespace}
+        onExpandAll={expandAll}
+        onCollapseAll={collapseAll}
+        onClose={onClose}
+      />
 
       {/* Summary Stats */}
       <div className="border-border border-b bg-secondary-bg px-4 py-2">

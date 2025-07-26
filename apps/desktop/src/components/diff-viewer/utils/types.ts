@@ -20,13 +20,22 @@ export interface ImageContainerProps {
 }
 
 export interface DiffHeaderProps {
-  fileName: string;
-  diff: GitDiff;
-  viewMode: "unified" | "split";
+  // Single file mode props (optional for multi-file mode)
+  fileName?: string;
+  diff?: GitDiff;
+  viewMode?: "unified" | "split";
+  onViewModeChange?: (mode: "unified" | "split") => void;
+
+  // Multi-file mode props (optional for single file mode)
+  commitHash?: string;
+  totalFiles?: number;
+  onExpandAll?: () => void;
+  onCollapseAll?: () => void;
+
+  // Common props
   showWhitespace: boolean;
-  onViewModeChange: (mode: "unified" | "split") => void;
   onShowWhitespaceChange: (show: boolean) => void;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 export interface DiffHunkHeaderProps {
