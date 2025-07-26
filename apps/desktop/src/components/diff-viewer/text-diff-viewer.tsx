@@ -12,6 +12,7 @@ export function TextDiffViewer({
   onStageHunk,
   onUnstageHunk,
   viewMode,
+  showWhitespace,
 }: TextDiffViewerProps) {
   const { isHunkCollapsed, toggleHunkCollapse } = useDiffViewState();
 
@@ -66,6 +67,7 @@ export function TextDiffViewer({
                       index={index}
                       hunkId={hunk.id}
                       viewMode={viewMode}
+                      showWhitespace={showWhitespace}
                     />
                   ))}
                 </div>

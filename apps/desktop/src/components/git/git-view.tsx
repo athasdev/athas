@@ -4,6 +4,7 @@ import { cn } from "@/utils/cn";
 import { useBufferStore } from "../../stores/buffer-store";
 import { useGitStore } from "../../stores/git-store";
 import { getBranches, getCommitDiff, getFileDiff, getGitLog, getGitStatus } from "../../utils/git";
+import type { MultiFileDiff } from "../diff-viewer/utils/types";
 
 // Import modular components
 import GitActionsMenu from "./git-actions-menu";
@@ -237,23 +238,59 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
       const diffs = await getCommitDiff(repoPath, commitHash);
 
       if (diffs && diffs.length > 0) {
-        const diff = filePath ? diffs.find((d) => d.file_path === filePath) || diffs[0] : diffs[0]; // Show specific file or first diff
-        const diffFileName = `${diff.file_path.split("/").pop()}.diff`;
-        const virtualPath = `diff://commit/${commitHash}/${diffFileName}`;
+        if (filePath) {
+          // Show specific file diff (when clicking on individual file in expanded commit)
+          const diff = diffs.find((d) => d.file_path === filePath) || diffs[0];
+          const diffFileName = `${diff.file_path.split("/").pop()}.diff`;
+          const virtualPath = `diff://commit/${commitHash}/${diffFileName}`;
 
-        // Open buffer with diff data directly
-        useBufferStore.getState().actions.openBuffer(
-          virtualPath,
-          diffFileName,
-          JSON.stringify(diff), // Keep for backwards compatibility
-          false, // isImage
-          false, // isSQLite
-          true, // isDiff
-          true, // isVirtual
-          diff, // Pass the diff data directly
-        );
+          // Open buffer with single diff data
+          useBufferStore.getState().actions.openBuffer(
+            virtualPath,
+            diffFileName,
+            JSON.stringify(diff), // Keep for backwards compatibility
+            false, // isImage
+            false, // isSQLite
+            true, // isDiff
+            true, // isVirtual
+            diff, // Pass the diff data directly
+          );
+        } else {
+          // Show all files in commit (when clicking on commit itself)
+          const totalAdditions = diffs.reduce(
+            (sum, diff) => sum + diff.lines.filter((line) => line.line_type === "added").length,
+            0,
+          );
+          const totalDeletions = diffs.reduce(
+            (sum, diff) => sum + diff.lines.filter((line) => line.line_type === "removed").length,
+            0,
+          );
+
+          const multiDiff: MultiFileDiff = {
+            commitHash,
+            files: diffs,
+            totalFiles: diffs.length,
+            totalAdditions,
+            totalDeletions,
+          };
+
+          const virtualPath = `diff://commit/${commitHash}/all-files`;
+          const displayName = `Commit ${commitHash.substring(0, 7)} (${diffs.length} files)`;
+
+          // Open buffer with multi-file diff data
+          useBufferStore.getState().actions.openBuffer(
+            virtualPath,
+            displayName,
+            JSON.stringify(multiDiff), // Keep for backwards compatibility
+            false, // isImage
+            false, // isSQLite
+            true, // isDiff
+            true, // isVirtual
+            multiDiff, // Pass the multi-diff data directly
+          );
+        }
       } else {
-        alert(`No changes in this commit for the specified file.`);
+        alert(`No changes in this commit${filePath ? ` for file ${filePath}` : ""}.`);
       }
     } catch (error) {
       console.error("Error getting commit diff:", error);

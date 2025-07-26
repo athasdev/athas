@@ -3,7 +3,49 @@ import { cn } from "../../utils/cn";
 import { copyLineContent } from "./utils/diff-helpers";
 import type { DiffLineProps } from "./utils/types";
 
-export function DiffLine({ line, index, hunkId, viewMode }: DiffLineProps) {
+export function DiffLine({ line, index, hunkId, viewMode, showWhitespace }: DiffLineProps) {
+  const renderTextContent = (content: string) => {
+    if (!content) return " ";
+
+    if (showWhitespace) {
+      // When showWhitespace is true, replace whitespace with visual indicators
+      const processedContent = content.split("").map((char, index) => {
+        if (char === " ") {
+          return (
+            <span key={index} className="text-text-lighter/50">
+              ·
+            </span>
+          );
+        } else if (char === "\t") {
+          return (
+            <span key={index} className="text-text-lighter/50">
+              →
+            </span>
+          );
+        } else if (char === "\r") {
+          return (
+            <span key={index} className="text-text-lighter/50">
+              ↵
+            </span>
+          );
+        } else if (char === "\n") {
+          return (
+            <span key={index} className="text-text-lighter/50">
+              ↵
+            </span>
+          );
+        } else {
+          return char;
+        }
+      });
+
+      return <span className="whitespace-pre-wrap">{processedContent}</span>;
+    }
+
+    // When showWhitespace is false, preserve original whitespace
+    return <span className="whitespace-pre-wrap">{content}</span>;
+  };
+
   const getLineClasses = () => {
     const base = "group hover:bg-hover/50 transition-colors border-l-2";
     switch (line.line_type) {
@@ -30,6 +72,10 @@ export function DiffLine({ line, index, hunkId, viewMode }: DiffLineProps) {
   const oldNum = line.old_line_number?.toString() || "";
   const newNum = line.new_line_number?.toString() || "";
 
+  const renderContent = (content: string, className: string) => (
+    <span className={className}>{renderTextContent(content || " ")}</span>
+  );
+
   if (viewMode === "split") {
     return (
       <div key={`${hunkId}-${index}`} className={cn("flex font-mono text-xs", getLineClasses())}>
@@ -49,9 +95,9 @@ export function DiffLine({ line, index, hunkId, viewMode }: DiffLineProps) {
           {/* Old Content */}
           <div className="flex-1 overflow-x-auto px-3 py-1">
             {line.line_type === "removed" ? (
-              <span className="bg-red-500/10 text-red-300">{line.content || " "}</span>
+              renderContent(line.content, "bg-red-500/10 text-red-300")
             ) : line.line_type === "context" ? (
-              <span className="text-text">{line.content || " "}</span>
+              renderContent(line.content, "text-text")
             ) : (
               <span className="select-none text-transparent">&nbsp;</span>
             )}
@@ -74,9 +120,9 @@ export function DiffLine({ line, index, hunkId, viewMode }: DiffLineProps) {
           {/* New Content */}
           <div className="flex-1 overflow-x-auto px-3 py-1">
             {line.line_type === "added" ? (
-              <span className="bg-green-500/10 text-green-300">{line.content || " "}</span>
+              renderContent(line.content, "bg-green-500/10 text-green-300")
             ) : line.line_type === "context" ? (
-              <span className="text-text">{line.content || " "}</span>
+              renderContent(line.content, "text-text")
             ) : (
               <span className="select-none text-transparent">&nbsp;</span>
             )}
@@ -134,17 +180,14 @@ export function DiffLine({ line, index, hunkId, viewMode }: DiffLineProps) {
 
       {/* Content */}
       <div className="flex-1 overflow-x-auto px-3 py-1">
-        <span
-          className={
-            line.line_type === "added"
-              ? "text-green-300"
-              : line.line_type === "removed"
-                ? "text-red-300"
-                : "text-text"
-          }
-        >
-          {line.content || " "}
-        </span>
+        {renderContent(
+          line.content,
+          line.line_type === "added"
+            ? "text-green-300"
+            : line.line_type === "removed"
+              ? "text-red-300"
+              : "text-text",
+        )}
       </div>
 
       {/* Actions */}

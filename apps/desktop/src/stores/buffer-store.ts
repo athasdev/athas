@@ -2,6 +2,7 @@ import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
 import { createSelectors } from "@/utils/zustand-selectors";
+import type { MultiFileDiff } from "../components/diff-viewer/utils/types";
 import { readFileContent } from "../utils/file-operations";
 import type { GitDiff } from "../utils/git";
 import { useRecentFilesStore } from "./recent-files-store";
@@ -18,8 +19,8 @@ interface Buffer {
   isSQLite: boolean;
   isDiff: boolean;
   isActive: boolean;
-  // For diff buffers, store the parsed diff data
-  diffData?: GitDiff;
+  // For diff buffers, store the parsed diff data (single or multi-file)
+  diffData?: GitDiff | MultiFileDiff;
   // Cached syntax highlighting tokens
   tokens: {
     start: number;
@@ -45,7 +46,7 @@ interface BufferActions {
     isSQLite?: boolean,
     isDiff?: boolean,
     isVirtual?: boolean,
-    diffData?: GitDiff,
+    diffData?: GitDiff | MultiFileDiff,
   ) => string;
   closeBuffer: (bufferId: string) => void;
   setActiveBuffer: (bufferId: string) => void;
@@ -53,7 +54,7 @@ interface BufferActions {
     bufferId: string,
     content: string,
     markDirty?: boolean,
-    diffData?: GitDiff,
+    diffData?: GitDiff | MultiFileDiff,
   ) => void;
   updateBufferTokens: (
     bufferId: string,
@@ -99,7 +100,7 @@ export const useBufferStore = createSelectors(
           isSQLite = false,
           isDiff = false,
           isVirtual = false,
-          diffData?: GitDiff,
+          diffData?: GitDiff | MultiFileDiff,
         ) => {
           const { buffers, maxOpenTabs } = get();
 
@@ -195,7 +196,7 @@ export const useBufferStore = createSelectors(
           bufferId: string,
           content: string,
           markDirty = true,
-          diffData?: GitDiff,
+          diffData?: GitDiff | MultiFileDiff,
         ) => {
           const buffer = get().buffers.find((b) => b.id === bufferId);
           if (!buffer || (buffer.content === content && !diffData)) {

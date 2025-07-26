@@ -6,8 +6,9 @@ import { DiffHeader } from "./diff-header";
 import { useDiffData } from "./hooks/useDiffData";
 import { useDiffViewState } from "./hooks/useDiffViewState";
 import { ImageDiffViewer } from "./image-diff-viewer";
+import { MultiFileDiffViewer } from "./multi-file-diff-viewer";
 import { TextDiffViewer } from "./text-diff-viewer";
-import type { DiffViewerProps } from "./utils/types";
+import type { DiffViewerProps, MultiFileDiff } from "./utils/types";
 
 function DiffViewer({ onStageHunk, onUnstageHunk }: DiffViewerProps) {
   const buffers = useBufferStore.use.buffers();
@@ -15,7 +16,7 @@ function DiffViewer({ onStageHunk, onUnstageHunk }: DiffViewerProps) {
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { closeBuffer } = useBufferStore.use.actions();
   const { diff, isStaged, isLoading, error, refresh } = useDiffData();
-  const { viewMode, setViewMode } = useDiffViewState();
+  const { viewMode, setViewMode, showWhitespace, setShowWhitespace } = useDiffViewState();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   if (!activeBuffer || !activeBuffer.isDiff) {
@@ -24,6 +25,20 @@ function DiffViewer({ onStageHunk, onUnstageHunk }: DiffViewerProps) {
 
   const fileName = activeBuffer.name;
   const onClose = () => closeBuffer(activeBuffer.id);
+
+  // Check if this is a multi-file diff
+  const isMultiFileDiff =
+    activeBuffer.path?.startsWith("diff://commit/") &&
+    activeBuffer.diffData &&
+    typeof activeBuffer.diffData === "object" &&
+    "files" in activeBuffer.diffData &&
+    Array.isArray((activeBuffer.diffData as any).files);
+
+  // Handle multi-file diff
+  if (isMultiFileDiff) {
+    const multiDiff = activeBuffer.diffData as MultiFileDiff;
+    return <MultiFileDiffViewer multiDiff={multiDiff} onClose={onClose} />;
+  }
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -89,13 +104,16 @@ function DiffViewer({ onStageHunk, onUnstageHunk }: DiffViewerProps) {
         fileName={fileName}
         diff={diff}
         viewMode={viewMode}
+        showWhitespace={showWhitespace}
         onViewModeChange={setViewMode}
+        onShowWhitespaceChange={setShowWhitespace}
         onClose={onClose}
       />
       <TextDiffViewer
         diff={diff}
         isStaged={isStaged}
         viewMode={viewMode}
+        showWhitespace={showWhitespace}
         onStageHunk={onStageHunk}
         onUnstageHunk={onUnstageHunk}
       />

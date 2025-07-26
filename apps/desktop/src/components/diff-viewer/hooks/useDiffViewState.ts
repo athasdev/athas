@@ -3,7 +3,9 @@ import { useCallback, useState } from "react";
 interface UseDiffViewStateReturn {
   collapsedHunks: Set<number>;
   viewMode: "unified" | "split";
+  showWhitespace: boolean;
   setViewMode: (mode: "unified" | "split") => void;
+  setShowWhitespace: (show: boolean) => void;
   toggleHunkCollapse: (hunkId: number) => void;
   isHunkCollapsed: (hunkId: number) => boolean;
 }
@@ -11,6 +13,7 @@ interface UseDiffViewStateReturn {
 export const useDiffViewState = (): UseDiffViewStateReturn => {
   const [collapsedHunks, setCollapsedHunks] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<"unified" | "split">("unified");
+  const [showWhitespace, setShowWhitespace] = useState(true);
 
   const toggleHunkCollapse = useCallback((hunkId: number) => {
     setCollapsedHunks((prev) => {
@@ -34,7 +37,9 @@ export const useDiffViewState = (): UseDiffViewStateReturn => {
   return {
     collapsedHunks,
     viewMode,
+    showWhitespace,
     setViewMode,
+    setShowWhitespace,
     toggleHunkCollapse,
     isHunkCollapsed,
   };

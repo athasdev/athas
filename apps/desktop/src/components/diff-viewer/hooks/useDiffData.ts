@@ -28,7 +28,7 @@ export const useDiffData = (): UseDiffDataReturn => {
   const isRefreshing = useRef(false);
 
   // Get diff from buffer or parse from content for backwards compatibility
-  const diff =
+  const diffData =
     activeBuffer?.diffData ||
     (activeBuffer?.isDiff && activeBuffer.content
       ? (() => {
@@ -39,6 +39,9 @@ export const useDiffData = (): UseDiffDataReturn => {
           }
         })()
       : null);
+
+  // Filter out MultiFileDiff since this hook handles single file diffs only
+  const diff = diffData && "file_path" in diffData ? diffData : null;
 
   // Extract file path and staged status from virtual path
   const pathMatch = activeBuffer?.path.match(/^diff:\/\/(staged|unstaged)\/(.+)$/);

@@ -12,42 +12,65 @@ export const createGitHunk = (
 export const getImgSrc = (base64: string | undefined) =>
   base64 ? `data:image/*;base64,${base64}` : undefined;
 
-export const getFileStatus = (diff: GitDiff) => {
-  if (diff.is_new) return "Added";
-  if (diff.is_deleted) return "Deleted";
-  if (diff.is_renamed) return "Renamed";
-  return "Modified";
-};
+/**
+ * Get human-readable file status from diff object
+ * @param diff The diff object
+ * @returns Human-readable status string
+ */
+export function getFileStatus(diff: GitDiff): string {
+  if (diff.is_new) return "added";
+  if (diff.is_deleted) return "deleted";
+  if (diff.is_renamed) return "renamed";
+  return "modified";
+}
 
-export const groupLinesIntoHunks = (lines: GitDiffLine[]): ParsedHunk[] => {
+export function groupLinesIntoHunks(lines: GitDiffLine[]): ParsedHunk[] {
   const hunks: ParsedHunk[] = [];
   let currentHunk: GitDiffLine[] = [];
-  let currentHeader: GitDiffLine | null = null;
+  let hunkHeader: GitDiffLine | null = null;
   let hunkId = 0;
 
-  lines.forEach((line) => {
+  for (const line of lines) {
     if (line.line_type === "header") {
-      if (currentHeader && currentHunk.length > 0) {
-        hunks.push({ header: currentHeader, lines: [...currentHunk], id: hunkId++ });
+      if (hunkHeader && currentHunk.length > 0) {
+        hunks.push({
+          header: hunkHeader,
+          lines: currentHunk,
+          id: hunkId++,
+        });
       }
-      currentHeader = line;
+      hunkHeader = line;
       currentHunk = [];
-    } else if (currentHeader) {
+    } else {
       currentHunk.push(line);
     }
-  });
+  }
 
-  if (currentHeader && currentHunk.length > 0) {
-    hunks.push({ header: currentHeader, lines: [...currentHunk], id: hunkId });
+  if (hunkHeader && currentHunk.length > 0) {
+    hunks.push({
+      header: hunkHeader,
+      lines: currentHunk,
+      id: hunkId,
+    });
   }
 
   return hunks;
-};
+}
 
-export const copyLineContent = async (content: string) => {
-  try {
-    await navigator.clipboard.writeText(content);
-  } catch (err) {
-    console.error("Failed to copy:", err);
-  }
-};
+export function copyLineContent(content: string) {
+  navigator.clipboard.writeText(content);
+}
+
+/**
+ * Converts whitespace characters to visible representations
+ * @param text The text to process
+ * @returns Text with whitespace characters made visible
+ */
+export function visualizeWhitespace(text: string): string {
+  return text
+    .replace(/\t/g, "→   ") // Tab to arrow + spaces
+    .replace(/ /g, "·") // Space to middle dot
+    .replace(/\r\n/g, "↵\r\n") // CRLF to return symbol + actual line break
+    .replace(/\n/g, "↵\n") // LF to return symbol + actual line break
+    .replace(/\r/g, "↵\r"); // CR to return symbol + actual line break
+}

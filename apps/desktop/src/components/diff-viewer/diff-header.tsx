@@ -1,4 +1,4 @@
-import { Edit3, FileIcon, FilePlus, FileX, X } from "lucide-react";
+import { Edit3, Eye, EyeOff, FileIcon, FilePlus, FileX, X } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { getFileStatus } from "./utils/diff-helpers";
 import type { DiffHeaderProps } from "./utils/types";
@@ -7,7 +7,9 @@ export function DiffHeader({
   fileName,
   diff,
   viewMode,
+  showWhitespace,
   onViewModeChange,
+  onShowWhitespaceChange,
   onClose,
 }: DiffHeaderProps) {
   const getFileIcon = () => {
@@ -53,6 +55,19 @@ export function DiffHeader({
         </div>
       </div>
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => onShowWhitespaceChange(!showWhitespace)}
+          className={cn(
+            "flex items-center justify-center gap-1 rounded px-2 py-1 text-xs transition-colors",
+            showWhitespace
+              ? "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+              : "bg-hover text-text hover:bg-border",
+          )}
+          title={showWhitespace ? "Hide whitespace" : "Show whitespace"}
+        >
+          <div>{showWhitespace ? <Eye size={12} /> : <EyeOff size={12} />}</div>
+          <span className="ml-1">Whitespace</span>
+        </button>
         <button
           onClick={() => onViewModeChange(viewMode === "unified" ? "split" : "unified")}
           className={cn(
