@@ -163,13 +163,13 @@ const GitStatusPanel = ({
   }, []);
 
   return (
-    <div className="space-y-0">
+    <div className="select-none space-y-0">
       {/* Staged Changes */}
       <div className="border-border border-b">
         <div className="flex items-center gap-2 bg-secondary-bg px-3 py-1 text-text-lighter">
           <span className="flex items-center gap-1">
             <Check size={10} />
-            <span>staged ({stagedFiles.length})</span>
+            <span className="cursor-default">staged ({stagedFiles.length})</span>
           </span>
           <div className="flex-1" />
           {stagedFiles.length > 0 && (
@@ -185,7 +185,7 @@ const GitStatusPanel = ({
         </div>
 
         {stagedFiles.length === 0 ? (
-          <div className="bg-primary-bg px-3 py-2 text-[10px] text-text-lighter italic">
+          <div className="cursor-default bg-primary-bg px-3 py-2 text-[10px] text-text-lighter italic">
             No staged changes
           </div>
         ) : (
@@ -232,7 +232,7 @@ const GitStatusPanel = ({
         <div className="flex items-center gap-2 bg-secondary-bg px-3 py-1 text-text-lighter">
           <span className="flex items-center gap-1">
             <Edit3 size={10} />
-            <span>changes ({unstagedFiles.length})</span>
+            <span className="cursor-default">changes ({unstagedFiles.length})</span>
           </span>
           <div className="flex-1" />
           {unstagedFiles.length > 0 && (
@@ -248,7 +248,7 @@ const GitStatusPanel = ({
         </div>
 
         {unstagedFiles.length === 0 ? (
-          <div className="bg-primary-bg px-3 py-2 text-[10px] text-text-lighter italic">
+          <div className="cursor-default bg-primary-bg px-3 py-2 text-[10px] text-text-lighter italic">
             No unstaged changes
           </div>
         ) : (
@@ -308,9 +308,9 @@ const GitStatusPanel = ({
         <div className="border-border border-b">
           <div className="flex items-center gap-2 bg-secondary-bg px-3 py-1 text-text-lighter">
             <Check size={10} />
-            <span>clean</span>
+            <span className="cursor-default">clean</span>
           </div>
-          <div className="bg-primary-bg px-3 py-2 text-[10px] text-text-lighter italic">
+          <div className="cursor-default bg-primary-bg px-3 py-2 text-[10px] text-text-lighter italic">
             No changes detected
           </div>
         </div>

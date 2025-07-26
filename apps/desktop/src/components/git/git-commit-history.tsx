@@ -371,9 +371,9 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
       <div className="border-border border-b">
         <div className="flex items-center gap-2 bg-secondary-bg px-3 py-1 text-text-lighter">
           <Clock size={10} />
-          <span>commits (0)</span>
+          <span className="cursor-default">commits</span>
         </div>
-        <div className="bg-primary-bg px-3 py-2 text-[10px] text-text-lighter italic">
+        <div className="cursor-default bg-primary-bg px-3 py-2 text-[10px] text-text-lighter italic">
           No commits found
         </div>
       </div>
@@ -384,7 +384,7 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
     <div className="border-border border-b">
       <div className="flex items-center gap-2 bg-secondary-bg px-3 py-1 text-text-lighter">
         <Clock size={10} />
-        <span>commits ({commits.length})</span>
+        <span className="cursor-default">commits</span>
       </div>
 
       <div ref={scrollContainerRef} className="max-h-96 overflow-y-auto bg-primary-bg">
