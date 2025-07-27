@@ -45,14 +45,11 @@ export const useAppStore = createSelectors(
           // Import stores dynamically to avoid circular dependencies
           const { useBufferStore } = await import("./buffer-store");
           const { useFileWatcherStore } = await import("./file-watcher-store");
-          const { useSettingsStore } = await import(
-            "@/settings/stores/settings-store.ts"
-          );
+          const { useSettingsStore } = await import("@/settings/stores/settings-store.ts");
 
           // Get dependencies from other stores
           const { activeBufferId, buffers } = useBufferStore.getState();
-          const { updateBufferContent, markBufferDirty } =
-            useBufferStore.getState().actions;
+          const { updateBufferContent, markBufferDirty } = useBufferStore.getState().actions;
           const { settings } = useSettingsStore.getState();
           const { markPendingSave } = useFileWatcherStore.getState();
 
@@ -96,9 +93,7 @@ export const useAppStore = createSelectors(
         handleSave: async () => {
           // Import stores dynamically to avoid circular dependencies
           const { useBufferStore } = await import("./buffer-store");
-          const { useSettingsStore } = await import(
-            "@/settings/stores/settings-store.ts"
-          );
+          const { useSettingsStore } = await import("@/settings/stores/settings-store.ts");
           const { useFileWatcherStore } = await import("./file-watcher-store");
 
           const { activeBufferId, buffers } = useBufferStore.getState();
@@ -119,9 +114,7 @@ export const useAppStore = createSelectors(
           } else if (activeBuffer.path.startsWith("remote://")) {
             // Handle remote save
             markBufferDirty(activeBuffer.id, true);
-            const pathParts = activeBuffer.path
-              .replace("remote://", "")
-              .split("/");
+            const pathParts = activeBuffer.path.replace("remote://", "").split("/");
             const connectionId = pathParts.shift();
             const remotePath = `/${pathParts.join("/")}`;
 

@@ -1,13 +1,12 @@
+import Button from "@/components/ui/button";
 import Dropdown from "@/components/ui/dropdown";
 import KeybindingBadge from "@/components/ui/keybinding-badge";
 import Section, { SettingRow } from "@/components/ui/section";
 import Switch from "@/components/ui/switch";
-import { useSettingsStore } from "../../stores/settings-store";
 import { useUpdater } from "@/settings/hooks/use-updater";
-import Button from "@/components/ui/button";
+import { useSettingsStore } from "../../stores/settings-store";
 
-const isMac =
-  typeof navigator !== "undefined" && navigator.platform.includes("Mac");
+const isMac = typeof navigator !== "undefined" && navigator.platform.includes("Mac");
 
 export const GeneralSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
@@ -30,10 +29,7 @@ export const GeneralSettings = () => {
   return (
     <div className="space-y-4">
       <Section title="File Management">
-        <SettingRow
-          label="Auto Save"
-          description="Automatically save files when editing"
-        >
+        <SettingRow label="Auto Save" description="Automatically save files when editing">
           <Switch
             checked={settings.autoSave}
             onChange={(checked) => updateSetting("autoSave", checked)}
@@ -43,16 +39,11 @@ export const GeneralSettings = () => {
       </Section>
 
       <Section title="Layout">
-        <SettingRow
-          label="Sidebar Position"
-          description="Choose where to position the sidebar"
-        >
+        <SettingRow label="Sidebar Position" description="Choose where to position the sidebar">
           <Dropdown
             value={settings.sidebarPosition}
             options={sidebarOptions}
-            onChange={(value) =>
-              updateSetting("sidebarPosition", value as "left" | "right")
-            }
+            onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
             className="w-20"
             size="xs"
           />
@@ -60,10 +51,7 @@ export const GeneralSettings = () => {
       </Section>
 
       <Section title="Zoom">
-        <SettingRow
-          label="Mouse Wheel Zoom"
-          description="Use mouse wheel to zoom in/out"
-        >
+        <SettingRow label="Mouse Wheel Zoom" description="Use mouse wheel to zoom in/out">
           <Switch
             checked={settings.mouseWheelZoom}
             onChange={(checked) => updateSetting("mouseWheelZoom", checked)}
@@ -73,17 +61,11 @@ export const GeneralSettings = () => {
       </Section>
 
       <Section title="Quick Access">
-        <SettingRow
-          label="Open Settings"
-          description="Keyboard shortcut to open settings"
-        >
+        <SettingRow label="Open Settings" description="Keyboard shortcut to open settings">
           <KeybindingBadge keys={isMac ? ["⌘", ","] : ["Ctrl", ","]} />
         </SettingRow>
 
-        <SettingRow
-          label="Toggle Sidebar"
-          description="Show or hide the sidebar"
-        >
+        <SettingRow label="Toggle Sidebar" description="Show or hide the sidebar">
           <KeybindingBadge keys={isMac ? ["⌘", "B"] : ["Ctrl", "B"]} />
         </SettingRow>
 
@@ -129,16 +111,12 @@ export const GeneralSettings = () => {
                 size="xs"
                 className="px-2 py-1"
               >
-                {downloading
-                  ? "Downloading..."
-                  : installing
-                    ? "Installing..."
-                    : "Install"}
+                {downloading ? "Downloading..." : installing ? "Installing..." : "Install"}
               </Button>
             )}
           </div>
         </SettingRow>
-        {error && <div className="mt-2 text-xs text-red-500">{error}</div>}
+        {error && <div className="mt-2 text-red-500 text-xs">{error}</div>}
       </Section>
     </div>
   );

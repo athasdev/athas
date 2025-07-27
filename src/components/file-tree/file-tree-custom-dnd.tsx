@@ -128,11 +128,7 @@ export const useCustomDragDrop = (
     };
 
     const handleMouseUp = async () => {
-      if (
-        dragState.isDragging &&
-        dragState.dragOverPath &&
-        dragState.draggedItem
-      ) {
+      if (dragState.isDragging && dragState.dragOverPath && dragState.draggedItem) {
         const { path: sourcePath, name: sourceName } = dragState.draggedItem;
         let targetPath = dragState.dragOverPath;
 
@@ -201,21 +197,18 @@ export const useCustomDragDrop = (
     }
   }, [dragState, onFileMove, onRefreshDirectory, rootFolderPath]);
 
-  const startCustomDrag = useCallback(
-    (e: React.MouseEvent, file: FileEntry) => {
-      e.preventDefault();
-      e.stopPropagation();
+  const startCustomDrag = useCallback((e: React.MouseEvent, file: FileEntry) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-      setDragState({
-        isDragging: true,
-        draggedItem: { path: file.path, name: file.name, isDir: file.isDir },
-        dragOverPath: null,
-        dragOverIsDir: false,
-        mousePosition: { x: e.clientX, y: e.clientY },
-      });
-    },
-    [],
-  );
+    setDragState({
+      isDragging: true,
+      draggedItem: { path: file.path, name: file.name, isDir: file.isDir },
+      dragOverPath: null,
+      dragOverIsDir: false,
+      mousePosition: { x: e.clientX, y: e.clientY },
+    });
+  }, []);
 
   return {
     dragState,

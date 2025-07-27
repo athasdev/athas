@@ -1,26 +1,18 @@
 import { exit } from "@tauri-apps/plugin-process";
 import { useEffect } from "react";
+import type { CoreFeaturesState } from "../settings/models/feature.types";
 import { useZoomStore } from "../stores/zoom-store";
 import type { Buffer } from "../types/buffer";
-import type { CoreFeaturesState } from "../settings/models/feature.types";
 import { isMac } from "../utils/platform";
 
 interface UseKeyboardShortcutsProps {
-  setIsBottomPaneVisible: (
-    value: boolean | ((prev: boolean) => boolean),
-  ) => void;
+  setIsBottomPaneVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
   setBottomPaneActiveTab: (tab: "terminal" | "diagnostics") => void;
   setIsFindVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsSidebarVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
-  setIsRightPaneVisible: (
-    value: boolean | ((prev: boolean) => boolean),
-  ) => void;
-  setIsCommandBarVisible: (
-    value: boolean | ((prev: boolean) => boolean),
-  ) => void;
-  setIsCommandPaletteVisible: (
-    value: boolean | ((prev: boolean) => boolean),
-  ) => void;
+  setIsRightPaneVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
+  setIsCommandBarVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
+  setIsCommandPaletteVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsSearchViewActive: (value: boolean) => void;
   focusSearchInput: () => void;
   focusCommandPalette: () => void;
@@ -91,12 +83,7 @@ export const useKeyboardShortcuts = ({
       }
 
       // Keep the old shortcut for backwards compatibility
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.key === "j" &&
-        coreFeatures.terminal &&
-        !isMac()
-      ) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "j" && coreFeatures.terminal && !isMac()) {
         e.preventDefault();
         if (isBottomPaneVisible && bottomPaneActiveTab === "terminal") {
           setIsBottomPaneVisible(false);
@@ -116,12 +103,7 @@ export const useKeyboardShortcuts = ({
       }
 
       // Cmd+Shift+J (Mac) or Ctrl+Shift+J (Windows/Linux) to toggle diagnostics
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.shiftKey &&
-        e.key === "J" &&
-        coreFeatures.diagnostics
-      ) {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "J" && coreFeatures.diagnostics) {
         e.preventDefault();
         if (isBottomPaneVisible && bottomPaneActiveTab === "diagnostics") {
           setIsBottomPaneVisible(false);
@@ -143,12 +125,7 @@ export const useKeyboardShortcuts = ({
 
       // Find is now handled by native menu accelerator on macOS
       // Only handle on non-macOS platforms
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.key === "f" &&
-        !e.shiftKey &&
-        !isMac()
-      ) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "f" && !e.shiftKey && !isMac()) {
         e.preventDefault();
         setIsFindVisible((prev) => !prev);
         return;
@@ -158,12 +135,7 @@ export const useKeyboardShortcuts = ({
       const isMacOS = isMac();
       const correctModifier = isMacOS ? e.metaKey : e.ctrlKey;
 
-      if (
-        correctModifier &&
-        e.shiftKey &&
-        e.key === "F" &&
-        coreFeatures.search
-      ) {
+      if (correctModifier && e.shiftKey && e.key === "F" && coreFeatures.search) {
         e.preventDefault();
         e.stopPropagation();
         setIsSidebarVisible(true);
@@ -176,13 +148,7 @@ export const useKeyboardShortcuts = ({
       }
 
       // Also handle if Mac users are somehow sending ctrlKey instead of metaKey
-      if (
-        isMacOS &&
-        e.ctrlKey &&
-        e.shiftKey &&
-        e.key === "F" &&
-        coreFeatures.search
-      ) {
+      if (isMacOS && e.ctrlKey && e.shiftKey && e.key === "F" && coreFeatures.search) {
         e.preventDefault();
         e.stopPropagation();
         console.log("Mac detected but using ctrlKey - this is unusual");
@@ -196,12 +162,7 @@ export const useKeyboardShortcuts = ({
 
       // Alternative shortcut: Cmd+Shift+H (Mac) or Ctrl+Shift+H (Windows/Linux) to open project search
       // This is a backup in case Cmd+Shift+F is captured by the browser/system
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.shiftKey &&
-        e.key === "H" &&
-        coreFeatures.search
-      ) {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "H" && coreFeatures.search) {
         e.preventDefault();
         e.stopPropagation();
         setIsSidebarVisible(true);
@@ -214,12 +175,7 @@ export const useKeyboardShortcuts = ({
 
       // Sidebar toggle is now handled by native menu accelerator on macOS
       // Only handle on non-macOS platforms
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.key === "b" &&
-        !e.shiftKey &&
-        !isMac()
-      ) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "b" && !e.shiftKey && !isMac()) {
         e.preventDefault();
         setIsSidebarVisible((prev) => !prev);
         return;
@@ -236,12 +192,7 @@ export const useKeyboardShortcuts = ({
 
       // AI Chat toggle is now handled by native menu accelerator on macOS
       // Only handle on non-macOS platforms
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.key === "r" &&
-        coreFeatures.aiChat &&
-        !isMac()
-      ) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "r" && coreFeatures.aiChat && !isMac()) {
         e.preventDefault();
         setIsRightPaneVisible((prev) => !prev);
         return;
@@ -249,12 +200,7 @@ export const useKeyboardShortcuts = ({
 
       // Go to File is now handled by native menu accelerator on macOS
       // Only handle on non-macOS platforms
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.key === "p" &&
-        !e.shiftKey &&
-        !isMac()
-      ) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "p" && !e.shiftKey && !isMac()) {
         e.preventDefault();
         setIsCommandBarVisible((prev) => !prev);
         return;
@@ -274,12 +220,7 @@ export const useKeyboardShortcuts = ({
 
       // Close Tab is now handled by native menu accelerator on macOS
       // Only handle on non-macOS platforms
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.key === "w" &&
-        !e.shiftKey &&
-        !isMac()
-      ) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "w" && !e.shiftKey && !isMac()) {
         e.preventDefault();
         if (activeBuffer) {
           closeBuffer(activeBuffer.id);

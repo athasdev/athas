@@ -41,7 +41,7 @@ class EditorAPIImpl implements EditorAPI {
     const before = content.substring(0, pos.offset);
     const after = content.substring(pos.offset);
     const newContent = before + text + after;
-    
+
     // Calculate new cursor position first
     const newOffset = pos.offset + text.length;
     const newPos = this.offsetToPosition(newOffset);
@@ -52,9 +52,9 @@ class EditorAPIImpl implements EditorAPI {
       this.textareaRef.value = newContent;
       // Set selection to new position
       this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
-      
+
       // Now trigger the change event so React updates
-      const event = new Event('input', { bubbles: true });
+      const event = new Event("input", { bubbles: true });
       this.textareaRef.dispatchEvent(event);
     } else {
       // Fallback if no textarea ref
@@ -94,7 +94,7 @@ class EditorAPIImpl implements EditorAPI {
   setCursorPosition(position: Position): void {
     this.cursorPosition = position;
     this.emit("cursorChange", position);
-    
+
     // Sync with textarea if available
     if (this.textareaRef) {
       this.textareaRef.selectionStart = this.textareaRef.selectionEnd = position.offset;

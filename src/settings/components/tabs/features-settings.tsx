@@ -1,8 +1,8 @@
+import Section, { SettingRow } from "@/components/ui/section";
+import Switch from "@/components/ui/switch";
 import { createCoreFeaturesList } from "../../config/features";
 import type { CoreFeature } from "../../models/feature.types";
 import { usePersistentSettingsStore } from "../../stores/persistent-settings-store";
-import Section, { SettingRow } from "@/components/ui/section";
-import Switch from "@/components/ui/switch";
 
 export const FeaturesSettings = () => {
   const { coreFeatures, setCoreFeatures } = usePersistentSettingsStore();
@@ -20,21 +20,12 @@ export const FeaturesSettings = () => {
 
   return (
     <div className="space-y-4">
-      <Section
-        title="Features"
-        description="Toggle application features on or off"
-      >
+      <Section title="Features" description="Toggle application features on or off">
         {coreFeaturesList.map((feature: CoreFeature) => (
-          <SettingRow
-            key={feature.id}
-            label={feature.name}
-            description={feature.description}
-          >
+          <SettingRow key={feature.id} label={feature.name} description={feature.description}>
             <Switch
               checked={feature.enabled}
-              onChange={(checked) =>
-                handleCoreFeatureToggle(feature.id, checked)
-              }
+              onChange={(checked) => handleCoreFeatureToggle(feature.id, checked)}
               size="sm"
             />
           </SettingRow>

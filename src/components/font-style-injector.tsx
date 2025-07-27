@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useSettingsStore } from "@/settings/stores/settings-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 
 export const FontStyleInjector = () => {
   const codeEditorFontFamily = useEditorSettingsStore((state) => state.fontFamily);

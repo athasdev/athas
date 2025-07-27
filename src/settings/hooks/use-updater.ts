@@ -1,5 +1,5 @@
-import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { check } from "@tauri-apps/plugin-updater";
 import { useEffect, useState } from "react";
 
 export interface UpdateInfo {
@@ -30,12 +30,12 @@ export const useUpdater = (checkOnMount = true) => {
 
   const checkForUpdates = async () => {
     try {
-      setState(prev => ({ ...prev, checking: true, error: null }));
-      
+      setState((prev) => ({ ...prev, checking: true, error: null }));
+
       const update = await check();
-      
+
       if (update?.available) {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           available: true,
           checking: false,
@@ -47,7 +47,7 @@ export const useUpdater = (checkOnMount = true) => {
           },
         }));
       } else {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           available: false,
           checking: false,
@@ -55,7 +55,7 @@ export const useUpdater = (checkOnMount = true) => {
         }));
       }
     } catch (error) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         checking: false,
         error: error instanceof Error ? error.message : "Failed to check for updates",
@@ -67,23 +67,23 @@ export const useUpdater = (checkOnMount = true) => {
     if (!state.updateInfo) return;
 
     try {
-      setState(prev => ({ ...prev, downloading: true, error: null }));
-      
+      setState((prev) => ({ ...prev, downloading: true, error: null }));
+
       const update = await check();
       if (!update?.available) {
         throw new Error("No update available");
       }
 
-      setState(prev => ({ ...prev, downloading: false, installing: true }));
-      
+      setState((prev) => ({ ...prev, downloading: false, installing: true }));
+
       await update.downloadAndInstall();
-      
-      setState(prev => ({ ...prev, installing: false }));
-      
+
+      setState((prev) => ({ ...prev, installing: false }));
+
       // Relaunch the app to apply the update
       await relaunch();
     } catch (error) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         downloading: false,
         installing: false,
@@ -93,7 +93,7 @@ export const useUpdater = (checkOnMount = true) => {
   };
 
   const dismissUpdate = () => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       available: false,
       updateInfo: null,
