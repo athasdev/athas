@@ -8,21 +8,7 @@
   "files": {
     "ignoreUnknown": false,
     "maxSize": 200000,
-    "includes": [
-      "apps/**/*.ts",
-      "apps/**/*.tsx",
-      "apps/**/*.js",
-      "apps/**/*.jsx",
-      "apps/**/*.json",
-      "!apps/web/**",
-      "!apps/desktop/src-tauri/gen/schemas/**",
-      "packages/**/*.ts",
-      "packages/**/*.tsx",
-      "packages/**/*.js",
-      "packages/**/*.jsx",
-      "*.json",
-      "*.ts"
-    ]
+    "includes": ["src/**/*.ts", "src/**/*.tsx", "*.json", "*.ts"]
   },
   "formatter": {
     "enabled": true,
