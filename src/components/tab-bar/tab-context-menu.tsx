@@ -50,6 +50,41 @@ const TabContextMenu = ({
       }
     };
 
+    // Adjust menu position to ensure it's visible
+    if (menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // Start with the provided position (already zoom-adjusted)
+      let adjustedX = position.x;
+      let adjustedY = position.y;
+
+      // Prevent menu from going off the right edge
+      if (adjustedX + rect.width > viewportWidth) {
+        adjustedX = viewportWidth - rect.width - 10;
+      }
+
+      // Prevent menu from going off the bottom edge
+      if (adjustedY + rect.height > viewportHeight) {
+        adjustedY = viewportHeight - rect.height - 10;
+      }
+
+      // Prevent menu from going off the left edge
+      if (adjustedX < 0) {
+        adjustedX = 10;
+      }
+
+      // Prevent menu from going off the top edge
+      if (adjustedY < 0) {
+        adjustedY = 10;
+      }
+
+      // Apply the adjusted position directly
+      menuRef.current.style.left = `${adjustedX}px`;
+      menuRef.current.style.top = `${adjustedY}px`;
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
 
@@ -57,7 +92,7 @@ const TabContextMenu = ({
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, position]);
 
   if (!isOpen || !buffer) return null;
 
@@ -65,7 +100,11 @@ const TabContextMenu = ({
     <div
       ref={menuRef}
       className="fixed z-50 w-[180px] select-none rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
-      style={{ left: position.x, top: position.y }}
+      style={{
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        transform: 'translateZ(0)' // Force GPU acceleration for consistent rendering
+      }}
     >
       <button
         className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"

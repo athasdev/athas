@@ -218,7 +218,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
         const currentPosition = { x: e.clientX, y: e.clientY };
         const distance = Math.sqrt(
           (currentPosition.x - prev.startPosition.x) ** 2 +
-            (currentPosition.y - prev.startPosition.y) ** 2,
+          (currentPosition.y - prev.startPosition.y) ** 2,
         );
         if (!prev.isDragging && distance > DRAG_THRESHOLD) {
           const tabPositions = cacheTabPositions();
@@ -298,9 +298,20 @@ const TabBar = ({ paneId }: TabBarProps) => {
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, buffer: Buffer) => {
       e.preventDefault();
+
+      // Get the tab element that was right-clicked
+      const target = e.currentTarget as HTMLElement;
+      const rect = target.getBoundingClientRect();
+
+      // Position the menu relative to the tab element
+      // This approach is zoom-independent because getBoundingClientRect() 
+      // already accounts for zoom scaling
+      const x = rect.left + rect.width * 0.5; // Center horizontally on the tab
+      const y = rect.bottom + 4; // Position just below the tab with small offset
+
       setContextMenu({
         isOpen: true,
-        position: { x: e.clientX, y: e.clientY },
+        position: { x, y },
         buffer,
       });
     },
@@ -335,7 +346,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
     [sortedBuffers, paneId],
   );
 
-  const handleDragEnd = useCallback(() => {}, []);
+  const handleDragEnd = useCallback(() => { }, []);
 
   const closeContextMenu = () => {
     setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
@@ -467,16 +478,16 @@ const TabBar = ({ paneId }: TabBarProps) => {
         position={contextMenu.position}
         buffer={contextMenu.buffer}
         onClose={closeContextMenu}
-        onPin={handleTabPin || (() => {})}
+        onPin={handleTabPin || (() => { })}
         onCloseTab={(bufferId) => {
           const buffer = buffers.find((b) => b.id === bufferId);
           if (buffer) {
             handleTabClose(bufferId);
           }
         }}
-        onCloseOthers={handleCloseOtherTabs || (() => {})}
-        onCloseAll={handleCloseAllTabs || (() => {})}
-        onCloseToRight={handleCloseTabsToRight || (() => {})}
+        onCloseOthers={handleCloseOtherTabs || (() => { })}
+        onCloseAll={handleCloseAllTabs || (() => { })}
+        onCloseToRight={handleCloseTabsToRight || (() => { })}
         onCopyPath={async (path: string) => {
           try {
             await navigator.clipboard.writeText(path);

@@ -14,16 +14,16 @@ export default function Tooltip({ content, children, side = "top", className }: 
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const updatePosition = () => {
     if (!triggerRef.current) return;
 
     const rect = triggerRef.current.getBoundingClientRect();
-    const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
 
-    let x = rect.left + scrollX;
-    let y = rect.top + scrollY;
+    let x = rect.left;
+    let y = rect.top;
 
     switch (side) {
       case "top":
@@ -47,21 +47,69 @@ export default function Tooltip({ content, children, side = "top", className }: 
     setPosition({ x, y });
   };
 
+  const showTooltip = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setIsVisible(true);
+  };
+
+  const hideTooltip = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      setIsVisible(false);
+    }, 200);
+  };
+
   useEffect(() => {
     if (isVisible) {
       updatePosition();
-      const handleResize = () => updatePosition();
-      const handleScroll = () => updatePosition();
 
+      const handleMouseMove = (e: MouseEvent) => {
+        if (!triggerRef.current) return;
+
+        const rect = triggerRef.current.getBoundingClientRect();
+        const isOverTrigger =
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom;
+
+        if (!isOverTrigger) {
+          hideTooltip();
+        }
+      };
+
+      const handleResize = () => {
+        hideTooltip();
+      };
+
+      const handleScroll = () => {
+        hideTooltip();
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("resize", handleResize);
       window.addEventListener("scroll", handleScroll, true);
 
       return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
         window.removeEventListener("resize", handleResize);
         window.removeEventListener("scroll", handleScroll, true);
       };
     }
-  }, [isVisible, side]);
+  }, [isVisible]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const tooltipClasses = {
     top: "-translate-x-1/2 -translate-y-full",
@@ -82,8 +130,8 @@ export default function Tooltip({ content, children, side = "top", className }: 
       <div
         ref={triggerRef}
         className="inline-block"
-        onMouseEnter={() => setIsVisible(true)}
-        onMouseLeave={() => setIsVisible(false)}
+        onMouseEnter={showTooltip}
+        onMouseLeave={hideTooltip}
       >
         {children}
       </div>
@@ -91,14 +139,15 @@ export default function Tooltip({ content, children, side = "top", className }: 
         typeof document !== "undefined" &&
         createPortal(
           <div
+            ref={tooltipRef}
             className={cn(
               "pointer-events-none fixed z-[99999] whitespace-nowrap rounded bg-secondary-bg border border-border px-2 py-1 text-text text-xs shadow-lg",
               tooltipClasses[side],
               className,
             )}
             style={{
-              left: position.x,
-              top: position.y,
+              left: `${position.x}px`,
+              top: `${position.y}px`,
             }}
           >
             {content}
