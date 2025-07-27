@@ -13,11 +13,13 @@ import { useEditorInstanceStore } from "../../../stores/editor-instance-store";
 import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
 import { useEditorSettingsStore } from "../../../stores/editor-settings-store";
 import { useEditorViewStore } from "../../../stores/editor-view-store";
+import { useLspStore } from "../../../stores/lsp-store";
 import type { Position } from "../../../types/editor-types";
 import {
   calculateCursorPosition,
   calculateOffsetFromPosition,
 } from "../../../utils/editor-position";
+import { CompletionDropdown } from "../overlays/completion-dropdown";
 import { LineBasedEditor } from "./line-based-editor";
 
 export function TextEditor() {
@@ -37,6 +39,7 @@ export function TextEditor() {
 
   const { setCursorPosition, setSelection, setDesiredColumn } = useEditorCursorStore.use.actions();
   const currentDesiredColumn = useEditorCursorStore.use.desiredColumn?.() ?? undefined;
+  const lspActions = useLspStore.use.actions();
 
   // Use the ref from the store or fallback to local ref
   const containerRef = editorRef || localRef;
@@ -337,6 +340,36 @@ export function TextEditor() {
     [handleSelectionChange],
   );
 
+  // Handle applying completion
+  const handleApplyCompletion = useCallback(
+    (completion: any) => {
+      if (!textareaRef.current) return;
+
+      const cursorPos = textareaRef.current.selectionStart;
+      const { newValue, newCursorPos } = lspActions.applyCompletion({
+        completion,
+        value: content,
+        cursorPos,
+      });
+
+      // Update the content
+      onChange?.(newValue);
+      if (activeBufferId) {
+        updateBufferContent(activeBufferId, newValue);
+      }
+
+      // Update cursor position after React renders the new value
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = newCursorPos;
+          textareaRef.current.focus();
+          handleSelectionChange();
+        }
+      }, 0);
+    },
+    [content, onChange, updateBufferContent, activeBufferId, lspActions],
+  );
+
   // Line-based rendering
   return (
     <div ref={containerRef} className="virtual-editor-container relative h-full overflow-hidden">
@@ -364,6 +397,9 @@ export function TextEditor() {
         onSelectionDrag={handleLineBasedSelection}
         viewportRef={viewportRef}
       />
+
+      {/* Completion dropdown */}
+      <CompletionDropdown onApplyCompletion={handleApplyCompletion} />
     </div>
   );
 }

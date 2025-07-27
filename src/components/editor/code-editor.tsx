@@ -1,20 +1,21 @@
 import type React from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useEditorScroll } from "../../hooks/use-editor-scroll";
 import { useHover } from "../../hooks/use-hover";
-import { useLspCompletion } from "../../hooks/use-lsp-completion";
+import { LspClient } from "../../lib/lsp/lsp-client";
 import { usePersistentSettingsStore } from "../../settings/stores/persistent-settings-store";
 import { useAppStore } from "../../stores/app-store";
 import { useBufferStore } from "../../stores/buffer-store";
+import { useEditorCursorStore } from "../../stores/editor-cursor-store";
 import { useEditorInstanceStore } from "../../stores/editor-instance-store";
 import { useEditorSearchStore } from "../../stores/editor-search-store";
 import { useEditorSettingsStore } from "../../stores/editor-settings-store";
 import { useFileSystemStore } from "../../stores/file-system/store";
+import { useLspStore } from "../../stores/lsp-store";
 import FindBar from "../find-bar";
 import Breadcrumb from "./breadcrumb";
 import { TextEditor } from "./core/text-editor";
 import { EditorStylesheet } from "./editor-stylesheet";
-import { CompletionDropdown } from "./overlays/completion-dropdown";
 import { HoverTooltip } from "./overlays/hover-tooltip";
 
 interface CodeEditorProps {
@@ -91,24 +92,94 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
     setDisabled(false);
   }, [setDisabled]);
 
-  // LSP completion hook - pass undefined for now as LSP functions come from parent
-  useLspCompletion({
-    getCompletions: undefined,
-    isLanguageSupported: () => false,
+  // Get LSP client instance
+  const lspClient = useMemo(() => LspClient.getInstance(), []);
+
+  // Check if current file is supported by LSP (synchronously for now)
+  const isLspSupported = useMemo(() => {
+    if (!filePath) return false;
+    const ext = filePath.split(".").pop()?.toLowerCase();
+    return ext === "ts" || ext === "tsx" || ext === "js" || ext === "jsx";
+  }, [filePath]);
+
+  // LSP store actions
+  const lspActions = useLspStore.use.actions();
+
+  // Set up LSP completion handlers
+  useEffect(() => {
+    console.log("Setting up LSP completion handlers, isLspSupported:", isLspSupported);
+    lspActions.setCompletionHandlers(
+      lspClient.getCompletions.bind(lspClient),
+      () => isLspSupported,
+    );
+  }, [lspClient, isLspSupported, lspActions]);
+
+  // Hover hook - prepare for future use
+  useHover({
+    getHover: lspClient.getHover.bind(lspClient),
+    isLanguageSupported: () => isLspSupported,
     filePath,
-    value,
     fontSize,
     lineNumbers,
   });
 
-  // Hover hook - pass undefined for now as LSP functions come from parent
-  useHover({
-    getHover: undefined,
-    isLanguageSupported: () => false,
-    filePath,
-    fontSize,
-    lineNumbers,
-  });
+  // Notify LSP about document changes
+  useEffect(() => {
+    if (!filePath || !activeBuffer) return;
+
+    // Document open
+    lspClient.notifyDocumentOpen(filePath, value).catch(console.error);
+
+    return () => {
+      // Document close
+      lspClient.notifyDocumentClose(filePath).catch(console.error);
+    };
+  }, [filePath, lspClient]);
+
+  // Notify LSP about content changes
+  useEffect(() => {
+    if (!filePath || !activeBuffer) return;
+
+    lspClient.notifyDocumentChange(filePath, value, 1).catch(console.error);
+  }, [value, filePath, activeBuffer, lspClient]);
+
+  // Get cursor position
+  const cursorPosition = useEditorCursorStore.use.cursorPosition();
+
+  // Track typing speed for dynamic debouncing
+  const lastTypeTimeRef = useRef<number>(Date.now());
+  const typingSpeedRef = useRef<number>(500);
+
+  // Trigger LSP completion on cursor position change
+  useEffect(() => {
+    if (!filePath || !editorRef.current) return;
+
+    // Calculate typing speed
+    const now = Date.now();
+    const timeSinceLastType = now - lastTypeTimeRef.current;
+    lastTypeTimeRef.current = now;
+
+    // Adjust debounce based on typing speed
+    if (timeSinceLastType < 100) {
+      // Fast typing - increase debounce
+      typingSpeedRef.current = Math.min(800, typingSpeedRef.current + 50);
+    } else if (timeSinceLastType > 500) {
+      // Slow typing - decrease debounce
+      typingSpeedRef.current = Math.max(300, typingSpeedRef.current - 50);
+    }
+
+    // Debounce completion trigger with dynamic delay
+    const timer = setTimeout(() => {
+      lspActions.requestCompletion({
+        filePath,
+        cursorPos: cursorPosition.offset,
+        value,
+        editorRef,
+      });
+    }, typingSpeedRef.current);
+
+    return () => clearTimeout(timer);
+  }, [cursorPosition, filePath, value, lspActions]);
 
   // Scroll management
   useEditorScroll(editorRef, null);
@@ -191,9 +262,6 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
               <div className="relative h-full flex-1 bg-primary-bg">
                 <TextEditor />
               </div>
-
-              {/* LSP Completion Dropdown - temporarily disabled */}
-              <CompletionDropdown />
             </div>
           </div>
         </div>

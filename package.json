@@ -58,7 +58,8 @@
     "@vitejs/plugin-react": "^4.7.0",
     "concurrently": "^9.2.0",
     "simple-git-hooks": "^2.13.0",
-    "typescript": "~5.8.3",
+    "typescript": "^5.8.3",
+    "typescript-language-server": "^4.3.4",
     "vite": "^7.0.5"
   },
   "simple-git-hooks": {
