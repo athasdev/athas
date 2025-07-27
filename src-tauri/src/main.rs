@@ -5,6 +5,7 @@ use claude_bridge::ClaudeCodeBridge;
 use commands::*;
 use file_watcher::FileWatcher;
 use log::{debug, info};
+use lsp::LspManager;
 use ssh::{ssh_connect, ssh_disconnect, ssh_write_file};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
@@ -15,6 +16,7 @@ mod claude_bridge;
 mod commands;
 mod file_watcher;
 mod logger;
+mod lsp;
 mod menu;
 mod ssh;
 mod terminal;
@@ -44,6 +46,9 @@ fn main() {
          // Set up Claude bridge
          let claude_bridge = Arc::new(Mutex::new(ClaudeCodeBridge::new(app.handle().clone())));
          app.manage(claude_bridge.clone());
+
+         // Set up LSP manager
+         app.manage(LspManager::new(app.handle().clone()));
 
          // Auto-start interceptor on app launch
          {
@@ -245,7 +250,16 @@ fn main() {
          get_tokens,
          // SQLite commands
          get_sqlite_tables,
-         query_sqlite
+         query_sqlite,
+         // LSP commands
+         lsp_start,
+         lsp_stop,
+         lsp_get_completions,
+         lsp_get_hover,
+         lsp_document_open,
+         lsp_document_change,
+         lsp_document_close,
+         lsp_is_language_supported,
       ])
       .run(tauri::generate_context!())
       .expect("error while running tauri application");

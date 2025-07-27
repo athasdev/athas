@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
+import { LspClient } from "../lib/lsp/lsp-client";
 import { useBufferStore } from "./buffer-store";
 
 interface FileChangeEvent {
@@ -21,9 +22,20 @@ export const useFileWatcherStore = create(
   combine(initialState, (set, get) => ({
     // Set the project root and start watching it
     setProjectRoot: async (path: string) => {
+      console.log(`📁 setProjectRoot called with path: ${path}`);
       try {
         await invoke("set_project_root", { path });
         console.log(`✅ Started watching project root: ${path}`);
+
+        // Start LSP for the project
+        try {
+          console.log(`🚀 Attempting to start LSP for project: ${path}`);
+          const lspClient = LspClient.getInstance();
+          await lspClient.start(path);
+          console.log(`✅ Started LSP for project: ${path}`);
+        } catch (error) {
+          console.error("❌ Failed to start LSP:", error);
+        }
       } catch (error) {
         console.error("❌ Failed to set project root:", path, error);
       }
