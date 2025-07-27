@@ -1,6 +1,7 @@
 use super::{
    client::LspClient,
    config::{LspRegistry, LspSettings},
+   utils,
 };
 use anyhow::{Context, Result, bail};
 use lsp_types::*;
@@ -33,23 +34,28 @@ impl LspManager {
    }
 
    pub fn get_server_path(&self, server_name: &str) -> Result<PathBuf> {
-      // In development, use static path
-      #[cfg(debug_assertions)]
-      {
-         if server_name == "typescript" {
+      // For TypeScript, try to find globally installed server
+      if server_name == "typescript" {
+         if let Some(path) = utils::find_global_binary("typescript-language-server") {
+            log::info!("Using global TypeScript server: {:?}", path);
+            return Ok(path);
+         }
+
+         // Development fallback
+         #[cfg(debug_assertions)]
+         {
             let server_path = PathBuf::from(
                "/Users/ale/mimi/prepos/athas/node_modules/.bin/typescript-language-server",
             );
 
-            log::info!("Using TypeScript server path: {:?}", server_path);
-
             if server_path.exists() {
+               log::info!("Using local TypeScript server: {:?}", server_path);
                return Ok(server_path);
             }
          }
       }
 
-      // In production, look for bundled executable
+      // Look for bundled executable
       let app_dir = self
          .app_handle
          .path()
