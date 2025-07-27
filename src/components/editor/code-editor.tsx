@@ -1,13 +1,12 @@
 import type React from "react";
 import { useEffect, useRef } from "react";
 import { useEditorScroll } from "../../hooks/use-editor-scroll";
-import { useEditorSync } from "../../hooks/use-editor-sync";
 import { useHover } from "../../hooks/use-hover";
 import { useLspCompletion } from "../../hooks/use-lsp-completion";
 import { usePersistentSettingsStore } from "../../settings/stores/persistent-settings-store";
 import { useAppStore } from "../../stores/app-store";
 import { useBufferStore } from "../../stores/buffer-store";
-import { useEditorCompletionStore } from "../../stores/editor-completion-store";
+import { useEditorContentStore } from "../../stores/editor-content-store";
 import { useEditorInstanceStore } from "../../stores/editor-instance-store";
 import { useEditorSearchStore } from "../../stores/editor-search-store";
 import { useEditorSettingsStore } from "../../stores/editor-settings-store";
@@ -37,17 +36,15 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null as any);
 
   const { setRefs, setContent, setFileInfo } = useEditorInstanceStore();
+  const { setContent: setValue } = useEditorContentStore.use.actions();
+  const { setDisabled } = useEditorSettingsStore.use.actions();
 
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { handleContentChange } = useAppStore.use.actions();
   const fontSize = useEditorSettingsStore.use.fontSize();
-  const fontFamily = useEditorSettingsStore.use.fontFamily();
-  const tabSize = useEditorSettingsStore.use.tabSize();
-  const wordWrap = useEditorSettingsStore.use.wordWrap();
   const lineNumbers = useEditorSettingsStore.use.lineNumbers();
-  const { aiCompletion } = useEditorCompletionStore();
   const { searchQuery, searchMatches, currentMatchIndex, setSearchMatches, setCurrentMatchIndex } =
     useEditorSearchStore();
   const isFileTreeLoading = useFileSystemStore((state) => state.isFileTreeLoading);
@@ -56,7 +53,6 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   // Extract values from active buffer or use defaults
   const value = activeBuffer?.content || "";
   const filePath = activeBuffer?.path || "";
-  const filename = activeBuffer?.name || "";
   const onChange = activeBuffer ? handleContentChange : () => {};
 
   // Initialize refs in store
@@ -89,22 +85,15 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
     setFileInfo(filePath);
   }, [filePath, setFileInfo]);
 
-  // Sync props with store
-  useEditorSync({
-    value,
-    filename,
-    filePath,
-    fontSize,
-    fontFamily,
-    tabSize,
-    wordWrap,
-    lineNumbers,
-    disabled: false,
-    aiCompletion,
-    searchQuery,
-    searchMatches,
-    currentMatchIndex,
-  });
+  // Sync content to editor content store when active buffer changes
+  useEffect(() => {
+    setValue(value);
+  }, [value, setValue]);
+
+  // Set disabled state
+  useEffect(() => {
+    setDisabled(false);
+  }, [setDisabled]);
 
   // LSP completion hook - pass undefined for now as LSP functions come from parent
   useLspCompletion({
