@@ -265,7 +265,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         });
 
         // Handle terminal key events for enhanced shortcuts
-        terminal.onKey(({ key, domEvent }) => {
+        terminal.onKey(({ domEvent }) => {
           const e = domEvent;
 
           // Cmd+Delete (Mac) or Ctrl+U (Unix) - Clear entire line

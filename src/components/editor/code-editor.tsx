@@ -6,7 +6,6 @@ import { useLspCompletion } from "../../hooks/use-lsp-completion";
 import { usePersistentSettingsStore } from "../../settings/stores/persistent-settings-store";
 import { useAppStore } from "../../stores/app-store";
 import { useBufferStore } from "../../stores/buffer-store";
-import { useEditorContentStore } from "../../stores/editor-content-store";
 import { useEditorInstanceStore } from "../../stores/editor-instance-store";
 import { useEditorSearchStore } from "../../stores/editor-search-store";
 import { useEditorSettingsStore } from "../../stores/editor-settings-store";
@@ -36,7 +35,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null as any);
 
   const { setRefs, setContent, setFileInfo } = useEditorInstanceStore();
-  const { setContent: setValue } = useEditorContentStore.use.actions();
+  // No longer need to sync content - editor-view-store computes from buffer
   const { setDisabled } = useEditorSettingsStore.use.actions();
 
   const buffers = useBufferStore.use.buffers();
@@ -85,10 +84,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
     setFileInfo(filePath);
   }, [filePath, setFileInfo]);
 
-  // Sync content to editor content store when active buffer changes
-  useEffect(() => {
-    setValue(value);
-  }, [value, setValue]);
+  // Editor view store automatically syncs with active buffer
 
   // Set disabled state
   useEffect(() => {

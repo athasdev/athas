@@ -1,6 +1,7 @@
-import { useEditorContentStore } from "../stores/editor-content-store";
+import { useBufferStore } from "../stores/buffer-store";
 import { useEditorDecorationsStore } from "../stores/editor-decorations-store";
 import { useEditorSettingsStore } from "../stores/editor-settings-store";
+import { useEditorViewStore } from "../stores/editor-view-store";
 import type { Decoration, Position, Range } from "../types/editor-types";
 import type { EditorAPI, EditorEvent, EditorSettings, EventHandler } from "./extension-types";
 
@@ -27,11 +28,15 @@ class EditorAPIImpl implements EditorAPI {
 
   // Content operations
   getContent(): string {
-    return useEditorContentStore.getState().actions.getContent();
+    return useEditorViewStore.getState().actions.getContent();
   }
 
   setContent(content: string): void {
-    useEditorContentStore.getState().actions.setContent(content);
+    const bufferStore = useBufferStore.getState();
+    const activeBufferId = bufferStore.activeBufferId;
+    if (activeBufferId) {
+      bufferStore.actions.updateBufferContent(activeBufferId, content);
+    }
     this.emit("contentChange", { content, changes: [] });
   }
 
@@ -151,7 +156,7 @@ class EditorAPIImpl implements EditorAPI {
 
   // Line operations
   getLines(): string[] {
-    return useEditorContentStore.getState().lines;
+    return useEditorViewStore.getState().lines;
   }
 
   getLine(lineNumber: number): string | undefined {

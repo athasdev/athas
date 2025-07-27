@@ -7,11 +7,12 @@ import {
   setSyntaxHighlightingFilePath,
   syntaxHighlightingExtension,
 } from "../../../extensions/syntax-highlighting-extension";
-import { useEditorContentStore } from "../../../stores/editor-content-store";
+import { useBufferStore } from "../../../stores/buffer-store";
 import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
 import { useEditorInstanceStore } from "../../../stores/editor-instance-store";
 import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
 import { useEditorSettingsStore } from "../../../stores/editor-settings-store";
+import { useEditorViewStore } from "../../../stores/editor-view-store";
 import type { Position } from "../../../types/editor-types";
 import {
   calculateCursorPosition,
@@ -21,8 +22,10 @@ import { LineBasedEditor } from "./line-based-editor";
 
 export function TextEditor() {
   const _tabSize = useEditorSettingsStore.use.tabSize();
-  const lines = useEditorContentStore.use.lines();
-  const { getContent, setContent } = useEditorContentStore.use.actions();
+  const lines = useEditorViewStore.use.lines();
+  const { getContent } = useEditorViewStore.use.actions();
+  const { updateBufferContent } = useBufferStore.use.actions();
+  const activeBufferId = useBufferStore.use.activeBufferId();
   const { onChange, disabled, filePath, editorRef } = useEditorInstanceStore();
   const { setViewportHeight } = useEditorLayoutStore.use.actions();
   const lineHeight =
@@ -57,7 +60,10 @@ export function TextEditor() {
     const affectedLines = new Set<number>();
     affectedLines.add(newCursorPosition.line);
 
-    setContent(newValue);
+    // Update buffer content instead of editor content store
+    if (activeBufferId) {
+      updateBufferContent(activeBufferId, newValue);
+    }
     onChange?.(newValue);
 
     setCursorPosition(newCursorPosition);
