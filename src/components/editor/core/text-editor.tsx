@@ -247,22 +247,15 @@ export function TextEditor() {
     }
   }, [filePath]);
 
-  // Reset cursor position when content changes (new file opened)
+  // Reset cursor position when switching to a new file
   useEffect(() => {
-    // Small delay to ensure textarea value is updated
-    const timer = setTimeout(() => {
-      if (textareaRef.current && content !== "") {
-        // Only reset if cursor is at end of file
-        if (textareaRef.current.selectionStart === content.length) {
-          textareaRef.current.selectionStart = 0;
-          textareaRef.current.selectionEnd = 0;
-          handleSelectionChange();
-        }
-      }
-    }, 10);
-
-    return () => clearTimeout(timer);
-  }, [content, handleSelectionChange]);
+    // Only reset cursor when activeBufferId changes (switching files)
+    if (textareaRef.current && content !== "") {
+      textareaRef.current.selectionStart = 0;
+      textareaRef.current.selectionEnd = 0;
+      handleSelectionChange();
+    }
+  }, [activeBufferId]); // Only depend on activeBufferId, not content
 
   // Update editor API by subscribing to cursor store changes
   useEffect(() => {
