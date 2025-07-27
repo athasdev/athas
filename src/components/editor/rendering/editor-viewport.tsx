@@ -16,6 +16,7 @@ interface EditorViewportProps {
   onMouseUp?: (e: React.MouseEvent<HTMLElement>) => void;
 }
 
+// TODO: use ref as props since we are in React 19
 export const EditorViewport = memo(
   forwardRef<HTMLDivElement, EditorViewportProps>(
     ({ onScroll, onClick, onMouseDown, onMouseMove, onMouseUp }, ref) => {

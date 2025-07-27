@@ -280,6 +280,13 @@ export function TextEditor() {
     editorAPI.setTextareaRef(textareaRef.current);
   }, []);
 
+  // Update viewport ref in editor API when it changes
+  useEffect(() => {
+    if (viewportRef.current) {
+      editorAPI.setViewportRef(viewportRef.current);
+    }
+  }, []);
+
   // Update viewport height when container size changes
   useEffect(() => {
     if (!containerRef.current) return;
