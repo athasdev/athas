@@ -91,7 +91,6 @@ const ExtensionCard = ({ extension, onToggle, isActive }: ExtensionCardProps) =>
   );
 };
 
-
 export default function ExtensionsView({
   onServerInstall,
   onServerUninstall,
@@ -143,7 +142,6 @@ export default function ExtensionsView({
     const matchesTab = extensionsActiveTab === "all" || extension.category === extensionsActiveTab;
     return matchesSearch && matchesTab;
   });
-
 
   return (
     <div className="flex h-full flex-col bg-primary-bg">
@@ -217,7 +215,6 @@ export default function ExtensionsView({
       </div>
 
       <div className="flex-1 overflow-auto p-4">
-
         {/* Extensions */}
         {extensionsActiveTab !== "theme" && (
           <div>

@@ -7,6 +7,7 @@ import { ToastContainer } from "./components/ui/toast";
 import WelcomeScreen from "./components/window/welcome-screen";
 import { ZoomIndicator } from "./components/zoom-indicator";
 import { useSettingsSync } from "./settings/hooks/use-settings-sync";
+import { useSettingsStore } from "./settings/stores/settings-store";
 import { useAppStore } from "./stores/app-store";
 import { useFileSystemStore } from "./stores/file-system/store";
 import {
@@ -15,7 +16,6 @@ import {
 } from "./stores/file-watcher-store";
 import { useFontStore } from "./stores/font-store";
 import { useRecentFoldersStore } from "./stores/recent-folders-store";
-import { useSettingsStore } from "./settings/stores/settings-store";
 import { useZoomStore } from "./stores/zoom-store";
 import { cn } from "./utils/cn";
 import { isMac } from "./utils/platform";
@@ -40,10 +40,7 @@ function App() {
     }
 
     return () => {
-      document.documentElement.classList.remove(
-        "platform-macos",
-        "platform-other",
-      );
+      document.documentElement.classList.remove("platform-macos", "platform-other");
       cleanup(); // Cleanup autosave timeouts
     };
   }, [cleanup]);
@@ -96,8 +93,7 @@ function App() {
   const isRemoteFromUrl = !!remoteParam;
 
   // Determine if we should show welcome screen
-  const shouldShowWelcome =
-    files.length === 0 && !rootFolderPath && !isRemoteFromUrl;
+  const shouldShowWelcome = files.length === 0 && !rootFolderPath && !isRemoteFromUrl;
 
   if (shouldShowWelcome) {
     return (
@@ -118,17 +114,11 @@ function App() {
   }
 
   return (
-    <div
-      className={cn(
-        "flex h-screen w-screen flex-col overflow-hidden bg-transparent",
-      )}
-    >
+    <div className={cn("flex h-screen w-screen flex-col overflow-hidden bg-transparent")}>
       <FontPreloader />
       <FontStyleInjector />
       <div
-        className={cn(
-          "window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg",
-        )}
+        className={cn("window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg")}
         style={{ zoom: zoomLevel }}
       >
         <MainLayout />

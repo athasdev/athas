@@ -91,12 +91,7 @@ class SSEStreamParser {
           this.handlers.onChunk(content);
         }
       } catch (parseError) {
-        console.warn(
-          "❌ Failed to parse SSE data:",
-          parseError,
-          "Raw data:",
-          trimmedLine,
-        );
+        console.warn("❌ Failed to parse SSE data:", parseError, "Raw data:", trimmedLine);
       }
     }
   }

@@ -1,8 +1,4 @@
-import {
-  AIProvider,
-  type ProviderHeaders,
-  type StreamRequest,
-} from "./provider-interface";
+import { AIProvider, type ProviderHeaders, type StreamRequest } from "./provider-interface";
 
 export class OpenRouterProvider extends AIProvider {
   buildHeaders(apiKey?: string): ProviderHeaders {

@@ -20,7 +20,7 @@ import {
 import { LineBasedEditor } from "./line-based-editor";
 
 export function TextEditor() {
-  const tabSize = useEditorSettingsStore.use.tabSize();
+  const _tabSize = useEditorSettingsStore.use.tabSize();
   const lines = useEditorContentStore.use.lines();
   const { getContent, setContent } = useEditorContentStore.use.actions();
   const { onChange, disabled, filePath, editorRef } = useEditorInstanceStore();
@@ -42,7 +42,9 @@ export function TextEditor() {
   const content = getContent();
 
   // Handle textarea input
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement> | React.FormEvent<HTMLTextAreaElement>) => {
+  const handleTextareaChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement> | React.FormEvent<HTMLTextAreaElement>,
+  ) => {
     const textarea = e.currentTarget;
     const newValue = textarea.value;
 

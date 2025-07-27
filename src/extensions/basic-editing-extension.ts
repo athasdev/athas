@@ -1,5 +1,5 @@
-import type { EditorAPI, EditorExtension } from "./extension-types";
 import { useBufferStore } from "../stores/buffer-store";
+import type { EditorAPI, EditorExtension } from "./extension-types";
 
 export const basicEditingExtension: EditorExtension = {
   name: "Basic Editing",
