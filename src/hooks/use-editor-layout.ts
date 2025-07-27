@@ -1,13 +1,13 @@
 import { useMemo } from "react";
 import { EDITOR_CONSTANTS } from "../constants/editor-constants";
-import { useEditorContentStore } from "../stores/editor-content-store";
 import { useEditorSettingsStore } from "../stores/editor-settings-store";
+import { useEditorViewStore } from "../stores/editor-view-store";
 import { getCharWidth, getLineHeight } from "../utils/editor-position";
 
 export function useEditorLayout() {
   const fontSize = useEditorSettingsStore.use.fontSize();
   const lineNumbers = useEditorSettingsStore.use.lineNumbers();
-  const lineCount = useEditorContentStore((state) => state.lines.length);
+  const lineCount = useEditorViewStore((state) => state.lines.length);
 
   return useMemo(() => {
     const lineHeight = getLineHeight(fontSize);

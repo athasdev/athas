@@ -2,10 +2,10 @@ import type React from "react";
 import { forwardRef, memo, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "../../../constants/editor-constants";
 import { useEditorLayout } from "../../../hooks/use-editor-layout";
-import { useEditorContentStore } from "../../../stores/editor-content-store";
 import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
 import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
 import { useEditorSettingsStore } from "../../../stores/editor-settings-store";
+import { useEditorViewStore } from "../../../stores/editor-view-store";
 import { LineWithContent } from "./line-with-content";
 
 interface EditorViewportProps {
@@ -20,7 +20,7 @@ export const EditorViewport = memo(
   forwardRef<HTMLDivElement, EditorViewportProps>(
     ({ onScroll, onClick, onMouseDown, onMouseMove, onMouseUp }, ref) => {
       const selection = useEditorCursorStore.use.selection?.() ?? undefined;
-      const lineCount = useEditorContentStore((state) => state.lines.length);
+      const lineCount = useEditorViewStore((state) => state.lines.length);
       const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
       const scrollTop = useEditorLayoutStore.use.scrollTop();
       const viewportHeight = useEditorLayoutStore.use.viewportHeight();

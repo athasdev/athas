@@ -2,10 +2,10 @@ import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { extensionManager } from "../../../extensions/extension-manager";
 import { useEditorLayout } from "../../../hooks/use-editor-layout";
-import { useEditorContentStore } from "../../../stores/editor-content-store";
 import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
 import { useEditorDecorationsStore } from "../../../stores/editor-decorations-store";
 import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
+import { useEditorViewStore } from "../../../stores/editor-view-store";
 import type { Decoration, Position } from "../../../types/editor-types";
 
 interface RenderedDecoration {
@@ -49,7 +49,7 @@ export const DecorationLayer = () => {
 
   const renderedDecorations = useMemo<RenderedDecoration[]>(() => {
     const rendered: RenderedDecoration[] = [];
-    const lines = useEditorContentStore.getState().lines;
+    const lines = useEditorViewStore.getState().lines;
 
     decorations.forEach((decoration, index) => {
       const { range, className = "", type } = decoration;
