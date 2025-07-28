@@ -152,15 +152,8 @@ export const useLspStore = createSelectors(
                 completionActions.setIsLspCompletionVisible(false);
               }
             } else {
-              // No prefix, show all completions as FilteredCompletion format
-              const allFiltered = completions.map((item) => ({
-                item,
-                score: 0,
-                indices: [],
-              }));
-              completionActions.setFilteredCompletions(allFiltered);
-              completionActions.setIsLspCompletionVisible(true);
-              completionActions.setSelectedLspIndex(0);
+              // No prefix - don't show completions when file is just opened
+              completionActions.setIsLspCompletionVisible(false);
             }
           } else {
             // Hide completion UI if no completions
