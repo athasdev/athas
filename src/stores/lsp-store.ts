@@ -1,5 +1,6 @@
 import type { CompletionItem } from "vscode-languageserver-protocol";
 import { create } from "zustand";
+import { detectCompletionContext, extractPrefix, filterCompletions } from "@/utils/fuzzy-matcher";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { useEditorCompletionStore } from "./editor-completion-store";
 
@@ -78,6 +79,11 @@ export const useLspStore = createSelectors(
           return;
         }
 
+        // Extract the current prefix being typed
+        const prefix = extractPrefix(value, cursorPos);
+        console.log("Current prefix:", prefix);
+        completionActions.setCurrentPrefix(prefix);
+
         // Smart triggering: check context before requesting completions
         const currentChar = cursorPos > 0 ? value[cursorPos - 1] : "";
 
@@ -123,10 +129,39 @@ export const useLspStore = createSelectors(
               })),
             );
 
-            // Update the completion UI
+            // Store original completions
             completionActions.setLspCompletions(completions);
-            completionActions.setIsLspCompletionVisible(true);
-            completionActions.setSelectedLspIndex(0);
+
+            // Filter completions using fuzzy matching if we have a prefix
+            if (prefix.length > 0) {
+              const context = detectCompletionContext(value, cursorPos);
+              const filtered = await filterCompletions({
+                pattern: prefix,
+                completions,
+                context_word: prefix,
+                context_type: context,
+              });
+
+              console.log(`Filtered ${completions.length} to ${filtered.length} completions`);
+
+              if (filtered.length > 0) {
+                completionActions.setFilteredCompletions(filtered);
+                completionActions.setIsLspCompletionVisible(true);
+                completionActions.setSelectedLspIndex(0);
+              } else {
+                completionActions.setIsLspCompletionVisible(false);
+              }
+            } else {
+              // No prefix, show all completions as FilteredCompletion format
+              const allFiltered = completions.map((item) => ({
+                item,
+                score: 0,
+                indices: [],
+              }));
+              completionActions.setFilteredCompletions(allFiltered);
+              completionActions.setIsLspCompletionVisible(true);
+              completionActions.setSelectedLspIndex(0);
+            }
           } else {
             // Hide completion UI if no completions
             completionActions.setIsLspCompletionVisible(false);

@@ -1,5 +1,6 @@
 import type { CompletionItem } from "vscode-languageserver-protocol";
 import { create } from "zustand";
+import type { FilteredCompletion } from "@/utils/fuzzy-matcher";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 // Types
@@ -16,6 +17,8 @@ type CompletionPosition = {
 interface EditorCompletionState {
   // LSP State
   lspCompletions: CompletionItem[];
+  filteredCompletions: FilteredCompletion[];
+  currentPrefix: string;
   selectedLspIndex: number;
   isLspCompletionVisible: boolean;
   completionPosition: CompletionPosition;
@@ -31,6 +34,8 @@ interface EditorCompletionState {
 
 interface EditorCompletionActions {
   setLspCompletions: (completions: CompletionItem[]) => void;
+  setFilteredCompletions: (completions: FilteredCompletion[]) => void;
+  setCurrentPrefix: (prefix: string) => void;
   setSelectedLspIndex: (index: number) => void;
   setIsLspCompletionVisible: (visible: boolean) => void;
   setCompletionPosition: (position: CompletionPosition) => void;
@@ -43,6 +48,8 @@ export const useEditorCompletionStore = createSelectors(
   create<EditorCompletionState>()((set) => ({
     // LSP State
     lspCompletions: [],
+    filteredCompletions: [],
+    currentPrefix: "",
     selectedLspIndex: 0,
     isLspCompletionVisible: false,
     completionPosition: { top: 0, left: 0 },
@@ -53,6 +60,9 @@ export const useEditorCompletionStore = createSelectors(
     aiCompletion: false,
     actions: {
       setLspCompletions: (completions: CompletionItem[]) => set({ lspCompletions: completions }),
+      setFilteredCompletions: (completions: FilteredCompletion[]) =>
+        set({ filteredCompletions: completions }),
+      setCurrentPrefix: (prefix: string) => set({ currentPrefix: prefix }),
       setSelectedLspIndex: (index: number) => set({ selectedLspIndex: index }),
       setIsLspCompletionVisible: (visible: boolean) => set({ isLspCompletionVisible: visible }),
       setCompletionPosition: (position: CompletionPosition) =>

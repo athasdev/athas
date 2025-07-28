@@ -35,7 +35,7 @@ fn is_command_available(cmd: &str) -> bool {
 
 fn get_bun_global_bin() -> Result<PathBuf> {
    let output = Command::new("bun")
-      .args(&["pm", "bin", "-g"])
+      .args(["pm", "bin", "-g"])
       .output()
       .context("Failed to get bun global bin")?;
 
@@ -49,7 +49,7 @@ fn get_bun_global_bin() -> Result<PathBuf> {
 
 fn get_npm_global_bin() -> Result<PathBuf> {
    let output = Command::new("npm")
-      .args(&["bin", "-g"])
+      .args(["bin", "-g"])
       .output()
       .context("Failed to get npm global bin")?;
 

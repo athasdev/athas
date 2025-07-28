@@ -260,6 +260,9 @@ fn main() {
          lsp_document_change,
          lsp_document_close,
          lsp_is_language_supported,
+         // Fuzzy matching commands
+         fuzzy_match,
+         filter_completions,
       ])
       .run(tauri::generate_context!())
       .expect("error while running tauri application");
