@@ -5,13 +5,14 @@ import { useEditorLayout } from "../../../hooks/use-editor-layout";
 import { useEditorCompletionStore } from "../../../stores/editor-completion-store";
 import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
 import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
+import { highlightMatches } from "../../../utils/fuzzy-matcher";
 
 interface CompletionDropdownProps {
   onApplyCompletion?: (completion: CompletionItem) => void;
 }
 
 export const CompletionDropdown = memo(({ onApplyCompletion }: CompletionDropdownProps) => {
-  const { isLspCompletionVisible, lspCompletions, selectedLspIndex, actions } =
+  const { isLspCompletionVisible, filteredCompletions, selectedLspIndex, currentPrefix, actions } =
     useEditorCompletionStore();
   const cursorPosition = useEditorCursorStore((state) => state.cursorPosition);
   const { scrollTop, scrollLeft } = useEditorLayoutStore();
@@ -43,37 +44,42 @@ export const CompletionDropdown = memo(({ onApplyCompletion }: CompletionDropdow
       }}
     >
       <div className="max-h-[300px] overflow-y-auto py-1">
-        {lspCompletions.map((item: any, index: number) => (
-          <div
-            key={index}
-            className={`cursor-pointer px-3 py-1.5 font-mono text-xs ${
-              index === selectedLspIndex ? "bg-blue-500 text-white" : "text-text hover:bg-hover"
-            }`}
-            onClick={() => handleSelect(item)}
-          >
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{item.label}</span>
-              {item.detail && (
-                <span
-                  className={index === selectedLspIndex ? "text-blue-100" : "text-text-lighter"}
-                >
-                  {item.detail}
+        {filteredCompletions.map((filtered, index: number) => {
+          const item = filtered.item;
+          const isSelected = index === selectedLspIndex;
+
+          return (
+            <div
+              key={index}
+              className={`cursor-pointer px-3 py-1.5 font-mono text-xs ${
+                isSelected ? "bg-blue-500 text-white" : "text-text hover:bg-hover"
+              }`}
+              onClick={() => handleSelect(item)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-medium">
+                  {currentPrefix && filtered.indices.length > 0
+                    ? highlightMatches(item.label, filtered.indices)
+                    : item.label}
                 </span>
+                {item.detail && (
+                  <span className={isSelected ? "text-blue-100" : "text-text-lighter"}>
+                    {item.detail}
+                  </span>
+                )}
+              </div>
+              {item.documentation && (
+                <div
+                  className={`mt-0.5 text-xs ${isSelected ? "text-blue-100" : "text-text-lighter"}`}
+                >
+                  {typeof item.documentation === "string"
+                    ? item.documentation
+                    : item.documentation.value}
+                </div>
               )}
             </div>
-            {item.documentation && (
-              <div
-                className={`mt-0.5 text-xs ${
-                  index === selectedLspIndex ? "text-blue-100" : "text-text-lighter"
-                }`}
-              >
-                {typeof item.documentation === "string"
-                  ? item.documentation
-                  : item.documentation.value}
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

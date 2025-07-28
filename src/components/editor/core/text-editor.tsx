@@ -8,6 +8,7 @@ import {
   syntaxHighlightingExtension,
 } from "../../../extensions/syntax-highlighting-extension";
 import { useBufferStore } from "../../../stores/buffer-store";
+import { useEditorCompletionStore } from "../../../stores/editor-completion-store";
 import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
 import { useEditorInstanceStore } from "../../../stores/editor-instance-store";
 import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
@@ -83,6 +84,19 @@ export function TextEditor() {
     // Emit content change with affected lines
     const eventData = { content: newValue, changes: [], affectedLines };
     editorAPI.emitEvent("contentChange", eventData);
+
+    // Trigger LSP completion if we're typing
+    if (newValue.length > content.length && selectionStart === selectionEnd) {
+      // Debounce completion requests
+      if (containerRef.current) {
+        lspActions.requestCompletion({
+          filePath: filePath || "",
+          cursorPos: selectionStart,
+          value: newValue,
+          editorRef: containerRef,
+        });
+      }
+    }
   };
 
   // Handle keyboard events
@@ -90,6 +104,7 @@ export function TextEditor() {
     const textarea = e.currentTarget;
     const { selectionStart } = textarea;
     const currentPosition = calculateCursorPosition(selectionStart, lines);
+    const completionStore = useEditorCompletionStore.getState();
 
     // Check for extension keybindings first
     const key = [
@@ -107,6 +122,36 @@ export function TextEditor() {
       e.preventDefault();
       command.execute({ editor: editorAPI });
       return;
+    }
+
+    // Handle completion navigation
+    if (completionStore.isLspCompletionVisible && completionStore.filteredCompletions.length > 0) {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+        const currentIndex = completionStore.selectedLspIndex;
+        const maxIndex = completionStore.filteredCompletions.length - 1;
+
+        let newIndex: number;
+        if (e.key === "ArrowUp") {
+          newIndex = currentIndex > 0 ? currentIndex - 1 : maxIndex;
+        } else {
+          newIndex = currentIndex < maxIndex ? currentIndex + 1 : 0;
+        }
+
+        completionStore.actions.setSelectedLspIndex(newIndex);
+        return;
+      } else if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        const selected = completionStore.filteredCompletions[completionStore.selectedLspIndex];
+        if (selected) {
+          handleApplyCompletion(selected.item);
+        }
+        return;
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        completionStore.actions.setIsLspCompletionVisible(false);
+        return;
+      }
     }
 
     if (e.key === "ArrowUp" || e.key === "ArrowDown") {
