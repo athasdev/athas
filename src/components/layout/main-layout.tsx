@@ -1,11 +1,13 @@
 import { useState } from "react";
+import SQLiteViewer from "../../database/sqlite-viewer";
 import { ProjectNameMenu } from "../../hooks/use-context-menus";
 import { useKeyboardShortcutsWrapper } from "../../hooks/use-keyboard-shortcuts-wrapper";
 import { useMenuEventsWrapper } from "../../hooks/use-menu-events-wrapper";
-import { useBufferStore } from "../../stores/buffer-store";
-import { useFileSystemStore } from "../../stores/file-system/store";
+import SettingsDialog from "../../settings/components/settings-dialog";
 import { usePersistentSettingsStore } from "../../settings/stores/persistent-settings-store";
 import { useSettingsStore } from "../../settings/stores/settings-store";
+import { useBufferStore } from "../../stores/buffer-store";
+import { useFileSystemStore } from "../../stores/file-system/store";
 import { useUIState } from "../../stores/ui-state-store";
 import { type GitHunk, stageHunk, unstageHunk } from "../../utils/git";
 import AIChat from "../ai-chat/ai-chat";
@@ -23,8 +25,6 @@ import GitHubCopilotSettings from "../github-copilot-settings";
 import { ImageViewer } from "../image-viewer/image-viewer";
 import ResizableRightPane from "../resizable-right-pane";
 import ResizableSidebar from "../resizable-sidebar";
-import SettingsDialog from "../../settings/components/settings-dialog";
-import SQLiteViewer from "../../database/sqlite-viewer";
 import TabBar from "../tab-bar/tab-bar";
 import CustomTitleBarWithSettings from "../window/custom-title-bar";
 import { MainSidebar } from "./main-sidebar";
@@ -127,29 +127,17 @@ export function MainLayout() {
               }
               if (activeBuffer.isDiff) {
                 return (
-                  <DiffViewer
-                    onStageHunk={handleStageHunk}
-                    onUnstageHunk={handleUnstageHunk}
-                  />
+                  <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />
                 );
               } else if (activeBuffer.isImage) {
-                return (
-                  <ImageViewer
-                    filePath={activeBuffer.path}
-                    fileName={activeBuffer.name}
-                  />
-                );
+                return <ImageViewer filePath={activeBuffer.path} fileName={activeBuffer.name} />;
               } else if (activeBuffer.isSQLite) {
                 return <SQLiteViewer databasePath={activeBuffer.path} />;
               } else if (activeBuffer.path === "extensions://marketplace") {
                 return (
                   <ExtensionsView
-                    onServerInstall={(server) =>
-                      console.log("Install server:", server)
-                    }
-                    onServerUninstall={(serverId) =>
-                      console.log("Uninstall server:", serverId)
-                    }
+                    onServerInstall={(server) => console.log("Install server:", server)}
+                    onServerUninstall={(serverId) => console.log("Uninstall server:", serverId)}
                     onThemeChange={handleThemeChange}
                     currentTheme={settings.theme}
                   />

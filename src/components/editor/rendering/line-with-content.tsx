@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { useEditorDecorationsStore } from "@/stores/editor-decorations-store";
-import { useEditorContentStore } from "../../../stores/editor-content-store";
+import { useEditorViewStore } from "../../../stores/editor-view-store";
 import { LineGutter } from "./line-gutter";
 import { LineRenderer } from "./line-renderer";
 
@@ -14,8 +14,8 @@ interface LineWithContentProps {
 
 export const LineWithContent = memo<LineWithContentProps>(
   ({ lineNumber, showLineNumbers, gutterWidth, lineHeight, isSelected }) => {
-    const content = useEditorContentStore((state) => state.lines[lineNumber]);
-    const tokens = useEditorContentStore((state) => state.lineTokens.get(lineNumber)) ?? [];
+    const content = useEditorViewStore((state) => state.lines[lineNumber]);
+    const tokens = useEditorViewStore((state) => state.lineTokens.get(lineNumber)) ?? [];
     const decorations = useEditorDecorationsStore((state) =>
       state.getDecorationsForLine(lineNumber),
     );

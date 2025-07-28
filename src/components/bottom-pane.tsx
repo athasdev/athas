@@ -4,9 +4,7 @@ import { cn } from "@/utils/cn";
 import { usePersistentSettingsStore } from "../settings/stores/persistent-settings-store";
 import { useProjectStore } from "../stores/project-store";
 import { useUIState } from "../stores/ui-state-store";
-import DiagnosticsPane, {
-  type Diagnostic,
-} from "./diagnostics/diagnostics-pane";
+import DiagnosticsPane, { type Diagnostic } from "./diagnostics/diagnostics-pane";
 import TerminalContainer from "./terminal/terminal-container";
 
 interface BottomPaneProps {
@@ -15,8 +13,7 @@ interface BottomPaneProps {
 }
 
 const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
-  const { isBottomPaneVisible, bottomPaneActiveTab, setIsBottomPaneVisible } =
-    useUIState();
+  const { isBottomPaneVisible, bottomPaneActiveTab, setIsBottomPaneVisible } = useUIState();
   const { rootFolderPath } = useProjectStore();
   const { coreFeatures } = usePersistentSettingsStore();
   const [height, setHeight] = useState(320);
@@ -43,10 +40,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
 
       const handleMouseMove = (e: MouseEvent) => {
         const deltaY = startY - e.clientY; // Reverse direction since we're resizing from top
-        const newHeight = Math.min(
-          Math.max(startHeight + deltaY, 200),
-          window.innerHeight * 0.8,
-        ); // Min 200px, max 80% of screen
+        const newHeight = Math.min(Math.max(startHeight + deltaY, 200), window.innerHeight * 0.8); // Min 200px, max 80% of screen
         setHeight(newHeight);
       };
 
@@ -68,7 +62,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
 
   const titleBarHeight = isMacOS ? 44 : 28; // h-11 for macOS, h-7 for Windows/Linux
   const footerHeight = 32; // Footer height matches min-h-[32px] from editor-footer
-  const totalReservedHeight = titleBarHeight + footerHeight;
+  const _totalReservedHeight = titleBarHeight + footerHeight;
 
   return (
     <div
@@ -112,10 +106,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
         {coreFeatures.terminal && (
           <TerminalContainer
             currentDirectory={rootFolderPath}
-            className={cn(
-              "h-full",
-              bottomPaneActiveTab === "terminal" ? "block" : "hidden",
-            )}
+            className={cn("h-full", bottomPaneActiveTab === "terminal" ? "block" : "hidden")}
             onClosePanel={() => setIsBottomPaneVisible(false)}
             onFullScreen={() => setIsFullScreen(!isFullScreen)}
             isFullScreen={isFullScreen}
@@ -133,8 +124,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
               isEmbedded={true}
             />
           </div>
-        ) : bottomPaneActiveTab !== "terminal" &&
-          bottomPaneActiveTab !== "diagnostics" ? (
+        ) : bottomPaneActiveTab !== "terminal" && bottomPaneActiveTab !== "diagnostics" ? (
           <div className="flex h-full items-center justify-center text-text-lighter">
             <span className="text-sm">No available panels</span>
           </div>

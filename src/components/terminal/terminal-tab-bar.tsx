@@ -218,14 +218,12 @@ const TerminalTabBar = ({
   };
 
   const handleMouseMove = (e: MouseEvent) => {
-    if (draggedIndex === null || !dragStartPosition || !tabBarRef.current)
-      return;
+    if (draggedIndex === null || !dragStartPosition || !tabBarRef.current) return;
 
     setDragCurrentPosition({ x: e.clientX, y: e.clientY });
 
     const distance = Math.sqrt(
-      (e.clientX - dragStartPosition.x) ** 2 +
-        (e.clientY - dragStartPosition.y) ** 2,
+      (e.clientX - dragStartPosition.x) ** 2 + (e.clientY - dragStartPosition.y) ** 2,
     );
 
     if (distance > 5 && !isDragging) {
@@ -238,19 +236,14 @@ const TerminalTabBar = ({
       const y = e.clientY - rect.top;
 
       // Check if dragged outside the tab bar
-      const isOutside =
-        x < 0 || x > rect.width || y < -50 || y > rect.height + 50;
+      const isOutside = x < 0 || x > rect.width || y < -50 || y > rect.height + 50;
       setIsDraggedOutside(isOutside);
 
       if (!isOutside) {
         // Handle internal reordering
-        const tabContainer = tabBarRef.current.querySelector(
-          "[data-tab-container]",
-        );
+        const tabContainer = tabBarRef.current.querySelector("[data-tab-container]");
         if (tabContainer) {
-          const tabElements = Array.from(
-            tabContainer.children,
-          ) as HTMLElement[];
+          const tabElements = Array.from(tabContainer.children) as HTMLElement[];
 
           let newDropTarget: number | null = null;
           for (let i = 0; i < tabElements.length; i++) {
@@ -272,10 +265,7 @@ const TerminalTabBar = ({
 
           // Clamp drop target to valid range
           if (newDropTarget !== null) {
-            newDropTarget = Math.max(
-              0,
-              Math.min(tabElements.length, newDropTarget),
-            );
+            newDropTarget = Math.max(0, Math.min(tabElements.length, newDropTarget));
           }
 
           if (newDropTarget !== dropTarget) {
@@ -290,12 +280,7 @@ const TerminalTabBar = ({
 
   const handleMouseUp = () => {
     if (draggedIndex !== null) {
-      if (
-        !isDraggedOutside &&
-        dropTarget !== null &&
-        dropTarget !== draggedIndex &&
-        onTabReorder
-      ) {
+      if (!isDraggedOutside && dropTarget !== null && dropTarget !== draggedIndex && onTabReorder) {
         // Adjust dropTarget if moving right (forward)
         let adjustedDropTarget = dropTarget;
         if (draggedIndex < dropTarget) {
@@ -364,9 +349,7 @@ const TerminalTabBar = ({
       >
         <div className="flex items-center gap-1.5">
           <TerminalIcon size={10} className="text-text-lighter" />
-          <span className="font-mono text-text-lighter text-xs">
-            No terminals
-          </span>
+          <span className="font-mono text-text-lighter text-xs">No terminals</span>
         </div>
         {onNewTerminal && (
           <Tooltip content="New Terminal (Cmd+T)" side="bottom">
@@ -400,17 +383,12 @@ const TerminalTabBar = ({
         }}
       >
         {/* Left side - Terminal tabs */}
-        <div
-          className="scrollbar-hidden flex overflow-x-auto"
-          data-tab-container
-        >
+        <div className="scrollbar-hidden flex overflow-x-auto" data-tab-container>
           {sortedTerminals.map((terminal, index) => {
             const isActive = terminal.id === activeTerminalId;
             // Drop indicator should be shown before the tab at dropTarget
             const showDropIndicator =
-              dropTarget === index &&
-              draggedIndex !== null &&
-              !isDraggedOutside;
+              dropTarget === index && draggedIndex !== null && !isDraggedOutside;
 
             return (
               <React.Fragment key={terminal.id}>
@@ -423,8 +401,8 @@ const TerminalTabBar = ({
                     />
                   </div>
                 )}
-                <Tooltip 
-                  content={`${terminal.name}${terminal.isPinned ? ' (Pinned)' : ''}\n${terminal.currentDirectory}`} 
+                <Tooltip
+                  content={`${terminal.name}${terminal.isPinned ? " (Pinned)" : ""}\n${terminal.currentDirectory}`}
                   side="bottom"
                 >
                   <div
@@ -445,61 +423,57 @@ const TerminalTabBar = ({
                     }}
                     onContextMenu={(e) => handleContextMenu(e, terminal)}
                   >
-                  {/* Active tab indicator */}
-                  {isActive && (
-                    <div className="absolute right-0 bottom-0 left-0 h-[2px] bg-blue-500" />
-                  )}
+                    {/* Active tab indicator */}
+                    {isActive && (
+                      <div className="absolute right-0 bottom-0 left-0 h-[2px] bg-blue-500" />
+                    )}
 
-                  {/* Terminal Icon */}
-                  <div className="flex-shrink-0">
-                    <TerminalIcon size={12} className="text-text-lighter" />
-                  </div>
+                    {/* Terminal Icon */}
+                    <div className="flex-shrink-0">
+                      <TerminalIcon size={12} className="text-text-lighter" />
+                    </div>
 
-                  {/* Pin indicator */}
-                  {terminal.isPinned && (
-                    <Pin size={8} className="flex-shrink-0 text-blue-500" />
-                  )}
+                    {/* Pin indicator */}
+                    {terminal.isPinned && <Pin size={8} className="flex-shrink-0 text-blue-500" />}
 
-                  {/* Terminal Name */}
-                  <span
-                    className={`flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs ${isActive ? "text-text" : "text-text-light"} `}
-                    title={terminal.currentDirectory}
-                  >
-                    {terminal.name}
-                  </span>
-
-                  {/* Close Button */}
-                  {!terminal.isPinned && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onTabClose(terminal.id, e);
-                      }}
-                      className={cn(
-                        "flex-shrink-0 cursor-pointer p-0.5",
-                        "text-text-lighter opacity-0 transition-all duration-150",
-                        "hover:bg-hover hover:text-text hover:opacity-100 group-hover:opacity-100",
-                      )}
+                    {/* Terminal Name */}
+                    <span
+                      className={`flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs ${isActive ? "text-text" : "text-text-light"} `}
+                      title={terminal.currentDirectory}
                     >
-                      <X size={12} />
-                    </button>
-                  )}
+                      {terminal.name}
+                    </span>
+
+                    {/* Close Button */}
+                    {!terminal.isPinned && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTabClose(terminal.id, e);
+                        }}
+                        className={cn(
+                          "flex-shrink-0 cursor-pointer p-0.5",
+                          "text-text-lighter opacity-0 transition-all duration-150",
+                          "hover:bg-hover hover:text-text hover:opacity-100 group-hover:opacity-100",
+                        )}
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
                   </div>
                 </Tooltip>
               </React.Fragment>
             );
           })}
           {/* Drop indicator after the last tab */}
-          {dropTarget === sortedTerminals.length &&
-            draggedIndex !== null &&
-            !isDraggedOutside && (
-              <div className="relative flex items-center">
-                <div
-                  className="absolute top-0 bottom-0 z-10 w-0.5 bg-accent"
-                  style={{ height: "100%" }}
-                />
-              </div>
-            )}
+          {dropTarget === sortedTerminals.length && draggedIndex !== null && !isDraggedOutside && (
+            <div className="relative flex items-center">
+              <div
+                className="absolute top-0 bottom-0 z-10 w-0.5 bg-accent"
+                style={{ height: "100%" }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right side - Action buttons */}
@@ -521,7 +495,10 @@ const TerminalTabBar = ({
 
           {/* Split View Button */}
           {onSplitView && (
-            <Tooltip content={isSplitView ? "Exit Split View" : "Split Terminal View (Cmd+D)"} side="bottom">
+            <Tooltip
+              content={isSplitView ? "Exit Split View" : "Split Terminal View (Cmd+D)"}
+              side="bottom"
+            >
               <button
                 onClick={onSplitView}
                 className={cn(
@@ -538,7 +515,10 @@ const TerminalTabBar = ({
 
           {/* Full Screen Button */}
           {onFullScreen && (
-            <Tooltip content={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"} side="bottom">
+            <Tooltip
+              content={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
+              side="bottom"
+            >
               <button
                 onClick={onFullScreen}
                 className={cn(
@@ -594,9 +574,7 @@ const TerminalTabBar = ({
             {sortedTerminals[draggedIndex].isPinned && (
               <Pin size={8} className="flex-shrink-0 text-blue-500" />
             )}
-            <span className="truncate">
-              {sortedTerminals[draggedIndex].name}
-            </span>
+            <span className="truncate">{sortedTerminals[draggedIndex].name}</span>
           </div>
         )}
       </div>

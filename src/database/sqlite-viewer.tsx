@@ -1,14 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import {
-  Code,
-  Copy,
-  Database,
-  Download,
-  RefreshCw,
-  Search,
-  Table,
-  X,
-} from "lucide-react";
+import { Code, Copy, Database, Download, RefreshCw, Search, Table, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "../components/ui/button";
 
@@ -46,10 +37,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
   const [sqlHistory, setSqlHistory] = useState<string[]>([]);
 
   // Database file info
-  const fileName =
-    databasePath.split("/").pop() ||
-    databasePath.split("\\").pop() ||
-    "Database";
+  const fileName = databasePath.split("/").pop() || databasePath.split("\\").pop() || "Database";
 
   // Load table list when component mounts
   useEffect(() => {
@@ -128,9 +116,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
         // Apply search if present
         if (searchTerm.trim()) {
           // Search across all columns
-          const searchableColumns = tableMeta
-            .map((col) => col.name)
-            .join(' || " " || ');
+          const searchableColumns = tableMeta.map((col) => col.name).join(' || " " || ');
           query = `SELECT * FROM "${selectedTable}" WHERE (${searchableColumns}) LIKE "%${searchTerm}%" LIMIT ${pageSize} OFFSET ${offset}`;
         }
 
@@ -149,15 +135,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
     };
 
     loadTableData();
-  }, [
-    databasePath,
-    selectedTable,
-    currentPage,
-    pageSize,
-    searchTerm,
-    isCustomQuery,
-    tableMeta,
-  ]);
+  }, [databasePath, selectedTable, currentPage, pageSize, searchTerm, isCustomQuery, tableMeta]);
 
   // Execute custom query
   const executeCustomQuery = async () => {
@@ -227,10 +205,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `${selectedTable || "query_result"}_export.csv`,
-    );
+    link.setAttribute("download", `${selectedTable || "query_result"}_export.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -444,9 +419,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
             <div className="custom-scrollbar flex-1 overflow-auto p-0">
               {queryResult.rows.length === 0 ? (
                 <div className="flex h-full items-center justify-center">
-                  <div className="font-mono text-sm text-text-lighter italic">
-                    No data returned
-                  </div>
+                  <div className="font-mono text-sm text-text-lighter italic">No data returned</div>
                 </div>
               ) : (
                 <table className="w-full border-collapse font-mono text-xs">
@@ -460,9 +433,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                         <th
                           key={i}
                           className="whitespace-nowrap border border-border bg-secondary-bg px-2 py-1.5 text-left"
-                          title={
-                            tableMeta.find((c) => c.name === column)?.type || ""
-                          }
+                          title={tableMeta.find((c) => c.name === column)?.type || ""}
                         >
                           {column}
                           {tableMeta.find((c) => c.name === column) && (
@@ -488,13 +459,9 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                             title={cell === null ? "NULL" : String(cell)}
                           >
                             {cell === null ? (
-                              <span className="text-text-lighter italic">
-                                NULL
-                              </span>
+                              <span className="text-text-lighter italic">NULL</span>
                             ) : typeof cell === "object" ? (
-                              <span className="text-blue-500">
-                                {JSON.stringify(cell)}
-                              </span>
+                              <span className="text-blue-500">{JSON.stringify(cell)}</span>
                             ) : (
                               String(cell)
                             )}
@@ -542,9 +509,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                   First
                 </Button>
                 <Button
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(1, prev - 1))
-                  }
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
                   variant="ghost"
                   size="sm"
@@ -558,9 +523,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                 </span>
 
                 <Button
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                  }
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
                   variant="ghost"
                   size="sm"

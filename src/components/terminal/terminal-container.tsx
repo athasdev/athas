@@ -278,7 +278,6 @@ const TerminalContainer = ({
         return;
       }
 
-
       // Terminal tab navigation with Alt+Left/Right
       if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
         e.preventDefault();

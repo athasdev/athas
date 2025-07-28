@@ -1,3 +1,4 @@
+import { useBufferStore } from "../stores/buffer-store";
 import type { EditorAPI, EditorExtension } from "./extension-types";
 
 export const basicEditingExtension: EditorExtension = {
@@ -97,6 +98,22 @@ export const basicEditingExtension: EditorExtension = {
         });
       },
     },
+    {
+      id: "editor.nextTab",
+      name: "Next Tab",
+      execute: () => {
+        const bufferStore = useBufferStore.getState();
+        bufferStore.actions.switchToNextBuffer();
+      },
+    },
+    {
+      id: "editor.previousTab",
+      name: "Previous Tab",
+      execute: () => {
+        const bufferStore = useBufferStore.getState();
+        bufferStore.actions.switchToPreviousBuffer();
+      },
+    },
   ],
 
   keybindings: {
@@ -109,5 +126,7 @@ export const basicEditingExtension: EditorExtension = {
     "Ctrl+ArrowUp": "editor.moveToDocumentStart",
     "Cmd+ArrowDown": "editor.moveToDocumentEnd",
     "Ctrl+ArrowDown": "editor.moveToDocumentEnd",
+    "Ctrl+Tab": "editor.nextTab",
+    "Ctrl+Shift+Tab": "editor.previousTab",
   },
 };

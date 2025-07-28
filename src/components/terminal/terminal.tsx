@@ -68,15 +68,13 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
   const { updateSession, getSession } = useTerminalStore();
   const { currentTheme } = useThemeStore();
-  const { fontSize: editorFontSize, fontFamily: editorFontFamily } =
-    useEditorSettingsStore();
+  const { fontSize: editorFontSize, fontFamily: editorFontFamily } = useEditorSettingsStore();
   const { rootFolderPath } = useProjectStore();
   const [fontSize, setFontSize] = useState(editorFontSize);
 
   const getTerminalTheme = useCallback((): TerminalTheme => {
     const computedStyle = getComputedStyle(document.documentElement);
-    const getColor = (varName: string) =>
-      computedStyle.getPropertyValue(varName).trim();
+    const getColor = (varName: string) => computedStyle.getPropertyValue(varName).trim();
 
     return {
       background: getColor("--color-primary-bg"),
@@ -146,33 +144,28 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       const fitAddon = new FitAddon();
       const searchAddon = new SearchAddon();
       // WebLinksAddon with custom handler
-      const webLinksAddon = new WebLinksAddon(
-        async (_event: MouseEvent, uri: string) => {
-          console.log("WebLinksAddon: Opening link", uri);
+      const webLinksAddon = new WebLinksAddon(async (_event: MouseEvent, uri: string) => {
+        console.log("WebLinksAddon: Opening link", uri);
 
-          try {
-            // Show confirmation dialog
-            const confirmed = await ask(
-              `Do you want to open this link in your browser?\n\n${uri}`,
-              {
-                title: "Open External Link",
-                kind: "warning",
-                okLabel: "Open",
-                cancelLabel: "Cancel",
-              },
-            );
+        try {
+          // Show confirmation dialog
+          const confirmed = await ask(`Do you want to open this link in your browser?\n\n${uri}`, {
+            title: "Open External Link",
+            kind: "warning",
+            okLabel: "Open",
+            cancelLabel: "Cancel",
+          });
 
-            if (confirmed) {
-              await open(uri);
-              console.log("Successfully opened link");
-            } else {
-              console.log("User cancelled opening link");
-            }
-          } catch (error) {
-            console.error("Failed to open link:", error);
+          if (confirmed) {
+            await open(uri);
+            console.log("Successfully opened link");
+          } else {
+            console.log("User cancelled opening link");
           }
-        },
-      );
+        } catch (error) {
+          console.error("Failed to open link:", error);
+        }
+      });
       const serializeAddon = new SerializeAddon();
       const unicode11Addon = new Unicode11Addon();
 
@@ -249,20 +242,14 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         // Create new connection
         const connectionId = await invoke<string>("create_xterm_terminal", {
           config: {
-            working_directory:
-              existingSession?.currentDirectory || rootFolderPath || undefined,
+            working_directory: existingSession?.currentDirectory || rootFolderPath || undefined,
             shell: existingSession?.shell || undefined,
             rows: terminal.rows,
             cols: terminal.cols,
           },
         });
 
-        console.log(
-          "Created new terminal connection:",
-          connectionId,
-          "for session:",
-          sessionId,
-        );
+        console.log("Created new terminal connection:", connectionId, "for session:", sessionId);
 
         // Store connection ID for this session
         updateSession(sessionId, { connectionId });
@@ -278,9 +265,9 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         });
 
         // Handle terminal key events for enhanced shortcuts
-        terminal.onKey(({ key, domEvent }) => {
+        terminal.onKey(({ domEvent }) => {
           const e = domEvent;
-          
+
           // Cmd+Delete (Mac) or Ctrl+U (Unix) - Clear entire line
           if ((e.metaKey && e.key === "Backspace") || (e.ctrlKey && e.key === "u")) {
             e.preventDefault();
@@ -291,7 +278,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
             });
             return;
           }
-          
+
           // Cmd+K (Mac) - Clear screen
           if (e.metaKey && e.key === "k") {
             e.preventDefault();
@@ -301,7 +288,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
             });
             return;
           }
-          
+
           // Option+Delete (Mac) - Delete word backwards
           if (e.altKey && e.key === "Backspace") {
             e.preventDefault();
@@ -312,7 +299,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
             });
             return;
           }
-          
+
           // Cmd+A (Mac) - Move to beginning of line
           if (e.metaKey && e.key === "a") {
             e.preventDefault();
@@ -322,7 +309,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
             });
             return;
           }
-          
+
           // Cmd+E (Mac) - Move to end of line
           if (e.metaKey && e.key === "e") {
             e.preventDefault();
@@ -332,7 +319,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
             });
             return;
           }
-          
+
           // Cmd+Left/Right (Mac) - Move to beginning/end of line
           if (e.metaKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
             e.preventDefault();
@@ -343,7 +330,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
             });
             return;
           }
-          
+
           // Option+Left/Right (Mac) - Move by word
           if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
             e.preventDefault();
@@ -360,11 +347,9 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         terminal.onResize(({ cols, rows }) => {
           // Use the ref to always have the current connection ID
           const currentId = currentConnectionIdRef.current || connectionId;
-          invoke("terminal_resize", { id: currentId, rows, cols }).catch(
-            (e) => {
-              console.error("Failed to resize terminal:", e);
-            },
-          );
+          invoke("terminal_resize", { id: currentId, rows, cols }).catch((e) => {
+            console.error("Failed to resize terminal:", e);
+          });
         });
 
         // Handle selection
@@ -394,9 +379,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         onReady?.();
       } catch (innerError) {
         console.error("Failed to create terminal connection:", innerError);
-        terminal.writeln(
-          "\r\n\x1b[31mFailed to create terminal connection\x1b[0m",
-        );
+        terminal.writeln("\r\n\x1b[31mFailed to create terminal connection\x1b[0m");
         isInitializingRef.current = false;
       }
     } catch (error) {
@@ -628,11 +611,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       const isTerminalFocused = terminalRef.current?.contains(e.target as Node);
 
       // Ctrl+F or Cmd+F for search - only when terminal is focused or already searching
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        e.key === "f" &&
-        (isTerminalFocused || isSearchVisible)
-      ) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "f" && (isTerminalFocused || isSearchVisible)) {
         e.preventDefault();
         e.stopPropagation();
         setIsSearchVisible(true);
@@ -644,11 +623,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         xtermRef.current?.focus();
       }
       // Ctrl/Cmd + Plus for zoom in
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        (e.key === "+" || e.key === "=") &&
-        isTerminalFocused
-      ) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "+" || e.key === "=") && isTerminalFocused) {
         e.preventDefault();
         handleZoomIn();
       }
@@ -703,10 +678,8 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       scrollToTop: () => xtermRef.current?.scrollToTop(),
       scrollToBottom: () => xtermRef.current?.scrollToBottom(),
       findNext: (term: string) => searchAddonRef.current?.findNext(term),
-      findPrevious: (term: string) =>
-        searchAddonRef.current?.findPrevious(term),
-      serialize: () =>
-        xtermRef.current ? serializeAddonRef.current?.serialize() : "",
+      findPrevious: (term: string) => searchAddonRef.current?.findPrevious(term),
+      serialize: () => (xtermRef.current ? serializeAddonRef.current?.serialize() : ""),
       resize: () => fitAddonRef.current?.fit(),
     }),
     [sessionId, isInitialized],
@@ -724,14 +697,9 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       <div
         ref={terminalRef}
         id={`terminal-${sessionId}`}
-        className={cn(
-          "xterm-container",
-          "w-full",
-          "text-text",
-          !isActive && "opacity-60",
-        )}
+        className={cn("xterm-container", "w-full", "text-text", !isActive && "opacity-60")}
         style={{
-          height: 'calc(100% - 40px)', // Subtract footer height to prevent content going below
+          height: "calc(100% - 40px)", // Subtract footer height to prevent content going below
         }}
       />
     </div>

@@ -1,6 +1,9 @@
-import { useEditorContentStore } from "../stores/editor-content-store";
+import { EDITOR_CONSTANTS } from "../constants/editor-constants";
+import { useBufferStore } from "../stores/buffer-store";
+import { useEditorCursorStore } from "../stores/editor-cursor-store";
 import { useEditorDecorationsStore } from "../stores/editor-decorations-store";
 import { useEditorSettingsStore } from "../stores/editor-settings-store";
+import { useEditorViewStore } from "../stores/editor-view-store";
 import type { Decoration, Position, Range } from "../types/editor-types";
 import type { EditorAPI, EditorEvent, EditorSettings, EventHandler } from "./extension-types";
 
@@ -9,6 +12,7 @@ class EditorAPIImpl implements EditorAPI {
   private cursorPosition: Position = { line: 0, column: 0, offset: 0 };
   private selection: Range | null = null;
   private textareaRef: HTMLTextAreaElement | null = null;
+  private viewportRef: HTMLDivElement | null = null;
 
   constructor() {
     // Initialize event handler sets
@@ -27,11 +31,15 @@ class EditorAPIImpl implements EditorAPI {
 
   // Content operations
   getContent(): string {
-    return useEditorContentStore.getState().actions.getContent();
+    return useEditorViewStore.getState().actions.getContent();
   }
 
   setContent(content: string): void {
-    useEditorContentStore.getState().actions.setContent(content);
+    const bufferStore = useBufferStore.getState();
+    const activeBufferId = bufferStore.activeBufferId;
+    if (activeBufferId) {
+      bufferStore.actions.updateBufferContent(activeBufferId, content);
+    }
     this.emit("contentChange", { content, changes: [] });
   }
 
@@ -41,7 +49,7 @@ class EditorAPIImpl implements EditorAPI {
     const before = content.substring(0, pos.offset);
     const after = content.substring(pos.offset);
     const newContent = before + text + after;
-    
+
     // Calculate new cursor position first
     const newOffset = pos.offset + text.length;
     const newPos = this.offsetToPosition(newOffset);
@@ -52,9 +60,9 @@ class EditorAPIImpl implements EditorAPI {
       this.textareaRef.value = newContent;
       // Set selection to new position
       this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
-      
+
       // Now trigger the change event so React updates
-      const event = new Event('input', { bubbles: true });
+      const event = new Event("input", { bubbles: true });
       this.textareaRef.dispatchEvent(event);
     } else {
       // Fallback if no textarea ref
@@ -94,10 +102,30 @@ class EditorAPIImpl implements EditorAPI {
   setCursorPosition(position: Position): void {
     this.cursorPosition = position;
     this.emit("cursorChange", position);
-    
+
+    // Update cursor store to trigger UI updates
+    useEditorCursorStore.getState().actions.setCursorPosition(position);
+
     // Sync with textarea if available
     if (this.textareaRef) {
       this.textareaRef.selectionStart = this.textareaRef.selectionEnd = position.offset;
+    }
+
+    // Direct viewport scrolling for immediate response
+    if (this.viewportRef) {
+      const fontSize = this.getSettings().fontSize;
+      const lineHeight = EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER * fontSize;
+      const targetLineTop = position.line * lineHeight;
+      const targetLineBottom = targetLineTop + lineHeight;
+      const currentScrollTop = this.viewportRef.scrollTop;
+      const viewportHeight = this.viewportRef.clientHeight;
+
+      // Scroll if cursor is out of view
+      if (targetLineTop < currentScrollTop) {
+        this.viewportRef.scrollTop = targetLineTop;
+      } else if (targetLineBottom > currentScrollTop + viewportHeight) {
+        this.viewportRef.scrollTop = targetLineBottom - viewportHeight;
+      }
     }
   }
 
@@ -151,7 +179,7 @@ class EditorAPIImpl implements EditorAPI {
 
   // Line operations
   getLines(): string[] {
-    return useEditorContentStore.getState().lines;
+    return useEditorViewStore.getState().lines;
   }
 
   getLine(lineNumber: number): string | undefined {
@@ -243,6 +271,11 @@ class EditorAPIImpl implements EditorAPI {
   // Set the textarea ref for syncing cursor position
   setTextareaRef(ref: HTMLTextAreaElement | null): void {
     this.textareaRef = ref;
+  }
+
+  // Set the viewport ref for direct scroll manipulation
+  setViewportRef(ref: HTMLDivElement | null): void {
+    this.viewportRef = ref;
   }
 
   private offsetToPosition(offset: number): Position {

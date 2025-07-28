@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
+import { useSettingsStore } from "@/settings/stores/settings-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 interface EditorSettingsState {
@@ -45,3 +46,15 @@ export const useEditorSettingsStore = createSelectors(
     })),
   ),
 );
+
+// Subscribe to settings store and sync all editor settings
+useSettingsStore.subscribe((state) => {
+  const { fontSize, fontFamily, tabSize, wordWrap, lineNumbers } = state.settings;
+  const actions = useEditorSettingsStore.getState().actions;
+
+  actions.setFontSize(fontSize);
+  actions.setFontFamily(fontFamily);
+  actions.setTabSize(tabSize);
+  actions.setWordWrap(wordWrap);
+  actions.setLineNumbers(lineNumbers);
+});

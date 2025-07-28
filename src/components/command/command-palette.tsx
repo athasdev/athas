@@ -109,9 +109,7 @@ const CommandPalette = () => {
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
-          setSelectedIndex((prev) =>
-            prev < filteredActions.length - 1 ? prev + 1 : prev,
-          );
+          setSelectedIndex((prev) => (prev < filteredActions.length - 1 ? prev + 1 : prev));
           break;
         case "ArrowUp":
           e.preventDefault();
@@ -157,9 +155,7 @@ const CommandPalette = () => {
   // Scroll selected item into view
   useEffect(() => {
     if (resultsRef.current && filteredActions.length > 0) {
-      const selectedElement = resultsRef.current.children[
-        selectedIndex
-      ] as HTMLElement;
+      const selectedElement = resultsRef.current.children[selectedIndex] as HTMLElement;
       if (selectedElement) {
         selectedElement.scrollIntoView({
           block: "nearest",
