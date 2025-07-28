@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-import { useBufferStore } from "../../stores/buffer-store";
 import { usePersistentSettingsStore } from "../../settings/stores/persistent-settings-store";
+import { useBufferStore } from "../../stores/buffer-store";
 import type { Buffer } from "../../types/buffer";
 
 import TabBarItem from "./tab-bar-item";
@@ -82,9 +81,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   useEffect(() => {
     if (maxOpenTabs > 0 && buffers.length > maxOpenTabs && handleTabClose) {
-      const closableBuffers = buffers.filter(
-        (b) => !b.isPinned && b.id !== activeBufferId,
-      );
+      const closableBuffers = buffers.filter((b) => !b.isPinned && b.id !== activeBufferId);
 
       let tabsToClose = buffers.length - maxOpenTabs;
       for (let i = 0; i < closableBuffers.length && tabsToClose > 0; i++) {
@@ -96,14 +93,8 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   // Auto-scroll active tab into view
   useEffect(() => {
-    const activeIndex = sortedBuffers.findIndex(
-      (buffer) => buffer.id === activeBufferId,
-    );
-    if (
-      activeIndex !== -1 &&
-      tabRefs.current[activeIndex] &&
-      tabBarRef.current
-    ) {
+    const activeIndex = sortedBuffers.findIndex((buffer) => buffer.id === activeBufferId);
+    if (activeIndex !== -1 && tabRefs.current[activeIndex] && tabBarRef.current) {
       const activeTab = tabRefs.current[activeIndex];
       const container = tabBarRef.current;
 
@@ -112,10 +103,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
         const containerRect = container.getBoundingClientRect();
 
         // Check if tab is out of view
-        if (
-          tabRect.left < containerRect.left ||
-          tabRect.right > containerRect.right
-        ) {
+        if (tabRect.left < containerRect.left || tabRect.right > containerRect.right) {
           activeTab.scrollIntoView({
             behavior: "smooth",
             block: "nearest",
@@ -181,10 +169,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
         if (relativeX >= pos.left && relativeX <= pos.right) {
           const relativePositionInTab = (relativeX - pos.left) / pos.width;
-          if (
-            currentDropTarget !== null &&
-            Math.abs(currentDropTarget - i) <= 1
-          ) {
+          if (currentDropTarget !== null && Math.abs(currentDropTarget - i) <= 1) {
             const threshold = 0.25;
 
             if (relativePositionInTab < 0.5 - threshold) {
@@ -204,10 +189,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
     return {
       dropTarget: newDropTarget,
-      direction:
-        relativeX > (tabPositions[draggedIndex]?.center ?? 0)
-          ? "right"
-          : "left",
+      direction: relativeX > (tabPositions[draggedIndex]?.center ?? 0) ? "right" : "left",
     };
   };
 
@@ -404,13 +386,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
       document.removeEventListener("mousemove", handleGlobalMouseMove);
       document.removeEventListener("mouseup", handleGlobalMouseUp);
     };
-  }, [
-    dragState.draggedIndex,
-    reorderBuffers,
-    handleTabClick,
-    sortedBuffers,
-    handleMouseMove,
-  ]);
+  }, [dragState.draggedIndex, reorderBuffers, handleTabClick, sortedBuffers, handleMouseMove]);
 
   useEffect(() => {
     tabRefs.current = tabRefs.current.slice(0, sortedBuffers.length);
@@ -422,16 +398,12 @@ const TabBar = ({ paneId }: TabBarProps) => {
     return null;
   }
 
-  const { isDragging, draggedIndex, dropTargetIndex, currentPosition } =
-    dragState;
+  const { isDragging, draggedIndex, dropTargetIndex, currentPosition } = dragState;
 
   return (
     <>
       <div className="relative">
-        <div
-          ref={tabBarRef}
-          className="scrollbar-hidden flex overflow-x-auto bg-secondary-bg"
-        >
+        <div ref={tabBarRef} className="scrollbar-hidden flex overflow-x-auto bg-secondary-bg">
           {sortedBuffers.map((buffer, index) => {
             const isActive = buffer.id === activeBufferId;
             const isDraggedTab = isDragging && draggedIndex === index;
@@ -499,8 +471,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
           // Reload the buffer by closing and reopening it
           const buffer = buffers.find((b) => b.id === bufferId);
           if (buffer && buffer.path !== "extensions://marketplace") {
-            const { closeBuffer, openBuffer } =
-              useBufferStore.getState().actions;
+            const { closeBuffer, openBuffer } = useBufferStore.getState().actions;
             closeBuffer(bufferId);
             // Re-read the file and open it again
             setTimeout(async () => {

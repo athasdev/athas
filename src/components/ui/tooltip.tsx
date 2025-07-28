@@ -118,11 +118,13 @@ export default function Tooltip({ content, children, side = "top", className }: 
     right: "-translate-y-1/2",
   };
 
-  const arrowClasses = {
+  const _arrowClasses = {
     top: "top-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-b-transparent border-t-border",
-    bottom: "bottom-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-t-transparent border-b-border",
+    bottom:
+      "bottom-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-t-transparent border-b-border",
     left: "left-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-r-transparent border-l-border",
-    right: "right-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent border-r-border",
+    right:
+      "right-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent border-r-border",
   };
 
   return (
@@ -141,7 +143,7 @@ export default function Tooltip({ content, children, side = "top", className }: 
           <div
             ref={tooltipRef}
             className={cn(
-              "pointer-events-none fixed z-[99999] whitespace-nowrap rounded bg-secondary-bg border border-border px-2 py-1 text-text text-xs shadow-lg",
+              "pointer-events-none fixed z-[99999] whitespace-nowrap rounded border border-border bg-secondary-bg px-2 py-1 text-text text-xs shadow-lg",
               tooltipClasses[side],
               className,
             )}

@@ -34,13 +34,10 @@ const storeCreator = combine(initialState, (set) => ({
   setIsAIChatVisible: (visible: boolean) => set({ isAIChatVisible: visible }),
   setExtensionsActiveTab: (tab: "all" | "core" | "language-server" | "theme") =>
     set({ extensionsActiveTab: tab }),
-  setCoreFeatures: (features: CoreFeaturesState) =>
-    set({ coreFeatures: features }),
+  setCoreFeatures: (features: CoreFeaturesState) => set({ coreFeatures: features }),
 }));
 
-export const usePersistentSettingsStore = create<
-  ReturnType<typeof storeCreator>
->()(
+export const usePersistentSettingsStore = create<ReturnType<typeof storeCreator>>()(
   persist(storeCreator, {
     name: "athas-persistent-settings",
     version: 1,

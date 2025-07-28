@@ -6,7 +6,7 @@ import { MainLayout } from "./components/layout/main-layout";
 import { ToastContainer } from "./components/ui/toast";
 import WelcomeScreen from "./components/window/welcome-screen";
 import { ZoomIndicator } from "./components/zoom-indicator";
-import { useSettingsSync } from "./settings/hooks/use-settings-sync";
+import { useScroll } from "./hooks/use-scroll";
 import { useAppStore } from "./stores/app-store";
 import { useFileSystemStore } from "./stores/file-system/store";
 import {
@@ -15,7 +15,6 @@ import {
 } from "./stores/file-watcher-store";
 import { useFontStore } from "./stores/font-store";
 import { useRecentFoldersStore } from "./stores/recent-folders-store";
-import { useSettingsStore } from "./settings/stores/settings-store";
 import { useZoomStore } from "./stores/zoom-store";
 import { cn } from "./utils/cn";
 import { isMac } from "./utils/platform";
@@ -28,8 +27,6 @@ function App() {
   const { recentFolders, openRecentFolder } = useRecentFoldersStore();
   const { loadAvailableFonts } = useFontStore.use.actions();
   const zoomLevel = useZoomStore.use.zoomLevel();
-  const { zoomIn, zoomOut } = useZoomStore.use.actions();
-  const { settings } = useSettingsStore();
 
   // Platform-specific setup
   useEffect(() => {
@@ -40,10 +37,7 @@ function App() {
     }
 
     return () => {
-      document.documentElement.classList.remove(
-        "platform-macos",
-        "platform-other",
-      );
+      document.documentElement.classList.remove("platform-macos", "platform-other");
       cleanup(); // Cleanup autosave timeouts
     };
   }, [cleanup]);
@@ -54,30 +48,7 @@ function App() {
   }, [loadAvailableFonts]);
 
   // Mouse wheel zoom functionality
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      if (!settings.mouseWheelZoom) return;
-
-      // Check if Ctrl/Cmd is held (common zoom modifier)
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-
-        if (e.deltaY < 0) {
-          // Scroll up = zoom in
-          zoomIn();
-        } else if (e.deltaY > 0) {
-          // Scroll down = zoom out
-          zoomOut();
-        }
-      }
-    };
-
-    window.addEventListener("wheel", handleWheel, { passive: false });
-
-    return () => {
-      window.removeEventListener("wheel", handleWheel);
-    };
-  }, [settings.mouseWheelZoom, zoomIn, zoomOut]);
+  useScroll();
 
   // Initialize file watcher
   useEffect(() => {
@@ -87,17 +58,13 @@ function App() {
     };
   }, []);
 
-  // Sync settings with editor config
-  useSettingsSync();
-
   // Check for remote connection from URL
   const urlParams = new URLSearchParams(window.location.search);
   const remoteParam = urlParams.get("remote");
   const isRemoteFromUrl = !!remoteParam;
 
   // Determine if we should show welcome screen
-  const shouldShowWelcome =
-    files.length === 0 && !rootFolderPath && !isRemoteFromUrl;
+  const shouldShowWelcome = files.length === 0 && !rootFolderPath && !isRemoteFromUrl;
 
   if (shouldShowWelcome) {
     return (
@@ -118,17 +85,11 @@ function App() {
   }
 
   return (
-    <div
-      className={cn(
-        "flex h-screen w-screen flex-col overflow-hidden bg-transparent",
-      )}
-    >
+    <div className={cn("flex h-screen w-screen flex-col overflow-hidden bg-transparent")}>
       <FontPreloader />
       <FontStyleInjector />
       <div
-        className={cn(
-          "window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg",
-        )}
+        className={cn("window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg")}
         style={{ zoom: zoomLevel }}
       >
         <MainLayout />

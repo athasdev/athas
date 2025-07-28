@@ -67,8 +67,7 @@ export default function Breadcrumb() {
   const handleGoBack = async () => {
     if (!dropdown || dropdown.navigationStack.length === 0) return;
 
-    const previousPath =
-      dropdown.navigationStack[dropdown.navigationStack.length - 1];
+    const previousPath = dropdown.navigationStack[dropdown.navigationStack.length - 1];
     try {
       const entries = await readDirectory(previousPath);
       const fileEntries: FileEntry[] = entries.map((entry: any) => ({
@@ -100,10 +99,7 @@ export default function Breadcrumb() {
     }
   };
 
-  const handleSegmentClick = async (
-    segmentIndex: number,
-    e: React.MouseEvent,
-  ) => {
+  const handleSegmentClick = async (segmentIndex: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -194,15 +190,12 @@ export default function Breadcrumb() {
 
   return (
     <>
-      <div className="flex min-h-[28px] items-center justify-between border-border border-b bg-terniary-bg px-3 py-1 select-none">
+      <div className="flex min-h-[28px] select-none items-center justify-between border-border border-b bg-terniary-bg px-3 py-1">
         <div className="flex items-center gap-0.5 overflow-hidden font-mono text-text-lighter text-xs">
           {segments.map((segment, index) => (
             <div key={index} className="flex min-w-0 items-center gap-0.5">
               {index > 0 && (
-                <ChevronRight
-                  size={10}
-                  className="mx-0.5 flex-shrink-0 text-text-lighter"
-                />
+                <ChevronRight size={10} className="mx-0.5 flex-shrink-0 text-text-lighter" />
               )}
               <button
                 ref={(el) => {
@@ -259,23 +252,19 @@ export default function Breadcrumb() {
                     // For folders, load their contents and update dropdown
                     try {
                       const entries = await readDirectory(item.path);
-                      const fileEntries: FileEntry[] = entries.map(
-                        (entry: any) => ({
-                          name: entry.name || "Unknown",
-                          path: entry.path,
-                          isDir: entry.is_dir || false,
-                          expanded: false,
-                          children: undefined,
-                        }),
-                      );
+                      const fileEntries: FileEntry[] = entries.map((entry: any) => ({
+                        name: entry.name || "Unknown",
+                        path: entry.path,
+                        isDir: entry.is_dir || false,
+                        expanded: false,
+                        children: undefined,
+                      }));
 
                       // Sort: directories first, then files, alphabetically
                       fileEntries.sort((a, b) => {
                         if (a.isDir && !b.isDir) return -1;
                         if (!a.isDir && b.isDir) return 1;
-                        return a.name
-                          .toLowerCase()
-                          .localeCompare(b.name.toLowerCase());
+                        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
                       });
 
                       // Update dropdown with new contents and track navigation
@@ -285,10 +274,7 @@ export default function Breadcrumb() {
                               ...prev,
                               items: fileEntries,
                               currentPath: item.path,
-                              navigationStack: [
-                                ...prev.navigationStack,
-                                prev.currentPath,
-                              ],
+                              navigationStack: [...prev.navigationStack, prev.currentPath],
                             }
                           : null,
                       );

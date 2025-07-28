@@ -1,5 +1,5 @@
 import { useCallback, useRef } from "react";
-import { useEditorContentStore } from "../stores/editor-content-store";
+import { useEditorViewStore } from "../stores/editor-view-store";
 import type { Position } from "../types/editor-types";
 
 interface UseEditorInteractionsProps {
@@ -30,7 +30,7 @@ export const useEditorInteractions = ({
 
       // Calculate line number
       const line = Math.floor(relativeY / lineHeight);
-      const currentLines = useEditorContentStore.getState().lines;
+      const currentLines = useEditorViewStore.getState().lines;
       if (line < 0 || line >= currentLines.length) {
         return null;
       }

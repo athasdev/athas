@@ -1,7 +1,6 @@
 import { memo, useEffect, useRef } from "react";
 import { useEditorInteractions } from "../../../hooks/use-editor-interactions";
 import { useEditorLayout } from "../../../hooks/use-editor-layout";
-import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
 import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
 import { useEditorSettingsStore } from "../../../stores/editor-settings-store";
 import type { Position } from "../../../types/editor-types";
@@ -24,7 +23,7 @@ export const LineBasedEditor = memo<LineBasedEditorProps>(
     const internalViewportRef = useRef<HTMLDivElement>(null);
 
     const fontSize = useEditorSettingsStore.use.fontSize();
-    const { scrollTop, scrollLeft, viewportHeight } = useEditorLayoutStore();
+    const { viewportHeight } = useEditorLayoutStore();
     const { setScroll } = useEditorLayoutStore.use.actions();
     const { lineHeight, gutterWidth } = useEditorLayout();
 
@@ -36,23 +35,8 @@ export const LineBasedEditor = memo<LineBasedEditorProps>(
       onSelectionDrag,
     });
 
-    // Subscribe to cursor line changes only
-    useEffect(() => {
-      const unsubscribe = useEditorCursorStore.subscribe(
-        (state) => state.cursorPosition.line,
-        (cursorLine) => {
-          const cursorTop = cursorLine * lineHeight;
-          const cursorBottom = cursorTop + lineHeight;
-
-          if (cursorTop < scrollTop) {
-            setScroll(cursorTop, scrollLeft);
-          } else if (cursorBottom > scrollTop + viewportHeight) {
-            setScroll(cursorBottom - viewportHeight, scrollLeft);
-          }
-        },
-      );
-      return unsubscribe;
-    }, [lineHeight, scrollTop, scrollLeft, viewportHeight, setScroll]);
+    // Removed cursor line subscription - scrolling is now handled directly in editor-api.ts
+    // This simplifies the flow and prevents circular updates
 
     const handleScroll = (newScrollTop: number, newScrollLeft: number) => {
       setScroll(newScrollTop, newScrollLeft);
