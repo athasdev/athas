@@ -1,5 +1,6 @@
 import type { CompletionItem } from "vscode-languageserver-protocol";
 import { create } from "zustand";
+import { useSettingsStore } from "@/settings/stores/settings-store";
 import type { FilteredCompletion } from "@/utils/fuzzy-matcher";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -73,3 +74,9 @@ export const useEditorCompletionStore = createSelectors(
     },
   })),
 );
+
+// Subscribe to settings store and sync AI completion setting
+useSettingsStore.subscribe((state) => {
+  const { aiCompletion } = state.settings;
+  useEditorCompletionStore.getState().actions.setAiCompletion(aiCompletion);
+});
