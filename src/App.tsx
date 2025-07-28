@@ -6,7 +6,7 @@ import { MainLayout } from "./components/layout/main-layout";
 import { ToastContainer } from "./components/ui/toast";
 import WelcomeScreen from "./components/window/welcome-screen";
 import { ZoomIndicator } from "./components/zoom-indicator";
-import { useSettingsStore } from "./settings/stores/settings-store";
+import { useScroll } from "./hooks/use-scroll";
 import { useAppStore } from "./stores/app-store";
 import { useFileSystemStore } from "./stores/file-system/store";
 import {
@@ -27,8 +27,6 @@ function App() {
   const { recentFolders, openRecentFolder } = useRecentFoldersStore();
   const { loadAvailableFonts } = useFontStore.use.actions();
   const zoomLevel = useZoomStore.use.zoomLevel();
-  const { zoomIn, zoomOut } = useZoomStore.use.actions();
-  const { settings } = useSettingsStore();
 
   // Platform-specific setup
   useEffect(() => {
@@ -50,30 +48,7 @@ function App() {
   }, [loadAvailableFonts]);
 
   // Mouse wheel zoom functionality
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      if (!settings.mouseWheelZoom) return;
-
-      // Check if Ctrl/Cmd is held (common zoom modifier)
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-
-        if (e.deltaY < 0) {
-          // Scroll up = zoom in
-          zoomIn();
-        } else if (e.deltaY > 0) {
-          // Scroll down = zoom out
-          zoomOut();
-        }
-      }
-    };
-
-    window.addEventListener("wheel", handleWheel, { passive: false });
-
-    return () => {
-      window.removeEventListener("wheel", handleWheel);
-    };
-  }, [settings.mouseWheelZoom, zoomIn, zoomOut]);
+  useScroll();
 
   // Initialize file watcher
   useEffect(() => {
