@@ -6,7 +6,6 @@ import { MainLayout } from "./components/layout/main-layout";
 import { ToastContainer } from "./components/ui/toast";
 import WelcomeScreen from "./components/window/welcome-screen";
 import { ZoomIndicator } from "./components/zoom-indicator";
-import { useSettingsSync } from "./settings/hooks/use-settings-sync";
 import { useSettingsStore } from "./settings/stores/settings-store";
 import { useAppStore } from "./stores/app-store";
 import { useFileSystemStore } from "./stores/file-system/store";
@@ -83,9 +82,6 @@ function App() {
       cleanupFileWatcherListener();
     };
   }, []);
-
-  // Sync settings with editor config
-  useSettingsSync();
 
   // Check for remote connection from URL
   const urlParams = new URLSearchParams(window.location.search);
