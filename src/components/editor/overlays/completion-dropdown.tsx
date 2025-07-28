@@ -12,11 +12,19 @@ interface CompletionDropdownProps {
 }
 
 export const CompletionDropdown = memo(({ onApplyCompletion }: CompletionDropdownProps) => {
-  const { isLspCompletionVisible, filteredCompletions, selectedLspIndex, currentPrefix, actions } =
-    useEditorCompletionStore();
-  const cursorPosition = useEditorCursorStore((state) => state.cursorPosition);
-  const { scrollTop, scrollLeft } = useEditorLayoutStore();
+  const isLspCompletionVisible = useEditorCompletionStore.use.isLspCompletionVisible();
+  const filteredCompletions = useEditorCompletionStore.use.filteredCompletions();
+  const selectedLspIndex = useEditorCompletionStore.use.selectedLspIndex();
+  const currentPrefix = useEditorCompletionStore.use.currentPrefix();
+  const { setIsLspCompletionVisible } = useEditorCompletionStore.use.actions();
+
+  const cursorPosition = useEditorCursorStore.use.cursorPosition();
+
+  const scrollTop = useEditorLayoutStore.use.scrollTop();
+  const scrollLeft = useEditorLayoutStore.use.scrollLeft();
+
   const { lineHeight, charWidth, gutterWidth } = useEditorLayout();
+
   const GUTTER_MARGIN = 8; // Same as cursor component
 
   if (!isLspCompletionVisible) return null;
@@ -29,7 +37,7 @@ export const CompletionDropdown = memo(({ onApplyCompletion }: CompletionDropdow
     if (onApplyCompletion) {
       onApplyCompletion(item);
     }
-    actions.setIsLspCompletionVisible(false);
+    setIsLspCompletionVisible(false);
   };
 
   return (
