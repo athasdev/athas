@@ -8,8 +8,15 @@ import { useSettingsStore } from "@/settings/stores/settings-store";
 import { getAvailableProviders, getModelById } from "@/types/ai-provider";
 
 export const AISettings = () => {
-  const { aiProviderId, aiModelId, setAIProviderAndModel, coreFeatures, setCoreFeatures } =
-    usePersistentSettingsStore();
+  const {
+    aiProviderId,
+    aiModelId,
+    aiSyntaxHighlighting,
+    setAIProviderAndModel,
+    setAISyntaxHighlighting,
+    coreFeatures,
+    setCoreFeatures,
+  } = usePersistentSettingsStore();
 
   const { settings, updateSetting } = useSettingsStore();
   const [apiKeysVisible, setApiKeysVisible] = useState(false);
@@ -133,7 +140,11 @@ export const AISettings = () => {
         </SettingRow>
 
         <SettingRow label="Syntax Highlighting" description="Enable code highlighting in chat">
-          <Switch checked={true} onChange={() => {}} size="sm" />
+          <Switch
+            checked={aiSyntaxHighlighting}
+            onChange={(checked) => setAISyntaxHighlighting(checked)}
+            size="sm"
+          />
         </SettingRow>
       </Section>
 

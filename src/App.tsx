@@ -7,6 +7,8 @@ import { ToastContainer } from "./components/ui/toast";
 import WelcomeScreen from "./components/window/welcome-screen";
 import { ZoomIndicator } from "./components/zoom-indicator";
 import { initializeThemeSystem } from "./extensions/themes/theme-initializer";
+import { useKeyboardShortcutsWrapper } from "./hooks/use-keyboard-shortcuts-wrapper";
+import { useMenuEventsWrapper } from "./hooks/use-menu-events-wrapper";
 import { useScroll } from "./hooks/use-scroll";
 import { useAppStore } from "./stores/app-store";
 import { useFileSystemStore } from "./stores/file-system/store";
@@ -62,6 +64,11 @@ function App() {
       cleanupFileWatcherListener();
     };
   }, []);
+
+  // Initialize menu events and keyboard shortcuts globally
+  // This ensures they work on both welcome screen and main layout
+  useMenuEventsWrapper();
+  useKeyboardShortcutsWrapper();
 
   // Check for remote connection from URL
   const urlParams = new URLSearchParams(window.location.search);

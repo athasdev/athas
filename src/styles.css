@@ -37,7 +37,7 @@
 
         /* Accent color */
         --tw-accent: #3b82f6;
-        
+
         /* Cursor color */
         --tw-cursor: #1a1a1a;
 
@@ -54,7 +54,7 @@
         --tw-git-untracked: #17a2b8;
         --tw-git-renamed: #6f42c1;
 
-        /* Syntax highlighting */
+        /* Syntax highlighting - Light theme */
         --tw-syntax-comment: #6a737d;
         --tw-syntax-keyword: #d73a49;
         --tw-syntax-string: #032f62;
@@ -64,6 +64,9 @@
         --tw-syntax-tag: #22863a;
         --tw-syntax-attribute: #6f42c1;
         --tw-syntax-punctuation: #24292e;
+        --tw-syntax-operator: #d73a49;
+        --tw-syntax-constant: #005cc5;
+        --tw-syntax-type: #6f42c1;
 
         /* Terminal ANSI colors - harmonized with syntax highlighting */
         --tw-terminal-black: #24292e;
@@ -112,7 +115,7 @@
 
         /* Accent color - Dark */
         --tw-accent: #60a5fa;
-        
+
         /* Cursor color - Dark */
         --tw-cursor: #e5e5e5;
 
@@ -139,6 +142,9 @@
         --tw-syntax-tag: #7ee787;
         --tw-syntax-attribute: #d2a8ff;
         --tw-syntax-punctuation: #b3b3b3;
+        --tw-syntax-operator: #ff7b72;
+        --tw-syntax-constant: #79c0ff;
+        --tw-syntax-type: #d2a8ff;
 
         /* Terminal ANSI colors - harmonized with syntax highlighting */
         --tw-terminal-black: #1a1a1a;
@@ -189,7 +195,7 @@
 
     /* Accent color */
     --color-accent: var(--tw-accent);
-    
+
     /* Cursor color */
     --color-cursor: var(--tw-cursor);
 
@@ -309,7 +315,7 @@ button {
         /* Font defaults */
         --app-font-family: "JetBrains Mono", monospace;
         --editor-font-family: "JetBrains Mono", monospace;
-        
+
         /* Default light theme colors */
         --tw-primary-bg: #ffffff;
         --tw-secondary-bg: #f8f8f8;
@@ -337,7 +343,7 @@ button {
 
         /* Accent color */
         --tw-accent: #3b82f6;
-        
+
         /* Cursor color */
         --tw-cursor: #1a1a1a;
 
@@ -414,7 +420,7 @@ button {
 
             /* Accent color - Dark */
             --tw-accent: #60a5fa;
-            
+
             /* Cursor color - Dark */
             --tw-cursor: #e5e5e5;
 

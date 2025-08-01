@@ -49,33 +49,108 @@ const HIGHLIGHT_NAMES: &[&str] = &[
 
 fn get_language_config(language_name: &str) -> Result<HighlightConfiguration> {
    match language_name {
+      "bash" | "sh" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_bash::LANGUAGE.into(),
+            language_name,
+            tree_sitter_bash::HIGHLIGHT_QUERY,
+            "", // Bash doesn't have injections/locals in this version
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "c" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_c::LANGUAGE.into(),
+            language_name,
+            tree_sitter_c::HIGHLIGHT_QUERY,
+            "",
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "cpp" | "cxx" | "cc" | "c++" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_cpp::LANGUAGE.into(),
+            language_name,
+            tree_sitter_cpp::HIGHLIGHT_QUERY,
+            "",
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "css" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_css::LANGUAGE.into(),
+            language_name,
+            tree_sitter_css::HIGHLIGHTS_QUERY,
+            "", // CSS doesn't have injections/locals
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "erb" | "html.erb" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_embedded_template::LANGUAGE.into(),
+            language_name,
+            tree_sitter_embedded_template::HIGHLIGHTS_QUERY,
+            "", // ERB doesn't have injections/locals in this version
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "go" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_go::LANGUAGE.into(),
+            language_name,
+            tree_sitter_go::HIGHLIGHTS_QUERY,
+            "", // Go doesn't have injections/locals in the current version
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "haskell" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_haskell::LANGUAGE.into(),
+            language_name,
+            tree_sitter_haskell::HIGHLIGHTS_QUERY,
+            "",
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "html" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_html::LANGUAGE.into(),
+            language_name,
+            tree_sitter_html::HIGHLIGHTS_QUERY,
+            tree_sitter_html::INJECTIONS_QUERY,
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "java" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_java::LANGUAGE.into(),
+            language_name,
+            tree_sitter_java::HIGHLIGHTS_QUERY,
+            "",
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
       "javascript" | "js" => {
          let mut config = HighlightConfiguration::new(
             tree_sitter_javascript::LANGUAGE.into(),
-            language_name,
-            tree_sitter_javascript::HIGHLIGHT_QUERY,
-            tree_sitter_javascript::INJECTIONS_QUERY,
-            tree_sitter_javascript::LOCALS_QUERY,
-         )?;
-         config.configure(HIGHLIGHT_NAMES);
-         Ok(config)
-      }
-      "typescript" | "ts" => {
-         // TypeScript inherits JavaScript highlights, so we use JavaScript's query
-         let mut config = HighlightConfiguration::new(
-            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-            language_name,
-            tree_sitter_javascript::HIGHLIGHT_QUERY,
-            tree_sitter_javascript::INJECTIONS_QUERY,
-            tree_sitter_javascript::LOCALS_QUERY,
-         )?;
-         config.configure(HIGHLIGHT_NAMES);
-         Ok(config)
-      }
-      "tsx" => {
-         // TSX also inherits JavaScript highlights
-         let mut config = HighlightConfiguration::new(
-            tree_sitter_typescript::LANGUAGE_TSX.into(),
             language_name,
             tree_sitter_javascript::HIGHLIGHT_QUERY,
             tree_sitter_javascript::INJECTIONS_QUERY,
@@ -95,23 +170,56 @@ fn get_language_config(language_name: &str) -> Result<HighlightConfiguration> {
          config.configure(HIGHLIGHT_NAMES);
          Ok(config)
       }
-      "yaml" | "yml" => {
+      "lua" => {
          let mut config = HighlightConfiguration::new(
-            tree_sitter_yaml::LANGUAGE.into(),
+            tree_sitter_lua::LANGUAGE.into(),
             language_name,
-            tree_sitter_yaml::HIGHLIGHTS_QUERY,
-            "", // YAML doesn't have injections/locals
+            tree_sitter_lua::HIGHLIGHTS_QUERY,
+            "",
             "",
          )?;
          config.configure(HIGHLIGHT_NAMES);
          Ok(config)
       }
-      "go" => {
+      "markdown" | "md" => {
          let mut config = HighlightConfiguration::new(
-            tree_sitter_go::LANGUAGE.into(),
+            tree_sitter_md::LANGUAGE.into(),
             language_name,
-            tree_sitter_go::HIGHLIGHTS_QUERY,
-            "", // Go doesn't have injections/locals in the current version
+            tree_sitter_md::HIGHLIGHT_QUERY_BLOCK,
+            tree_sitter_md::INJECTION_QUERY_BLOCK,
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "objc" | "objective-c" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_objc::LANGUAGE.into(),
+            language_name,
+            tree_sitter_objc::HIGHLIGHTS_QUERY,
+            "",
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "php" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_php::LANGUAGE_PHP.into(),
+            language_name,
+            tree_sitter_php::HIGHLIGHTS_QUERY,
+            tree_sitter_php::INJECTIONS_QUERY,
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "python" | "py" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_python::LANGUAGE.into(),
+            language_name,
+            tree_sitter_python::HIGHLIGHTS_QUERY,
+            "", // Python doesn't have injections/locals in this version
             "",
          )?;
          config.configure(HIGHLIGHT_NAMES);
@@ -139,67 +247,23 @@ fn get_language_config(language_name: &str) -> Result<HighlightConfiguration> {
          config.configure(HIGHLIGHT_NAMES);
          Ok(config)
       }
-      "erb" | "html.erb" => {
+      "scala" => {
          let mut config = HighlightConfiguration::new(
-            tree_sitter_embedded_template::LANGUAGE.into(),
+            tree_sitter_scala::LANGUAGE.into(),
             language_name,
-            tree_sitter_embedded_template::HIGHLIGHTS_QUERY,
-            "", // ERB doesn't have injections/locals in this version
+            tree_sitter_scala::HIGHLIGHTS_QUERY,
+            "",
             "",
          )?;
          config.configure(HIGHLIGHT_NAMES);
          Ok(config)
       }
-      "python" | "py" => {
+      "swift" => {
          let mut config = HighlightConfiguration::new(
-            tree_sitter_python::LANGUAGE.into(),
+            tree_sitter_swift::LANGUAGE.into(),
             language_name,
-            tree_sitter_python::HIGHLIGHTS_QUERY,
-            "", // Python doesn't have injections/locals in this version
+            tree_sitter_swift::HIGHLIGHTS_QUERY,
             "",
-         )?;
-         config.configure(HIGHLIGHT_NAMES);
-         Ok(config)
-      }
-      "html" => {
-         let mut config = HighlightConfiguration::new(
-            tree_sitter_html::LANGUAGE.into(),
-            language_name,
-            tree_sitter_html::HIGHLIGHTS_QUERY,
-            tree_sitter_html::INJECTIONS_QUERY,
-            "",
-         )?;
-         config.configure(HIGHLIGHT_NAMES);
-         Ok(config)
-      }
-      "css" => {
-         let mut config = HighlightConfiguration::new(
-            tree_sitter_css::LANGUAGE.into(),
-            language_name,
-            tree_sitter_css::HIGHLIGHTS_QUERY,
-            "", // CSS doesn't have injections/locals
-            "",
-         )?;
-         config.configure(HIGHLIGHT_NAMES);
-         Ok(config)
-      }
-      "markdown" | "md" => {
-         let mut config = HighlightConfiguration::new(
-            tree_sitter_md::LANGUAGE.into(),
-            language_name,
-            tree_sitter_md::HIGHLIGHT_QUERY_BLOCK,
-            tree_sitter_md::INJECTION_QUERY_BLOCK,
-            "",
-         )?;
-         config.configure(HIGHLIGHT_NAMES);
-         Ok(config)
-      }
-      "bash" | "sh" => {
-         let mut config = HighlightConfiguration::new(
-            tree_sitter_bash::LANGUAGE.into(),
-            language_name,
-            tree_sitter_bash::HIGHLIGHT_QUERY,
-            "", // Bash doesn't have injections/locals in this version
             "",
          )?;
          config.configure(HIGHLIGHT_NAMES);
@@ -216,6 +280,65 @@ fn get_language_config(language_name: &str) -> Result<HighlightConfiguration> {
          config.configure(HIGHLIGHT_NAMES);
          Ok(config)
       }
+      "tsx" => {
+         // TSX also inherits JavaScript highlights
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_typescript::LANGUAGE_TSX.into(),
+            language_name,
+            tree_sitter_javascript::HIGHLIGHT_QUERY,
+            tree_sitter_javascript::INJECTIONS_QUERY,
+            tree_sitter_javascript::LOCALS_QUERY,
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "typescript" | "ts" => {
+         // TypeScript inherits JavaScript highlights, so we use JavaScript's query
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            language_name,
+            tree_sitter_javascript::HIGHLIGHT_QUERY,
+            tree_sitter_javascript::INJECTIONS_QUERY,
+            tree_sitter_javascript::LOCALS_QUERY,
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "xml" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_xml::LANGUAGE_XML.into(),
+            language_name,
+            tree_sitter_xml::DTD_HIGHLIGHT_QUERY,
+            "",
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "yaml" | "yml" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_yaml::LANGUAGE.into(),
+            language_name,
+            tree_sitter_yaml::HIGHLIGHTS_QUERY,
+            "", // YAML doesn't have injections/locals
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "zig" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_zig::LANGUAGE.into(),
+            language_name,
+            tree_sitter_zig::HIGHLIGHTS_QUERY,
+            "",
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+
+
       _ => anyhow::bail!("Unsupported language: {}", language_name),
    }
 }
@@ -246,21 +369,52 @@ fn map_highlight_to_class(highlight_name: &str) -> (&str, &str) {
 pub async fn get_tokens(content: String, file_extension: String) -> Result<Vec<Token>, String> {
    // Determine language from extension
    let language = match file_extension.as_str() {
+      // Web technologies
       "js" | "jsx" => "javascript",
       "ts" => "typescript",
       "tsx" => "tsx",
       "json" => "json",
-      "yml" | "yaml" => "yaml",
-      "go" => "go",
-      "rb" | "ruby" => "ruby",
-      "rs" => "rust",
-      "erb" | "html.erb" => "erb",
-      "py" => "python",
       "html" | "htm" => "html",
       "css" => "css",
-      "md" | "markdown" => "markdown",
-      "sh" | "bash" => "bash",
+
+      // Systems languages
+      "c" => "c",
+      "cpp" | "cxx" | "cc" | "c++" => "cpp",
+      "rs" => "rust",
+      "go" => "go",
+      "zig" => "zig",
+
+      // Object-oriented languages
+      "java" => "java",
+      "swift" => "swift",
+      "m" => "objc",
+      "scala" => "scala",
+
+      // Dynamic languages
+      "py" => "python",
+      "rb" | "ruby" => "ruby",
+      "lua" => "lua",
+      "php" => "php",
+
+      // Functional languages
+      "hs" => "haskell",
+
+      // Markup languages
+      "xml" => "xml",
+
+      // Data & config
+      "yml" | "yaml" => "yaml",
       "toml" => "toml",
+
+      // Shell & scripting
+      "sh" | "bash" => "bash",
+
+      // Documentation
+      "md" | "markdown" => "markdown",
+
+      // Templates
+      "erb" | "html.erb" => "erb",
+
       _ => return Err(format!("Unsupported file extension: {}", file_extension)),
    };
 

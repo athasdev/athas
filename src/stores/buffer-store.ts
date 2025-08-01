@@ -3,6 +3,7 @@ import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { MultiFileDiff } from "../components/diff-viewer/utils/types";
+import { createTextBuffer, type TextBufferManager } from "../lib/text-buffer/text-buffer-manager";
 import { readFileContent } from "../utils/file-operations";
 import type { GitDiff } from "../utils/git";
 import { useRecentFilesStore } from "./recent-files-store";
@@ -11,7 +12,8 @@ interface Buffer {
   id: string;
   path: string;
   name: string;
-  content: string;
+  content: string; // Keep for compatibility, but will be managed by textBuffer
+  textBuffer: TextBufferManager; // New piece tree text buffer
   isDirty: boolean;
   isVirtual: boolean;
   isPinned: boolean;
@@ -21,13 +23,8 @@ interface Buffer {
   isActive: boolean;
   // For diff buffers, store the parsed diff data (single or multi-file)
   diffData?: GitDiff | MultiFileDiff;
-  // Cached syntax highlighting tokens
-  tokens: {
-    start: number;
-    end: number;
-    token_type: string;
-    class_name: string;
-  }[];
+  // Syntax highlighting is now handled by the syntax highlighting extension
+  // with efficient line-based token caching - no need to duplicate tokens here
 }
 
 interface BufferState {
@@ -56,19 +53,16 @@ interface BufferActions {
     markDirty?: boolean,
     diffData?: GitDiff | MultiFileDiff,
   ) => void;
-  updateBufferTokens: (
-    bufferId: string,
-    tokens: {
-      start: number;
-      end: number;
-      token_type: string;
-      class_name: string;
-    }[],
-  ) => void;
+  // Token management moved to syntax highlighting extension
   markBufferDirty: (bufferId: string, isDirty: boolean) => void;
   updateBuffer: (updatedBuffer: Buffer) => void;
   handleTabClick: (bufferId: string) => void;
   handleTabClose: (bufferId: string) => void;
+
+  // New efficient text editing methods
+  insertText: (bufferId: string, offset: number, text: string) => void;
+  deleteText: (bufferId: string, offset: number, length: number) => void;
+  replaceText: (bufferId: string, start: number, end: number, text: string) => void;
   handleTabPin: (bufferId: string) => void;
   handleCloseOtherTabs: (keepBufferId: string) => void;
   handleCloseAllTabs: () => void;
@@ -125,11 +119,14 @@ export const useBufferStore = createSelectors(
             newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
           }
 
+          const textBuffer = createTextBuffer(content, true); // Use piece tree by default
+
           const newBuffer: Buffer = {
             id: generateBufferId(path),
             path,
             name,
             content,
+            textBuffer,
             isDirty: false,
             isVirtual,
             isPinned: false,
@@ -138,7 +135,6 @@ export const useBufferStore = createSelectors(
             isDiff,
             isActive: true,
             diffData,
-            tokens: [],
           };
 
           set((state) => {
@@ -207,7 +203,19 @@ export const useBufferStore = createSelectors(
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer) {
+              // Update both the legacy content field and the text buffer
               buffer.content = content;
+
+              // Replace the entire content in the text buffer
+              // This is not optimal but maintains compatibility
+              const currentLength = buffer.textBuffer.getLength();
+              if (currentLength > 0) {
+                buffer.textBuffer.delete(0, currentLength);
+              }
+              if (content.length > 0) {
+                buffer.textBuffer.insert(0, content);
+              }
+
               if (diffData) {
                 buffer.diffData = diffData;
               }
@@ -219,14 +227,8 @@ export const useBufferStore = createSelectors(
           });
         },
 
-        updateBufferTokens: (bufferId: string, tokens: Buffer["tokens"]) => {
-          set((state) => {
-            const buffer = state.buffers.find((b) => b.id === bufferId);
-            if (buffer) {
-              buffer.tokens = tokens;
-            }
-          });
-        },
+        // Token management is now handled by the syntax highlighting extension
+        // for better performance and memory efficiency
 
         markBufferDirty: (bufferId: string, isDirty: boolean) => {
           set((state) => {
@@ -354,6 +356,55 @@ export const useBufferStore = createSelectors(
           } catch (error) {
             console.error(`[FileWatcher] Failed to reload buffer from disk: ${buffer.path}`, error);
           }
+        },
+
+        // New text buffer methods for efficient editing
+        insertText: (bufferId: string, offset: number, text: string) => {
+          const buffer = get().buffers.find((b) => b.id === bufferId);
+          if (!buffer) return;
+
+          set((state) => {
+            const buffer = state.buffers.find((b) => b.id === bufferId);
+            if (buffer) {
+              buffer.textBuffer.insert(offset, text);
+              buffer.content = buffer.textBuffer.getText(); // Keep legacy field in sync
+              if (!buffer.isVirtual) {
+                buffer.isDirty = true;
+              }
+            }
+          });
+        },
+
+        deleteText: (bufferId: string, offset: number, length: number) => {
+          const buffer = get().buffers.find((b) => b.id === bufferId);
+          if (!buffer) return;
+
+          set((state) => {
+            const buffer = state.buffers.find((b) => b.id === bufferId);
+            if (buffer) {
+              buffer.textBuffer.delete(offset, length);
+              buffer.content = buffer.textBuffer.getText(); // Keep legacy field in sync
+              if (!buffer.isVirtual) {
+                buffer.isDirty = true;
+              }
+            }
+          });
+        },
+
+        replaceText: (bufferId: string, start: number, end: number, text: string) => {
+          const buffer = get().buffers.find((b) => b.id === bufferId);
+          if (!buffer) return;
+
+          set((state) => {
+            const buffer = state.buffers.find((b) => b.id === bufferId);
+            if (buffer) {
+              buffer.textBuffer.replace(start, end, text);
+              buffer.content = buffer.textBuffer.getText(); // Keep legacy field in sync
+              if (!buffer.isVirtual) {
+                buffer.isDirty = true;
+              }
+            }
+          });
         },
       },
     })),

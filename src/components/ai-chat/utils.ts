@@ -1,4 +1,4 @@
-// Language mapping for Prism.js
+// Language mapping for Shiki syntax highlighting
 export const mapLanguage = (lang: string): string => {
   const langMap: { [key: string]: string } = {
     js: "javascript",

@@ -1,6 +1,7 @@
 import isEqual from "fast-deep-equal";
 import { createWithEqualityFn } from "zustand/traditional";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { tokenService } from "../lib/syntax-highlighting/token-service";
 import type { LineToken } from "../types/editor-types";
 import { useBufferStore } from "./buffer-store";
 
@@ -17,48 +18,7 @@ interface EditorViewState {
   };
 }
 
-// Helper function to convert buffer tokens to line tokens
-function convertToLineTokens(
-  content: string,
-  tokens: Array<{ start: number; end: number; class_name: string }>,
-): Map<number, LineToken[]> {
-  const lines = content.split("\n");
-  const tokensByLine = new Map<number, LineToken[]>();
-
-  let currentOffset = 0;
-
-  for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
-    const lineLength = lines[lineNumber].length;
-    const lineStart = currentOffset;
-    const lineEnd = currentOffset + lineLength;
-    const lineTokens: LineToken[] = [];
-
-    // Find tokens that overlap with this line
-    for (const token of tokens) {
-      if (token.start >= lineEnd) break;
-      if (token.end <= lineStart) continue;
-
-      const tokenStartInLine = Math.max(0, token.start - lineStart);
-      const tokenEndInLine = Math.min(lineLength, token.end - lineStart);
-
-      if (tokenStartInLine < tokenEndInLine) {
-        lineTokens.push({
-          startColumn: tokenStartInLine,
-          endColumn: tokenEndInLine,
-          className: token.class_name,
-        });
-      }
-    }
-
-    if (lineTokens.length > 0) {
-      tokensByLine.set(lineNumber, lineTokens);
-    }
-
-    currentOffset += lineLength + 1; // +1 for newline
-  }
-
-  return tokensByLine;
-}
+// Token conversion is now handled by the centralized token service
 
 export const useEditorViewStore = createSelectors(
   createWithEqualityFn<EditorViewState>()(
@@ -75,9 +35,8 @@ export const useEditorViewStore = createSelectors(
         },
 
         getLineTokens: () => {
-          const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
-          if (!activeBuffer) return new Map();
-          return convertToLineTokens(activeBuffer.content, activeBuffer.tokens);
+          // Get tokens from the centralized token service
+          return tokenService.convertToEditorLineTokens();
         },
 
         getContent: () => {
@@ -96,7 +55,7 @@ useBufferStore.subscribe((state) => {
   if (activeBuffer) {
     useEditorViewStore.setState({
       lines: activeBuffer.content.split("\n"),
-      lineTokens: convertToLineTokens(activeBuffer.content, activeBuffer.tokens),
+      lineTokens: tokenService.convertToEditorLineTokens(),
     });
   } else {
     useEditorViewStore.setState({

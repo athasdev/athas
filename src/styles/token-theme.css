@@ -1,96 +1,138 @@
-/* Token theme for Tree-sitter based syntax highlighting */
+/* Token theme for Shiki-based syntax highlighting - Athas Theme System */
 
 /* Keywords */
 .token-keyword {
-  color: var(--color-syntax-keyword, #c792ea);
+  color: var(--tw-syntax-keyword);
   font-weight: 500;
 }
 
 /* Strings */
 .token-string {
-  color: var(--color-syntax-string, #c3e88d);
+  color: var(--tw-syntax-string);
 }
 
 /* Numbers */
 .token-number {
-  color: var(--color-syntax-number, #f78c6c);
+  color: var(--tw-syntax-number);
 }
 
 /* Constants */
 .token-constant {
-  color: var(--color-syntax-constant, #89ddff);
+  color: var(--tw-syntax-number);
 }
 
 /* Comments */
 .token-comment {
-  color: var(--color-syntax-comment, #7f848e);
+  color: var(--tw-syntax-comment);
   font-style: italic;
 }
 
 /* Variables */
 .token-variable {
-  color: var(--color-syntax-variable, #f07178);
+  color: var(--tw-syntax-variable);
 }
 
 /* Properties */
 .token-property {
-  color: var(--color-syntax-property, #82aaff);
+  color: var(--tw-syntax-attribute);
 }
 
 /* Types */
 .token-type {
-  color: var(--color-syntax-type, #ffcb6b);
+  color: var(--tw-syntax-function);
 }
 
 /* Functions */
 .token-function {
-  color: var(--color-syntax-function, #82aaff);
+  color: var(--tw-syntax-function);
 }
 
 /* Operators */
 .token-operator {
-  color: var(--color-syntax-operator, #89ddff);
+  color: var(--tw-syntax-punctuation);
 }
 
 /* Punctuation */
 .token-punctuation {
-  color: var(--color-syntax-punctuation, var(--color-text));
+  color: var(--tw-syntax-punctuation);
 }
 
 /* Default text */
 .token-text {
-  color: var(--color-text);
+  color: var(--tw-text);
 }
 
 /* Identifiers */
 .token-identifier {
-  color: var(--color-text);
+  color: var(--tw-text);
 }
 
 /* Booleans */
 .token-boolean {
-  color: var(--color-syntax-boolean, #ff5370);
+  color: var(--tw-syntax-keyword);
 }
 
 /* Null/undefined */
 .token-null {
-  color: var(--color-syntax-null, #ff5370);
+  color: var(--tw-syntax-keyword);
 }
 
 /* Regular expressions */
 .token-regex {
-  color: var(--color-syntax-regex, #89ddff);
+  color: var(--tw-syntax-string);
 }
 
 /* JSX */
 .token-jsx {
-  color: var(--color-syntax-jsx, #89ddff);
+  color: var(--tw-syntax-tag);
 }
 
 .token-jsx-attribute {
-  color: var(--color-syntax-jsx-attribute, #c792ea);
+  color: var(--tw-syntax-attribute);
 }
 
 .token-jsx-text {
-  color: var(--color-text);
+  color: var(--tw-text);
+}
+
+/* Tags (HTML/XML) */
+.token-tag {
+  color: var(--tw-syntax-tag);
+}
+
+/* Attributes */
+.token-attribute {
+  color: var(--tw-syntax-attribute);
+}
+
+/* Escape sequences */
+.token-escape {
+  color: var(--tw-syntax-variable);
+}
+
+/* Preprocessor directives */
+.token-preprocessor {
+  color: var(--tw-syntax-comment);
+}
+
+/* Markdown specific */
+.token-title {
+  color: var(--tw-syntax-function);
+  font-weight: bold;
+}
+
+.token-bold {
+  font-weight: bold;
+}
+
+.token-italic {
+  font-style: italic;
+}
+
+.token-code {
+  color: var(--tw-syntax-string);
+  background-color: var(--tw-secondary-bg);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }

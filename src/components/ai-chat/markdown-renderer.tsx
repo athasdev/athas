@@ -1,228 +1,176 @@
-import Prism from "prismjs";
-import type React from "react";
-import { cn } from "@/utils/cn";
+import { marked } from "marked";
+import { markedHighlight } from "marked-highlight";
+import { useEffect, useState } from "react";
+import { chatHighlighter } from "../../lib/syntax-highlighting/chat-highlighter";
+import { usePersistentSettingsStore } from "../../settings/stores/persistent-settings-store";
 import type { MarkdownRendererProps } from "./types";
-import { mapLanguage } from "./utils";
 
-// Import common language components
-import "prismjs/components/prism-bash";
-import "prismjs/components/prism-c";
-import "prismjs/components/prism-cpp";
-import "prismjs/components/prism-csharp";
-import "prismjs/components/prism-css";
-import "prismjs/components/prism-go";
-import "prismjs/components/prism-java";
-import "prismjs/components/prism-javascript";
-import "prismjs/components/prism-json";
-import "prismjs/components/prism-jsx";
-import "prismjs/components/prism-markdown";
-import "prismjs/components/prism-php";
-import "prismjs/components/prism-python";
-import "prismjs/components/prism-ruby";
-import "prismjs/components/prism-rust";
-import "prismjs/components/prism-scss";
-import "prismjs/components/prism-shell-session";
-import "prismjs/components/prism-sql";
-import "prismjs/components/prism-toml";
-import "prismjs/components/prism-tsx";
-import "prismjs/components/prism-typescript";
-import "prismjs/components/prism-yaml";
-
-// Simple markdown renderer for AI responses
+// Modern markdown renderer using marked + shiki
 export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRendererProps) {
-  const renderContent = (text: string) => {
-    // First, handle code blocks (triple backticks)
-    const codeBlockParts = text.split(/(```[\s\S]*?```)/g);
+  const [renderedHtml, setRenderedHtml] = useState<string>("");
+  const [isInitialized, setIsInitialized] = useState(false);
+  const { aiSyntaxHighlighting } = usePersistentSettingsStore();
 
-    return codeBlockParts.map((part, index) => {
-      if (part.startsWith("```") && part.endsWith("```")) {
-        // Code block
-        const lines = part.split("\n");
-        const language = lines[0].replace("```", "").trim();
-        const code = lines.slice(1, -1).join("\n");
-
-        // Get the mapped language for Prism
-        const prismLanguage = mapLanguage(language);
-
-        // Highlight the code if the language is supported
-        let highlightedCode = code;
-        if (language && Prism.languages[prismLanguage]) {
-          try {
-            highlightedCode = Prism.highlight(code, Prism.languages[prismLanguage], prismLanguage);
-          } catch {
-            // Fallback to plain text if highlighting fails
-            highlightedCode = code;
-          }
+  // Initialize marked with chat highlighter
+  useEffect(() => {
+    const initializeRenderer = async () => {
+      try {
+        // Only initialize highlighter if syntax highlighting is enabled
+        if (aiSyntaxHighlighting) {
+          await chatHighlighter.initialize();
         }
 
-        return (
-          <div key={index} className="group relative my-2">
-            <pre className="max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
-              <div className="mb-1 flex items-center justify-between">
-                {language && <div className="font-mono text-text-lighter text-xs">{language}</div>}
-                {onApplyCode && code.trim() && (
-                  <button
-                    onClick={() => onApplyCode(code)}
-                    className={cn(
-                      "whitespace-nowrap rounded border border-border bg-primary-bg",
-                      "px-2 py-1 font-mono text-text text-xs",
-                      "opacity-0 transition-colors hover:bg-hover group-hover:opacity-100",
-                    )}
-                    title="Apply this code to current buffer"
-                  >
-                    Apply
-                  </button>
-                )}
-              </div>
-              <code
-                className="block whitespace-pre-wrap break-all font-mono text-text text-xs"
-                dangerouslySetInnerHTML={{ __html: highlightedCode }}
-              />
-            </pre>
-          </div>
+        // Configure marked with conditional highlighting
+        marked.use(
+          markedHighlight({
+            async: true,
+            highlight: async (code: string, lang: string) => {
+              try {
+                // Only highlight if setting is enabled
+                if (aiSyntaxHighlighting) {
+                  return await chatHighlighter.highlightCodeBlock(code, lang || "text");
+                } else {
+                  // Return plain escaped HTML if highlighting is disabled
+                  return escapeHtml(code);
+                }
+              } catch (error) {
+                console.error("Highlighting error:", error);
+                return escapeHtml(code);
+              }
+            },
+          }),
+          {
+            renderer: createCustomRenderer(),
+          },
         );
-      }
 
-      // Process the rest for inline elements and lists
-      return <div key={index}>{renderInlineAndLists(part)}</div>;
-    });
-  };
-
-  const renderInlineAndLists = (text: string) => {
-    // Split text into lines for list processing
-    const lines = text.split("\n");
-    const elements: React.ReactNode[] = [];
-    let currentList: { type: "ol" | "ul" | null; items: string[] } = {
-      type: null,
-      items: [],
-    };
-    let currentParagraph: string[] = [];
-
-    const flushCurrentList = () => {
-      if (currentList.type && currentList.items.length > 0) {
-        const ListComponent = currentList.type === "ol" ? "ol" : "ul";
-        elements.push(
-          <ListComponent key={`list-${elements.length}`} className="my-2 ml-4">
-            {currentList.items.map((item, index) => (
-              <li key={index} className="my-1">
-                {renderInlineFormatting(item)}
-              </li>
-            ))}
-          </ListComponent>,
-        );
-        currentList = { type: null, items: [] };
-      }
-    };
-
-    const flushCurrentParagraph = () => {
-      if (currentParagraph.length > 0) {
-        const paragraphText = currentParagraph.join("\n");
-        if (paragraphText.trim()) {
-          elements.push(
-            <div key={`para-${elements.length}`} className="my-1">
-              {renderInlineFormatting(paragraphText)}
-            </div>,
-          );
-        }
-        currentParagraph = [];
-      }
-    };
-
-    lines.forEach((line) => {
-      const trimmedLine = line.trim();
-
-      // Check for numbered lists (e.g., "1. ", "2. ", etc.)
-      const numberedMatch = trimmedLine.match(/^(\d+)\.\s+(.*)$/);
-      if (numberedMatch) {
-        flushCurrentParagraph();
-        if (currentList.type !== "ol") {
-          flushCurrentList();
-          currentList.type = "ol";
-        }
-        currentList.items.push(numberedMatch[2]);
-        return;
-      }
-
-      // Check for bullet lists (e.g., "- ", "* ", "• ")
-      const bulletMatch = trimmedLine.match(/^[-*•]\s+(.*)$/);
-      if (bulletMatch) {
-        flushCurrentParagraph();
-        if (currentList.type !== "ul") {
-          flushCurrentList();
-          currentList.type = "ul";
-        }
-        currentList.items.push(bulletMatch[1]);
-        return;
-      }
-
-      // If we reach here, it's not a list item
-      flushCurrentList();
-
-      // Add to current paragraph (handle empty lines as paragraph breaks)
-      if (trimmedLine === "") {
-        flushCurrentParagraph();
-      } else {
-        currentParagraph.push(line);
-      }
-    });
-
-    // Flush any remaining content
-    flushCurrentList();
-    flushCurrentParagraph();
-
-    return elements.length > 0 ? elements : [renderInlineFormatting(text)];
-  };
-
-  const renderInlineFormatting = (text: string) => {
-    // Handle inline code first (single backticks)
-    const inlineCodeParts = text.split(/(`[^`]+`)/g);
-
-    return inlineCodeParts.map((part, index) => {
-      if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
-        // Inline code
-        const code = part.slice(1, -1);
-        return (
-          <code
-            key={index}
-            className="rounded border border-border bg-secondary-bg px-1 font-mono text-xs"
-          >
-            {code}
-          </code>
-        );
-      }
-
-      // Handle bold text (**text**)
-      const boldParts = part.split(/(\*\*[^*]+\*\*)/g);
-      return boldParts.map((boldPart, boldIndex) => {
-        if (boldPart.startsWith("**") && boldPart.endsWith("**") && boldPart.length > 4) {
-          return (
-            <strong key={`${index}-${boldIndex}`} className="font-semibold">
-              {boldPart.slice(2, -2)}
-            </strong>
-          );
-        }
-
-        // Handle italic text (*text*)
-        const italicParts = boldPart.split(/(\*[^*]+\*)/g);
-        return italicParts.map((italicPart, italicIndex) => {
-          if (
-            italicPart.startsWith("*") &&
-            italicPart.endsWith("*") &&
-            italicPart.length > 2 &&
-            !italicPart.startsWith("**")
-          ) {
-            return (
-              <em key={`${index}-${boldIndex}-${italicIndex}`} className="italic">
-                {italicPart.slice(1, -1)}
-              </em>
-            );
-          }
-
-          return <span key={`${index}-${boldIndex}-${italicIndex}`}>{italicPart}</span>;
+        // Configure marked options
+        marked.setOptions({
+          breaks: true,
+          gfm: true,
         });
-      });
-    });
+
+        setIsInitialized(true);
+      } catch (error) {
+        console.error("Failed to initialize markdown renderer:", error);
+        setIsInitialized(true); // Still allow fallback rendering
+      }
+    };
+
+    initializeRenderer();
+  }, [onApplyCode, aiSyntaxHighlighting]); // Re-initialize when setting changes
+
+  // Render markdown when content changes
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const renderMarkdown = async () => {
+      try {
+        const html = await marked.parse(content);
+        setRenderedHtml(html);
+
+        // Post-process to add syntax highlighting to code blocks
+        setTimeout(() => {
+          const codeBlocks = document.querySelectorAll(".highlighted-code");
+          codeBlocks.forEach(async (codeElement) => {
+            const preElement = codeElement.closest("pre");
+            const codeBlockDiv = preElement?.closest(".code-block");
+            const language = codeBlockDiv?.getAttribute("data-language") || "text";
+            const button = preElement?.querySelector(".apply-code-btn");
+            const code = button?.getAttribute("data-code");
+
+            if (code && codeElement.innerHTML.trim() === "") {
+              try {
+                const decodedCode = decodeURIComponent(code);
+                const highlightedHtml = await chatHighlighter.highlightCodeBlock(
+                  decodedCode,
+                  language,
+                );
+                codeElement.innerHTML = highlightedHtml;
+              } catch (error) {
+                console.error("Error highlighting code block:", error);
+                codeElement.textContent = decodeURIComponent(code);
+              }
+            }
+          });
+        }, 0);
+      } catch (error) {
+        console.error("Markdown parsing error:", error);
+        setRenderedHtml(escapeHtml(content));
+      }
+    };
+
+    renderMarkdown();
+  }, [content, isInitialized]);
+
+  const escapeHtml = (text: string): string => {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
   };
 
-  return <div className="whitespace-pre-wrap">{renderContent(content)}</div>;
+  // Custom renderer for code blocks with apply button
+  const createCustomRenderer = () => {
+    const renderer = new marked.Renderer();
+
+    renderer.code = ({ text, lang }: { text: string; lang?: string }) => {
+      const language = lang || "text";
+
+      return `
+        <div class="group relative my-2 code-block" data-language="${language}">
+          <pre class="max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
+            <div class="mb-1 flex items-center justify-between">
+              ${language !== "text" ? `<div class="font-mono text-text-lighter text-xs">${language}</div>` : ""}
+              ${
+                onApplyCode
+                  ? `
+                <button
+                  class="apply-code-btn whitespace-nowrap rounded border border-border bg-primary-bg px-2 py-1 font-mono text-text text-xs opacity-0 transition-colors hover:bg-hover group-hover:opacity-100"
+                  data-code="${encodeURIComponent(text)}"
+                  title="Apply this code to current buffer"
+                >
+                  Apply
+                </button>
+              `
+                  : ""
+              }
+            </div>
+            <code class="block whitespace-pre-wrap break-all font-mono text-text text-xs highlighted-code"></code>
+          </pre>
+        </div>
+      `;
+    };
+
+    return renderer;
+  };
+
+  // Handle apply code button clicks
+  useEffect(() => {
+    if (!onApplyCode) return;
+
+    const handleApplyClick = (event: Event) => {
+      const target = event.target as HTMLElement;
+      if (target.classList.contains("apply-code-btn")) {
+        const encodedCode = target.getAttribute("data-code");
+        if (encodedCode) {
+          const code = decodeURIComponent(encodedCode);
+          onApplyCode(code);
+        }
+      }
+    };
+
+    document.addEventListener("click", handleApplyClick);
+    return () => document.removeEventListener("click", handleApplyClick);
+  }, [onApplyCode]);
+
+  if (!isInitialized) {
+    return <div className="text-text-lighter">Loading...</div>;
+  }
+
+  return (
+    <div
+      className="markdown-content whitespace-pre-wrap"
+      dangerouslySetInnerHTML={{ __html: renderedHtml }}
+    />
+  );
 }

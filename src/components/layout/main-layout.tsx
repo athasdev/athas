@@ -1,8 +1,6 @@
 import { useState } from "react";
 import SQLiteViewer from "../../database/sqlite-viewer";
 import { ProjectNameMenu } from "../../hooks/use-context-menus";
-import { useKeyboardShortcutsWrapper } from "../../hooks/use-keyboard-shortcuts-wrapper";
-import { useMenuEventsWrapper } from "../../hooks/use-menu-events-wrapper";
 import SettingsDialog from "../../settings/components/settings-dialog";
 import { usePersistentSettingsStore } from "../../settings/stores/persistent-settings-store";
 import { useSettingsStore } from "../../settings/stores/settings-store";
@@ -91,10 +89,6 @@ export function MainLayout() {
       console.error("Error unstaging hunk:", error);
     }
   };
-
-  // Initialize event listeners
-  useMenuEventsWrapper();
-  useKeyboardShortcutsWrapper();
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-primary-bg">

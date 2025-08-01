@@ -3,7 +3,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { LspClient } from "../lib/lsp/lsp-client";
-import { useBufferStore } from "./buffer-store";
+import * as fileWatcherCoordination from "../services/file-watcher-coordination-service";
 
 interface FileChangeEvent {
   path: string;
@@ -142,18 +142,11 @@ export async function initializeFileWatcherListener() {
       return;
     }
 
-    // Handle the file change directly
-    const { buffers } = useBufferStore.getState();
-    const { reloadBufferFromDisk } = useBufferStore.getState().actions;
-    const buffer = buffers.find((b) => b.path === path);
+    // Handle the file change using coordination service
+    await fileWatcherCoordination.handleFileChange(path);
 
-    if (buffer) {
-      // Reload buffer content from disk
-      await reloadBufferFromDisk(buffer.id);
-
-      // Dispatch custom event for file reload notification
-      window.dispatchEvent(new CustomEvent("file-reloaded", { detail: { path } }));
-    }
+    // Dispatch custom event for file reload notification
+    window.dispatchEvent(new CustomEvent("file-reloaded", { detail: { path } }));
   });
 }
 
