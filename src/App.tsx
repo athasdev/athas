@@ -63,6 +63,17 @@ function App() {
     };
   }, []);
 
+  // Prevent native context menu
+  useEffect(() => {
+    const handleContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+    document.addEventListener("contextmenu", handleContextMenu);
+    return () => {
+      document.removeEventListener("contextmenu", handleContextMenu);
+    };
+  }, []);
+
   // Check for remote connection from URL
   const urlParams = new URLSearchParams(window.location.search);
   const remoteParam = urlParams.get("remote");
