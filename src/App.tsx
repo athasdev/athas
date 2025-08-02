@@ -63,8 +63,9 @@ function App() {
     };
   }, []);
 
-  // Prevent native context menu
-  useEffect(() => {
+// Hide native context menu
+useEffect(() => {
+  if (import.meta.env.MODE === "production") {
     const handleContextMenu = (event: MouseEvent) => {
       event.preventDefault();
     };
@@ -72,7 +73,8 @@ function App() {
     return () => {
       document.removeEventListener("contextmenu", handleContextMenu);
     };
-  }, []);
+  }
+}, []);
 
   // Check for remote connection from URL
   const urlParams = new URLSearchParams(window.location.search);
