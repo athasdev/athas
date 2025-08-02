@@ -83,7 +83,7 @@ See `example-custom-theme.toml` for a complete example of how to create custom t
 
 The following themes are included with Athas:
 - **GitHub**: Light, Dark, and Dark Dimmed variants
-- **VS Code**: Light and Dark variants  
+- **VS Code**: Light and Dark variants
 - **One Dark**: Original and Pro variants
 - **Tokyo Night**: Original, Storm, and Moon variants
 - **Dracula**: Original and Soft variants
@@ -118,7 +118,7 @@ name = "Theme One"
 # ... theme configuration
 
 [[themes]]
-id = "theme-two" 
+id = "theme-two"
 name = "Theme Two"
 # ... theme configuration
 ```

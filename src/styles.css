@@ -37,7 +37,7 @@
 
         /* Accent color */
         --tw-accent: #3b82f6;
-        
+
         /* Cursor color */
         --tw-cursor: #1a1a1a;
 
@@ -112,7 +112,7 @@
 
         /* Accent color - Dark */
         --tw-accent: #60a5fa;
-        
+
         /* Cursor color - Dark */
         --tw-cursor: #e5e5e5;
 
@@ -189,7 +189,7 @@
 
     /* Accent color */
     --color-accent: var(--tw-accent);
-    
+
     /* Cursor color */
     --color-cursor: var(--tw-cursor);
 
@@ -309,7 +309,7 @@ button {
         /* Font defaults */
         --app-font-family: "JetBrains Mono", monospace;
         --editor-font-family: "JetBrains Mono", monospace;
-        
+
         /* Default light theme colors */
         --tw-primary-bg: #ffffff;
         --tw-secondary-bg: #f8f8f8;
@@ -337,7 +337,7 @@ button {
 
         /* Accent color */
         --tw-accent: #3b82f6;
-        
+
         /* Cursor color */
         --tw-cursor: #1a1a1a;
 
@@ -414,7 +414,7 @@ button {
 
             /* Accent color - Dark */
             --tw-accent: #60a5fa;
-            
+
             /* Cursor color - Dark */
             --tw-cursor: #e5e5e5;
 

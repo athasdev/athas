@@ -1,5 +1,6 @@
 # dependency directories
 node_modules/
+.venv/
 
 # Build output
 dist/
@@ -58,7 +59,7 @@ TODO.md
 # claude local settings
 .claude/settings.local.json
 
-# Tauri gen files 
+# Tauri gen files
 src-tauri/gen/
 apps/desktop/src-tauri/gen/
 **/src-tauri/gen/
