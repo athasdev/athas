@@ -6,7 +6,7 @@
 
 <!-- Describe the changes made in the PR. -->
 
-- 
+-
 -
 -
 -
@@ -21,5 +21,3 @@
 <!-- If this PR closes any issues, use the keyword 'closes' followed by the issue number -->
 
 Closes # Fixes #
-
-

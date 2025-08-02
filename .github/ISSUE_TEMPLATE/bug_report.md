@@ -9,8 +9,8 @@ assignees: ''
 
 ### Environment
 
-* **OS**: 
-* **Version**: 
+* **OS**:
+* **Version**:
 
 ### Problem
 

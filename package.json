@@ -14,8 +14,6 @@
     "check:all": "bun typecheck && bun lint",
     "check:fix": "biome check --write --unsafe",
     "clean": "concurrently --names \"node,rust\" --prefix-colors \"cyan,yellow\" \"rimraf dist build node_modules bun.lockb && bun install\" \"cargo clean && cargo build\"",
-    "prepare": "simple-git-hooks",
-    "commitlint": "commitlint --edit",
     "setup": "chmod +x scripts/linux/setup.sh && ./scripts/linux/setup.sh",
     "setup:linux": "chmod +x scripts/linux/setup.sh && ./scripts/linux/setup.sh",
     "setup-win": "./scripts/windows/setup.ps1",
@@ -61,14 +59,9 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.7.0",
     "concurrently": "^9.2.0",
-    "simple-git-hooks": "^2.13.0",
     "typescript": "^5.8.3",
     "typescript-language-server": "^4.3.4",
     "vite": "^7.0.5"
-  },
-  "simple-git-hooks": {
-    "pre-commit": "bun check:all",
-    "commit-msg": "bun commitlint --edit $1"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json}": [

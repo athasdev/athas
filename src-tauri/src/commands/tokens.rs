@@ -476,15 +476,15 @@ std = []"#;
    fn test_tokenize_java() {
       let code = r#"public class HelloWorld {
     private String message;
-    
+
     public HelloWorld(String message) {
         this.message = message;
     }
-    
+
     public void greet() {
         System.out.println("Hello, " + message + "!");
     }
-    
+
     public static void main(String[] args) {
         HelloWorld app = new HelloWorld("World");
         app.greet();
@@ -495,10 +495,19 @@ std = []"#;
       println!("Found {} Java tokens", tokens.len());
 
       let token_types: Vec<&str> = tokens.iter().map(|t| t.token_type.as_str()).collect();
-      assert!(token_types.contains(&"keyword"), "Should have keyword tokens");
+      assert!(
+         token_types.contains(&"keyword"),
+         "Should have keyword tokens"
+      );
       assert!(token_types.contains(&"string"), "Should have string tokens");
-      assert!(token_types.contains(&"identifier"), "Should have identifier tokens");
-      assert!(token_types.contains(&"function"), "Should have function tokens");
+      assert!(
+         token_types.contains(&"identifier"),
+         "Should have identifier tokens"
+      );
+      assert!(
+         token_types.contains(&"function"),
+         "Should have function tokens"
+      );
    }
 
    #[test]
@@ -515,9 +524,15 @@ int main() {
       println!("Found {} C tokens", tokens.len());
 
       let token_types: Vec<&str> = tokens.iter().map(|t| t.token_type.as_str()).collect();
-      assert!(token_types.contains(&"keyword"), "Should have keyword tokens");
+      assert!(
+         token_types.contains(&"keyword"),
+         "Should have keyword tokens"
+      );
       assert!(token_types.contains(&"string"), "Should have string tokens");
-      assert!(token_types.contains(&"identifier"), "Should have identifier tokens");
+      assert!(
+         token_types.contains(&"identifier"),
+         "Should have identifier tokens"
+      );
       assert!(token_types.contains(&"number"), "Should have number tokens");
    }
 
@@ -529,10 +544,10 @@ int main() {
 class Greeter {
 private:
     std::string name;
-    
+
 public:
     Greeter(const std::string& n) : name(n) {}
-    
+
     void greet() const {
         std::cout << "Hello, " << name << "!" << std::endl;
     }
@@ -549,8 +564,14 @@ int main() {
 
       let token_types: Vec<&str> = tokens.iter().map(|t| t.token_type.as_str()).collect();
       assert!(!tokens.is_empty(), "Should have tokens");
-      assert!(token_types.contains(&"keyword"), "Should have keyword tokens");
-      assert!(token_types.contains(&"function") || token_types.contains(&"identifier"), "Should have function or identifier tokens");
+      assert!(
+         token_types.contains(&"keyword"),
+         "Should have keyword tokens"
+      );
+      assert!(
+         token_types.contains(&"function") || token_types.contains(&"identifier"),
+         "Should have function or identifier tokens"
+      );
    }
 
    #[test]
@@ -559,12 +580,12 @@ int main() {
 class User {
     private $name;
     private $email;
-    
+
     public function __construct($name, $email) {
         $this->name = $name;
         $this->email = $email;
     }
-    
+
     public function greet() {
         echo "Hello, {$this->name}! Your email is {$this->email}";
     }
@@ -578,10 +599,19 @@ $user->greet();
       println!("Found {} PHP tokens", tokens.len());
 
       let token_types: Vec<&str> = tokens.iter().map(|t| t.token_type.as_str()).collect();
-      assert!(token_types.contains(&"keyword"), "Should have keyword tokens");
+      assert!(
+         token_types.contains(&"keyword"),
+         "Should have keyword tokens"
+      );
       assert!(token_types.contains(&"string"), "Should have string tokens");
-      assert!(token_types.contains(&"identifier"), "Should have identifier tokens");
-      assert!(token_types.contains(&"function"), "Should have function tokens");
+      assert!(
+         token_types.contains(&"identifier"),
+         "Should have identifier tokens"
+      );
+      assert!(
+         token_types.contains(&"function"),
+         "Should have function tokens"
+      );
    }
 
    #[test]

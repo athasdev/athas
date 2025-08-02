@@ -1,0 +1,52 @@
+# Pre-commit hooks configuration for Rust + TypeScript/React project
+# See https://pre-commit.com for more information
+
+repos:
+  # Rust hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+        exclude: 'tsconfig.*\.json$'
+      - id: check-merge-conflict
+
+  # Rust formatting only (clippy/check too heavy for CI)
+  - repo: local
+    hooks:
+      - id: rust-fmt-workspace
+        name: Rust format (workspace)
+        entry: cargo fmt
+        args: ['--all', '--check']
+        language: system
+        files: '\.rs$'
+        pass_filenames: false
+
+  # TypeScript/JavaScript with Biome and type checking
+  - repo: local
+    hooks:
+      - id: typescript-check
+        name: TypeScript check
+        entry: bun
+        args: ['typecheck']
+        language: system
+        files: \.(ts|tsx)$
+        pass_filenames: false
+      - id: biome-check
+        name: Biome check
+        entry: bun
+        args: ['check', '--write']
+        language: system
+        files: \.(js|jsx|ts|tsx|json)$
+        pass_filenames: false
+
+  # Commit message validation
+  - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
+    rev: v9.18.0
+    hooks:
+      - id: commitlint
+        stages: [commit-msg]
+        additional_dependencies: ['@commitlint/cli']
