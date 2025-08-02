@@ -42,6 +42,7 @@ const ModelProviderSelector = ({
   const handleApiKeyClick = (e: React.MouseEvent, providerId: string) => {
     e.stopPropagation();
     onApiKeyRequest(providerId);
+    isOpen && setIsOpen(false);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {

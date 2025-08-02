@@ -148,7 +148,7 @@ const ApiKeyModal = ({
   const instructions = getInstructions();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-150 flex items-center justify-center bg-black/50">
       <div className="flex max-h-[90vh] w-[480px] flex-col rounded-lg border border-border bg-primary-bg">
         {/* Header */}
         <div className="flex items-center justify-between border-border border-b p-4">

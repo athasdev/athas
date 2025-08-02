@@ -184,7 +184,7 @@ const GitBranchManager = ({
 
       {showModal && (
         <div
-          className={cn("fixed inset-0 z-50 flex items-center justify-center", "bg-opacity-50")}
+          className={cn("fixed inset-0 z-100 flex items-center justify-center", "bg-opacity-50")}
           onClick={() => setShowModal(false)}
         >
           <div

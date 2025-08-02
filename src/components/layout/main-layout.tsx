@@ -24,7 +24,7 @@ import FileReloadToast from "../file-reload-toast";
 import GitHubCopilotSettings from "../github-copilot-settings";
 import { ImageViewer } from "../image-viewer/image-viewer";
 import ResizableRightPane from "../resizable-right-pane";
-import ResizableSidebar from "../resizable-sidebar";
+import ResizableSidebar from "../resizable-sidebar/resizable-sidebar";
 import TabBar from "../tab-bar/tab-bar";
 import CustomTitleBarWithSettings from "../window/custom-title-bar";
 import { MainSidebar } from "./main-sidebar";
