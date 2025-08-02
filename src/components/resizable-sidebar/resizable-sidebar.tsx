@@ -1,6 +1,7 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cn } from "../utils/cn";
+import { cn } from "../../utils/cn";
+import "./resizable-sidebar.css";
 
 interface ResizableSidebarProps {
   children: React.ReactNode;
@@ -88,17 +89,9 @@ const ResizableSidebar = ({
         <div
           ref={resizerRef}
           onMouseDown={handleMouseDown}
-          className={cn(
-            "group absolute top-0 right-0 h-full w-1 cursor-col-resize transition-colors duration-150 hover:bg-blue-500/30",
-            isResizing && "bg-blue-500/50",
-          )}
+          className={cn("resize-handle", isResizing && "resize-handle--resizing")}
         >
-          <div
-            className={cn(
-              "-translate-x-[1px] absolute top-0 right-0 h-full w-[3px]",
-              "bg-blue-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100",
-            )}
-          />
+          <div className="resize-handle__indicator" />
         </div>
       </div>
     </div>

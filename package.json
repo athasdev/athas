@@ -18,6 +18,7 @@
     "commitlint": "commitlint --edit",
     "setup": "chmod +x scripts/linux/setup.sh && ./scripts/linux/setup.sh",
     "setup:linux": "chmod +x scripts/linux/setup.sh && ./scripts/linux/setup.sh",
+    "setup-win": "./scripts/windows/setup.ps1",
     "dev": "bun run tauri dev"
   },
   "dependencies": {
@@ -75,5 +76,8 @@
     "*.{ts,tsx,js,jsx,json}": [
       "biome check --no-errors-on-unmatched"
     ]
+  },
+  "engines": {
+    "node": ">=22.0.0"
   }
 }

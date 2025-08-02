@@ -10,7 +10,7 @@ Designed for developers who want a fast and customizable development environment
 Choose your platform for detailed setup instructions:
 
 - [**macOS**](docs/develop/macos.md) - Setup for macOS development
-- [**Windows**](docs/develop/windows.md) - Setup for Windows development  
+- [**Windows**](docs/develop/windows.md) - Setup for Windows development (includes automated script)
 - [**Linux**](docs/develop/linux.md) - Setup for Linux development (includes automated script)
 
 ## Customizing
@@ -21,7 +21,7 @@ Create custom themes by adding TOML files. See the [themes documentation](src/ex
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed contribution guidelines.
 
 ## Support
 
