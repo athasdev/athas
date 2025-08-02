@@ -157,6 +157,11 @@ class ExtensionManager {
     return Array.from(this.extensions.values());
   }
 
+  isExtensionLoaded(extensionName: string): boolean {
+    const extensionId = this.generateExtensionId(extensionName);
+    return this.extensions.has(extensionId);
+  }
+
   private generateExtensionId(name: string): string {
     return name.toLowerCase().replace(/\s+/g, "-");
   }

@@ -290,9 +290,14 @@ export function TextEditor() {
         // Initialize extension manager if not already done
         if (!extensionManager.isInitialized()) {
           extensionManager.initialize();
+        }
 
-          // Load core extensions
+        // Load core extensions if not already loaded
+        if (!extensionManager.isExtensionLoaded("Syntax Highlighting")) {
           await extensionManager.loadExtension(syntaxHighlightingExtension);
+        }
+
+        if (!extensionManager.isExtensionLoaded("Basic Editing")) {
           await extensionManager.loadExtension(basicEditingExtension);
         }
 
@@ -363,6 +368,44 @@ export function TextEditor() {
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
   }, [setViewportHeight]);
+
+  // Sync textarea scroll with viewport scroll
+  useEffect(() => {
+    if (!viewportRef.current || !textareaRef.current) return;
+
+    const viewport = viewportRef.current;
+    const textarea = textareaRef.current;
+    let isViewportScrolling = false;
+    let isTextareaScrolling = false;
+
+    const handleViewportScroll = () => {
+      if (isTextareaScrolling) return;
+      isViewportScrolling = true;
+      textarea.scrollTop = viewport.scrollTop;
+      textarea.scrollLeft = viewport.scrollLeft;
+      requestAnimationFrame(() => {
+        isViewportScrolling = false;
+      });
+    };
+
+    const handleTextareaScroll = () => {
+      if (isViewportScrolling) return;
+      isTextareaScrolling = true;
+      viewport.scrollTop = textarea.scrollTop;
+      viewport.scrollLeft = textarea.scrollLeft;
+      requestAnimationFrame(() => {
+        isTextareaScrolling = false;
+      });
+    };
+
+    viewport.addEventListener("scroll", handleViewportScroll);
+    textarea.addEventListener("scroll", handleTextareaScroll);
+
+    return () => {
+      viewport.removeEventListener("scroll", handleViewportScroll);
+      textarea.removeEventListener("scroll", handleTextareaScroll);
+    };
+  }, []);
 
   // Emit content change events to extensions on initial load only
   useEffect(() => {
@@ -752,8 +795,11 @@ export function TextEditor() {
         onKeyUp={handleSelectionChange}
         onMouseUp={handleSelectionChange}
         onContextMenu={handleContextMenu}
+        onScroll={() => {
+          /* Handled by useEffect */
+        }}
         disabled={disabled}
-        className="absolute resize-none overflow-hidden border-none bg-transparent text-transparent caret-transparent outline-none"
+        className="absolute resize-none overflow-auto border-none bg-transparent text-transparent caret-transparent outline-none"
         style={{
           left: `${gutterWidth + GUTTER_MARGIN}px`,
           top: 0,
@@ -763,6 +809,7 @@ export function TextEditor() {
           fontFamily: "JetBrains Mono, monospace",
           lineHeight: `${lineHeight}px`,
           padding: 0,
+          paddingBottom: `${20 * lineHeight}px`, // Add 20 lines worth of bottom padding
           margin: 0,
           whiteSpace: "pre",
           tabSize: 2,

@@ -216,6 +216,50 @@ fn get_language_config(language_name: &str) -> Result<HighlightConfiguration> {
          config.configure(HIGHLIGHT_NAMES);
          Ok(config)
       }
+      "java" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_java::LANGUAGE.into(),
+            language_name,
+            tree_sitter_java::HIGHLIGHTS_QUERY,
+            "", // Java doesn't have injections/locals in this version
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "c" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_c::LANGUAGE.into(),
+            language_name,
+            tree_sitter_c::HIGHLIGHT_QUERY,
+            "", // C doesn't have injections/locals in this version
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "cpp" | "cxx" | "cc" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_cpp::LANGUAGE.into(),
+            language_name,
+            tree_sitter_cpp::HIGHLIGHT_QUERY,
+            "", // C++ doesn't have injections/locals in this version
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
+      "php" => {
+         let mut config = HighlightConfiguration::new(
+            tree_sitter_php::LANGUAGE_PHP.into(),
+            language_name,
+            tree_sitter_php::HIGHLIGHTS_QUERY,
+            tree_sitter_php::INJECTIONS_QUERY,
+            "",
+         )?;
+         config.configure(HIGHLIGHT_NAMES);
+         Ok(config)
+      }
       _ => anyhow::bail!("Unsupported language: {}", language_name),
    }
 }
@@ -261,6 +305,10 @@ pub async fn get_tokens(content: String, file_extension: String) -> Result<Vec<T
       "md" | "markdown" => "markdown",
       "sh" | "bash" => "bash",
       "toml" => "toml",
+      "java" => "java",
+      "c" => "c",
+      "cpp" | "cxx" | "cc" | "c++" | "hpp" | "hxx" | "h++" => "cpp",
+      "php" => "php",
       _ => return Err(format!("Unsupported file extension: {}", file_extension)),
    };
 
@@ -422,6 +470,118 @@ std = []"#;
          token_types.contains(&"punctuation"),
          "Should have punctuation tokens"
       );
+   }
+
+   #[test]
+   fn test_tokenize_java() {
+      let code = r#"public class HelloWorld {
+    private String message;
+    
+    public HelloWorld(String message) {
+        this.message = message;
+    }
+    
+    public void greet() {
+        System.out.println("Hello, " + message + "!");
+    }
+    
+    public static void main(String[] args) {
+        HelloWorld app = new HelloWorld("World");
+        app.greet();
+    }
+}"#;
+
+      let tokens = tokenize_content(code, "java").unwrap();
+      println!("Found {} Java tokens", tokens.len());
+
+      let token_types: Vec<&str> = tokens.iter().map(|t| t.token_type.as_str()).collect();
+      assert!(token_types.contains(&"keyword"), "Should have keyword tokens");
+      assert!(token_types.contains(&"string"), "Should have string tokens");
+      assert!(token_types.contains(&"identifier"), "Should have identifier tokens");
+      assert!(token_types.contains(&"function"), "Should have function tokens");
+   }
+
+   #[test]
+   fn test_tokenize_c() {
+      let code = r#"#include <stdio.h>
+
+int main() {
+    int number = 42;
+    printf("Hello, C! Number: %d\n", number);
+    return 0;
+}"#;
+
+      let tokens = tokenize_content(code, "c").unwrap();
+      println!("Found {} C tokens", tokens.len());
+
+      let token_types: Vec<&str> = tokens.iter().map(|t| t.token_type.as_str()).collect();
+      assert!(token_types.contains(&"keyword"), "Should have keyword tokens");
+      assert!(token_types.contains(&"string"), "Should have string tokens");
+      assert!(token_types.contains(&"identifier"), "Should have identifier tokens");
+      assert!(token_types.contains(&"number"), "Should have number tokens");
+   }
+
+   #[test]
+   fn test_tokenize_cpp() {
+      let code = r#"#include <iostream>
+#include <string>
+
+class Greeter {
+private:
+    std::string name;
+    
+public:
+    Greeter(const std::string& n) : name(n) {}
+    
+    void greet() const {
+        std::cout << "Hello, " << name << "!" << std::endl;
+    }
+};
+
+int main() {
+    Greeter g("World");
+    g.greet();
+    return 0;
+}"#;
+
+      let tokens = tokenize_content(code, "cpp").unwrap();
+      println!("Found {} C++ tokens", tokens.len());
+
+      let token_types: Vec<&str> = tokens.iter().map(|t| t.token_type.as_str()).collect();
+      assert!(!tokens.is_empty(), "Should have tokens");
+      assert!(token_types.contains(&"keyword"), "Should have keyword tokens");
+      assert!(token_types.contains(&"function") || token_types.contains(&"identifier"), "Should have function or identifier tokens");
+   }
+
+   #[test]
+   fn test_tokenize_php() {
+      let code = r#"<?php
+class User {
+    private $name;
+    private $email;
+    
+    public function __construct($name, $email) {
+        $this->name = $name;
+        $this->email = $email;
+    }
+    
+    public function greet() {
+        echo "Hello, {$this->name}! Your email is {$this->email}";
+    }
+}
+
+$user = new User("Alice", "alice@example.com");
+$user->greet();
+?>"#;
+
+      let tokens = tokenize_content(code, "php").unwrap();
+      println!("Found {} PHP tokens", tokens.len());
+
+      let token_types: Vec<&str> = tokens.iter().map(|t| t.token_type.as_str()).collect();
+      assert!(token_types.contains(&"keyword"), "Should have keyword tokens");
+      assert!(token_types.contains(&"string"), "Should have string tokens");
+      assert!(token_types.contains(&"identifier"), "Should have identifier tokens");
+      assert!(token_types.contains(&"function"), "Should have function tokens");
    }
 
    #[test]

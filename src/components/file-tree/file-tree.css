@@ -1,29 +1,17 @@
-/* Customize scrollbar for Chrome, Safari and Opera */
-.file-tree-container::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
-  display: block !important;
+/* Hide native scrollbar completely */
+.file-tree-container,
+.file-tree-container * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
-.file-tree-container::-webkit-scrollbar-track {
-  background: transparent !important;
-  display: block !important;
-}
-
-.file-tree-container::-webkit-scrollbar-thumb {
-  background: rgba(155, 155, 155, 0.3) !important;
-  border-radius: 3px !important;
-  display: block !important;
-}
-
-.file-tree-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(155, 155, 155, 0.5) !important;
-}
-
-/* Customize scrollbar for Firefox */
-.file-tree-container {
-  scrollbar-width: thin !important;
-  scrollbar-color: rgba(155, 155, 155, 0.3) transparent !important;
+.file-tree-container::-webkit-scrollbar,
+.file-tree-container *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
 }
 
 /* Enable proper mouse wheel scrolling */

@@ -104,7 +104,7 @@ export const EditorViewport = memo(
         };
       }, []);
 
-      const totalHeight = lineCount * lineHeight;
+      const totalHeight = lineCount * lineHeight + 20 * lineHeight; // Add 20 lines of empty space at bottom
 
       return (
         <div
