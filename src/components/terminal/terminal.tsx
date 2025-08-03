@@ -699,7 +699,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         id={`terminal-${sessionId}`}
         className={cn("xterm-container", "w-full", "text-text", !isActive && "opacity-60")}
         style={{
-          height: "calc(100% - 40px)", // Subtract footer height to prevent content going below
+          height: "calc(100% - 1px)", // Subtract footer height to prevent content going below
         }}
       />
     </div>
