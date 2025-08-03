@@ -50,9 +50,9 @@ const WelcomeScreen = ({
       {/* Logo Section */}
       <div className={cn("mb-6 flex flex-col items-center")}>
         <div className={cn("mb-1 flex justify-center")}>
-          <img src="/logo.svg" alt="athas industries" className={cn("h-12")} draggable="false" />
+          <img src="/athas.svg" alt="Athas logo" className={cn("h-14")} draggable="false" />
         </div>
-        <div className={cn("flex items-center gap-2")}>
+        <div className={cn("mt-4 flex items-center gap-2")}>
           <p className={cn("paper-text-light font-mono font-normal text-xs")}>v0.1.0</p>
           {checking && (
             <div className={cn("paper-text-light text-xs")} title="Checking for updates...">
