@@ -495,10 +495,19 @@ std = []"#;
       println!("Found {} Java tokens", tokens.len());
 
       let token_types: Vec<&str> = tokens.iter().map(|t| t.token_type.as_str()).collect();
-      assert!(token_types.contains(&"keyword"), "Should have keyword tokens");
+      assert!(
+         token_types.contains(&"keyword"),
+         "Should have keyword tokens"
+      );
       assert!(token_types.contains(&"string"), "Should have string tokens");
-      assert!(token_types.contains(&"identifier"), "Should have identifier tokens");
-      assert!(token_types.contains(&"function"), "Should have function tokens");
+      assert!(
+         token_types.contains(&"identifier"),
+         "Should have identifier tokens"
+      );
+      assert!(
+         token_types.contains(&"function"),
+         "Should have function tokens"
+      );
    }
 
    #[test]
@@ -515,9 +524,15 @@ int main() {
       println!("Found {} C tokens", tokens.len());
 
       let token_types: Vec<&str> = tokens.iter().map(|t| t.token_type.as_str()).collect();
-      assert!(token_types.contains(&"keyword"), "Should have keyword tokens");
+      assert!(
+         token_types.contains(&"keyword"),
+         "Should have keyword tokens"
+      );
       assert!(token_types.contains(&"string"), "Should have string tokens");
-      assert!(token_types.contains(&"identifier"), "Should have identifier tokens");
+      assert!(
+         token_types.contains(&"identifier"),
+         "Should have identifier tokens"
+      );
       assert!(token_types.contains(&"number"), "Should have number tokens");
    }
 
@@ -549,8 +564,14 @@ int main() {
 
       let token_types: Vec<&str> = tokens.iter().map(|t| t.token_type.as_str()).collect();
       assert!(!tokens.is_empty(), "Should have tokens");
-      assert!(token_types.contains(&"keyword"), "Should have keyword tokens");
-      assert!(token_types.contains(&"function") || token_types.contains(&"identifier"), "Should have function or identifier tokens");
+      assert!(
+         token_types.contains(&"keyword"),
+         "Should have keyword tokens"
+      );
+      assert!(
+         token_types.contains(&"function") || token_types.contains(&"identifier"),
+         "Should have function or identifier tokens"
+      );
    }
 
    #[test]
@@ -578,10 +599,19 @@ $user->greet();
       println!("Found {} PHP tokens", tokens.len());
 
       let token_types: Vec<&str> = tokens.iter().map(|t| t.token_type.as_str()).collect();
-      assert!(token_types.contains(&"keyword"), "Should have keyword tokens");
+      assert!(
+         token_types.contains(&"keyword"),
+         "Should have keyword tokens"
+      );
       assert!(token_types.contains(&"string"), "Should have string tokens");
-      assert!(token_types.contains(&"identifier"), "Should have identifier tokens");
-      assert!(token_types.contains(&"function"), "Should have function tokens");
+      assert!(
+         token_types.contains(&"identifier"),
+         "Should have identifier tokens"
+      );
+      assert!(
+         token_types.contains(&"function"),
+         "Should have function tokens"
+      );
    }
 
    #[test]
