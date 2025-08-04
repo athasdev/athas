@@ -4,7 +4,7 @@ Welcome! We're happy to have you here. Thank you in advance for your contributio
 
 Note: Please check existing issues and pull requests before creating a new one.
 
-# The Basics
+## The Basics
 
 Athas welcomes contributions in the form of pull requests.
 
@@ -14,20 +14,35 @@ For larger changes (e.g., new lint rules, new functionality, new configuration o
 
 If you have suggestions on how we might improve the contributing documentation, let us know!
 
-# Prerequisites
+## Prerequisites
 
 Athas is a Tauri project using Bun as package manager and Biome for linting/formatting.
 
 - [Rust](https://rustup.rs) with `cargo`, `rustfmt`, and `clippy`
 - [Tauri CLI](https://tauri.app) → `cargo install tauri-cli`
 - [Bun](https://bun.sh) as package manager
-- [Node.js ≥ 18](https://nodejs.org)
+- [Node.js ≥ 20.19.0](https://nodejs.org)
+- [Python 3.8+](https://www.python.org/downloads/) for `pre-commit` hooks
 
 Check with: `node -v`, `cargo --version`, `tauri --version`, `bun --version`
 
-# Development
+## Development
 
-After cloning the repository, run Athas locally from the repository root with:
+After cloning the repository, install `pre-commit` hooks. It's really important to ensure code quality and consistency across contributions.
+
+```bash
+pip install pre-commit
+pre-commit install -f
+pre-commit install --hook-type commit-msg
+```
+
+Test the hooks to ensure they are working correctly:
+
+```bash
+pre-commit run --all-files
+```
+
+Then, install project dependencies, and run development server:
 
 ```bash
 bun install
@@ -51,18 +66,20 @@ Available commands:
 - `bun run check` - Run both typecheck and biome check
 - `bun run fix` - Auto-fix formatting and linting issues
 
-# Pull Request Guidelines
+## Pull Request Guidelines
 
-## Commit History
+### Commit History
 
 To maintain a clean commit history:
 
 1. **Squash commits** into logical, compact commits before opening your PR
 2. **Rebase on origin/master** to avoid merge conflicts:
+
    ```bash
    git fetch origin
    git rebase origin/master
    ```
+
 3. Each commit should represent a single logical change
 4. Use descriptive commit messages following conventional commits format
 
