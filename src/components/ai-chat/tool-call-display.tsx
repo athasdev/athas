@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 import "./tool-call-display.css";
 
 interface ToolCallDisplayProps {

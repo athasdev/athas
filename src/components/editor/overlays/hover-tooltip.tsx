@@ -1,7 +1,7 @@
 import { memo } from "react";
-import { EDITOR_CONSTANTS } from "../../../constants/editor-constants";
-import { useEditorCompletionStore } from "../../../stores/editor-completion-store";
-import { useEditorSettingsStore } from "../../../stores/editor-settings-store";
+import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
+import { useEditorCompletionStore } from "@/stores/editor-completion-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 
 export const HoverTooltip = memo(() => {
   const fontSize = useEditorSettingsStore((state) => state.fontSize);

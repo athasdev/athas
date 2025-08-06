@@ -2,7 +2,7 @@ import { FontSelector } from "@/components/ui/font-selector";
 import Input from "@/components/ui/input";
 import Section, { SettingRow } from "@/components/ui/section";
 import Switch from "@/components/ui/switch";
-import { useSettingsStore } from "../../stores/settings-store";
+import { useSettingsStore } from "@/settings/stores/settings-store";
 
 export const EditorSettings = () => {
   const { settings, updateSetting } = useSettingsStore();

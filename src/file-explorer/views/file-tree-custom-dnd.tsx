@@ -1,7 +1,7 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FileEntry } from "../../types/app";
-import { moveFile } from "../../utils/platform";
+import { moveFile } from "@/file-system/controllers/platform";
+import type { FileEntry } from "@/file-system/models/app";
 
 interface CustomDragState {
   isDragging: boolean;

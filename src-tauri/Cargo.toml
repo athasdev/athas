@@ -79,6 +79,7 @@ fontdb = "0.23.0"
 nucleo = "0.5.0"
 nucleo-matcher = "0.3.1"
 toml = "0.8"
+tauri-plugin-clipboard-manager = "2"
 
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

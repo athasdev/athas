@@ -10,15 +10,15 @@ import {
   Upload,
 } from "lucide-react";
 import { useState } from "react";
+import { useGitStore } from "@/stores/git-store";
 import { cn } from "@/utils/cn";
-import { useGitStore } from "../../stores/git-store";
 import {
   discardAllChanges,
   fetchChanges,
   initRepository,
   pullChanges,
   pushChanges,
-} from "../../utils/git";
+} from "@/utils/git";
 
 interface GitActionsMenuProps {
   isOpen: boolean;

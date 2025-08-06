@@ -8,7 +8,7 @@ import {
   type GitStash,
   getStashes,
   popStash,
-} from "../../utils/git";
+} from "@/utils/git";
 
 interface GitStashManagerProps {
   isOpen: boolean;

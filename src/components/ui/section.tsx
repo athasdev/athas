@@ -1,5 +1,5 @@
 import type React from "react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 
 interface SectionProps {
   title: string;

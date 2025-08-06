@@ -2,16 +2,26 @@ import { confirm } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import type { CodeEditorRef } from "@/components/editor/code-editor";
+import { useFileTreeStore } from "@/file-explorer/controllers/file-tree-store";
+// Store imports - Note: Direct store communication via getState() is used here.
+// This is an acceptable Zustand pattern, though it creates coupling between stores.
+// See: https://github.com/pmndrs/zustand/discussions/1319
+import { useBufferStore } from "@/stores/buffer-store";
+import { useGitStore } from "@/stores/git-store";
+import { useProjectStore } from "@/stores/project-store";
+import { getGitStatus } from "@/utils/git";
+import { isDiffFile, parseRawDiffContent } from "@/utils/git-diff-parser";
 import { createSelectors } from "@/utils/zustand-selectors";
-import type { CodeEditorRef } from "../../components/editor/code-editor";
-import type { FileEntry } from "../../types/app";
+import type { FileEntry } from "../models/app";
+import type { FsActions, FsState } from "../models/interface";
 import {
   createNewDirectory,
   createNewFile,
   deleteFileOrDirectory,
   readDirectoryContents,
   readFileContent,
-} from "../../utils/file-operations";
+} from "./file-operations";
 import {
   addFileToTree,
   collapseAllFolders,
@@ -19,26 +29,11 @@ import {
   removeFileFromTree,
   sortFileEntries,
   updateFileInTree,
-} from "../../utils/file-tree-utils";
-import {
-  getFilenameFromPath,
-  getRootPath,
-  isImageFile,
-  isSQLiteFile,
-} from "../../utils/file-utils";
-import { getGitStatus } from "../../utils/git";
-import { isDiffFile, parseRawDiffContent } from "../../utils/git-diff-parser";
-import { openFolder, readDirectory } from "../../utils/platform";
-// Store imports - Note: Direct store communication via getState() is used here.
-// This is an acceptable Zustand pattern, though it creates coupling between stores.
-// See: https://github.com/pmndrs/zustand/discussions/1319
-import { useBufferStore } from "../buffer-store";
-import { useFileTreeStore } from "../file-tree-store";
-import { useFileWatcherStore } from "../file-watcher-store";
-import { useGitStore } from "../git-store";
-import { useProjectStore } from "../project-store";
-import { useRecentFoldersStore } from "../recent-folders-store";
-import type { FsActions, FsState } from "./interface";
+} from "./file-tree-utils";
+import { getFilenameFromPath, getRootPath, isImageFile, isSQLiteFile } from "./file-utils";
+import { useFileWatcherStore } from "./file-watcher-store";
+import { openFolder, readDirectory } from "./platform";
+import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 
 export const useFileSystemStore = createSelectors(

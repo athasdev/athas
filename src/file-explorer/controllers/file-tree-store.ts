@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { FileEntry } from "../types/app";
+import type { FileEntry } from "../../file-system/models/app";
 
 interface FileTreeState {
   expandedFolders: Set<string>;

@@ -17,7 +17,7 @@ import {
   Type,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
+import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import KeybindingBadge from "../../ui/keybinding-badge";
 
 interface EditorContextMenuProps {

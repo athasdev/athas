@@ -1,11 +1,11 @@
 import type React from "react";
 import { forwardRef, memo, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { EDITOR_CONSTANTS } from "../../../constants/editor-constants";
-import { useEditorLayout } from "../../../hooks/use-editor-layout";
-import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
-import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
-import { useEditorSettingsStore } from "../../../stores/editor-settings-store";
-import { useEditorViewStore } from "../../../stores/editor-view-store";
+import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
+import { useEditorLayout } from "@/hooks/use-editor-layout";
+import { useEditorCursorStore } from "@/stores/editor-cursor-store";
+import { useEditorLayoutStore } from "@/stores/editor-layout-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
+import { useEditorViewStore } from "@/stores/editor-view-store";
 import { LineWithContent } from "./line-with-content";
 
 interface EditorViewportProps {

@@ -1,9 +1,9 @@
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
-import type { FileEntry } from "../types/app";
-import { readFile } from "../utils/platform";
-import FileIcon from "./file-icon";
+import FileIcon from "../file-explorer/views/file.icon";
+import { readFile } from "../file-system/controllers/platform";
+import type { FileEntry } from "../file-system/models/app";
 import Toggle from "./ui/toggle";
 import Tooltip from "./ui/tooltip";
 

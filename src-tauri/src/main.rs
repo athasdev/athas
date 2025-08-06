@@ -24,6 +24,7 @@ mod xterm_terminal;
 
 fn main() {
    tauri::Builder::default()
+      .plugin(tauri_plugin_clipboard_manager::init())
       .plugin(logger::init(log::LevelFilter::Info))
       .plugin(tauri_plugin_window_state::Builder::new().build())
       .plugin(tauri_plugin_fs::init())

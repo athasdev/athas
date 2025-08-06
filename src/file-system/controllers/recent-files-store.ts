@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { RecentFile, RecentFilesStore } from "../types/recent-files";
-import { calculateFrecencyScore } from "../utils/frecency";
+import { calculateFrecencyScore } from "../../utils/frecency";
+import type { RecentFile, RecentFilesStore } from "../models/recent-files";
 
 const MAX_RECENT_FILES = 50;
 const PRUNE_THRESHOLD_SCORE = 5; // Remove files with frecency score below this

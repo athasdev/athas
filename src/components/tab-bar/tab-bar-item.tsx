@@ -1,8 +1,8 @@
 import { Database, Package, Pin, X } from "lucide-react";
 import { memo } from "react";
-import type { Buffer } from "../../types/buffer";
-import { cn } from "../../utils/cn";
-import FileIcon from "../file-icon";
+import FileIcon from "@/file-explorer/views/file.icon";
+import type { Buffer } from "@/types/buffer";
+import { cn } from "@/utils/cn";
 
 interface TabBarItemProps {
   buffer: Buffer;

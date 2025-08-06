@@ -1,11 +1,11 @@
 import { memo } from "react";
 import type { CompletionItem } from "vscode-languageserver-protocol";
-import { EDITOR_CONSTANTS } from "../../../constants/editor-constants";
-import { useEditorLayout } from "../../../hooks/use-editor-layout";
-import { useEditorCompletionStore } from "../../../stores/editor-completion-store";
-import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
-import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
-import { highlightMatches } from "../../../utils/fuzzy-matcher";
+import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
+import { useEditorLayout } from "@/hooks/use-editor-layout";
+import { useEditorCompletionStore } from "@/stores/editor-completion-store";
+import { useEditorCursorStore } from "@/stores/editor-cursor-store";
+import { useEditorLayoutStore } from "@/stores/editor-layout-store";
+import { highlightMatches } from "@/utils/fuzzy-matcher";
 
 interface CompletionDropdownProps {
   onApplyCompletion?: (completion: CompletionItem) => void;

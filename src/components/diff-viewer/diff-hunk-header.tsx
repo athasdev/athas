@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Copy, Minus, Plus } from "lucide-react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 import { copyLineContent, createGitHunk } from "./utils/diff-helpers";
 import type { DiffHunkHeaderProps } from "./utils/types";
 

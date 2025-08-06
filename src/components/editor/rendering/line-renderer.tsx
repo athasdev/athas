@@ -1,5 +1,5 @@
 import type React from "react";
-import type { Decoration, LineToken } from "../../../types/editor-types";
+import type { Decoration, LineToken } from "@/types/editor-types";
 
 interface LineRendererProps {
   lineNumber: number;

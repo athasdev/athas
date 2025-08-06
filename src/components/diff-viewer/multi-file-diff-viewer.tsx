@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight, FileIcon, FilePlus, FileText, FileX } from "lucide-react";
 import { memo, useCallback, useMemo, useState } from "react";
-import type { GitDiff } from "../../utils/git";
+import type { GitDiff } from "@/utils/git";
 import { DiffHeader } from "./diff-header";
 import { ImageDiffViewer } from "./image-diff-viewer";
 import { TextDiffViewer } from "./text-diff-viewer";

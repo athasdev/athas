@@ -2,13 +2,7 @@ import { Check, ChevronDown, GitBranch, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useToast } from "@/contexts/toast-context";
 import { cn } from "@/utils/cn";
-import {
-  checkoutBranch,
-  createBranch,
-  createStash,
-  deleteBranch,
-  getBranches,
-} from "../../utils/git";
+import { checkoutBranch, createBranch, createStash, deleteBranch, getBranches } from "@/utils/git";
 
 interface GitBranchManagerProps {
   currentBranch?: string;

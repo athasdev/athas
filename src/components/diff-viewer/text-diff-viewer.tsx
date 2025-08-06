@@ -1,6 +1,6 @@
 import { FileIcon } from "lucide-react";
 import { memo } from "react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 import { DiffHunkHeader } from "./diff-hunk-header";
 import { DiffLine } from "./diff-line";
 import { useDiffViewState } from "./hooks/useDiffViewState";

@@ -1,6 +1,6 @@
 import { Copy } from "lucide-react";
 import { memo } from "react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 import { copyLineContent } from "./utils/diff-helpers";
 import type { DiffLineProps } from "./utils/types";
 

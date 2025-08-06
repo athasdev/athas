@@ -1,6 +1,6 @@
 import { Edit, FolderOpen, Plus, Server, Trash2, Wifi } from "lucide-react";
 import React, { useState } from "react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 import Button from "../ui/button";
 import type { RemoteConnection } from "./types";
 

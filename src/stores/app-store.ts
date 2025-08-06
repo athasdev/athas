@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
-import { writeFile } from "../utils/platform";
+import { writeFile } from "../file-system/controllers/platform";
 
 interface AppState {
   // Autosave state
@@ -44,7 +44,9 @@ export const useAppStore = createSelectors(
         handleContentChange: async (content: string) => {
           // Import stores dynamically to avoid circular dependencies
           const { useBufferStore } = await import("./buffer-store");
-          const { useFileWatcherStore } = await import("./file-watcher-store");
+          const { useFileWatcherStore } = await import(
+            "../file-system/controllers/file-watcher-store"
+          );
           const { useSettingsStore } = await import("@/settings/stores/settings-store.ts");
 
           // Get dependencies from other stores
@@ -94,7 +96,9 @@ export const useAppStore = createSelectors(
           // Import stores dynamically to avoid circular dependencies
           const { useBufferStore } = await import("./buffer-store");
           const { useSettingsStore } = await import("@/settings/stores/settings-store.ts");
-          const { useFileWatcherStore } = await import("./file-watcher-store");
+          const { useFileWatcherStore } = await import(
+            "../file-system/controllers/file-watcher-store"
+          );
 
           const { activeBufferId, buffers } = useBufferStore.getState();
           const { markBufferDirty } = useBufferStore.getState().actions;

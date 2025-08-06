@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
-import { safeLocalStorageSetItem } from "../../utils/storage";
+import { safeLocalStorageSetItem } from "@/utils/storage";
 import ConnectionDialog from "./connection-dialog";
 import ConnectionList from "./connection-list";
 import type { RemoteConnection, RemoteConnectionFormData } from "./types";

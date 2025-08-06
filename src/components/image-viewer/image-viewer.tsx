@@ -1,7 +1,7 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { FileIcon, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 import Button from "../ui/button";
 
 interface ImageViewerProps {

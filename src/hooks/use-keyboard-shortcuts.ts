@@ -1,9 +1,9 @@
 import { exit } from "@tauri-apps/plugin-process";
 import { useEffect } from "react";
+import { isMac } from "../file-system/controllers/platform";
 import type { CoreFeaturesState } from "../settings/models/feature.types";
 import { useZoomStore } from "../stores/zoom-store";
 import type { Buffer } from "../types/buffer";
-import { isMac } from "../utils/platform";
 
 interface UseKeyboardShortcutsProps {
   setIsBottomPaneVisible: (value: boolean | ((prev: boolean) => boolean)) => void;

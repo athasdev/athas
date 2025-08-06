@@ -1,6 +1,6 @@
 import type React from "react";
 import { createContext, memo, useContext, useMemo } from "react";
-import { EDITOR_CONSTANTS } from "../../../constants/editor-constants";
+import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 
 type LayerType = "base" | "decoration" | "selection" | "overlay";
 

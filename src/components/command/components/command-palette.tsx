@@ -1,8 +1,8 @@
 import { Palette, Settings, Sparkles } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { useAppStore } from "../../../stores/app-store";
-import { useUIState } from "../../../stores/ui-state-store";
+import { useAppStore } from "@/stores/app-store";
+import { useUIState } from "@/stores/ui-state-store";
 import Command, {
   CommandEmpty,
   CommandHeader,

@@ -1,5 +1,5 @@
-import type { CodeEditorRef } from "../../components/editor/code-editor";
-import type { FileEntry } from "../../types/app";
+import type { CodeEditorRef } from "@/components/editor/code-editor";
+import type { FileEntry } from "./app";
 
 export interface FsState {
   files: FileEntry[];

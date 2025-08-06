@@ -1,10 +1,10 @@
 import { ClockIcon, File } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IGNORED_PATTERNS } from "@/components/command/constants/ignored-patterns";
-import { useBufferStore } from "../../../stores/buffer-store";
-import { useFileSystemStore } from "../../../stores/file-system/store";
-import { useRecentFilesStore } from "../../../stores/recent-files-store";
-import { useUIState } from "../../../stores/ui-state-store";
+import { useRecentFilesStore } from "@/file-system/controllers/recent-files-store";
+import { useFileSystemStore } from "@/file-system/controllers/store";
+import { useBufferStore } from "@/stores/buffer-store";
+import { useUIState } from "@/stores/ui-state-store";
 import Command, {
   CommandEmpty,
   CommandHeader,

@@ -1,6 +1,6 @@
 import type React from "react";
-import type { FileEntry } from "../../types/app";
-import type { Buffer } from "../../types/buffer";
+import type { FileEntry } from "@/file-system/models/app";
+import type { Buffer } from "@/types/buffer";
 
 interface ToolCall {
   name: string;

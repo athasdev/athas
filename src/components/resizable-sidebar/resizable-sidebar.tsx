@@ -1,6 +1,6 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 import "./resizable-sidebar.css";
 
 interface ResizableSidebarProps {

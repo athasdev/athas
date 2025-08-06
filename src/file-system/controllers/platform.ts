@@ -78,8 +78,6 @@ export async function openFolder(): Promise<string | null> {
  */
 export async function readDirectory(path: string): Promise<any[]> {
   try {
-    console.log("readDirectory: Attempting to read path:", path);
-
     // Normalize the path - remove any trailing slashes
     const normalizedPath = path.replace(/[/\\]+$/, "");
 

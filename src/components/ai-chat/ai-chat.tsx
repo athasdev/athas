@@ -1,26 +1,101 @@
 import { invoke } from "@tauri-apps/api/core";
 import { MessageSquare, Plus, Sparkles } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useRef } from "react";
-import { usePersistentSettingsStore } from "../../settings/stores/persistent-settings-store";
-import { useAIChatStore } from "../../stores/ai-chat/store";
-import { useProjectStore } from "../../stores/project-store";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
+import { useAIChatStore } from "@/stores/ai-chat/store";
+import { useProjectStore } from "@/stores/project-store";
 import {
   getAvailableProviders,
   getProviderById,
   setClaudeCodeAvailability,
-} from "../../types/ai-provider";
-import type { ClaudeStatus } from "../../types/claude";
-import { getChatCompletionStream } from "../../utils/ai-chat";
-import { cn } from "../../utils/cn";
+} from "@/types/ai-provider";
+import type { ClaudeStatus } from "@/types/claude";
+import { getChatCompletionStream } from "@/utils/ai-chat";
+import { cn } from "@/utils/cn";
+import type { ContextInfo } from "@/utils/types";
 import ApiKeyModal from "../api-key-modal";
 import AIChatInputBar from "./ai-chat-input-bar";
 import ChatHistoryModal from "./chat-history-modal";
 import MarkdownRenderer from "./markdown-renderer";
 import { parseMentionsAndLoadFiles } from "./mention-utils";
 import ToolCallDisplay from "./tool-call-display";
-import type { AIChatProps, ContextInfo, Message } from "./types";
+import type { AIChatProps, Message } from "./types";
 import { formatTime } from "./utils";
+
+// Editable Chat Title Component
+function EditableChatTitle({
+  title,
+  onUpdateTitle,
+}: {
+  title: string;
+  onUpdateTitle: (title: string) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Update editValue when title changes externally
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(title);
+    }
+  }, [title, isEditing]);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleSave = () => {
+    const trimmedValue = editValue.trim();
+    if (trimmedValue && trimmedValue !== title) {
+      onUpdateTitle(trimmedValue);
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditValue(title);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      handleCancel();
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        value={editValue}
+        onChange={(e) => setEditValue(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={handleKeyDown}
+        className="rounded border-none bg-transparent px-1 py-0.5 font-medium text-text outline-none focus:bg-hover"
+        style={{ minWidth: "100px", maxWidth: "200px" }}
+      />
+    );
+  }
+
+  return (
+    <span
+      className="cursor-pointer rounded px-1 py-0.5 font-medium transition-colors hover:bg-hover"
+      onClick={() => setIsEditing(true)}
+      title="Click to rename chat"
+    >
+      {title}
+    </span>
+  );
+}
 
 export default function AIChat({
   className,
@@ -40,6 +115,7 @@ export default function AIChat({
   // Get store state selectively to avoid re-renders
   const input = useAIChatStore((state) => state.input);
   const selectedBufferIds = useAIChatStore((state) => state.selectedBufferIds);
+  const selectedFilesPaths = useAIChatStore((state) => state.selectedFilesPaths);
   const hasApiKey = useAIChatStore((state) => state.hasApiKey);
   const chats = useAIChatStore((state) => state.chats);
   const currentChatId = useAIChatStore((state) => state.currentChatId);
@@ -158,6 +234,7 @@ export default function AIChat({
       activeBuffer: activeBuffer || undefined,
       openBuffers: selectedBuffers,
       selectedFiles,
+      selectedProjectFiles: Array.from(selectedFilesPaths),
       projectRoot: rootFolderPath,
       providerId: aiProviderId,
     };
@@ -415,7 +492,14 @@ export default function AIChat({
         >
           <MessageSquare size={14} />
         </button>
-        <span className="font-medium">{currentChat ? currentChat.title : "New Chat"}</span>
+        {currentChatId ? (
+          <EditableChatTitle
+            title={currentChat ? currentChat.title : "New Chat"}
+            onUpdateTitle={(title) => updateChatTitle(currentChatId, title)}
+          />
+        ) : (
+          <span className="font-medium">New Chat</span>
+        )}
         <div className="flex-1" />
         <button
           onClick={handleNewChat}
@@ -470,7 +554,7 @@ export default function AIChat({
                 <div className="w-full">
                   {/* AI Message Header - Only show for first message in sequence */}
                   {isFirstAssistantInSequence && (
-                    <div className="mb-2 flex items-center gap-2">
+                    <div className="mb-2 flex select-none items-center gap-2">
                       <div
                         className="flex items-center gap-1"
                         style={{ color: "var(--color-text-lighter)" }}

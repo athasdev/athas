@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
-import { useEditorLayout } from "../../../hooks/use-editor-layout";
-import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
-import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
+import { useEditorLayout } from "@/hooks/use-editor-layout";
+import { useEditorCursorStore } from "@/stores/editor-cursor-store";
+import { useEditorLayoutStore } from "@/stores/editor-layout-store";
 
 interface CursorRendererProps {
   visible?: boolean;

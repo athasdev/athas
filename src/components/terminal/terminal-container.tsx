@@ -1,7 +1,7 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTerminalTabs } from "../../hooks/use-terminal-tabs";
-import { useUIState } from "../../stores/ui-state-store";
+import { useTerminalTabs } from "@/hooks/use-terminal-tabs";
+import { useUIState } from "@/stores/ui-state-store";
 import TerminalSession from "./terminal-session";
 import TerminalTabBar from "./terminal-tab-bar";
 

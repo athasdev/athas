@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePersistentSettingsStore } from "../../settings/stores/persistent-settings-store";
-import { useBufferStore } from "../../stores/buffer-store";
-import type { Buffer } from "../../types/buffer";
+import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
+import { useBufferStore } from "@/stores/buffer-store";
+import type { Buffer } from "@/types/buffer";
 
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";

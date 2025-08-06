@@ -1,7 +1,7 @@
 import { RefreshCw, X } from "lucide-react";
 import { useCallback, useState } from "react";
-import { useBufferStore } from "../../stores/buffer-store";
-import { cn } from "../../utils/cn";
+import { useBufferStore } from "@/stores/buffer-store";
+import { cn } from "@/utils/cn";
 import { DiffHeader } from "./diff-header";
 import { useDiffData } from "./hooks/useDiffData";
 import { useDiffViewState } from "./hooks/useDiffViewState";

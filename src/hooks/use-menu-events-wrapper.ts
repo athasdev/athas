@@ -1,8 +1,8 @@
+import { useFileSystemStore } from "../file-system/controllers/store";
 import { usePersistentSettingsStore } from "../settings/stores/persistent-settings-store";
 import { useSettingsStore } from "../settings/stores/settings-store";
 import { useAppStore } from "../stores/app-store";
 import { useBufferStore } from "../stores/buffer-store";
-import { useFileSystemStore } from "../stores/file-system/store";
 import { useUIState } from "../stores/ui-state-store";
 import { useMenuEvents } from "./use-menu-events";
 

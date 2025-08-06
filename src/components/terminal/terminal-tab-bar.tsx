@@ -11,8 +11,8 @@ import {
   X,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
-import type { Terminal } from "../../types/terminal";
-import { cn } from "../../utils/cn";
+import type { Terminal } from "@/types/terminal";
+import { cn } from "@/utils/cn";
 import KeybindingBadge from "../ui/keybinding-badge";
 import Tooltip from "../ui/tooltip";
 
