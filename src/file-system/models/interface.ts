@@ -48,6 +48,7 @@ export interface FsActions {
   handleFileMove: (oldPath: string, newPath: string) => Promise<void>;
   handleRevealInFolder: (path: string) => Promise<void>;
   handleDuplicatePath: (path: string) => Promise<void>;
+  handleRenamePath: (path: string, newName?: string) => Promise<void>;
 
   // Search operations
   getAllProjectFiles: () => Promise<FileEntry[]>;

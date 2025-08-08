@@ -3,6 +3,24 @@ use tauri::command;
 use walkdir::WalkDir;
 
 #[command]
+pub fn rename_file(source_path: String, target_path: String) -> Result<(), String> {
+   let source = Path::new(&source_path);
+   let target = Path::new(&target_path);
+
+   if !source.exists() {
+      return Err("Source path does not exist".to_string());
+   }
+
+   if target.exists() {
+      return Err("Target path already exists".to_string());
+   }
+
+   fs::rename(source, target).map_err(|e| format!("Failed to rename file: {}", e))?;
+
+   Ok(())
+}
+
+#[command]
 pub fn move_file(source_path: String, target_path: String) -> Result<(), String> {
    let source = Path::new(&source_path);
    let target = Path::new(&target_path);

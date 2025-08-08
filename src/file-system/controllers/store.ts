@@ -1,4 +1,4 @@
-import { basename, dirname, extname } from "@tauri-apps/api/path";
+import { basename, dirname, extname, join } from "@tauri-apps/api/path";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { copyFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
@@ -34,7 +34,7 @@ import {
 } from "./file-tree-utils";
 import { getFilenameFromPath, getRootPath, isImageFile, isSQLiteFile } from "./file-utils";
 import { useFileWatcherStore } from "./file-watcher-store";
-import { openFolder, readDirectory } from "./platform";
+import { openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 
@@ -591,6 +591,54 @@ export const useFileSystemStore = createSelectors(
           state.files = addFileToTree(state.files, dir, newFile);
           state.filesVersion++;
         });
+      },
+
+      handleRenamePath: async (path: string, newName?: string) => {
+        if (newName) {
+          const dir = await dirname(path);
+
+          try {
+            const targetPath = await join(dir, newName);
+            await renameFile(path, targetPath);
+
+            set((state) => {
+              state.files = updateFileInTree(state.files, path, (item) => ({
+                ...item,
+                name: newName,
+                path: targetPath,
+                isRenaming: false,
+              }));
+              state.filesVersion++;
+            });
+
+            const { buffers, actions } = useBufferStore.getState();
+            const buffer = buffers.find((b) => b.path === path);
+            if (buffer) {
+              actions.updateBuffer({
+                ...buffer,
+                path: targetPath,
+                name: newName,
+              });
+            }
+          } catch (error) {
+            console.error("Failed to rename file:", error);
+            set((state) => {
+              state.files = updateFileInTree(state.files, path, (item) => ({
+                ...item,
+                isRenaming: false,
+              }));
+              state.filesVersion++;
+            });
+          }
+        } else {
+          set((state) => {
+            state.files = updateFileInTree(state.files, path, (item) => ({
+              ...item,
+              isRenaming: !item.isRenaming,
+            }));
+            state.filesVersion++;
+          });
+        }
       },
 
       // Setter methods

@@ -105,3 +105,7 @@ export async function readDirectory(path: string): Promise<any[]> {
 export async function moveFile(sourcePath: string, targetPath: string): Promise<void> {
   await invoke("move_file", { sourcePath, targetPath });
 }
+
+export async function renameFile(sourcePath: string, targetPath: string): Promise<void> {
+  await invoke("rename_file", { sourcePath, targetPath });
+}

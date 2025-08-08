@@ -187,6 +187,7 @@ fn main() {
       .invoke_handler(tauri::generate_handler![
          // File system commands
          move_file,
+         rename_file,
          // Git commands
          git_status,
          git_add,
