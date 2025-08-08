@@ -12,6 +12,7 @@ import { useFileTreeStore } from "@/file-explorer/controllers/file-tree-store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useGitStore } from "@/stores/git-store";
 import { useProjectStore } from "@/stores/project-store";
+import { useSidebarStore } from "@/stores/sidebar-store";
 import { getGitStatus } from "@/utils/git";
 import { isDiffFile, parseRawDiffContent } from "@/utils/git-diff-parser";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -32,7 +33,7 @@ import {
   sortFileEntries,
   updateFileInTree,
 } from "./file-tree-utils";
-import { getFilenameFromPath, getRootPath, isImageFile, isSQLiteFile } from "./file-utils";
+import { getFilenameFromPath, isImageFile, isSQLiteFile } from "./file-utils";
 import { useFileWatcherStore } from "./file-watcher-store";
 import { openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
@@ -269,15 +270,23 @@ export const useFileSystemStore = createSelectors(
       },
 
       handleCreateNewFile: async () => {
-        const { rootFolderPath, files } = get();
+        const { rootFolderPath } = get();
+        const { activePath } = useSidebarStore.getState();
 
         if (!rootFolderPath) {
           alert("Please open a folder first");
           return;
         }
 
-        const rootPath = getRootPath(files);
-        const effectiveRootPath = rootPath || rootFolderPath;
+        let effectiveRootPath = activePath || rootFolderPath;
+
+        // Active path maybe is a file
+        if (activePath) {
+          try {
+            await extname(activePath);
+            effectiveRootPath = await dirname(activePath);
+          } catch {}
+        }
 
         if (!effectiveRootPath) {
           alert("Unable to determine root folder path");
@@ -295,7 +304,8 @@ export const useFileSystemStore = createSelectors(
 
         // Add the new item to the root level of the file tree
         set((state) => {
-          state.files = [...state.files, newItem];
+          state.files = addFileToTree(state.files, effectiveRootPath, newItem);
+          state.filesVersion++;
         });
       },
 

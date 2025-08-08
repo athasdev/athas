@@ -63,9 +63,10 @@ export const MainSidebar = () => {
   const handleRenamePath = useFileSystemStore.use.handleRenamePath?.();
 
   // sidebar store
-  const activeBufferPath = useSidebarStore.use.activeBufferPath?.();
+  const activePath = useSidebarStore.use.activePath?.();
   const isRemoteWindow = useSidebarStore.use.isRemoteWindow();
   const remoteConnectionName = useSidebarStore.use.remoteConnectionName?.();
+  const updateActivePath = useSidebarStore.use.updateActivePath?.();
 
   // persistent settings store
   const { coreFeatures } = usePersistentSettingsStore();
@@ -201,7 +202,8 @@ export const MainSidebar = () => {
         ) : (
           <FileTree
             files={files}
-            activeBufferPath={activeBufferPath}
+            activePath={activePath}
+            updateActivePath={updateActivePath}
             rootFolderPath={rootFolderPath}
             onFileSelect={handleFileSelect}
             onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
