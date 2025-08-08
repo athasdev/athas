@@ -33,14 +33,12 @@ export const LineWithContent = memo<LineWithContentProps>(
           overflow: "hidden",
         }}
       >
-        {showLineNumbers && (
-          <LineGutter
-            lineNumber={lineNumber}
-            showLineNumbers={showLineNumbers}
-            gutterWidth={gutterWidth}
-            decorations={decorations}
-          />
-        )}
+        <LineGutter
+          lineNumber={lineNumber}
+          showLineNumbers={showLineNumbers}
+          gutterWidth={showLineNumbers ? gutterWidth : 16}
+          decorations={decorations}
+        />
         <div
           className="editor-line-content-wrapper"
           style={{
