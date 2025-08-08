@@ -1,6 +1,6 @@
 import { MessageSquare, Search, Trash2, X } from "lucide-react";
 import { useState } from "react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 import type { ChatHistoryModalProps } from "./types";
 import { getRelativeTime } from "./utils";
 
@@ -23,7 +23,7 @@ export default function ChatHistoryModal({
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
       <div className="mx-4 max-h-[80vh] w-full max-w-md overflow-hidden rounded-lg border border-border bg-primary-bg shadow-xl">
-        <div className="flex items-center justify-between border-border border-b p-3">
+        <div className="flex select-none items-center justify-between border-border border-b p-3">
           <h3 className="font-medium text-sm text-text">Chat History</h3>
           <button onClick={onClose} className="rounded p-1 transition-colors hover:bg-hover">
             <X size={14} className="text-text-lighter" />
@@ -68,7 +68,7 @@ export default function ChatHistoryModal({
                 >
                   <div className="min-w-0 flex-1 pr-2">
                     <div className="truncate font-medium text-text text-xs">{chat.title}</div>
-                    <div className="text-text-lighter text-xs">
+                    <div className="select-none text-text-lighter text-xs">
                       {getRelativeTime(chat.lastMessageAt)}
                     </div>
                   </div>

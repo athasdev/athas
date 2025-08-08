@@ -20,11 +20,11 @@ import {
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { moveFile, readDirectory, readFile } from "@/file-system/controllers/platform";
+import type { ContextMenuState, FileEntry } from "@/file-system/models/app";
 import { cn } from "@/utils/cn";
-import type { ContextMenuState, FileEntry } from "../../types/app";
-import { type GitFile, type GitStatus, getGitStatus } from "../../utils/git";
-import { moveFile, readDirectory, readFile } from "../../utils/platform";
-import FileIcon from "../file-icon";
+import { type GitFile, type GitStatus, getGitStatus } from "@/utils/git";
+import FileIcon from "./file.icon";
 import { useCustomDragDrop } from "./file-tree-custom-dnd";
 import "./file-tree.css";
 
@@ -40,7 +40,7 @@ interface FileTreeProps {
   onUpdateFiles?: (files: FileEntry[]) => void;
   onCopyPath?: (path: string) => void;
   onCutPath?: (path: string) => void;
-  onRenamePath?: (path: string, newName: string) => void;
+  onRenamePath?: (path: string, newName?: string) => void;
   onDuplicatePath?: (path: string) => void;
   onRefreshDirectory?: (path: string) => void;
   onRevealInFinder?: (path: string) => void;
@@ -373,6 +373,11 @@ const FileTree = ({
         return;
       }
 
+      if (item.isRenaming) {
+        onRenamePath?.(item.path, newName.trim());
+        return;
+      }
+
       if (item.isDir) {
         onCreateNewFolderInDirectory?.(parentPath, newName.trim());
       } else {
@@ -395,8 +400,13 @@ const FileTree = ({
     setEditingValue("");
   };
 
-  const cancelInlineEditing = () => {
+  const cancelInlineEditing = (file: FileEntry) => {
     if (!onUpdateFiles) return;
+
+    if (file.isRenaming) {
+      onRenamePath?.(file.path);
+      return;
+    }
 
     // Remove the temporary item from the tree
     const removeNewItemFromTree = (items: FileEntry[]): FileEntry[] => {
@@ -481,10 +491,32 @@ const FileTree = ({
     [onFileSelect],
   );
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent, file: FileEntry) => {
+      if (e.key === "Enter") {
+        finishInlineEditing(file, editingValue);
+      } else if (e.key === "Escape") {
+        cancelInlineEditing(file);
+      }
+    },
+    [finishInlineEditing, cancelInlineEditing, editingValue],
+  );
+
+  const handleBlur = useCallback(
+    (file: FileEntry) => {
+      if (editingValue.trim()) {
+        finishInlineEditing(file, editingValue);
+      } else {
+        cancelInlineEditing(file);
+      }
+    },
+    [finishInlineEditing, cancelInlineEditing, editingValue],
+  );
+
   const renderFileTree = (items: FileEntry[], depth = 0) => {
     return items.map((file) => (
       <div key={file.path} className="file-tree-item" data-depth={depth}>
-        {file.isEditing ? (
+        {file.isEditing || file.isRenaming ? (
           <div
             className={cn("flex min-h-[22px] w-full items-center", "gap-1.5 px-1.5 py-1")}
             style={{ paddingLeft: `${12 + depth * 20}px`, paddingRight: "8px" }}
@@ -496,23 +528,32 @@ const FileTree = ({
               className="flex-shrink-0 text-text-lighter"
             />
             <input
+              ref={(inputElement) => {
+                if (inputElement) {
+                  // Focus the input
+                  inputElement.focus();
+                  // Scroll to the input element
+                  inputElement.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                    inline: "nearest",
+                  });
+                }
+              }}
               type="text"
+              autoCapitalize="none"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
               value={editingValue}
+              onFocus={() => {
+                if (file.isRenaming) {
+                  setEditingValue(file.name);
+                }
+              }}
               onChange={(e) => setEditingValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  finishInlineEditing(file, editingValue);
-                } else if (e.key === "Escape") {
-                  cancelInlineEditing();
-                }
-              }}
-              onBlur={() => {
-                if (editingValue.trim()) {
-                  finishInlineEditing(file, editingValue);
-                } else {
-                  cancelInlineEditing();
-                }
-              }}
+              onKeyDown={(e) => handleKeyDown(e, file)}
+              onBlur={() => handleBlur(file)}
               className={cn(
                 "flex-1 border-text border-b border-none bg-transparent",
                 "font-mono text-text text-xs outline-none focus:border-text-lighter",
@@ -695,6 +736,17 @@ const FileTree = ({
       style={{
         scrollBehavior: "auto", // Disable smooth scrolling
         overscrollBehavior: "contain",
+      }}
+      onWheel={(e) => {
+        // Handle wheel scrolling with native delta values for natural acceleration
+        const container = containerRef.current;
+        if (!container) return;
+
+        // Use the native deltaY value to preserve mouse acceleration
+        container.scrollTop += e.deltaY;
+
+        // Prevent default to avoid any browser interference
+        e.preventDefault();
       }}
       onDragOver={(e) => {
         e.preventDefault();
@@ -1016,13 +1068,7 @@ const FileTree = ({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const newName = prompt("Enter new name:", contextMenu.path.split("/").pop() || "");
-                if (newName?.trim()) {
-                  if (onRenamePath) {
-                    onRenamePath(contextMenu.path, newName.trim());
-                  } else {
-                  }
-                }
+                onRenamePath?.(contextMenu.path);
                 setContextMenu(null);
               }}
               className={cn(

@@ -1,26 +1,101 @@
 import { invoke } from "@tauri-apps/api/core";
-import { MessageSquare, Plus, Sparkles } from "lucide-react";
+import { MessageSquare, Plus, RefreshCw, Sparkles } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useRef } from "react";
-import { usePersistentSettingsStore } from "../../settings/stores/persistent-settings-store";
-import { useAIChatStore } from "../../stores/ai-chat/store";
-import { useProjectStore } from "../../stores/project-store";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
+import { useAIChatStore } from "@/stores/ai-chat/store";
+import { useProjectStore } from "@/stores/project-store";
 import {
   getAvailableProviders,
   getProviderById,
   setClaudeCodeAvailability,
-} from "../../types/ai-provider";
-import type { ClaudeStatus } from "../../types/claude";
-import { getChatCompletionStream } from "../../utils/ai-chat";
-import { cn } from "../../utils/cn";
+} from "@/types/ai-provider";
+import type { ClaudeStatus } from "@/types/claude";
+import { getChatCompletionStream } from "@/utils/ai-chat";
+import { cn } from "@/utils/cn";
+import type { ContextInfo } from "@/utils/types";
 import ApiKeyModal from "../api-key-modal";
 import AIChatInputBar from "./ai-chat-input-bar";
 import ChatHistoryModal from "./chat-history-modal";
 import MarkdownRenderer from "./markdown-renderer";
 import { parseMentionsAndLoadFiles } from "./mention-utils";
 import ToolCallDisplay from "./tool-call-display";
-import type { AIChatProps, ContextInfo, Message } from "./types";
+import type { AIChatProps, Message } from "./types";
 import { formatTime } from "./utils";
+
+// Editable Chat Title Component
+function EditableChatTitle({
+  title,
+  onUpdateTitle,
+}: {
+  title: string;
+  onUpdateTitle: (title: string) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Update editValue when title changes externally
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(title);
+    }
+  }, [title, isEditing]);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleSave = () => {
+    const trimmedValue = editValue.trim();
+    if (trimmedValue && trimmedValue !== title) {
+      onUpdateTitle(trimmedValue);
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditValue(title);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      handleCancel();
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        value={editValue}
+        onChange={(e) => setEditValue(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={handleKeyDown}
+        className="rounded border-none bg-transparent px-1 py-0.5 font-medium text-text outline-none focus:bg-hover"
+        style={{ minWidth: "100px", maxWidth: "200px" }}
+      />
+    );
+  }
+
+  return (
+    <span
+      className="cursor-pointer rounded px-1 py-0.5 font-medium transition-colors hover:bg-hover"
+      onClick={() => setIsEditing(true)}
+      title="Click to rename chat"
+    >
+      {title}
+    </span>
+  );
+}
 
 export default function AIChat({
   className,
@@ -39,7 +114,9 @@ export default function AIChat({
 
   // Get store state selectively to avoid re-renders
   const input = useAIChatStore((state) => state.input);
+  const isTyping = useAIChatStore((state) => state.isTyping);
   const selectedBufferIds = useAIChatStore((state) => state.selectedBufferIds);
+  const selectedFilesPaths = useAIChatStore((state) => state.selectedFilesPaths);
   const hasApiKey = useAIChatStore((state) => state.hasApiKey);
   const chats = useAIChatStore((state) => state.chats);
   const currentChatId = useAIChatStore((state) => state.currentChatId);
@@ -58,6 +135,7 @@ export default function AIChat({
   const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
   const addMessage = useAIChatStore((state) => state.addMessage);
   const updateMessage = useAIChatStore((state) => state.updateMessage);
+  const regenerateResponse = useAIChatStore((state) => state.regenerateResponse);
   const setIsChatHistoryVisible = useAIChatStore((state) => state.setIsChatHistoryVisible);
   const setApiKeyModalState = useAIChatStore((state) => state.setApiKeyModalState);
   const saveApiKey = useAIChatStore((state) => state.saveApiKey);
@@ -158,6 +236,7 @@ export default function AIChat({
       activeBuffer: activeBuffer || undefined,
       openBuffers: selectedBuffers,
       selectedFiles,
+      selectedProjectFiles: Array.from(selectedFilesPaths),
       projectRoot: rootFolderPath,
       providerId: aiProviderId,
     };
@@ -202,8 +281,8 @@ export default function AIChat({
     setStreamingMessageId(null);
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || !hasApiKey) return;
+  const sendMessage = async (messageContent: string) => {
+    if (!messageContent.trim() || !hasApiKey) return;
 
     // Auto-start claude-code if needed
     if (aiProviderId === "claude-code") {
@@ -224,12 +303,15 @@ export default function AIChat({
     }
 
     // Parse @ mentions and load referenced files
-    const { processedMessage } = await parseMentionsAndLoadFiles(input.trim(), allProjectFiles);
+    const { processedMessage } = await parseMentionsAndLoadFiles(
+      messageContent.trim(),
+      allProjectFiles,
+    );
 
     const context = buildContext();
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: input.trim(), // Show original message to user
+      content: messageContent.trim(), // Show original message to user
       role: "user",
       timestamp: new Date(),
     };
@@ -387,6 +469,13 @@ export default function AIChat({
     setApiKeyModalState({ isOpen: true, providerId });
   };
 
+  const handleRegenerate = async () => {
+    const contentToRegenerate = regenerateResponse();
+    if (contentToRegenerate) {
+      await sendMessage(contentToRegenerate);
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -415,7 +504,14 @@ export default function AIChat({
         >
           <MessageSquare size={14} />
         </button>
-        <span className="font-medium">{currentChat ? currentChat.title : "New Chat"}</span>
+        {currentChatId ? (
+          <EditableChatTitle
+            title={currentChat ? currentChat.title : "New Chat"}
+            onUpdateTitle={(title) => updateChatTitle(currentChatId, title)}
+          />
+        ) : (
+          <span className="font-medium">New Chat</span>
+        )}
         <div className="flex-1" />
         <button
           onClick={handleNewChat}
@@ -428,7 +524,7 @@ export default function AIChat({
       </div>
 
       {/* Messages */}
-      <div className="custom-scrollbar flex-1 overflow-y-auto">
+      <div className="scrollbar-hidden flex-1 overflow-y-auto">
         {messages.length === 0 && (
           <div className="flex h-full items-center justify-center p-4 text-center">
             <div>
@@ -470,32 +566,19 @@ export default function AIChat({
                 <div className="w-full">
                   {/* AI Message Header - Only show for first message in sequence */}
                   {isFirstAssistantInSequence && (
-                    <div className="mb-2 flex items-center gap-2">
+                    <div className="mb-2 flex select-none items-center gap-2">
                       <div
                         className="flex items-center gap-1"
                         style={{ color: "var(--color-text-lighter)" }}
                       >
                         <span>{getProviderById(aiProviderId)?.name || aiProviderId}</span>
-                        {message.isStreaming && (
-                          <div className="ml-1 flex items-center gap-1">
-                            <span className="h-1 w-1 animate-pulse rounded-full bg-text-lighter" />
-                            <span
-                              className="h-1 w-1 animate-pulse rounded-full bg-text-lighter"
-                              style={{ animationDelay: "0.2s" }}
-                            />
-                            <span
-                              className="h-1 w-1 animate-pulse rounded-full bg-text-lighter"
-                              style={{ animationDelay: "0.4s" }}
-                            />
-                          </div>
-                        )}
                       </div>
                     </div>
                   )}
 
                   {/* Tool Calls */}
                   {message.toolCalls && message.toolCalls.length > 0 && (
-                    <div className="mb-3 space-y-2">
+                    <div className="mb-1 space-y-0">
                       {message.toolCalls!.map((toolCall, toolIndex) => (
                         <ToolCallDisplay
                           key={`${message.id}-tool-${toolIndex}`}
@@ -513,10 +596,21 @@ export default function AIChat({
                   {message.content && (
                     <div className="pr-1 leading-relaxed">
                       <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
+                    </div>
+                  )}
 
-                      {message.isStreaming && (
-                        <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-[var(--color-text-lighter)]" />
-                      )}
+                  {/* Regenerate Button */}
+                  {index === messages.length - 1 && !isTyping && message.role === "assistant" && (
+                    <div className="mt-2">
+                      <button
+                        onClick={handleRegenerate}
+                        className="flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors hover:bg-hover"
+                        style={{ color: "var(--color-text-lighter)" }}
+                        title="Regenerate response"
+                      >
+                        <RefreshCw size={12} />
+                        <span>Regenerate</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -532,7 +626,7 @@ export default function AIChat({
       <AIChatInputBar
         buffers={buffers}
         allProjectFiles={allProjectFiles}
-        onSendMessage={sendMessage}
+        onSendMessage={() => sendMessage(input)}
         onStopStreaming={stopStreaming}
         onApiKeyRequest={handleApiKeyRequest}
         onProviderChange={handleProviderChange}

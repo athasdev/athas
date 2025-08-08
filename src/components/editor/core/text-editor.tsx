@@ -1,31 +1,29 @@
+import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { basicEditingExtension } from "../../../extensions/basic-editing-extension";
-import { editorAPI } from "../../../extensions/editor-api";
-import { extensionManager } from "../../../extensions/extension-manager";
+import { basicEditingExtension } from "@/extensions/basic-editing-extension";
+import { editorAPI } from "@/extensions/editor-api";
+import { extensionManager } from "@/extensions/extension-manager";
 import {
   setSyntaxHighlightingFilePath,
   syntaxHighlightingExtension,
-} from "../../../extensions/syntax-highlighting-extension";
-import { useEditorLayout } from "../../../hooks/use-editor-layout";
-import { useBufferStore } from "../../../stores/buffer-store";
-import { useEditorCompletionStore } from "../../../stores/editor-completion-store";
-import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
-import { useEditorInstanceStore } from "../../../stores/editor-instance-store";
-import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
-import { useEditorSettingsStore } from "../../../stores/editor-settings-store";
-import { useEditorViewStore } from "../../../stores/editor-view-store";
-import { useLspStore } from "../../../stores/lsp-store";
-import type { Position } from "../../../types/editor-types";
-import {
-  calculateCursorPosition,
-  calculateOffsetFromPosition,
-} from "../../../utils/editor-position";
+} from "@/extensions/syntax-highlighting-extension";
+import { useEditorLayout } from "@/hooks/use-editor-layout";
+import { useBufferStore } from "@/stores/buffer-store";
+import { useEditorCompletionStore } from "@/stores/editor-completion-store";
+import { useEditorCursorStore } from "@/stores/editor-cursor-store";
+import { useEditorInstanceStore } from "@/stores/editor-instance-store";
+import { useEditorLayoutStore } from "@/stores/editor-layout-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
+import { useEditorViewStore } from "@/stores/editor-view-store";
+import { useLspStore } from "@/stores/lsp-store";
+import type { Position } from "@/types/editor-types";
+import { calculateCursorPosition, calculateOffsetFromPosition } from "@/utils/editor-position";
 import { CompletionDropdown } from "../overlays/completion-dropdown";
 import EditorContextMenu from "../overlays/editor-context-menu";
 import { LineBasedEditor } from "./line-based-editor";
 
 export function TextEditor() {
-  const _tabSize = useEditorSettingsStore.use.tabSize();
+  const tabSize = useEditorSettingsStore.use.tabSize();
   const lines = useEditorViewStore.use.lines();
   const { getContent } = useEditorViewStore.use.actions();
   const { updateBufferContent } = useBufferStore.use.actions();
@@ -536,7 +534,7 @@ export function TextEditor() {
 
   const handlePaste = useCallback(async () => {
     try {
-      const text = await navigator.clipboard.readText();
+      const text = await readText();
       if (textareaRef.current) {
         const cursorPos = textareaRef.current.selectionStart;
         const selection = useEditorCursorStore.getState().selection;
@@ -812,7 +810,7 @@ export function TextEditor() {
           paddingBottom: `${20 * lineHeight}px`, // Add 20 lines worth of bottom padding
           margin: 0,
           whiteSpace: "pre",
-          tabSize: 2,
+          tabSize: tabSize,
           zIndex: 1,
         }}
         autoComplete="off"

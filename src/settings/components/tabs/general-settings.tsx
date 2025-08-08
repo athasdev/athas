@@ -4,7 +4,7 @@ import KeybindingBadge from "@/components/ui/keybinding-badge";
 import Section, { SettingRow } from "@/components/ui/section";
 import Switch from "@/components/ui/switch";
 import { useUpdater } from "@/settings/hooks/use-updater";
-import { useSettingsStore } from "../../stores/settings-store";
+import { useSettingsStore } from "@/settings/stores/settings-store";
 
 const isMac = typeof navigator !== "undefined" && navigator.platform.includes("Mac");
 

@@ -93,6 +93,37 @@ export const buildContextPrompt = (context: ContextInfo): string => {
     }
   }
 
+  // Selected project files for context
+  if (context.selectedProjectFiles && context.selectedProjectFiles.length > 0) {
+    if (context.providerId === "claude-code") {
+      // For Claude Code, just list the file paths
+      const filePaths = context.selectedProjectFiles
+        .map((filePath) => {
+          const relativePath =
+            context.projectRoot && filePath.startsWith(context.projectRoot)
+              ? filePath.slice(context.projectRoot.length + 1)
+              : filePath;
+          return relativePath;
+        })
+        .slice(0, 20);
+
+      contextPrompt += `\n\nSelected context files:\n${filePaths.map((p) => `- ${p}`).join("\n")}`;
+      if (context.selectedProjectFiles.length > 20) {
+        contextPrompt += `\n... and ${context.selectedProjectFiles.length - 20} more`;
+      }
+    } else {
+      // For other providers, list file names only
+      const fileNames = context.selectedProjectFiles
+        .map((filePath) => filePath.split("/").pop() || "Unknown")
+        .slice(0, 20);
+
+      contextPrompt += `\n\nSelected context files: ${fileNames.join(", ")}`;
+      if (context.selectedProjectFiles.length > 20) {
+        contextPrompt += ` and ${context.selectedProjectFiles.length - 20} more`;
+      }
+    }
+  }
+
   return contextPrompt;
 };
 
@@ -107,6 +138,7 @@ Key capabilities:
 - Helping with errors and troubleshooting
 - Code generation and refactoring
 - Architecture and design guidance
+- Access to selected project files for comprehensive context
 
 Guidelines:
 - Be concise but thorough in your explanations

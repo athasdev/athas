@@ -2,15 +2,15 @@ import { produce } from "immer";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { Chat } from "../../components/ai-chat/types";
-import { AI_PROVIDERS } from "../../types/ai-provider";
-import type { FileEntry } from "../../types/app";
+import type { Chat } from "@/components/ai-chat/types";
+import type { FileEntry } from "@/file-system/models/app";
+import { AI_PROVIDERS } from "@/types/ai-provider";
 import {
   getProviderApiToken,
   removeProviderApiToken,
   storeProviderApiToken,
   validateProviderApiKey,
-} from "../../utils/ai-chat";
+} from "@/utils/ai-chat";
 import type { AIChatActions, AIChatState } from "./types";
 
 export const useAIChatStore = create<AIChatState & AIChatActions>()(
@@ -21,6 +21,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         isTyping: false,
         streamingMessageId: null,
         selectedBufferIds: new Set<string>(),
+        selectedFilesPaths: new Set<string>(),
         isContextDropdownOpen: false,
         isSendAnimating: false,
         hasApiKey: false,
@@ -65,6 +66,16 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               state.selectedBufferIds.add(bufferId);
             }
           }),
+        toggleFileSelection: (filePath) =>
+          set((state) => {
+            // Create new Set for immutability
+            state.selectedFilesPaths = new Set(state.selectedFilesPaths);
+            if (state.selectedFilesPaths.has(filePath)) {
+              state.selectedFilesPaths.delete(filePath);
+            } else {
+              state.selectedFilesPaths.add(filePath);
+            }
+          }),
         setIsContextDropdownOpen: (isContextDropdownOpen) =>
           set((state) => {
             state.isContextDropdownOpen = isContextDropdownOpen;
@@ -81,9 +92,17 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             state.selectedBufferIds = new Set<string>();
           }),
+        clearSelectedFiles: () =>
+          set((state) => {
+            state.selectedFilesPaths = new Set<string>();
+          }),
         setSelectedBufferIds: (selectedBufferIds) =>
           set((state) => {
             state.selectedBufferIds = selectedBufferIds;
+          }),
+        setSelectedFilesPaths: (selectedFilesPaths) =>
+          set((state) => {
+            state.selectedFilesPaths = selectedFilesPaths;
           }),
         autoSelectBuffer: (bufferId) =>
           set((state) => {
@@ -178,6 +197,38 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               }
             }
           });
+        },
+
+        regenerateResponse: () => {
+          const { currentChatId, chats } = get();
+          if (!currentChatId) return null;
+
+          const chat = chats.find((c) => c.id === currentChatId);
+          if (!chat || chat.messages.length === 0) return null;
+
+          // Find the last user message
+          let lastUserMessageIndex = -1;
+          for (let i = chat.messages.length - 1; i >= 0; i--) {
+            if (chat.messages[i].role === "user") {
+              lastUserMessageIndex = i;
+              break;
+            }
+          }
+
+          if (lastUserMessageIndex === -1) return null;
+
+          const lastUserMessage = chat.messages[lastUserMessageIndex];
+
+          set((state) => {
+            const currentChat = state.chats.find((c) => c.id === currentChatId);
+            if (currentChat) {
+              // Remove all messages after the last user message
+              currentChat.messages.splice(lastUserMessageIndex + 1);
+              currentChat.lastMessageAt = new Date();
+            }
+          });
+
+          return lastUserMessage.content;
         },
 
         setIsChatHistoryVisible: (isChatHistoryVisible) =>

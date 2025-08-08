@@ -24,6 +24,7 @@ mod xterm_terminal;
 
 fn main() {
    tauri::Builder::default()
+      .plugin(tauri_plugin_clipboard_manager::init())
       .plugin(logger::init(log::LevelFilter::Info))
       .plugin(tauri_plugin_window_state::Builder::new().build())
       .plugin(tauri_plugin_fs::init())
@@ -186,6 +187,7 @@ fn main() {
       .invoke_handler(tauri::generate_handler![
          // File system commands
          move_file,
+         rename_file,
          // Git commands
          git_status,
          git_add,

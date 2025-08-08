@@ -1,4 +1,4 @@
-import { getFilenameFromPath } from "./file-utils";
+import { getFilenameFromPath } from "../file-system/controllers/file-utils";
 import type { GitDiff, GitDiffLine } from "./git";
 
 export function parseRawDiffContent(content: string, filePath: string): GitDiff {

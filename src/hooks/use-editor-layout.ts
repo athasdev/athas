@@ -11,7 +11,7 @@ export function useEditorLayout() {
 
   return useMemo(() => {
     const lineHeight = getLineHeight(fontSize);
-    const charWidth = getCharWidth(fontSize);
+    const charWidth = getCharWidth(fontSize, "JetBrains Mono, monospace");
     const gutterWidth = lineNumbers
       ? Math.max(
           EDITOR_CONSTANTS.MIN_GUTTER_WIDTH,

@@ -1,11 +1,11 @@
-import { ChevronDown, Database, FileText, Send, Square, X } from "lucide-react";
-import type React from "react";
+import { Send, Square } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
-import { usePersistentSettingsStore } from "../../settings/stores/persistent-settings-store";
-import { useAIChatStore } from "../../stores/ai-chat/store";
-import { cn } from "../../utils/cn";
+import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
+import { useAIChatStore } from "@/stores/ai-chat/store";
+import { cn } from "@/utils/cn";
 import ModelProviderSelector from "../model-provider-selector";
 import Button from "../ui/button";
+import { ContextSelector } from "./context-selector";
 import { FileMentionDropdown } from "./file-mention-dropdown";
 import type { AIChatInputBarProps } from "./types";
 
@@ -18,9 +18,10 @@ export default function AIChatInputBar({
   onProviderChange,
   hasProviderApiKey,
 }: AIChatInputBarProps) {
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLDivElement>(null);
   const contextDropdownRef = useRef<HTMLDivElement>(null);
   const aiChatContainerRef = useRef<HTMLDivElement>(null);
+  const isUpdatingContentRef = useRef(false);
 
   // Get state from stores
   const { aiProviderId, aiModelId } = usePersistentSettingsStore();
@@ -29,12 +30,14 @@ export default function AIChatInputBar({
     isTyping,
     streamingMessageId,
     selectedBufferIds,
+    selectedFilesPaths,
     isContextDropdownOpen,
     isSendAnimating,
     hasApiKey,
     mentionState,
     setInput,
     toggleBufferSelection,
+    toggleFileSelection,
     setIsContextDropdownOpen,
     setIsSendAnimating,
     showMention,
@@ -45,43 +48,72 @@ export default function AIChatInputBar({
     getFilteredFiles,
   } = useAIChatStore();
 
+  // Function to get plain text from contentEditable div
+  const getPlainTextFromDiv = useCallback(() => {
+    if (!inputRef.current) return "";
+
+    let text = "";
+    const walker = document.createTreeWalker(
+      inputRef.current,
+      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+      {
+        acceptNode: (node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          if (
+            node.nodeType === Node.ELEMENT_NODE &&
+            (node as Element).hasAttribute("data-mention")
+          ) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          return NodeFilter.FILTER_SKIP;
+        },
+      },
+    );
+
+    let node: Node | null;
+    while (true) {
+      node = walker.nextNode();
+      if (!node) break;
+      if (node.nodeType === Node.TEXT_NODE) {
+        text += node.textContent || "";
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const mentionElement = node as Element;
+        const fileName = mentionElement.textContent?.trim();
+        if (fileName) {
+          text += `@[${fileName}]`;
+        }
+      }
+    }
+
+    return text;
+  }, []);
+
   // Function to recalculate mention dropdown position
   const recalculateMentionPosition = useCallback(() => {
     if (!mentionState.active || !inputRef.current) return;
 
-    const textarea = inputRef.current;
-    const value = textarea.value;
-    const beforeCursor = value.slice(0, textarea.selectionStart);
+    const div = inputRef.current;
+    const value = getPlainTextFromDiv();
+    const selection = window.getSelection();
+    const cursorPos = selection?.rangeCount ? selection.getRangeAt(0).startOffset : 0;
+    const beforeCursor = value.slice(0, cursorPos);
     const lastAtIndex = beforeCursor.lastIndexOf("@");
 
     if (lastAtIndex === -1) return;
 
-    const textBeforeAt = value.slice(0, lastAtIndex);
-
-    // Create a temporary element to measure text position
-    const mirror = document.createElement("div");
-    mirror.style.position = "absolute";
-    mirror.style.visibility = "hidden";
-    mirror.style.whiteSpace = "pre-wrap";
-    mirror.style.font = window.getComputedStyle(textarea).font;
-    mirror.style.padding = window.getComputedStyle(textarea).padding;
-    mirror.style.width = `${textarea.clientWidth}px`;
-    mirror.textContent = `${textBeforeAt}@`;
-
-    document.body.appendChild(mirror);
-    document.body.removeChild(mirror);
-
-    const textareaRect = textarea.getBoundingClientRect();
-    const aiChatContainer = textarea.closest(".ai-chat-container");
+    const divRect = div.getBoundingClientRect();
+    const aiChatContainer = div.closest(".ai-chat-container");
     const containerRect = aiChatContainer?.getBoundingClientRect();
 
     const position = {
-      top: textareaRect.top - 240, // Position above the input area (above Context button)
-      left: containerRect ? containerRect.left : textareaRect.left, // Position at the left edge of the sidebar
+      top: divRect.bottom + 4, // Position below the input area
+      left: containerRect ? containerRect.left : divRect.left, // Position at the left edge of the sidebar
     };
 
     updatePosition(position);
-  }, [mentionState.active, updatePosition]);
+  }, [mentionState.active, updatePosition, getPlainTextFromDiv]);
 
   // ResizeObserver to track container size changes
   useEffect(() => {
@@ -121,7 +153,7 @@ export default function AIChatInputBar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [setIsContextDropdownOpen]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (mentionState.active) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -140,51 +172,144 @@ export default function AIChatInputBar({
         e.preventDefault();
         hideMention();
       }
+    } else if (e.key === "Backspace") {
+      // Handle mention badge deletion
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0 && inputRef.current) {
+        const range = selection.getRangeAt(0);
+        const container = range.startContainer;
+        const offset = range.startOffset;
+
+        // Check if cursor is at the beginning of a text node that follows a mention badge
+        if (container.nodeType === Node.TEXT_NODE && offset === 0) {
+          const previousSibling = container.previousSibling;
+
+          if (
+            previousSibling &&
+            previousSibling.nodeType === Node.ELEMENT_NODE &&
+            (previousSibling as Element).hasAttribute("data-mention")
+          ) {
+            e.preventDefault();
+
+            // Remove the mention badge
+            previousSibling.remove();
+
+            // Update the input state by getting the new plain text
+            const newPlainText = getPlainTextFromDiv();
+            setInput(newPlainText);
+
+            return;
+          }
+        }
+
+        // Check if cursor is right after a mention badge (in separator text node)
+        if (
+          container.nodeType === Node.TEXT_NODE &&
+          container.textContent === "\u200B" &&
+          offset === 1
+        ) {
+          const previousSibling = container.previousSibling?.previousSibling; // Skip the space node
+
+          if (
+            previousSibling &&
+            previousSibling.nodeType === Node.ELEMENT_NODE &&
+            (previousSibling as Element).hasAttribute("data-mention")
+          ) {
+            e.preventDefault();
+
+            // Remove the mention badge
+            previousSibling.remove();
+
+            // Update the input state
+            const newPlainText = getPlainTextFromDiv();
+            setInput(newPlainText);
+
+            return;
+          }
+        }
+      }
     } else if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
-  // Handle textarea change for @ mentions
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    const cursorPos = e.target.selectionStart;
-    setInput(value);
+  // Handle input change for @ mentions
+  const handleInputChange = useCallback(() => {
+    if (!inputRef.current || isUpdatingContentRef.current) return;
 
-    // Check for @ mention
-    const beforeCursor = value.slice(0, cursorPos);
-    const lastAtIndex = beforeCursor.lastIndexOf("@");
+    // Get the plain text from the contentEditable div
+    const plainTextFromDiv = getPlainTextFromDiv();
+
+    // Only update store if content actually changed
+    if (plainTextFromDiv !== input) {
+      setInput(plainTextFromDiv);
+    }
+
+    // Get cursor position for @ mention detection
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    // Calculate cursor position in the plain text
+    let cursorPosition = 0;
+    const range = selection.getRangeAt(0);
+    const walker = document.createTreeWalker(
+      inputRef.current,
+      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+      {
+        acceptNode: (node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          if (
+            node.nodeType === Node.ELEMENT_NODE &&
+            (node as Element).hasAttribute("data-mention")
+          ) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          return NodeFilter.FILTER_SKIP;
+        },
+      },
+    );
+
+    let node: Node | null;
+    while (true) {
+      node = walker.nextNode();
+      if (!node) break;
+
+      if (node === range.startContainer || node.contains(range.startContainer)) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          cursorPosition += range.startOffset;
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const fileName = (node as Element).textContent?.trim();
+          if (fileName) {
+            cursorPosition += fileName.length + 3; // +3 for @[]
+          }
+        }
+        break;
+      } else {
+        if (node.nodeType === Node.TEXT_NODE) {
+          cursorPosition += node.textContent?.length || 0;
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const fileName = (node as Element).textContent?.trim();
+          if (fileName) {
+            cursorPosition += fileName.length + 3; // +3 for @[]
+          }
+        }
+      }
+    }
+
+    const textBeforeCursor = plainTextFromDiv.slice(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
 
     if (lastAtIndex !== -1) {
-      const afterAt = beforeCursor.slice(lastAtIndex + 1);
-      // Check if there's no space between @ and cursor
-      if (!afterAt.includes(" ")) {
-        // Get textarea position for dropdown
-        const textarea = e.target;
-        const textBeforeAt = value.slice(0, lastAtIndex);
-
-        // Create a temporary element to measure text position
-        const mirror = document.createElement("div");
-        mirror.style.position = "absolute";
-        mirror.style.visibility = "hidden";
-        mirror.style.whiteSpace = "pre-wrap";
-        mirror.style.font = window.getComputedStyle(textarea).font;
-        mirror.style.padding = window.getComputedStyle(textarea).padding;
-        mirror.style.width = `${textarea.clientWidth}px`;
-        mirror.textContent = `${textBeforeAt}@`;
-
-        document.body.appendChild(mirror);
-        document.body.removeChild(mirror);
-
-        const textareaRect = textarea.getBoundingClientRect();
-        // Get the AI chat container to position relative to it
-        const aiChatContainer = textarea.closest(".ai-chat-container");
-        const containerRect = aiChatContainer?.getBoundingClientRect();
-
+      const afterAt = textBeforeCursor.slice(lastAtIndex + 1);
+      // Check if there's no space between @ and cursor and it's not part of a mention badge
+      if (!afterAt.includes(" ") && !afterAt.includes("]")) {
+        const inputRect = inputRef.current.getBoundingClientRect();
         const position = {
-          top: textareaRect.top - 240, // Position above the input area (above Context button)
-          left: containerRect ? containerRect.left : textareaRect.left, // Position at the left edge of the sidebar
+          top: inputRect.bottom + 4,
+          left: inputRect.left,
         };
 
         showMention(position, afterAt, lastAtIndex);
@@ -194,25 +319,80 @@ export default function AIChatInputBar({
     } else {
       hideMention();
     }
-  };
+  }, [input, setInput, showMention, hideMention, getPlainTextFromDiv]);
 
   // Handle file mention selection
-  const handleFileMentionSelect = (file: any) => {
-    const beforeMention = input.slice(0, mentionState.startIndex);
-    const afterMention = input.slice(mentionState.startIndex + mentionState.search.length + 1);
-    const newInput = `${beforeMention}@${file.name} ${afterMention}`;
-    setInput(newInput);
-    hideMention();
+  const handleFileMentionSelect = useCallback(
+    (file: any) => {
+      if (!inputRef.current) return;
 
-    // Move cursor after the mention
-    setTimeout(() => {
-      if (inputRef.current) {
-        const newCursorPos = beforeMention.length + file.name.length + 2;
-        inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      isUpdatingContentRef.current = true;
+
+      const beforeMention = input.slice(0, mentionState.startIndex);
+      const afterMention = input.slice(mentionState.startIndex + mentionState.search.length + 1);
+      const newInput = `${beforeMention}@[${file.name}] ${afterMention}`;
+
+      // Update input state and hide mention dropdown
+      setInput(newInput);
+      hideMention();
+
+      // Completely rebuild the DOM content to ensure clean structure
+      setTimeout(() => {
+        if (!inputRef.current) return;
+
+        // Clear all content
+        inputRef.current.innerHTML = "";
+
+        // Build new content piece by piece
+        // Add text before mention if any
+        if (beforeMention) {
+          const beforeTextNode = document.createTextNode(beforeMention);
+          inputRef.current.appendChild(beforeTextNode);
+        }
+
+        // Add the mention badge
+        const mentionSpan = document.createElement("span");
+        mentionSpan.setAttribute("data-mention", "true");
+        mentionSpan.className =
+          "inline-flex items-center gap-1 rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-400 font-mono select-none";
+        mentionSpan.textContent = file.name;
+        inputRef.current.appendChild(mentionSpan);
+
+        // Always add a space and remaining text as separate text node
+        // Ensure there's always substantial content to prevent cursor from jumping to span
+        const remainingText = ` ${afterMention}${afterMention ? "" : " "}`;
+        const afterTextNode = document.createTextNode(remainingText);
+        inputRef.current.appendChild(afterTextNode);
+
+        // Add an invisible zero-width space to ensure cursor stays in text node
+        const separatorNode = document.createTextNode("\u200B"); // Zero-width space
+        inputRef.current.appendChild(separatorNode);
+
+        // Position cursor in the separator node to ensure it doesn't jump to span
+        const selection = window.getSelection();
+        if (selection) {
+          const range = document.createRange();
+          try {
+            // Position at the end of the separator node
+            range.setStart(separatorNode, 1);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          } catch (_e) {
+            // Fallback - position at end of input
+            range.selectNodeContents(inputRef.current);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        }
+
         inputRef.current.focus();
-      }
-    }, 0);
-  };
+        isUpdatingContentRef.current = false;
+      }, 0);
+    },
+    [input, mentionState.startIndex, mentionState.search.length, setInput, hideMention],
+  );
 
   const handleSendMessage = async () => {
     if (!input.trim() || !hasApiKey) return;
@@ -227,119 +407,58 @@ export default function AIChatInputBar({
   };
 
   return (
-    <div ref={aiChatContainerRef} className="border-border border-t bg-terniary-bg">
-      {/* Model Provider Selector and Mode Toggle */}
-      {aiProviderId !== "claude-code" && (
-        <div className="border-border border-b bg-secondary-bg px-2 py-1.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {/* Context Selector Dropdown */}
-              <div className="relative" ref={contextDropdownRef}>
-                <button
-                  onClick={() => setIsContextDropdownOpen(!isContextDropdownOpen)}
-                  className={cn(
-                    "flex items-center gap-1 rounded px-2 py-1",
-                    "text-text-lighter text-xs transition-colors",
-                    "hover:bg-hover hover:text-text",
-                  )}
-                  title="Add context files"
-                >
-                  <FileText size={12} />
-                  <span>Context ({selectedBufferIds.size})</span>
-                  <ChevronDown size={10} />
-                </button>
-
-                {isContextDropdownOpen && (
-                  <div
-                    className={cn(
-                      "absolute top-full left-0 z-50 mt-1",
-                      "max-h-64 w-64 overflow-y-auto rounded",
-                      "border border-border bg-primary-bg shadow-lg",
-                    )}
-                  >
-                    <div className="p-2">
-                      <div className="mb-2 text-text-lighter text-xs">
-                        Select files to include as context:
-                      </div>
-                      {buffers.length === 0 ? (
-                        <div className="p-2 text-text-lighter text-xs">No files available</div>
-                      ) : (
-                        <div className="space-y-1">
-                          {buffers.map((buffer) => (
-                            <label
-                              key={buffer.id}
-                              className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-hover"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedBufferIds.has(buffer.id)}
-                                onChange={() => toggleBufferSelection(buffer.id)}
-                                className="h-3 w-3"
-                              />
-                              <div className="flex min-w-0 flex-1 items-center gap-1">
-                                {buffer.isSQLite ? <Database size={10} /> : <FileText size={10} />}
-                                <span className="truncate text-xs">{buffer.name}</span>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Context badges */}
-      {aiProviderId !== "claude-code" && selectedBufferIds.size > 0 && (
-        <div className="border-border border-b bg-secondary-bg px-2 py-1.5">
-          <div className="flex flex-wrap items-center gap-1">
-            {Array.from(selectedBufferIds).map((bufferId) => {
-              const buffer = buffers.find((b) => b.id === bufferId);
-              if (!buffer) return null;
-              return (
-                <div
-                  key={bufferId}
-                  className="flex items-center gap-1 rounded border border-border bg-hover px-2 py-1 text-xs"
-                >
-                  {buffer.isSQLite ? <Database size={8} /> : <FileText size={8} />}
-                  <span className="max-w-20 truncate">{buffer.name}</span>
-                  <button
-                    onClick={() => toggleBufferSelection(bufferId)}
-                    className="text-text-lighter transition-colors hover:text-red-400"
-                  >
-                    <X size={8} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
+    <div
+      ref={aiChatContainerRef}
+      className="ai-chat-container border-border border-t bg-terniary-bg"
+    >
       <div className="px-2 py-1.5">
-        <div className="flex gap-2">
-          <textarea
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center">
+            <ContextSelector
+              buffers={buffers}
+              selectedBufferIds={selectedBufferIds}
+              selectedFilesPaths={selectedFilesPaths}
+              onToggleBuffer={toggleBufferSelection}
+              onToggleFile={toggleFileSelection}
+              isOpen={isContextDropdownOpen}
+              onToggleOpen={() => setIsContextDropdownOpen(!isContextDropdownOpen)}
+            />
+          </div>
+          <div
             ref={inputRef}
-            value={input}
-            onChange={handleTextareaChange}
+            contentEditable={!isTyping && hasApiKey}
+            onInput={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder={
-              hasApiKey ? "input ('@' tag files)" : "Configure API key to enable AI chat..."
+            data-placeholder={
+              hasApiKey
+                ? "Enter your prompt ('@' tag files)"
+                : "Configure API key to enable AI chat..."
             }
-            disabled={isTyping || !hasApiKey}
             className={cn(
-              "min-h-[60px] flex-1 resize-none border-none bg-transparent",
-              "px-3 py-2 text-text text-xs",
-              "focus:outline-none disabled:opacity-50",
+              "max-h-[120px] min-h-[60px] w-full resize-none overflow-y-auto border-none bg-transparent",
+              "p-1 text-text text-xs",
+              "focus:outline-none",
+              !hasApiKey || isTyping ? "cursor-not-allowed opacity-50" : "cursor-text",
+              // Custom styles for contentEditable placeholder
+              "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
             )}
+            style={
+              {
+                // Ensure proper line height and text rendering
+                lineHeight: "1.4",
+                wordWrap: "break-word",
+                overflowWrap: "break-word",
+              } as React.CSSProperties
+            }
+            role="textbox"
+            aria-multiline="true"
+            aria-label="Message input"
+            tabIndex={hasApiKey && !isTyping ? 0 : -1}
           />
         </div>
-        <div className="mt-2 flex items-center justify-between">
-          <div className="ml-auto flex items-center gap-0.5">
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">{/* Spacer for responsive layout */}</div>
+          <div className="flex select-none items-center gap-1">
             <ModelProviderSelector
               currentProviderId={aiProviderId}
               currentModelId={aiModelId}
@@ -353,17 +472,21 @@ export default function AIChatInputBar({
               onClick={isTyping && streamingMessageId ? onStopStreaming : handleSendMessage}
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded p-0 text-text-lighter hover:bg-hover hover:text-text",
-                "send-button-hover button-transition",
+                "send-button-hover button-transition focus:outline-none focus:ring-2 focus:ring-accent/50",
                 isTyping && streamingMessageId && !isSendAnimating && "button-morphing",
                 input.trim() &&
                   !isTyping &&
                   hasApiKey &&
-                  "bg-blue-500 text-white hover:bg-blue-600",
+                  "bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500/50",
                 (!input.trim() && !isTyping) || !hasApiKey
                   ? "cursor-not-allowed opacity-50"
                   : "cursor-pointer",
               )}
-              title={isTyping && streamingMessageId ? "Stop generation" : "Send message"}
+              title={
+                isTyping && streamingMessageId ? "Stop generation (Escape)" : "Send message (Enter)"
+              }
+              aria-label={isTyping && streamingMessageId ? "Stop generation" : "Send message"}
+              tabIndex={0}
             >
               {isTyping && streamingMessageId && !isSendAnimating ? (
                 <Square size={14} className="transition-all duration-300" />
@@ -382,9 +505,7 @@ export default function AIChatInputBar({
       </div>
 
       {/* File Mention Dropdown */}
-      {mentionState.active && (
-        <FileMentionDropdown files={allProjectFiles} onSelect={handleFileMentionSelect} />
-      )}
+      {mentionState.active && <FileMentionDropdown onSelect={handleFileMentionSelect} />}
     </div>
   );
 }

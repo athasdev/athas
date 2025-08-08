@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronRight, Clock, Hash, User } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useGitStore } from "../../stores/git-store";
-import { getCommitDiff } from "../../utils/git";
+import { useGitStore } from "@/stores/git-store";
+import { getCommitDiff } from "@/utils/git";
 
 interface GitCommitHistoryProps {
   onViewCommitDiff?: (commitHash: string, filePath?: string) => void;

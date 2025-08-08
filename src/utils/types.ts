@@ -20,6 +20,7 @@ export interface ContextInfo {
     isActive: boolean;
   }>;
   selectedFiles?: string[];
+  selectedProjectFiles?: string[];
   projectRoot?: string;
   language?: string;
   providerId?: string;

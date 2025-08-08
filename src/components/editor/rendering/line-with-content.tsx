@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { useEditorDecorationsStore } from "@/stores/editor-decorations-store";
-import { useEditorViewStore } from "../../../stores/editor-view-store";
+import { useEditorViewStore } from "@/stores/editor-view-store";
 import { LineGutter } from "./line-gutter";
 import { LineRenderer } from "./line-renderer";
 

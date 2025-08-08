@@ -1,8 +1,8 @@
 import { AlertCircle, GitCommit as GitCommitIcon, Send } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { cn } from "../../utils/cn";
-import { commitChanges } from "../../utils/git";
+import { cn } from "@/utils/cn";
+import { commitChanges } from "@/utils/git";
 
 interface GitCommitPanelProps {
   stagedFilesCount: number;

@@ -9,11 +9,11 @@ import { SearchAddon } from "xterm-addon-search";
 import { SerializeAddon } from "xterm-addon-serialize";
 import { Unicode11Addon } from "xterm-addon-unicode11";
 import { WebLinksAddon } from "xterm-addon-web-links";
-import { useEditorSettingsStore } from "../../stores/editor-settings-store";
-import { useProjectStore } from "../../stores/project-store";
-import { useTerminalStore } from "../../stores/terminal-store";
-import { useThemeStore } from "../../stores/theme-store";
-import { cn } from "../../utils/cn";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
+import { useProjectStore } from "@/stores/project-store";
+import { useTerminalStore } from "@/stores/terminal-store";
+import { useThemeStore } from "@/stores/theme-store";
+import { cn } from "@/utils/cn";
 import { TerminalSearch } from "./terminal-search";
 import "xterm/css/xterm.css";
 import "./terminal.css";
@@ -699,7 +699,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         id={`terminal-${sessionId}`}
         className={cn("xterm-container", "w-full", "text-text", !isActive && "opacity-60")}
         style={{
-          height: "calc(100% - 40px)", // Subtract footer height to prevent content going below
+          height: "calc(100% - 1px)", // Subtract footer height to prevent content going below
         }}
       />
     </div>

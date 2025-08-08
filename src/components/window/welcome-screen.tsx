@@ -1,6 +1,8 @@
 import { AlertCircle, Download, Folder } from "lucide-react";
+import { useEffect, useState } from "react";
 import Button from "@/components/ui/button";
 import { useUpdater } from "@/settings/hooks/use-updater";
+import { fetchRawAppVersion } from "@/utils/app-utils";
 import { cn } from "@/utils/cn";
 
 interface RecentFolder {
@@ -20,6 +22,7 @@ const WelcomeScreen = ({
   recentFolders = [],
   onOpenRecentFolder,
 }: WelcomeScreenProps) => {
+  const [appVersion, setAppVersion] = useState<string>("...");
   const {
     available,
     checking,
@@ -30,6 +33,15 @@ const WelcomeScreen = ({
     downloadAndInstall,
     dismissUpdate,
   } = useUpdater(true);
+
+  useEffect(() => {
+    const loadVersion = async () => {
+      const version = await fetchRawAppVersion();
+      setAppVersion(version);
+    };
+
+    loadVersion();
+  }, []);
 
   const handleRecentFolderClick = (path: string) => {
     if (onOpenRecentFolder) {
@@ -53,7 +65,7 @@ const WelcomeScreen = ({
           <img src="/logo.svg" alt="athas industries" className={cn("h-12")} draggable="false" />
         </div>
         <div className={cn("flex items-center gap-2")}>
-          <p className={cn("paper-text-light font-mono font-normal text-xs")}>v0.1.0</p>
+          <p className={cn("paper-text-light font-mono font-normal text-xs")}>v{appVersion}</p>
           {checking && (
             <div className={cn("paper-text-light text-xs")} title="Checking for updates...">
               ⟳

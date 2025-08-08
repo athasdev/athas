@@ -166,7 +166,7 @@ export default function ExtensionsView({
         </div>
       </div>
 
-      <div className="flex gap-2 p-4 ">
+      <div className="flex gap-2 p-4">
         <Button
           onClick={() => setExtensionsActiveTab("all")}
           variant="ghost"

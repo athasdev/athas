@@ -1,4 +1,4 @@
-import type { FileEntry } from "../types/app";
+import type { FileEntry } from "../models/app";
 
 export function sortFileEntries(entries: FileEntry[]): FileEntry[] {
   return entries.sort((a, b) => {

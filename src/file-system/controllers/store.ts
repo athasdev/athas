@@ -1,16 +1,29 @@
+import { basename, dirname, extname, join } from "@tauri-apps/api/path";
 import { confirm } from "@tauri-apps/plugin-dialog";
+import { copyFile } from "@tauri-apps/plugin-fs";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import type { CodeEditorRef } from "@/components/editor/code-editor";
+import { useFileTreeStore } from "@/file-explorer/controllers/file-tree-store";
+// Store imports - Note: Direct store communication via getState() is used here.
+// This is an acceptable Zustand pattern, though it creates coupling between stores.
+// See: https://github.com/pmndrs/zustand/discussions/1319
+import { useBufferStore } from "@/stores/buffer-store";
+import { useGitStore } from "@/stores/git-store";
+import { useProjectStore } from "@/stores/project-store";
+import { getGitStatus } from "@/utils/git";
+import { isDiffFile, parseRawDiffContent } from "@/utils/git-diff-parser";
 import { createSelectors } from "@/utils/zustand-selectors";
-import type { CodeEditorRef } from "../../components/editor/code-editor";
-import type { FileEntry } from "../../types/app";
+import type { FileEntry } from "../models/app";
+import type { FsActions, FsState } from "../models/interface";
 import {
   createNewDirectory,
   createNewFile,
   deleteFileOrDirectory,
   readDirectoryContents,
   readFileContent,
-} from "../../utils/file-operations";
+} from "./file-operations";
 import {
   addFileToTree,
   collapseAllFolders,
@@ -18,26 +31,11 @@ import {
   removeFileFromTree,
   sortFileEntries,
   updateFileInTree,
-} from "../../utils/file-tree-utils";
-import {
-  getFilenameFromPath,
-  getRootPath,
-  isImageFile,
-  isSQLiteFile,
-} from "../../utils/file-utils";
-import { getGitStatus } from "../../utils/git";
-import { isDiffFile, parseRawDiffContent } from "../../utils/git-diff-parser";
-import { openFolder, readDirectory } from "../../utils/platform";
-// Store imports - Note: Direct store communication via getState() is used here.
-// This is an acceptable Zustand pattern, though it creates coupling between stores.
-// See: https://github.com/pmndrs/zustand/discussions/1319
-import { useBufferStore } from "../buffer-store";
-import { useFileTreeStore } from "../file-tree-store";
-import { useFileWatcherStore } from "../file-watcher-store";
-import { useGitStore } from "../git-store";
-import { useProjectStore } from "../project-store";
-import { useRecentFoldersStore } from "../recent-folders-store";
-import type { FsActions, FsState } from "./interface";
+} from "./file-tree-utils";
+import { getFilenameFromPath, getRootPath, isImageFile, isSQLiteFile } from "./file-utils";
+import { useFileWatcherStore } from "./file-watcher-store";
+import { openFolder, readDirectory, renameFile } from "./platform";
+import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 
 export const useFileSystemStore = createSelectors(
@@ -548,6 +546,99 @@ export const useFileSystemStore = createSelectors(
           state.files = removeFileFromTree(state.files, path);
           state.filesVersion++;
         });
+      },
+
+      handleRevealInFolder: async (path: string) => {
+        await revealItemInDir(path);
+      },
+
+      handleDuplicatePath: async (path: string) => {
+        const dir = await dirname(path);
+        const base = await basename(path);
+        const ext = await extname(path);
+
+        const originalFile = findFileInTree(get().files, path);
+        if (!originalFile) return;
+
+        const nameWithoutExt = base.slice(0, base.length - ext.length);
+        let counter = 0;
+        let finalName = "";
+        let finalPath = "";
+
+        const generateCopyName = () => {
+          if (counter === 0) {
+            return `${nameWithoutExt}_copy.${ext}`;
+          }
+          return `${nameWithoutExt}_copy_${counter}.${ext}`;
+        };
+
+        do {
+          finalName = generateCopyName();
+          finalPath = `${dir}/${finalName}`;
+          counter++;
+        } while (findFileInTree(get().files, finalPath));
+
+        await copyFile(path, finalPath);
+
+        const newFile: FileEntry = {
+          name: finalName,
+          path: finalPath,
+          isDir: false,
+          expanded: false,
+        };
+
+        set((state) => {
+          state.files = addFileToTree(state.files, dir, newFile);
+          state.filesVersion++;
+        });
+      },
+
+      handleRenamePath: async (path: string, newName?: string) => {
+        if (newName) {
+          const dir = await dirname(path);
+
+          try {
+            const targetPath = await join(dir, newName);
+            await renameFile(path, targetPath);
+
+            set((state) => {
+              state.files = updateFileInTree(state.files, path, (item) => ({
+                ...item,
+                name: newName,
+                path: targetPath,
+                isRenaming: false,
+              }));
+              state.filesVersion++;
+            });
+
+            const { buffers, actions } = useBufferStore.getState();
+            const buffer = buffers.find((b) => b.path === path);
+            if (buffer) {
+              actions.updateBuffer({
+                ...buffer,
+                path: targetPath,
+                name: newName,
+              });
+            }
+          } catch (error) {
+            console.error("Failed to rename file:", error);
+            set((state) => {
+              state.files = updateFileInTree(state.files, path, (item) => ({
+                ...item,
+                isRenaming: false,
+              }));
+              state.filesVersion++;
+            });
+          }
+        } else {
+          set((state) => {
+            state.files = updateFileInTree(state.files, path, (item) => ({
+              ...item,
+              isRenaming: !item.isRenaming,
+            }));
+            state.filesVersion++;
+          });
+        }
       },
 
       // Setter methods

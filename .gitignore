@@ -20,6 +20,7 @@ dist/
 
 # npm, yarn and bun lock files
 package-lock.json
+pnpm-lock.yaml
 yarn.lock
 bun.lockb
 
@@ -58,7 +59,7 @@ TODO.md
 # claude local settings
 .claude/settings.local.json
 
-# Tauri gen files 
+# Tauri gen files
 src-tauri/gen/
 apps/desktop/src-tauri/gen/
 **/src-tauri/gen/

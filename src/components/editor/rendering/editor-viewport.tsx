@@ -1,11 +1,11 @@
 import type React from "react";
 import { forwardRef, memo, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { EDITOR_CONSTANTS } from "../../../constants/editor-constants";
-import { useEditorLayout } from "../../../hooks/use-editor-layout";
-import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
-import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
-import { useEditorSettingsStore } from "../../../stores/editor-settings-store";
-import { useEditorViewStore } from "../../../stores/editor-view-store";
+import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
+import { useEditorLayout } from "@/hooks/use-editor-layout";
+import { useEditorCursorStore } from "@/stores/editor-cursor-store";
+import { useEditorLayoutStore } from "@/stores/editor-layout-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
+import { useEditorViewStore } from "@/stores/editor-view-store";
 import { LineWithContent } from "./line-with-content";
 
 interface EditorViewportProps {
@@ -26,6 +26,7 @@ export const EditorViewport = memo(
       const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
       const scrollTop = useEditorLayoutStore.use.scrollTop();
       const viewportHeight = useEditorLayoutStore.use.viewportHeight();
+      const tabSize = useEditorSettingsStore.use.tabSize();
       const { lineHeight, gutterWidth } = useEditorLayout();
 
       const selectedLines = useMemo(() => {
@@ -139,6 +140,7 @@ export const EditorViewport = memo(
               height: `${totalHeight}px`,
               minWidth: "100%",
               zIndex: 1,
+              tabSize: tabSize,
             }}
             onClick={onClick}
             onMouseDown={onMouseDown}

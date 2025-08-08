@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 
 interface TerminalSearchProps {
   onSearch: (term: string) => void;

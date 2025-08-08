@@ -1,5 +1,5 @@
-import type { Decoration } from "../../../types/editor-types";
-import { cn } from "../../../utils/cn";
+import type { Decoration } from "@/types/editor-types";
+import { cn } from "@/utils/cn";
 
 interface LineGutterProps {
   lineNumber: number;

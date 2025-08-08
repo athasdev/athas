@@ -1,4 +1,4 @@
-import type { FileEntry } from "../types/app";
+import type { FileEntry } from "../models/app";
 import {
   createDirectory as platformCreateDirectory,
   deletePath as platformDeletePath,

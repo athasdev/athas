@@ -7,6 +7,7 @@ export interface FileEntry {
   isEditing?: boolean;
   isNewItem?: boolean;
   ignored?: boolean;
+  isRenaming?: boolean;
 }
 
 export interface ContextMenuState {

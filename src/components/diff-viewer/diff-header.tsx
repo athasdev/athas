@@ -1,6 +1,6 @@
 import { Edit3, Eye, EyeOff, FileIcon, FilePlus, FileX, Hash, X } from "lucide-react";
 import { memo } from "react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 import { getFileStatus } from "./utils/diff-helpers";
 import type { DiffHeaderProps } from "./utils/types";
 

@@ -1,8 +1,8 @@
 import { Monitor, Moon, Palette, Sun, Upload } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { themeRegistry } from "../../../extensions/themes/theme-registry";
-import type { ThemeDefinition } from "../../../extensions/themes/types";
+import { themeRegistry } from "@/extensions/themes/theme-registry";
+import type { ThemeDefinition } from "@/extensions/themes/types";
 import Button from "../../ui/button";
 import Command, {
   CommandEmpty,

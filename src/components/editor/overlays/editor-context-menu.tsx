@@ -17,7 +17,7 @@ import {
   Type,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
+import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import KeybindingBadge from "../../ui/keybinding-badge";
 
 interface EditorContextMenuProps {
@@ -235,7 +235,7 @@ const EditorContextMenu = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 w-[200px] select-none rounded-md border border-border bg-secondary-bg py-0.5 shadow-lg"
+      className="fixed z-99 w-[200px] select-none rounded-md border border-border bg-secondary-bg py-0.5 shadow-lg"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,

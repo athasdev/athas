@@ -1,13 +1,13 @@
 import { ArrowLeft, ChevronRight, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { EDITOR_CONSTANTS } from "../../constants/editor-constants";
-import { useBufferStore } from "../../stores/buffer-store";
-import { useFileSystemStore } from "../../stores/file-system/store";
-import { useUIState } from "../../stores/ui-state-store";
-import type { FileEntry } from "../../types/app";
-import { readDirectory } from "../../utils/platform";
-import FileIcon from "../file-icon";
+import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
+import FileIcon from "@/file-explorer/views/file.icon";
+import { readDirectory } from "@/file-system/controllers/platform";
+import { useFileSystemStore } from "@/file-system/controllers/store";
+import type { FileEntry } from "@/file-system/models/app";
+import { useBufferStore } from "@/stores/buffer-store";
+import { useUIState } from "@/stores/ui-state-store";
 
 export default function Breadcrumb() {
   const buffers = useBufferStore.use.buffers();

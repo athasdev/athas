@@ -1,6 +1,6 @@
 import { FileIcon, FilePlus, FileX, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { memo, useState } from "react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 import Button from "../ui/button";
 import { getImgSrc } from "./utils/diff-helpers";
 import type { ImageContainerProps, ImageDiffViewerProps } from "./utils/types";

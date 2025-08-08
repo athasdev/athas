@@ -1,15 +1,15 @@
 import { memo, useEffect, useRef } from "react";
-import { useEditorInteractions } from "../../../hooks/use-editor-interactions";
-import { useEditorLayout } from "../../../hooks/use-editor-layout";
-import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
-import { useEditorSettingsStore } from "../../../stores/editor-settings-store";
-import type { Position } from "../../../types/editor-types";
+import { useEditorInteractions } from "@/hooks/use-editor-interactions";
+import { useEditorLayout } from "@/hooks/use-editor-layout";
+import { useEditorLayoutStore } from "@/stores/editor-layout-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
+import type { Position } from "@/types/editor-types";
 import { Cursor } from "../overlays/cursor";
 import { DecorationLayer } from "../overlays/decoration-layer";
 import { EditorViewport } from "../rendering/editor-viewport";
 import { EditorLayer, EditorLayers } from "./editor-layers";
-import "../../../styles/editor-line-based.css";
-import "../../../styles/token-theme.css";
+import "@/styles/editor-line-based.css";
+import "@/styles/token-theme.css";
 
 interface LineBasedEditorProps {
   onPositionClick?: (position: Position) => void;

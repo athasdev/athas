@@ -1,15 +1,15 @@
 import { FilePlus, FolderOpen, FolderPlus, Server } from "lucide-react";
 import type React from "react";
 import { useMemo } from "react";
+import FileTree from "@/file-explorer/views/file-tree";
+import { useFileSystemStore } from "@/file-system/controllers/store";
+import type { FileEntry } from "@/file-system/models/app";
+import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
+import { useBufferStore } from "@/stores/buffer-store";
+import { useProjectStore } from "@/stores/project-store";
+import { useSidebarStore } from "@/stores/sidebar-store";
+import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
-import { usePersistentSettingsStore } from "../../settings/stores/persistent-settings-store";
-import { useBufferStore } from "../../stores/buffer-store";
-import { useFileSystemStore } from "../../stores/file-system/store";
-import { useProjectStore } from "../../stores/project-store";
-import { useSidebarStore } from "../../stores/sidebar-store";
-import { useUIState } from "../../stores/ui-state-store";
-import type { FileEntry } from "../../types/app";
-import FileTree from "../file-tree/file-tree";
 import GitView from "../git/git-view";
 import RemoteConnectionView from "../remote/remote-connection-view";
 import SearchView from "../search-view";
@@ -58,6 +58,9 @@ export const MainSidebar = () => {
   const handleDeletePath = useFileSystemStore.use.handleDeletePath?.();
   const refreshDirectory = useFileSystemStore.use.refreshDirectory?.();
   const handleFileMove = useFileSystemStore.use.handleFileMove?.();
+  const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
+  const handleDuplicatePath = useFileSystemStore.use.handleDuplicatePath?.();
+  const handleRenamePath = useFileSystemStore.use.handleRenamePath?.();
 
   // sidebar store
   const activeBufferPath = useSidebarStore.use.activeBufferPath?.();
@@ -206,7 +209,10 @@ export const MainSidebar = () => {
             onDeletePath={handleDeletePath}
             onUpdateFiles={setFiles}
             onRefreshDirectory={refreshDirectory}
+            onRenamePath={handleRenamePath}
+            onRevealInFinder={handleRevealInFolder}
             onFileMove={handleFileMove}
+            onDuplicatePath={handleDuplicatePath}
           />
         )}
       </div>

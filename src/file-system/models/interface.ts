@@ -1,5 +1,5 @@
-import type { CodeEditorRef } from "../../components/editor/code-editor";
-import type { FileEntry } from "../../types/app";
+import type { CodeEditorRef } from "@/components/editor/code-editor";
+import type { FileEntry } from "./app";
 
 export interface FsState {
   files: FileEntry[];
@@ -46,6 +46,9 @@ export interface FsActions {
   refreshDirectory: (directoryPath: string) => Promise<void>;
   handleCollapseAllFolders: () => Promise<void>;
   handleFileMove: (oldPath: string, newPath: string) => Promise<void>;
+  handleRevealInFolder: (path: string) => Promise<void>;
+  handleDuplicatePath: (path: string) => Promise<void>;
+  handleRenamePath: (path: string, newName?: string) => Promise<void>;
 
   // Search operations
   getAllProjectFiles: () => Promise<FileEntry[]>;

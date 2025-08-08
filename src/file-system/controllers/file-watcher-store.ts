@@ -2,8 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
-import { LspClient } from "../lib/lsp/lsp-client";
-import { useBufferStore } from "./buffer-store";
+import { LspClient } from "../../lib/lsp/lsp-client";
+import { useBufferStore } from "../../stores/buffer-store";
 
 interface FileChangeEvent {
   path: string;

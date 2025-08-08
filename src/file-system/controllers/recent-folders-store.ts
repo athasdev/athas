@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { RecentFolder } from "../types/recent-folders";
+import type { RecentFolder } from "../models/recent-folders";
 
 interface RecentFoldersState {
   recentFolders: RecentFolder[];
@@ -44,7 +44,7 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
 
         openRecentFolder: async (folderPath: string) => {
           try {
-            const { useFileSystemStore } = await import("./file-system/store");
+            const { useFileSystemStore } = await import("./store");
             const { handleOpenFolderByPath } = useFileSystemStore.getState();
             await handleOpenFolderByPath(folderPath);
             get().addToRecents(folderPath);

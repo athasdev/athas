@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 import Button from "@/components/ui/button";
 import Dropdown from "@/components/ui/dropdown";
 import Section, { SettingRow } from "@/components/ui/section";
-import { themeRegistry } from "../../../extensions/themes/theme-registry";
-import type { ThemeDefinition } from "../../../extensions/themes/types";
-import { useSettingsStore } from "../../stores/settings-store";
+import { themeRegistry } from "@/extensions/themes/theme-registry";
+import type { ThemeDefinition } from "@/extensions/themes/types";
+import { useSettingsStore } from "@/settings/stores/settings-store";
 
 export const ThemeSettings = () => {
   const { settings, updateTheme } = useSettingsStore();
@@ -40,7 +40,7 @@ export const ThemeSettings = () => {
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        const { uploadTheme } = await import("../../../utils/theme-upload");
+        const { uploadTheme } = await import("@/utils/theme-upload");
         const result = await uploadTheme(file);
         if (result.success) {
           console.log("Theme uploaded successfully:", result.theme?.name);

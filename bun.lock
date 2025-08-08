@@ -5,8 +5,10 @@
       "name": "athas-monorepo",
       "dependencies": {
         "@tauri-apps/api": "^2",
+        "@tauri-apps/plugin-clipboard-manager": "~2.3.0",
         "@tauri-apps/plugin-dialog": "^2",
         "@tauri-apps/plugin-fs": "^2",
+        "@tauri-apps/plugin-opener": "^2.4.0",
         "@tauri-apps/plugin-os": "^2",
         "@tauri-apps/plugin-process": "^2",
         "@tauri-apps/plugin-shell": "^2.3.0",
@@ -379,9 +381,13 @@
 
     "@tauri-apps/cli-win32-x64-msvc": ["@tauri-apps/cli-win32-x64-msvc@2.7.1", "", { "os": "win32", "cpu": "x64" }, "sha512-D7Q9kDObutuirCNLxYQ7KAg2Xxg99AjcdYz/KuMw5HvyEPbkC9Q7JL0vOrQOrHEHxIQ2lYzFOZvKKoC2yyqXcg=="],
 
+    "@tauri-apps/plugin-clipboard-manager": ["@tauri-apps/plugin-clipboard-manager@2.3.0", "", { "dependencies": { "@tauri-apps/api": "^2.6.0" } }, "sha512-81NOBA2P+OTY8RLkBwyl9ZR/0CeggLub4F6zxcxUIfFOAqtky7J61+K/MkH2SC1FMxNBxrX0swDuKvkjkHadlA=="],
+
     "@tauri-apps/plugin-dialog": ["@tauri-apps/plugin-dialog@2.3.1", "", { "dependencies": { "@tauri-apps/api": "^2.6.0" } }, "sha512-B7jvyhycV8SI/WHzPjciwtYfdFM6/9EXuMjRgYWZwn8GPDmHxpT80aJdb/eDVN+NgoAFDh9bu4QPonYahoYnZQ=="],
 
     "@tauri-apps/plugin-fs": ["@tauri-apps/plugin-fs@2.4.1", "", { "dependencies": { "@tauri-apps/api": "^2.6.0" } }, "sha512-vJlKZVGF3UAFGoIEVT6Oq5L4HGDCD78WmA4uhzitToqYiBKWAvZR61M6zAyQzHqLs0ADemkE4RSy/5sCmZm6ZQ=="],
+
+    "@tauri-apps/plugin-opener": ["@tauri-apps/plugin-opener@2.4.0", "", { "dependencies": { "@tauri-apps/api": "^2.6.0" } }, "sha512-43VyN8JJtvKWJY72WI/KNZszTpDpzHULFxQs0CJBIYUdCRowQ6Q1feWTDb979N7nldqSuDOaBupZ6wz2nvuWwQ=="],
 
     "@tauri-apps/plugin-os": ["@tauri-apps/plugin-os@2.3.0", "", { "dependencies": { "@tauri-apps/api": "^2.6.0" } }, "sha512-dm3bDsMuUngpIQdJ1jaMkMfyQpHyDcaTIKTFaAMHoKeUd+Is3UHO2uzhElr6ZZkfytIIyQtSVnCWdW2Kc58f3g=="],
 

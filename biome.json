@@ -23,7 +23,8 @@
       "a11y": {
         "useKeyWithClickEvents": "off",
         "noStaticElementInteractions": "off",
-        "useButtonType": "off"
+        "useButtonType": "off",
+        "useSemanticElements": "off"
       },
       "style": {
         "noNonNullAssertion": "off"

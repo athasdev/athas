@@ -1,7 +1,7 @@
 import { Calendar, GitCommit, Plus, Tag, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/utils/cn";
-import { createTag, deleteTag, type GitTag, getTags } from "../../utils/git";
+import { createTag, deleteTag, type GitTag, getTags } from "@/utils/git";
 
 interface GitTagManagerProps {
   isOpen: boolean;

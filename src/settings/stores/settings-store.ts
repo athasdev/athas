@@ -55,7 +55,7 @@ const applyTheme = async (theme: Theme) => {
 
   // For TOML themes, use the theme registry
   try {
-    const { themeRegistry } = await import("../../extensions/themes/theme-registry");
+    const { themeRegistry } = await import("@/extensions/themes/theme-registry");
     console.log(`Settings store: Attempting to apply theme "${theme}"`);
 
     // Check if theme registry is ready

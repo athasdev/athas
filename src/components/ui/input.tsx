@@ -1,5 +1,5 @@
 import type React from "react";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   size?: "xs" | "sm" | "md";

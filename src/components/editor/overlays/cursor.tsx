@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
-import { useEditorLayout } from "../../../hooks/use-editor-layout";
-import { useEditorCursorStore } from "../../../stores/editor-cursor-store";
-import { useEditorLayoutStore } from "../../../stores/editor-layout-store";
+import { useEditorLayout } from "@/hooks/use-editor-layout";
+import { useEditorCursorStore } from "@/stores/editor-cursor-store";
+import { useEditorLayoutStore } from "@/stores/editor-layout-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 
 interface CursorRendererProps {
   visible?: boolean;
@@ -12,7 +13,7 @@ export function Cursor({ visible = true }: CursorRendererProps) {
   const movementTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { scrollTop, scrollLeft } = useEditorLayoutStore();
   const { lineHeight, charWidth, gutterWidth } = useEditorLayout();
-  const GUTTER_MARGIN = 8; // mr-2 in Tailwind (0.5rem = 8px)
+  const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
 
   // Update position without re-rendering
   useEffect(() => {
@@ -23,7 +24,11 @@ export function Cursor({ visible = true }: CursorRendererProps) {
       (position) => {
         if (!cursorRef.current) return;
 
-        const x = gutterWidth + GUTTER_MARGIN + position.column * charWidth - scrollLeft;
+        // Position cursor relative to the text content area
+        // Account for gutter width and conditional padding
+        const contentPadding = showLineNumbers ? 0 : 16;
+        // Position cursor after the character
+        const x = gutterWidth + contentPadding + (position.column + 1) * charWidth - scrollLeft;
         const y = position.line * lineHeight - scrollTop;
 
         // Add moving class to pause blinking
@@ -47,7 +52,10 @@ export function Cursor({ visible = true }: CursorRendererProps) {
 
     // Set initial position
     const position = useEditorCursorStore.getState().cursorPosition;
-    const x = gutterWidth + GUTTER_MARGIN + position.column * charWidth - scrollLeft;
+    // Position cursor relative to the text content area
+    const contentPadding = showLineNumbers ? 0 : 16; // 16px padding when no line numbers
+    // Position cursor after the character
+    const x = gutterWidth + contentPadding + (position.column + 1) * charWidth - scrollLeft;
     const y = position.line * lineHeight - scrollTop;
     cursorRef.current.style.left = `${x}px`;
     cursorRef.current.style.top = `${y}px`;
@@ -58,7 +66,7 @@ export function Cursor({ visible = true }: CursorRendererProps) {
         clearTimeout(movementTimeoutRef.current);
       }
     };
-  }, [lineHeight, gutterWidth, scrollTop, scrollLeft, charWidth, visible]);
+  }, [lineHeight, gutterWidth, scrollTop, scrollLeft, charWidth, visible, showLineNumbers]);
 
   if (!visible) return null;
 

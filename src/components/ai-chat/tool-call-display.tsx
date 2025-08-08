@@ -1,7 +1,6 @@
 import {
   AlertCircle,
   CheckCircle,
-  ChevronDown,
   ChevronRight,
   Clock,
   Database,
@@ -15,8 +14,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { cn } from "../../utils/cn";
-import "./tool-call-display.css";
+import { cn } from "@/utils/cn";
 
 interface ToolCallDisplayProps {
   toolName: string;
@@ -55,32 +53,6 @@ const toolIcons: Record<string, React.ElementType> = {
   default: Wrench,
 };
 
-const toolCategories: Record<string, string> = {
-  // File operations
-  Read: "File Operations",
-  Write: "File Operations",
-  Edit: "File Operations",
-  MultiEdit: "File Operations",
-
-  // Search operations
-  Grep: "Search",
-  Glob: "Search",
-  Search: "Search",
-  Task: "Search",
-
-  // System operations
-  Bash: "System",
-  LS: "System",
-
-  // Web operations
-  WebFetch: "Web",
-  WebSearch: "Web",
-
-  // Database operations
-  NotebookRead: "Notebook",
-  NotebookEdit: "Notebook",
-};
-
 export default function ToolCallDisplay({
   toolName,
   input,
@@ -91,7 +63,6 @@ export default function ToolCallDisplay({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const Icon = toolIcons[toolName] || toolIcons.default;
-  const category = toolCategories[toolName] || "Tool";
 
   // not sure if there are tool calls that can be just empty without any input
   if (!input || (typeof input === "object" && Object.keys(input).length === 0)) {
@@ -203,61 +174,45 @@ export default function ToolCallDisplay({
   };
 
   return (
-    <div
-      className={cn(
-        "tool-call-card rounded-lg border transition-all duration-200",
-        isStreaming && "animate-pulse",
-        error && "tool-error border-red-500/50",
-        !isStreaming && !error && output && "tool-success",
-      )}
-      style={{
-        background: "var(--color-secondary-bg)",
-        borderColor: error ? undefined : "var(--color-border)",
-      }}
-    >
+    <div className="my-0.5">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={cn(
-          "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left",
-          "transition-colors hover:bg-[var(--color-hover)]",
-        )}
+        className="group flex w-full items-center gap-1 py-0.5 text-left text-xs opacity-60 transition-all duration-200 hover:opacity-80"
       >
-        <div className="flex flex-1 items-center gap-2">
-          <Icon
-            size={14}
-            className={cn(error ? "text-red-500" : "", isStreaming && "tool-icon-running")}
-          />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{toolName}</span>
-              <span className="text-xs opacity-60">({category})</span>
-              {isStreaming && (
-                <div className="flex items-center gap-1">
-                  <Clock size={10} className="animate-spin" />
-                  <span className="text-xs">Running...</span>
-                </div>
-              )}
-              {!isStreaming && !error && output && (
-                <CheckCircle size={12} className="text-green-500" />
-              )}
-              {error && <AlertCircle size={12} className="text-red-500" />}
-            </div>
-            <div className="truncate text-xs opacity-75">{formatInput(input)}</div>
-          </div>
-        </div>
-        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        <Icon
+          size={10}
+          className={cn(
+            "opacity-50",
+            error ? "text-red-400" : "text-current",
+            isStreaming && "animate-pulse",
+          )}
+        />
+        <span className="font-medium">{toolName}</span>
+        <span className="opacity-40">·</span>
+        <span className="truncate opacity-40">{formatInput(input)}</span>
+        {isStreaming && <Clock size={8} className="ml-1 animate-spin opacity-30" />}
+        {!isStreaming && !error && output && (
+          <CheckCircle size={8} className="ml-1 text-green-400 opacity-40" />
+        )}
+        {error && <AlertCircle size={8} className="ml-1 text-red-400 opacity-40" />}
+        <ChevronRight
+          size={8}
+          className={cn(
+            "ml-auto opacity-30 transition-transform duration-200 group-hover:opacity-50",
+            isExpanded && "rotate-90",
+          )}
+        />
       </button>
 
       {isExpanded && (
-        <div className="tool-expand-content space-y-2 px-3 pb-3">
+        <div className="mt-1 space-y-2 pl-3 text-xs opacity-70">
           {/* Input section */}
           <div>
-            <div className="mb-1 font-medium text-xs opacity-60">Input:</div>
+            <div className="mb-1 font-medium opacity-60">Input:</div>
             <pre
-              className="overflow-x-auto rounded p-2 text-xs"
+              className="overflow-x-auto rounded-sm bg-black/10 p-2 text-xs"
               style={{
-                background: "var(--color-primary-bg)",
-                border: "1px solid var(--color-border)",
+                fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, monospace",
               }}
             >
               {JSON.stringify(input, null, 2)}
@@ -267,12 +222,12 @@ export default function ToolCallDisplay({
           {/* Output section */}
           {output && (
             <div>
-              <div className="mb-1 font-medium text-xs opacity-60">Output:</div>
+              <div className="mb-1 font-medium opacity-60">Output:</div>
               <pre
-                className="max-h-48 overflow-x-auto rounded p-2 text-xs"
+                className="max-h-48 overflow-x-auto rounded-sm bg-black/10 p-2 text-xs"
                 style={{
-                  background: "var(--color-primary-bg)",
-                  border: "1px solid var(--color-border)",
+                  fontFamily:
+                    "ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, monospace",
                 }}
               >
                 {formatOutput(output)}
@@ -283,16 +238,8 @@ export default function ToolCallDisplay({
           {/* Error section */}
           {error && (
             <div>
-              <div className="mb-1 font-medium text-red-500 text-xs">Error:</div>
-              <div
-                className="rounded p-2 text-red-400 text-xs"
-                style={{
-                  background: "rgba(239, 68, 68, 0.1)",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
-                }}
-              >
-                {error}
-              </div>
+              <div className="mb-1 font-medium text-red-400 opacity-80">Error:</div>
+              <div className="rounded-sm bg-red-500/10 p-2 text-red-400 opacity-80">{error}</div>
             </div>
           )}
         </div>

@@ -1,7 +1,7 @@
 import { ChevronDown, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { cn } from "../../utils/cn";
+import { cn } from "@/utils/cn";
 
 interface DropdownProps {
   value: string;

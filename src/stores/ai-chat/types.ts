@@ -1,5 +1,5 @@
-import type { Chat, Message } from "../../components/ai-chat/types";
-import type { FileEntry } from "../../types/app";
+import type { Chat, Message } from "@/components/ai-chat/types";
+import type { FileEntry } from "@/file-system/models/app";
 
 export interface AIChatState {
   // Input state
@@ -7,6 +7,7 @@ export interface AIChatState {
   isTyping: boolean;
   streamingMessageId: string | null;
   selectedBufferIds: Set<string>;
+  selectedFilesPaths: Set<string>;
   isContextDropdownOpen: boolean;
   isSendAnimating: boolean;
   hasApiKey: boolean;
@@ -36,11 +37,14 @@ export interface AIChatActions {
   setIsTyping: (isTyping: boolean) => void;
   setStreamingMessageId: (streamingMessageId: string | null) => void;
   toggleBufferSelection: (bufferId: string) => void;
+  toggleFileSelection: (filePath: string) => void;
   setIsContextDropdownOpen: (isContextDropdownOpen: boolean) => void;
   setIsSendAnimating: (isSendAnimating: boolean) => void;
   setHasApiKey: (hasApiKey: boolean) => void;
   clearSelectedBuffers: () => void;
+  clearSelectedFiles: () => void;
   setSelectedBufferIds: (selectedBufferIds: Set<string>) => void;
+  setSelectedFilesPaths: (selectedFilesPaths: Set<string>) => void;
   autoSelectBuffer: (bufferId: string) => void;
 
   // Chat actions
@@ -50,6 +54,7 @@ export interface AIChatActions {
   updateChatTitle: (chatId: string, title: string) => void;
   addMessage: (chatId: string, message: Message) => void;
   updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void;
+  regenerateResponse: () => string | null;
   setIsChatHistoryVisible: (isChatHistoryVisible: boolean) => void;
 
   // Provider API key actions

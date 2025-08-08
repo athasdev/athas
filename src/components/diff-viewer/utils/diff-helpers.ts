@@ -1,4 +1,4 @@
-import type { GitDiff, GitDiffLine, GitHunk } from "../../../utils/git";
+import type { GitDiff, GitDiffLine, GitHunk } from "@/utils/git";
 import type { ParsedHunk } from "./types";
 
 export const createGitHunk = (

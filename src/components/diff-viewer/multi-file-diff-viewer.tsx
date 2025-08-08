@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight, FileIcon, FilePlus, FileText, FileX } from "lucide-react";
 import { memo, useCallback, useMemo, useState } from "react";
-import type { GitDiff } from "../../utils/git";
+import type { GitDiff } from "@/utils/git";
 import { DiffHeader } from "./diff-header";
 import { ImageDiffViewer } from "./image-diff-viewer";
 import { TextDiffViewer } from "./text-diff-viewer";
@@ -219,7 +219,22 @@ export const MultiFileDiffViewer = memo(function MultiFileDiffViewer({
       </div>
 
       {/* File List */}
-      <div className="custom-scrollbar flex-1 overflow-y-auto">
+      <div
+        className="custom-scrollbar flex-1 overflow-y-auto"
+        style={{ scrollBehavior: "auto" }} // Override smooth scrolling for manual control
+        onWheel={(e) => {
+          // Minimal handler to ensure scrolling works even when mouse is over DiffLine elements
+          // This prevents child elements from blocking scroll events
+          const container = e.currentTarget;
+
+          // Only handle vertical scrolling to not interfere with horizontal scrolling in code lines
+          if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+            // Use native deltaY to preserve natural mouse acceleration
+            container.scrollTop += e.deltaY;
+            e.preventDefault();
+          }
+        }}
+      >
         {multiDiff.files.map((diff, index) => {
           const summary = fileSummaries[index];
 
