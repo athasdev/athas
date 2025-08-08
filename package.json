@@ -62,6 +62,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.7.0",
+    "code-inspector-plugin": "^1.0.4",
     "concurrently": "^9.2.0",
     "simple-git-hooks": "^2.13.0",
     "typescript": "^5.8.3",
