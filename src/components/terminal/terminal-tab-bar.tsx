@@ -456,7 +456,6 @@ const TerminalTabBar = ({
                     {/* Terminal Name */}
                     <span
                       className={`flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs ${isActive ? "text-text" : "text-text-light"} `}
-                      title={terminal.currentDirectory}
                     >
                       {terminal.name}
                     </span>
