@@ -27,7 +27,6 @@ import { type GitFile, type GitStatus, getGitStatus } from "@/utils/git";
 import FileIcon from "./file.icon";
 import { useCustomDragDrop } from "./file-tree-custom-dnd";
 import "./file-tree.css";
-import { dirname } from "@tauri-apps/api/path";
 
 interface FileTreeProps {
   files: FileEntry[];
@@ -356,7 +355,7 @@ const FileTree = ({
     setEditingValue("");
   };
 
-  const finishInlineEditing = async (item: FileEntry, newName: string) => {
+  const finishInlineEditing = (item: FileEntry, newName: string) => {
     if (!onUpdateFiles) return;
 
     if (newName.trim()) {
