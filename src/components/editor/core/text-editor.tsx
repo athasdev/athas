@@ -410,7 +410,10 @@ export function TextEditor() {
     // Only emit on initial mount when content is first loaded
     if (content) {
       const eventData = { content, changes: [], affectedLines: new Set<number>() };
-      editorAPI.emitEvent("contentChange", eventData);
+      // Defer the event emission to avoid blocking initial render
+      requestAnimationFrame(() => {
+        editorAPI.emitEvent("contentChange", eventData);
+      });
     }
   }, []); // Empty dependency array - only run once on mount
 

@@ -1,0 +1,52 @@
+/* Test file for color indicators */
+
+body {
+  background-color: white;
+  font-family: Arial, sans-serif;
+}
+
+.header {
+  color: red;
+  background-color: #f0f0f0;
+  padding: 20px;
+}
+
+.box-1 {
+  background-color: blue;
+  color: white;
+  width: 200px;
+  height: 100px;
+}
+
+.box-2 {
+  background-color: #ff6b35;
+  color: #ffffff;
+  border: 2px solid green;
+}
+
+.box-3 {
+  background-color: rgb(255, 192, 203);
+  color: rgb(0, 0, 0);
+  margin: 10px;
+}
+
+.box-4 {
+  background-color: rgba(75, 0, 130, 0.7);
+  color: yellow;
+  padding: 15px;
+}
+
+.text-purple {
+  color: #800080;
+}
+
+.gradient-bg {
+  background: linear-gradient(45deg, #ff9a9e, #fecfef);
+  color: darkblue;
+}
+
+.shadow-box {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  background-color: lightgray;
+  border: 1px solid #ccc;
+}

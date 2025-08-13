@@ -1,0 +1,86 @@
+/* Editor Performance Optimizations */
+
+/* Hardware acceleration for smooth scrolling */
+.editor-viewport {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: scroll-position;
+  contain: layout style;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000;
+  -webkit-perspective: 1000;
+}
+
+/* Optimize line rendering */
+.editor-line-wrapper {
+  contain: layout style;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+.editor-line {
+  contain: layout style paint;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.editor-line-content {
+  will-change: transform;
+  contain: layout style;
+}
+
+/* Optimize syntax highlighting */
+.token {
+  contain: style;
+}
+
+/* Optimize color indicators */
+.pointer-events-none {
+  pointer-events: none !important;
+}
+
+/* Optimize cursor and overlay elements */
+.editor-cursor {
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  contain: layout;
+}
+
+/* Smooth scrolling optimizations */
+.custom-scrollbar,
+.custom-scrollbar-thin,
+.custom-scrollbar-auto {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto; /* Disable smooth scrolling for performance */
+}
+
+/* Reduce repaints during scrolling */
+.editor-gutter-background {
+  will-change: transform;
+  contain: layout style paint;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Force layer creation for better performance */
+.editor-content {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: scroll-position;
+  contain: layout style;
+}
+
+/* Optimize text rendering */
+.editor-line-content span {
+  font-feature-settings: "liga" 0; /* Disable ligatures for better performance */
+  text-rendering: optimizeSpeed;
+}
+
+/* Performance hints for large content */
+@media (min-height: 1000px) {
+  .editor-viewport {
+    contain: strict;
+  }
+}

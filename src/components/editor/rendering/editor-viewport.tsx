@@ -47,6 +47,8 @@ export const EditorViewport = memo(
       const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
       const [, forceUpdate] = useState({});
       const isScrollingRef = useRef(false);
+      const lastScrollUpdateRef = useRef(0);
+      const animationFrameRef = useRef<number | null>(null);
 
       // Sync scroll position from prop only when not actively scrolling
       useEffect(() => {
@@ -60,11 +62,14 @@ export const EditorViewport = memo(
         const actualScrollTop = containerRef.current?.scrollTop ?? scrollTop;
         const startLine = Math.floor(actualScrollTop / lineHeight);
         const endLine = Math.ceil((actualScrollTop + viewportHeight) / lineHeight);
-        // Dynamic overscan based on viewport size
+        // Dynamic overscan based on viewport size with performance constraints
         const visibleLineCount = endLine - startLine;
         const overscan = Math.max(
           EDITOR_CONSTANTS.MIN_OVERSCAN_LINES,
-          Math.ceil(visibleLineCount * EDITOR_CONSTANTS.VIEWPORT_OVERSCAN_RATIO),
+          Math.min(
+            EDITOR_CONSTANTS.MAX_OVERSCAN_LINES,
+            Math.ceil(visibleLineCount * EDITOR_CONSTANTS.VIEWPORT_OVERSCAN_RATIO),
+          ),
         );
 
         return {
@@ -77,12 +82,25 @@ export const EditorViewport = memo(
         const target = e.currentTarget;
         const newScrollTop = target.scrollTop;
         const newScrollLeft = target.scrollLeft;
+        const now = Date.now();
 
         isScrollingRef.current = true;
         setIsScrolling(true);
 
-        // Force re-render to update visible range
-        forceUpdate({});
+        // Throttle visible range updates for smooth scrolling
+        if (now - lastScrollUpdateRef.current > 16) {
+          // ~60fps throttling
+          lastScrollUpdateRef.current = now;
+
+          if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+          }
+
+          animationFrameRef.current = requestAnimationFrame(() => {
+            forceUpdate({});
+            onScroll?.(newScrollTop, newScrollLeft);
+          });
+        }
 
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
@@ -91,16 +109,16 @@ export const EditorViewport = memo(
         scrollTimeoutRef.current = setTimeout(() => {
           setIsScrolling(false);
           isScrollingRef.current = false;
-        }, 150);
-
-        // Still notify parent component
-        onScroll?.(newScrollTop, newScrollLeft);
+        }, 100); // Reduced timeout for more responsive updates
       };
 
       useEffect(() => {
         return () => {
           if (scrollTimeoutRef.current) {
             clearTimeout(scrollTimeoutRef.current);
+          }
+          if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
           }
         };
       }, []);
@@ -116,6 +134,8 @@ export const EditorViewport = memo(
             position: "relative",
             overflow: "auto",
             height: `${viewportHeight}px`,
+            scrollBehavior: "auto", // Prevent smooth scrolling interference
+            willChange: "scroll-position", // Optimize for scrolling
           }}
         >
           {/* Gutter background for full height */}

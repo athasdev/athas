@@ -6,6 +6,7 @@
 /* utils like animations */
 @import "./styles/utils.css";
 @import "./styles/token-theme.css";
+@import "./styles/editor-performance.css";
 
 /* Theme classes - defined inline since we only have 2 themes */
 @layer themes {
