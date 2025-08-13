@@ -26,11 +26,22 @@ impl PackageManager {
 }
 
 fn is_command_available(cmd: &str) -> bool {
-   Command::new("which")
-      .arg(cmd)
-      .output()
-      .map(|output| output.status.success())
-      .unwrap_or(false)
+   #[cfg(target_os = "windows")]
+   {
+      Command::new("where")
+         .arg(cmd)
+         .output()
+         .map(|output| output.status.success())
+         .unwrap_or(false)
+   }
+   #[cfg(not(target_os = "windows"))]
+   {
+      Command::new("which")
+         .arg(cmd)
+         .output()
+         .map(|output| output.status.success())
+         .unwrap_or(false)
+   }
 }
 
 fn get_bun_global_bin() -> Result<PathBuf> {
@@ -64,11 +75,29 @@ fn get_npm_global_bin() -> Result<PathBuf> {
 pub fn find_global_binary(binary_name: &str) -> Option<PathBuf> {
    let pm = PackageManager::detect()?;
    let global_bin = pm.global_bin_path().ok()?;
-   let binary_path = global_bin.join(binary_name);
+   let base_path = global_bin.join(binary_name);
 
-   if binary_path.exists() {
-      Some(binary_path)
-   } else {
+   // On Windows, global binaries can be .cmd or .ps1 shims
+   #[cfg(target_os = "windows")]
+   {
+      let candidates = [
+         base_path.clone(),
+         PathBuf::from(format!("{}{}", base_path.display(), ".cmd")),
+         PathBuf::from(format!("{}{}", base_path.display(), ".ps1")),
+      ];
+      for candidate in candidates {
+         if candidate.exists() {
+            return Some(candidate);
+         }
+      }
       None
+   }
+   #[cfg(not(target_os = "windows"))]
+   {
+      if base_path.exists() {
+         Some(base_path)
+      } else {
+         None
+      }
    }
 }
