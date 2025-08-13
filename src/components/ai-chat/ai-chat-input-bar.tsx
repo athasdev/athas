@@ -321,6 +321,29 @@ export default function AIChatInputBar({
     }
   }, [input, setInput, showMention, hideMention, getPlainTextFromDiv]);
 
+  // Sync store-driven clears to the DOM (e.g., after sending message we call setInput(""))
+  useEffect(() => {
+    if (!inputRef.current) return;
+    if (input === "") {
+      // Prevent feedback loop with onInput
+      isUpdatingContentRef.current = true;
+      // Clear the contentEditable so placeholder appears
+      inputRef.current.innerHTML = "";
+      // Reset mention state just in case
+      hideMention();
+      // Place caret at start (not strictly needed when empty, but harmless)
+      const selection = window.getSelection();
+      if (selection) {
+        const range = document.createRange();
+        range.selectNodeContents(inputRef.current);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      isUpdatingContentRef.current = false;
+    }
+  }, [input, hideMention]);
+
   // Handle file mention selection
   const handleFileMentionSelect = useCallback(
     (file: any) => {

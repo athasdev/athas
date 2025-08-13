@@ -15,6 +15,11 @@ export const buildContextPrompt = (context: ContextInfo): string => {
     }
   }
 
+  // Optional high-level project overview (if provided by caller)
+  if (context.projectOverview) {
+    contextPrompt += `\nProject overview:\n${context.projectOverview}\n`;
+  }
+
   // Currently active file
   if (context.activeBuffer) {
     // For Claude Code, just provide the path
@@ -42,7 +47,9 @@ export const buildContextPrompt = (context: ContextInfo): string => {
         const lines = context.activeBuffer.content.split("\n");
         if (lines.length <= 100) {
           // Include the whole file if it's small
-          contextPrompt += `\n\nFile content:\n\`\`\`${context.language?.toLowerCase() || "text"}\n${context.activeBuffer.content}\n\`\`\``;
+          contextPrompt += `\n\nFile content:\n\`\`\`${
+            context.language?.toLowerCase() || "text"
+          }\n${context.activeBuffer.content}\n\`\`\``;
         } else {
           // Include first 50 lines and last 20 lines for larger files
           const preview = [
@@ -50,7 +57,9 @@ export const buildContextPrompt = (context: ContextInfo): string => {
             "... (content truncated) ...",
             ...lines.slice(-20),
           ].join("\n");
-          contextPrompt += `\n\nFile content (preview):\n\`\`\`${context.language?.toLowerCase() || "text"}\n${preview}\n\`\`\``;
+          contextPrompt += `\n\nFile content (preview):\n\`\`\`${
+            context.language?.toLowerCase() || "text"
+          }\n${preview}\n\`\`\``;
         }
       }
     }

@@ -24,4 +24,5 @@ export interface ContextInfo {
   projectRoot?: string;
   language?: string;
   providerId?: string;
+  projectOverview?: string;
 }
