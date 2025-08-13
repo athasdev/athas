@@ -42,4 +42,21 @@ export abstract class AIProvider {
   get requiresApiKey(): boolean {
     return this.config.requiresApiKey;
   }
+
+  // Default request URL (can be overridden by providers like Gemini)
+  getRequestUrl(_modelId: string, _apiKey?: string): string {
+    return this.config.apiUrl;
+  }
+
+  // Whether provider returns SSE streaming responses. Defaults to true.
+  supportsSSE(): boolean {
+    return true;
+  }
+
+  // For non-SSE providers, extract text content from JSON
+  // Default returns empty string (unused by SSE providers)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  parseResponseJson(_json: any): string {
+    return "";
+  }
 }

@@ -95,7 +95,10 @@ export const getChatCompletionStream = async (
 
     console.log(`🤖 Making ${provider.name} streaming chat request with model ${model.name}...`);
 
-    const response = await fetch(provider.apiUrl, {
+    // Build provider-specific request URL
+    const requestUrl = providerImpl.getRequestUrl(modelId, apiKey || undefined);
+
+    const response = await fetch(requestUrl, {
       method: "POST",
       headers,
       body: JSON.stringify(payload),
@@ -109,8 +112,21 @@ export const getChatCompletionStream = async (
       return;
     }
 
-    // Use stream processing utility
-    await processStreamingResponse(response, onChunk, onComplete, onError);
+    if (providerImpl.supportsSSE()) {
+      // Streamed response
+      await processStreamingResponse(response, onChunk, onComplete, onError);
+    } else {
+      // JSON response
+      try {
+        const data = await response.json();
+        const content = providerImpl.parseResponseJson(data);
+        if (content) onChunk(content);
+        onComplete();
+      } catch (jsonErr) {
+        console.error("❌ JSON parse error:", jsonErr);
+        onError("Failed to parse provider response");
+      }
+    }
   } catch (error) {
     console.error(`❌ ${providerId} streaming chat completion error:`, error);
     onError(`Failed to connect to ${providerId} API`);
