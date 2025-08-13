@@ -109,7 +109,16 @@ export const useFontStore = createSelectors(
 
             try {
               console.log("Loading fonts from system...");
-              const fonts = await invoke<FontInfo[]>("get_system_fonts");
+              const hasTauri =
+                typeof (window as any)?.__TAURI_INTERNALS__ !== "undefined" ||
+                typeof (window as any)?.__TAURI__ !== "undefined";
+              let fonts: FontInfo[] = [];
+              if (hasTauri) {
+                fonts = await invoke<FontInfo[]>("get_system_fonts");
+              } else {
+                console.log("Tauri not detected, using empty font list in browser dev");
+                fonts = [];
+              }
               const monospaceFonts = fonts.filter((font) => font.is_monospace);
 
               set((state) => {
@@ -147,7 +156,10 @@ export const useFontStore = createSelectors(
 
             try {
               console.log("Loading monospace fonts from system...");
-              const fonts = await invoke<FontInfo[]>("get_monospace_fonts");
+              const hasTauri =
+                typeof (window as any)?.__TAURI_INTERNALS__ !== "undefined" ||
+                typeof (window as any)?.__TAURI__ !== "undefined";
+              const fonts = hasTauri ? await invoke<FontInfo[]>("get_monospace_fonts") : [];
               set((state) => {
                 state.monospaceFonts = fonts;
                 state.isLoading = false;

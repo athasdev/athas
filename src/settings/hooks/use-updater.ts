@@ -31,7 +31,14 @@ export const useUpdater = (checkOnMount = true) => {
   const checkForUpdates = async () => {
     try {
       setState((prev) => ({ ...prev, checking: true, error: null }));
-
+      const hasTauri =
+        typeof (window as any)?.__TAURI_INTERNALS__ !== "undefined" ||
+        typeof (window as any)?.__TAURI__ !== "undefined";
+      if (!hasTauri) {
+        // In browser dev, skip updater entirely
+        setState((prev) => ({ ...prev, checking: false, available: false, updateInfo: null }));
+        return;
+      }
       const update = await check();
 
       if (update?.available) {
@@ -68,7 +75,12 @@ export const useUpdater = (checkOnMount = true) => {
 
     try {
       setState((prev) => ({ ...prev, downloading: true, error: null }));
-
+      const hasTauri =
+        typeof (window as any)?.__TAURI_INTERNALS__ !== "undefined" ||
+        typeof (window as any)?.__TAURI__ !== "undefined";
+      if (!hasTauri) {
+        throw new Error("Updater unavailable in browser dev");
+      }
       const update = await check();
       if (!update?.available) {
         throw new Error("No update available");

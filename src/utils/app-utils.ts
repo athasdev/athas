@@ -6,6 +6,13 @@ import { getVersion } from "@tauri-apps/api/app";
  */
 export const fetchRawAppVersion = async (): Promise<string> => {
   try {
+    const hasTauri =
+      typeof (window as any)?.__TAURI_INTERNALS__ !== "undefined" ||
+      typeof (window as any)?.__TAURI__ !== "undefined";
+    if (!hasTauri) {
+      // Browser dev fallback
+      return "0.1.0";
+    }
     const version = await getVersion();
     return version;
   } catch (error) {

@@ -44,9 +44,15 @@ export class ThemeLoader extends BaseThemeExtension {
       for (const path of possiblePaths) {
         try {
           console.log("ThemeLoader: Trying path:", path);
-          tomlThemes = await invoke("load_toml_themes", {
-            themesDir: path,
-          });
+          // If Tauri core is unavailable (plain browser dev), skip invoking backend
+          const hasTauri =
+            typeof (window as any)?.__TAURI_INTERNALS__ !== "undefined" ||
+            typeof (window as any)?.__TAURI__ !== "undefined";
+          if (!hasTauri) {
+            console.log("ThemeLoader: Tauri not detected, skipping backend invoke in browser dev");
+            break;
+          }
+          tomlThemes = await invoke("load_toml_themes", { themesDir: path });
           if (tomlThemes.length > 0) {
             console.log(
               `ThemeLoader: Successfully loaded ${tomlThemes.length} themes from path: ${path}`,
@@ -59,22 +65,9 @@ export class ThemeLoader extends BaseThemeExtension {
       }
 
       if (tomlThemes.length === 0) {
-        console.log("ThemeLoader: No themes found in any path, trying absolute path...");
-        // Try with absolute path as last resort
-        const absolutePath =
-          "/Users/mehmetozgul/Documents/GitHub/athasdev/athas/src/extensions/themes/builtin";
-        try {
-          tomlThemes = await invoke("load_toml_themes", {
-            themesDir: absolutePath,
-          });
-          if (tomlThemes.length > 0) {
-            console.log(
-              `ThemeLoader: Successfully loaded ${tomlThemes.length} themes from absolute path`,
-            );
-          }
-        } catch (error) {
-          console.log("ThemeLoader: Failed to load from absolute path:", error);
-        }
+        console.log(
+          "ThemeLoader: No TOML themes found in configured directories; skipping absolute path fallback",
+        );
       }
 
       console.log(
@@ -92,7 +85,16 @@ export class ThemeLoader extends BaseThemeExtension {
       });
 
       // Cache the themes in Rust backend for faster access
-      await invoke("cache_themes", { themes: tomlThemes });
+      try {
+        const hasTauri =
+          typeof (window as any)?.__TAURI_INTERNALS__ !== "undefined" ||
+          typeof (window as any)?.__TAURI__ !== "undefined";
+        if (hasTauri) {
+          await invoke("cache_themes", { themes: tomlThemes });
+        }
+      } catch (e) {
+        console.log("ThemeLoader: Skipping cache_themes in browser dev:", e);
+      }
 
       console.log(`ThemeLoader: Converted, registered, and cached ${this.themes.length} themes`);
     } catch (error) {

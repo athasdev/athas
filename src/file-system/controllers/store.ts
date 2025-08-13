@@ -60,7 +60,7 @@ export const useFileSystemStore = createSelectors(
         });
 
         const selected = await openFolder();
-
+        // In browser dev (no Tauri), openFolder returns null; bail gracefully
         if (!selected) {
           set((state) => {
             state.isFileTreeLoading = false;

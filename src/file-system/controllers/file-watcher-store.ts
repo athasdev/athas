@@ -5,6 +5,18 @@ import { combine } from "zustand/middleware";
 import { LspClient } from "../../lib/lsp/lsp-client";
 import { useBufferStore } from "../../stores/buffer-store";
 
+// Detect Tauri environment to avoid calling APIs in plain browser dev
+const isTauriEnv = (): boolean => {
+  try {
+    return (
+      typeof window !== "undefined" &&
+      (Boolean((window as any).__TAURI_INTERNALS__) || Boolean((window as any).__TAURI__))
+    );
+  } catch {
+    return false;
+  }
+};
+
 interface FileChangeEvent {
   path: string;
   event_type: "created" | "modified" | "deleted";
@@ -24,6 +36,10 @@ export const useFileWatcherStore = create(
     setProjectRoot: async (path: string) => {
       console.log(`📁 setProjectRoot called with path: ${path}`);
       try {
+        if (!isTauriEnv()) {
+          console.warn("setProjectRoot: Tauri not detected; skipping in browser dev");
+          return;
+        }
         await invoke("set_project_root", { path });
         console.log(`✅ Started watching project root: ${path}`);
 
@@ -49,6 +65,10 @@ export const useFileWatcherStore = create(
       }
 
       try {
+        if (!isTauriEnv()) {
+          console.warn("startWatching: Tauri not detected; skipping in browser dev");
+          return;
+        }
         await invoke("start_watching", { path });
         set((state) => ({
           watchedPaths: new Set(state.watchedPaths).add(path),
@@ -66,6 +86,10 @@ export const useFileWatcherStore = create(
       }
 
       try {
+        if (!isTauriEnv()) {
+          console.warn("stopWatching: Tauri not detected; skipping in browser dev");
+          return;
+        }
         await invoke("stop_watching", { path });
         set((state) => {
           const newSet = new Set(state.watchedPaths);
@@ -121,6 +145,10 @@ export const useFileWatcherStore = create(
 
 // Initialize event listener (called only once)
 export async function initializeFileWatcherListener() {
+  if (!isTauriEnv()) {
+    console.warn("initializeFileWatcherListener: Tauri not detected; skipping in browser dev");
+    return;
+  }
   // Clean up existing listener first
   await cleanupFileWatcherListener();
 

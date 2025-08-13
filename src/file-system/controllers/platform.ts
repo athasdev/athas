@@ -8,12 +8,42 @@ import {
   remove,
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
-import { type } from "@tauri-apps/plugin-os";
 
 /**
- * Check if the current platform is macOS
+ * Returns true if running inside Tauri WebView (v2 detection)
  */
-export const isMac = () => type() === "macos";
+const isTauriEnv = (): boolean => {
+  try {
+    // Tauri v2 exposes __TAURI_INTERNALS__ and polyfilled window.__TAURI__
+    return (
+      typeof window !== "undefined" &&
+      Boolean((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__)
+    );
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Check if the current platform is macOS without relying on Tauri plugin APIs,
+ * so the check also works in plain browser dev (bun vite)
+ */
+export const isMac = (): boolean => {
+  if (typeof navigator !== "undefined") {
+    const platform = navigator.platform || "";
+    const ua = navigator.userAgent || "";
+    if (/Mac/i.test(platform) || /Mac OS X/i.test(ua)) return true;
+  }
+  // In Tauri env we can still be more accurate via process.platform if available
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyWindow = window as any;
+    if (isTauriEnv() && anyWindow?.process?.platform) {
+      return anyWindow.process.platform === "darwin";
+    }
+  } catch {}
+  return false;
+};
 
 /**
  * Read a text file from the filesystem
@@ -64,11 +94,12 @@ export async function deletePath(path: string): Promise<void> {
  * Open a folder selection dialog
  */
 export async function openFolder(): Promise<string | null> {
-  const selected = await open({
-    directory: true,
-    multiple: false,
-  });
-
+  // Avoid calling Tauri dialog in plain browser dev
+  if (!isTauriEnv()) {
+    console.warn("openFolder: Tauri not detected; skipping folder dialog in browser dev");
+    return null;
+  }
+  const selected = await open({ directory: true, multiple: false });
   return selected as string | null;
 }
 
