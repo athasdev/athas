@@ -26,7 +26,7 @@ export const calculateCursorPosition = (offset: number, lines: string[]): Positi
     column: lines[lines.length - 1].length,
     offset: lines.reduce(
       (sum, line, idx) => sum + line.length + (idx < lines.length - 1 ? 1 : 0),
-      0
+      0,
     ),
   };
 };
@@ -37,7 +37,7 @@ export const calculateCursorPosition = (offset: number, lines: string[]): Positi
 export const calculateOffsetFromPosition = (
   line: number,
   column: number,
-  lines: string[]
+  lines: string[],
 ): number => {
   let offset = 0;
 
@@ -68,7 +68,7 @@ export const getLineHeight = (fontSize: number): number => {
  */
 export const getCharWidth = (
   fontSize: number,
-  fontFamily: string = "JetBrains Mono, monospace"
+  fontFamily: string = "JetBrains Mono, monospace",
 ): number => {
   // Get the actual font family being used in the editor
   const editorFontFamily =

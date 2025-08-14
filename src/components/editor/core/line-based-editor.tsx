@@ -4,8 +4,8 @@ import { useEditorLayoutStore } from "@/stores/editor-layout-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import "@/styles/editor-line-based.css";
 import "@/styles/token-theme.css";
-import type { Position } from "@/types/editor-types";
 import { memo, useEffect, useRef } from "react";
+import type { Position } from "@/types/editor-types";
 import { Cursor } from "../overlays/cursor";
 import { DecorationLayer } from "../overlays/decoration-layer";
 import { EditorViewport } from "../rendering/editor-viewport";
@@ -85,7 +85,7 @@ export const LineBasedEditor = memo<LineBasedEditorProps>(
         </EditorLayers>
       </div>
     );
-  }
+  },
 );
 
 LineBasedEditor.displayName = "LineBasedEditor";

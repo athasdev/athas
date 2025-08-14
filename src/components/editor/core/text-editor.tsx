@@ -1,3 +1,5 @@
+import { readText } from "@tauri-apps/plugin-clipboard-manager";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { basicEditingExtension } from "@/extensions/basic-editing-extension";
 import { editorAPI } from "@/extensions/editor-api";
 import { extensionManager } from "@/extensions/extension-manager";
@@ -16,8 +18,6 @@ import { useEditorViewStore } from "@/stores/editor-view-store";
 import { useLspStore } from "@/stores/lsp-store";
 import type { Position } from "@/types/editor-types";
 import { calculateCursorPosition, calculateOffsetFromPosition } from "@/utils/editor-position";
-import { readText } from "@tauri-apps/plugin-clipboard-manager";
-import { useCallback, useEffect, useRef, useState } from "react";
 import { CompletionDropdown } from "../overlays/completion-dropdown";
 import EditorContextMenu from "../overlays/editor-context-menu";
 import { LineBasedEditor } from "./line-based-editor";
@@ -57,7 +57,7 @@ export function TextEditor() {
 
   // Handle textarea input
   const handleTextareaChange = (
-    e: React.ChangeEvent<HTMLTextAreaElement> | React.FormEvent<HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLTextAreaElement> | React.FormEvent<HTMLTextAreaElement>,
   ) => {
     const textarea = e.currentTarget;
     const newValue = textarea.value;
@@ -336,7 +336,7 @@ export function TextEditor() {
       (state) => ({ cursor: state.cursorPosition, selection: state.selection }),
       ({ cursor, selection }) => {
         editorAPI.updateCursorAndSelection(cursor, selection ?? null);
-      }
+      },
     );
     return unsubscribe;
   }, []);
@@ -428,7 +428,7 @@ export function TextEditor() {
       // Update cursor position
       handleSelectionChange();
     },
-    [handleSelectionChange]
+    [handleSelectionChange],
   );
 
   const handleLineBasedSelection = useCallback(
@@ -445,7 +445,7 @@ export function TextEditor() {
       // Update visual selection
       handleSelectionChange();
     },
-    [handleSelectionChange]
+    [handleSelectionChange],
   );
 
   // Handle applying completion
@@ -475,7 +475,7 @@ export function TextEditor() {
         }
       }, 0);
     },
-    [content, onChange, updateBufferContent, activeBufferId, lspActions]
+    [content, onChange, updateBufferContent, activeBufferId, lspActions],
   );
 
   // Context menu handlers
@@ -623,7 +623,7 @@ export function TextEditor() {
         const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
         const currentLine = content.slice(lineStart, actualLineEnd);
         const newContent = `${content.slice(0, actualLineEnd)}\n${currentLine}${content.slice(
-          actualLineEnd
+          actualLineEnd,
         )}`;
 
         onChange?.(newContent);

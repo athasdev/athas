@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { extensionManager } from "@/extensions/extension-manager";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
@@ -6,8 +8,6 @@ import { useEditorLayoutStore } from "@/stores/editor-layout-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
 import type { Decoration, Position } from "@/types/editor-types";
-import { useMemo } from "react";
-import { useShallow } from "zustand/react/shallow";
 
 interface RenderedDecoration {
   key: string;
