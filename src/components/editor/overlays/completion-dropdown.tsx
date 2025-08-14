@@ -1,11 +1,12 @@
-import { memo } from "react";
-import type { CompletionItem } from "vscode-languageserver-protocol";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useEditorCompletionStore } from "@/stores/editor-completion-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorLayoutStore } from "@/stores/editor-layout-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { highlightMatches } from "@/utils/fuzzy-matcher";
+import { memo } from "react";
+import type { CompletionItem } from "vscode-languageserver-protocol";
 
 interface CompletionDropdownProps {
   onApplyCompletion?: (completion: CompletionItem) => void;
@@ -24,13 +25,13 @@ export const CompletionDropdown = memo(({ onApplyCompletion }: CompletionDropdow
   const scrollLeft = useEditorLayoutStore.use.scrollLeft();
 
   const { lineHeight, charWidth, gutterWidth } = useEditorLayout();
-
-  const GUTTER_MARGIN = 8; // Same as cursor component
+  const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
 
   if (!isLspCompletionVisible) return null;
 
-  // Calculate position same as cursor but offset below the current line
-  const x = gutterWidth + GUTTER_MARGIN + cursorPosition.column * charWidth - scrollLeft;
+  // Calculate position using the same logic as cursor positioning
+  const contentPadding = showLineNumbers ? 0 : 16;
+  const x = gutterWidth + contentPadding + cursorPosition.column * charWidth - scrollLeft;
   const y = (cursorPosition.line + 1) * lineHeight - scrollTop; // +1 to appear below current line
 
   const handleSelect = (item: CompletionItem) => {

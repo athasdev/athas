@@ -26,7 +26,7 @@ export const calculateCursorPosition = (offset: number, lines: string[]): Positi
     column: lines[lines.length - 1].length,
     offset: lines.reduce(
       (sum, line, idx) => sum + line.length + (idx < lines.length - 1 ? 1 : 0),
-      0,
+      0
     ),
   };
 };
@@ -37,7 +37,7 @@ export const calculateCursorPosition = (offset: number, lines: string[]): Positi
 export const calculateOffsetFromPosition = (
   line: number,
   column: number,
-  lines: string[],
+  lines: string[]
 ): number => {
   let offset = 0;
 
@@ -68,26 +68,36 @@ export const getLineHeight = (fontSize: number): number => {
  */
 export const getCharWidth = (
   fontSize: number,
-  fontFamily: string = "JetBrains Mono, monospace",
+  fontFamily: string = "JetBrains Mono, monospace"
 ): number => {
+  // Get the actual font family being used in the editor
+  const editorFontFamily =
+    getComputedStyle(document.documentElement).getPropertyValue("--editor-font-family").trim() ||
+    fontFamily;
+
   // Create a temporary element to measure character width
   const measureElement = document.createElement("span");
   measureElement.style.position = "absolute";
   measureElement.style.visibility = "hidden";
   measureElement.style.whiteSpace = "pre";
   measureElement.style.fontSize = `${fontSize}px`;
-  measureElement.style.fontFamily = fontFamily;
-  measureElement.style.lineHeight = "1";
+  measureElement.style.fontFamily = editorFontFamily;
+  measureElement.style.lineHeight = `${getLineHeight(fontSize)}px`; // Use same line height as editor
   measureElement.style.padding = "0";
   measureElement.style.margin = "0";
   measureElement.style.border = "none";
+  measureElement.style.boxSizing = "border-box";
 
-  measureElement.textContent = "M";
+  // Measure multiple characters for better accuracy
+  measureElement.textContent = "MMMMMMMMM"; // 9 characters
 
   document.body.appendChild(measureElement);
-  const width = measureElement.getBoundingClientRect().width;
+  const totalWidth = measureElement.getBoundingClientRect().width;
   document.body.removeChild(measureElement);
 
+  // Calculate average character width
+  const charWidth = totalWidth / 9;
+
   // Round to avoid subpixel issues
-  return Math.round(width * 100) / 100;
+  return Math.round(charWidth * 100) / 100;
 };

@@ -1,5 +1,3 @@
-import { readText } from "@tauri-apps/plugin-clipboard-manager";
-import { useCallback, useEffect, useRef, useState } from "react";
 import { basicEditingExtension } from "@/extensions/basic-editing-extension";
 import { editorAPI } from "@/extensions/editor-api";
 import { extensionManager } from "@/extensions/extension-manager";
@@ -18,6 +16,8 @@ import { useEditorViewStore } from "@/stores/editor-view-store";
 import { useLspStore } from "@/stores/lsp-store";
 import type { Position } from "@/types/editor-types";
 import { calculateCursorPosition, calculateOffsetFromPosition } from "@/utils/editor-position";
+import { readText } from "@tauri-apps/plugin-clipboard-manager";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CompletionDropdown } from "../overlays/completion-dropdown";
 import EditorContextMenu from "../overlays/editor-context-menu";
 import { LineBasedEditor } from "./line-based-editor";
@@ -57,7 +57,7 @@ export function TextEditor() {
 
   // Handle textarea input
   const handleTextareaChange = (
-    e: React.ChangeEvent<HTMLTextAreaElement> | React.FormEvent<HTMLTextAreaElement>,
+    e: React.ChangeEvent<HTMLTextAreaElement> | React.FormEvent<HTMLTextAreaElement>
   ) => {
     const textarea = e.currentTarget;
     const newValue = textarea.value;
@@ -336,7 +336,7 @@ export function TextEditor() {
       (state) => ({ cursor: state.cursorPosition, selection: state.selection }),
       ({ cursor, selection }) => {
         editorAPI.updateCursorAndSelection(cursor, selection ?? null);
-      },
+      }
     );
     return unsubscribe;
   }, []);
@@ -428,7 +428,7 @@ export function TextEditor() {
       // Update cursor position
       handleSelectionChange();
     },
-    [handleSelectionChange],
+    [handleSelectionChange]
   );
 
   const handleLineBasedSelection = useCallback(
@@ -445,7 +445,7 @@ export function TextEditor() {
       // Update visual selection
       handleSelectionChange();
     },
-    [handleSelectionChange],
+    [handleSelectionChange]
   );
 
   // Handle applying completion
@@ -475,7 +475,7 @@ export function TextEditor() {
         }
       }, 0);
     },
-    [content, onChange, updateBufferContent, activeBufferId, lspActions],
+    [content, onChange, updateBufferContent, activeBufferId, lspActions]
   );
 
   // Context menu handlers
@@ -622,7 +622,9 @@ export function TextEditor() {
         const lineEnd = content.indexOf("\n", cursorPos);
         const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
         const currentLine = content.slice(lineStart, actualLineEnd);
-        const newContent = `${content.slice(0, actualLineEnd)}\n${currentLine}${content.slice(actualLineEnd)}`;
+        const newContent = `${content.slice(0, actualLineEnd)}\n${currentLine}${content.slice(
+          actualLineEnd
+        )}`;
 
         onChange?.(newContent);
         if (activeBufferId) {
@@ -764,17 +766,24 @@ export function TextEditor() {
 
   // Get layout values for proper textarea positioning - use the same values as visual editor
   const gutterWidth = layoutGutterWidth;
-  const GUTTER_MARGIN = 8; // mr-2 in Tailwind (0.5rem = 8px)
+  const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
+
+  // Calculate the actual content offset to match LineWithContent layout exactly
+  // When line numbers are shown: gutter takes full gutterWidth, content starts right after
+  // When line numbers are hidden: gutter takes 16px, content has 16px paddingLeft
+  const actualGutterWidth = showLineNumbers ? gutterWidth : 16;
+  const contentPadding = showLineNumbers ? 0 : 16;
+  const textareaLeftOffset = actualGutterWidth + contentPadding;
 
   // Line-based rendering
   return (
     <div ref={containerRef} className="virtual-editor-container relative h-full overflow-hidden">
       {/* Gutter area overlay to prevent selection in line numbers */}
-      {gutterWidth > 0 && (
+      {actualGutterWidth > 0 && (
         <div
           className="pointer-events-auto absolute top-0 left-0 h-full select-none"
           style={{
-            width: `${gutterWidth + GUTTER_MARGIN}px`,
+            width: `${actualGutterWidth}px`,
             zIndex: 2,
           }}
           onMouseDown={(e) => e.preventDefault()}
@@ -799,12 +808,12 @@ export function TextEditor() {
         disabled={disabled}
         className="absolute resize-none overflow-auto border-none bg-transparent text-transparent caret-transparent outline-none"
         style={{
-          left: `${gutterWidth + GUTTER_MARGIN}px`,
+          left: `${textareaLeftOffset}px`,
           top: 0,
           right: 0,
           bottom: 0,
           fontSize: `${fontSize}px`,
-          fontFamily: "JetBrains Mono, monospace",
+          fontFamily: "var(--editor-font-family, 'JetBrains Mono', monospace)",
           lineHeight: `${lineHeight}px`,
           padding: 0,
           paddingBottom: `${20 * lineHeight}px`, // Add 20 lines worth of bottom padding
