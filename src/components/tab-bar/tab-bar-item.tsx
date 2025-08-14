@@ -51,6 +51,7 @@ const TabBarItem = memo(function TabBarItem({
         draggable
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
+        onAuxClick={() => handleTabClose(buffer.id)}
       >
         {isActive && <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-accent" />}
         <div className="grid size-3 max-h-3 max-w-3 shrink-0 place-content-center py-3">
