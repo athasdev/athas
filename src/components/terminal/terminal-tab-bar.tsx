@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import {
   Copy,
   Maximize2,
@@ -11,8 +12,9 @@ import {
   X,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
-import type { Terminal } from "@/types/terminal";
+import type { Shell, Terminal } from "@/types/terminal";
 import { cn } from "@/utils/cn";
+import Dropdown from "../ui/dropdown";
 import KeybindingBadge from "../ui/keybinding-badge";
 import Tooltip from "../ui/tooltip";
 
@@ -189,6 +191,8 @@ const TerminalTabBar = ({
   const [isDragging, setIsDragging] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dropTarget, setDropTarget] = useState<number | null>(null);
+  const [shells, setShells] = useState<Shell[]>([]);
+  const [selectedShell, setSelectedShell] = useState<string>("");
   const [dragStartPosition, setDragStartPosition] = useState<{
     x: number;
     y: number;
@@ -325,6 +329,31 @@ const TerminalTabBar = ({
   });
 
   useEffect(() => {
+    async function fetchShells() {
+      try {
+        // invoke it from the rust source
+        const res: Shell[] = await invoke("get_shells");
+        setShells(res);
+      } catch (err) {
+        console.error(`Failed to load available shells ${err}`);
+      }
+    }
+
+    fetchShells();
+    // TODO: Change placeholder code
+    // async function fetchShellExecutable(){
+    // same as fetchShell, but will search for it's respectable executable found in PATH
+    // try {
+    //   // invoke it from the rust source
+    //   const res: Shell[] = await invoke("get_executable");
+    //   setShells(res);
+    // } catch (err) {
+    //   console.error(`Failed to load executable for shell ${err}`);
+    // }
+    // }
+  }, []);
+
+  useEffect(() => {
     if (draggedIndex === null) return;
 
     const move = (e: MouseEvent) => handleMouseMove(e);
@@ -352,17 +381,34 @@ const TerminalTabBar = ({
           <span className="font-mono text-text-lighter text-xs">No terminals</span>
         </div>
         {onNewTerminal && (
-          <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-            <button
-              onClick={onNewTerminal}
-              className={cn(
-                "flex items-center gap-0.5 px-1.5 py-1",
-                "text-text-lighter text-xs transition-colors hover:bg-hover",
-              )}
-            >
-              <Plus size={9} />
-            </button>
-          </Tooltip>
+          <div className="flex items-center gap-1">
+            <Tooltip content="New Terminal (Cmd+T)" side="bottom">
+              <button
+                onClick={onNewTerminal}
+                className={cn(
+                  "flex items-center gap-0.5 px-1.5 py-1",
+                  "text-text-lighter text-xs transition-colors hover:bg-hover",
+                )}
+              >
+                <Plus size={9} />
+              </button>
+            </Tooltip>
+            {/* Shell selecting menu */}
+            <Tooltip content="Select a shell" side="top">
+              <Dropdown
+                value={selectedShell}
+                options={shells.map((shell) => ({
+                  value: shell.id,
+                  label: shell.name,
+                }))}
+                onChange={setSelectedShell}
+                className={cn(
+                  "flex items-center gap-0.5 px-1.5 py-1",
+                  "text-text-lighter text-xs transition-colors hover:bg-hover",
+                )}
+              ></Dropdown>
+            </Tooltip>
+          </div>
         )}
       </div>
     );
@@ -495,20 +541,19 @@ const TerminalTabBar = ({
         {/* Right side - Action buttons */}
         <div className="flex items-center gap-0.5">
           {/* New Terminal Button */}
-          {onNewTerminal && (
+          <div className="flex items-center gap-1">
             <Tooltip content="New Terminal (Cmd+T)" side="bottom">
               <button
                 onClick={onNewTerminal}
                 className={cn(
-                  "flex flex-shrink-0 cursor-pointer items-center p-1",
-                  "text-text-lighter transition-colors hover:bg-hover",
+                  "flex items-center gap-0.5 px-1.5 py-1",
+                  "text-text-lighter text-xs transition-colors hover:bg-hover",
                 )}
               >
-                <Plus size={12} />
+                <Plus size={9} />
               </button>
             </Tooltip>
-          )}
-
+          </div>
           {/* Split View Button */}
           {onSplitView && (
             <Tooltip
@@ -528,7 +573,6 @@ const TerminalTabBar = ({
               </button>
             </Tooltip>
           )}
-
           {/* Full Screen Button */}
           {onFullScreen && (
             <Tooltip
@@ -546,7 +590,6 @@ const TerminalTabBar = ({
               </button>
             </Tooltip>
           )}
-
           {/* Close Panel Button */}
           {onClosePanel && (
             <Tooltip content="Close Terminal Panel" side="bottom">
@@ -561,7 +604,46 @@ const TerminalTabBar = ({
               </button>
             </Tooltip>
           )}
+          {/* Shell selecting menu */}
+          <Tooltip content="Select a shell" side="top">
+            <Dropdown
+              value={selectedShell}
+              options={shells.map((shell) => ({
+                value: shell.id,
+                label: shell.name,
+              }))}
+              onChange={setSelectedShell}
+              className={cn(
+                "flex items-center gap-0.5 px-1.5 py-1",
+                "text-text-lighter text-xs transition-colors hover:bg-hover",
+              )}
+            ></Dropdown>
+          </Tooltip>
+
+          {/*<Tooltip content="Select a shell" side="top">
+            <Dropdown
+              onChange={(val) => setShell(val)}
+              value={shell}
+              options={[
+                // The options for unix shells will be dimmed (not supported on windows)
+                // They are hardcoded for now until we connect the rust xterm to Dropdown component
+                { value: "powershell", label: "Windows Powershell" },
+                { value: "pwsh", label: "Powershell" },
+                { value: "nu", label: "Nushell" },
+                { value: "cmd", label: "Command Prompt" },
+                { value: "bash", label: "Git Bash" },
+
+                // { value: "zsh", label: "Zsh" },
+                // { value: "fish", label: "Fish" },
+              ]}
+              className={cn(
+                "flex items-center gap-0.5 px-1.5 py-1",
+                "text-text-lighter text-xs transition-colors hover:bg-hover",
+              )}
+            />
+          </Tooltip>*/}
         </div>
+
         {/* Floating tab name while dragging */}
         {isDragging && draggedIndex !== null && dragCurrentPosition && (
           <div

@@ -5,6 +5,7 @@ pub mod fuzzy;
 pub mod git;
 pub mod github;
 pub mod lsp;
+pub mod shell;
 pub mod sqlite;
 pub mod terminal;
 pub mod theme;

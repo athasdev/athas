@@ -1,3 +1,4 @@
+use crate::shell::Shell;
 use anyhow::{Result, anyhow};
 use portable_pty::{CommandBuilder, PtyPair, PtySize};
 use serde::{Deserialize, Serialize};
@@ -13,7 +14,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct XtermConfig {
    pub working_directory: Option<String>,
-   pub shell: Option<String>,
+   pub shell: Option<Shell>,
    pub environment: Option<HashMap<String, String>>,
    pub rows: u16,
    pub cols: u16,
@@ -64,8 +65,17 @@ impl XtermConnection {
          })
       };
 
-      let shell_path = config.shell.as_deref().unwrap_or(&default_shell);
-      let mut cmd = CommandBuilder::new(shell_path);
+      let shell_path = if let Some(shell) = &config.shell {
+         if cfg!(target_os = "windows") {
+            shell.exec_win.clone().unwrap_or(default_shell.clone())
+         } else {
+            shell.exec_unix.clone().unwrap_or(default_shell.clone())
+         }
+      } else {
+         default_shell.clone()
+      };
+
+      let mut cmd = CommandBuilder::new(&shell_path);
 
       if let Some(working_dir) = &config.working_directory {
          cmd.cwd(working_dir);
@@ -76,7 +86,7 @@ impl XtermConnection {
       cmd.env("COLORTERM", "truecolor");
       cmd.env("TERM_PROGRAM", "athas");
       cmd.env("TERM_PROGRAM_VERSION", "1.0.0");
-      cmd.env("SHELL", shell_path);
+      cmd.env("SHELL", &shell_path);
       cmd.env("FORCE_COLOR", "1");
       cmd.env("CLICOLOR", "1");
       cmd.env("CLICOLOR_FORCE", "1");
