@@ -6,29 +6,35 @@ export const ToastContainer = () => {
   const { toasts, dismissToast } = useToast();
 
   return (
-    <div className="fixed right-4 bottom-4 z-50 flex flex-col gap-2 text-text">
+    <div className="fixed right-4 bottom-16 z-50 flex flex-col gap-2 text-text">
       {toasts.map((toast) => (
         <div
           key={toast.id}
           className={cn(
-            "relative flex min-w-[300px] max-w-[400px] flex-col gap-3",
+            "relative flex min-w-[250px] max-w-[320px] flex-col gap-2",
             toast.isExiting ? "animate-slide-out-right" : "animate-slide-in-right",
-            "rounded border border-border bg-primary-bg px-4 py-3 shadow",
+            "rounded-md border border-border/50 bg-secondary-bg/95 px-3 py-2 shadow-sm backdrop-blur-sm",
           )}
         >
-          <div className="flex items-start gap-3">
-            {toast.type === "error" && <CircleX size={14} className="mt-1 text-error" />}
-            {toast.type === "warning" && <CircleAlert size={14} className="mt-1 text-warning" />}
-            {toast.type === "success" && <CircleCheck size={14} className="mt-1 text-success" />}
-            {toast.type === "info" && <CircleQuestionMark size={14} className="mt-1 text-info" />}
+          <div className="flex items-start gap-2">
+            {toast.type === "error" && <CircleX size={12} className="mt-0.5 text-error/80" />}
+            {toast.type === "warning" && (
+              <CircleAlert size={12} className="mt-0.5 text-warning/80" />
+            )}
+            {toast.type === "success" && (
+              <CircleCheck size={12} className="mt-0.5 text-success/80" />
+            )}
+            {toast.type === "info" && (
+              <CircleQuestionMark size={12} className="mt-0.5 text-info/80" />
+            )}
 
-            <p className="flex-1 text-sm">{toast.message}</p>
+            <p className="flex-1 text-sm text-text/90">{toast.message}</p>
 
             <button
               onClick={() => dismissToast(toast.id)}
-              className="rounded p-1 transition-colors hover:bg-white/10"
+              className="rounded p-0.5 transition-colors hover:bg-white/10"
             >
-              <X size={14} />
+              <X size={12} className="text-text-lighter" />
             </button>
           </div>
 

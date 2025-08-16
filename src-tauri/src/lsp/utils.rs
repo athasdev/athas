@@ -72,3 +72,22 @@ pub fn find_global_binary(binary_name: &str) -> Option<PathBuf> {
       None
    }
 }
+
+pub fn find_in_path(binary_name: &str) -> Option<PathBuf> {
+   let output = Command::new("which")
+      .arg(binary_name)
+      .output()
+      .ok()?;
+
+   if output.status.success() {
+      let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+      let path = PathBuf::from(path_str);
+      if path.exists() {
+         Some(path)
+      } else {
+         None
+      }
+   } else {
+      None
+   }
+}

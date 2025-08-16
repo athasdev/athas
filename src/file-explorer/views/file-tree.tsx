@@ -20,6 +20,10 @@ import {
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+
+// Performance optimizations
+const GIT_STATUS_DEBOUNCE_MS = 500;
+
 import { findFileInTree } from "@/file-system/controllers/file-tree-utils";
 import { moveFile, readDirectory, readFile } from "@/file-system/controllers/platform";
 import type { ContextMenuState, FileEntry } from "@/file-system/models/app";
@@ -114,36 +118,44 @@ const FileTree = ({
     [userIgnore, rootFolderPath],
   );
 
-  // Track scroll for deepest sticky folder detection
+  // Track scroll for deepest sticky folder detection with throttling
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
+    let isThrottled = false;
+
     const handleScroll = () => {
-      // Find all sticky folders currently visible
-      const stickyFolders = container.querySelectorAll(".file-tree-item-dir");
-      let deepest = null;
-      let maxDepth = -1;
+      if (isThrottled) return;
 
-      stickyFolders.forEach((folder) => {
-        const rect = folder.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
+      isThrottled = true;
+      requestAnimationFrame(() => {
+        // Find all sticky folders currently visible
+        const stickyFolders = container.querySelectorAll(".file-tree-item-dir");
+        let deepest = null;
+        let maxDepth = -1;
 
-        // Check if folder is sticky (at its sticky position)
-        if (rect.top <= containerRect.top + 100) {
-          // 100px buffer for nested folders
-          const depth = parseInt(folder.getAttribute("data-depth") || "0");
-          if (depth > maxDepth) {
-            maxDepth = depth;
-            deepest = folder.getAttribute("data-path");
+        stickyFolders.forEach((folder) => {
+          const rect = folder.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+
+          // Check if folder is sticky (at its sticky position)
+          if (rect.top <= containerRect.top + 100) {
+            // 100px buffer for nested folders
+            const depth = parseInt(folder.getAttribute("data-depth") || "0");
+            if (depth > maxDepth) {
+              maxDepth = depth;
+              deepest = folder.getAttribute("data-path");
+            }
           }
-        }
-      });
+        });
 
-      setDeepestStickyFolder(deepest);
+        setDeepestStickyFolder(deepest);
+        isThrottled = false;
+      });
     };
 
-    container.addEventListener("scroll", handleScroll);
+    container.addEventListener("scroll", handleScroll, { passive: true });
     // Also run on mount
     handleScroll();
 
@@ -178,22 +190,28 @@ const FileTree = ({
   }, [rootFolderPath]);
 
   useEffect(() => {
-    const loadGitStatus = async () => {
-      if (!rootFolderPath) {
-        setGitStatus(null);
-        return;
-      }
+    const debounceTimer = setTimeout(() => {
+      const loadGitStatus = async () => {
+        if (!rootFolderPath) {
+          setGitStatus(null);
+          return;
+        }
 
-      try {
-        const status = await getGitStatus(rootFolderPath);
-        setGitStatus(status);
-      } catch (error) {
-        console.error("Failed to load git status:", error);
-        setGitStatus(null);
-      }
+        try {
+          const status = await getGitStatus(rootFolderPath);
+          setGitStatus(status);
+        } catch (error) {
+          console.error("Failed to load git status:", error);
+          setGitStatus(null);
+        }
+      };
+
+      loadGitStatus();
+    }, GIT_STATUS_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeout(debounceTimer);
     };
-
-    loadGitStatus();
   }, [rootFolderPath, files]);
 
   const isGitIgnored = useCallback(

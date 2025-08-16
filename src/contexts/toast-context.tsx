@@ -15,7 +15,8 @@ interface Toast {
 
 interface ToastContextType {
   toasts: Toast[];
-  showToast: (toast: Omit<Toast, "id">) => void;
+  showToast: (toast: Omit<Toast, "id">) => string; // Return toast ID
+  updateToast: (id: string, updates: Partial<Omit<Toast, "id">>) => void;
   dismissToast: (id: string) => void;
 }
 
@@ -34,6 +35,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, 300);
   }, []);
 
+  const updateToast = useCallback((id: string, updates: Partial<Omit<Toast, "id">>) => {
+    setToasts((prev) => prev.map((toast) => (toast.id === id ? { ...toast, ...updates } : toast)));
+  }, []);
+
   const showToast = useCallback(
     (toast: Omit<Toast, "id">) => {
       const id = Date.now().toString();
@@ -46,12 +51,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           dismissToast(id);
         }, toast.duration || 5000);
       }
+
+      return id; // Return the toast ID
     },
     [dismissToast],
   );
 
   return (
-    <ToastContext.Provider value={{ toasts, showToast, dismissToast }}>
+    <ToastContext.Provider value={{ toasts, showToast, updateToast, dismissToast }}>
       {children}
     </ToastContext.Provider>
   );

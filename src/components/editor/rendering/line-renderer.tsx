@@ -1,4 +1,5 @@
 import type React from "react";
+import { memo } from "react";
 import type { Decoration, LineToken } from "@/types/editor-types";
 import { cn } from "@/utils/cn";
 
@@ -11,7 +12,8 @@ interface LineRendererProps {
   searchHighlight?: { start: number; end: number }[];
 }
 
-export const LineRenderer = ({
+// Memoized line renderer for performance
+const LineRendererInternal = ({
   lineNumber,
   content,
   tokens,
@@ -77,3 +79,16 @@ export const LineRenderer = ({
     </div>
   );
 };
+
+// Export memoized version for performance
+export const LineRenderer = memo(LineRendererInternal, (prevProps, nextProps) => {
+  // Custom comparison for optimal re-rendering
+  return (
+    prevProps.lineNumber === nextProps.lineNumber &&
+    prevProps.content === nextProps.content &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.tokens.length === nextProps.tokens.length &&
+    prevProps.decorations.length === nextProps.decorations.length &&
+    (prevProps.searchHighlight?.length || 0) === (nextProps.searchHighlight?.length || 0)
+  );
+});

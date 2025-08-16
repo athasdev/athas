@@ -1,5 +1,6 @@
 import { ClockIcon, File } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDebounce } from "use-debounce";
 import { shouldIgnoreInCommandPalette } from "@/components/command/constants/ignored-patterns";
 import { useRecentFilesStore } from "@/file-system/controllers/recent-files-store";
 import { useFileSystemStore } from "@/file-system/controllers/store";
@@ -76,6 +77,7 @@ const CommandBar = () => {
   const isVisible = isCommandBarVisible;
   const onClose = () => setIsCommandBarVisible(false);
   const [query, setQuery] = useState("");
+  const [debouncedQuery] = useDebounce(query, 150); // Debounce search for better performance
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -87,17 +89,21 @@ const CommandBar = () => {
   const { addOrUpdateRecentFile, getRecentFilesOrderedByFrecency } = useRecentFilesStore();
   const recentFiles = getRecentFilesOrderedByFrecency();
 
-  // Load all project files when component mounts
+  // Load all project files when component mounts or becomes visible
   useEffect(() => {
+    if (!isVisible) return; // Only load when actually needed
+
     getAllProjectFiles().then((allFiles) => {
-      const formattedFiles = allFiles.map((file) => ({
-        name: file.name,
-        path: file.path,
-        isDir: file.isDir,
-      }));
+      const formattedFiles = allFiles
+        .filter((file) => !file.isDir && !shouldIgnoreFile(file.path)) // Pre-filter here
+        .map((file) => ({
+          name: file.name,
+          path: file.path,
+          isDir: file.isDir,
+        }));
       setFiles(formattedFiles);
     });
-  }, [getAllProjectFiles]);
+  }, [getAllProjectFiles, isVisible]); // Only reload when visible
 
   // Update local state when command bar becomes visible
   useEffect(() => {
@@ -179,9 +185,8 @@ const CommandBar = () => {
 
   // Memoize file filtering and sorting
   const { openBufferFiles, recentFilesInResults, otherFiles } = useMemo(() => {
-    // Files are already filtered by the file system store, but we apply additional
-    // command palette specific filtering for extra safety
-    const allFiles = files.filter((entry) => !entry.isDir && !shouldIgnoreFile(entry.path));
+    // Files are already pre-filtered in the useEffect
+    const allFiles = files;
 
     // Get open buffers (excluding active buffer)
     const openBufferPaths = buffers
@@ -195,7 +200,7 @@ const CommandBar = () => {
       .filter((rf) => !activeBuffer || rf.path !== activeBuffer.path)
       .map((rf) => rf.path);
 
-    if (!query.trim()) {
+    if (!debouncedQuery.trim()) {
       // No search query - show open buffers, then recent files by frecency, then alphabetical
       const recent = allFiles
         .filter(
@@ -227,8 +232,8 @@ const CommandBar = () => {
     const scoredFiles = allFiles
       .map((file) => {
         // Score both filename and full path, take the higher score
-        const nameScore = fuzzyScore(file.name, query);
-        const pathScore = fuzzyScore(file.path, query);
+        const nameScore = fuzzyScore(file.name, debouncedQuery);
+        const pathScore = fuzzyScore(file.path, debouncedQuery);
         const score = Math.max(nameScore, pathScore);
 
         return { file, score };
@@ -284,7 +289,7 @@ const CommandBar = () => {
       recentFilesInResults: recent.slice(0, 20 - openBuffers.length),
       otherFiles: others.slice(0, 20 - openBuffers.length - recent.length),
     };
-  }, [files, recentFiles, query, buffers, activeBufferId, activeBuffer]);
+  }, [files, debouncedQuery, buffers, activeBufferId]); // Use debounced query for better performance
 
   const handleItemSelect = useCallback(
     (path: string) => {
@@ -377,7 +382,11 @@ const CommandBar = () => {
         otherFiles.length === 0 ? (
           <CommandEmpty>
             <div className="font-mono">
-              {query ? "No matching files found" : "No files available"}
+              {debouncedQuery
+                ? "No matching files found"
+                : query
+                  ? "Searching..."
+                  : "No files available"}
             </div>
           </CommandEmpty>
         ) : (

@@ -103,5 +103,6 @@ pub fn lsp_is_language_supported(file_path: String) -> bool {
    let path = PathBuf::from(file_path);
    let extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
 
-   matches!(extension, "ts" | "tsx" | "js" | "jsx")
+   // Support TypeScript, JavaScript, and related files
+   matches!(extension, "ts" | "tsx" | "js" | "jsx" | "mjs" | "cjs" | "json")
 }

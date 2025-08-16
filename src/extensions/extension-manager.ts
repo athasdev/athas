@@ -1,10 +1,18 @@
 import type { Decoration } from "../types/editor-types";
-import type { Command, EditorAPI, EditorExtension, ExtensionContext } from "./extension-types";
+import type {
+  Command,
+  EditorAPI,
+  EditorExtension,
+  Extension,
+  ExtensionContext,
+} from "./extension-types";
 
 class ExtensionManager {
   private extensions: Map<string, EditorExtension> = new Map();
+  private newExtensions: Map<string, Extension> = new Map(); // New extension system
   private contexts: Map<string, ExtensionContext> = new Map();
   private commands: Map<string, Command> = new Map();
+  private registeredCommands: Map<string, (...args: any[]) => any> = new Map(); // New command system
   private keybindings: Map<string, string> = new Map();
   private decorationProviders: Map<string, () => Decoration[]> = new Map();
   private editor: EditorAPI | null = null;
@@ -47,6 +55,18 @@ class ExtensionManager {
       editor: this.editor,
       extensionId,
       storage: this.createExtensionStorage(extensionId),
+      registerCommand: (id: string, handler: (...args: any[]) => any) => {
+        // Legacy support - convert to old command format
+        this.commands.set(id, {
+          id,
+          name: id,
+          execute: handler,
+        });
+      },
+      registerLanguage: (language) => {
+        // Language registration would be implemented here
+        console.log("Registering language:", language);
+      },
     };
 
     // Store extension and context
@@ -159,7 +179,95 @@ class ExtensionManager {
 
   isExtensionLoaded(extensionName: string): boolean {
     const extensionId = this.generateExtensionId(extensionName);
-    return this.extensions.has(extensionId);
+    return this.extensions.has(extensionId) || this.newExtensions.has(extensionId);
+  }
+
+  // New extension system methods
+  async loadNewExtension(extension: Extension): Promise<void> {
+    if (!this.editor) {
+      throw new Error("Editor API not initialized");
+    }
+
+    if (this.newExtensions.has(extension.id)) {
+      throw new Error(`Extension ${extension.id} is already loaded`);
+    }
+
+    // Create enhanced extension context
+    const context: ExtensionContext = {
+      editor: this.editor,
+      extensionId: extension.id,
+      storage: this.createExtensionStorage(extension.id),
+      registerCommand: (id: string, handler: (...args: any[]) => any) => {
+        this.registeredCommands.set(id, handler);
+      },
+      registerLanguage: (language) => {
+        // Language registration would be implemented here
+        console.log("Registering language:", language);
+      },
+    };
+
+    // Store extension and context
+    this.newExtensions.set(extension.id, extension);
+    this.contexts.set(extension.id, context);
+
+    try {
+      // Activate extension
+      await extension.activate(context);
+      console.log(`Extension ${extension.displayName} loaded successfully`);
+    } catch (error) {
+      // Cleanup on failure
+      this.newExtensions.delete(extension.id);
+      this.contexts.delete(extension.id);
+      throw new Error(`Failed to activate extension ${extension.displayName}: ${error}`);
+    }
+  }
+
+  async unloadNewExtension(extensionId: string): Promise<void> {
+    const extension = this.newExtensions.get(extensionId);
+    if (!extension) {
+      throw new Error(`Extension ${extensionId} not found`);
+    }
+
+    try {
+      // Deactivate extension
+      await extension.deactivate();
+    } catch (error) {
+      console.error(`Error deactivating extension ${extensionId}:`, error);
+    }
+
+    // Cleanup commands
+    if (extension.contributes?.commands) {
+      for (const command of extension.contributes.commands) {
+        this.registeredCommands.delete(command.id);
+      }
+    }
+
+    // Remove extension and context
+    this.newExtensions.delete(extensionId);
+    this.contexts.delete(extensionId);
+  }
+
+  executeCommand(commandId: string, ...args: any[]): any {
+    const handler = this.registeredCommands.get(commandId);
+    if (handler) {
+      return handler(...args);
+    }
+
+    // Fallback to old command system
+    const command = this.commands.get(commandId);
+    if (command) {
+      return command.execute(args[0]);
+    }
+
+    throw new Error(`Command ${commandId} not found`);
+  }
+
+  getAllNewExtensions(): Extension[] {
+    return Array.from(this.newExtensions.values());
+  }
+
+  getNewExtension(extensionId: string): Extension | undefined {
+    return this.newExtensions.get(extensionId);
   }
 
   private generateExtensionId(name: string): string {
@@ -236,6 +344,12 @@ class ExtensionManager {
       const handler = (data: any) => extension.onSettingsChange!(data);
       const unsubscribe = this.editor.on("settingsChange", handler);
       handlers.push(["settingsChange", unsubscribe]);
+    }
+
+    if (extension.onKeyDown) {
+      const handler = (data: any) => extension.onKeyDown!(data);
+      const unsubscribe = this.editor.on("keydown", handler);
+      handlers.push(["keydown", unsubscribe]);
     }
 
     // Store handlers for cleanup

@@ -9,6 +9,11 @@ import {
   syntaxHighlightingExtension,
 } from "@/extensions/syntax-highlighting-extension";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
+import {
+  useDebouncedFunction,
+  usePerformanceMonitor,
+  useRAFCallback,
+} from "@/hooks/use-performance";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorCompletionStore } from "@/stores/editor-completion-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
@@ -36,6 +41,9 @@ export function TextEditor() {
   const fontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
   const { addDecoration, removeDecoration } = useEditorDecorationsStore();
+
+  // Performance monitoring
+  const { start: startRender, end: endRender } = usePerformanceMonitor("TextEditor render");
 
   const searchResults = useSearchResultsStore((state) => state.activePathsearchResults);
   const searchDecorations = useMemo(() => {
@@ -82,10 +90,39 @@ export function TextEditor() {
   // Get content as string when needed
   const content = getContent();
 
+  // Debounced LSP completion request
+  const debouncedLSPRequest = useDebouncedFunction(
+    (params: {
+      filePath: string;
+      cursorPos: number;
+      value: string;
+      editorRef: React.RefObject<HTMLDivElement | null>;
+    }) => {
+      if (containerRef.current) {
+        lspActions.requestCompletion({
+          ...params,
+          editorRef: containerRef,
+        });
+      }
+    },
+    150,
+    { leading: false, trailing: true },
+  );
+
+  // RAF-optimized scroll handler
+  const rafScrollHandler = useRAFCallback((targetLineTop: number, viewport: HTMLElement) => {
+    if (targetLineTop < viewport.scrollTop) {
+      viewport.scrollTop = targetLineTop;
+    } else if (targetLineTop + lineHeight > viewport.scrollTop + viewport.clientHeight) {
+      viewport.scrollTop = targetLineTop + lineHeight - viewport.clientHeight;
+    }
+  });
+
   // Handle textarea input
   const handleTextareaChange = (
     e: React.ChangeEvent<HTMLTextAreaElement> | React.FormEvent<HTMLTextAreaElement>,
   ) => {
+    startRender();
     const textarea = e.currentTarget;
     const newValue = textarea.value;
 
@@ -119,18 +156,17 @@ export function TextEditor() {
     const eventData = { content: newValue, changes: [], affectedLines };
     editorAPI.emitEvent("contentChange", eventData);
 
-    // Trigger LSP completion if we're typing
+    // Trigger LSP completion if we're typing (using debounced version)
     if (newValue.length > content.length && selectionStart === selectionEnd) {
-      // Debounce completion requests
-      if (containerRef.current) {
-        lspActions.requestCompletion({
-          filePath: filePath || "",
-          cursorPos: selectionStart,
-          value: newValue,
-          editorRef: containerRef,
-        });
-      }
+      debouncedLSPRequest({
+        filePath: filePath || "",
+        cursorPos: selectionStart,
+        value: newValue,
+        editorRef: containerRef,
+      });
     }
+
+    endRender();
   };
 
   // Handle keyboard events
@@ -139,6 +175,17 @@ export function TextEditor() {
     const { selectionStart } = textarea;
     const currentPosition = calculateCursorPosition(selectionStart, lines);
     const completionStore = useEditorCompletionStore.getState();
+
+    // Emit keydown event for extensions (like auto-pairing)
+    editorAPI.emitEvent("keydown", {
+      event: e.nativeEvent,
+      content: textarea.value,
+      position: {
+        line: currentPosition.line,
+        character: currentPosition.column,
+        offset: selectionStart,
+      },
+    });
 
     // Check for extension keybindings first
     const key = [
@@ -217,22 +264,10 @@ export function TextEditor() {
       // Update textarea selection
       textarea.selectionStart = textarea.selectionEnd = newOffset;
 
-      // Direct viewport scrolling for immediate response
+      // RAF-optimized viewport scrolling
       if (viewportRef.current) {
-        const viewport = viewportRef.current;
         const targetLineTop = targetLine * lineHeight;
-        const targetLineBottom = targetLineTop + lineHeight;
-        const currentScrollTop = viewport.scrollTop;
-        const viewportHeight = viewport.clientHeight;
-
-        // Use requestAnimationFrame for smooth scrolling
-        requestAnimationFrame(() => {
-          if (targetLineTop < currentScrollTop) {
-            viewport.scrollTop = targetLineTop;
-          } else if (targetLineBottom > currentScrollTop + viewportHeight) {
-            viewport.scrollTop = targetLineBottom - viewportHeight;
-          }
-        });
+        rafScrollHandler(targetLineTop, viewportRef.current);
       }
 
       // Update cursor position immediately
@@ -361,7 +396,7 @@ export function TextEditor() {
           extensionManager.initialize();
         }
 
-        // Load core extensions if not already loaded
+        // Load core extensions if not already loaded (these are lightweight)
         if (!extensionManager.isExtensionLoaded("Syntax Highlighting")) {
           await extensionManager.loadExtension(syntaxHighlightingExtension);
         }
@@ -370,10 +405,33 @@ export function TextEditor() {
           await extensionManager.loadExtension(basicEditingExtension);
         }
 
+        // Load Auto Pairing extension first (lightweight and immediate user experience)
+        if (!extensionManager.isExtensionLoaded("Auto Pairing")) {
+          const { autoPairingExtension } = await import(
+            "@/extensions/editing/auto-pairing-extension"
+          );
+          await extensionManager.loadExtension(autoPairingExtension);
+        }
+
         // Set file path for syntax highlighting
         if (filePath) {
           setSyntaxHighlightingFilePath(filePath);
         }
+
+        // Load LSP extension asynchronously without blocking UI
+        // This prevents blocking the file picker and other UI interactions
+        setTimeout(async () => {
+          try {
+            if (!extensionManager.isExtensionLoaded("typescript-lsp")) {
+              const { typescriptLSPExtension } = await import(
+                "@/extensions/language-support/typescript-lsp-extension"
+              );
+              await extensionManager.loadNewExtension(typescriptLSPExtension);
+            }
+          } catch (error) {
+            console.error("Failed to load LSP extension:", error);
+          }
+        }, 0);
       } catch (error) {
         console.error("Failed to load extensions:", error);
       }

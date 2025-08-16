@@ -64,7 +64,8 @@ export type EditorEvent =
   | "selectionChange"
   | "cursorChange"
   | "settingsChange"
-  | "decorationChange";
+  | "decorationChange"
+  | "keydown";
 
 export type EventHandler = (data?: any) => void;
 
@@ -87,12 +88,72 @@ export interface EditorExtension {
   onSelectionChange?: (selection: Range | null) => void;
   onCursorChange?: (position: Position) => void;
   onSettingsChange?: (settings: Partial<EditorSettings>) => void;
+  onKeyDown?: (data: { event: KeyboardEvent; content: string; position: Position }) => void;
+}
+
+export interface Extension {
+  readonly id: string;
+  readonly displayName: string;
+  readonly description?: string;
+  readonly version: string;
+  readonly category?: string;
+
+  contributes?: {
+    languages?: LanguageContribution[];
+    commands?: CommandContribution[];
+    keybindings?: KeybindingContribution[];
+    settings?: SettingContribution[];
+    themes?: ThemeContribution[];
+  };
+
+  activate(context: ExtensionContext): Promise<void> | void;
+  deactivate(): Promise<void> | void;
+
+  getSettings?(): Record<string, any>;
+  updateSettings?(settings: Record<string, any>): void;
+}
+
+export interface LanguageContribution {
+  id: string;
+  extensions: string[];
+  aliases?: string[];
+  configuration?: string;
+}
+
+export interface CommandContribution {
+  id: string;
+  title: string;
+  category?: string;
+  when?: string;
+}
+
+export interface KeybindingContribution {
+  command: string;
+  key: string;
+  when?: string;
+}
+
+export interface SettingContribution {
+  id: string;
+  title: string;
+  type: "string" | "number" | "boolean" | "array" | "object";
+  default: any;
+  description?: string;
+  enum?: any[];
+}
+
+export interface ThemeContribution {
+  id: string;
+  label: string;
+  path: string;
 }
 
 export interface ExtensionContext {
   editor: EditorAPI;
   extensionId: string;
   storage: ExtensionStorage;
+  registerCommand: (id: string, handler: (...args: any[]) => any) => void;
+  registerLanguage: (language: LanguageContribution) => void;
 }
 
 interface ExtensionStorage {

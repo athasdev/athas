@@ -22,6 +22,8 @@
     "dev": "bun run tauri dev"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.7",
+    "@tanstack/react-virtual": "^3.13.12",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-clipboard-manager": "~2.3.0",
     "@tauri-apps/plugin-dialog": "^2",
@@ -49,8 +51,12 @@
     "prismjs": "^1.30.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-intersection-observer": "^9.16.0",
     "react-scan": "^0.4.3",
+    "react-window": "^1.8.11",
+    "react-window-infinite-loader": "^1.0.10",
     "tailwind-merge": "^3.3.1",
+    "use-debounce": "^10.0.5",
     "use-sync-external-store": "^1.5.0",
     "vscode-languageserver-protocol": "^3.17.5",
     "zustand": "^5.0.6"

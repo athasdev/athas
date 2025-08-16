@@ -4,6 +4,32 @@ import { detectCompletionContext, extractPrefix, filterCompletions } from "@/uti
 import { createSelectors } from "@/utils/zustand-selectors";
 import { useEditorCompletionStore } from "./editor-completion-store";
 
+// Performance optimizations
+const COMPLETION_DEBOUNCE_MS = 150;
+const COMPLETION_CACHE_TTL_MS = 5000;
+const MAX_CACHE_SIZE = 100;
+
+// Cache interfaces
+interface CacheEntry {
+  completions: CompletionItem[];
+  timestamp: number;
+  prefix: string;
+}
+
+interface CompletionCache {
+  [key: string]: CacheEntry;
+}
+
+// LSP Status types
+export type LspStatus = "disconnected" | "connecting" | "connected" | "error";
+
+interface LspStatusInfo {
+  status: LspStatus;
+  activeWorkspaces: string[];
+  lastError?: string;
+  supportedLanguages?: string[];
+}
+
 interface LspState {
   // Completion handlers
   getCompletions?: (filePath: string, line: number, character: number) => Promise<CompletionItem[]>;
@@ -11,6 +37,13 @@ interface LspState {
 
   // Request tracking
   currentCompletionRequest: AbortController | null;
+  debounceTimer: NodeJS.Timeout | null;
+
+  // Cache
+  completionCache: CompletionCache;
+
+  // Status tracking
+  lspStatus: LspStatusInfo;
 
   // Actions
   actions: LspActions;
@@ -33,10 +66,26 @@ interface LspActions {
     editorRef: React.RefObject<HTMLDivElement | null>;
   }) => Promise<void>;
 
+  performCompletionRequest: (params: {
+    filePath: string;
+    cursorPos: number;
+    value: string;
+    editorRef: React.RefObject<HTMLDivElement | null>;
+  }) => Promise<void>;
+
+  getCacheKey: (filePath: string, line: number, character: number) => string;
+  cleanExpiredCache: () => void;
+  limitCacheSize: () => void;
+
   applyCompletion: (params: { completion: CompletionItem; value: string; cursorPos: number }) => {
     newValue: string;
     newCursorPos: number;
   };
+
+  // LSP Status actions
+  updateLspStatus: (status: LspStatus, workspaces?: string[], error?: string) => void;
+  setLspError: (error: string) => void;
+  clearLspError: () => void;
 }
 
 export const useLspStore = createSelectors(
@@ -44,21 +93,88 @@ export const useLspStore = createSelectors(
     getCompletions: undefined,
     isLanguageSupported: undefined,
     currentCompletionRequest: null,
+    debounceTimer: null,
+    completionCache: {},
+    lspStatus: {
+      status: "disconnected" as LspStatus,
+      activeWorkspaces: [],
+      lastError: undefined,
+      supportedLanguages: undefined,
+    },
 
     actions: {
       setCompletionHandlers: (getCompletions, isLanguageSupported) => {
         set({ getCompletions, isLanguageSupported });
       },
 
-      requestCompletion: async ({ filePath, cursorPos, value, editorRef }) => {
-        const { getCompletions, isLanguageSupported, currentCompletionRequest } = get();
-        const { actions: completionActions } = useEditorCompletionStore.getState();
+      // Cache management helpers
+      getCacheKey: (filePath: string, line: number, character: number) => {
+        return `${filePath}:${line}:${character}`;
+      },
 
-        console.log("LSP requestCompletion", { filePath, cursorPos });
+      cleanExpiredCache: () => {
+        const { completionCache } = get();
+        const now = Date.now();
+        const cleanedCache: CompletionCache = {};
+
+        for (const [key, entry] of Object.entries(completionCache)) {
+          if (now - entry.timestamp < COMPLETION_CACHE_TTL_MS) {
+            cleanedCache[key] = entry;
+          }
+        }
+
+        set({ completionCache: cleanedCache });
+      },
+
+      limitCacheSize: () => {
+        const { completionCache } = get();
+        const entries = Object.entries(completionCache);
+
+        if (entries.length > MAX_CACHE_SIZE) {
+          // Sort by timestamp and keep newest entries
+          entries.sort((a, b) => b[1].timestamp - a[1].timestamp);
+          const limitedCache: CompletionCache = {};
+
+          entries.slice(0, MAX_CACHE_SIZE).forEach(([key, entry]) => {
+            limitedCache[key] = entry;
+          });
+
+          set({ completionCache: limitedCache });
+        }
+      },
+
+      requestCompletion: async ({ filePath, cursorPos, value, editorRef }) => {
+        const { debounceTimer, actions } = get();
+
+        // Clear existing debounce timer
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+        }
+
+        // Debounce completion requests
+        const timer = setTimeout(async () => {
+          try {
+            await actions.performCompletionRequest({ filePath, cursorPos, value, editorRef });
+          } catch (error) {
+            console.error("Debounced completion request failed:", error);
+          }
+        }, COMPLETION_DEBOUNCE_MS);
+
+        set({ debounceTimer: timer });
+      },
+
+      performCompletionRequest: async ({ filePath, cursorPos, value, editorRef }) => {
+        const {
+          getCompletions,
+          isLanguageSupported,
+          currentCompletionRequest,
+          completionCache,
+          actions,
+        } = get();
+        const { actions: completionActions } = useEditorCompletionStore.getState();
 
         // Cancel any existing request
         if (currentCompletionRequest) {
-          console.log("Cancelling previous completion request");
           currentCompletionRequest.abort();
         }
 
@@ -69,19 +185,11 @@ export const useLspStore = createSelectors(
           filePath.startsWith("remote://") ||
           !editorRef.current
         ) {
-          console.log("Skipping completion:", {
-            hasGetCompletions: !!getCompletions,
-            hasFilePath: !!filePath,
-            isSupported: isLanguageSupported?.(filePath),
-            isRemote: filePath?.startsWith("remote://"),
-            hasEditor: !!editorRef.current,
-          });
           return;
         }
 
         // Extract the current prefix being typed
         const prefix = extractPrefix(value, cursorPos);
-        console.log("Current prefix:", prefix);
         completionActions.setCurrentPrefix(prefix);
 
         // Smart triggering: check context before requesting completions
@@ -89,7 +197,6 @@ export const useLspStore = createSelectors(
 
         // Only skip if we just typed whitespace
         if (/\s/.test(currentChar)) {
-          console.log("Skipping completion: whitespace");
           completionActions.setIsLspCompletionVisible(false);
           return;
         }
@@ -98,36 +205,71 @@ export const useLspStore = createSelectors(
         const line = lines.length - 1;
         const character = lines[lines.length - 1].length;
 
-        // No need to calculate position here anymore - the dropdown component handles it
+        // Check cache first
+        const cacheKey = actions.getCacheKey(filePath, line, character);
+        const cachedEntry = completionCache[cacheKey];
+
+        if (cachedEntry && Date.now() - cachedEntry.timestamp < COMPLETION_CACHE_TTL_MS) {
+          // Use cached completions if they match the current prefix or are compatible
+          const completions = cachedEntry.completions;
+
+          if (completions.length > 0) {
+            completionActions.setLspCompletions(completions);
+
+            if (prefix.length > 0) {
+              const context = detectCompletionContext(value, cursorPos);
+              const filtered = await filterCompletions({
+                pattern: prefix,
+                completions,
+                context_word: prefix,
+                context_type: context,
+              });
+
+              if (filtered.length > 0) {
+                completionActions.setFilteredCompletions(filtered);
+                completionActions.setIsLspCompletionVisible(true);
+                completionActions.setSelectedLspIndex(0);
+              } else {
+                completionActions.setIsLspCompletionVisible(false);
+              }
+            } else {
+              completionActions.setIsLspCompletionVisible(false);
+            }
+          }
+          return;
+        }
 
         // Create new abort controller for this request
         const abortController = new AbortController();
         set({ currentCompletionRequest: abortController });
 
         try {
-          console.log(`Requesting completions at ${line}:${character}`);
           const startTime = performance.now();
           const completions = await getCompletions(filePath, line, character);
 
           // Check if request was cancelled
           if (abortController.signal.aborted) {
-            console.log("Completion request was cancelled");
             return;
           }
 
-          const elapsed = performance.now() - startTime;
-          console.log(`Received ${completions.length} completions in ${elapsed.toFixed(2)}ms`);
+          const _elapsed = performance.now() - startTime;
 
           if (completions.length > 0) {
-            // Log completion results for debugging
-            console.log(
-              "Completions received:",
-              completions.map((c) => ({
-                label: c.label,
-                kind: c.kind,
-                detail: c.detail,
-              })),
-            );
+            // Cache the results
+            const { completionCache: currentCache } = get();
+            const newCache = {
+              ...currentCache,
+              [cacheKey]: {
+                completions,
+                timestamp: Date.now(),
+                prefix,
+              },
+            };
+            set({ completionCache: newCache });
+
+            // Clean cache periodically
+            actions.cleanExpiredCache();
+            actions.limitCacheSize();
 
             // Store original completions
             completionActions.setLspCompletions(completions);
@@ -142,8 +284,6 @@ export const useLspStore = createSelectors(
                 context_type: context,
               });
 
-              console.log(`Filtered ${completions.length} to ${filtered.length} completions`);
-
               if (filtered.length > 0) {
                 completionActions.setFilteredCompletions(filtered);
                 completionActions.setIsLspCompletionVisible(true);
@@ -152,7 +292,6 @@ export const useLspStore = createSelectors(
                 completionActions.setIsLspCompletionVisible(false);
               }
             } else {
-              // No prefix - don't show completions when file is just opened
               completionActions.setIsLspCompletionVisible(false);
             }
           } else {
@@ -161,9 +300,7 @@ export const useLspStore = createSelectors(
           }
         } catch (error) {
           // Ignore if request was aborted
-          if (error instanceof Error && error.name === "AbortError") {
-            console.log("Completion request aborted");
-          } else {
+          if (error instanceof Error && error.name !== "AbortError") {
             console.error("LSP completion error:", error);
           }
         } finally {
@@ -188,6 +325,38 @@ export const useLspStore = createSelectors(
         completionActions.setIsLspCompletionVisible(false);
 
         return { newValue, newCursorPos };
+      },
+
+      // LSP Status actions
+      updateLspStatus: (status, workspaces, error) => {
+        set((state) => ({
+          lspStatus: {
+            ...state.lspStatus,
+            status,
+            activeWorkspaces: workspaces || state.lspStatus.activeWorkspaces,
+            lastError: error || (status === "error" ? state.lspStatus.lastError : undefined),
+          },
+        }));
+      },
+
+      setLspError: (error) => {
+        set((state) => ({
+          lspStatus: {
+            ...state.lspStatus,
+            status: "error" as LspStatus,
+            lastError: error,
+          },
+        }));
+      },
+
+      clearLspError: () => {
+        set((state) => ({
+          lspStatus: {
+            ...state.lspStatus,
+            lastError: undefined,
+            status: state.lspStatus.activeWorkspaces.length > 0 ? "connected" : "disconnected",
+          },
+        }));
       },
     },
   })),

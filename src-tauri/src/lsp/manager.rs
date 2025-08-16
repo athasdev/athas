@@ -10,6 +10,7 @@ use std::{
    path::PathBuf,
    process::Child,
    sync::{Arc, Mutex},
+   time::Instant,
 };
 use tauri::{AppHandle, Manager as TauriManager};
 
@@ -34,24 +35,28 @@ impl LspManager {
    }
 
    pub fn get_server_path(&self, server_name: &str) -> Result<PathBuf> {
-      // For TypeScript, try to find globally installed server
+      // For TypeScript, try multiple detection strategies
       if server_name == "typescript" {
+         // First try: globally installed server via package managers
          if let Some(path) = utils::find_global_binary("typescript-language-server") {
             log::info!("Using global TypeScript server: {:?}", path);
             return Ok(path);
          }
 
-         // Development fallback
-         #[cfg(debug_assertions)]
-         {
-            let server_path = PathBuf::from(
-               "/Users/ale/mimi/prepos/athas/node_modules/.bin/typescript-language-server",
-            );
+         // Second try: check if it's in PATH
+         if let Some(path) = utils::find_in_path("typescript-language-server") {
+            log::info!("Using TypeScript server from PATH: {:?}", path);
+            return Ok(path);
+         }
 
-            if server_path.exists() {
-               log::info!("Using local TypeScript server: {:?}", server_path);
-               return Ok(server_path);
-            }
+         // Third try: local node_modules in current working directory
+         let local_path = std::env::current_dir()
+            .context("Failed to get current directory")?
+            .join("node_modules/.bin/typescript-language-server");
+         
+         if local_path.exists() {
+            log::info!("Using local TypeScript server: {:?}", local_path);
+            return Ok(local_path);
          }
       }
 
@@ -65,9 +70,10 @@ impl LspManager {
       let bundled_path = app_dir.join(format!("{}-language-server", server_name));
 
       if bundled_path.exists() {
+         log::info!("Using bundled language server: {:?}", bundled_path);
          Ok(bundled_path)
       } else {
-         bail!("Language server '{}' not found", server_name)
+         bail!("Language server '{}' not found. Please install it globally using: bun add -g typescript-language-server", server_name)
       }
    }
 
@@ -137,6 +143,8 @@ impl LspManager {
       line: u32,
       character: u32,
    ) -> Result<Vec<CompletionItem>> {
+      let start_time = Instant::now();
+      
       let client = self
          .get_client_for_file(file_path)
          .context("No LSP client for this file")?;
@@ -167,13 +175,20 @@ impl LspManager {
       };
 
       if items.len() > max_completions {
-         log::warn!(
+         log::debug!(
             "LSP returned {} completions, limiting to {}",
             items.len(),
             max_completions
          );
          items.truncate(max_completions);
       }
+
+      let elapsed = start_time.elapsed();
+      log::debug!(
+         "LSP completion request completed in {:?} with {} items",
+         elapsed,
+         items.len()
+      );
 
       Ok(items)
    }
@@ -297,8 +312,11 @@ impl LspManager {
       let extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
 
       match extension {
-         "ts" | "tsx" => "typescript",
-         "js" | "jsx" => "javascript",
+         "ts" => "typescript",
+         "tsx" => "typescriptreact", 
+         "js" | "mjs" | "cjs" => "javascript",
+         "jsx" => "javascriptreact",
+         "json" => "json",
          _ => "plaintext",
       }
       .to_string()
