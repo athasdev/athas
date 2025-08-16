@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useSettingsStore } from "@/settings/stores/settings-store";
+import { useSettingsStore } from "@/settings/store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 
 export const FontStyleInjector = () => {

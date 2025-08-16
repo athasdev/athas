@@ -1,6 +1,6 @@
 import { Send, Square } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
-import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
+import { useSettingsStore } from "@/settings/store";
 import { useAIChatStore } from "@/stores/ai-chat/store";
 import { cn } from "@/utils/cn";
 import ModelProviderSelector from "../model-provider-selector";
@@ -24,7 +24,7 @@ export default function AIChatInputBar({
   const isUpdatingContentRef = useRef(false);
 
   // Get state from stores
-  const { aiProviderId, aiModelId } = usePersistentSettingsStore();
+  const { settings } = useSettingsStore();
   const {
     input,
     isTyping,
@@ -460,8 +460,8 @@ export default function AIChatInputBar({
           <div className="min-w-0 flex-1">{/* Spacer for responsive layout */}</div>
           <div className="flex select-none items-center gap-1">
             <ModelProviderSelector
-              currentProviderId={aiProviderId}
-              currentModelId={aiModelId}
+              currentProviderId={settings.aiProviderId}
+              currentModelId={settings.aiModelId}
               onProviderChange={onProviderChange}
               onApiKeyRequest={onApiKeyRequest}
               hasApiKey={hasProviderApiKey}

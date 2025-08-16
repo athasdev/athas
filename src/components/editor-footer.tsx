@@ -1,11 +1,11 @@
 import { AlertCircle, Download, Terminal as TerminalIcon } from "lucide-react";
 import { useUpdater } from "@/settings/hooks/use-updater";
+import { useSettingsStore } from "@/settings/store";
 import {
   getFilenameFromPath,
   getLanguageFromFilename,
 } from "../file-system/controllers/file-utils";
 import { useFileSystemStore } from "../file-system/controllers/store";
-import { usePersistentSettingsStore } from "../settings/stores/persistent-settings-store";
 import { useBufferStore } from "../stores/buffer-store";
 import { useUIState } from "../stores/ui-state-store";
 import { getGitStatus } from "../version-control/git/controllers/git";
@@ -16,7 +16,7 @@ const EditorFooter = () => {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
-  const { coreFeatures } = usePersistentSettingsStore();
+  const { settings } = useSettingsStore();
   const uiState = useUIState();
   const { rootFolderPath } = useFileSystemStore();
   const { gitStatus, actions } = useGitStore();
@@ -38,7 +38,7 @@ const EditorFooter = () => {
         )}
 
         {/* Terminal indicator */}
-        {coreFeatures.terminal && (
+        {settings.coreFeatures.terminal && (
           <button
             onClick={() => {
               uiState.setBottomPaneActiveTab("terminal");
@@ -66,7 +66,7 @@ const EditorFooter = () => {
         )}
 
         {/* Diagnostics indicator (placeholder for now) */}
-        {coreFeatures.diagnostics && (
+        {settings.coreFeatures.diagnostics && (
           <div
             className="flex items-center gap-0.5 rounded px-1 py-0.5 text-text-lighter"
             style={{ minHeight: 0, minWidth: 0 }}

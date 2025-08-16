@@ -1,7 +1,7 @@
 import { Code, Package, Palette, Search } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSettingsStore } from "@/settings/store";
 import { cn } from "@/utils/cn";
-import { usePersistentSettingsStore } from "../settings/stores/persistent-settings-store";
 import Button from "./ui/button";
 
 interface Extension {
@@ -97,7 +97,7 @@ export default function ExtensionsView({
   onThemeChange,
   currentTheme,
 }: ExtensionsViewProps) {
-  const { extensionsActiveTab, setExtensionsActiveTab } = usePersistentSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [extensions, setExtensions] = useState<Extension[]>(() => {
     // Initialize extensions with the current theme state
@@ -139,7 +139,8 @@ export default function ExtensionsView({
     const matchesSearch =
       extension.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       extension.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTab = extensionsActiveTab === "all" || extension.category === extensionsActiveTab;
+    const matchesTab =
+      settings.extensionsActiveTab === "all" || extension.category === settings.extensionsActiveTab;
     return matchesSearch && matchesTab;
   });
 
@@ -168,13 +169,13 @@ export default function ExtensionsView({
 
       <div className="flex gap-2 p-4">
         <Button
-          onClick={() => setExtensionsActiveTab("all")}
+          onClick={() => updateSetting("extensionsActiveTab", "all")}
           variant="ghost"
           size="sm"
-          data-active={extensionsActiveTab === "all"}
+          data-active={settings.extensionsActiveTab === "all"}
           className={cn(
             "text-xs",
-            extensionsActiveTab === "all"
+            settings.extensionsActiveTab === "all"
               ? "bg-selected text-text"
               : "bg-transparent text-text-lighter hover:bg-hover",
           )}
@@ -182,13 +183,13 @@ export default function ExtensionsView({
           All
         </Button>
         <Button
-          onClick={() => setExtensionsActiveTab("language-server")}
+          onClick={() => updateSetting("extensionsActiveTab", "language-server")}
           variant="ghost"
           size="sm"
-          data-active={extensionsActiveTab === "language-server"}
+          data-active={settings.extensionsActiveTab === "language-server"}
           className={cn(
             "flex items-center gap-1 text-xs",
-            extensionsActiveTab === "language-server"
+            settings.extensionsActiveTab === "language-server"
               ? "bg-selected text-text"
               : "bg-transparent text-text-lighter hover:bg-hover",
           )}
@@ -197,13 +198,13 @@ export default function ExtensionsView({
           Language Servers
         </Button>
         <Button
-          onClick={() => setExtensionsActiveTab("theme")}
+          onClick={() => updateSetting("extensionsActiveTab", "theme")}
           variant="ghost"
           size="sm"
-          data-active={extensionsActiveTab === "theme"}
+          data-active={settings.extensionsActiveTab === "theme"}
           className={cn(
             "flex items-center gap-1 text-xs",
-            extensionsActiveTab === "theme"
+            settings.extensionsActiveTab === "theme"
               ? "bg-selected text-text"
               : "bg-transparent text-text-lighter hover:bg-hover",
           )}
@@ -215,9 +216,9 @@ export default function ExtensionsView({
 
       <div className="flex-1 overflow-auto p-4">
         {/* Extensions */}
-        {extensionsActiveTab !== "theme" && (
+        {settings.extensionsActiveTab !== "theme" && (
           <div>
-            {extensionsActiveTab === "all" && filteredExtensions.length > 0 && (
+            {settings.extensionsActiveTab === "all" && filteredExtensions.length > 0 && (
               <h3 className="mb-3 flex items-center gap-2 font-medium text-sm text-text">
                 <Package size={16} />
                 Extensions

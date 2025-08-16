@@ -2,7 +2,9 @@
   "$schema": "https://schema.tauri.app/config/2/capability",
   "identifier": "main-capability",
   "description": "Capability for all windows",
-  "windows": ["*"],
+  "windows": [
+    "*"
+  ],
   "permissions": [
     "core:default",
     "core:window:default",
@@ -28,8 +30,12 @@
     {
       "identifier": "fs:scope",
       "allow": [
-        { "path": "$HOME/**" },
-        { "path": "/**" }
+        {
+          "path": "$HOME/**"
+        },
+        {
+          "path": "/**"
+        }
       ],
       "requireLiteralLeadingDot": false
     },
@@ -50,7 +56,12 @@
         {
           "name": "sh",
           "cmd": "sh",
-          "args": ["-c", { "validator": ".*" }]
+          "args": [
+            "-c",
+            {
+              "validator": ".*"
+            }
+          ]
         },
         {
           "name": "gsettings",
@@ -58,18 +69,31 @@
           "args": [
             "get",
             "org.gnome.desktop.interface",
-            { "validator": "(gtk-theme|color-scheme)" }
+            {
+              "validator": "(gtk-theme|color-scheme)"
+            }
           ]
         },
         {
           "name": "kreadconfig5",
           "cmd": "kreadconfig5",
-          "args": ["--file", "kdeglobals", "--group", "General", "--key", "ColorScheme"]
+          "args": [
+            "--file",
+            "kdeglobals",
+            "--group",
+            "General",
+            "--key",
+            "ColorScheme"
+          ]
         },
         {
           "name": "defaults",
           "cmd": "defaults",
-          "args": ["read", "-g", "AppleInterfaceStyle"]
+          "args": [
+            "read",
+            "-g",
+            "AppleInterfaceStyle"
+          ]
         },
         {
           "name": "reg",
@@ -82,6 +106,7 @@
           ]
         }
       ]
-    }
+    },
+    "store:default"
   ]
 }

@@ -1,7 +1,7 @@
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+import { useSettingsStore } from "@/settings/store";
 import { cn } from "@/utils/cn";
-import { usePersistentSettingsStore } from "../settings/stores/persistent-settings-store";
 import { useProjectStore } from "../stores/project-store";
 import { useUIState } from "../stores/ui-state-store";
 import DiagnosticsPane, { type Diagnostic } from "./diagnostics/diagnostics-pane";
@@ -15,7 +15,7 @@ interface BottomPaneProps {
 const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
   const { isBottomPaneVisible, bottomPaneActiveTab, setIsBottomPaneVisible } = useUIState();
   const { rootFolderPath } = useProjectStore();
-  const { coreFeatures } = usePersistentSettingsStore();
+  const { settings } = useSettingsStore();
   const [height, setHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
   const [isMacOS, setIsMacOS] = useState(false);
@@ -103,7 +103,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
       {/* Content Area */}
       <div className="h-full">
         {/* Terminal Container - Always mounted to preserve terminal sessions */}
-        {coreFeatures.terminal && (
+        {settings.coreFeatures.terminal && (
           <TerminalContainer
             currentDirectory={rootFolderPath}
             className={cn("h-full", bottomPaneActiveTab === "terminal" ? "block" : "hidden")}
@@ -114,7 +114,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
         )}
 
         {/* Diagnostics Pane */}
-        {bottomPaneActiveTab === "diagnostics" && coreFeatures.diagnostics ? (
+        {bottomPaneActiveTab === "diagnostics" && settings.coreFeatures.diagnostics ? (
           <div className="h-full">
             <DiagnosticsPane
               diagnostics={diagnostics}

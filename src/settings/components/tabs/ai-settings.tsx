@@ -3,19 +3,15 @@ import Button from "@/components/ui/button";
 import Dropdown from "@/components/ui/dropdown";
 import Section, { SettingRow } from "@/components/ui/section";
 import Switch from "@/components/ui/switch";
-import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
-import { useSettingsStore } from "@/settings/stores/settings-store";
+import { useSettingsStore } from "@/settings/store";
 import { getAvailableProviders, getModelById } from "@/types/ai-provider";
 
 export const AISettings = () => {
-  const { aiProviderId, aiModelId, setAIProviderAndModel, coreFeatures, setCoreFeatures } =
-    usePersistentSettingsStore();
-
   const { settings, updateSetting } = useSettingsStore();
   const [apiKeysVisible, setApiKeysVisible] = useState(false);
 
-  const currentProvider = getAvailableProviders().find((p) => p.id === aiProviderId);
-  const currentModel = getModelById(aiProviderId, aiModelId);
+  const currentProvider = getAvailableProviders().find((p) => p.id === settings.aiProviderId);
+  const currentModel = getModelById(settings.aiProviderId, settings.aiModelId);
 
   const providerOptions = getAvailableProviders().map((provider) => ({
     value: provider.id,
@@ -31,12 +27,13 @@ export const AISettings = () => {
   const handleProviderChange = (providerId: string) => {
     const provider = getAvailableProviders().find((p) => p.id === providerId);
     if (provider && provider.models.length > 0) {
-      setAIProviderAndModel(providerId, provider.models[0].id);
+      updateSetting("aiProviderId", providerId);
+      updateSetting("aiModelId", provider.models[0].id);
     }
   };
 
   const handleModelChange = (modelId: string) => {
-    setAIProviderAndModel(aiProviderId, modelId);
+    updateSetting("aiModelId", modelId);
   };
 
   return (
@@ -44,7 +41,7 @@ export const AISettings = () => {
       <Section title="AI Provider">
         <SettingRow label="Provider" description="Choose your AI service provider">
           <Dropdown
-            value={aiProviderId}
+            value={settings.aiProviderId}
             options={providerOptions}
             onChange={handleProviderChange}
             className="w-40"
@@ -54,7 +51,7 @@ export const AISettings = () => {
 
         <SettingRow label="Model" description="Select the AI model to use">
           <Dropdown
-            value={aiModelId}
+            value={settings.aiModelId}
             options={modelOptions}
             onChange={handleModelChange}
             className="w-40"
@@ -79,8 +76,10 @@ export const AISettings = () => {
       <Section title="AI Features">
         <SettingRow label="AI Chat" description="Enable AI-powered chat assistant">
           <Switch
-            checked={coreFeatures.aiChat}
-            onChange={(checked) => setCoreFeatures({ ...coreFeatures, aiChat: checked })}
+            checked={settings.coreFeatures.aiChat}
+            onChange={(checked) =>
+              updateSetting("coreFeatures", { ...settings.coreFeatures, aiChat: checked })
+            }
             size="sm"
           />
         </SettingRow>

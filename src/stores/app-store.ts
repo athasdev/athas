@@ -49,7 +49,7 @@ export const useAppStore = createSelectors(
           const { useFileWatcherStore } = await import(
             "../file-system/controllers/file-watcher-store"
           );
-          const { useSettingsStore } = await import("@/settings/stores/settings-store.ts");
+          const { useSettingsStore } = await import("@/settings/store");
 
           // Get dependencies from other stores
           const { activeBufferId, buffers } = useBufferStore.getState();
@@ -111,7 +111,7 @@ export const useAppStore = createSelectors(
         handleSave: async () => {
           // Import stores dynamically to avoid circular dependencies
           const { useBufferStore } = await import("./buffer-store");
-          const { useSettingsStore } = await import("@/settings/stores/settings-store.ts");
+          const { useSettingsStore } = await import("@/settings/store");
           const { useFileWatcherStore } = await import(
             "../file-system/controllers/file-watcher-store"
           );

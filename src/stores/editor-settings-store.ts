@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import { useSettingsStore } from "@/settings/stores/settings-store";
+import { useSettingsStore } from "@/settings/store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 interface EditorSettingsState {

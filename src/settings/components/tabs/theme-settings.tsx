@@ -5,10 +5,10 @@ import Dropdown from "@/components/ui/dropdown";
 import Section, { SettingRow } from "@/components/ui/section";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
-import { useSettingsStore } from "@/settings/stores/settings-store";
+import { useSettingsStore } from "@/settings/store";
 
 export const ThemeSettings = () => {
-  const { settings, updateTheme } = useSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
   const [themeOptions, setThemeOptions] = useState<{ value: string; label: string }[]>([]);
 
   // Load themes from theme registry
@@ -68,7 +68,7 @@ export const ThemeSettings = () => {
             <Dropdown
               value={settings.theme}
               options={themeOptions}
-              onChange={(value) => updateTheme(value)}
+              onChange={(value) => updateSetting("theme", value)}
               className="w-40"
               size="xs"
             />

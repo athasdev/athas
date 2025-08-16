@@ -1,6 +1,6 @@
 import type { CompletionItem } from "vscode-languageserver-protocol";
 import { create } from "zustand";
-import { useSettingsStore } from "@/settings/stores/settings-store";
+import { useSettingsStore } from "@/settings/store";
 import type { FilteredCompletion } from "@/utils/fuzzy-matcher";
 import { createSelectors } from "@/utils/zustand-selectors";
 

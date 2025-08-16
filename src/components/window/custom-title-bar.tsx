@@ -3,7 +3,7 @@ import { platform } from "@tauri-apps/plugin-os";
 import { Maximize2, Minimize2, Minus, Settings, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import SettingsDialog from "@/settings/components/settings-dialog";
-import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
+import { useSettingsStore } from "@/settings/store";
 import { useProjectStore } from "@/stores/project-store";
 import { cn } from "@/utils/cn";
 
@@ -20,7 +20,7 @@ const CustomTitleBar = ({
   onOpenSettings,
 }: CustomTitleBarProps) => {
   const { getProjectName } = useProjectStore();
-  const { isAIChatVisible, setIsAIChatVisible } = usePersistentSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
 
   const projectName = getProjectName();
   const [isMaximized, setIsMaximized] = useState(false);
@@ -168,10 +168,10 @@ const CustomTitleBar = ({
         <div className="flex items-center gap-0.5">
           <button
             onClick={() => {
-              setIsAIChatVisible(!isAIChatVisible);
+              updateSetting("isAIChatVisible", !settings.isAIChatVisible);
             }}
             className={`flex items-center justify-center rounded p-1 transition-colors ${
-              isAIChatVisible
+              settings.isAIChatVisible
                 ? "bg-selected text-text"
                 : "text-text-lighter hover:bg-hover hover:text-text"
             }`}
@@ -217,10 +217,10 @@ const CustomTitleBar = ({
         {/* AI Chat button */}
         <button
           onClick={() => {
-            setIsAIChatVisible(!isAIChatVisible);
+            updateSetting("isAIChatVisible", !settings.isAIChatVisible);
           }}
           className={`flex items-center justify-center rounded px-1 py-0.5 transition-colors ${
-            isAIChatVisible
+            settings.isAIChatVisible
               ? "bg-selected text-text"
               : "text-text-lighter hover:bg-hover hover:text-text"
           }`}

@@ -5,8 +5,7 @@ import { ProjectNameMenu } from "@/hooks/use-context-menus";
 import { useKeyboardShortcutsWrapper } from "@/hooks/use-keyboard-shortcuts-wrapper";
 import { useMenuEventsWrapper } from "@/hooks/use-menu-events-wrapper";
 import SettingsDialog from "@/settings/components/settings-dialog";
-import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
-import { useSettingsStore } from "@/settings/stores/settings-store";
+import { useSettingsStore } from "@/settings/store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useUIState } from "@/stores/ui-state-store";
 import DiffViewer from "@/version-control/diff-viewer/views/diff-viewer";
@@ -42,8 +41,7 @@ export function MainLayout() {
     setIsSettingsDialogVisible,
     setIsThemeSelectorVisible,
   } = useUIState();
-  const { isAIChatVisible } = usePersistentSettingsStore();
-  const { settings, updateTheme } = useSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
   const { rootFolderPath } = useFileSystemStore();
 
   const [diagnostics] = useState<Diagnostic[]>([]);
@@ -51,7 +49,7 @@ export function MainLayout() {
 
   // Handle theme change
   const handleThemeChange = (theme: string) => {
-    updateTheme(theme);
+    updateSetting("theme", theme);
   };
 
   // Handle hunk staging/unstaging
@@ -106,7 +104,7 @@ export function MainLayout() {
         <div className="flex flex-1 flex-row overflow-hidden">
           {/* Left sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
-            <ResizableRightPane position="left" isVisible={isAIChatVisible}>
+            <ResizableRightPane position="left" isVisible={settings.isAIChatVisible}>
               <AIChat mode="chat" />
             </ResizableRightPane>
           ) : (
@@ -155,7 +153,7 @@ export function MainLayout() {
               </ResizableRightPane>
             )
           ) : (
-            <ResizableRightPane position="right" isVisible={isAIChatVisible}>
+            <ResizableRightPane position="right" isVisible={settings.isAIChatVisible}>
               <AIChat mode="chat" />
             </ResizableRightPane>
           )}

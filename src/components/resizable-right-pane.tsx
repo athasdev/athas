@@ -1,6 +1,6 @@
 import type React from "react";
 import { useCallback, useRef, useState } from "react";
-import { usePersistentSettingsStore } from "../settings/stores/persistent-settings-store";
+import { useSettingsStore } from "@/settings/store";
 import { cn } from "../utils/cn";
 
 // Constants for resizable pane
@@ -20,16 +20,10 @@ const ResizableRightPane = ({
   position = "right",
   isVisible = true,
 }: ResizableRightPaneProps) => {
-  const { aiChatWidth, setAIChatWidth } = usePersistentSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
   const [isResizing, setIsResizing] = useState(false);
   const paneRef = useRef<HTMLDivElement>(null);
   const resizerRef = useRef<HTMLDivElement>(null);
-
-  // Always use width from store
-  const width = aiChatWidth;
-  const setWidth = (newWidth: number) => {
-    setAIChatWidth(newWidth);
-  };
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -37,7 +31,7 @@ const ResizableRightPane = ({
       setIsResizing(true);
 
       const startX = e.clientX;
-      const startWidth = width;
+      const startWidth = settings.aiChatWidth;
 
       const handleMouseMove = (e: MouseEvent) => {
         const deltaX =
@@ -45,7 +39,7 @@ const ResizableRightPane = ({
             ? startX - e.clientX // Reverse direction for right pane
             : e.clientX - startX; // Normal direction for left pane
         const newWidth = Math.min(Math.max(startWidth + deltaX, MIN_WIDTH), MAX_WIDTH);
-        setWidth(newWidth);
+        updateSetting("aiChatWidth", newWidth);
       };
 
       const handleMouseUp = () => {
@@ -61,7 +55,7 @@ const ResizableRightPane = ({
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     },
-    [width, position],
+    [settings.aiChatWidth, position],
   );
 
   if (!isVisible) {
@@ -72,7 +66,7 @@ const ResizableRightPane = ({
     <div className="flex">
       <div
         ref={paneRef}
-        style={{ width: `${width}px` }}
+        style={{ width: `${settings.aiChatWidth}px` }}
         className={cn(
           "relative flex flex-1 flex-col bg-secondary-bg",
           position === "right" ? "border-border border-l" : "border-border border-r",

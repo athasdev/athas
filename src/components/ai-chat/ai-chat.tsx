@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { MessageSquare, Plus, RefreshCw, Sparkles } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
+import { useSettingsStore } from "@/settings/store";
 import { useAIChatStore } from "@/stores/ai-chat/store";
 import { useProjectStore } from "@/stores/project-store";
 import {
@@ -109,8 +109,7 @@ export default function AIChat({
   // Get rootFolderPath from project store
   const { rootFolderPath } = useProjectStore();
 
-  // Provider and Model State from persistent store
-  const { aiProviderId, aiModelId, setAIProviderAndModel } = usePersistentSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
 
   // Get store state selectively to avoid re-renders
   const input = useAIChatStore((state) => state.input);
@@ -161,9 +160,9 @@ export default function AIChat({
 
   // Check API keys on mount and when provider changes
   useEffect(() => {
-    checkApiKey(aiProviderId);
+    checkApiKey(settings.aiProviderId);
     checkAllProviderApiKeys();
-  }, [aiProviderId, checkApiKey, checkAllProviderApiKeys]);
+  }, [settings.aiProviderId, checkApiKey, checkAllProviderApiKeys]);
 
   // Check Claude Code availability on mount
   useEffect(() => {
@@ -173,11 +172,12 @@ export default function AIChat({
         setClaudeCodeAvailability(status.interceptor_running);
 
         // If Claude Code is selected but not available, switch to first available provider
-        if (aiProviderId === "claude-code" && !status.interceptor_running) {
+        if (settings.aiProviderId === "claude-code" && !status.interceptor_running) {
           const availableProviders = getAvailableProviders();
           if (availableProviders.length > 0) {
             const firstProvider = availableProviders[0];
-            setAIProviderAndModel(firstProvider.id, firstProvider.models[0].id);
+            updateSetting("aiProviderId", firstProvider.id);
+            updateSetting("aiModelId", firstProvider.models[0].id);
           }
         }
       } catch {
@@ -185,17 +185,18 @@ export default function AIChat({
         setClaudeCodeAvailability(false);
 
         // Switch away from Claude Code if it's selected
-        if (aiProviderId === "claude-code") {
+        if (settings.aiProviderId === "claude-code") {
           const availableProviders = getAvailableProviders();
           if (availableProviders.length > 0) {
             const firstProvider = availableProviders[0];
-            setAIProviderAndModel(firstProvider.id, firstProvider.models[0].id);
+            updateSetting("aiProviderId", firstProvider.id);
+            updateSetting("aiModelId", firstProvider.models[0].id);
           }
         }
       }
     };
     checkClaudeCodeStatus();
-  }, [aiProviderId, setAIProviderAndModel]);
+  }, [settings.aiProviderId, updateSetting]);
 
   // Wrapper for deleteChat to handle event
   const handleDeleteChat = (chatId: string, event: React.MouseEvent) => {
@@ -208,7 +209,7 @@ export default function AIChat({
     const newChatId = createNewChat();
 
     // Restart claude-code for new context
-    if (aiProviderId === "claude-code") {
+    if (settings.aiProviderId === "claude-code") {
       try {
         // First stop the existing claude process
         await invoke("stop_claude_code");
@@ -238,7 +239,7 @@ export default function AIChat({
       selectedFiles,
       selectedProjectFiles: Array.from(selectedFilesPaths),
       projectRoot: rootFolderPath,
-      providerId: aiProviderId,
+      providerId: settings.aiProviderId,
     };
 
     if (activeBuffer) {
@@ -285,7 +286,7 @@ export default function AIChat({
     if (!messageContent.trim() || !hasApiKey) return;
 
     // Auto-start claude-code if needed
-    if (aiProviderId === "claude-code") {
+    if (settings.aiProviderId === "claude-code") {
       try {
         await invoke("start_claude_code", {
           workspacePath: rootFolderPath || null,
@@ -364,8 +365,8 @@ export default function AIChat({
       let currentAssistantMessageId = assistantMessageId;
 
       await getChatCompletionStream(
-        aiProviderId,
-        aiModelId,
+        settings.aiProviderId,
+        settings.aiModelId,
         enhancedMessage,
         context,
         // onChunk - update the streaming message
@@ -461,7 +462,8 @@ export default function AIChat({
 
   // Handle provider/model selection
   const handleProviderChange = (providerId: string, modelId: string) => {
-    setAIProviderAndModel(providerId, modelId);
+    updateSetting("aiProviderId", providerId);
+    updateSetting("aiModelId", modelId);
   };
 
   // Handle API key request
@@ -571,7 +573,9 @@ export default function AIChat({
                         className="flex items-center gap-1"
                         style={{ color: "var(--color-text-lighter)" }}
                       >
-                        <span>{getProviderById(aiProviderId)?.name || aiProviderId}</span>
+                        <span>
+                          {getProviderById(settings.aiProviderId)?.name || settings.aiProviderId}
+                        </span>
                       </div>
                     </div>
                   )}

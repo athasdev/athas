@@ -1,6 +1,8 @@
+import { appDataDir } from "@tauri-apps/api/path";
 import { Palette, Settings, Sparkles } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useAppStore } from "@/stores/app-store";
 import { useUIState } from "@/stores/ui-state-store";
 import Command, {
@@ -31,6 +33,8 @@ const CommandPalette = () => {
     setIsThemeSelectorVisible,
   } = useUIState();
   const { openQuickEdit } = useAppStore.use.actions();
+
+  const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
 
   const isVisible = isCommandPaletteVisible;
   const onClose = () => setIsCommandPaletteVisible(false);
@@ -77,6 +81,19 @@ const CommandPalette = () => {
       action: () => {
         onClose();
         setIsSettingsDialogVisible(true);
+      },
+    },
+    {
+      id: "open-settings-json",
+      label: "Preferences: Open Settings JSON file",
+      description: "Open settings JSON file",
+      icon: <Settings size={14} />,
+      category: "Settings",
+      action: () => {
+        onClose();
+        appDataDir().then((path) => {
+          handleFileSelect(`${path}/settings.json`, false);
+        });
       },
     },
     {

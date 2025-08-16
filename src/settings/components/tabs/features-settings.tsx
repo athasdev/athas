@@ -1,19 +1,19 @@
 import Section, { SettingRow } from "@/components/ui/section";
 import Switch from "@/components/ui/switch";
+import { useSettingsStore } from "@/settings/store";
 import { createCoreFeaturesList } from "../../config/features";
 import type { CoreFeature } from "../../models/feature.types";
-import { usePersistentSettingsStore } from "../../stores/persistent-settings-store";
 
 export const FeaturesSettings = () => {
-  const { coreFeatures, setCoreFeatures } = usePersistentSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
 
   // Create core features list
-  const coreFeaturesList = createCoreFeaturesList(coreFeatures);
+  const coreFeaturesList = createCoreFeaturesList(settings.coreFeatures);
 
   // Handle core feature toggle
   const handleCoreFeatureToggle = (featureId: string, enabled: boolean) => {
-    setCoreFeatures({
-      ...coreFeatures,
+    updateSetting("coreFeatures", {
+      ...settings.coreFeatures,
       [featureId]: enabled,
     });
   };

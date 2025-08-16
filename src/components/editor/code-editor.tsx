@@ -4,7 +4,7 @@ import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useEditorScroll } from "@/hooks/use-editor-scroll";
 import { useHover } from "@/hooks/use-hover";
 import { LspClient } from "@/lib/lsp/lsp-client";
-import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
+import { useSettingsStore } from "@/settings/store";
 import { useAppStore } from "@/stores/app-store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
@@ -44,13 +44,11 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { handleContentChange } = useAppStore.use.actions();
-  const fontSize = useEditorSettingsStore.use.fontSize();
-  const lineNumbers = useEditorSettingsStore.use.lineNumbers();
   const { searchQuery, searchMatches, currentMatchIndex, setSearchMatches, setCurrentMatchIndex } =
     useEditorSearchStore();
   const isFileTreeLoading = useFileSystemStore((state) => state.isFileTreeLoading);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const { coreFeatures } = usePersistentSettingsStore();
+  const { settings } = useSettingsStore();
 
   // Extract values from active buffer or use defaults
   const value = activeBuffer?.content || "";
@@ -121,8 +119,8 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
     getHover: lspClient.getHover.bind(lspClient),
     isLanguageSupported: () => isLspSupported,
     filePath,
-    fontSize,
-    lineNumbers,
+    fontSize: settings.fontSize,
+    lineNumbers: settings.lineNumbers,
   });
 
   // Notify LSP about document changes
@@ -252,7 +250,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
       <EditorStylesheet />
       <div className="flex h-full flex-col">
         {/* Breadcrumbs */}
-        {coreFeatures.breadcrumbs && <Breadcrumb />}
+        {settings.coreFeatures.breadcrumbs && <Breadcrumb />}
 
         {/* Find Bar */}
         <FindBar />

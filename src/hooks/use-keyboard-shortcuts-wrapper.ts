@@ -1,4 +1,4 @@
-import { usePersistentSettingsStore } from "../settings/stores/persistent-settings-store";
+import { useSettingsStore } from "@/settings/store";
 import { useAppStore } from "../stores/app-store";
 import { useBufferStore } from "../stores/buffer-store";
 import { useUIState } from "../stores/ui-state-store";
@@ -12,7 +12,7 @@ export function useKeyboardShortcutsWrapper() {
   const { closeBuffer, switchToNextBuffer, switchToPreviousBuffer, setActiveBuffer } =
     useBufferStore.use.actions();
   const { handleSave, openQuickEdit } = useAppStore.use.actions();
-  const { coreFeatures, isAIChatVisible, setIsAIChatVisible } = usePersistentSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
 
   const searchViewRef = { current: null }; // Placeholder for search view ref
   const commandPaletteRef = { current: null }; // Placeholder for command palette ref
@@ -42,9 +42,9 @@ export function useKeyboardShortcutsWrapper() {
     },
     setIsRightPaneVisible: (value) => {
       if (typeof value === "function") {
-        setIsAIChatVisible(value(isAIChatVisible));
+        updateSetting("isAIChatVisible", value(settings.isAIChatVisible));
       } else {
-        setIsAIChatVisible(value);
+        updateSetting("isAIChatVisible", value);
       }
     },
     setIsCommandBarVisible: (value) => {
@@ -96,6 +96,6 @@ export function useKeyboardShortcutsWrapper() {
         });
       }
     },
-    coreFeatures,
+    coreFeatures: settings.coreFeatures,
   });
 }

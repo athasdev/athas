@@ -1,27 +1,24 @@
 import type React from "react";
 import { useEffect, useState } from "react";
-import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
+import { useSettingsStore } from "@/settings/store";
 
 export const FileTreeSettings = () => {
-  const {
-    hiddenFilePatterns,
-    hiddenDirectoryPatterns,
-    setHiddenFilePatterns,
-    setHiddenDirectoryPatterns,
-  } = usePersistentSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
 
-  const [filePatternsInput, setFilePatternsInput] = useState(hiddenFilePatterns.join(", "));
+  const [filePatternsInput, setFilePatternsInput] = useState(
+    settings.hiddenFilePatterns.join(", "),
+  );
   const [directoryPatternsInput, setDirectoryPatternsInput] = useState(
-    hiddenDirectoryPatterns.join(", "),
+    settings.hiddenDirectoryPatterns.join(", "),
   );
 
   useEffect(() => {
-    setFilePatternsInput(hiddenFilePatterns.join(", "));
-  }, [hiddenFilePatterns]);
+    setFilePatternsInput(settings.hiddenFilePatterns.join(", "));
+  }, [settings.hiddenFilePatterns]);
 
   useEffect(() => {
-    setDirectoryPatternsInput(hiddenDirectoryPatterns.join(", "));
-  }, [hiddenDirectoryPatterns]);
+    setDirectoryPatternsInput(settings.hiddenDirectoryPatterns.join(", "));
+  }, [settings.hiddenDirectoryPatterns]);
 
   const handleFilePatternsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setFilePatternsInput(e.target.value);
@@ -36,7 +33,7 @@ export const FileTreeSettings = () => {
       .split(",")
       .map((p) => p.trim())
       .filter((p) => p.length > 0);
-    setHiddenFilePatterns(patterns);
+    updateSetting("hiddenFilePatterns", patterns);
   };
 
   const handleDirectoryPatternsBlur = () => {
@@ -44,7 +41,7 @@ export const FileTreeSettings = () => {
       .split(",")
       .map((p) => p.trim())
       .filter((p) => p.length > 0);
-    setHiddenDirectoryPatterns(patterns);
+    updateSetting("hiddenDirectoryPatterns", patterns);
   };
 
   return (

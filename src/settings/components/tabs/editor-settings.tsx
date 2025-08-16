@@ -2,7 +2,7 @@ import { FontSelector } from "@/components/ui/font-selector";
 import Input from "@/components/ui/input";
 import Section, { SettingRow } from "@/components/ui/section";
 import Switch from "@/components/ui/switch";
-import { useSettingsStore } from "@/settings/stores/settings-store";
+import { useSettingsStore } from "@/settings/store";
 
 export const EditorSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
@@ -57,16 +57,6 @@ export const EditorSettings = () => {
           <Switch
             checked={settings.lineNumbers}
             onChange={(checked) => updateSetting("lineNumbers", checked)}
-            size="sm"
-          />
-        </SettingRow>
-      </Section>
-
-      <Section title="Features">
-        <SettingRow label="AI Completion" description="Enable AI-powered code completion">
-          <Switch
-            checked={settings.aiCompletion}
-            onChange={(checked) => updateSetting("aiCompletion", checked)}
             size="sm"
           />
         </SettingRow>

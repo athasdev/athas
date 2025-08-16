@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePersistentSettingsStore } from "@/settings/stores/persistent-settings-store";
+import { useSettingsStore } from "@/settings/store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import type { Buffer } from "@/types/buffer";
@@ -34,7 +34,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
     handleCloseTabsToRight,
     reorderBuffers,
   } = useBufferStore.use.actions();
-  const { maxOpenTabs } = usePersistentSettingsStore();
+  const { settings } = useSettingsStore();
   const { updateActivePath } = useSidebarStore();
 
   // Drag state
@@ -81,16 +81,16 @@ const TabBar = ({ paneId }: TabBarProps) => {
   }, [buffers]);
 
   useEffect(() => {
-    if (maxOpenTabs > 0 && buffers.length > maxOpenTabs && handleTabClose) {
+    if (settings.maxOpenTabs > 0 && buffers.length > settings.maxOpenTabs && handleTabClose) {
       const closableBuffers = buffers.filter((b) => !b.isPinned && b.id !== activeBufferId);
 
-      let tabsToClose = buffers.length - maxOpenTabs;
+      let tabsToClose = buffers.length - settings.maxOpenTabs;
       for (let i = 0; i < closableBuffers.length && tabsToClose > 0; i++) {
         handleTabClose(closableBuffers[i].id);
         tabsToClose--;
       }
     }
-  }, [buffers, maxOpenTabs, activeBufferId, handleTabClose]);
+  }, [buffers, settings.maxOpenTabs, activeBufferId, handleTabClose]);
 
   // Auto-scroll active tab into view
   useEffect(() => {
