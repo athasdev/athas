@@ -16,6 +16,8 @@ env:
 
 jobs:
   check:
+    # Don't run on forks
+    if: github.repository == 'athasdev/athas'
     name: check format and cargo check
     runs-on: ubuntu-latest
     steps:

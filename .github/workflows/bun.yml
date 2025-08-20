@@ -13,6 +13,8 @@ concurrency:
 
 jobs:
   check:
+    # Don't run on forks
+    if: github.repository == 'athasdev/athas'
     name: check format, types, and lint
     runs-on: ubuntu-latest
     steps:
