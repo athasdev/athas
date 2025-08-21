@@ -1,5 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useRef } from "react";
+import { editorAPI } from "@/extensions/editor-api";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useEditorScroll } from "@/hooks/use-editor-scroll";
 import { useHover } from "@/hooks/use-hover";
@@ -55,6 +56,10 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const value = activeBuffer?.content || "";
   const filePath = activeBuffer?.path || "";
   const onChange = activeBuffer ? handleContentChange : () => {};
+
+  useEffect(() => {
+    editorAPI.setEditorWrapperRef(editorRef.current);
+  }, []);
 
   // Initialize refs in store
   useEffect(() => {

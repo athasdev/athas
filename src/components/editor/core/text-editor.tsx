@@ -625,10 +625,20 @@ export function TextEditor() {
   // Context menu handlers
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    setContextMenu({
-      isOpen: true,
-      position: { x: e.clientX, y: e.clientY },
-    });
+
+    const wrapper = editorAPI.getEditorWrapperRef();
+    if (wrapper) {
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const x = e.clientX - wrapperRect.x;
+      const y = e.clientY - wrapperRect.y;
+
+      setContextMenu({ isOpen: true, position: { x, y } });
+    } else {
+      setContextMenu({
+        isOpen: true,
+        position: { x: e.clientX, y: e.clientY },
+      });
+    }
   }, []);
 
   const handleCloseContextMenu = useCallback(() => {
