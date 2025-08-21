@@ -993,15 +993,9 @@ export function TextEditor() {
         onBlur={() => setCursorVisibility(false)}
         onFocus={() => setCursorVisibility(true)}
         onKeyDown={handleKeyDown}
-        onSelect={() => {
-          console.log("select");
-          handleSelectionChange();
-        }}
+        onSelect={handleSelectionChange}
         onKeyUp={handleSelectionChange}
-        onMouseDown={() => {
-          console.log("mouse down");
-          handleSelectionChange();
-        }}
+        onMouseDown={handleSelectionChange}
         onMouseUp={handleSelectionChange}
         onContextMenu={handleContextMenu}
         onScroll={() => {
