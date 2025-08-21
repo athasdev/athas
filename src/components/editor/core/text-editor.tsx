@@ -312,16 +312,19 @@ export function TextEditor() {
   const handleSelectionChange = useCallback(() => {
     if (!textareaRef.current) return;
 
-    const { selectionStart, selectionEnd } = textareaRef.current;
+    const { selectionStart, selectionEnd, value } = textareaRef.current;
     const newCursorPosition = calculateCursorPosition(selectionStart, lines);
 
     setCursorPosition(newCursorPosition);
 
     if (selectionStart !== selectionEnd) {
-      setSelection({
-        start: calculateCursorPosition(selectionStart, lines),
-        end: calculateCursorPosition(selectionEnd, lines),
-      });
+      const selectedText = value.slice(selectionStart, selectionEnd).trim();
+      if (selectedText.length > 0) {
+        setSelection({
+          start: calculateCursorPosition(selectionStart, lines),
+          end: calculateCursorPosition(selectionEnd, lines),
+        });
+      }
     } else {
       setSelection(undefined);
     }
@@ -990,9 +993,15 @@ export function TextEditor() {
         onBlur={() => setCursorVisibility(false)}
         onFocus={() => setCursorVisibility(true)}
         onKeyDown={handleKeyDown}
-        onSelect={handleSelectionChange}
+        onSelect={() => {
+          console.log("select");
+          handleSelectionChange();
+        }}
         onKeyUp={handleSelectionChange}
-        onMouseDown={handleSelectionChange}
+        onMouseDown={() => {
+          console.log("mouse down");
+          handleSelectionChange();
+        }}
         onMouseUp={handleSelectionChange}
         onContextMenu={handleContextMenu}
         onScroll={() => {
