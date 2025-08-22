@@ -108,8 +108,16 @@ const getStore = async () => {
   if (!storeInstance) {
     storeInstance = await load("settings.json", {
       autoSave: true,
-      defaults: defaultSettings as unknown as { [key: string]: unknown },
     });
+
+    // Initialize defaults if not present
+    for (const [key, value] of Object.entries(defaultSettings)) {
+      const current = await storeInstance.get(key);
+      if (current === null || current === undefined) {
+        await storeInstance.set(key, value);
+      }
+    }
+    await storeInstance.save();
   }
   return storeInstance;
 };
