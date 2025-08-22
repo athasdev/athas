@@ -108,7 +108,7 @@ const getStore = async () => {
   if (!storeInstance) {
     storeInstance = await load("settings.json", {
       autoSave: true,
-      defaults: {},
+      defaults: defaultSettings as unknown as { [key: string]: unknown },
     });
   }
   return storeInstance;
