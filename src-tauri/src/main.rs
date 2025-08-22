@@ -150,6 +150,9 @@ fn main() {
                   "split_editor" => {
                      let _ = window.emit("menu_split_editor", ());
                   }
+                  "toggle_menu_bar" => {
+                     let _ = window.emit("menu_toggle_menu_bar", ());
+                  }
                   "toggle_vim" => {
                      let _ = window.emit("menu_toggle_vim", ());
                   }
@@ -170,6 +173,31 @@ fn main() {
                   }
                   "help" => {
                      let _ = window.emit("menu_help", ());
+                  }
+                  "about_athas" => {
+                     let _ = window.emit("menu_about_athas", ());
+                  }
+                  // Window menu items
+                  "minimize_window" => {
+                     if let Err(e) = window.minimize() {
+                        log::error!("Failed to minimize window: {}", e);
+                     }
+                  }
+                  "close_window" => {
+                     if let Err(e) = window.close() {
+                        log::error!("Failed to close window: {}", e);
+                     }
+                  }
+                  "zoom_window" => {
+                     if let Err(e) = window.maximize() {
+                        log::error!("Failed to zoom window: {}", e);
+                     }
+                  }
+                  "toggle_fullscreen" => {
+                     let is_fullscreen = window.is_fullscreen().unwrap_or(false);
+                     if let Err(e) = window.set_fullscreen(!is_fullscreen) {
+                        log::error!("Failed to toggle fullscreen: {}", e);
+                     }
                   }
                   // Theme menu items
                   theme_id if theme_id.starts_with("theme_") => {
