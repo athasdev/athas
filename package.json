@@ -80,7 +80,7 @@
     "vite": "^7.0.5"
   },
   "simple-git-hooks": {
-    "pre-commit": "bun run --bun lint-staged",
+    "pre-commit": "bunx lint-staged",
     "pre-push": "bun check:all",
     "commit-msg": "bun commitlint --edit $1"
   },
