@@ -1,15 +1,22 @@
 import { Upload } from "lucide-react";
 import { useEffect, useState } from "react";
+
 import Button from "@/components/ui/button";
 import Dropdown from "@/components/ui/dropdown";
 import Section, { SettingRow } from "@/components/ui/section";
+import Switch from "@/components/ui/switch";
+
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
+
 import { useSettingsStore } from "@/settings/store";
+import { useUIState } from "@/stores/ui-state-store";
 
 export const ThemeSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
   const [themeOptions, setThemeOptions] = useState<{ value: string; label: string }[]>([]);
+
+  const { setIsRestartDialogVisible } = useUIState();
 
   // Load themes from theme registry
   useEffect(() => {
@@ -77,6 +84,32 @@ export const ThemeSettings = () => {
               Upload
             </Button>
           </div>
+        </SettingRow>
+
+        <SettingRow
+          label="Native Menu Bar"
+          description="Use the native menu bar or a custom UI menu bar"
+        >
+          <Switch
+            checked={settings.nativeMenuBar}
+            onChange={(checked) => {
+              updateSetting("nativeMenuBar", checked);
+              setIsRestartDialogVisible(true);
+            }}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Compact Menu Bar"
+          description="Requires UI menu bar; compact hamburger or full UI menu"
+        >
+          <Switch
+            checked={settings.compactMenuBar}
+            disabled={settings.nativeMenuBar}
+            onChange={(checked) => updateSetting("compactMenuBar", checked)}
+            size="sm"
+          />
         </SettingRow>
       </Section>
     </div>

@@ -22,6 +22,8 @@ interface Settings {
   theme: Theme;
   autoThemeLight: Theme;
   autoThemeDark: Theme;
+  nativeMenuBar: boolean;
+  compactMenuBar: boolean;
   // AI
   aiProviderId: string;
   aiModelId: string;
@@ -64,6 +66,8 @@ const defaultSettings: Settings = {
   theme: "athas-dark", // Changed from "auto" since we don't support continuous monitoring
   autoThemeLight: "athas-light",
   autoThemeDark: "athas-dark",
+  nativeMenuBar: false, // TODO: check for OS, mac = true, linux/windows = false
+  compactMenuBar: true,
   // AI
   aiProviderId: "openai",
   aiModelId: "gpt-4o-mini",
@@ -183,7 +187,7 @@ const getSystemThemePreference = (): "light" | "dark" => {
   return "dark";
 };
 
-// Initialize settings from localStorage
+// Initialize settings
 const getInitialSettings = async (): Promise<Settings> => {
   if (typeof window === "undefined") return defaultSettings;
 

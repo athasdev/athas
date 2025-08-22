@@ -4,7 +4,7 @@ import { useFileSystemStore } from "@/file-system/controllers/store";
 import { ProjectNameMenu } from "@/hooks/use-context-menus";
 import { useKeyboardShortcutsWrapper } from "@/hooks/use-keyboard-shortcuts-wrapper";
 import { useMenuEventsWrapper } from "@/hooks/use-menu-events-wrapper";
-import SettingsDialog from "@/settings/components/settings-dialog";
+import RestartDialog from "@/settings/components/restart-dialog";
 import { useSettingsStore } from "@/settings/store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useUIState } from "@/stores/ui-state-store";
@@ -36,9 +36,9 @@ export function MainLayout() {
 
   const {
     isSidebarVisible,
-    isSettingsDialogVisible,
+    isRestartDialogVisible,
     isThemeSelectorVisible,
-    setIsSettingsDialogVisible,
+    setIsRestartDialogVisible,
     setIsThemeSelectorVisible,
   } = useUIState();
   const { settings, updateSetting } = useSettingsStore();
@@ -172,9 +172,9 @@ export function MainLayout() {
       <FileReloadToast />
 
       {/* Dialog components */}
-      <SettingsDialog
-        isOpen={isSettingsDialogVisible}
-        onClose={() => setIsSettingsDialogVisible(false)}
+      <RestartDialog
+        isOpen={isRestartDialogVisible}
+        onClose={() => setIsRestartDialogVisible(false)}
       />
       <ThemeSelector
         isVisible={isThemeSelectorVisible}
