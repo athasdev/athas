@@ -756,7 +756,6 @@ button {
 /* Window container styling - rounded but no borders */
 .window-container {
     overflow: hidden;
-    background: var(--color-primary-bg);
 }
 
 /* fero - commented because i dont think this really needed */
@@ -1118,77 +1117,14 @@ textarea::-webkit-scrollbar-thumb:hover {
   animation: dropIndicatorPulse 1s ease-in-out infinite;
 }
 
-/* Zoom wrapper and container styles */
-.zoom-wrapper {
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  position: relative;
-  background: var(--color-primary-bg);
-}
+/* Zoom system styles */
+[style*="zoom"] {
+  transition: zoom 150ms cubic-bezier(0.4, 0, 0.2, 1);
 
-.zoom-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transform-origin: top left;
-  /* Prevent blur on transform */
-  will-change: transform;
-  backface-visibility: hidden;
-  -webkit-font-smoothing: subpixel-antialiased;
-  /* Prevent white flash during zoom */
-  background: var(--color-primary-bg);
-  /* Ensure no gaps during transform */
-  min-width: 100vw;
-  min-height: 100vh;
-  /* Smooth zoom transition */
-  transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Ensure crisp rendering during zoom */
-.zoom-container * {
-  image-rendering: crisp-edges;
-  image-rendering: -webkit-optimize-contrast;
-}
-
-/* Fix for text rendering */
-.zoom-container text,
-.zoom-container span,
-.zoom-container div,
-.zoom-container p,
-.zoom-container h1,
-.zoom-container h2,
-.zoom-container h3,
-.zoom-container h4,
-.zoom-container h5,
-.zoom-container h6 {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-}
 
-/* Ensure scrollbars scale properly with zoom */
-.zoom-container::-webkit-scrollbar,
-.zoom-container *::-webkit-scrollbar {
-  width: calc(8px / var(--zoom-level, 1));
-  height: calc(8px / var(--zoom-level, 1));
-}
-
-.zoom-container::-webkit-scrollbar-thumb,
-.zoom-container *::-webkit-scrollbar-thumb {
-  border-radius: calc(4px / var(--zoom-level, 1));
-}
-
-/* Fix position fixed elements within zoom container */
-.zoom-container .fixed {
-  position: absolute;
-}
-
-/* Ensure dropdowns and modals render correctly */
-.zoom-container [role="dialog"],
-.zoom-container [role="menu"],
-.zoom-container [role="listbox"],
-.zoom-container [data-radix-popper-content-wrapper] {
-  transform: scale(calc(1 / var(--zoom-level, 1)));
-  transform-origin: top left;
+  image-rendering: crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
 }

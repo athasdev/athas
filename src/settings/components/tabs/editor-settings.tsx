@@ -1,5 +1,5 @@
 import { FontSelector } from "@/components/ui/font-selector";
-import Input from "@/components/ui/input";
+import NumberInput from "@/components/ui/number-input";
 import Section, { SettingRow } from "@/components/ui/section";
 import Switch from "@/components/ui/switch";
 import { useSettingsStore } from "@/settings/store";
@@ -20,24 +20,22 @@ export const EditorSettings = () => {
         </SettingRow>
 
         <SettingRow label="Font Size" description="Editor font size in pixels">
-          <Input
-            type="number"
+          <NumberInput
             min="8"
             max="32"
             value={settings.fontSize}
-            onChange={(e) => updateSetting("fontSize", parseInt(e.target.value))}
+            onChange={(val) => updateSetting("fontSize", val)}
             className="w-16"
             size="xs"
           />
         </SettingRow>
 
         <SettingRow label="Tab Size" description="Number of spaces per tab">
-          <Input
-            type="number"
+          <NumberInput
             min="1"
             max="8"
             value={settings.tabSize}
-            onChange={(e) => updateSetting("tabSize", parseInt(e.target.value))}
+            onChange={(val) => updateSetting("tabSize", val)}
             className="w-16"
             size="xs"
           />

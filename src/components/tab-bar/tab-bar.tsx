@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSettingsStore } from "@/settings/store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
@@ -332,6 +333,8 @@ const TabBar = ({ paneId }: TabBarProps) => {
   const handleDragEnd = useCallback(() => {}, []);
 
   const closeContextMenu = () => {
+    console.log("????");
+
     setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
   };
 
@@ -441,13 +444,17 @@ const TabBar = ({ paneId }: TabBarProps) => {
           )}
         </div>
 
-        {isDragging && draggedIndex !== null && currentPosition && (
-          <TabDragPreview
-            x={currentPosition.x}
-            y={currentPosition.y}
-            buffer={sortedBuffers[draggedIndex]}
-          />
-        )}
+        {isDragging &&
+          draggedIndex !== null &&
+          currentPosition &&
+          createPortal(
+            <TabDragPreview
+              x={currentPosition.x}
+              y={currentPosition.y}
+              buffer={sortedBuffers[draggedIndex]}
+            />,
+            document.body,
+          )}
       </div>
 
       <MemoizedTabContextMenu

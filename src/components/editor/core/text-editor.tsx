@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import { basicEditingExtension } from "@/extensions/basic-editing-extension";
 import { editorAPI } from "@/extensions/editor-api";
@@ -637,19 +638,10 @@ export function TextEditor() {
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
 
-    const wrapper = editorAPI.getEditorWrapperRef();
-    if (wrapper) {
-      const wrapperRect = wrapper.getBoundingClientRect();
-      const x = e.clientX - wrapperRect.x;
-      const y = e.clientY - wrapperRect.y;
-
-      setContextMenu({ isOpen: true, position: { x, y } });
-    } else {
-      setContextMenu({
-        isOpen: true,
-        position: { x: e.clientX, y: e.clientY },
-      });
-    }
+    setContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+    });
   }, []);
 
   const handleCloseContextMenu = useCallback(() => {
@@ -1055,26 +1047,29 @@ export function TextEditor() {
       <CompletionDropdown onApplyCompletion={handleApplyCompletion} />
 
       {/* Context menu */}
-      <EditorContextMenu
-        isOpen={contextMenu.isOpen}
-        position={contextMenu.position}
-        onClose={handleCloseContextMenu}
-        onCopy={handleCopy}
-        onCut={handleCut}
-        onPaste={handlePaste}
-        onSelectAll={handleSelectAll}
-        onDelete={handleDelete}
-        onDuplicate={handleDuplicate}
-        onIndent={handleIndent}
-        onOutdent={handleOutdent}
-        onToggleComment={handleToggleComment}
-        onFormat={handleFormat}
-        onToggleCase={handleToggleCase}
-        onMoveLineUp={handleMoveLineUp}
-        onMoveLineDown={handleMoveLineDown}
-        onInsertLine={handleInsertLine}
-        onToggleBookmark={handleToggleBookmark}
-      />
+      {createPortal(
+        <EditorContextMenu
+          isOpen={contextMenu.isOpen}
+          position={contextMenu.position}
+          onClose={handleCloseContextMenu}
+          onCopy={handleCopy}
+          onCut={handleCut}
+          onPaste={handlePaste}
+          onSelectAll={handleSelectAll}
+          onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
+          onIndent={handleIndent}
+          onOutdent={handleOutdent}
+          onToggleComment={handleToggleComment}
+          onFormat={handleFormat}
+          onToggleCase={handleToggleCase}
+          onMoveLineUp={handleMoveLineUp}
+          onMoveLineDown={handleMoveLineDown}
+          onInsertLine={handleInsertLine}
+          onToggleBookmark={handleToggleBookmark}
+        />,
+        document.body,
+      )}
     </div>
   );
 }
