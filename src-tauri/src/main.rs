@@ -151,7 +151,30 @@ fn main() {
                      let _ = window.emit("menu_split_editor", ());
                   }
                   "toggle_menu_bar" => {
-                     let _ = window.emit("menu_toggle_menu_bar", ());
+                     // Toggle menu visibility by setting it to None or recreating it
+                     let current_menu = _app_handle.menu();
+                     if current_menu.is_some() {
+                        // Hide menu by setting it to None
+                        if let Err(e) = _app_handle.remove_menu() {
+                           log::error!("Failed to hide menu: {}", e);
+                        } else {
+                           log::info!("Menu bar hidden");
+                        }
+                     } else {
+                        // Show menu by recreating it
+                        match menu::create_menu(_app_handle) {
+                           Ok(new_menu) => {
+                              if let Err(e) = _app_handle.set_menu(new_menu) {
+                                 log::error!("Failed to show menu: {}", e);
+                              } else {
+                                 log::info!("Menu bar shown");
+                              }
+                           }
+                           Err(e) => {
+                              log::error!("Failed to create menu: {}", e);
+                           }
+                        }
+                     }
                   }
                   "toggle_vim" => {
                      let _ = window.emit("menu_toggle_vim", ());
@@ -310,6 +333,8 @@ fn main() {
          filter_completions,
          // Format commands
          format_code,
+         // Menu commands
+         menu::toggle_menu_bar,
       ])
       .run(tauri::generate_context!())
       .expect("error while running tauri application");

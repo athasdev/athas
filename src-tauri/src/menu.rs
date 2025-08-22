@@ -1,5 +1,21 @@
 use tauri::menu::{MenuBuilder, MenuItem, SubmenuBuilder};
 
+#[tauri::command]
+pub async fn toggle_menu_bar(app: tauri::AppHandle) -> Result<(), String> {
+    let current_menu = app.menu();
+    if current_menu.is_some() {
+        // Hide menu by setting it to None
+        app.remove_menu().map_err(|e| format!("Failed to hide menu: {}", e))?;
+        log::info!("Menu bar hidden via command");
+    } else {
+        // Show menu by recreating it
+        let new_menu = create_menu(&app).map_err(|e| format!("Failed to create menu: {}", e))?;
+        app.set_menu(new_menu).map_err(|e| format!("Failed to show menu: {}", e))?;
+        log::info!("Menu bar shown via command");
+    }
+    Ok(())
+}
+
 pub fn create_menu<R: tauri::Runtime>(
    app: &tauri::AppHandle<R>,
 ) -> Result<tauri::menu::Menu<R>, tauri::Error> {

@@ -106,7 +106,10 @@ let storeInstance: Store;
 
 const getStore = async () => {
   if (!storeInstance) {
-    storeInstance = await load("settings.json", { autoSave: true });
+    storeInstance = await load("settings.json", {
+      autoSave: true,
+      defaults: {},
+    });
   }
   return storeInstance;
 };
