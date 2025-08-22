@@ -35,7 +35,7 @@
 /* Sticky parent folders - simple and clean */
 .file-tree-item-dir {
   position: sticky !important;
-  top: calc(var(--depth, 0) * 1.375rem) !important;
+  top: calc(var(--depth, 0) * 22px) !important;
   z-index: calc(50 - var(--depth, 0)) !important;
 }
 
@@ -99,7 +99,7 @@
 .file-tree-item[data-depth="1"]::after {
   content: "";
   position: absolute;
-  left: 1.25rem;
+  left: 20px;
   top: 0;
   bottom: 0;
   width: 1px;
@@ -112,7 +112,7 @@
 .file-tree-item[data-depth="2"]::after {
   content: "";
   position: absolute;
-  left: 2.5rem;
+  left: 40px;
   top: 0;
   bottom: 0;
   width: 1px;
@@ -125,7 +125,7 @@
 .file-tree-item[data-depth="3"]::after {
   content: "";
   position: absolute;
-  left: 3.75rem;
+  left: 60px;
   top: 0;
   bottom: 0;
   width: 1px;
@@ -138,7 +138,7 @@
 .file-tree-item[data-depth="4"]::after {
   content: "";
   position: absolute;
-  left: 5rem;
+  left: 80px;
   top: 0;
   bottom: 0;
   width: 1px;
@@ -151,7 +151,7 @@
 .file-tree-item[data-depth="5"]::after {
   content: "";
   position: absolute;
-  left: 6.25rem;
+  left: 100px;
   top: 0;
   bottom: 0;
   width: 1px;

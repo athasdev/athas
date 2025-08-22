@@ -13,7 +13,6 @@ class EditorAPIImpl implements EditorAPI {
   private selection: Range | null = null;
   private textareaRef: HTMLTextAreaElement | null = null;
   private viewportRef: HTMLDivElement | null = null;
-  private editorWrapperRef: HTMLDivElement | null = null;
 
   constructor() {
     // Initialize event handler sets
@@ -284,14 +283,6 @@ class EditorAPIImpl implements EditorAPI {
   // Public method to safely emit events (for extensions)
   emitEvent(event: EditorEvent, data?: any): void {
     this.emit(event, data);
-  }
-
-  setEditorWrapperRef(ref: HTMLDivElement | null): void {
-    this.editorWrapperRef = ref;
-  }
-
-  getEditorWrapperRef(): HTMLDivElement | null {
-    return this.editorWrapperRef;
   }
 
   // Set the textarea ref for syncing cursor position

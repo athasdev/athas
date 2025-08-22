@@ -16,7 +16,6 @@ interface ZoomActions {
   zoomOut: () => void;
   resetZoom: () => void;
   showZoomIndicatorTemporarily: () => void;
-  getZoomPercentage: () => number;
 }
 
 export const useZoomStore = createSelectors(
@@ -73,8 +72,6 @@ export const useZoomStore = createSelectors(
         },
 
         showZoomIndicatorTemporarily,
-
-        getZoomPercentage: () => Math.round(get().zoomLevel * 100),
       },
     };
   }),
