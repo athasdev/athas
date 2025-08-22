@@ -11,7 +11,8 @@ import {
   Trash2,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { type RefObject, useRef, useState } from "react";
+import { useOnClickOutside } from "usehooks-ts";
 import {
   discardFileChanges,
   stageAllFiles,
@@ -43,6 +44,8 @@ const GitStatusPanel = ({
   onRefresh,
   repoPath,
 }: GitStatusPanelProps) => {
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
@@ -151,16 +154,9 @@ const GitStatusPanel = ({
     });
   };
 
-  const handleDocumentClick = () => {
+  useOnClickOutside(contextMenuRef as RefObject<HTMLElement>, () => {
     setContextMenu(null);
-  };
-
-  useEffect(() => {
-    document.addEventListener("click", handleDocumentClick);
-    return () => {
-      document.removeEventListener("click", handleDocumentClick);
-    };
-  }, []);
+  });
 
   return (
     <div className="select-none space-y-0">
@@ -319,6 +315,7 @@ const GitStatusPanel = ({
       {/* Context Menu */}
       {contextMenu && onOpenFile && (
         <div
+          ref={contextMenuRef}
           className="fixed z-50 min-w-[120px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
           style={{
             left: contextMenu.x,

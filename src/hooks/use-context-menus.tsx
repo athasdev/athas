@@ -1,5 +1,6 @@
 import { ClockIcon } from "lucide-react";
-import { useEffect } from "react";
+import { type RefObject, useRef } from "react";
+import { useOnClickOutside } from "usehooks-ts";
 import { cn } from "@/utils/cn";
 import { useRecentFoldersStore } from "../file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "../file-system/controllers/store";
@@ -7,6 +8,7 @@ import type { RecentFolder } from "../file-system/models/recent-folders";
 import { useUIState } from "../stores/ui-state-store";
 
 export const ProjectNameMenu = () => {
+  const menuRef = useRef<HTMLDivElement>(null);
   // Get data from stores
   const { projectNameMenu, setProjectNameMenu } = useUIState();
   const { handleOpenFolder, handleCollapseAllFolders } = useFileSystemStore();
@@ -18,33 +20,15 @@ export const ProjectNameMenu = () => {
   const onOpenRecentFolder = openRecentFolder;
 
   // Close menu on outside click
-  useEffect(() => {
-    if (!projectNameMenu) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const menuEl = document.getElementById("project-name-menu");
-      if (menuEl && !menuEl.contains(target)) {
-        setProjectNameMenu(null);
-      }
-    };
-
-    // Small delay to avoid closing immediately on menu open
-    const timer = setTimeout(() => {
-      document.addEventListener("click", handleClickOutside);
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("click", handleClickOutside);
-    };
-  }, [projectNameMenu, setProjectNameMenu]);
+  useOnClickOutside(menuRef as RefObject<HTMLElement>, () => {
+    setProjectNameMenu(null);
+  });
 
   if (!projectNameMenu) return null;
 
   return (
     <div
-      id="project-name-menu"
+      ref={menuRef}
       className="fixed z-50 min-w-[200px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
       style={{
         left: projectNameMenu.x,
