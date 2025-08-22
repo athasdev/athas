@@ -53,7 +53,6 @@ async function setupMenuListeners(handlers: any) {
     listen("menu_help", () => currentHandlers.current.onHelp()),
     listen("menu_about_athas", () => currentHandlers.current.onAboutAthas()),
     listen("menu_toggle_menu_bar", () => currentHandlers.current.onToggleMenuBar()),
-    listen("menu-toggle-menu-bar", () => currentHandlers.current.onToggleMenuBar()),
   ]);
 
   cleanupFunctions = removeListeners;
