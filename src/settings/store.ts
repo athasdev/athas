@@ -1,8 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { load, type Store } from "@tauri-apps/plugin-store";
+
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+
 import type { CoreFeaturesState } from "./models/feature.types";
 
 type Theme = string;
@@ -66,7 +68,7 @@ const defaultSettings: Settings = {
   theme: "athas-dark", // Changed from "auto" since we don't support continuous monitoring
   autoThemeLight: "athas-light",
   autoThemeDark: "athas-dark",
-  nativeMenuBar: false, // TODO: check for OS, mac = true, linux/windows = false
+  nativeMenuBar: false,
   compactMenuBar: true,
   // AI
   aiProviderId: "openai",
@@ -187,53 +189,45 @@ const getSystemThemePreference = (): "light" | "dark" => {
   return "dark";
 };
 
-// Initialize settings
-const getInitialSettings = async (): Promise<Settings> => {
+const initializeSettings = async () => {
   if (typeof window === "undefined") return defaultSettings;
 
-  const store = await getStore();
-  const loadedSettings: Settings = { ...defaultSettings };
+  try {
+    const store = await getStore();
+    const loadedSettings: Settings = { ...defaultSettings };
 
-  // Load each setting from the store
-  for (const key of Object.keys(defaultSettings) as Array<keyof Settings>) {
-    const value = await store.get(key);
-    if (value !== null && value !== undefined) {
-      (loadedSettings as any)[key] = value as Settings[typeof key];
-    }
-  }
-
-  const hasStoredTheme = await store.get("theme");
-  if (!hasStoredTheme) {
-    // No theme found, detect OS theme for better default
-    let detectedTheme = getSystemThemePreference() === "dark" ? "athas-dark" : "athas-light";
-
-    // Get more accurate theme detection from Tauri
-    try {
-      // Try to get more accurate theme detection from Tauri
-      const tauriDetectedTheme = await invoke<string>("get_system_theme");
-      detectedTheme = tauriDetectedTheme === "dark" ? "athas-dark" : "athas-light";
-    } catch {
-      console.log("Tauri theme detection not available, using browser detection");
+    // Load settings from store
+    for (const key of Object.keys(defaultSettings) as Array<keyof Settings>) {
+      const value = await store.get(key);
+      if (value !== null && value !== undefined) {
+        (loadedSettings as any)[key] = value as Settings[typeof key];
+      }
     }
 
-    loadedSettings.theme = detectedTheme;
+    // Detect theme if none exists
+    if (!loadedSettings.theme) {
+      let detectedTheme = getSystemThemePreference() === "dark" ? "athas-dark" : "athas-light";
+
+      try {
+        const tauriDetectedTheme = await invoke<string>("get_system_theme");
+        detectedTheme = tauriDetectedTheme === "dark" ? "athas-dark" : "athas-light";
+      } catch {
+        console.log("Tauri theme detection not available, using browser detection");
+      }
+
+      loadedSettings.theme = detectedTheme;
+    }
+
+    applyTheme(loadedSettings.theme);
+
+    // Update Zustand store
+    useSettingsStore.getState().initializeSettings(loadedSettings);
     await saveSettingsToStore(loadedSettings);
-  }
 
-  return loadedSettings;
-};
-
-const initializeSettings = async () => {
-  if (typeof window !== "undefined") {
-    try {
-      const loadedSettings = await getInitialSettings();
-      applyTheme(loadedSettings.theme);
-
-      const store = useSettingsStore.getState();
-      store.initializeSettings(loadedSettings);
-    } catch (error) {
-      console.error("Failed to initialize settings:", error);
-    }
+    return loadedSettings;
+  } catch (error) {
+    console.error("Failed to initialize settings:", error);
+    return defaultSettings;
   }
 };
 
