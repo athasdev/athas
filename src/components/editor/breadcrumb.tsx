@@ -1,6 +1,7 @@
 import { ArrowLeft, ChevronRight, Search } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type RefObject, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import FileIcon from "@/file-explorer/views/file.icon";
 import { readDirectory } from "@/file-system/controllers/platform";
@@ -10,6 +11,8 @@ import { useBufferStore } from "@/stores/buffer-store";
 import { useUIState } from "@/stores/ui-state-store";
 
 export default function Breadcrumb() {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
@@ -160,31 +163,19 @@ export default function Breadcrumb() {
   };
 
   // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest(".breadcrumb-dropdown")) {
+  useOnClickOutside(dropdownRef as RefObject<HTMLElement>, () => {
+    setDropdown(null);
+  });
+
+  useEventListener("keydown", async (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      if (dropdown && dropdown.navigationStack.length > 0) {
+        await handleGoBack();
+      } else {
         setDropdown(null);
       }
-    };
-
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (dropdown && dropdown.navigationStack.length > 0) {
-          await handleGoBack();
-        } else {
-          setDropdown(null);
-        }
-      }
-    };
-
-    document.addEventListener("click", handleClick);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("click", handleClick);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [dropdown]);
+    }
+  });
 
   if (!activeBuffer || segments.length === 0) return null;
 
@@ -224,6 +215,7 @@ export default function Breadcrumb() {
       {dropdown &&
         createPortal(
           <div
+            ref={dropdownRef}
             className="breadcrumb-dropdown fixed overflow-y-auto rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
             style={{
               zIndex: EDITOR_CONSTANTS.Z_INDEX.DROPDOWN,

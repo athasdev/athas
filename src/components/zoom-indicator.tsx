@@ -1,9 +1,14 @@
+import { useMemo } from "react";
 import { useZoomStore } from "../stores/zoom-store";
 import { cn } from "../utils/cn";
 
 export function ZoomIndicator() {
   const showZoomIndicator = useZoomStore.use.showZoomIndicator();
-  const { getZoomPercentage } = useZoomStore.use.actions();
+  const zoomLevel = useZoomStore.use.zoomLevel();
+
+  const zoomPercentage = useMemo(() => {
+    return `${Math.round(zoomLevel * 100)}%`;
+  }, [zoomLevel]);
 
   if (!showZoomIndicator) {
     return null;
@@ -24,7 +29,7 @@ export function ZoomIndicator() {
         animationFillMode: "forwards",
       }}
     >
-      {getZoomPercentage()}%
+      {zoomPercentage}
     </div>
   );
 }

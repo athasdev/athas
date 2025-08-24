@@ -18,7 +18,7 @@ import {
   Upload,
 } from "lucide-react";
 import type React from "react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 // Performance optimizations
@@ -33,6 +33,7 @@ import type { GitFile, GitStatus } from "@/version-control/git/models/git-types"
 import FileIcon from "./file.icon";
 import { useCustomDragDrop } from "./file-tree-custom-dnd";
 import "./file-tree.css";
+import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import { useSettingsStore } from "@/settings/store";
 
 interface FileTreeProps {
@@ -78,6 +79,8 @@ const FileTree = ({
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+  const documentRef = useRef<Document>(document);
 
   const [gitIgnore, setGitIgnore] = useState<ReturnType<typeof ignore> | null>(null);
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
@@ -528,34 +531,30 @@ const FileTree = ({
     });
   };
 
-  const handleDocumentClick = (e: Event) => {
-    const target = e.target as HTMLElement;
-    if (!target.closest(".context-menu")) {
-      setContextMenu(null);
-    }
-  };
+  // Handle click outside of context menu
+  useOnClickOutside(contextMenuRef as RefObject<HTMLElement>, () => {
+    setContextMenu(null);
+  });
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+  // Handle escape key
+  useEventListener(
+    "keydown",
+    (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setContextMenu(null);
       }
-    };
+    },
+    documentRef,
+  );
 
-    // Prevent default drag behavior at document level
-    const handleDocumentDragOver = (e: DragEvent) => {
+  // Prevent default drag behavior at document level
+  useEventListener(
+    "dragover",
+    (e: DragEvent) => {
       e.preventDefault();
-    };
-
-    document.addEventListener("click", handleDocumentClick);
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("dragover", handleDocumentDragOver);
-    return () => {
-      document.removeEventListener("click", handleDocumentClick);
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("dragover", handleDocumentDragOver);
-    };
-  }, []);
+    },
+    documentRef,
+  );
 
   const handleFileClick = useCallback(
     (e: React.MouseEvent, path: string, isDir: boolean) => {
@@ -851,6 +850,7 @@ const FileTree = ({
       {contextMenu &&
         createPortal(
           <div
+            ref={contextMenuRef}
             className={cn(
               "context-menu fixed z-50 rounded-md border",
               "border-border bg-secondary-bg py-1 shadow-lg",
