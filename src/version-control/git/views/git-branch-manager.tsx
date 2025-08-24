@@ -1,5 +1,5 @@
 import { Check, ChevronDown, GitBranch, Plus, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/contexts/toast-context";
 import { cn } from "@/utils/cn";
 import {
@@ -28,6 +28,7 @@ const GitBranchManager = ({
   const [newBranchName, setNewBranchName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { showToast } = useToast();
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     loadBranches();
@@ -79,7 +80,6 @@ const GitBranchManager = ({
                   true,
                 );
                 if (stashSuccess) {
-                  // Try to checkout again after stashing
                   const retryResult = await checkoutBranch(repoPath, branchName);
                   if (retryResult.success) {
                     showToast({
@@ -155,9 +155,27 @@ const GitBranchManager = ({
     return null;
   }
 
+  const getModalPosition = () => {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    const modalWidth = 480;
+    const modalMaxHeight = viewportHeight * 0.6;
+
+    const left = viewportWidth / 2 - modalWidth / 2 + 100;
+    const top = viewportHeight / 2 - modalMaxHeight / 2;
+
+    return {
+      left: `${left}px`,
+      top: `${top}px`,
+      maxHeight: `${modalMaxHeight}px`,
+    };
+  };
+
   return (
     <>
       <button
+        ref={buttonRef}
         onClick={() => setShowModal(true)}
         disabled={isLoading}
         className={cn(
@@ -184,14 +202,15 @@ const GitBranchManager = ({
 
       {showModal && (
         <div
-          className={cn("fixed inset-0 z-100 flex items-center justify-center", "bg-opacity-50")}
+          className={cn("fixed inset-0 z-100", "bg-black bg-opacity-50")}
           onClick={() => setShowModal(false)}
         >
           <div
             className={cn(
-              "flex max-h-[60vh] w-120 flex-col rounded-lg",
+              "absolute flex w-120 flex-col rounded-lg",
               "border border-border bg-primary-bg shadow-xl",
             )}
+            style={getModalPosition()}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
