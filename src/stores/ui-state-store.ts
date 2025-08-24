@@ -18,6 +18,7 @@ const initialState = {
 
   // Dialog States
   isSettingsDialogVisible: false,
+  isRestartDialogVisible: false,
   isThemeSelectorVisible: false,
 
   // Bottom Pane
@@ -54,6 +55,7 @@ export const useUIState = create(
 
     // Dialog State actions
     setIsSettingsDialogVisible: (v: boolean) => set({ isSettingsDialogVisible: v }),
+    setIsRestartDialogVisible: (v: boolean) => set({ isRestartDialogVisible: v }),
     setIsThemeSelectorVisible: (v: boolean) => set({ isThemeSelectorVisible: v }),
 
     // Bottom Pane actions

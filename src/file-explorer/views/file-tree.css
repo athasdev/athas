@@ -36,7 +36,6 @@
 .file-tree-item-dir {
   position: sticky !important;
   top: calc(var(--depth, 0) * 22px) !important;
-  z-index: calc(50 - var(--depth, 0)) !important;
 }
 
 /* Ensure file tree content wrapper stretches to full scrollable area */

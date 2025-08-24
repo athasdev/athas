@@ -9,8 +9,11 @@ use lsp::LspManager;
 use ssh::{ssh_connect, ssh_disconnect, ssh_write_file};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
+use tauri_plugin_os::platform;
+use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 use xterm_terminal::XtermManager;
+
 mod claude_bridge;
 mod commands;
 mod file_watcher;
@@ -37,8 +40,22 @@ fn main() {
       .plugin(tauri_plugin_http::init())
       .plugin(tauri_plugin_process::init())
       .setup(|app| {
-         let menu = menu::create_menu(app.handle())?;
-         app.set_menu(menu)?;
+         let store = app.store("settings.json")?;
+
+         let native_menu_bar = store
+            .get("nativeMenuBar")
+            .and_then(|v| v.as_bool())
+            .unwrap_or_else(|| {
+               // If setting is missing, detect platform; if on MacOS, enable native menu bar
+               let default = platform() == "macos";
+               store.set("nativeMenuBar", default);
+               default
+            });
+
+         if native_menu_bar {
+            let menu = menu::create_menu(app.handle())?;
+            app.set_menu(menu)?;
+         }
 
          log::info!("Starting app ☺️!");
 

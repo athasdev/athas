@@ -48,7 +48,7 @@ is_dark = true
 "--tw-text-light" = "#b5bfe2"
 "--tw-text-lighter" = "#a5adce"
 "--tw-border" = "#51576d"
-"--tw-hover" = "##414559"
+"--tw-hover" = "#414559"
 "--tw-selected" = "#51576d"
 "--tw-accent" = "#99d1db"
 
