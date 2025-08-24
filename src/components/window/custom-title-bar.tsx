@@ -152,8 +152,12 @@ const CustomTitleBar = ({
     return (
       <div
         data-tauri-drag-region
-        className="relative z-50 flex h-8 select-none items-center justify-between bg-primary-bg"
+        className="relative z-50 flex h-8 select-none items-center justify-between bg-primary-bg pl-0.5"
       >
+        {!settings.nativeMenuBar && (
+          <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
+        )}
+
         {/* macOS traffic light space holder */}
         <div className="flex items-center space-x-2 pl-4" />
 
@@ -227,7 +231,9 @@ const CustomTitleBar = ({
           <span
             className={cn(
               "max-w-96 truncate font-medium text-text text-xs",
-              !settings.compactMenuBar && "-translate-x-1/2 absolute left-1/2",
+              !settings.nativeMenuBar &&
+                !settings.compactMenuBar &&
+                "-translate-x-1/2 absolute left-1/2",
             )}
           >
             {projectName}
