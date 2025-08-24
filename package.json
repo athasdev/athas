@@ -59,6 +59,7 @@
     "tailwind-merge": "^3.3.1",
     "use-debounce": "^10.0.5",
     "use-sync-external-store": "^1.5.0",
+    "usehooks-ts": "^3.1.1",
     "vscode-languageserver-protocol": "^3.17.5",
     "zustand": "^5.0.6"
   },

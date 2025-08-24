@@ -1,5 +1,5 @@
 import { Database, Package, Pin, X } from "lucide-react";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import FileIcon from "@/file-explorer/views/file.icon";
 import type { Buffer } from "@/types/buffer";
 import { cn } from "@/utils/cn";
@@ -30,6 +30,16 @@ const TabBarItem = memo(function TabBarItem({
   onDragEnd,
   handleTabClose,
 }: TabBarItemProps) {
+  const handleAuxClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Only handle middle click here
+      if (e.button !== 1) return;
+
+      handleTabClose(buffer.id);
+    },
+    [handleTabClose, buffer.id],
+  );
+
   return (
     <>
       {showDropIndicatorBefore && (
@@ -51,7 +61,7 @@ const TabBarItem = memo(function TabBarItem({
         draggable
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
-        onAuxClick={() => handleTabClose(buffer.id)}
+        onAuxClick={handleAuxClick}
       >
         {isActive && <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-accent" />}
         <div className="grid size-3 max-h-3 max-w-3 shrink-0 place-content-center py-3">
