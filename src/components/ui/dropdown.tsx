@@ -1,7 +1,10 @@
 import { ChevronDown, Search } from "lucide-react";
+import type { FC, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useOnClickOutside } from "usehooks-ts";
 import { cn } from "@/utils/cn";
+import { adjustPositionToFitViewport } from "@/utils/fit-viewport";
 
 interface DropdownProps {
   value: string;
@@ -12,6 +15,10 @@ interface DropdownProps {
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
   searchable?: boolean;
+  CustomTrigger?: FC<{
+    ref: RefObject<HTMLButtonElement | null>;
+    onClick: () => void;
+  }>;
 }
 
 const Dropdown = ({
@@ -23,6 +30,7 @@ const Dropdown = ({
   disabled = false,
   size = "sm",
   searchable = false,
+  CustomTrigger,
 }: DropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,29 +43,22 @@ const Dropdown = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  useOnClickOutside(dropdownRef as RefObject<HTMLElement>, () => setIsOpen(false));
 
   // Update dropdown position when opened
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
+      const position = adjustPositionToFitViewport({
+        x: rect.left,
+        y: rect.bottom + 8,
+        width: rect.width,
+        height: rect.height,
+      });
+
       setDropdownPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
+        top: position.y,
+        left: position.x,
         width: rect.width,
       });
       // Focus search input when dropdown opens
@@ -153,28 +154,31 @@ const Dropdown = ({
 
   return (
     <div className={cn("relative", className)}>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        disabled={disabled}
-        className={cn(
-          "flex w-full items-center justify-between gap-1 rounded border border-border bg-secondary-bg text-text transition-colors",
-          "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
-          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
-          sizeClasses[size],
-        )}
-      >
-        <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
-        <ChevronDown
-          size={iconSizes[size]}
+      {CustomTrigger ? (
+        <CustomTrigger ref={buttonRef} onClick={() => !disabled && setIsOpen(!isOpen)} />
+      ) : (
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          disabled={disabled}
           className={cn(
-            "flex-shrink-0 text-text-lighter transition-transform",
-            isOpen && "rotate-180",
+            "flex w-full items-center justify-between gap-1 rounded border border-border bg-secondary-bg text-text transition-colors",
+            "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
+            disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
+            sizeClasses[size],
           )}
-        />
-      </button>
-
+        >
+          <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
+          <ChevronDown
+            size={iconSizes[size]}
+            className={cn(
+              "flex-shrink-0 text-text-lighter transition-transform",
+              isOpen && "rotate-180",
+            )}
+          />
+        </button>
+      )}
       {typeof document !== "undefined" && createPortal(renderDropdown(), document.body)}
     </div>
   );
