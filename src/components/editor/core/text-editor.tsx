@@ -10,6 +10,7 @@ import {
   setSyntaxHighlightingFilePath,
   syntaxHighlightingExtension,
 } from "@/extensions/syntax-highlighting-extension";
+import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import {
   useDebouncedFunction,
@@ -25,6 +26,7 @@ import { useEditorInstanceStore } from "@/stores/editor-instance-store";
 import { useEditorLayoutStore } from "@/stores/editor-layout-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
+import { useGitBlameStore } from "@/stores/git-blame-store";
 import { useLspStore } from "@/stores/lsp-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 import type { Position } from "@/types/editor-types";
@@ -46,6 +48,8 @@ export function TextEditor() {
   const fontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
   const { addDecoration, removeDecoration } = useEditorDecorationsStore();
+  const { loadBlameForFile } = useGitBlameStore();
+  const { rootFolderPath } = useFileSystemStore();
 
   // Performance monitoring
   const { start: startRender, end: endRender } = usePerformanceMonitor("TextEditor render");
@@ -59,7 +63,11 @@ export function TextEditor() {
 
       return {
         range: {
-          start: { line: result.line, column: result.column, offset: startOffset },
+          start: {
+            line: result.line,
+            column: result.column,
+            offset: startOffset,
+          },
           end: { line: result.line, column: endColumn, offset: endOffset },
         },
         className: "search-highlight",
@@ -463,6 +471,18 @@ export function TextEditor() {
     }
   }, [filePath]);
 
+  // Load git blame data when file changes
+  useEffect(() => {
+    if (filePath && rootFolderPath && activeBufferId) {
+      // Only load blame for files within the git repository
+      if (filePath.startsWith(rootFolderPath)) {
+        loadBlameForFile(rootFolderPath, filePath).catch((error) => {
+          console.warn("Failed to load git blame:", error);
+        });
+      }
+    }
+  }, [filePath, rootFolderPath, activeBufferId, loadBlameForFile]);
+
   const restoreCursorPosition = useCallback(
     (bufferId: string) => {
       if (!textareaRef.current) return;
@@ -565,7 +585,11 @@ export function TextEditor() {
   useEffect(() => {
     // Only emit on initial mount when content is first loaded
     if (content) {
-      const eventData = { content, changes: [], affectedLines: new Set<number>() };
+      const eventData = {
+        content,
+        changes: [],
+        affectedLines: new Set<number>(),
+      };
       editorAPI.emitEvent("contentChange", eventData);
     }
   }, []); // Empty dependency array - only run once on mount
@@ -779,7 +803,9 @@ export function TextEditor() {
         const lineEnd = content.indexOf("\n", cursorPos);
         const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
         const currentLine = content.slice(lineStart, actualLineEnd);
-        const newContent = `${content.slice(0, actualLineEnd)}\n${currentLine}${content.slice(actualLineEnd)}`;
+        const newContent = `${content.slice(0, actualLineEnd)}\n${currentLine}${content.slice(
+          actualLineEnd,
+        )}`;
 
         onChange?.(newContent);
         if (activeBufferId) {

@@ -1,3 +1,4 @@
+mod blame;
 mod branch;
 mod commit;
 mod diff;
@@ -10,6 +11,7 @@ mod tag;
 mod types;
 mod utils;
 
+pub use blame::*;
 pub use branch::*;
 pub use commit::*;
 pub use diff::*;

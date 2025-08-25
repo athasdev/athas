@@ -223,6 +223,7 @@ fn main() {
          git_delete_tag,
          git_stage_hunk,
          git_unstage_hunk,
+         git_blame_file,
          // GitHub commands
          store_github_token,
          get_github_token,
