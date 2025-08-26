@@ -852,7 +852,7 @@ const FileTree = ({
           <div
             ref={contextMenuRef}
             className={cn(
-              "context-menu fixed z-50 rounded-md border",
+              "context-menu fixed z-100 rounded-md border",
               "border-border bg-secondary-bg py-1 shadow-lg",
             )}
             style={{
