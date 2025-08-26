@@ -8,7 +8,7 @@ use std::{
    path::Path,
    sync::{Arc, Mutex},
 };
-use tauri::command;
+use tauri::{Manager, command};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SshConnection {
@@ -241,11 +241,28 @@ pub async fn ssh_connect(
 }
 
 #[command]
-pub async fn ssh_disconnect(connection_id: String) -> Result<(), String> {
+pub async fn ssh_disconnect(app: tauri::AppHandle, connection_id: String) -> Result<(), String> {
    let mut connections = CONNECTIONS.lock().unwrap();
    if let Some((session, _)) = connections.remove(&connection_id) {
       let _ = session.disconnect(None, "Disconnecting", None);
    }
+
+   // Close the remote window if it exists
+   let window_label = format!("remote-{}", connection_id);
+   if let Some(window) = app.get_webview_window(&window_label) {
+      let _ = window.close();
+   }
+
+   Ok(())
+}
+
+#[command]
+pub async fn ssh_disconnect_only(connection_id: String) -> Result<(), String> {
+   let mut connections = CONNECTIONS.lock().unwrap();
+   if let Some((session, _)) = connections.remove(&connection_id) {
+      let _ = session.disconnect(None, "Disconnecting", None);
+   }
+
    Ok(())
 }
 

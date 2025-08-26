@@ -6,7 +6,7 @@ use commands::*;
 use file_watcher::FileWatcher;
 use log::{debug, info};
 use lsp::LspManager;
-use ssh::{ssh_connect, ssh_disconnect, ssh_write_file};
+use ssh::{ssh_connect, ssh_disconnect, ssh_disconnect_only, ssh_write_file};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tokio::sync::Mutex;
@@ -244,6 +244,7 @@ fn main() {
          // SSH commands
          ssh_connect,
          ssh_disconnect,
+         ssh_disconnect_only,
          ssh_write_file,
          // Claude commands
          start_claude_code,

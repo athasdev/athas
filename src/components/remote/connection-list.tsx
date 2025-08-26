@@ -1,4 +1,4 @@
-import { Edit, FolderOpen, Plus, Server, Trash2, Wifi } from "lucide-react";
+import { Edit, FolderOpen, Plus, Server, Trash2, Wifi, WifiOff } from "lucide-react";
 import React, { useState } from "react";
 import { cn } from "@/utils/cn";
 import Button from "../ui/button";
@@ -34,7 +34,7 @@ const ConnectionList = ({
     const diffMs = now.getTime() - date.getTime();
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
 
-    if (diffMinutes < 1) return "Just now";
+    if (diffMinutes < 1) return "just now";
     if (diffMinutes < 60) return `${diffMinutes}m ago`;
     if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
     return `${Math.floor(diffMinutes / 1440)}d ago`;
@@ -110,7 +110,7 @@ const ConnectionList = ({
 
                   {/* Connection Info - Clickable */}
                   <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <div className="mb-1 flex flex-wrap items-center gap-y-2">
                       <span
                         className="cursor-pointer truncate rounded px-1 py-0.5 font-medium text-sm text-text hover:bg-hover"
                         title="Click for options"
@@ -135,11 +135,11 @@ const ConnectionList = ({
                       >
                         {connection.name}
                       </span>
-                      <span className="flex-shrink-0 rounded bg-hover px-1.5 py-0.5 font-mono text-text-lighter text-xs">
+                      <span className="flex-shrink-0 rounded bg-hover px-1 font-mono text-text-lighter text-xs">
                         {connection.type.toUpperCase()}
                       </span>
                     </div>
-                    <div className="truncate text-text-lighter text-xs">
+                    <div className="mx-1 truncate text-text-lighter text-xs">
                       {connection.isConnected
                         ? "Connected"
                         : connection.lastConnected
@@ -148,18 +148,29 @@ const ConnectionList = ({
                     </div>
                   </div>
 
-                  {/* Connect/Browse Button Only */}
-                  <div className="flex flex-shrink-0 items-center">
+                  {/* Connect/Disconnect/Browse Buttons */}
+                  <div className="flex flex-shrink-0 items-center gap-1">
                     {connection.isConnected ? (
-                      <Button
-                        onClick={() => onFileSelect?.(`/remote/${connection.id}/`, true)}
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 cursor-pointer p-0"
-                        title="Browse Files"
-                      >
-                        <FolderOpen size={12} />
-                      </Button>
+                      <>
+                        <Button
+                          onClick={() => onFileSelect?.(`/remote/${connection.id}/`, true)}
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 cursor-pointer p-0"
+                          title="Browse Files"
+                        >
+                          <FolderOpen size={12} />
+                        </Button>
+                        <Button
+                          onClick={() => onConnect(connection.id)}
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 cursor-pointer p-0 text-text-lighter hover:text-red-400"
+                          title="Disconnect"
+                        >
+                          <WifiOff size={12} />
+                        </Button>
+                      </>
                     ) : (
                       <Button
                         onClick={() => onConnect(connection.id)}

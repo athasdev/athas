@@ -26,6 +26,7 @@ const ConnectionDialog = ({
     password: "",
     keyPath: "",
     type: "ssh",
+    saveCredentials: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -48,6 +49,7 @@ const ConnectionDialog = ({
           password: editingConnection.password || "",
           keyPath: editingConnection.keyPath || "",
           type: editingConnection.type,
+          saveCredentials: editingConnection.saveCredentials ?? false,
         });
       } else {
         setFormData({
@@ -58,6 +60,7 @@ const ConnectionDialog = ({
           password: "",
           keyPath: "",
           type: "ssh",
+          saveCredentials: false,
         });
       }
       setValidationStatus("idle");
@@ -290,6 +293,27 @@ const ConnectionDialog = ({
                 disabled={isValidating}
               />
             </div>
+
+            {/* Save Credentials Option */}
+            {formData.password && (
+              <div className="space-y-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.saveCredentials}
+                    onChange={(e) => updateFormData({ saveCredentials: e.target.checked })}
+                    className="rounded border border-border bg-secondary-bg text-blue-500 focus:ring-blue-500"
+                    disabled={isValidating}
+                  />
+                  <span className="font-medium text-text text-xs">
+                    Save password for future connections
+                  </span>
+                </label>
+                <div className="text-text-lighter text-xs leading-relaxed">
+                  When unchecked, you'll need to enter the password each time you connect.
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Validation Status */}

@@ -103,7 +103,7 @@ const PasswordPromptDialog = ({
         <div className="space-y-4 p-4">
           <div className="text-text-lighter text-xs leading-relaxed">
             Enter the password for <span className="font-medium text-text">{connection.name}</span>{" "}
-            ({connection.username}@64.***.**.72:{connection.port})
+            ({connection.username}@{connection.host}:{connection.port})
           </div>
 
           {/* Password Input */}

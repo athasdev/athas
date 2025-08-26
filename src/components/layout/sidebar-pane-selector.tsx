@@ -7,6 +7,7 @@ interface SidebarPaneSelectorProps {
   isSearchViewActive: boolean;
   isRemoteViewActive: boolean;
   isExtensionsViewActive: boolean;
+  isRemoteWindow: boolean;
   coreFeatures: CoreFeaturesState;
   onViewChange: (view: "files" | "git" | "search" | "remote" | "extensions") => void;
   onOpenExtensions: () => void;
@@ -17,6 +18,7 @@ export const SidebarPaneSelector = ({
   isSearchViewActive,
   isRemoteViewActive,
   isExtensionsViewActive,
+  isRemoteWindow,
   coreFeatures,
   onViewChange,
   onOpenExtensions,
@@ -75,7 +77,7 @@ export const SidebarPaneSelector = ({
         </Button>
       )}
 
-      {coreFeatures.remote && (
+      {coreFeatures.remote && !isRemoteWindow && (
         <Button
           onClick={() => onViewChange("remote")}
           variant="ghost"
