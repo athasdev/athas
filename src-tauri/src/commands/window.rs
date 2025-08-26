@@ -1,6 +1,6 @@
-use tauri::{
-   Emitter, Manager, TitleBarStyle, UserAttentionType, WebviewUrl, WebviewWindowBuilder, command,
-};
+#[cfg(target_os = "macos")]
+use tauri::TitleBarStyle;
+use tauri::{Emitter, Manager, UserAttentionType, WebviewUrl, WebviewWindowBuilder, command};
 
 #[command]
 pub async fn create_remote_window(
@@ -18,9 +18,17 @@ pub async fn create_remote_window(
    }
 
    let url = format!("index.html?remote={connection_id}");
-   let window = WebviewWindowBuilder::new(&app, &window_label, WebviewUrl::App(url.into()))
-      .hidden_title(true)
-      .title_bar_style(TitleBarStyle::Overlay)
+   let mut window_builder =
+      WebviewWindowBuilder::new(&app, &window_label, WebviewUrl::App(url.into()));
+
+   #[cfg(target_os = "macos")]
+   {
+      window_builder = window_builder
+         .hidden_title(true)
+         .title_bar_style(TitleBarStyle::Overlay);
+   }
+
+   let window = window_builder
       .transparent(true)
       .inner_size(1200.0, 800.0)
       .min_inner_size(800.0, 600.0)
