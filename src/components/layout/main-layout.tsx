@@ -100,7 +100,7 @@ export function MainLayout() {
       <CustomTitleBarWithSettings />
       <div className="h-px flex-shrink-0 bg-border" />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden">
           {/* Left sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
