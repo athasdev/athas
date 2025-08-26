@@ -141,9 +141,7 @@ const TabContextMenu = ({
       <button
         className="flex w-full items-center gap-2 px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
         onClick={() => {
-          if (onRevealInFinder) {
-            onRevealInFinder(buffer.path);
-          }
+          onRevealInFinder?.(buffer.path);
           onClose();
         }}
       >
