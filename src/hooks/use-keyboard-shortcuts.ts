@@ -198,17 +198,15 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
-      // Go to File is now handled by native menu accelerator on macOS
-      // Only handle on non-macOS platforms
-      if ((e.metaKey || e.ctrlKey) && e.key === "p" && !e.shiftKey && !isMac()) {
+      // Go to File (Ctrl+P / Cmd+P)
+      if ((e.metaKey || e.ctrlKey) && e.key === "p" && !e.shiftKey) {
         e.preventDefault();
         setIsCommandBarVisible((prev) => !prev);
         return;
       }
 
-      // Command Palette is now handled by native menu accelerator on macOS
-      // Only handle on non-macOS platforms
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "P" && !isMac()) {
+      // Command Palette (Ctrl+Shift+P / Cmd+Shift+P)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "P") {
         e.preventDefault();
         setIsCommandPaletteVisible((prev) => !prev);
         // Focus the command palette after a short delay to ensure it's rendered
@@ -218,9 +216,53 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
-      // Close Tab is now handled by native menu accelerator on macOS
-      // Only handle on non-macOS platforms
-      if ((e.metaKey || e.ctrlKey) && e.key === "w" && !e.shiftKey && !isMac()) {
+      // Go to Line (Ctrl+G / Cmd+G)
+      if ((e.metaKey || e.ctrlKey) && e.key === "g") {
+        e.preventDefault();
+        // Dispatch custom event for Go to Line
+        window.dispatchEvent(new CustomEvent("menu-go-to-line"));
+        return;
+      }
+
+      // Find and Replace (Ctrl+H / Cmd+Alt+F)
+      if (
+        ((e.ctrlKey && e.key === "h") || (e.metaKey && e.altKey && e.key === "f")) &&
+        coreFeatures.search
+      ) {
+        e.preventDefault();
+        setIsFindVisible(true);
+        console.log("Find/Replace mode activated");
+        return;
+      }
+
+      // Save As (Ctrl+Shift+S / Cmd+Shift+S)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "S") {
+        e.preventDefault();
+        console.log("Save As triggered via keyboard shortcut");
+        // Dispatch custom event for Save As
+        window.dispatchEvent(new CustomEvent("menu-save-as"));
+        return;
+      }
+
+      // Undo (Ctrl+Z / Cmd+Z)
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        document.execCommand("undo");
+        return;
+      }
+
+      // Redo (Ctrl+Y / Cmd+Y or Ctrl+Shift+Z / Cmd+Shift+Z)
+      if (
+        ((e.metaKey || e.ctrlKey) && e.key === "y") ||
+        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "Z")
+      ) {
+        e.preventDefault();
+        document.execCommand("redo");
+        return;
+      }
+
+      // Close Tab (Ctrl+W / Cmd+W)
+      if ((e.metaKey || e.ctrlKey) && e.key === "w" && !e.shiftKey) {
         e.preventDefault();
         if (activeBuffer) {
           closeBuffer(activeBuffer.id);
@@ -297,6 +339,65 @@ export const useKeyboardShortcuts = ({
         e.preventDefault();
         resetZoom();
         return;
+      }
+
+      // Menu bar toggle: Alt+M (Linux/Windows)
+      if (e.altKey && e.key === "m" && !isMac()) {
+        e.preventDefault();
+        console.log("Toggle menu bar shortcut activated");
+        // Call the Tauri command directly to toggle menu bar
+        import("@tauri-apps/api/core").then(({ invoke }) => {
+          invoke("toggle_menu_bar").catch((error) => {
+            console.error("Failed to toggle menu bar via shortcut:", error);
+          });
+        });
+        return;
+      }
+
+      // Window controls for Linux/Windows
+      if (!isMac()) {
+        // Minimize: Alt+F9
+        if (e.altKey && e.key === "F9") {
+          e.preventDefault();
+          console.log("Minimize window shortcut activated");
+          window.dispatchEvent(new CustomEvent("minimize-window"));
+          return;
+        }
+
+        // Maximize/Restore: Alt+F10
+        if (e.altKey && e.key === "F10") {
+          e.preventDefault();
+          console.log("Maximize window shortcut activated");
+          window.dispatchEvent(new CustomEvent("maximize-window"));
+          return;
+        }
+      }
+
+      // Fullscreen toggle: F11 (all platforms)
+      if (e.key === "F11") {
+        e.preventDefault();
+        console.log("Toggle fullscreen shortcut activated");
+        window.dispatchEvent(new CustomEvent("toggle-fullscreen"));
+        return;
+      }
+
+      // macOS specific window shortcuts
+      if (isMac()) {
+        // Minimize: Cmd+M
+        if (e.metaKey && e.key === "m") {
+          e.preventDefault();
+          console.log("Minimize window (macOS)");
+          window.dispatchEvent(new CustomEvent("minimize-window"));
+          return;
+        }
+
+        // Fullscreen: Cmd+Ctrl+F
+        if (e.metaKey && e.ctrlKey && e.key === "f") {
+          e.preventDefault();
+          console.log("Toggle fullscreen (macOS)");
+          window.dispatchEvent(new CustomEvent("toggle-fullscreen"));
+          return;
+        }
       }
     };
 
