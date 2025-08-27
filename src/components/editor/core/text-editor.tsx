@@ -10,6 +10,7 @@ import {
   setSyntaxHighlightingFilePath,
   syntaxHighlightingExtension,
 } from "@/extensions/syntax-highlighting-extension";
+import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import {
   useDebouncedFunction,
@@ -25,6 +26,7 @@ import { useEditorInstanceStore } from "@/stores/editor-instance-store";
 import { useEditorLayoutStore } from "@/stores/editor-layout-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
+import { useGitBlameStore } from "@/stores/git-blame-store";
 import { useLspStore } from "@/stores/lsp-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 import type { Position } from "@/types/editor-types";
@@ -46,6 +48,8 @@ export function TextEditor() {
   const fontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
   const { addDecoration, removeDecoration } = useEditorDecorationsStore();
+  const { loadBlameForFile } = useGitBlameStore();
+  const { rootFolderPath } = useFileSystemStore();
 
   // Performance monitoring
   const { start: startRender, end: endRender } = usePerformanceMonitor("TextEditor render");
@@ -59,7 +63,11 @@ export function TextEditor() {
 
       return {
         range: {
-          start: { line: result.line, column: result.column, offset: startOffset },
+          start: {
+            line: result.line,
+            column: result.column,
+            offset: startOffset,
+          },
           end: { line: result.line, column: endColumn, offset: endOffset },
         },
         className: "search-highlight",
@@ -332,22 +340,20 @@ export function TextEditor() {
   const handleSelectionChange = useCallback(() => {
     if (!textareaRef.current) return;
 
-    const { selectionStart, selectionEnd, value } = textareaRef.current;
-    const newCursorPosition = calculateCursorPosition(selectionStart, lines);
-
-    setCursorPosition(newCursorPosition);
+    const { selectionStart, selectionEnd } = textareaRef.current;
 
     if (selectionStart !== selectionEnd) {
-      const selectedText = value.slice(selectionStart, selectionEnd).trim();
-      if (selectedText.length > 0) {
-        setSelection({
-          start: calculateCursorPosition(selectionStart, lines),
-          end: calculateCursorPosition(selectionEnd, lines),
-        });
-      }
+      setSelection({
+        start: calculateCursorPosition(selectionStart, lines),
+        end: calculateCursorPosition(selectionEnd, lines),
+      });
     } else {
       setSelection(undefined);
     }
+
+    // Update cursor position after selection change
+    const newCursorPosition = calculateCursorPosition(selectionEnd, lines);
+    setCursorPosition(newCursorPosition);
   }, [lines, setCursorPosition, setSelection]);
 
   useEffect(() => {
@@ -463,6 +469,18 @@ export function TextEditor() {
     }
   }, [filePath]);
 
+  // Load git blame data when file changes
+  useEffect(() => {
+    if (filePath && rootFolderPath && activeBufferId) {
+      // Only load blame for files within the git repository
+      if (filePath.startsWith(rootFolderPath)) {
+        loadBlameForFile(rootFolderPath, filePath).catch((error) => {
+          console.warn("Failed to load git blame:", error);
+        });
+      }
+    }
+  }, [filePath, rootFolderPath, activeBufferId, loadBlameForFile]);
+
   const restoreCursorPosition = useCallback(
     (bufferId: string) => {
       if (!textareaRef.current) return;
@@ -565,7 +583,11 @@ export function TextEditor() {
   useEffect(() => {
     // Only emit on initial mount when content is first loaded
     if (content) {
-      const eventData = { content, changes: [], affectedLines: new Set<number>() };
+      const eventData = {
+        content,
+        changes: [],
+        affectedLines: new Set<number>(),
+      };
       editorAPI.emitEvent("contentChange", eventData);
     }
   }, []); // Empty dependency array - only run once on mount
@@ -635,14 +657,30 @@ export function TextEditor() {
   );
 
   // Context menu handlers
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
 
-    setContextMenu({
-      isOpen: true,
-      position: { x: e.clientX, y: e.clientY },
-    });
-  }, []);
+      // Check if right-click is at the end of a line to prevent automatic text selection
+      if (textareaRef.current) {
+        const { selectionStart, selectionEnd, value } = textareaRef.current;
+        const selectedText = value.slice(selectionStart, selectionEnd);
+
+        if (selectedText.split("\n").length > 1) {
+          // If the selected text is more than one line, clear the selection
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = selectionStart;
+          setCursorPosition(calculateCursorPosition(selectionStart, lines));
+          setSelection(undefined);
+        }
+      }
+
+      setContextMenu({
+        isOpen: true,
+        position: { x: e.clientX, y: e.clientY },
+      });
+    },
+    [content, lines, setCursorPosition, setSelection],
+  );
 
   const handleCloseContextMenu = useCallback(() => {
     setContextMenu({ isOpen: false, position: { x: 0, y: 0 } });
@@ -779,7 +817,9 @@ export function TextEditor() {
         const lineEnd = content.indexOf("\n", cursorPos);
         const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
         const currentLine = content.slice(lineStart, actualLineEnd);
-        const newContent = `${content.slice(0, actualLineEnd)}\n${currentLine}${content.slice(actualLineEnd)}`;
+        const newContent = `${content.slice(0, actualLineEnd)}\n${currentLine}${content.slice(
+          actualLineEnd,
+        )}`;
 
         onChange?.(newContent);
         if (activeBufferId) {

@@ -16,6 +16,7 @@ import { useState } from "react";
 import { useToast } from "@/contexts/toast-context";
 import { useUpdater } from "@/settings/hooks/use-updater";
 import { useSettingsStore } from "@/settings/store";
+import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { extensionManager } from "../extensions/extension-manager";
 import {
   getFilenameFromPath,
@@ -232,6 +233,8 @@ const EditorFooter = () => {
   const { rootFolderPath } = useFileSystemStore();
   const { gitStatus, actions } = useGitStore();
   const { available, downloading, installing, updateInfo, downloadAndInstall } = useUpdater(false);
+  const cursorPosition = useEditorCursorStore.use.cursorPosition();
+
   return (
     <div className="flex min-h-[32px] items-center justify-between border-border border-t bg-secondary-bg px-2 py-1">
       <div className="flex items-center gap-0.5 font-mono text-text-lighter text-xs">
@@ -310,14 +313,15 @@ const EditorFooter = () => {
           </button>
         )}
       </div>
-      <div className="flex items-center gap-0.5 font-mono text-[10px] text-text-lighter">
-        {activeBuffer && (
-          <>
-            <span className="px-1">{activeBuffer.content.split("\n").length} lines</span>
-            <LspStatusDropdown activeBuffer={activeBuffer} />
-          </>
-        )}
-      </div>
+
+      {activeBuffer && (
+        <div className="flex items-center gap-2 font-mono text-[10px] text-text-lighter">
+          <span>
+            Ln {cursorPosition.line + 1}, Col {cursorPosition.column + 1}
+          </span>
+          <LspStatusDropdown activeBuffer={activeBuffer} />
+        </div>
+      )}
     </div>
   );
 };

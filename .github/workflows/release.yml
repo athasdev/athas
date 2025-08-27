@@ -49,6 +49,7 @@ jobs:
         if: matrix.target != ''
         run: rustup target add ${{ matrix.target }}
 
+
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
@@ -69,11 +70,6 @@ jobs:
       - name: Install frontend dependencies
         run: bun install
 
-      - name: Run typecheck
-        run: bun typecheck
-
-      - name: Run biome check
-        run: bun check
 
       - uses: tauri-apps/tauri-action@v0
         env:

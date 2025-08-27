@@ -23,7 +23,7 @@ const CustomTitleBar = ({
   const { getProjectName } = useProjectStore();
   const { settings, updateSetting } = useSettingsStore();
 
-  const projectName = getProjectName();
+  const [projectName, setProjectName] = useState<string>("");
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
@@ -67,10 +67,19 @@ const CustomTitleBar = ({
       } catch (error) {
         console.error("Error checking maximized state:", error);
       }
+
+      // Get project name asynchronously
+      try {
+        const name = await getProjectName();
+        setProjectName(name);
+      } catch (error) {
+        console.error("Error getting project name:", error);
+        setProjectName("Explorer");
+      }
     };
 
     initWindow();
-  }, []);
+  }, [getProjectName]);
 
   const handleMinimize = async () => {
     try {

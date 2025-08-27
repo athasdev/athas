@@ -1,7 +1,11 @@
 import { memo } from "react";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
+import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorDecorationsStore } from "@/stores/editor-decorations-store";
+import { useEditorInstanceStore } from "@/stores/editor-instance-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
+import { useGitBlameStore } from "@/stores/git-blame-store";
+import { InlineGitBlame } from "@/version-control/git/views/inline-git-blame";
 import { LineGutter } from "./line-gutter";
 import { LineRenderer } from "./line-renderer";
 
@@ -20,6 +24,14 @@ export const LineWithContent = memo<LineWithContentProps>(
     const decorations = useEditorDecorationsStore((state) =>
       state.getDecorationsForLine(lineNumber),
     );
+    const { line } = useEditorCursorStore((state) => state.cursorPosition);
+
+    // Git blame functionality
+    const { filePath } = useEditorInstanceStore();
+    const { getBlameForLine } = useGitBlameStore();
+
+    const blameLine = filePath ? getBlameForLine(filePath, lineNumber) : null;
+    const isSelectedLine = line === lineNumber;
 
     return (
       <div
@@ -50,6 +62,9 @@ export const LineWithContent = memo<LineWithContentProps>(
             lineHeight: `${lineHeight}px`,
             height: `${lineHeight}px`,
             overflow: "hidden",
+            display: "flex",
+            alignItems: "center",
+            gap: "3rem",
           }}
         >
           <LineRenderer
@@ -59,6 +74,9 @@ export const LineWithContent = memo<LineWithContentProps>(
             decorations={decorations}
             isSelected={isSelected}
           />
+          {isSelectedLine && blameLine && (
+            <InlineGitBlame blameLine={blameLine} className="mr-4 ml-auto opacity-60" />
+          )}
         </div>
       </div>
     );

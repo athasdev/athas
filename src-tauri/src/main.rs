@@ -6,7 +6,7 @@ use commands::*;
 use file_watcher::FileWatcher;
 use log::{debug, info};
 use lsp::LspManager;
-use ssh::{ssh_connect, ssh_disconnect, ssh_write_file};
+use ssh::{ssh_connect, ssh_disconnect, ssh_disconnect_only, ssh_write_file};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri_plugin_os::platform;
@@ -167,6 +167,32 @@ fn main() {
                   "split_editor" => {
                      let _ = window.emit("menu_split_editor", ());
                   }
+                  "toggle_menu_bar" => {
+                     // Toggle menu visibility by setting it to None or recreating it
+                     let current_menu = _app_handle.menu();
+                     if current_menu.is_some() {
+                        // Hide menu by setting it to None
+                        if let Err(e) = _app_handle.remove_menu() {
+                           log::error!("Failed to hide menu: {}", e);
+                        } else {
+                           log::info!("Menu bar hidden");
+                        }
+                     } else {
+                        // Show menu by recreating it
+                        match menu::create_menu(_app_handle) {
+                           Ok(new_menu) => {
+                              if let Err(e) = _app_handle.set_menu(new_menu) {
+                                 log::error!("Failed to show menu: {}", e);
+                              } else {
+                                 log::info!("Menu bar shown");
+                              }
+                           }
+                           Err(e) => {
+                              log::error!("Failed to create menu: {}", e);
+                           }
+                        }
+                     }
+                  }
                   "toggle_vim" => {
                      let _ = window.emit("menu_toggle_vim", ());
                   }
@@ -187,6 +213,31 @@ fn main() {
                   }
                   "help" => {
                      let _ = window.emit("menu_help", ());
+                  }
+                  "about_athas" => {
+                     let _ = window.emit("menu_about_athas", ());
+                  }
+                  // Window menu items
+                  "minimize_window" => {
+                     if let Err(e) = window.minimize() {
+                        log::error!("Failed to minimize window: {}", e);
+                     }
+                  }
+                  "close_window" => {
+                     if let Err(e) = window.close() {
+                        log::error!("Failed to close window: {}", e);
+                     }
+                  }
+                  "zoom_window" => {
+                     if let Err(e) = window.maximize() {
+                        log::error!("Failed to zoom window: {}", e);
+                     }
+                  }
+                  "toggle_fullscreen" => {
+                     let is_fullscreen = window.is_fullscreen().unwrap_or(false);
+                     if let Err(e) = window.set_fullscreen(!is_fullscreen) {
+                        log::error!("Failed to toggle fullscreen: {}", e);
+                     }
                   }
                   // Theme menu items
                   theme_id if theme_id.starts_with("theme_") => {
@@ -240,6 +291,7 @@ fn main() {
          git_delete_tag,
          git_stage_hunk,
          git_unstage_hunk,
+         git_blame_file,
          // GitHub commands
          store_github_token,
          get_github_token,
@@ -261,6 +313,7 @@ fn main() {
          // SSH commands
          ssh_connect,
          ssh_disconnect,
+         ssh_disconnect_only,
          ssh_write_file,
          // Claude commands
          start_claude_code,
@@ -299,6 +352,8 @@ fn main() {
          filter_completions,
          // Format commands
          format_code,
+         // Menu commands
+         menu::toggle_menu_bar,
       ])
       .run(tauri::generate_context!())
       .expect("error while running tauri application");
