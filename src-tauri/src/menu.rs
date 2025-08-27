@@ -1,9 +1,14 @@
 use tauri::menu::{MenuBuilder, MenuItem, SubmenuBuilder};
 
 #[tauri::command]
-pub async fn toggle_menu_bar(app: tauri::AppHandle) -> Result<(), String> {
-   let current_menu = app.menu();
-   if current_menu.is_some() {
+pub async fn toggle_menu_bar(app: tauri::AppHandle, toggle: Option<bool>) -> Result<(), String> {
+   let is_menu_present = app.menu().is_some();
+   let should_show_menu = match toggle {
+      Some(t) => t,
+      None => is_menu_present,
+   };
+
+   if should_show_menu {
       // Hide menu by setting it to None
       app.remove_menu()
          .map_err(|e| format!("Failed to hide menu: {}", e))?;
@@ -201,23 +206,10 @@ pub fn create_menu<R: tauri::Runtime>(
             Some("Alt+F9")
          },
       )?)
-      .separator()
       .item(&MenuItem::with_id(
          app,
-         "close_window",
-         "Close Window",
-         true,
-         if cfg!(target_os = "macos") {
-            Some("Cmd+W")
-         } else {
-            Some("Ctrl+W")
-         },
-      )?)
-      .separator()
-      .item(&MenuItem::with_id(
-         app,
-         "zoom_window",
-         "Zoom",
+         "maximize_window",
+         "Maximize",
          true,
          if cfg!(target_os = "macos") {
             Some("Cmd+Option+Z")
@@ -225,6 +217,15 @@ pub fn create_menu<R: tauri::Runtime>(
             Some("Alt+F10")
          },
       )?)
+      .separator()
+      .item(&MenuItem::with_id(
+         app,
+         "quit_app",
+         "Quit",
+         true,
+         Some("CmdOrCtrl+Q"),
+      )?)
+      .separator()
       .item(&MenuItem::with_id(
          app,
          "toggle_fullscreen",

@@ -1,22 +1,17 @@
+import { invoke } from "@tauri-apps/api/core";
 import { Upload } from "lucide-react";
 import { useEffect, useState } from "react";
-
 import Button from "@/components/ui/button";
 import Dropdown from "@/components/ui/dropdown";
 import Section, { SettingRow } from "@/components/ui/section";
 import Switch from "@/components/ui/switch";
-
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
-
 import { useSettingsStore } from "@/settings/store";
-import { useUIState } from "@/stores/ui-state-store";
 
 export const ThemeSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
   const [themeOptions, setThemeOptions] = useState<{ value: string; label: string }[]>([]);
-
-  const { setIsRestartDialogVisible } = useUIState();
 
   // Load themes from theme registry
   useEffect(() => {
@@ -94,7 +89,7 @@ export const ThemeSettings = () => {
             checked={settings.nativeMenuBar}
             onChange={(checked) => {
               updateSetting("nativeMenuBar", checked);
-              setIsRestartDialogVisible(true);
+              invoke("toggle_menu_bar", { toggle: !checked });
             }}
             size="sm"
           />

@@ -1,5 +1,5 @@
 import { platform } from "@tauri-apps/plugin-os";
-import type { ReactNode } from "react";
+import { type ReactNode, useMemo } from "react";
 
 interface Props {
   children?: ReactNode;
@@ -11,20 +11,24 @@ interface Props {
 const MenuItem = ({ children, shortcut, onClick, separator }: Props) => {
   const currentPlatform = platform();
 
-  // Convert shortcut to Windows/Linux if not on MacOS
-  const shortcutOsSpecific =
-    currentPlatform === "macos"
-      ? shortcut
-      : shortcut
-          ?.replace(/⇧⌘/g, "Ctrl+Shift+")
-          .replace(/⌥⌘/g, "Ctrl+Alt+")
-          .replace(/⌘⌥/g, "Ctrl+Alt+")
-          .replace(/⌘⌃/g, "Ctrl+")
-          .replace(/⌘/g, "Ctrl+")
-          .replace(/⌥/g, "Alt+")
-          .replace(/⇧/g, "Shift+")
-          .replace(/→/g, "Right")
-          .replace(/←/g, "Left");
+  // Convert shortcut to user's OS
+  const shortcutOsSpecific = useMemo(() => {
+    if (currentPlatform !== "macos" || !shortcut) return shortcut;
+
+    // Order matters
+    return shortcut
+      .replace(/Ctrl\+Alt\+Shift\+/g, "⌘⌥⇧")
+      .replace(/Ctrl\+Shift\+/g, "⌘⇧")
+      .replace(/Ctrl\+Alt\+/g, "⌘⌥")
+      .replace(/Alt\+Shift\+/g, "⌥⇧")
+      .replace(/Ctrl\+/g, "⌘")
+      .replace(/Alt\+/g, "⌥")
+      .replace(/Shift\+/g, "⇧")
+      .replace(/Right/g, "→")
+      .replace(/Left/g, "←")
+      .replace(/Up/g, "↑")
+      .replace(/Down/g, "↓");
+  }, [currentPlatform, shortcut]);
 
   if (separator) {
     return <div className="my-1 border-border border-t" />;

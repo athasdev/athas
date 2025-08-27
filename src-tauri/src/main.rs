@@ -223,14 +223,9 @@ fn main() {
                         log::error!("Failed to minimize window: {}", e);
                      }
                   }
-                  "close_window" => {
-                     if let Err(e) = window.close() {
-                        log::error!("Failed to close window: {}", e);
-                     }
-                  }
-                  "zoom_window" => {
+                  "maximize_window" => {
                      if let Err(e) = window.maximize() {
-                        log::error!("Failed to zoom window: {}", e);
+                        log::error!("Failed to maximize window: {}", e);
                      }
                   }
                   "toggle_fullscreen" => {

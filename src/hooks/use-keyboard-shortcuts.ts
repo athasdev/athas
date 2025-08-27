@@ -1,5 +1,6 @@
 import { exit } from "@tauri-apps/plugin-process";
 import { useEffect } from "react";
+import { useSettingsStore } from "@/settings/store";
 import { isMac } from "../file-system/controllers/platform";
 import type { CoreFeaturesState } from "../settings/models/feature.types";
 import { useZoomStore } from "../stores/zoom-store";
@@ -58,6 +59,7 @@ export const useKeyboardShortcuts = ({
   onToggleSidebarPosition,
   coreFeatures,
 }: UseKeyboardShortcutsProps) => {
+  const { settings } = useSettingsStore();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
 
   useEffect(() => {
@@ -369,7 +371,7 @@ export const useKeyboardShortcuts = ({
       }
 
       // Menu bar toggle: Alt+M (Linux/Windows)
-      if (e.altKey && e.key === "m" && !isMac()) {
+      if (e.altKey && e.key === "m" && !isMac() && settings.nativeMenuBar) {
         e.preventDefault();
         console.log("Toggle menu bar shortcut activated");
         // Call the Tauri command directly to toggle menu bar
