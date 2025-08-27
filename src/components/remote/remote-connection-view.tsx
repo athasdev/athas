@@ -1,8 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { message } from "@tauri-apps/plugin-dialog";
 import { memo, useEffect, useState } from "react";
-import { safeLocalStorageSetItem } from "@/utils/storage";
+import { connectionStore } from "@/utils/connection-store";
 import ConnectionDialog from "./connection-dialog";
 import ConnectionList from "./connection-list";
+import PasswordPromptDialog from "./password-prompt-dialog";
 import type { RemoteConnection, RemoteConnectionFormData } from "./types";
 
 interface RemoteConnectionViewProps {
@@ -13,80 +16,90 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
   const [connections, setConnections] = useState<RemoteConnection[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingConnection, setEditingConnection] = useState<RemoteConnection | null>(null);
+  const [passwordPromptConnection, setPasswordPromptConnection] = useState<RemoteConnection | null>(
+    null,
+  );
 
-  // Load connections from localStorage
+  // Load connections from Tauri Store
   useEffect(() => {
-    const stored = localStorage.getItem("athas-remote-connections");
-    if (stored) {
+    const loadConnections = async () => {
       try {
-        const parsed = JSON.parse(stored);
-        setConnections(parsed.map((conn: any) => ({ ...conn, isConnected: false })));
+        // First migrate any existing localStorage connections
+        await connectionStore.migrateFromLocalStorage();
+
+        // Then load all connections from Tauri Store
+        const storedConnections = await connectionStore.getAllConnections();
+        setConnections(storedConnections.map((conn: any) => ({ ...conn, isConnected: false })));
       } catch (error) {
         console.error("Error loading remote connections:", error);
       }
-    }
+    };
+
+    loadConnections();
   }, []);
 
-  // Save connections to localStorage
-  const saveConnections = (conns: RemoteConnection[]) => {
-    const connectionsJson = JSON.stringify(conns);
+  // Listen for remote connection disconnection events
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
 
-    const success = safeLocalStorageSetItem("athas-remote-connections", connectionsJson, {
-      clearPrefix: "athas-remote-",
-      onSuccess: () => {
-        setConnections(conns);
-      },
-      onQuotaExceeded: (error) => {
-        console.error("Failed to save remote connections due to quota:", error);
-        // Still update the state even if localStorage fails
-        setConnections(conns);
+    const setupDisconnectListener = async () => {
+      try {
+        unlisten = await listen<{ connectionId: string }>(
+          "remote-connection-disconnected",
+          async (event) => {
+            console.log("Received remote disconnection event:", event.payload);
 
-        // Try to inform the user
-        try {
-          alert(
-            "Warning: Remote connections could not be saved due to storage limitations. Your connections will be lost when you restart the application.",
-          );
-        } catch {
-          console.warn("Remote connections could not be saved due to storage limitations");
-        }
-      },
-    });
+            // Update connection status in store
+            await connectionStore.updateConnectionStatus(event.payload.connectionId, false);
 
-    if (!success) {
-      console.error("Failed to save remote connections");
-      // Still update the state even if localStorage fails
-      setConnections(conns);
+            // Refresh local state
+            await refreshConnections();
+          },
+        );
+      } catch (error) {
+        console.error("Failed to set up disconnect event listener:", error);
+      }
+    };
+
+    setupDisconnectListener();
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, []);
+
+  // Update the local state and reload connections
+  const refreshConnections = async () => {
+    try {
+      const storedConnections = await connectionStore.getAllConnections();
+      setConnections(storedConnections);
+    } catch (error) {
+      console.error("Error refreshing connections:", error);
     }
   };
 
   const handleSaveConnection = async (formData: RemoteConnectionFormData): Promise<boolean> => {
     try {
-      let updatedConnections: RemoteConnection[];
-
       if (editingConnection) {
         // Update existing connection
-        updatedConnections = connections.map((conn) =>
-          conn.id === editingConnection.id
-            ? {
-                ...conn,
-                ...formData,
-                isConnected: false, // Reset connection status when editing
-              }
-            : conn,
-        );
+        await connectionStore.saveConnection({
+          ...editingConnection,
+          ...formData,
+        });
       } else {
         // Add new connection
-        const newConnection: RemoteConnection = {
+        const newConnection = {
           id: Date.now().toString(),
           ...formData,
           isConnected: false,
         };
-        updatedConnections = [...connections, newConnection];
+        await connectionStore.saveConnection(newConnection);
       }
 
-      // Use the safe save function
-      saveConnections(updatedConnections);
-
+      // Refresh the local state
+      await refreshConnections();
       return true;
     } catch (error) {
       console.error("Error saving connection:", error);
@@ -94,7 +107,7 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
     }
   };
 
-  const handleConnect = async (connectionId: string) => {
+  const handleConnect = async (connectionId: string, providedPassword?: string) => {
     const connection = connections.find((conn) => conn.id === connectionId);
     if (!connection) return;
 
@@ -103,35 +116,34 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
         // Disconnect
         await invoke("ssh_disconnect", { connectionId });
 
-        setConnections(
-          connections.map((conn) =>
-            conn.id === connectionId ? { ...conn, isConnected: false } : conn,
-          ),
-        );
+        // Update connection status in store
+        await connectionStore.updateConnectionStatus(connectionId, false);
+
+        // Refresh local state
+        await refreshConnections();
       } else {
+        // Check if we need to prompt for password
+        if (!connection.password && !connection.keyPath && !providedPassword) {
+          setPasswordPromptConnection(connection);
+          return;
+        }
+
         // Connect
         await invoke("ssh_connect", {
           connectionId,
           host: connection.host,
           port: connection.port,
           username: connection.username,
-          password: connection.password || null,
+          password: providedPassword || connection.password || null,
           keyPath: connection.keyPath || null,
           useSftp: connection.type === "sftp",
         });
 
-        // Update connection status
-        setConnections(
-          connections.map((conn) =>
-            conn.id === connectionId
-              ? {
-                  ...conn,
-                  isConnected: true,
-                  lastConnected: new Date().toISOString(),
-                }
-              : conn,
-          ),
-        );
+        // Update connection status in store
+        await connectionStore.updateConnectionStatus(connectionId, true, new Date().toISOString());
+
+        // Refresh local state
+        await refreshConnections();
 
         // Create new remote window
         await invoke("create_remote_window", {
@@ -142,17 +154,22 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
     } catch (error) {
       console.error("Connection error:", error);
 
-      // Use Tauri's dialog API instead of alert
-      try {
-        const { message } = await import("@tauri-apps/plugin-dialog");
-        await message(`Connection failed: ${error}`, {
-          title: "SSH Connection Error",
-          kind: "error",
-        });
-      } catch {
-        // Fallback to console if dialog fails
-        console.error("Connection failed:", error);
+      // If this is a password prompt connection attempt, don't show the dialog
+      // Let the password prompt handle the error display
+      if (!providedPassword) {
+        try {
+          await message(String(error), {
+            title: "Connection Error",
+            kind: "error",
+          });
+        } catch {
+          // Fallback to console if dialog fails
+          console.error("Connection failed:", error);
+        }
       }
+
+      // Re-throw error so password prompt can handle it
+      throw error;
     }
   };
 
@@ -161,8 +178,13 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
     setIsDialogOpen(true);
   };
 
-  const handleDeleteConnection = (connectionId: string) => {
-    saveConnections(connections.filter((conn) => conn.id !== connectionId));
+  const handleDeleteConnection = async (connectionId: string) => {
+    try {
+      await connectionStore.deleteConnection(connectionId);
+      await refreshConnections();
+    } catch (error) {
+      console.error("Error deleting connection:", error);
+    }
   };
 
   const handleAddNew = () => {
@@ -173,6 +195,15 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingConnection(null);
+  };
+
+  const handlePasswordPromptConnect = async (connectionId: string, password: string) => {
+    await handleConnect(connectionId, password);
+    setPasswordPromptConnection(null);
+  };
+
+  const handleClosePasswordPrompt = () => {
+    setPasswordPromptConnection(null);
   };
 
   return (
@@ -191,6 +222,13 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
         onClose={handleCloseDialog}
         onSave={handleSaveConnection}
         editingConnection={editingConnection}
+      />
+
+      <PasswordPromptDialog
+        isOpen={!!passwordPromptConnection}
+        connection={passwordPromptConnection}
+        onClose={handleClosePasswordPrompt}
+        onConnect={handlePasswordPromptConnect}
       />
     </>
   );
