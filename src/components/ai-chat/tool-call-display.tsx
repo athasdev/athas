@@ -174,10 +174,10 @@ export default function ToolCallDisplay({
   };
 
   return (
-    <div className="my-0.5">
+    <div className="leading-tight">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="group flex w-full items-center gap-1 py-0.5 text-left text-xs opacity-60 transition-all duration-200 hover:opacity-80"
+        className="group flex w-full items-center gap-1 text-left text-xs opacity-60 transition-all duration-200 hover:opacity-80"
       >
         <Icon
           size={10}
@@ -205,7 +205,7 @@ export default function ToolCallDisplay({
       </button>
 
       {isExpanded && (
-        <div className="mt-1 space-y-2 pl-3 text-xs opacity-70">
+        <div className="mt-1 space-y-1 pl-3 text-xs opacity-70">
           {/* Input section */}
           <div>
             <div className="mb-1 font-medium opacity-60">Input:</div>

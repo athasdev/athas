@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import SQLiteViewer from "@/database/sqlite-viewer";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { ProjectNameMenu } from "@/hooks/use-context-menus";
@@ -10,7 +10,10 @@ import { useUIState } from "@/stores/ui-state-store";
 import DiffViewer from "@/version-control/diff-viewer/views/diff-viewer";
 import { stageHunk, unstageHunk } from "@/version-control/git/controllers/git";
 import type { GitHunk } from "@/version-control/git/models/git-types";
-import AIChat from "../ai-chat/ai-chat";
+
+// Lazy load AI Chat for better performance
+const AIChat = lazy(() => import("../ai-chat/ai-chat"));
+
 import BottomPane from "../bottom-pane";
 import CommandBar from "../command/components/command-bar";
 import CommandPalette from "../command/components/command-palette";
@@ -98,7 +101,15 @@ export function MainLayout() {
           {/* Left sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
             <ResizableRightPane position="left" isVisible={settings.isAIChatVisible}>
-              <AIChat mode="chat" />
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center text-text-lighter text-xs">
+                    Loading AI Chat...
+                  </div>
+                }
+              >
+                <AIChat mode="chat" />
+              </Suspense>
             </ResizableRightPane>
           ) : (
             isSidebarVisible && (
@@ -147,7 +158,15 @@ export function MainLayout() {
             )
           ) : (
             <ResizableRightPane position="right" isVisible={settings.isAIChatVisible}>
-              <AIChat mode="chat" />
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center text-text-lighter text-xs">
+                    Loading AI Chat...
+                  </div>
+                }
+              >
+                <AIChat mode="chat" />
+              </Suspense>
             </ResizableRightPane>
           )}
         </div>

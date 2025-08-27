@@ -1,6 +1,6 @@
 import { FilePlus, FolderOpen, FolderPlus, Server } from "lucide-react";
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import RemoteConnectionView from "@/components/remote/remote-connection-view";
 import FileTree from "@/file-explorer/views/file-tree";
 import { useFileSystemStore } from "@/file-system/controllers/store";
@@ -34,7 +34,7 @@ const flattenFileTree = (files: FileEntry[]): FileEntry[] => {
   return result;
 };
 
-export const MainSidebar = () => {
+export const MainSidebar = memo(() => {
   // Get state from stores
   const {
     isGitViewActive,
@@ -52,9 +52,6 @@ export const MainSidebar = () => {
   const { setSearchViewRef } = useSearchViewStore();
 
   // file system store
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
-  const files = useFileSystemStore.use.files();
-  const isFileTreeLoading = useFileSystemStore.use.isFileTreeLoading();
   const setFiles = useFileSystemStore.use.setFiles?.();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder?.();
   const handleCreateNewFile = useFileSystemStore.use.handleCreateNewFile?.();
@@ -70,6 +67,10 @@ export const MainSidebar = () => {
   const handleDuplicatePath = useFileSystemStore.use.handleDuplicatePath?.();
   const handleRenamePath = useFileSystemStore.use.handleRenamePath?.();
 
+  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const files = useFileSystemStore.use.files();
+  const isFileTreeLoading = useFileSystemStore.use.isFileTreeLoading();
+
   // sidebar store
   const activePath = useSidebarStore.use.activePath?.();
   const remoteConnectionName = useSidebarStore.use.remoteConnectionName?.();
@@ -80,9 +81,6 @@ export const MainSidebar = () => {
   const updateActivePath = useSidebarStore.use.updateActivePath?.();
 
   const { settings } = useSettingsStore();
-
-  const showFileTreeHeader =
-    !isGitViewActive && !isSearchViewActive && !isRemoteViewActive && !isRemoteWindow;
 
   // Load project name asynchronously
   useEffect(() => {
@@ -135,10 +133,15 @@ export const MainSidebar = () => {
     setProjectNameMenu({ x: event.clientX, y: event.clientY });
   };
 
-  // Get all project files by flattening the file tree
+  // Get all project files by flattening the file tree - memoized for performance
   const allProjectFiles = useMemo(() => {
     return flattenFileTree(files);
   }, [files]);
+
+  // Memoize expensive computations
+  const memoizedShowFileTreeHeader = useMemo(() => {
+    return !isGitViewActive && !isSearchViewActive && !isRemoteViewActive && !isRemoteWindow;
+  }, [isGitViewActive, isSearchViewActive, isRemoteViewActive, isRemoteWindow]);
 
   return (
     <div className="flex h-full flex-col">
@@ -170,7 +173,7 @@ export const MainSidebar = () => {
       )}
 
       {/* File Tree Header */}
-      {showFileTreeHeader && (
+      {memoizedShowFileTreeHeader && (
         <div className="flex flex-wrap items-center justify-between bg-secondary-bg px-2 py-1.5">
           <h3
             className="min-w-0 flex-shrink cursor-pointer truncate rounded px-2 py-1 font-medium font-mono text-text text-xs tracking-wide hover:bg-hover"
@@ -277,4 +280,4 @@ export const MainSidebar = () => {
       </div>
     </div>
   );
-};
+});

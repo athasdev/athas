@@ -1,90 +1,85 @@
-import { Send, Square } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
+import { Send, Settings, Square } from "lucide-react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import { useSettingsStore } from "@/settings/store";
 import { useAIChatStore } from "@/stores/ai-chat/store";
+import { useUIState } from "@/stores/ui-state-store";
+import { getModelById } from "@/types/ai-provider";
 import { cn } from "@/utils/cn";
-import ModelProviderSelector from "../model-provider-selector";
 import Button from "../ui/button";
 import { ContextSelector } from "./context-selector";
 import { FileMentionDropdown } from "./file-mention-dropdown";
 import type { AIChatInputBarProps } from "./types";
 
-export default function AIChatInputBar({
+const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
   allProjectFiles,
   onSendMessage,
   onStopStreaming,
-  onApiKeyRequest,
-  onProviderChange,
-  hasProviderApiKey,
 }: AIChatInputBarProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const contextDropdownRef = useRef<HTMLDivElement>(null);
   const aiChatContainerRef = useRef<HTMLDivElement>(null);
   const isUpdatingContentRef = useRef(false);
+  const performanceTimer = useRef<number | null>(null);
 
-  // Get state from stores
+  // Get state from stores with optimized selectors
   const { settings } = useSettingsStore();
-  const {
-    input,
-    isTyping,
-    streamingMessageId,
-    selectedBufferIds,
-    selectedFilesPaths,
-    isContextDropdownOpen,
-    isSendAnimating,
-    hasApiKey,
-    mentionState,
-    setInput,
-    toggleBufferSelection,
-    toggleFileSelection,
-    setIsContextDropdownOpen,
-    setIsSendAnimating,
-    showMention,
-    hideMention,
-    updatePosition,
-    selectNext,
-    selectPrevious,
-    getFilteredFiles,
-  } = useAIChatStore();
+  const { openSettingsDialog } = useUIState();
 
-  // Function to get plain text from contentEditable div
+  // Optimize store selectors to prevent unnecessary re-renders
+  const input = useAIChatStore((state) => state.input);
+  const isTyping = useAIChatStore((state) => state.isTyping);
+  const streamingMessageId = useAIChatStore((state) => state.streamingMessageId);
+  const selectedBufferIds = useAIChatStore((state) => state.selectedBufferIds);
+  const selectedFilesPaths = useAIChatStore((state) => state.selectedFilesPaths);
+  const isContextDropdownOpen = useAIChatStore((state) => state.isContextDropdownOpen);
+  const isSendAnimating = useAIChatStore((state) => state.isSendAnimating);
+  const hasApiKey = useAIChatStore((state) => state.hasApiKey);
+  const mentionState = useAIChatStore((state) => state.mentionState);
+
+  // Memoize action selectors
+  const setInput = useAIChatStore((state) => state.setInput);
+  const setIsContextDropdownOpen = useAIChatStore((state) => state.setIsContextDropdownOpen);
+  const setIsSendAnimating = useAIChatStore((state) => state.setIsSendAnimating);
+  const toggleBufferSelection = useAIChatStore((state) => state.toggleBufferSelection);
+  const toggleFileSelection = useAIChatStore((state) => state.toggleFileSelection);
+  const showMention = useAIChatStore((state) => state.showMention);
+  const hideMention = useAIChatStore((state) => state.hideMention);
+  const updatePosition = useAIChatStore((state) => state.updatePosition);
+  const selectNext = useAIChatStore((state) => state.selectNext);
+  const selectPrevious = useAIChatStore((state) => state.selectPrevious);
+  const getFilteredFiles = useAIChatStore((state) => state.getFilteredFiles);
+
+  // Optimized function to get plain text from contentEditable div
   const getPlainTextFromDiv = useCallback(() => {
     if (!inputRef.current) return "";
 
+    // Use a simpler approach for better performance
+    const element = inputRef.current;
     let text = "";
-    const walker = document.createTreeWalker(
-      inputRef.current,
-      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
-      {
-        acceptNode: (node) => {
-          if (node.nodeType === Node.TEXT_NODE) {
-            return NodeFilter.FILTER_ACCEPT;
-          }
-          if (
-            node.nodeType === Node.ELEMENT_NODE &&
-            (node as Element).hasAttribute("data-mention")
-          ) {
-            return NodeFilter.FILTER_ACCEPT;
-          }
-          return NodeFilter.FILTER_SKIP;
-        },
-      },
-    );
 
-    let node: Node | null;
-    while (true) {
-      node = walker.nextNode();
-      if (!node) break;
+    // Walk through child nodes directly instead of using TreeWalker
+    const processNode = (node: Node): void => {
       if (node.nodeType === Node.TEXT_NODE) {
         text += node.textContent || "";
       } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const mentionElement = node as Element;
-        const fileName = mentionElement.textContent?.trim();
-        if (fileName) {
-          text += `@[${fileName}]`;
+        const element = node as Element;
+        if (element.hasAttribute("data-mention")) {
+          const fileName = element.textContent?.trim();
+          if (fileName) {
+            text += `@[${fileName}]`;
+          }
+        } else {
+          // Process child nodes
+          for (const child of Array.from(node.childNodes)) {
+            processNode(child);
+          }
         }
       }
+    };
+
+    for (const child of Array.from(element.childNodes)) {
+      processNode(child);
     }
 
     return text;
@@ -135,6 +130,10 @@ export default function AIChatInputBar({
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener("resize", handleWindowResize);
+      // Cleanup performance timer
+      if (performanceTimer.current) {
+        clearTimeout(performanceTimer.current);
+      }
     };
   }, [recalculateMentionPosition]);
 
@@ -234,7 +233,48 @@ export default function AIChatInputBar({
     }
   };
 
-  // Handle input change for @ mentions
+  // Throttled mention detection to improve performance
+  const debouncedMentionDetection = useCallback(
+    (plainText: string) => {
+      if (performanceTimer.current) {
+        clearTimeout(performanceTimer.current);
+      }
+
+      performanceTimer.current = window.setTimeout(() => {
+        if (!inputRef.current) return;
+
+        // Simple approach - just check the end of the text for @ mentions
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+
+        // Get a simple cursor position estimation
+        const _range = selection.getRangeAt(0);
+        const beforeCursor = plainText.slice(0, plainText.length);
+        const lastAtIndex = beforeCursor.lastIndexOf("@");
+
+        if (lastAtIndex !== -1) {
+          const afterAt = beforeCursor.slice(lastAtIndex + 1);
+          // Check if there's no space between @ and cursor and it's not part of a mention badge
+          if (!afterAt.includes(" ") && !afterAt.includes("]") && afterAt.length < 50) {
+            // Use cached position to avoid getBoundingClientRect on every call
+            const position = {
+              top: inputRef.current.offsetTop + inputRef.current.offsetHeight + 4,
+              left: inputRef.current.offsetLeft,
+            };
+
+            showMention(position, afterAt, lastAtIndex);
+          } else {
+            hideMention();
+          }
+        } else {
+          hideMention();
+        }
+      }, 100); // 100ms debounce for mention detection
+    },
+    [showMention, hideMention],
+  );
+
+  // Optimized input change handler
   const handleInputChange = useCallback(() => {
     if (!inputRef.current || isUpdatingContentRef.current) return;
 
@@ -244,82 +284,15 @@ export default function AIChatInputBar({
     // Only update store if content actually changed
     if (plainTextFromDiv !== input) {
       setInput(plainTextFromDiv);
-    }
 
-    // Get cursor position for @ mention detection
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-
-    // Calculate cursor position in the plain text
-    let cursorPosition = 0;
-    const range = selection.getRangeAt(0);
-    const walker = document.createTreeWalker(
-      inputRef.current,
-      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
-      {
-        acceptNode: (node) => {
-          if (node.nodeType === Node.TEXT_NODE) {
-            return NodeFilter.FILTER_ACCEPT;
-          }
-          if (
-            node.nodeType === Node.ELEMENT_NODE &&
-            (node as Element).hasAttribute("data-mention")
-          ) {
-            return NodeFilter.FILTER_ACCEPT;
-          }
-          return NodeFilter.FILTER_SKIP;
-        },
-      },
-    );
-
-    let node: Node | null;
-    while (true) {
-      node = walker.nextNode();
-      if (!node) break;
-
-      if (node === range.startContainer || node.contains(range.startContainer)) {
-        if (node.nodeType === Node.TEXT_NODE) {
-          cursorPosition += range.startOffset;
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          const fileName = (node as Element).textContent?.trim();
-          if (fileName) {
-            cursorPosition += fileName.length + 3; // +3 for @[]
-          }
-        }
-        break;
-      } else {
-        if (node.nodeType === Node.TEXT_NODE) {
-          cursorPosition += node.textContent?.length || 0;
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          const fileName = (node as Element).textContent?.trim();
-          if (fileName) {
-            cursorPosition += fileName.length + 3; // +3 for @[]
-          }
-        }
-      }
-    }
-
-    const textBeforeCursor = plainTextFromDiv.slice(0, cursorPosition);
-    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
-
-    if (lastAtIndex !== -1) {
-      const afterAt = textBeforeCursor.slice(lastAtIndex + 1);
-      // Check if there's no space between @ and cursor and it's not part of a mention badge
-      if (!afterAt.includes(" ") && !afterAt.includes("]")) {
-        const inputRect = inputRef.current.getBoundingClientRect();
-        const position = {
-          top: inputRect.bottom + 4,
-          left: inputRect.left,
-        };
-
-        showMention(position, afterAt, lastAtIndex);
+      // Only do mention detection if the text contains @ and is not too long
+      if (plainTextFromDiv.includes("@") && plainTextFromDiv.length < 500) {
+        debouncedMentionDetection(plainTextFromDiv);
       } else {
         hideMention();
       }
-    } else {
-      hideMention();
     }
-  }, [input, setInput, showMention, hideMention, getPlainTextFromDiv]);
+  }, [input, setInput, getPlainTextFromDiv, debouncedMentionDetection, hideMention]);
 
   // Handle file mention selection
   const handleFileMentionSelect = useCallback(
@@ -459,13 +432,19 @@ export default function AIChatInputBar({
         <div className="mt-2 flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1">{/* Spacer for responsive layout */}</div>
           <div className="flex select-none items-center gap-1">
-            <ModelProviderSelector
-              currentProviderId={settings.aiProviderId}
-              currentModelId={settings.aiModelId}
-              onProviderChange={onProviderChange}
-              onApiKeyRequest={onApiKeyRequest}
-              hasApiKey={hasProviderApiKey}
-            />
+            {/* Model selector button */}
+            <button
+              onClick={() => openSettingsDialog("ai")}
+              className="flex min-w-[160px] items-center gap-1.5 rounded bg-transparent px-2 py-1 font-mono text-xs transition-colors hover:bg-hover"
+              title="Open AI settings to change model"
+            >
+              <div className="min-w-0 flex-1 text-left">
+                <div className="truncate text-text text-xs">
+                  {getModelById(settings.aiProviderId, settings.aiModelId)?.name || "Select Model"}
+                </div>
+              </div>
+              <Settings size={10} className="text-text-lighter" />
+            </button>
             <Button
               type="submit"
               disabled={(!input.trim() && !isTyping) || !hasApiKey}
@@ -508,4 +487,6 @@ export default function AIChatInputBar({
       {mentionState.active && <FileMentionDropdown onSelect={handleFileMentionSelect} />}
     </div>
   );
-}
+});
+
+export default AIChatInputBar;

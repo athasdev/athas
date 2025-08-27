@@ -71,7 +71,4 @@ export interface AIChatInputBarProps {
   allProjectFiles: FileEntry[];
   onSendMessage: () => Promise<void>;
   onStopStreaming: () => void;
-  onApiKeyRequest: (providerId: string) => void;
-  onProviderChange: (providerId: string, modelId: string) => void;
-  hasProviderApiKey: (providerId: string) => boolean;
 }

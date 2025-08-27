@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import { MessageSquare, Plus, RefreshCw, Sparkles } from "lucide-react";
+import { Check, Copy, MessageSquare, Plus, Sparkles } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/settings/store";
 import { useAIChatStore } from "@/stores/ai-chat/store";
 import { useProjectStore } from "@/stores/project-store";
@@ -97,7 +97,7 @@ function EditableChatTitle({
   );
 }
 
-export default function AIChat({
+const AIChat = memo(function AIChat({
   className,
   activeBuffer,
   buffers = [],
@@ -111,9 +111,8 @@ export default function AIChat({
 
   const { settings, updateSetting } = useSettingsStore();
 
-  // Get store state selectively to avoid re-renders
+  // Get store state selectively to avoid re-renders - using individual selectors
   const input = useAIChatStore((state) => state.input);
-  const isTyping = useAIChatStore((state) => state.isTyping);
   const selectedBufferIds = useAIChatStore((state) => state.selectedBufferIds);
   const selectedFilesPaths = useAIChatStore((state) => state.selectedFilesPaths);
   const hasApiKey = useAIChatStore((state) => state.hasApiKey);
@@ -134,7 +133,6 @@ export default function AIChat({
   const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
   const addMessage = useAIChatStore((state) => state.addMessage);
   const updateMessage = useAIChatStore((state) => state.updateMessage);
-  const regenerateResponse = useAIChatStore((state) => state.regenerateResponse);
   const setIsChatHistoryVisible = useAIChatStore((state) => state.setIsChatHistoryVisible);
   const setApiKeyModalState = useAIChatStore((state) => state.setApiKeyModalState);
   const saveApiKey = useAIChatStore((state) => state.saveApiKey);
@@ -146,6 +144,7 @@ export default function AIChat({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   // Get current chat and messages directly from store
   const currentChat = getCurrentChat();
@@ -460,33 +459,32 @@ export default function AIChat({
     }
   };
 
-  // Handle provider/model selection
-  const handleProviderChange = (providerId: string, modelId: string) => {
-    updateSetting("aiProviderId", providerId);
-    updateSetting("aiModelId", modelId);
-  };
+  // Memoized send message handler to prevent unnecessary re-renders
+  const handleSendMessage = useCallback(async () => {
+    await sendMessage(input);
+  }, [sendMessage, input]);
 
-  // Handle API key request
-  const handleApiKeyRequest = (providerId: string) => {
-    setApiKeyModalState({ isOpen: true, providerId });
-  };
-
-  const handleRegenerate = async () => {
-    const contentToRegenerate = regenerateResponse();
-    if (contentToRegenerate) {
-      await sendMessage(contentToRegenerate);
+  // Copy message content to clipboard
+  const handleCopyMessage = useCallback(async (messageContent: string, messageId: string) => {
+    try {
+      await navigator.clipboard.writeText(messageContent);
+      setCopiedMessageId(messageId);
+      // Reset back to copy icon after 2 seconds
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy message:", err);
     }
-  };
+  }, []);
 
   return (
     <div
       className={cn(
         "ai-chat-container flex h-full flex-col font-mono text-xs",
-        "bg-primary-bg text-text",
+        "bg-secondary-bg text-text",
         className,
       )}
       style={{
-        background: "var(--color-primary-bg)",
+        background: "var(--color-secondary-bg)",
         color: "var(--color-text)",
       }}
     >
@@ -545,10 +543,29 @@ export default function AIChat({
             message.role === "assistant" &&
             (index === 0 || messages[index - 1].role !== "assistant");
 
+          // Check if this message is primarily tool calls (empty content + tool calls)
+          const isToolOnlyMessage =
+            message.role === "assistant" &&
+            message.toolCalls &&
+            message.toolCalls.length > 0 &&
+            (!message.content || message.content.trim().length === 0);
+
+          // Check if previous message was also a tool-only message for even tighter spacing
+          const prevMessage = index > 0 ? messages[index - 1] : null;
+          const previousMessageIsToolOnly =
+            prevMessage &&
+            prevMessage.role === "assistant" &&
+            prevMessage.toolCalls &&
+            prevMessage.toolCalls.length > 0 &&
+            (!prevMessage.content || prevMessage.content.trim().length === 0);
+
           return (
             <div
               key={message.id}
-              className={cn("p-3", message.role === "user" && "flex justify-end")}
+              className={cn(
+                isToolOnlyMessage ? (previousMessageIsToolOnly ? "px-3" : "px-3 pt-1") : "p-3",
+                message.role === "user" && "flex justify-end",
+              )}
             >
               {message.role === "user" ? (
                 /* User Message - Subtle Chat Bubble */
@@ -563,9 +580,21 @@ export default function AIChat({
                     <div className="whitespace-pre-wrap break-words">{message.content}</div>
                   </div>
                 </div>
+              ) : isToolOnlyMessage ? (
+                /* Tool-Only Message - Minimal Structure */
+                message.toolCalls!.map((toolCall, toolIndex) => (
+                  <ToolCallDisplay
+                    key={`${message.id}-tool-${toolIndex}`}
+                    toolName={toolCall.name}
+                    input={toolCall.input}
+                    output={toolCall.output}
+                    error={toolCall.error}
+                    isStreaming={!toolCall.isComplete && message.isStreaming}
+                  />
+                ))
               ) : (
                 /* Assistant Message - Full Width with Header */
-                <div className="w-full">
+                <div className="group relative w-full">
                   {/* AI Message Header - Only show for first message in sequence */}
                   {isFirstAssistantInSequence && (
                     <div className="mb-2 flex select-none items-center gap-2">
@@ -582,7 +611,7 @@ export default function AIChat({
 
                   {/* Tool Calls */}
                   {message.toolCalls && message.toolCalls.length > 0 && (
-                    <div className="mb-1 space-y-0">
+                    <div className="-space-y-0">
                       {message.toolCalls!.map((toolCall, toolIndex) => (
                         <ToolCallDisplay
                           key={`${message.id}-tool-${toolIndex}`}
@@ -603,17 +632,19 @@ export default function AIChat({
                     </div>
                   )}
 
-                  {/* Regenerate Button */}
-                  {index === messages.length - 1 && !isTyping && message.role === "assistant" && (
-                    <div className="mt-2">
+                  {/* Copy Button - Positioned at bottom right */}
+                  {message.content && (
+                    <div className="mt-2 flex justify-end">
                       <button
-                        onClick={handleRegenerate}
-                        className="flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors hover:bg-hover"
-                        style={{ color: "var(--color-text-lighter)" }}
-                        title="Regenerate response"
+                        onClick={() => handleCopyMessage(message.content, message.id)}
+                        className="rounded p-1 opacity-60 transition-opacity hover:bg-hover hover:opacity-100"
+                        title="Copy message"
                       >
-                        <RefreshCw size={12} />
-                        <span>Regenerate</span>
+                        {copiedMessageId === message.id ? (
+                          <Check size={12} className="text-green-400" />
+                        ) : (
+                          <Copy size={12} />
+                        )}
                       </button>
                     </div>
                   )}
@@ -630,11 +661,8 @@ export default function AIChat({
       <AIChatInputBar
         buffers={buffers}
         allProjectFiles={allProjectFiles}
-        onSendMessage={() => sendMessage(input)}
+        onSendMessage={handleSendMessage}
         onStopStreaming={stopStreaming}
-        onApiKeyRequest={handleApiKeyRequest}
-        onProviderChange={handleProviderChange}
-        hasProviderApiKey={hasProviderApiKey}
       />
 
       {/* API Key Modal */}
@@ -661,4 +689,6 @@ export default function AIChat({
       />
     </div>
   );
-}
+});
+
+export default AIChat;

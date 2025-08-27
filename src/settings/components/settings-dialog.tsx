@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import Dialog from "@/components/ui/dialog";
+import { type SettingsTab, useUIState } from "@/stores/ui-state-store";
 import { SettingsVerticalTabs } from "./settings-vertical-tabs";
 
 import { AdvancedSettings } from "./tabs/advanced-settings";
@@ -18,19 +19,16 @@ interface SettingsDialogProps {
   onClose: () => void;
 }
 
-export type SettingsTab =
-  | "general"
-  | "editor"
-  | "theme"
-  | "ai"
-  | "keyboard"
-  | "language"
-  | "features"
-  | "advanced"
-  | "fileTree";
-
 const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
+  const { settingsInitialTab } = useUIState();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+
+  // Set the active tab to the initial tab when the dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(settingsInitialTab);
+    }
+  }, [isOpen, settingsInitialTab]);
 
   // Handle Escape key to close dialog
   useEffect(() => {

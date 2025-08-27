@@ -9,8 +9,8 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-react";
+import type { SettingsTab } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
-import type { SettingsTab } from "./settings-dialog";
 
 interface SettingsVerticalTabsProps {
   activeTab: SettingsTab;

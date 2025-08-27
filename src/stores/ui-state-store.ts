@@ -2,6 +2,17 @@ import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import type { BottomPaneTab, QuickEditSelection } from "../types/ui-state";
 
+export type SettingsTab =
+  | "general"
+  | "editor"
+  | "theme"
+  | "ai"
+  | "keyboard"
+  | "language"
+  | "features"
+  | "advanced"
+  | "fileTree";
+
 const initialState = {
   // UI State
   isSidebarVisible: true,
@@ -19,6 +30,7 @@ const initialState = {
   // Dialog States
   isSettingsDialogVisible: false,
   isThemeSelectorVisible: false,
+  settingsInitialTab: "general" as SettingsTab,
 
   // Bottom Pane
   isBottomPaneVisible: false,
@@ -55,6 +67,12 @@ export const useUIState = create(
     // Dialog State actions
     setIsSettingsDialogVisible: (v: boolean) => set({ isSettingsDialogVisible: v }),
     setIsThemeSelectorVisible: (v: boolean) => set({ isThemeSelectorVisible: v }),
+    setSettingsInitialTab: (tab: SettingsTab) => set({ settingsInitialTab: tab }),
+    openSettingsDialog: (tab?: SettingsTab) =>
+      set({
+        isSettingsDialogVisible: true,
+        settingsInitialTab: tab || "general",
+      }),
 
     // Bottom Pane actions
     setIsBottomPaneVisible: (v: boolean) => set({ isBottomPaneVisible: v }),
