@@ -332,22 +332,20 @@ export function TextEditor() {
   const handleSelectionChange = useCallback(() => {
     if (!textareaRef.current) return;
 
-    const { selectionStart, selectionEnd, value } = textareaRef.current;
-    const newCursorPosition = calculateCursorPosition(selectionStart, lines);
-
-    setCursorPosition(newCursorPosition);
+    const { selectionStart, selectionEnd } = textareaRef.current;
 
     if (selectionStart !== selectionEnd) {
-      const selectedText = value.slice(selectionStart, selectionEnd).trim();
-      if (selectedText.length > 0) {
-        setSelection({
-          start: calculateCursorPosition(selectionStart, lines),
-          end: calculateCursorPosition(selectionEnd, lines),
-        });
-      }
+      setSelection({
+        start: calculateCursorPosition(selectionStart, lines),
+        end: calculateCursorPosition(selectionEnd, lines),
+      });
     } else {
       setSelection(undefined);
     }
+
+    // Update cursor position after selection change
+    const newCursorPosition = calculateCursorPosition(selectionEnd, lines);
+    setCursorPosition(newCursorPosition);
   }, [lines, setCursorPosition, setSelection]);
 
   useEffect(() => {
@@ -635,14 +633,30 @@ export function TextEditor() {
   );
 
   // Context menu handlers
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
 
-    setContextMenu({
-      isOpen: true,
-      position: { x: e.clientX, y: e.clientY },
-    });
-  }, []);
+      // Check if right-click is at the end of a line to prevent automatic text selection
+      if (textareaRef.current) {
+        const { selectionStart, selectionEnd, value } = textareaRef.current;
+        const selectedText = value.slice(selectionStart, selectionEnd);
+
+        if (selectedText.split("\n").length > 1) {
+          // If the selected text is more than one line, clear the selection
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = selectionStart;
+          setCursorPosition(calculateCursorPosition(selectionStart, lines));
+          setSelection(undefined);
+        }
+      }
+
+      setContextMenu({
+        isOpen: true,
+        position: { x: e.clientX, y: e.clientY },
+      });
+    },
+    [content, lines, setCursorPosition, setSelection],
+  );
 
   const handleCloseContextMenu = useCallback(() => {
     setContextMenu({ isOpen: false, position: { x: 0, y: 0 } });

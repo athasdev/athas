@@ -39,7 +39,7 @@ export const DecorationLayer = () => {
     if (selection) {
       allDecorations.push({
         range: selection,
-        type: "line" as const,
+        type: "inline" as const,
         className: "selection",
       });
     }
