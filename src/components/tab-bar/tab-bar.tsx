@@ -1,5 +1,7 @@
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useSettingsStore } from "@/settings/store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
@@ -69,6 +71,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragStateRef = useRef(dragState);
+  const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
   const { clearPositionCache } = useEditorCursorStore.getState().actions;
 
   useEffect(() => {
@@ -332,9 +335,14 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   const handleDragEnd = useCallback(() => {}, []);
 
-  const closeContextMenu = () => {
-    console.log("????");
+  const handleCopyPath = useCallback(
+    async (path: string) => {
+      await writeText(path);
+    },
+    [writeText],
+  );
 
+  const closeContextMenu = () => {
     setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
   };
 
@@ -462,23 +470,17 @@ const TabBar = ({ paneId }: TabBarProps) => {
         position={contextMenu.position}
         buffer={contextMenu.buffer}
         onClose={closeContextMenu}
-        onPin={handleTabPin || (() => {})}
+        onPin={handleTabPin}
         onCloseTab={(bufferId) => {
           const buffer = buffers.find((b) => b.id === bufferId);
           if (buffer) {
             handleTabClose(bufferId);
           }
         }}
-        onCloseOthers={handleCloseOtherTabs || (() => {})}
-        onCloseAll={handleCloseAllTabs || (() => {})}
-        onCloseToRight={handleCloseTabsToRight || (() => {})}
-        onCopyPath={async (path: string) => {
-          try {
-            await navigator.clipboard.writeText(path);
-          } catch (error) {
-            console.error("Failed to copy path:", error);
-          }
-        }}
+        onCloseOthers={handleCloseOtherTabs}
+        onCloseAll={handleCloseAllTabs}
+        onCloseToRight={handleCloseTabsToRight}
+        onCopyPath={handleCopyPath}
         onReload={(bufferId: string) => {
           // Reload the buffer by closing and reopening it
           const buffer = buffers.find((b) => b.id === bufferId);
@@ -504,13 +506,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
             }, 100);
           }
         }}
-        onRevealInFinder={(path: string) => {
-          // Platform-specific reveal in finder/explorer
-          if (window.electron) {
-            window.electron.shell.showItemInFolder(path);
-          } else {
-          }
-        }}
+        onRevealInFinder={handleRevealInFolder}
       />
     </>
   );
