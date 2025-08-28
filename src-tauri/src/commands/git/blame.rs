@@ -27,7 +27,6 @@ pub fn git_blame_file(root_path: &str, file_path: &str) -> Result<GitBlame, Stri
    for hunk in blame.iter() {
       let signature = hunk.final_signature();
       let commit = repo.find_commit(hunk.final_commit_id()).unwrap();
-      println!("{:#?}", hunk.lines_in_hunk());
 
       blame_lines.push(GitBlameLine {
          line_number: hunk.final_start_line(),
