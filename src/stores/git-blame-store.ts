@@ -101,7 +101,7 @@ export const useGitBlameStore = create<GitBlameState>((set, get) => ({
         return true;
       }
 
-      if (currentLine > line.line_number && currentLine <= line.total_lines) {
+      if (currentLine > line.line_number && currentLine < line.line_number + line.total_lines) {
         return true;
       }
 
