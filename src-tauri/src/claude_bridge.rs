@@ -46,8 +46,8 @@ impl ClaudeCodeBridge {
 
       log::info!("Starting interceptor as embedded service...");
 
-      // Start the interceptor proxy server on an ephemeral port and get the actual port
-      let (rx, ws_state, server_handle, proxy_port) = start_proxy_server_with_ws(None).await?;
+      // Start the interceptor proxy server on an ephemeral port and get the assigned port
+      let (rx, ws_state, server_handle, assigned_port) = start_proxy_server_with_ws(None).await?;
 
       // Create channels for message distribution
       let (broadcast_tx, mut broadcast_rx) = mpsc::unbounded_channel::<InterceptorMessage>();
@@ -75,9 +75,9 @@ impl ClaudeCodeBridge {
       self.interceptor_handle = Some(message_handler);
       self.server_handle = Some(server_handle);
       self.ws_connected = true;
-      self.proxy_port = Some(proxy_port);
+      self.proxy_port = Some(assigned_port);
 
-      log::info!("Interceptor started successfully on port {}", proxy_port);
+      log::info!("Interceptor started successfully on port {}", assigned_port);
       Ok(())
    }
 
