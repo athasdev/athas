@@ -22,6 +22,7 @@ pub struct ClaudeCodeBridge {
    interceptor_handle: Option<tokio::task::JoinHandle<()>>,
    server_handle: Option<tokio::task::JoinHandle<()>>,
    ws_connected: bool,
+   proxy_port: Option<u16>,
    app_handle: AppHandle,
 }
 
@@ -33,6 +34,7 @@ impl ClaudeCodeBridge {
          interceptor_handle: None,
          server_handle: None,
          ws_connected: false,
+         proxy_port: None,
          app_handle,
       }
    }
@@ -44,11 +46,8 @@ impl ClaudeCodeBridge {
 
       log::info!("Starting interceptor as embedded service...");
 
-      // todo: we shouldn't hardcode this
-      let proxy_port = 3456;
-
-      // Start the interceptor proxy server
-      let (rx, ws_state, server_handle) = start_proxy_server_with_ws(proxy_port).await?;
+      // Start the interceptor proxy server on an ephemeral port and get the actual port
+      let (rx, ws_state, server_handle, proxy_port) = start_proxy_server_with_ws(None).await?;
 
       // Create channels for message distribution
       let (broadcast_tx, mut broadcast_rx) = mpsc::unbounded_channel::<InterceptorMessage>();
@@ -76,6 +75,7 @@ impl ClaudeCodeBridge {
       self.interceptor_handle = Some(message_handler);
       self.server_handle = Some(server_handle);
       self.ws_connected = true;
+      self.proxy_port = Some(proxy_port);
 
       log::info!("Interceptor started successfully on port {}", proxy_port);
       Ok(())
@@ -87,6 +87,10 @@ impl ClaudeCodeBridge {
          "Claude Code is already running"
       );
 
+      let proxy_port = self
+         .proxy_port
+         .context("Interceptor must be started before starting Claude Code")?;
+
       let mut cmd = Command::new("claude");
       cmd.args([
          "--dangerously-skip-permissions",
@@ -97,7 +101,10 @@ impl ClaudeCodeBridge {
          "--input-format",
          "stream-json",
       ])
-      .env("ANTHROPIC_BASE_URL", "http://localhost:3456")
+      .env(
+         "ANTHROPIC_BASE_URL",
+         format!("http://localhost:{proxy_port}"),
+      )
       .stdin(Stdio::piped())
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
