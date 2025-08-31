@@ -17,7 +17,6 @@ import {
   Type,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { editorAPI } from "@/extensions/editor-api";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import KeybindingBadge from "../../ui/keybinding-badge";
 
@@ -88,9 +87,8 @@ const EditorContextMenu = ({
     // Adjust menu position to ensure it's visible
     if (menuRef.current) {
       const rect = menuRef.current.getBoundingClientRect();
-      const viewportRef = editorAPI.getViewportRef();
-      const viewportWidth = viewportRef!.getBoundingClientRect().width;
-      const viewportHeight = viewportRef!.getBoundingClientRect().height;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
 
       // Start with the provided position
       let adjustedX = position.x;

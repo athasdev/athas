@@ -181,6 +181,11 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       // Open terminal in DOM
       terminal.open(terminalRef.current);
 
+      // Allow shortcuts to be handled
+      terminal.attachCustomKeyEventHandler((e) => {
+        return !(e.ctrlKey || e.metaKey);
+      });
+
       // Load WebLinksAddon after terminal is open
       terminal.loadAddon(webLinksAddon);
 

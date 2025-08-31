@@ -61,3 +61,18 @@ export interface GitTag {
   message?: string;
   date: string;
 }
+
+export interface GitBlame {
+  file_path: string;
+  lines: GitBlameLine[];
+}
+
+export interface GitBlameLine {
+  line_number: number;
+  total_lines: number;
+  commit_hash: string;
+  author: string;
+  email: string;
+  time: number;
+  commit: string;
+}

@@ -2,18 +2,19 @@
   "$schema": "https://schema.tauri.app/config/2/capability",
   "identifier": "main-capability",
   "description": "Capability for all windows",
-  "windows": [
-    "*"
-  ],
+  "windows": ["*"],
   "permissions": [
     "core:default",
     "core:window:default",
     "core:window:allow-start-dragging",
     "core:window:allow-close",
+    "core:window:allow-destroy",
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-internal-toggle-maximize",
     "core:window:allow-is-maximized",
+    "core:window:allow-is-fullscreen",
+    "core:window:allow-set-fullscreen",
     "core:event:default",
     "core:event:allow-listen",
     "core:event:allow-emit",
@@ -49,6 +50,7 @@
     "fs:allow-copy-file",
     "http:default",
     "http:allow-fetch",
+    "process:allow-restart",
     "process:allow-exit",
     {
       "identifier": "shell:allow-execute",
@@ -89,11 +91,7 @@
         {
           "name": "defaults",
           "cmd": "defaults",
-          "args": [
-            "read",
-            "-g",
-            "AppleInterfaceStyle"
-          ]
+          "args": ["read", "-g", "AppleInterfaceStyle"]
         },
         {
           "name": "reg",

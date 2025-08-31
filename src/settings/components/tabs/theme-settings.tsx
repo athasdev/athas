@@ -1,8 +1,10 @@
+import { invoke } from "@tauri-apps/api/core";
 import { Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "@/components/ui/button";
 import Dropdown from "@/components/ui/dropdown";
 import Section, { SettingRow } from "@/components/ui/section";
+import Switch from "@/components/ui/switch";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
 import { useSettingsStore } from "@/settings/store";
@@ -77,6 +79,32 @@ export const ThemeSettings = () => {
               Upload
             </Button>
           </div>
+        </SettingRow>
+
+        <SettingRow
+          label="Native Menu Bar"
+          description="Use the native menu bar or a custom UI menu bar"
+        >
+          <Switch
+            checked={settings.nativeMenuBar}
+            onChange={(checked) => {
+              updateSetting("nativeMenuBar", checked);
+              invoke("toggle_menu_bar", { toggle: !checked });
+            }}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Compact Menu Bar"
+          description="Requires UI menu bar; compact hamburger or full UI menu"
+        >
+          <Switch
+            checked={settings.compactMenuBar}
+            disabled={settings.nativeMenuBar}
+            onChange={(checked) => updateSetting("compactMenuBar", checked)}
+            size="sm"
+          />
         </SettingRow>
       </Section>
     </div>

@@ -5,7 +5,7 @@
 Use the automated setup script:
 
 ```bash
-bun run setup
+bun setup
 ```
 
 ## Manual Setup
@@ -22,5 +22,5 @@ bun run setup
 bun install
 
 # Start development server
-bun run tauri dev
+bun tauri dev
 ```

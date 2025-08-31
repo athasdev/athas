@@ -6,11 +6,14 @@ use commands::*;
 use file_watcher::FileWatcher;
 use log::{debug, info};
 use lsp::LspManager;
-use ssh::{ssh_connect, ssh_disconnect, ssh_write_file};
+use ssh::{ssh_connect, ssh_disconnect, ssh_disconnect_only, ssh_write_file};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
+use tauri_plugin_os::platform;
+use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 use xterm_terminal::XtermManager;
+
 mod claude_bridge;
 mod commands;
 mod file_watcher;
@@ -37,8 +40,22 @@ fn main() {
       .plugin(tauri_plugin_http::init())
       .plugin(tauri_plugin_process::init())
       .setup(|app| {
-         let menu = menu::create_menu(app.handle())?;
-         app.set_menu(menu)?;
+         let store = app.store("settings.json")?;
+
+         let native_menu_bar = store
+            .get("nativeMenuBar")
+            .and_then(|v| v.as_bool())
+            .unwrap_or_else(|| {
+               // If setting is missing, detect platform; if on MacOS, enable native menu bar
+               let default = platform() == "macos";
+               store.set("nativeMenuBar", default);
+               default
+            });
+
+         if native_menu_bar {
+            let menu = menu::create_menu(app.handle())?;
+            app.set_menu(menu)?;
+         }
 
          log::info!("Starting app ☺️!");
 
@@ -150,6 +167,32 @@ fn main() {
                   "split_editor" => {
                      let _ = window.emit("menu_split_editor", ());
                   }
+                  "toggle_menu_bar" => {
+                     // Toggle menu visibility by setting it to None or recreating it
+                     let current_menu = _app_handle.menu();
+                     if current_menu.is_some() {
+                        // Hide menu by setting it to None
+                        if let Err(e) = _app_handle.remove_menu() {
+                           log::error!("Failed to hide menu: {}", e);
+                        } else {
+                           log::info!("Menu bar hidden");
+                        }
+                     } else {
+                        // Show menu by recreating it
+                        match menu::create_menu(_app_handle) {
+                           Ok(new_menu) => {
+                              if let Err(e) = _app_handle.set_menu(new_menu) {
+                                 log::error!("Failed to show menu: {}", e);
+                              } else {
+                                 log::info!("Menu bar shown");
+                              }
+                           }
+                           Err(e) => {
+                              log::error!("Failed to create menu: {}", e);
+                           }
+                        }
+                     }
+                  }
                   "toggle_vim" => {
                      let _ = window.emit("menu_toggle_vim", ());
                   }
@@ -170,6 +213,26 @@ fn main() {
                   }
                   "help" => {
                      let _ = window.emit("menu_help", ());
+                  }
+                  "about_athas" => {
+                     let _ = window.emit("menu_about_athas", ());
+                  }
+                  // Window menu items
+                  "minimize_window" => {
+                     if let Err(e) = window.minimize() {
+                        log::error!("Failed to minimize window: {}", e);
+                     }
+                  }
+                  "maximize_window" => {
+                     if let Err(e) = window.maximize() {
+                        log::error!("Failed to maximize window: {}", e);
+                     }
+                  }
+                  "toggle_fullscreen" => {
+                     let is_fullscreen = window.is_fullscreen().unwrap_or(false);
+                     if let Err(e) = window.set_fullscreen(!is_fullscreen) {
+                        log::error!("Failed to toggle fullscreen: {}", e);
+                     }
                   }
                   // Theme menu items
                   theme_id if theme_id.starts_with("theme_") => {
@@ -223,6 +286,7 @@ fn main() {
          git_delete_tag,
          git_stage_hunk,
          git_unstage_hunk,
+         git_blame_file,
          // GitHub commands
          store_github_token,
          get_github_token,
@@ -244,6 +308,7 @@ fn main() {
          // SSH commands
          ssh_connect,
          ssh_disconnect,
+         ssh_disconnect_only,
          ssh_write_file,
          // Claude commands
          start_claude_code,
@@ -282,6 +347,8 @@ fn main() {
          filter_completions,
          // Format commands
          format_code,
+         // Menu commands
+         menu::toggle_menu_bar,
       ])
       .run(tauri::generate_context!())
       .expect("error while running tauri application");

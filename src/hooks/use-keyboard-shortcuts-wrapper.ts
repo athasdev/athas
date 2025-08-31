@@ -1,6 +1,7 @@
 import { useSettingsStore } from "@/settings/store";
 import { useAppStore } from "../stores/app-store";
 import { useBufferStore } from "../stores/buffer-store";
+import { useSearchViewStore } from "../stores/search-view-store";
 import { useUIState } from "../stores/ui-state-store";
 import { useKeyboardShortcuts } from "./use-keyboard-shortcuts";
 
@@ -13,8 +14,8 @@ export function useKeyboardShortcutsWrapper() {
     useBufferStore.use.actions();
   const { handleSave, openQuickEdit } = useAppStore.use.actions();
   const { settings, updateSetting } = useSettingsStore();
+  const { focusSearchInput } = useSearchViewStore();
 
-  const searchViewRef = { current: null }; // Placeholder for search view ref
   const commandPaletteRef = { current: null }; // Placeholder for command palette ref
 
   useKeyboardShortcuts({
@@ -62,11 +63,7 @@ export function useKeyboardShortcutsWrapper() {
       }
     },
     setIsSearchViewActive: uiState.setIsSearchViewActive,
-    focusSearchInput: () => {
-      if (searchViewRef.current && "focus" in searchViewRef.current) {
-        (searchViewRef.current as any).focus();
-      }
-    },
+    focusSearchInput,
     focusCommandPalette: () => {
       if (commandPaletteRef.current && "focus" in commandPaletteRef.current) {
         (commandPaletteRef.current as any).focus();

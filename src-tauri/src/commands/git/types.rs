@@ -66,6 +66,23 @@ pub struct GitDiff {
 }
 
 #[derive(Serialize)]
+pub struct GitBlame {
+   pub file_path: String,
+   pub lines: Vec<GitBlameLine>,
+}
+
+#[derive(Serialize)]
+pub struct GitBlameLine {
+   pub line_number: usize,
+   pub total_lines: usize,
+   pub commit_hash: String,
+   pub author: String,
+   pub email: String,
+   pub time: i64,
+   pub commit: String,
+}
+
+#[derive(Serialize)]
 pub struct GitRemote {
    pub name: String,
    pub url: String,

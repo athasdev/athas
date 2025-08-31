@@ -1,11 +1,12 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { platform } from "@tauri-apps/plugin-os";
-import { Maximize2, Minimize2, Minus, Settings, Sparkles, X } from "lucide-react";
+import { Maximize2, MenuIcon, Minimize2, Minus, Settings, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import SettingsDialog from "@/settings/components/settings-dialog";
 import { useSettingsStore } from "@/settings/store";
 import { useProjectStore } from "@/stores/project-store";
 import { cn } from "@/utils/cn";
+import CustomMenuBar from "./menu-bar";
 
 interface CustomTitleBarProps {
   title?: string;
@@ -22,7 +23,8 @@ const CustomTitleBar = ({
   const { getProjectName } = useProjectStore();
   const { settings, updateSetting } = useSettingsStore();
 
-  const projectName = getProjectName();
+  const [projectName, setProjectName] = useState<string>("");
+  const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
   const [currentPlatform, setCurrentPlatform] = useState<string>(() => {
@@ -65,10 +67,19 @@ const CustomTitleBar = ({
       } catch (error) {
         console.error("Error checking maximized state:", error);
       }
+
+      // Get project name asynchronously
+      try {
+        const name = await getProjectName();
+        setProjectName(name);
+      } catch (error) {
+        console.error("Error getting project name:", error);
+        setProjectName("Explorer");
+      }
     };
 
     initWindow();
-  }, []);
+  }, [getProjectName]);
 
   const handleMinimize = async () => {
     try {
@@ -150,8 +161,12 @@ const CustomTitleBar = ({
     return (
       <div
         data-tauri-drag-region
-        className="relative z-50 flex h-8 select-none items-center justify-between bg-primary-bg"
+        className="relative z-50 flex h-8 select-none items-center justify-between bg-primary-bg pl-0.5"
       >
+        {!settings.nativeMenuBar && (
+          <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
+        )}
+
         {/* macOS traffic light space holder */}
         <div className="flex items-center space-x-2 pl-4" />
 
@@ -200,20 +215,43 @@ const CustomTitleBar = ({
   return (
     <div
       data-tauri-drag-region
-      className={cn(
-        "relative z-50 flex h-7 select-none items-center justify-between",
-        "bg-primary-bg",
-      )}
+      className={"z-50 flex h-7 select-none items-center justify-between bg-primary-bg"}
     >
+      {!settings.nativeMenuBar && (
+        <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
+      )}
+
       {/* Left side */}
       <div className="flex flex-1 items-center px-2">
+        {/* Menu bar button */}
+        {!settings.nativeMenuBar && settings.compactMenuBar && (
+          <button
+            onClick={() => {
+              setMenuBarActiveMenu("File");
+            }}
+            className={`mr-2 flex items-center justify-center rounded py-0.5 text-text`}
+            title="Open Menu Bar"
+          >
+            <MenuIcon size={16} />
+          </button>
+        )}
+
         {projectName && (
-          <span className="max-w-96 truncate font-medium text-text text-xs">{projectName}</span>
+          <span
+            className={cn(
+              "max-w-96 truncate font-medium text-text text-xs",
+              !settings.nativeMenuBar &&
+                !settings.compactMenuBar &&
+                "-translate-x-1/2 absolute left-1/2",
+            )}
+          >
+            {projectName}
+          </span>
         )}
       </div>
 
       {/* Right side */}
-      <div className="flex items-center gap-0.5">
+      <div className="z-20 flex items-center gap-0.5">
         {/* AI Chat button */}
         <button
           onClick={() => {

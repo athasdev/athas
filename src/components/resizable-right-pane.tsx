@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/settings/store";
 import { cn } from "../utils/cn";
 
@@ -22,8 +22,32 @@ const ResizableRightPane = ({
 }: ResizableRightPaneProps) => {
   const { settings, updateSetting } = useSettingsStore();
   const [isResizing, setIsResizing] = useState(false);
+  const [tempWidth, setTempWidth] = useState(settings.aiChatWidth);
   const paneRef = useRef<HTMLDivElement>(null);
   const resizerRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | undefined>(undefined);
+
+  // Throttle settings updates for better performance
+  const throttledUpdateSetting = useCallback(
+    (newWidth: number) => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+      rafRef.current = requestAnimationFrame(() => {
+        updateSetting("aiChatWidth", newWidth);
+      });
+    },
+    [updateSetting],
+  );
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -39,11 +63,14 @@ const ResizableRightPane = ({
             ? startX - e.clientX // Reverse direction for right pane
             : e.clientX - startX; // Normal direction for left pane
         const newWidth = Math.min(Math.max(startWidth + deltaX, MIN_WIDTH), MAX_WIDTH);
-        updateSetting("aiChatWidth", newWidth);
+        setTempWidth(newWidth);
+        throttledUpdateSetting(newWidth);
       };
 
       const handleMouseUp = () => {
         setIsResizing(false);
+        // Ensure final width is saved
+        throttledUpdateSetting(tempWidth);
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
         document.body.style.cursor = "";
@@ -55,7 +82,7 @@ const ResizableRightPane = ({
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     },
-    [settings.aiChatWidth, position],
+    [settings.aiChatWidth, position, tempWidth, throttledUpdateSetting],
   );
 
   if (!isVisible) {
@@ -66,7 +93,7 @@ const ResizableRightPane = ({
     <div className="flex">
       <div
         ref={paneRef}
-        style={{ width: `${settings.aiChatWidth}px` }}
+        style={{ width: `${isResizing ? tempWidth : settings.aiChatWidth}px` }}
         className={cn(
           "relative flex flex-1 flex-col bg-secondary-bg",
           position === "right" ? "border-border border-l" : "border-border border-r",

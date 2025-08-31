@@ -5,7 +5,7 @@ Quick Setup (Recommended)
 Use the automated setup script:
 
 ```bash
-bun run setup-win
+bun setup-win
 ```
 
 ## Manual Setup
@@ -22,5 +22,5 @@ bun run setup-win
 bun install
 
 # Start development server
-bun run tauri dev
+bun tauri dev
 ```

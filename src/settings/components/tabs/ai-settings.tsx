@@ -1,14 +1,50 @@
-import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { useEffect, useState } from "react";
+import ApiKeyModal from "@/components/api-key-modal";
 import Button from "@/components/ui/button";
 import Dropdown from "@/components/ui/dropdown";
 import Section, { SettingRow } from "@/components/ui/section";
 import Switch from "@/components/ui/switch";
 import { useSettingsStore } from "@/settings/store";
-import { getAvailableProviders, getModelById } from "@/types/ai-provider";
+import { useAIChatStore } from "@/stores/ai-chat/store";
+import {
+  getAvailableProviders,
+  getModelById,
+  setClaudeCodeAvailability,
+} from "@/types/ai-provider";
+import type { ClaudeStatus } from "@/types/claude";
 
 export const AISettings = () => {
   const { settings, updateSetting } = useSettingsStore();
   const [apiKeysVisible, setApiKeysVisible] = useState(false);
+
+  // Check Claude Code availability on mount
+  useEffect(() => {
+    const checkClaudeCodeStatus = async () => {
+      try {
+        const status = await invoke<ClaudeStatus>("get_claude_status");
+        setClaudeCodeAvailability(status.interceptor_running);
+      } catch {
+        // If we can't check status, assume it's not available
+        setClaudeCodeAvailability(false);
+      }
+    };
+    checkClaudeCodeStatus();
+  }, []);
+
+  // Local state for immediate modal response
+  const [localModalState, setLocalModalState] = useState<{
+    isOpen: boolean;
+    providerId: string | null;
+  }>({
+    isOpen: false,
+    providerId: null,
+  });
+
+  // API Key functions from AI chat store
+  const saveApiKey = useAIChatStore((state) => state.saveApiKey);
+  const removeApiKey = useAIChatStore((state) => state.removeApiKey);
+  const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
 
   const currentProvider = getAvailableProviders().find((p) => p.id === settings.aiProviderId);
   const currentModel = getModelById(settings.aiProviderId, settings.aiModelId);
@@ -34,6 +70,10 @@ export const AISettings = () => {
 
   const handleModelChange = (modelId: string) => {
     updateSetting("aiModelId", modelId);
+  };
+
+  const handleApiKeyRequest = (providerId: string) => {
+    setLocalModalState({ isOpen: true, providerId });
   };
 
   return (
@@ -94,7 +134,7 @@ export const AISettings = () => {
       </Section>
 
       <Section title="API Keys">
-        <SettingRow label="Manage API Keys" description="Configure authentication for AI providers">
+        <SettingRow label="Manage API Keys">
           <Button variant="outline" size="xs" onClick={() => setApiKeysVisible(!apiKeysVisible)}>
             {apiKeysVisible ? "Hide" : "Show"}
           </Button>
@@ -104,13 +144,9 @@ export const AISettings = () => {
           getAvailableProviders()
             .filter((provider) => provider.requiresApiKey)
             .map((provider) => (
-              <SettingRow
-                key={provider.id}
-                label={`${provider.name} API Key`}
-                description={`Authentication for ${provider.name} services`}
-              >
-                <Button variant="ghost" size="xs">
-                  Configure
+              <SettingRow key={provider.id} label={provider.name}>
+                <Button variant="ghost" size="xs" onClick={() => handleApiKeyRequest(provider.id)}>
+                  {hasProviderApiKey(provider.id) ? "Update" : "Configure"}
                 </Button>
               </SettingRow>
             ))}
@@ -159,6 +195,18 @@ export const AISettings = () => {
           />
         </SettingRow>
       </Section>
+
+      {/* API Key Modal */}
+      <ApiKeyModal
+        isOpen={localModalState.isOpen}
+        onClose={() => setLocalModalState({ isOpen: false, providerId: null })}
+        providerId={localModalState.providerId || ""}
+        onSave={saveApiKey}
+        onRemove={removeApiKey}
+        hasExistingKey={
+          localModalState.providerId ? hasProviderApiKey(localModalState.providerId) : false
+        }
+      />
     </div>
   );
 };

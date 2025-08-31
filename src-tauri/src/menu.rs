@@ -1,32 +1,32 @@
-use tauri::menu::{AboutMetadata, MenuBuilder, MenuItem, SubmenuBuilder};
+use tauri::menu::{MenuBuilder, MenuItem, SubmenuBuilder};
+
+#[tauri::command]
+pub async fn toggle_menu_bar(app: tauri::AppHandle, toggle: Option<bool>) -> Result<(), String> {
+   let is_menu_present = app.menu().is_some();
+   let should_show_menu = match toggle {
+      Some(t) => t,
+      None => is_menu_present,
+   };
+
+   if should_show_menu {
+      // Hide menu by setting it to None
+      app.remove_menu()
+         .map_err(|e| format!("Failed to hide menu: {}", e))?;
+      log::info!("Menu bar hidden via command");
+   } else {
+      // Show menu by recreating it
+      let new_menu = create_menu(&app).map_err(|e| format!("Failed to create menu: {}", e))?;
+      app.set_menu(new_menu)
+         .map_err(|e| format!("Failed to show menu: {}", e))?;
+      log::info!("Menu bar shown via command");
+   }
+   Ok(())
+}
 
 pub fn create_menu<R: tauri::Runtime>(
    app: &tauri::AppHandle<R>,
 ) -> Result<tauri::menu::Menu<R>, tauri::Error> {
-   // App menu (macOS style - first menu with app name)
-   let app_menu = SubmenuBuilder::new(app, "Athas")
-      .about(Some(AboutMetadata {
-         name: Some("Athas".to_string()),
-         version: Some(env!("CARGO_PKG_VERSION").to_string()),
-         ..Default::default()
-      }))
-      .separator()
-      .services()
-      .separator()
-      .hide()
-      .hide_others()
-      .show_all()
-      .separator()
-      .item(&MenuItem::with_id(
-         app,
-         "quit_app",
-         "Quit Athas",
-         true,
-         Some("CmdOrCtrl+Q"),
-      )?)
-      .build()?;
-
-   // File menu with cross-platform keyboard shortcuts
+   // Unified File menu for all platforms - clean and consistent
    let file_menu = SubmenuBuilder::new(app, "File")
       .item(&MenuItem::with_id(
          app,
@@ -64,6 +64,14 @@ pub fn create_menu<R: tauri::Runtime>(
          "Close Tab",
          true,
          Some("CmdOrCtrl+W"),
+      )?)
+      .separator()
+      .item(&MenuItem::with_id(
+         app,
+         "quit_app",
+         "Quit",
+         true,
+         Some("CmdOrCtrl+Q"),
       )?)
       .build()?;
 
@@ -141,6 +149,14 @@ pub fn create_menu<R: tauri::Runtime>(
       .separator()
       .text("split_editor", "Split Editor")
       .separator()
+      .item(&MenuItem::with_id(
+         app,
+         "toggle_menu_bar",
+         "Toggle Menu Bar",
+         true,
+         Some("Alt+M"),
+      )?)
+      .separator()
       .item(&theme_menu)
       .build()?;
 
@@ -177,22 +193,62 @@ pub fn create_menu<R: tauri::Runtime>(
       )?)
       .build()?;
 
-   // Window menu (macOS convention)
+   // Window menu - cross-platform window management
    let window_menu = SubmenuBuilder::new(app, "Window")
-      .minimize()
+      .item(&MenuItem::with_id(
+         app,
+         "minimize_window",
+         "Minimize",
+         true,
+         if cfg!(target_os = "macos") {
+            Some("Cmd+M")
+         } else {
+            Some("Alt+F9")
+         },
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "maximize_window",
+         "Maximize",
+         true,
+         if cfg!(target_os = "macos") {
+            Some("Cmd+Option+Z")
+         } else {
+            Some("Alt+F10")
+         },
+      )?)
       .separator()
-      .close_window()
+      .item(&MenuItem::with_id(
+         app,
+         "quit_app",
+         "Quit",
+         true,
+         Some("CmdOrCtrl+Q"),
+      )?)
+      .separator()
+      .item(&MenuItem::with_id(
+         app,
+         "toggle_fullscreen",
+         "Toggle Fullscreen",
+         true,
+         if cfg!(target_os = "macos") {
+            Some("Cmd+Ctrl+F")
+         } else {
+            Some("F11")
+         },
+      )?)
       .build()?;
 
    // Help menu
    let help_menu = SubmenuBuilder::new(app, "Help")
       .text("help", "Help")
+      .separator()
+      .text("about_athas", "About Athas")
       .build()?;
 
-   // Main menu - include app menu first for macOS convention
+   // Main menu - unified structure for all platforms
    MenuBuilder::new(app)
       .items(&[
-         &app_menu,
          &file_menu,
          &edit_menu,
          &view_menu,

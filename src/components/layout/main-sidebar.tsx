@@ -1,6 +1,6 @@
 import { FilePlus, FolderOpen, FolderPlus, Server } from "lucide-react";
 import type React from "react";
-import { useMemo } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import RemoteConnectionView from "@/components/remote/remote-connection-view";
 import FileTree from "@/file-explorer/views/file-tree";
 import { useFileSystemStore } from "@/file-system/controllers/store";
@@ -8,11 +8,12 @@ import type { FileEntry } from "@/file-system/models/app";
 import { useSettingsStore } from "@/settings/store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useProjectStore } from "@/stores/project-store";
+import { useSearchViewStore } from "@/stores/search-view-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 import GitView from "@/version-control/git/views/git-view";
-import SearchView from "../search-view";
+import SearchView, { type SearchViewRef } from "../search-view";
 import Button from "../ui/button";
 import { SidebarPaneSelector } from "./sidebar-pane-selector";
 
@@ -33,7 +34,7 @@ const flattenFileTree = (files: FileEntry[]): FileEntry[] => {
   return result;
 };
 
-export const MainSidebar = () => {
+export const MainSidebar = memo(() => {
   // Get state from stores
   const {
     isGitViewActive,
@@ -44,11 +45,13 @@ export const MainSidebar = () => {
     isExtensionsViewActive,
   } = useUIState();
   const { getProjectName } = useProjectStore();
+  const [projectName, setProjectName] = useState<string>("Explorer");
+
+  // Ref for SearchView to enable focus functionality
+  const searchViewRef = useRef<SearchViewRef>(null);
+  const { setSearchViewRef } = useSearchViewStore();
 
   // file system store
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
-  const files = useFileSystemStore.use.files();
-  const isFileTreeLoading = useFileSystemStore.use.isFileTreeLoading();
   const setFiles = useFileSystemStore.use.setFiles?.();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder?.();
   const handleCreateNewFile = useFileSystemStore.use.handleCreateNewFile?.();
@@ -64,18 +67,52 @@ export const MainSidebar = () => {
   const handleDuplicatePath = useFileSystemStore.use.handleDuplicatePath?.();
   const handleRenamePath = useFileSystemStore.use.handleRenamePath?.();
 
+  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const files = useFileSystemStore.use.files();
+  const isFileTreeLoading = useFileSystemStore.use.isFileTreeLoading();
+
   // sidebar store
   const activePath = useSidebarStore.use.activePath?.();
-  const isRemoteWindow = useSidebarStore.use.isRemoteWindow();
   const remoteConnectionName = useSidebarStore.use.remoteConnectionName?.();
+
+  // Check if this is a remote window directly from URL params
+  const urlParams = new URLSearchParams(window.location.search);
+  const isRemoteWindow = !!urlParams.get("remote");
   const updateActivePath = useSidebarStore.use.updateActivePath?.();
 
   const { settings } = useSettingsStore();
 
-  const showFileTreeHeader =
-    !isGitViewActive && !isSearchViewActive && !isRemoteViewActive && !isRemoteWindow;
+  // Load project name asynchronously
+  useEffect(() => {
+    const loadProjectName = async () => {
+      try {
+        const name = await getProjectName();
+        setProjectName(name);
+      } catch (error) {
+        console.error("Error loading project name:", error);
+      }
+    };
 
-  const projectName = getProjectName();
+    loadProjectName();
+  }, [getProjectName, isRemoteWindow]);
+
+  // Register search view ref with store when it becomes available
+  useEffect(() => {
+    if (searchViewRef.current) {
+      setSearchViewRef(searchViewRef.current);
+    }
+
+    return () => {
+      setSearchViewRef(null);
+    };
+  }, [setSearchViewRef]);
+
+  // Additional effect to ensure ref is registered when search becomes active
+  useEffect(() => {
+    if (isSearchViewActive && searchViewRef.current) {
+      setSearchViewRef(searchViewRef.current);
+    }
+  }, [isSearchViewActive, setSearchViewRef]);
 
   // Handlers
   const onOpenExtensions = () => {
@@ -96,10 +133,15 @@ export const MainSidebar = () => {
     setProjectNameMenu({ x: event.clientX, y: event.clientY });
   };
 
-  // Get all project files by flattening the file tree
+  // Get all project files by flattening the file tree - memoized for performance
   const allProjectFiles = useMemo(() => {
     return flattenFileTree(files);
   }, [files]);
+
+  // Memoize expensive computations
+  const memoizedShowFileTreeHeader = useMemo(() => {
+    return !isGitViewActive && !isSearchViewActive && !isRemoteViewActive && !isRemoteWindow;
+  }, [isGitViewActive, isSearchViewActive, isRemoteViewActive, isRemoteWindow]);
 
   return (
     <div className="flex h-full flex-col">
@@ -109,6 +151,7 @@ export const MainSidebar = () => {
         isSearchViewActive={isSearchViewActive}
         isRemoteViewActive={isRemoteViewActive}
         isExtensionsViewActive={isExtensionsViewActive}
+        isRemoteWindow={isRemoteWindow}
         coreFeatures={settings.coreFeatures}
         onViewChange={setActiveView}
         onOpenExtensions={onOpenExtensions}
@@ -130,7 +173,7 @@ export const MainSidebar = () => {
       )}
 
       {/* File Tree Header */}
-      {showFileTreeHeader && (
+      {memoizedShowFileTreeHeader && (
         <div className="flex flex-wrap items-center justify-between bg-secondary-bg px-2 py-1.5">
           <h3
             className="min-w-0 flex-shrink cursor-pointer truncate rounded px-2 py-1 font-medium font-mono text-text text-xs tracking-wide hover:bg-hover"
@@ -191,6 +234,7 @@ export const MainSidebar = () => {
         {settings.coreFeatures.search && (
           <div className={cn("h-full", !isSearchViewActive && "hidden")}>
             <SearchView
+              ref={searchViewRef}
               rootFolderPath={rootFolderPath}
               allProjectFiles={allProjectFiles}
               onFileSelect={(path, line, column) => handleFileSelect(path, false, line, column)}
@@ -236,4 +280,4 @@ export const MainSidebar = () => {
       </div>
     </div>
   );
-};
+});

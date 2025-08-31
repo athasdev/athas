@@ -19,11 +19,11 @@ If you have suggestions on how we might improve the contributing documentation, 
 Athas is a Tauri project using Bun as package manager and Biome for linting/formatting.
 
 - [Rust](https://rustup.rs) with `cargo`, `rustfmt`, and `clippy`
-- [Tauri CLI](https://tauri.app) → `cargo install tauri-cli`
+- [Tauri CLI](https://tauri.app) → `bun add -D @tauri-apps/cli`
 - [Bun](https://bun.sh) as package manager
 - [Node.js ≥ 18](https://nodejs.org)
 
-Check with: `node -v`, `cargo --version`, `tauri --version`, `bun --version`
+Check with: `node -v`, `cargo --version`, `bun tauri --version`, `bun --version`
 
 # Development
 
@@ -31,7 +31,7 @@ After cloning the repository, run Athas locally from the repository root with:
 
 ```bash
 bun install
-bun run tauri dev
+bun tauri dev
 ```
 
 ## Code Quality

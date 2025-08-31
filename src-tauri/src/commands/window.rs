@@ -1,4 +1,6 @@
-use tauri::{Emitter, WebviewUrl, WebviewWindowBuilder, command};
+#[cfg(target_os = "macos")]
+use tauri::TitleBarStyle;
+use tauri::{Emitter, Manager, UserAttentionType, WebviewUrl, WebviewWindowBuilder, command};
 
 #[command]
 pub async fn create_remote_window(
@@ -8,17 +10,33 @@ pub async fn create_remote_window(
 ) -> Result<(), String> {
    let window_label = format!("remote-{connection_id}");
 
+   // Check if window already exists
+   if let Some(existing_window) = app.get_webview_window(&window_label) {
+      // Window exists, just focus it and return
+      let _ = existing_window.set_focus();
+      return Ok(());
+   }
+
    let url = format!("index.html?remote={connection_id}");
-   let window = WebviewWindowBuilder::new(&app, &window_label, WebviewUrl::App(url.into()))
-      .title(format!("Remote: {connection_name}"))
+   let mut window_builder =
+      WebviewWindowBuilder::new(&app, &window_label, WebviewUrl::App(url.into()));
+
+   #[cfg(target_os = "macos")]
+   {
+      window_builder = window_builder
+         .hidden_title(true)
+         .title_bar_style(TitleBarStyle::Overlay);
+   }
+
+   let window = window_builder
+      .transparent(true)
       .inner_size(1200.0, 800.0)
       .min_inner_size(800.0, 600.0)
       .center()
-      .decorations(false)
-      .transparent(true)
-      .shadow(false)
       .build()
       .map_err(|e| format!("Failed to create window: {e}"))?;
+
+   let _ = window.request_user_attention(Some(UserAttentionType::Informational));
 
    #[cfg(target_os = "macos")]
    {

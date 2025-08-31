@@ -44,6 +44,7 @@
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",
     "clsx": "^2.1.1",
+    "dayjs": "^1.11.13",
     "fast-deep-equal": "^3.1.3",
     "ignore": "^7.0.5",
     "immer": "^10.1.1",
@@ -59,6 +60,7 @@
     "tailwind-merge": "^3.3.1",
     "use-debounce": "^10.0.5",
     "use-sync-external-store": "^1.5.0",
+    "usehooks-ts": "^3.1.1",
     "vscode-languageserver-protocol": "^3.17.5",
     "zustand": "^5.0.6"
   },
@@ -80,7 +82,7 @@
     "vite": "^7.0.5"
   },
   "simple-git-hooks": {
-    "pre-commit": "npx lint-staged",
+    "pre-commit": "bunx lint-staged",
     "pre-push": "bun check:all",
     "commit-msg": "bun commitlint --edit $1"
   },

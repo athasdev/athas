@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
+import { connectionStore } from "@/utils/connection-store";
 
 export const useProjectStore = create(
   combine(
@@ -11,7 +12,20 @@ export const useProjectStore = create(
       setProjectName: (name: string) => set({ projectName: name }),
       setRootFolderPath: (path: string | undefined) => set({ rootFolderPath: path }),
 
-      getProjectName: () => {
+      getProjectName: async () => {
+        // Check if this is a remote window
+        const urlParams = new URLSearchParams(window.location.search);
+        const remoteConnectionId = urlParams.get("remote");
+
+        if (remoteConnectionId) {
+          try {
+            const connection = await connectionStore.getConnection(remoteConnectionId);
+            return connection ? `Remote: ${connection.name}` : "Remote";
+          } catch {
+            return "Remote";
+          }
+        }
+
         const { rootFolderPath } = get();
         if (!rootFolderPath) return "Explorer";
 

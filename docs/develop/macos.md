@@ -12,5 +12,5 @@
 bun install
 
 # Start development server
-bun run tauri dev
+bun tauri dev
 ```

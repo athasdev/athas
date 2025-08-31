@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
+  ChevronDown,
   Copy,
   Maximize2,
   Minimize2,
@@ -11,7 +12,9 @@ import {
   Terminal as TerminalIcon,
   X,
 } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { type RefObject, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import type { Shell, Terminal } from "@/types/terminal";
 import { cn } from "@/utils/cn";
 import Dropdown from "../ui/dropdown";
@@ -42,30 +45,21 @@ const TerminalContextMenu = ({
   onCloseToRight,
 }: TerminalContextMenuProps) => {
   const menuRef = useRef<HTMLDivElement>(null);
+  const documentRef = useRef(document);
 
-  useEffect(() => {
-    if (!isOpen) return;
+  useOnClickOutside(menuRef as RefObject<HTMLElement>, () => {
+    onClose();
+  });
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-
-    const handleEscape = (e: KeyboardEvent) => {
+  useEventListener(
+    "keydown",
+    (e) => {
       if (e.key === "Escape") {
         onClose();
       }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isOpen, onClose]);
+    },
+    documentRef,
+  );
 
   if (!isOpen || !terminal) return null;
 
@@ -517,7 +511,7 @@ const TerminalTabBar = ({
                           onTabClose(terminal.id, e);
                         }}
                         className={cn(
-                          "flex-shrink-0 cursor-pointer p-0.5",
+                          "flex-shrink-0 cursor-pointer rounded p-0.5",
                           "text-text-lighter opacity-0 transition-all duration-150",
                           "hover:bg-hover hover:text-text hover:opacity-100 group-hover:opacity-100",
                         )}
@@ -542,19 +536,43 @@ const TerminalTabBar = ({
         </div>
 
         {/* Right side - Action buttons */}
-        <div className="flex items-center gap-0.5">
-          {/* New Terminal Button */}
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <div className="flex flex-shrink-0 items-center gap-0.5 rounded p-0.5 transition-colors hover:bg-hover">
             <Tooltip content="New Terminal (Cmd+T)" side="bottom">
               <button
                 onClick={onNewTerminal}
                 className={cn(
-                  "flex items-center gap-0.5 px-1.5 py-1",
-                  "text-text-lighter text-xs transition-colors hover:bg-hover",
+                  "flex flex-shrink-0 cursor-pointer items-center ",
+                  "text-text-lighter",
                 )}
               >
-                <Plus size={9} />
+                <Plus size={16} />
               </button>
+            </Tooltip>
+            <Tooltip content="Select a shell" side="bottom">
+              <Dropdown
+                searchable={false}
+                value={selectedShell}
+                options={shells.map((shell) => ({
+                  value: shell.id,
+                  label: shell.name,
+                }))}
+                onChange={(val) => {
+                  setSelectedShell(val);
+                }}
+                CustomTrigger={({ ref, onClick }) => (
+                  <button
+                    ref={ref}
+                    onClick={onClick}
+                    className={cn(
+                      "flex flex-shrink-0 cursor-pointer items-center ",
+                      "text-text-lighter ",
+                    )}
+                  >
+                    <ChevronDown size={10} />
+                  </button>
+                )}
+              ></Dropdown>
             </Tooltip>
           </div>
           {/* Split View Button */}
@@ -566,7 +584,7 @@ const TerminalTabBar = ({
               <button
                 onClick={onSplitView}
                 className={cn(
-                  "flex flex-shrink-0 cursor-pointer items-center p-1",
+                  "flex flex-shrink-0 cursor-pointer items-center rounded p-1",
                   isSplitView
                     ? "bg-selected text-text"
                     : "text-text-lighter transition-colors hover:bg-hover",
@@ -585,7 +603,7 @@ const TerminalTabBar = ({
               <button
                 onClick={onFullScreen}
                 className={cn(
-                  "flex flex-shrink-0 cursor-pointer items-center p-1",
+                  "flex flex-shrink-0 cursor-pointer items-center rounded p-1",
                   "text-text-lighter transition-colors hover:bg-hover",
                 )}
               >
@@ -599,7 +617,7 @@ const TerminalTabBar = ({
               <button
                 onClick={onClosePanel}
                 className={cn(
-                  "flex flex-shrink-0 cursor-pointer items-center p-1",
+                  "flex flex-shrink-0 cursor-pointer items-center rounded p-1",
                   "text-text-lighter transition-colors hover:bg-hover",
                 )}
               >
@@ -607,23 +625,6 @@ const TerminalTabBar = ({
               </button>
             </Tooltip>
           )}
-          {/* Shell selecting menu */}
-          <Tooltip content="Select a shell" side="top">
-            <Dropdown
-              value={selectedShell}
-              options={shells.map((shell) => ({
-                value: shell.id,
-                label: shell.name,
-              }))}
-              onChange={(val) => {
-                setSelectedShell(val);
-              }}
-              className={cn(
-                "flex items-center gap-0.5 px-1.5 py-1",
-                "text-text-lighter text-xs transition-colors hover:bg-hover",
-              )}
-            ></Dropdown>
-          </Tooltip>
         </div>
 
         {/* Floating tab name while dragging */}
@@ -659,21 +660,24 @@ const TerminalTabBar = ({
         )}
       </div>
 
-      <TerminalContextMenu
-        isOpen={contextMenu.isOpen}
-        position={contextMenu.position}
-        terminal={contextMenu.terminal}
-        onClose={closeContextMenu}
-        onPin={(terminalId) => {
-          onTabPin?.(terminalId);
-        }}
-        onCloseTab={(terminalId) => {
-          onTabClose(terminalId, {} as React.MouseEvent);
-        }}
-        onCloseOthers={onCloseOtherTabs || (() => {})}
-        onCloseAll={onCloseAllTabs || (() => {})}
-        onCloseToRight={onCloseTabsToRight || (() => {})}
-      />
+      {createPortal(
+        <TerminalContextMenu
+          isOpen={contextMenu.isOpen}
+          position={contextMenu.position}
+          terminal={contextMenu.terminal}
+          onClose={closeContextMenu}
+          onPin={(terminalId) => {
+            onTabPin?.(terminalId);
+          }}
+          onCloseTab={(terminalId) => {
+            onTabClose(terminalId, {} as React.MouseEvent);
+          }}
+          onCloseOthers={onCloseOtherTabs || (() => {})}
+          onCloseAll={onCloseAllTabs || (() => {})}
+          onCloseToRight={onCloseTabsToRight || (() => {})}
+        />,
+        document.body,
+      )}
     </>
   );
 };

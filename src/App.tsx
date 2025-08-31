@@ -1,3 +1,6 @@
+import { invoke } from "@tauri-apps/api/core";
+import { emit, listen } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { enableMapSet } from "immer";
 import { useEffect } from "react";
 import { FontPreloader } from "./components/font-preloader";
@@ -17,6 +20,7 @@ import { useFileSystemStore } from "./file-system/controllers/store";
 import { useScroll } from "./hooks/use-scroll";
 import { useAppStore } from "./stores/app-store";
 import { useFontStore } from "./stores/font-store";
+import { useSidebarStore } from "./stores/sidebar-store";
 import { useZoomStore } from "./stores/zoom-store";
 import { cn } from "./utils/cn";
 
@@ -31,6 +35,7 @@ function App() {
   const { cleanup } = useAppStore.use.actions();
   const { recentFolders, openRecentFolder } = useRecentFoldersStore();
   const { loadAvailableFonts } = useFontStore.use.actions();
+  const setRemoteWindow = useSidebarStore.use.setRemoteWindow();
   const zoomLevel = useZoomStore.use.zoomLevel();
 
   // Platform-specific setup
@@ -63,6 +68,79 @@ function App() {
     };
   }, []);
 
+  // Listen for remote connection info and handle remote window setup
+  useEffect(() => {
+    // Check if this is a remote window from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const remoteParam = urlParams.get("remote");
+    if (remoteParam) {
+      setRemoteWindow(true, undefined, remoteParam);
+    }
+
+    // Set up event listener for remote connection info from Tauri
+    let unlistenRemoteInfo: (() => void) | null = null;
+
+    const setupRemoteListener = async () => {
+      try {
+        unlistenRemoteInfo = await listen<{
+          connectionId: string;
+          connectionName: string;
+          isRemoteWindow: boolean;
+        }>("remote-connection-info", (event) => {
+          const { isRemoteWindow, connectionName, connectionId } = event.payload;
+          setRemoteWindow(isRemoteWindow, connectionName, connectionId);
+        });
+      } catch (error) {
+        console.error("Failed to set up remote connection listener:", error);
+      }
+    };
+
+    setupRemoteListener();
+
+    return () => {
+      if (unlistenRemoteInfo) {
+        unlistenRemoteInfo();
+      }
+    };
+  }, [setRemoteWindow]);
+
+  // Handle window close request for remote connections
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const remoteParam = urlParams.get("remote");
+
+    if (!remoteParam) return;
+
+    let unlistenCloseRequested: (() => void) | null = null;
+
+    const setupCloseListener = async () => {
+      try {
+        const currentWindow = getCurrentWebviewWindow();
+
+        unlistenCloseRequested = await currentWindow.onCloseRequested(async (event) => {
+          event.preventDefault();
+
+          try {
+            await invoke("ssh_disconnect_only", { connectionId: remoteParam });
+            await emit("remote-connection-disconnected", { connectionId: remoteParam });
+            await currentWindow.destroy();
+          } catch (error) {
+            console.error("Failed to cleanup on window close:", error);
+            await currentWindow.destroy();
+          }
+        });
+      } catch (error) {
+        console.error("Failed to set up window close listener:", error);
+      }
+    };
+
+    setupCloseListener();
+
+    return () => {
+      unlistenCloseRequested?.();
+    };
+  }, []);
+
   // Hide native context menu
   useEffect(() => {
     if (import.meta.env.MODE === "production") {
@@ -86,21 +164,10 @@ function App() {
 
   if (shouldShowWelcome) {
     return (
-      <div className="zoom-wrapper">
+      <div className="h-screen w-screen overflow-hidden bg-transparent" style={{ zoom: zoomLevel }}>
         <FontPreloader />
         <FontStyleInjector />
-        <div
-          className="zoom-container h-full w-full"
-          style={
-            {
-              transform: `scale(${zoomLevel})`,
-              transformOrigin: "top left",
-              width: `${100 / zoomLevel + 0.1}%`,
-              height: `${100 / zoomLevel + 0.1}%`,
-              "--zoom-level": zoomLevel,
-            } as React.CSSProperties
-          }
-        >
+        <div className="h-full w-full">
           <WelcomeScreen
             onOpenFolder={handleOpenFolder}
             recentFolders={recentFolders}
@@ -114,22 +181,14 @@ function App() {
   }
 
   return (
-    <div className={cn("zoom-wrapper h-screen w-screen overflow-hidden bg-transparent")}>
+    <div
+      className={cn("h-screen w-screen overflow-hidden bg-transparent")}
+      style={{ zoom: zoomLevel }}
+    >
       <FontPreloader />
       <FontStyleInjector />
       <div
-        className={cn(
-          "zoom-container window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg",
-        )}
-        style={
-          {
-            transform: `scale(${zoomLevel})`,
-            transformOrigin: "top left",
-            width: `${100 / zoomLevel}%`,
-            height: `${100 / zoomLevel}%`,
-            "--zoom-level": zoomLevel,
-          } as React.CSSProperties
-        }
+        className={cn("window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg")}
       >
         <MainLayout />
       </div>
