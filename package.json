@@ -16,9 +16,7 @@
     "clean": "concurrently --names \"node,rust\" --prefix-colors \"cyan,yellow\" \"rimraf dist build node_modules bun.lockb && bun install\" \"cargo clean && cargo build\"",
     "prepare": "simple-git-hooks",
     "commitlint": "commitlint",
-    "setup": "chmod +x scripts/linux/setup.sh && ./scripts/linux/setup.sh",
-    "setup:linux": "chmod +x scripts/linux/setup.sh && ./scripts/linux/setup.sh",
-    "setup-win": "powershell -ExecutionPolicy Bypass -File ./scripts/windows/setup.ps1",
+    "setup": "bun setup.ts",
     "dev": "bun run tauri dev"
   },
   "dependencies": {
@@ -69,6 +67,7 @@
     "@commitlint/cli": "^19.8.1",
     "@tailwindcss/vite": "^4.1.11",
     "@tauri-apps/cli": "^2",
+    "@types/bun": "^1.2.21",
     "@types/node": "^24.1.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
