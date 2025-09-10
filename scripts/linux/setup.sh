@@ -103,34 +103,6 @@ install_bun() {
     fi
 }
 
-install_node() {
-    if command_exists node; then
-        NODE_VERSION=$(node --version | cut -d'v' -f2 | cut -d'.' -f1)
-        if [ "$NODE_VERSION" -ge 18 ]; then
-            print_success "Node.js is already installed ($(node --version))"
-            return
-        fi
-    fi
-
-    print_status "Installing Node.js LTS..."
-    case $DISTRO in
-        "ubuntu")
-            curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-            sudo apt-get install -y nodejs
-            ;;
-        "fedora")
-            sudo dnf install -y nodejs npm
-            ;;
-        "arch")
-            sudo pacman -S --needed --noconfirm nodejs npm
-            ;;
-        "opensuse")
-            sudo zypper install -y nodejs18 npm18
-            ;;
-    esac
-    print_success "Node.js installation completed"
-}
-
 install_project_deps() {
     print_status "Installing project dependencies..."
 
@@ -139,9 +111,6 @@ install_project_deps() {
     if command_exists bun; then
         bun install
         print_success "Dependencies installed with Bun"
-    elif command_exists npm; then
-        npm install
-        print_success "Dependencies installed with npm"
     else
         print_warning "Package manager not found, but continuing..."
     fi
@@ -181,7 +150,6 @@ main() {
     install_rust
     install_tauri_cli
     install_bun
-    install_node
     install_project_deps
     verify_basic
 
