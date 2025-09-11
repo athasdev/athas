@@ -9,6 +9,7 @@ interface EditorSettingsState {
   tabSize: number;
   wordWrap: boolean;
   lineNumbers: boolean;
+  showInlineDiff: boolean;
   disabled: boolean;
   theme: string;
   actions: EditorSettingsActions;
@@ -20,6 +21,7 @@ interface EditorSettingsActions {
   setTabSize: (size: number) => void;
   setWordWrap: (wrap: boolean) => void;
   setLineNumbers: (show: boolean) => void;
+  setShowInlineDiff: (show: boolean) => void;
   setDisabled: (disabled: boolean) => void;
   setTheme: (theme: string) => void;
 }
@@ -32,6 +34,7 @@ export const useEditorSettingsStore = createSelectors(
       tabSize: 2,
       wordWrap: true,
       lineNumbers: true,
+      showInlineDiff: false,
       disabled: false,
       theme: "auto",
       actions: {
@@ -40,6 +43,7 @@ export const useEditorSettingsStore = createSelectors(
         setTabSize: (size) => set({ tabSize: size }),
         setWordWrap: (wrap) => set({ wordWrap: wrap }),
         setLineNumbers: (show) => set({ lineNumbers: show }),
+        setShowInlineDiff: (show) => set({ showInlineDiff: show }),
         setDisabled: (disabled) => set({ disabled }),
         setTheme: (theme) => set({ theme }),
       },

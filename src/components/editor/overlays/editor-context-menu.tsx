@@ -8,6 +8,7 @@ import {
   Code,
   Copy,
   FileText,
+  GitMerge,
   Indent,
   Outdent,
   RotateCcw,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import KeybindingBadge from "../../ui/keybinding-badge";
 
 interface EditorContextMenuProps {
@@ -41,6 +43,7 @@ interface EditorContextMenuProps {
   onMoveLineDown?: () => void;
   onInsertLine?: () => void;
   onToggleBookmark?: () => void;
+  onToggleInlineDiff?: () => void;
 }
 
 const EditorContextMenu = ({
@@ -64,10 +67,13 @@ const EditorContextMenu = ({
   onMoveLineDown,
   onInsertLine,
   onToggleBookmark,
+  onToggleInlineDiff,
 }: EditorContextMenuProps) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const selection = useEditorCursorStore.use.selection?.() ?? undefined;
   const hasSelection = selection && selection.start.offset !== selection.end.offset;
+  const showInlineDiff = useEditorSettingsStore.use.showInlineDiff();
+  const { setShowInlineDiff } = useEditorSettingsStore.use.actions();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -229,6 +235,16 @@ const EditorContextMenu = ({
 
   const handleToggleBookmark = () => {
     if (onToggleBookmark) onToggleBookmark();
+    onClose();
+  };
+
+  const handleToggleInlineDiff = () => {
+    if (onToggleInlineDiff) {
+      onToggleInlineDiff();
+    } else {
+      // Default behavior: toggle the setting directly
+      setShowInlineDiff(!showInlineDiff);
+    }
     onClose();
   };
 
@@ -443,6 +459,20 @@ const EditorContextMenu = ({
           <span>Toggle Bookmark</span>
         </div>
         <KeybindingBadge keys={["⌘", "K", "⌘", "K"]} className="opacity-60" />
+      </button>
+
+      <div className="my-0.5 border-border border-t" />
+
+      {/* Toggle Inline Git Diff */}
+      <button
+        className="flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        onClick={handleToggleInlineDiff}
+      >
+        <div className="flex items-center gap-2">
+          <GitMerge size={11} />
+          <span>{showInlineDiff ? "Hide" : "Show"} Inline Git Diff</span>
+        </div>
+        <div className="text-xs opacity-60">{showInlineDiff ? "✓" : ""}</div>
       </button>
     </div>
   );

@@ -40,15 +40,23 @@ install_system_deps() {
         "ubuntu")
             sudo apt update
             sudo apt install -y build-essential curl wget file libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev pkg-config
+            # Deps for git2 and ssh2
+            sudo apt install -y openssl-devel pkgconf perl-FindBin perl-IPC-Cmd perl
             ;;
         "fedora")
             sudo dnf install -y gcc gcc-c++ make curl wget file openssl-devel gtk3-devel webkit2gtk4.1-devel libsoup3-devel libayatana-appindicator-gtk3-devel librsvg2-devel pkgconf-pkg-config
+            # Deps for git2 and ssh2
+            sudo dnf install -y openssl-devel pkgconf perl-FindBin perl-IPC-Cmd perl
             ;;
         "arch")
             sudo pacman -S --needed --noconfirm base-devel curl wget file openssl gtk3 webkit2gtk-4.1 libsoup3 libayatana-appindicator librsvg pkgconf
+            # Deps for git2 and ssh2
+            sudo pacman -S --needed --noconfirm openssl-devel pkgconf perl-FindBin perl-IPC-Cmd perl
             ;;
         "opensuse")
             sudo zypper install -y gcc gcc-c++ make curl wget file libopenssl-devel gtk3-devel webkit2gtk3-devel libsoup3-devel libayatana-appindicator3-devel librsvg-devel pkg-config
+            # Deps for git2 and ssh2
+            sudo zypper install -y openssl-devel pkgconf perl-FindBin perl-IPC-Cmd perl
             ;;
         *)
             print_error "Unsupported Linux distribution: $DISTRO"
@@ -95,34 +103,6 @@ install_bun() {
     fi
 }
 
-install_node() {
-    if command_exists node; then
-        NODE_VERSION=$(node --version | cut -d'v' -f2 | cut -d'.' -f1)
-        if [ "$NODE_VERSION" -ge 18 ]; then
-            print_success "Node.js is already installed ($(node --version))"
-            return
-        fi
-    fi
-
-    print_status "Installing Node.js LTS..."
-    case $DISTRO in
-        "ubuntu")
-            curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-            sudo apt-get install -y nodejs
-            ;;
-        "fedora")
-            sudo dnf install -y nodejs npm
-            ;;
-        "arch")
-            sudo pacman -S --needed --noconfirm nodejs npm
-            ;;
-        "opensuse")
-            sudo zypper install -y nodejs18 npm18
-            ;;
-    esac
-    print_success "Node.js installation completed"
-}
-
 install_project_deps() {
     print_status "Installing project dependencies..."
 
@@ -131,9 +111,6 @@ install_project_deps() {
     if command_exists bun; then
         bun install
         print_success "Dependencies installed with Bun"
-    elif command_exists npm; then
-        npm install
-        print_success "Dependencies installed with npm"
     else
         print_warning "Package manager not found, but continuing..."
     fi
@@ -173,7 +150,6 @@ main() {
     install_rust
     install_tauri_cli
     install_bun
-    install_node
     install_project_deps
     verify_basic
 
