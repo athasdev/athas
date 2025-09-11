@@ -29,7 +29,7 @@ export function ZoomIndicator() {
         animationFillMode: "forwards",
       }}
     >
-      {zoomPercentage}
+      Terminal: {getZoomPercentage("terminal")}% Window: {getZoomPercentage("window")}%
     </div>
   );
 }

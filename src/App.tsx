@@ -17,6 +17,7 @@ import {
 import { isMac } from "./file-system/controllers/platform";
 import { useRecentFoldersStore } from "./file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "./file-system/controllers/store";
+import { useActiveElement } from "./hooks/use-active-dom-element";
 import { useScroll } from "./hooks/use-scroll";
 import { useAppStore } from "./stores/app-store";
 import { useFontStore } from "./stores/font-store";
@@ -35,8 +36,7 @@ function App() {
   const { cleanup } = useAppStore.use.actions();
   const { recentFolders, openRecentFolder } = useRecentFoldersStore();
   const { loadAvailableFonts } = useFontStore.use.actions();
-  const setRemoteWindow = useSidebarStore.use.setRemoteWindow();
-  const zoomLevel = useZoomStore.use.zoomLevel();
+  const zoomLevel = useZoomStore.use.windowZoomLevel();
 
   // Platform-specific setup
   useEffect(() => {

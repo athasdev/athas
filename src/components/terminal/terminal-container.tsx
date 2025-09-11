@@ -1,7 +1,9 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useActiveElement } from "@/hooks/use-active-dom-element";
 import { useTerminalTabs } from "@/hooks/use-terminal-tabs";
 import { useUIState } from "@/stores/ui-state-store";
+import { useZoomStore } from "@/stores/zoom-store";
 import { cn } from "@/utils/cn";
 import TerminalSession from "./terminal-session";
 import TerminalTabBar from "./terminal-tab-bar";
@@ -36,6 +38,8 @@ const TerminalContainer = ({
     switchToPrevTerminal,
     setTerminalSplitMode,
   } = useTerminalTabs();
+
+  const zoomLevel = useZoomStore.use.terminalZoomLevel();
 
   const [renamingTerminalId, setRenamingTerminalId] = useState<string | null>(null);
   const [newTerminalName, setNewTerminalName] = useState("");
@@ -394,7 +398,16 @@ const TerminalContainer = ({
       />
 
       {/* Terminal Sessions */}
-      <div className="relative bg-primary-bg" style={{ height: "calc(100% - 28px)" }}>
+      <div
+        className="relative bg-primary-bg"
+        style={{
+          //height: "calc(100% - 28px)",
+          transform: `scale(${zoomLevel})`,
+          transformOrigin: "top left",
+          width: `${100 / zoomLevel}%`,
+          height: `${100 / zoomLevel}%`,
+        }}
+      >
         {(() => {
           return (
             <div className="h-full">

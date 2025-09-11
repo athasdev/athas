@@ -1,6 +1,7 @@
 import type React from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useFileSystemStore } from "@/file-system/controllers/store";
+import { useActiveElement } from "@/hooks/use-active-dom-element";
 import { useEditorScroll } from "@/hooks/use-editor-scroll";
 import { useHover } from "@/hooks/use-hover";
 import { LspClient } from "@/lib/lsp/lsp-client";
@@ -13,6 +14,7 @@ import { useEditorInstanceStore } from "@/stores/editor-instance-store";
 import { useEditorSearchStore } from "@/stores/editor-search-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useLspStore } from "@/stores/lsp-store";
+import { useZoomStore } from "@/stores/zoom-store";
 import { useGitGutter } from "@/version-control/git/controllers/use-git-gutter";
 import FindBar from "../find-bar";
 import Breadcrumb from "./breadcrumb";
@@ -36,13 +38,13 @@ export interface CodeEditorRef {
 
 const CodeEditor = ({ className }: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null as any);
-
   const { setRefs, setContent, setFileInfo } = useEditorInstanceStore();
   // No longer need to sync content - editor-view-store computes from buffer
   const { setDisabled } = useEditorSettingsStore.use.actions();
 
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
+  const zoomLevel = useZoomStore.use.editorZoomLevel();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { handleContentChange } = useAppStore.use.actions();
   const { searchQuery, searchMatches, currentMatchIndex, setSearchMatches, setCurrentMatchIndex } =
@@ -146,7 +148,6 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
 
   // Get cursor position
   const cursorPosition = useEditorCursorStore.use.cursorPosition();
-
   // Track typing speed for dynamic debouncing
   const lastTypeTimeRef = useRef<number>(Date.now());
   const typingSpeedRef = useRef<number>(500);
@@ -264,7 +265,14 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
         <div
           ref={editorRef}
           className={`editor-container relative flex-1 overflow-hidden ${className || ""}`}
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            transform: `scale(${zoomLevel})`,
+            transformOrigin: "top left",
+            width: `${100 / zoomLevel}%`,
+            height: `${100 / zoomLevel}%`,
+          }}
         >
           {/* Hover Tooltip */}
           <HoverTooltip />

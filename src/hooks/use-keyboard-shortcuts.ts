@@ -5,6 +5,7 @@ import { isMac } from "../file-system/controllers/platform";
 import type { CoreFeaturesState } from "../settings/models/feature.types";
 import { useZoomStore } from "../stores/zoom-store";
 import type { Buffer } from "../types/buffer";
+import { useActiveElement } from "./use-active-dom-element";
 
 interface UseKeyboardShortcutsProps {
   setIsBottomPaneVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
@@ -61,6 +62,8 @@ export const useKeyboardShortcuts = ({
 }: UseKeyboardShortcutsProps) => {
   const { settings } = useSettingsStore();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
+
+  const activeElement = useActiveElement();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -362,19 +365,29 @@ export const useKeyboardShortcuts = ({
       // Zoom controls
       if ((e.metaKey || e.ctrlKey) && (e.key === "=" || e.key === "+")) {
         e.preventDefault();
-        zoomIn();
+        const isEditorFocused = activeElement?.className.includes("editor");
+        if (isEditorFocused) {
+          zoomIn("window");
+        } else {
+          zoomIn("terminal");
+        }
         return;
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === "-") {
         e.preventDefault();
-        zoomOut();
+        const isEditorFocused = activeElement?.className.includes("editor");
+        if (isEditorFocused) {
+          zoomOut("window");
+        } else {
+          zoomOut("terminal");
+        }
         return;
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === "0") {
         e.preventDefault();
-        resetZoom();
+        resetZoom("window");
         return;
       }
 
