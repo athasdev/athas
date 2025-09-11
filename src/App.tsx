@@ -36,6 +36,7 @@ function App() {
   const { cleanup } = useAppStore.use.actions();
   const { recentFolders, openRecentFolder } = useRecentFoldersStore();
   const { loadAvailableFonts } = useFontStore.use.actions();
+  const setRemoteWindow = useSidebarStore.use.setRemoteWindow();
   const zoomLevel = useZoomStore.use.windowZoomLevel();
 
   // Platform-specific setup
