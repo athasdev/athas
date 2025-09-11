@@ -1,7 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useFileSystemStore } from "@/file-system/controllers/store";
-import { useActiveElement } from "@/hooks/use-active-dom-element";
 import { useEditorScroll } from "@/hooks/use-editor-scroll";
 import { useHover } from "@/hooks/use-hover";
 import { LspClient } from "@/lib/lsp/lsp-client";

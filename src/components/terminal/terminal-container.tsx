@@ -1,6 +1,5 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useActiveElement } from "@/hooks/use-active-dom-element";
 import { useTerminalTabs } from "@/hooks/use-terminal-tabs";
 import { useUIState } from "@/stores/ui-state-store";
 import { useZoomStore } from "@/stores/zoom-store";

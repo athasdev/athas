@@ -5,7 +5,8 @@ import { isMac } from "../file-system/controllers/platform";
 import type { CoreFeaturesState } from "../settings/models/feature.types";
 import { useZoomStore } from "../stores/zoom-store";
 import type { Buffer } from "../types/buffer";
-import { useActiveElement } from "./use-active-dom-element";
+
+//import { useActiveElement } from "./use-active-dom-element";
 
 interface UseKeyboardShortcutsProps {
   setIsBottomPaneVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
@@ -63,7 +64,7 @@ export const useKeyboardShortcuts = ({
   const { settings } = useSettingsStore();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
 
-  const activeElement = useActiveElement();
+  // const activeElement = useActiveElement();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -365,29 +366,37 @@ export const useKeyboardShortcuts = ({
       // Zoom controls
       if ((e.metaKey || e.ctrlKey) && (e.key === "=" || e.key === "+")) {
         e.preventDefault();
-        const isEditorFocused = activeElement?.className.includes("editor");
-        if (isEditorFocused) {
-          zoomIn("window");
-        } else {
+        const terminalContainer = document.querySelector('[data-terminal-container="active"]');
+        const isTerminalFocused = terminalContainer?.contains(document.activeElement);
+        if (isTerminalFocused) {
           zoomIn("terminal");
+        } else {
+          zoomIn("window");
         }
         return;
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === "-") {
         e.preventDefault();
-        const isEditorFocused = activeElement?.className.includes("editor");
-        if (isEditorFocused) {
-          zoomOut("window");
-        } else {
+        const terminalContainer = document.querySelector('[data-terminal-container="active"]');
+        const isTerminalFocused = terminalContainer?.contains(document.activeElement);
+        if (isTerminalFocused) {
           zoomOut("terminal");
+        } else {
+          zoomOut("window");
         }
         return;
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === "0") {
         e.preventDefault();
-        resetZoom("window");
+        const terminalContainer = document.querySelector('[data-terminal-container="active"]');
+        const isTerminalFocused = terminalContainer?.contains(document.activeElement);
+        if (isTerminalFocused) {
+          resetZoom("terminal");
+        } else {
+          resetZoom("window");
+        }
         return;
       }
 

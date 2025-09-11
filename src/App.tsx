@@ -17,7 +17,6 @@ import {
 import { isMac } from "./file-system/controllers/platform";
 import { useRecentFoldersStore } from "./file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "./file-system/controllers/store";
-import { useActiveElement } from "./hooks/use-active-dom-element";
 import { useScroll } from "./hooks/use-scroll";
 import { useAppStore } from "./stores/app-store";
 import { useFontStore } from "./stores/font-store";
