@@ -1,14 +1,19 @@
-import { useMemo } from "react";
 import { useZoomStore } from "../stores/zoom-store";
 import { cn } from "../utils/cn";
 
 export function ZoomIndicator() {
   const showZoomIndicator = useZoomStore.use.showZoomIndicator();
-  const zoomLevel = useZoomStore.use.zoomLevel();
+  //const { getZoomPercentage } = useZoomStore.use.actions();
+  const windowZoomLevel = useZoomStore.use.windowZoomLevel();
+  const terminalZoomLevel = useZoomStore.use.terminalZoomLevel();
 
-  const zoomPercentage = useMemo(() => {
+  function getZoomPercentage(zoomLevel: number) {
     return `${Math.round(zoomLevel * 100)}%`;
-  }, [zoomLevel]);
+  }
+
+  // const zoomPercentage = useMemo(() => {
+  //   return `${Math.round(zoomLevel * 100)}%`;
+  // }, [zoomLevel]);
 
   if (!showZoomIndicator) {
     return null;
@@ -29,7 +34,8 @@ export function ZoomIndicator() {
         animationFillMode: "forwards",
       }}
     >
-      {zoomPercentage}
+      Window: {getZoomPercentage(windowZoomLevel)}% Terminal: {getZoomPercentage(terminalZoomLevel)}
+      %
     </div>
   );
 }

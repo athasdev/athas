@@ -87,7 +87,9 @@ const LspStatusDropdown = ({ activeBuffer }: { activeBuffer: any }) => {
     } catch (error) {
       console.error("Failed to restart LSP:", error);
       updateToast(toastId, {
-        message: `Failed to restart LSP: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `Failed to restart LSP: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         type: "error",
         duration: 5000,
       });
@@ -117,7 +119,9 @@ const LspStatusDropdown = ({ activeBuffer }: { activeBuffer: any }) => {
     } catch (error) {
       console.error("Failed to toggle LSP:", error);
       updateToast(toastId, {
-        message: `Failed to ${isCurrentlyConnected ? "disable" : "enable"} LSP: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `Failed to ${isCurrentlyConnected ? "disable" : "enable"} LSP: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         type: "error",
         duration: 5000,
       });
@@ -237,7 +241,7 @@ const EditorFooter = () => {
   const cursorPosition = useEditorCursorStore.use.cursorPosition();
 
   return (
-    <div className="flex min-h-[32px] items-center justify-between border-border border-t bg-secondary-bg px-2 py-1">
+    <div className="flex min-h-[32px] items-center justify-between border-border border-t bg-secondary-bg px-2 py-1 ">
       <div className="flex items-center gap-0.5 font-mono text-text-lighter text-xs">
         {/* Git branch manager */}
         {rootFolderPath && gitStatus?.branch && (

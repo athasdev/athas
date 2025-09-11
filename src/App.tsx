@@ -36,7 +36,7 @@ function App() {
   const { recentFolders, openRecentFolder } = useRecentFoldersStore();
   const { loadAvailableFonts } = useFontStore.use.actions();
   const setRemoteWindow = useSidebarStore.use.setRemoteWindow();
-  const zoomLevel = useZoomStore.use.zoomLevel();
+  const zoomLevel = useZoomStore.use.windowZoomLevel();
 
   // Platform-specific setup
   useEffect(() => {

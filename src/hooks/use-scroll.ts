@@ -16,10 +16,10 @@ export function useScroll() {
 
         if (e.deltaY < 0) {
           // Scroll up = zoom in
-          zoomIn();
+          zoomIn("editor");
         } else if (e.deltaY > 0) {
           // Scroll down = zoom out
-          zoomOut();
+          zoomOut("editor");
         }
       }
     };

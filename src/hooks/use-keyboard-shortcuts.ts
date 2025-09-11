@@ -6,6 +6,8 @@ import type { CoreFeaturesState } from "../settings/models/feature.types";
 import { useZoomStore } from "../stores/zoom-store";
 import type { Buffer } from "../types/buffer";
 
+//import { useActiveElement } from "./use-active-dom-element";
+
 interface UseKeyboardShortcutsProps {
   setIsBottomPaneVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
   setBottomPaneActiveTab: (tab: "terminal" | "diagnostics") => void;
@@ -61,6 +63,8 @@ export const useKeyboardShortcuts = ({
 }: UseKeyboardShortcutsProps) => {
   const { settings } = useSettingsStore();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
+
+  // const activeElement = useActiveElement();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -362,19 +366,37 @@ export const useKeyboardShortcuts = ({
       // Zoom controls
       if ((e.metaKey || e.ctrlKey) && (e.key === "=" || e.key === "+")) {
         e.preventDefault();
-        zoomIn();
+        const terminalContainer = document.querySelector('[data-terminal-container="active"]');
+        const isTerminalFocused = terminalContainer?.contains(document.activeElement);
+        if (isTerminalFocused) {
+          zoomIn("terminal");
+        } else {
+          zoomIn("window");
+        }
         return;
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === "-") {
         e.preventDefault();
-        zoomOut();
+        const terminalContainer = document.querySelector('[data-terminal-container="active"]');
+        const isTerminalFocused = terminalContainer?.contains(document.activeElement);
+        if (isTerminalFocused) {
+          zoomOut("terminal");
+        } else {
+          zoomOut("window");
+        }
         return;
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === "0") {
         e.preventDefault();
-        resetZoom();
+        const terminalContainer = document.querySelector('[data-terminal-container="active"]');
+        const isTerminalFocused = terminalContainer?.contains(document.activeElement);
+        if (isTerminalFocused) {
+          resetZoom("terminal");
+        } else {
+          resetZoom("window");
+        }
         return;
       }
 
