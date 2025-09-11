@@ -33,7 +33,7 @@ interface Settings {
   isAIChatVisible: boolean;
   aiCompletion: boolean;
   // Keyboard
-  //  > nothing here, yet
+  vimMode: boolean;
   // Language
   defaultLanguage: string;
   autoDetectLanguage: boolean;
@@ -77,7 +77,7 @@ const defaultSettings: Settings = {
   isAIChatVisible: false,
   aiCompletion: true,
   // Keyboard
-  //  > nothing here, yet
+  vimMode: false,
   // Language
   defaultLanguage: "auto",
   autoDetectLanguage: true,

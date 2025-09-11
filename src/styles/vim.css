@@ -1,0 +1,41 @@
+/* Vim mode cursor styles */
+.editor-textarea {
+  /* Default cursor style */
+  caret-color: var(--color-cursor);
+}
+
+/* Insert mode - normal thin cursor */
+.editor-textarea[data-vim-mode="insert"] {
+  caret-color: #22c55e; /* Green cursor for insert mode */
+}
+
+/* Normal mode - block cursor simulation */
+.editor-textarea[data-vim-mode="normal"] {
+  caret-color: #3b82f6; /* Blue cursor for normal mode */
+}
+
+/* Visual mode - selection cursor */
+.editor-textarea[data-vim-mode="visual"] {
+  caret-color: #eab308; /* Yellow cursor for visual mode */
+}
+
+/* Command mode - hide cursor since command bar is active */
+.editor-textarea[data-vim-mode="command"] {
+  caret-color: transparent;
+}
+
+/* Vim mode indication in editor */
+.vim-mode-normal .editor-textarea:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+.vim-mode-insert .editor-textarea:focus {
+  outline: 2px solid #22c55e;
+  outline-offset: -2px;
+}
+
+.vim-mode-visual .editor-textarea:focus {
+  outline: 2px solid #eab308;
+  outline-offset: -2px;
+}

@@ -24,6 +24,7 @@ export function useMenuEventsWrapper() {
   useMenuEvents({
     onNewFile: fileSystemStore.handleCreateNewFile,
     onOpenFolder: fileSystemStore.handleOpenFolder,
+    onCloseFolder: fileSystemStore.closeFolder,
     onSave: handleSave,
     onSaveAs: async () => {
       if (!activeBuffer) return;

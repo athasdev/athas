@@ -52,6 +52,8 @@
     "http:allow-fetch",
     "process:allow-restart",
     "process:allow-exit",
+    "shell:default",
+    "shell:allow-open",
     {
       "identifier": "shell:allow-execute",
       "allow": [

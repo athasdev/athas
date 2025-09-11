@@ -106,6 +106,39 @@ export const useFileSystemStore = createSelectors(
         return true;
       },
 
+      closeFolder: async () => {
+        // Reset all project-related state to return to welcome screen
+        set((state) => {
+          state.files = [];
+          state.isFileTreeLoading = false;
+          state.filesVersion++;
+        });
+
+        // Clear tree UI state
+        useFileTreeStore.getState().collapseAll();
+
+        // Reset project store
+        const { setRootFolderPath, setProjectName } = useProjectStore.getState();
+        setRootFolderPath("");
+        setProjectName("");
+
+        // Close all buffers (close them individually since closeAllBuffers doesn't exist)
+        const { buffers, actions: bufferActions } = useBufferStore.getState();
+        buffers.forEach((buffer) => bufferActions.closeBuffer(buffer.id));
+
+        // Stop file watching
+        await useFileWatcherStore.getState().setProjectRoot("");
+
+        // Reset git store
+        const { actions: gitActions } = useGitStore.getState();
+        gitActions.resetCommits();
+
+        // Clear git diff cache
+        gitDiffCache.clear();
+
+        return true;
+      },
+
       handleOpenFolderByPath: async (path: string) => {
         set((state) => {
           state.isFileTreeLoading = true;

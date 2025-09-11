@@ -64,6 +64,14 @@ export const useKeyboardShortcuts = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't process regular shortcuts if vim mode is enabled and we're not using modifier keys
+      const isVimModeEnabled = settings.vimMode;
+      const hasModifiers = e.metaKey || e.ctrlKey || e.altKey || e.shiftKey;
+
+      if (isVimModeEnabled && !hasModifiers) {
+        // Let vim mode handle basic keys without modifiers
+        return;
+      }
       // Terminal toggle with Ctrl/Cmd + ` (backtick)
       if ((e.metaKey || e.ctrlKey) && e.key === "`" && coreFeatures.terminal) {
         e.preventDefault();

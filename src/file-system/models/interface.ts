@@ -24,6 +24,7 @@ export interface FsActions {
   // Folder operations
   handleOpenFolder: () => Promise<boolean>;
   handleOpenFolderByPath: (path: string) => Promise<boolean>;
+  closeFolder: () => Promise<boolean>;
   // File operations
   handleFileSelect: (
     path: string,

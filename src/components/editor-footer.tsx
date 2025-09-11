@@ -29,6 +29,7 @@ import { useUIState } from "../stores/ui-state-store";
 import { getGitStatus } from "../version-control/git/controllers/git";
 import { useGitStore } from "../version-control/git/controllers/git-store";
 import GitBranchManager from "../version-control/git/views/git-branch-manager";
+import VimStatusIndicator from "./vim-status/vim-status-indicator";
 
 // LSP Status Dropdown Component
 const LspStatusDropdown = ({ activeBuffer }: { activeBuffer: any }) => {
@@ -289,6 +290,9 @@ const EditorFooter = () => {
             <AlertCircle size={12} />
           </div>
         )}
+
+        {/* Vim status indicator */}
+        <VimStatusIndicator />
 
         {/* Update indicator */}
         {available && (

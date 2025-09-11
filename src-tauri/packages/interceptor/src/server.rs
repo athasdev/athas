@@ -25,11 +25,12 @@ pub struct AppState {
 }
 
 pub async fn start_proxy_server_with_ws(
-   proxy_port: u16,
+   requested_port: Option<u16>,
 ) -> Result<(
    UnboundedReceiver<InterceptorMessage>,
    WsState,
    JoinHandle<()>,
+   u16,
 )> {
    let (tx, rx) = unbounded_channel::<InterceptorMessage>();
    let interceptor_state = InterceptorState::new(tx);
@@ -59,16 +60,21 @@ pub async fn start_proxy_server_with_ws(
         ))
         .with_state(app_state);
 
-   let listener = TcpListener::bind(format!("127.0.0.1:{proxy_port}"))
+   let port = requested_port.unwrap_or(0);
+   let listener = TcpListener::bind(format!("127.0.0.1:{port}"))
       .await
-      .with_context(|| format!("Failed to bind `TcpListener` to port {proxy_port}"))?;
+      .with_context(|| format!("Failed to bind `TcpListener` to port {port}"))?;
+   let assigned_port = listener
+      .local_addr()
+      .with_context(|| "Failed to get local address for proxy server")?
+      .port();
 
    info!(
       "Claude Code Proxy with WebSocket running on http://localhost:{}",
-      proxy_port
+      assigned_port
    );
 
-   info!("WebSocket endpoint: ws://localhost:{}/ws", proxy_port);
+   info!("WebSocket endpoint: ws://localhost:{}/ws", assigned_port);
 
    let server_handle = tokio::spawn(async move {
       if let Err(e) = axum::serve(listener, app).await {
@@ -76,5 +82,5 @@ pub async fn start_proxy_server_with_ws(
       }
    });
 
-   Ok((rx, ws_state, server_handle))
+   Ok((rx, ws_state, server_handle, assigned_port))
 }

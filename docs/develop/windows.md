@@ -1,6 +1,6 @@
 # Windows Development Setup
 
-Quick Setup (Recommended)
+## Quick Setup (Recommended)
 
 Use the automated setup script:
 
@@ -17,7 +17,7 @@ bun setup-win
 
 ### Setup
 
-```cmd
+```bash
 # Install project dependencies
 bun install
 

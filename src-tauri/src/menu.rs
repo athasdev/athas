@@ -42,6 +42,13 @@ pub fn create_menu<R: tauri::Runtime>(
          true,
          Some("CmdOrCtrl+O"),
       )?)
+      .item(&MenuItem::with_id(
+         app,
+         "close_folder",
+         "Close Folder",
+         true,
+         None::<String>,
+      )?)
       .separator()
       .item(&MenuItem::with_id(
          app,

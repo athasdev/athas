@@ -59,6 +59,16 @@ export const EditorSettings = () => {
           />
         </SettingRow>
       </Section>
+
+      <Section title="Input">
+        <SettingRow label="Vim Mode" description="Enable vim keybindings and commands">
+          <Switch
+            checked={settings.vimMode}
+            onChange={(checked) => updateSetting("vimMode", checked)}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
     </div>
   );
 };

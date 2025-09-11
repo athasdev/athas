@@ -4,6 +4,7 @@ import { useFileSystemStore } from "@/file-system/controllers/store";
 import { ProjectNameMenu } from "@/hooks/use-context-menus";
 import { useKeyboardShortcutsWrapper } from "@/hooks/use-keyboard-shortcuts-wrapper";
 import { useMenuEventsWrapper } from "@/hooks/use-menu-events-wrapper";
+import { useVimKeyboard } from "@/hooks/use-vim-keyboard";
 import { useSettingsStore } from "@/settings/store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useUIState } from "@/stores/ui-state-store";
@@ -18,6 +19,7 @@ import BottomPane from "../bottom-pane";
 import CommandBar from "../command/components/command-bar";
 import CommandPalette from "../command/components/command-palette";
 import ThemeSelector from "../command/components/theme-selector";
+import VimCommandBar from "../command/components/vim-command-bar";
 import type { Diagnostic } from "../diagnostics/diagnostics-pane";
 import CodeEditor from "../editor/code-editor";
 import EditorFooter from "../editor-footer";
@@ -28,6 +30,7 @@ import { ImageViewer } from "../image-viewer/image-viewer";
 import ResizableRightPane from "../resizable-right-pane";
 import ResizableSidebar from "../resizable-sidebar/resizable-sidebar";
 import TabBar from "../tab-bar/tab-bar";
+import { VimSearchBar } from "../vim-search/vim-search-bar";
 import CustomTitleBarWithSettings from "../window/custom-title-bar";
 import { MainSidebar } from "./main-sidebar";
 
@@ -90,6 +93,22 @@ export function MainLayout() {
   // Initialize event listeners
   useMenuEventsWrapper();
   useKeyboardShortcutsWrapper();
+
+  // Initialize vim mode handling
+  useVimKeyboard({
+    onSave: () => {
+      // Dispatch the same save event that existing keyboard shortcuts use
+      window.dispatchEvent(new CustomEvent("menu-save"));
+    },
+    onGoToLine: (line: number) => {
+      // Dispatch go to line event
+      window.dispatchEvent(
+        new CustomEvent("menu-go-to-line", {
+          detail: { line },
+        }),
+      );
+    },
+  });
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-primary-bg">
@@ -178,6 +197,8 @@ export function MainLayout() {
 
       {/* Global modals and overlays */}
       <CommandBar />
+      <VimCommandBar />
+      <VimSearchBar />
       <CommandPalette />
       <GitHubCopilotSettings />
       <ProjectNameMenu />

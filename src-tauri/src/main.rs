@@ -130,6 +130,9 @@ fn main() {
                   "open_folder" => {
                      let _ = window.emit("menu_open_folder", ());
                   }
+                  "close_folder" => {
+                     let _ = window.emit("menu_close_folder", ());
+                  }
                   "save" => {
                      let _ = window.emit("menu_save", ());
                   }

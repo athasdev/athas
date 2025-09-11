@@ -123,7 +123,8 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
         await refreshConnections();
       } else {
         // Check if we need to prompt for password
-        if (!connection.password && !connection.keyPath && !providedPassword) {
+        // Only prompt if no SSH key is available AND no password is saved/provided
+        if (!connection.keyPath && !connection.password && !providedPassword) {
           setPasswordPromptConnection(connection);
           return;
         }

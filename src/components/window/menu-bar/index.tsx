@@ -33,6 +33,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
           <MenuItem shortcut="Ctrl+O" onClick={() => handleClickEmit("menu_open_folder")}>
             Open Folder
           </MenuItem>
+          <MenuItem onClick={() => handleClickEmit("menu_close_folder")}>Close Folder</MenuItem>
           <MenuItem separator />
           <MenuItem shortcut="Ctrl+S" onClick={() => handleClickEmit("menu_save")}>
             Save

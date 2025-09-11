@@ -27,6 +27,7 @@ async function setupMenuListeners(handlers: any) {
   const removeListeners = await Promise.all([
     listen("menu_new_file", () => currentHandlers.current.onNewFile()),
     listen("menu_open_folder", () => currentHandlers.current.onOpenFolder()),
+    listen("menu_close_folder", () => currentHandlers.current.onCloseFolder()),
     listen("menu_save", () => currentHandlers.current.onSave()),
     listen("menu_save_as", () => currentHandlers.current.onSaveAs()),
     listen("menu_close_tab", () => currentHandlers.current.onCloseTab()),
@@ -63,6 +64,7 @@ async function setupMenuListeners(handlers: any) {
 interface UseMenuEventsProps {
   onNewFile: () => void;
   onOpenFolder: () => void;
+  onCloseFolder: () => void;
   onSave: () => void;
   onSaveAs: () => void;
   onCloseTab: () => void;
