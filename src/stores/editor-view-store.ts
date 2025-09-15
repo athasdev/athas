@@ -1,6 +1,8 @@
 import isEqual from "fast-deep-equal";
 import { createWithEqualityFn } from "zustand/traditional";
 import { createSelectors } from "@/utils/zustand-selectors";
+import type { MultiFileDiff } from "@/version-control/diff-viewer/models/diff-types";
+import type { GitDiff } from "@/version-control/git/models/git-types";
 import type { LineToken } from "../types/editor-types";
 import { useBufferStore } from "./buffer-store";
 
@@ -8,6 +10,7 @@ interface EditorViewState {
   // Computed views of the active buffer
   lines: string[];
   lineTokens: Map<number, LineToken[]>;
+  diffData?: GitDiff | MultiFileDiff;
 
   // Actions
   actions: {
@@ -66,6 +69,7 @@ export const useEditorViewStore = createSelectors(
       // These will be computed from the active buffer
       lines: [""],
       lineTokens: new Map(),
+      diffData: undefined,
 
       actions: {
         getLines: () => {
@@ -84,6 +88,14 @@ export const useEditorViewStore = createSelectors(
           const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
           return activeBuffer?.content || "";
         },
+
+        getDiffData: () => {
+          const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
+          if (!activeBuffer) return [];
+          const diffData = activeBuffer.diffData;
+          if (!diffData) return [];
+          return diffData;
+        },
       },
     }),
     isEqual,
@@ -97,11 +109,13 @@ useBufferStore.subscribe((state) => {
     useEditorViewStore.setState({
       lines: activeBuffer.content.split("\n"),
       lineTokens: convertToLineTokens(activeBuffer.content, activeBuffer.tokens),
+      diffData: activeBuffer.diffData,
     });
   } else {
     useEditorViewStore.setState({
       lines: [""],
       lineTokens: new Map(),
+      diffData: undefined,
     });
   }
 });

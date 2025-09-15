@@ -16,10 +16,11 @@ import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { createSelectors } from "@/utils/zustand-selectors";
-import { getGitStatus } from "@/version-control/git/controllers/git";
+import { getFileDiff, getGitStatus } from "@/version-control/git/controllers/git";
 import { gitDiffCache } from "@/version-control/git/controllers/git-diff-cache";
 import { isDiffFile, parseRawDiffContent } from "@/version-control/git/controllers/git-diff-parser";
 import { useGitStore } from "@/version-control/git/controllers/git-store";
+import type { GitDiff } from "@/version-control/git/models/git-types";
 import type { FileEntry } from "../models/app";
 import type { FsActions, FsState } from "../models/interface";
 import {
@@ -230,7 +231,23 @@ export const useFileSystemStore = createSelectors(
             const diffJson = JSON.stringify(parsedDiff);
             openBuffer(path, fileName, diffJson, false, false, true, false);
           } else {
-            openBuffer(path, fileName, content, false, false, false, false);
+            // For regular files, try to fetch git diff data
+            let diffData: GitDiff | undefined;
+            try {
+              const { rootFolderPath } = get();
+              if (rootFolderPath) {
+                // Get relative path for git operations
+                const relativePath = path.startsWith(rootFolderPath)
+                  ? path.substring(rootFolderPath.length + 1).replace(/\\/g, "/")
+                  : path;
+                diffData = (await getFileDiff(rootFolderPath, relativePath, false)) || undefined;
+              }
+            } catch (error) {
+              console.warn("Failed to fetch git diff for file:", path, error);
+              // Continue without diff data
+            }
+
+            openBuffer(path, fileName, content, false, false, false, false, diffData);
           }
 
           // Handle navigation to specific line/column
