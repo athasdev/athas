@@ -57,6 +57,52 @@
   margin-left: 4px;
 }
 
+/* Git diff line background styles */
+:root {
+  --git-diff-added-bg: rgba(34, 197, 94, 0.1);
+  --git-diff-removed-bg: rgba(239, 68, 68, 0.1);
+  --git-diff-modified-bg: rgba(245, 158, 11, 0.1);
+  --git-diff-header-bg: rgba(128, 128, 128, 0.1);
+  --git-diff-added-border: rgba(34, 197, 94, 0.3);
+  --git-diff-removed-border: rgba(239, 68, 68, 0.3);
+}
+
+.git-diff-line-added {
+  background-color: var(--git-diff-added-bg);
+  /*border-left: 2px solid var(--git-diff-added-border);*/
+}
+
+.git-diff-line-removed {
+  background-color: var(--git-diff-removed-bg);
+  /*border-left: 2px solid var(--git-diff-removed-border);*/
+  position: relative;
+}
+
+.git-diff-line-removed::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  /*background-color: var(--git-diff-removed-border);*/
+  opacity: 0.5;
+  z-index: 1;
+}
+
+.git-diff-line-modified {
+  background-color: var(--git-diff-modified-bg);
+}
+
+.git-diff-line-header {
+  background-color: var(--git-diff-header-bg);
+}
+
+/* Diff-only line styling (for removed lines) */
+.editor-line-wrapper.git-diff-line-removed {
+  opacity: 0.8;
+}
+
 /* Virtual scrolling optimization */
 .editor-content {
   contain: layout;
