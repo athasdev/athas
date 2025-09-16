@@ -17,7 +17,7 @@
     "prepare": "simple-git-hooks",
     "commitlint": "commitlint",
     "setup": "bun setup.ts",
-    "dev": "WEBKIT_DISABLE_DMABUF_RENDERER=1 bun tauri dev"
+    "dev": "WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",
