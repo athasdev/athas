@@ -144,7 +144,7 @@ export const MainSidebar = memo(() => {
   }, [isGitViewActive, isSearchViewActive, isRemoteViewActive, isRemoteWindow]);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col ">
       {/* Pane Selection Row */}
       <SidebarPaneSelector
         isGitViewActive={isGitViewActive}
