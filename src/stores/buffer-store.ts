@@ -6,6 +6,7 @@ import { useRecentFilesStore } from "@/file-system/controllers/recent-files-stor
 import { detectLanguageFromFileName } from "@/utils/language-detection";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { MultiFileDiff } from "@/version-control/diff-viewer/models/diff-types";
+import { getFileDiff } from "@/version-control/git/controllers/git";
 import type { GitDiff } from "@/version-control/git/models/git-types";
 
 interface Buffer {
@@ -220,6 +221,42 @@ export const useBufferStore = createSelectors(
               // Don't clear tokens - syntax highlighter will update them
             }
           });
+
+          // For non-virtual, non-diff files, refresh git diff data in the background
+          if (
+            buffer &&
+            !buffer.isVirtual &&
+            !buffer.isDiff &&
+            !buffer.isImage &&
+            !buffer.isSQLite
+          ) {
+            (async () => {
+              try {
+                const { useFileSystemStore } = await import("@/file-system/controllers/store");
+                const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
+
+                if (rootFolderPath && buffer.path.startsWith(rootFolderPath)) {
+                  const relativePath = buffer.path
+                    .substring(rootFolderPath.length + 1)
+                    .replace(/\\/g, "/");
+
+                  const freshDiffData = await getFileDiff(rootFolderPath, relativePath, false);
+
+                  if (freshDiffData) {
+                    set((state) => {
+                      const currentBuffer = state.buffers.find((b) => b.id === bufferId);
+                      if (currentBuffer) {
+                        currentBuffer.diffData = freshDiffData;
+                      }
+                    });
+                  }
+                }
+              } catch (error) {
+                // Silently fail - diff data is not critical for basic functionality
+                console.debug("Failed to refresh git diff data:", error);
+              }
+            })();
+          }
         },
 
         updateBufferTokens: (bufferId: string, tokens: Buffer["tokens"]) => {

@@ -9,6 +9,9 @@ interface LineGutterProps {
   isBreakpoint?: boolean;
   hasError?: boolean;
   hasWarning?: boolean;
+  isDeleted?: boolean;
+  oldLineNumber?: number;
+  newLineNumber?: number;
 }
 
 export const LineGutter = ({
@@ -19,6 +22,8 @@ export const LineGutter = ({
   isBreakpoint = false,
   hasError = false,
   hasWarning = false,
+  isDeleted = false,
+  newLineNumber,
 }: LineGutterProps) => {
   const gutterDecorations = decorations.filter(
     (d) => d.type === "gutter" && d.range.start.line === lineNumber,
@@ -55,7 +60,7 @@ export const LineGutter = ({
           className={cn("gutter-decoration", decoration.className)}
           style={{
             position: "absolute",
-            left: "2px", // Small gap from left edge
+            left: "-4px", // Small gap from left edge
             top: decoration.className?.includes("git-gutter-deleted") ? "0px" : "50%",
             transform: decoration.className?.includes("git-gutter-deleted")
               ? "none"
@@ -99,24 +104,42 @@ export const LineGutter = ({
       ))}
 
       {/* Line numbers */}
-      {showLineNumbers && (
-        <span
-          className="line-number"
-          style={{
-            position: "relative",
-            zIndex: 2,
-            fontSize: "12px",
-            color: "var(--color-text-lighter, #6b7280)",
-            fontFamily: "inherit",
-            userSelect: "none",
-            textAlign: "right",
-            minWidth: `${gutterWidth - 24}px`, // Account for git indicator space and padding
-            paddingLeft: "12px", // Space from git indicators
-          }}
-        >
-          {lineNumber + 1}
-        </span>
-      )}
+      {showLineNumbers &&
+        (newLineNumber !== undefined ? (
+          <div
+            className="line-number-container"
+            style={{
+              position: "relative",
+              zIndex: 2,
+              fontSize: "12px",
+              color: "var(--color-text-lighter, #6b7280)",
+              fontFamily: "inherit",
+              userSelect: "none",
+              textAlign: "right",
+              minWidth: `${gutterWidth - 24}px`,
+              paddingLeft: "12px",
+            }}
+          >
+            {newLineNumber}
+          </div>
+        ) : !isDeleted ? (
+          <div
+            className="line-number-container"
+            style={{
+              position: "relative",
+              zIndex: 2,
+              fontSize: "12px",
+              color: "var(--color-text-lighter, #6b7280)",
+              fontFamily: "inherit",
+              userSelect: "none",
+              textAlign: "right",
+              minWidth: `${gutterWidth - 24}px`,
+              paddingLeft: "12px",
+            }}
+          >
+            {lineNumber + 1}
+          </div>
+        ) : null)}
 
       {/* Other decorations (breakpoints, errors, etc.) */}
       {otherDecorations
