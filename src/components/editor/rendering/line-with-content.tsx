@@ -41,10 +41,10 @@ export const LineWithContent = memo<LineWithContentProps>(
           position: "absolute",
           top: `${lineNumber * lineHeight}px`,
           left: 0,
-          right: 0,
           height: `${lineHeight}px`,
           display: "flex",
-          overflow: "hidden",
+          overflow: "visible",
+          minWidth: "100%",
         }}
       >
         <LineGutter
@@ -62,7 +62,7 @@ export const LineWithContent = memo<LineWithContentProps>(
               : `${2 * EDITOR_CONSTANTS.GUTTER_MARGIN}px`,
             lineHeight: `${lineHeight}px`,
             height: `${lineHeight}px`,
-            overflow: "hidden",
+            overflow: "visible",
             display: "flex",
             alignItems: "center",
             gap: "3rem",

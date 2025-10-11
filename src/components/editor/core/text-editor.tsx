@@ -1034,10 +1034,11 @@ export function TextEditor() {
           /* Handled by useEffect */
         }}
         disabled={disabled}
-        className="editor-textarea selection-transparent absolute resize-none overflow-auto border-none bg-transparent text-transparent caret-transparent outline-none"
+        className="editor-textarea selection-transparent absolute resize-none overflow-auto border-none bg-transparent text-transparent outline-none"
         style={{
           left: `${gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN}px`,
           top: 0,
+          caretColor: "transparent",
           right: 0,
           bottom: 0,
           fontSize: `${fontSize}px`,

@@ -25,7 +25,6 @@ export const LineBasedEditor = memo<LineBasedEditorProps>(
 
     const fontSize = useEditorSettingsStore.use.fontSize();
     const { viewportHeight } = useEditorLayoutStore();
-    const { setScroll } = useEditorLayoutStore.use.actions();
     const { lineHeight, gutterWidth } = useEditorLayout();
 
     const { handleClick, handleMouseDown, handleMouseMove, handleMouseUp } = useEditorInteractions({
@@ -36,11 +35,10 @@ export const LineBasedEditor = memo<LineBasedEditorProps>(
       onSelectionDrag,
     });
 
-    // Removed cursor line subscription - scrolling is now handled directly in editor-api.ts
-    // This simplifies the flow and prevents circular updates
-
-    const handleScroll = (newScrollTop: number, newScrollLeft: number) => {
-      setScroll(newScrollTop, newScrollLeft);
+    // Scroll is now tracked locally in viewport - no need to update store on every scroll event
+    // This prevents unnecessary re-renders and improves scroll performance
+    const handleScroll = (_newScrollTop: number, _newScrollLeft: number) => {
+      // Store updates removed - scroll position is tracked locally in viewport
     };
 
     // Store viewport ref for parent access

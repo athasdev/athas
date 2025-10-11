@@ -195,7 +195,7 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
     <div ref={triggerRef} className="relative inline-flex">
       <div
         className={cn("ml-2 inline-flex items-center gap-1 ", "text-text-lighter", className)}
-        style={{ fontSize: `${settings.fontSize}px` }}
+        style={{ fontSize: `${settings.fontSize}px`, whiteSpace: "nowrap" }}
       >
         <GitBranch size={settings.fontSize} />
         <span>{blameLine.author},</span>

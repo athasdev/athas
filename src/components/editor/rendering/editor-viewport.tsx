@@ -24,7 +24,6 @@ export const EditorViewport = memo(
       const selection = useEditorCursorStore((state) => state.selection);
       const lineCount = useEditorViewStore((state) => state.lines.length);
       const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
-      const scrollTop = useEditorLayoutStore.use.scrollTop();
       const viewportHeight = useEditorLayoutStore.use.viewportHeight();
       const tabSize = useEditorSettingsStore.use.tabSize();
       const { lineHeight, gutterWidth } = useEditorLayout();
@@ -43,19 +42,8 @@ export const EditorViewport = memo(
       // Expose the container ref to parent components
       useImperativeHandle(ref, () => containerRef.current!, []);
 
-      const [localScrollTop, setLocalScrollTop] = useState(scrollTop);
-      const [, setIsScrolling] = useState(false);
-      const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+      const [localScrollTop, setLocalScrollTop] = useState(0);
       const rafRef = useRef<number | null>(null);
-      const isScrollingRef = useRef(false);
-
-      // Sync scroll position from prop only when not actively scrolling
-      useEffect(() => {
-        if (containerRef.current && !isScrollingRef.current) {
-          containerRef.current.scrollTop = scrollTop;
-          setLocalScrollTop(scrollTop);
-        }
-      }, [scrollTop]);
 
       const visibleRange = useMemo(() => {
         // Use the local scroll position for visible range calculation
@@ -80,9 +68,6 @@ export const EditorViewport = memo(
         const newScrollTop = target.scrollTop;
         const newScrollLeft = target.scrollLeft;
 
-        isScrollingRef.current = true;
-        setIsScrolling(true);
-
         // Use requestAnimationFrame to batch scroll updates
         if (rafRef.current) {
           cancelAnimationFrame(rafRef.current);
@@ -92,24 +77,12 @@ export const EditorViewport = memo(
           setLocalScrollTop(newScrollTop);
         });
 
-        if (scrollTimeoutRef.current) {
-          clearTimeout(scrollTimeoutRef.current);
-        }
-
-        scrollTimeoutRef.current = setTimeout(() => {
-          setIsScrolling(false);
-          isScrollingRef.current = false;
-        }, 150);
-
-        // Still notify parent component
+        // Notify parent component (but parent no longer updates store)
         onScroll?.(newScrollTop, newScrollLeft);
       };
 
       useEffect(() => {
         return () => {
-          if (scrollTimeoutRef.current) {
-            clearTimeout(scrollTimeoutRef.current);
-          }
           if (rafRef.current) {
             cancelAnimationFrame(rafRef.current);
           }

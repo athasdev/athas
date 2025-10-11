@@ -18,6 +18,7 @@ interface EditorViewState {
 }
 
 // Helper function to convert buffer tokens to line tokens
+// Handles conversion from byte offsets (from tree-sitter) to character positions
 function convertToLineTokens(
   content: string,
   tokens: Array<{ start: number; end: number; class_name: string }>,
@@ -25,16 +26,38 @@ function convertToLineTokens(
   const lines = content.split("\n");
   const tokensByLine = new Map<number, LineToken[]>();
 
-  let currentOffset = 0;
+  // Build a byte-to-character mapping for proper UTF-8 handling
+  const encoder = new TextEncoder();
+  let byteOffset = 0;
+  let charOffset = 0;
+  const byteToChar = new Map<number, number>();
+
+  for (let i = 0; i < content.length; i++) {
+    byteToChar.set(byteOffset, charOffset);
+    const char = content[i];
+    const charBytes = encoder.encode(char).length;
+    byteOffset += charBytes;
+    charOffset++;
+  }
+  byteToChar.set(byteOffset, charOffset); // End position
+
+  // Convert byte offsets to character offsets
+  const charTokens = tokens.map((token) => ({
+    start: byteToChar.get(token.start) ?? 0,
+    end: byteToChar.get(token.end) ?? content.length,
+    class_name: token.class_name,
+  }));
+
+  let currentCharOffset = 0;
 
   for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
     const lineLength = lines[lineNumber].length;
-    const lineStart = currentOffset;
-    const lineEnd = currentOffset + lineLength;
+    const lineStart = currentCharOffset;
+    const lineEnd = currentCharOffset + lineLength;
     const lineTokens: LineToken[] = [];
 
     // Find tokens that overlap with this line
-    for (const token of tokens) {
+    for (const token of charTokens) {
       if (token.start >= lineEnd) break;
       if (token.end <= lineStart) continue;
 
@@ -54,7 +77,7 @@ function convertToLineTokens(
       tokensByLine.set(lineNumber, lineTokens);
     }
 
-    currentOffset += lineLength + 1; // +1 for newline
+    currentCharOffset += lineLength + 1; // +1 for newline
   }
 
   return tokensByLine;

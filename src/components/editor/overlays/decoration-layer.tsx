@@ -4,7 +4,6 @@ import { extensionManager } from "@/extensions/extension-manager";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorDecorationsStore } from "@/stores/editor-decorations-store";
-import { useEditorLayoutStore } from "@/stores/editor-layout-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
 import type { Decoration, Position } from "@/types/editor-types";
 
@@ -25,7 +24,6 @@ function isPositionBefore(a: Position, b: Position): boolean {
 export const DecorationLayer = () => {
   const storeDecorations = useEditorDecorationsStore((state) => state.getDecorations());
   const selection = useEditorCursorStore((state) => state.selection);
-  const { scrollTop, scrollLeft } = useEditorLayoutStore();
   const { lineHeight, charWidth, gutterWidth } = useEditorLayout();
 
   const decorations = useMemo(() => {
@@ -64,9 +62,8 @@ export const DecorationLayer = () => {
         // Inline decorations span within text
         if (start.line === end.line) {
           // Single line decoration
-          const x =
-            gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + start.column * charWidth - scrollLeft;
-          const y = start.line * lineHeight - scrollTop;
+          const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + start.column * charWidth;
+          const y = start.line * lineHeight;
           const width = (end.column - start.column) * charWidth;
 
           rendered.push({
@@ -82,8 +79,8 @@ export const DecorationLayer = () => {
           // Multi-line decoration
           // First line
           const firstLineX =
-            gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + start.column * charWidth - scrollLeft;
-          const firstLineY = start.line * lineHeight - scrollTop;
+            gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + start.column * charWidth;
+          const firstLineY = start.line * lineHeight;
           const firstLineWidth = (lines[start.line].length - start.column) * charWidth;
 
           rendered.push({
@@ -98,8 +95,8 @@ export const DecorationLayer = () => {
 
           // Middle lines
           for (let line = start.line + 1; line < end.line; line++) {
-            const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN - scrollLeft;
-            const y = line * lineHeight - scrollTop;
+            const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN;
+            const y = line * lineHeight;
             const width = lines[line].length * charWidth;
 
             rendered.push({
@@ -114,8 +111,8 @@ export const DecorationLayer = () => {
           }
 
           // Last line
-          const lastLineX = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN - scrollLeft;
-          const lastLineY = end.line * lineHeight - scrollTop;
+          const lastLineX = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN;
+          const lastLineY = end.line * lineHeight;
           const lastLineWidth = end.column * charWidth;
 
           rendered.push({
@@ -132,7 +129,7 @@ export const DecorationLayer = () => {
         // Line decorations highlight entire lines, excluding gutter
         for (let line = start.line; line <= end.line; line++) {
           const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN;
-          const y = line * lineHeight - scrollTop;
+          const y = line * lineHeight;
 
           rendered.push({
             key: `line-${index}-${line}`,
@@ -148,7 +145,7 @@ export const DecorationLayer = () => {
     });
 
     return rendered;
-  }, [decorations, lineHeight, charWidth, gutterWidth, scrollTop, scrollLeft]);
+  }, [decorations, lineHeight, charWidth, gutterWidth]);
 
   return (
     <>

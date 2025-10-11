@@ -207,6 +207,7 @@ fn get_language_config(language_name: &str) -> Result<HighlightConfiguration> {
          Ok(config)
       }
       "markdown" | "md" => {
+         // Markdown uses block-level parsing for structure
          let mut config = HighlightConfiguration::new(
             tree_sitter_md::LANGUAGE.into(),
             language_name,

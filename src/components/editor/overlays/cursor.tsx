@@ -2,18 +2,16 @@ import { useEffect, useRef } from "react";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
-import { useEditorLayoutStore } from "@/stores/editor-layout-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 
 export function Cursor() {
   const cursorRef = useRef<HTMLDivElement>(null);
   const movementTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { scrollTop, scrollLeft } = useEditorLayoutStore();
   const { lineHeight, charWidth, gutterWidth } = useEditorLayout();
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
   const visible = useEditorCursorStore((state) => state.cursorVisible);
 
-  // Update position without re-rendering
+  // Update position without re-rendering - cursor scrolls naturally with content
   useEffect(() => {
     if (!cursorRef.current || !visible) return;
 
@@ -22,11 +20,9 @@ export function Cursor() {
       (position) => {
         if (!cursorRef.current) return;
 
-        // Position cursor relative to the text content area
-        // Position cursor at the character position
-        const x =
-          gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + position.column * charWidth - scrollLeft;
-        const y = position.line * lineHeight - scrollTop;
+        // Position cursor at the character position (no scroll offset needed - browser handles it)
+        const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + position.column * charWidth;
+        const y = position.line * lineHeight;
 
         // Add moving class to pause blinking
         cursorRef.current.classList.add("moving");
@@ -49,10 +45,8 @@ export function Cursor() {
 
     // Set initial position
     const position = useEditorCursorStore.getState().cursorPosition;
-    // Position cursor at the character position
-    const x =
-      gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + position.column * charWidth - scrollLeft;
-    const y = position.line * lineHeight - scrollTop;
+    const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + position.column * charWidth;
+    const y = position.line * lineHeight;
     cursorRef.current.style.left = `${x}px`;
     cursorRef.current.style.top = `${y}px`;
 
@@ -62,7 +56,7 @@ export function Cursor() {
         clearTimeout(movementTimeoutRef.current);
       }
     };
-  }, [lineHeight, gutterWidth, scrollTop, scrollLeft, charWidth, visible, showLineNumbers]);
+  }, [lineHeight, gutterWidth, charWidth, visible, showLineNumbers]);
 
   if (!visible) return null;
 

@@ -4,7 +4,6 @@ import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useEditorCompletionStore } from "@/stores/editor-completion-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
-import { useEditorLayoutStore } from "@/stores/editor-layout-store";
 import { cn } from "@/utils/cn";
 import { highlightMatches } from "@/utils/fuzzy-matcher";
 
@@ -20,18 +19,13 @@ export const CompletionDropdown = memo(({ onApplyCompletion }: CompletionDropdow
   const { setIsLspCompletionVisible } = useEditorCompletionStore.use.actions();
 
   const cursorPosition = useEditorCursorStore.use.cursorPosition();
-
-  const scrollTop = useEditorLayoutStore.use.scrollTop();
-  const scrollLeft = useEditorLayoutStore.use.scrollLeft();
-
   const { lineHeight, charWidth, gutterWidth } = useEditorLayout();
 
   if (!isLspCompletionVisible) return null;
 
   // Calculate position same as cursor but offset below the current line
-  const x =
-    gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + cursorPosition.column * charWidth - scrollLeft;
-  const y = (cursorPosition.line + 1) * lineHeight - scrollTop; // +1 to appear below current line
+  const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + cursorPosition.column * charWidth;
+  const y = (cursorPosition.line + 1) * lineHeight; // +1 to appear below current line
 
   const handleSelect = (item: CompletionItem) => {
     if (onApplyCompletion) {
