@@ -24,14 +24,15 @@ export const LineWithContent = memo<LineWithContentProps>(
     const decorations = useEditorDecorationsStore((state) =>
       state.getDecorationsForLine(lineNumber),
     );
-    const { line } = useEditorCursorStore((state) => state.cursorPosition);
+    const cursorLine = useEditorCursorStore((state) => state.cursorPosition.line);
 
-    // Git blame functionality
+    // Git blame functionality - only subscribe when this is the selected line
     const { filePath } = useEditorInstanceStore();
-    const { getBlameForLine } = useGitBlameStore();
+    const isSelectedLine = cursorLine === lineNumber;
 
-    const blameLine = filePath ? getBlameForLine(filePath, lineNumber) : null;
-    const isSelectedLine = line === lineNumber;
+    // Only get blame info for the current line to avoid unnecessary lookups
+    const { getBlameForLine } = useGitBlameStore();
+    const blameLine = isSelectedLine && filePath ? getBlameForLine(filePath, lineNumber) : null;
 
     return (
       <div
@@ -79,6 +80,16 @@ export const LineWithContent = memo<LineWithContentProps>(
           )}
         </div>
       </div>
+    );
+  },
+  (prev, next) => {
+    // Custom comparison function for better memoization
+    return (
+      prev.lineNumber === next.lineNumber &&
+      prev.showLineNumbers === next.showLineNumbers &&
+      prev.gutterWidth === next.gutterWidth &&
+      prev.lineHeight === next.lineHeight &&
+      prev.isSelected === next.isSelected
     );
   },
 );

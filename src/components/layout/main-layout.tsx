@@ -24,7 +24,6 @@ import type { Diagnostic } from "../diagnostics/diagnostics-pane";
 import CodeEditor from "../editor/code-editor";
 import EditorFooter from "../editor-footer";
 import ExtensionsView from "../extensions-view";
-import FileReloadToast from "../file-reload-toast";
 import GitHubCopilotSettings from "../github-copilot-settings";
 import { ImageViewer } from "../image-viewer/image-viewer";
 import ResizableRightPane from "../resizable-right-pane";
@@ -202,7 +201,6 @@ export function MainLayout() {
       <CommandPalette />
       <GitHubCopilotSettings />
       <ProjectNameMenu />
-      <FileReloadToast />
 
       {/* Dialog components */}
       <ThemeSelector

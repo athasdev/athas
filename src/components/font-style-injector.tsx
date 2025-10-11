@@ -7,23 +7,27 @@ export const FontStyleInjector = () => {
   const { settings } = useSettingsStore();
 
   useEffect(() => {
-    // Priority: Settings store → Code editor store → JetBrains Mono default
-    const fontFamily = settings.fontFamily || codeEditorFontFamily || "JetBrains Mono";
+    // Get font families from settings
+    const editorFont = settings.fontFamily || codeEditorFontFamily || "JetBrains Mono";
+    const uiFont = settings.uiFontFamily || "Space Grotesk";
 
-    // Set CSS variables for both editor and app-wide font with simple fallbacks
-    const fallbackChain = `"${fontFamily}", "JetBrains Mono", monospace`;
-    document.documentElement.style.setProperty("--editor-font-family", fallbackChain);
-    document.documentElement.style.setProperty("--app-font-family", fallbackChain);
-  }, [settings.fontFamily, codeEditorFontFamily]);
+    // Set CSS variables with fallbacks
+    const editorFallbackChain = `"${editorFont}", "JetBrains Mono", monospace`;
+    const uiFallbackChain = `"${uiFont}", "Space Grotesk", sans-serif`;
+
+    document.documentElement.style.setProperty("--editor-font-family", editorFallbackChain);
+    document.documentElement.style.setProperty("--app-font-family", uiFallbackChain);
+  }, [settings.fontFamily, settings.uiFontFamily, codeEditorFontFamily]);
 
   // Set initial default styles immediately on mount
   useEffect(() => {
     // Ensure we always have a default font set
     const currentAppFont = document.documentElement.style.getPropertyValue("--app-font-family");
     if (!currentAppFont) {
-      const defaultChain = `"JetBrains Mono", monospace`;
-      document.documentElement.style.setProperty("--editor-font-family", defaultChain);
-      document.documentElement.style.setProperty("--app-font-family", defaultChain);
+      const editorDefaultChain = `"JetBrains Mono", monospace`;
+      const uiDefaultChain = `"Space Grotesk", sans-serif`;
+      document.documentElement.style.setProperty("--editor-font-family", editorDefaultChain);
+      document.documentElement.style.setProperty("--app-font-family", uiDefaultChain);
     }
   }, []); // Run only once on mount
 

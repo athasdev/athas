@@ -103,6 +103,10 @@ export function EditorStylesheet() {
         .editor-container {
           scrollbar-width: none;
           -ms-overflow-style: none;
+          /* GPU acceleration for smooth scrolling */
+          transform: translateZ(0);
+          -webkit-transform: translateZ(0);
+          will-change: scroll-position;
         }
         .editor-container::-webkit-scrollbar {
           display: none;
@@ -124,12 +128,23 @@ export function EditorStylesheet() {
         .editor-viewport {
           scrollbar-width: none;
           -ms-overflow-style: none;
+          /* GPU acceleration for smooth scrolling */
+          transform: translateZ(0);
+          -webkit-transform: translateZ(0);
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
         }
         .editor-content-new::-webkit-scrollbar,
         .virtual-editor-container::-webkit-scrollbar,
         [data-editor-viewport]::-webkit-scrollbar,
         .editor-viewport::-webkit-scrollbar {
           display: none;
+        }
+
+        /* Optimize line rendering */
+        .editor-line-wrapper {
+          contain: layout style paint;
+          content-visibility: auto;
         }
 
         /* Ensure line numbers use tabular figures for consistent width */

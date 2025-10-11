@@ -10,7 +10,19 @@ export const EditorSettings = () => {
   return (
     <div className="space-y-4">
       <Section title="Typography">
-        <SettingRow label="Font Family" description="Editor font family">
+        <SettingRow
+          label="UI Font Family"
+          description="Font family for UI elements (file tree, markdown, etc.)"
+        >
+          <FontSelector
+            value={settings.uiFontFamily}
+            onChange={(fontFamily) => updateSetting("uiFontFamily", fontFamily)}
+            className="w-48"
+            monospaceOnly={false}
+          />
+        </SettingRow>
+
+        <SettingRow label="Editor Font Family" description="Font family for code editor">
           <FontSelector
             value={settings.fontFamily}
             onChange={(fontFamily) => updateSetting("fontFamily", fontFamily)}

@@ -11,6 +11,7 @@ interface EditorSettingsState {
   lineNumbers: boolean;
   disabled: boolean;
   theme: string;
+  isMarkdownPreview: boolean;
   actions: EditorSettingsActions;
 }
 
@@ -22,6 +23,7 @@ interface EditorSettingsActions {
   setLineNumbers: (show: boolean) => void;
   setDisabled: (disabled: boolean) => void;
   setTheme: (theme: string) => void;
+  setIsMarkdownPreview: (preview: boolean) => void;
 }
 
 export const useEditorSettingsStore = createSelectors(
@@ -34,6 +36,7 @@ export const useEditorSettingsStore = createSelectors(
       lineNumbers: true,
       disabled: false,
       theme: "auto",
+      isMarkdownPreview: false,
       actions: {
         setFontSize: (size) => set({ fontSize: size }),
         setFontFamily: (family) => set({ fontFamily: family }),
@@ -42,6 +45,7 @@ export const useEditorSettingsStore = createSelectors(
         setLineNumbers: (show) => set({ lineNumbers: show }),
         setDisabled: (disabled) => set({ disabled }),
         setTheme: (theme) => set({ theme }),
+        setIsMarkdownPreview: (preview) => set({ isMarkdownPreview: preview }),
       },
     })),
   ),

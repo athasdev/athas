@@ -352,7 +352,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
 
   // Get column type icon
   const getColumnIcon = (type: string, isPrimaryKey: boolean) => {
-    if (isPrimaryKey) return <Key size={12} className="text-amber-500" />;
+    if (isPrimaryKey) return <Key size={12} className="text-text-lighter" />;
     const lowerType = type.toLowerCase();
     if (lowerType.includes("int") || lowerType.includes("num"))
       return <Hash size={12} className="text-blue-500" />;

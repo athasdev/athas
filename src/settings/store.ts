@@ -20,6 +20,8 @@ interface Settings {
   tabSize: number;
   wordWrap: boolean;
   lineNumbers: boolean;
+  // UI
+  uiFontFamily: string;
   // Theme
   theme: Theme;
   autoThemeLight: Theme;
@@ -64,6 +66,8 @@ const defaultSettings: Settings = {
   tabSize: 2,
   wordWrap: true,
   lineNumbers: true,
+  // UI
+  uiFontFamily: "Space Grotesk",
   // Theme
   theme: "athas-dark", // Changed from "auto" since we don't support continuous monitoring
   autoThemeLight: "athas-light",

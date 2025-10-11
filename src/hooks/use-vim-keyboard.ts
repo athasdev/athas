@@ -30,7 +30,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
     clearLastKey,
   } = useVimStore.use.actions();
   const { setCursorVisibility } = useEditorCursorStore.use.actions();
-  const { setDisabled } = useEditorInstanceStore();
+  const { setDisabled } = useEditorInstanceStore.use.actions();
   const { startSearch, findNext, findPrevious } = useVimSearchStore.use.actions();
 
   // Reset vim state when vim mode is enabled/disabled

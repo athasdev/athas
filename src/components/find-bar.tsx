@@ -8,14 +8,10 @@ import { cn } from "../utils/cn";
 const FindBar = () => {
   // Get data from stores
   const { isFindVisible, setIsFindVisible } = useUIState();
-  const {
-    searchQuery,
-    setSearchQuery,
-    searchMatches,
-    currentMatchIndex,
-    searchNext,
-    searchPrevious,
-  } = useEditorSearchStore();
+  const searchQuery = useEditorSearchStore.use.searchQuery();
+  const searchMatches = useEditorSearchStore.use.searchMatches();
+  const currentMatchIndex = useEditorSearchStore.use.currentMatchIndex();
+  const { setSearchQuery, searchNext, searchPrevious } = useEditorSearchStore.use.actions();
 
   const isVisible = isFindVisible;
   const onClose = () => setIsFindVisible(false);

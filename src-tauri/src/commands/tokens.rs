@@ -45,6 +45,29 @@ const HIGHLIGHT_NAMES: &[&str] = &[
    "variable",
    "variable.builtin",
    "variable.parameter",
+   // Markdown-specific highlight names
+   "markup.heading",
+   "markup.heading.1",
+   "markup.heading.2",
+   "markup.heading.3",
+   "markup.heading.4",
+   "markup.heading.5",
+   "markup.heading.6",
+   "markup.bold",
+   "markup.strong",
+   "markup.italic",
+   "markup.emphasis",
+   "markup.strikethrough",
+   "markup.link",
+   "markup.link.url",
+   "markup.link.text",
+   "markup.raw",
+   "markup.raw.inline",
+   "markup.raw.block",
+   "markup.list",
+   "markup.list.checked",
+   "markup.list.unchecked",
+   "markup.quote",
 ];
 
 fn get_language_config(language_name: &str) -> Result<HighlightConfiguration> {
@@ -282,6 +305,23 @@ fn map_highlight_to_class(highlight_name: &str) -> (&str, &str) {
       }
       "tag" => ("jsx", "token-jsx"),
       "attribute" => ("jsx-attribute", "token-jsx-attribute"),
+      // Markdown-specific highlight names
+      "markup.heading" | "markup.heading.1" | "markup.heading.2" | "markup.heading.3"
+      | "markup.heading.4" | "markup.heading.5" | "markup.heading.6" => {
+         ("markdown-heading", "token-markdown-heading")
+      }
+      "markup.bold" | "markup.strong" => ("markdown-bold", "token-markdown-bold"),
+      "markup.italic" | "markup.emphasis" => ("markdown-italic", "token-markdown-italic"),
+      "markup.strikethrough" => ("markdown-strikethrough", "token-markdown-strikethrough"),
+      "markup.link" | "markup.link.url" => ("markdown-link", "token-markdown-link"),
+      "markup.link.text" => ("markdown-link-text", "token-markdown-link-text"),
+      "markup.raw" | "markup.raw.inline" | "markup.raw.block" => {
+         ("markdown-code", "token-markdown-code")
+      }
+      "markup.list" | "markup.list.checked" | "markup.list.unchecked" => {
+         ("markdown-list", "token-markdown-list")
+      }
+      "markup.quote" => ("markdown-quote", "token-markdown-quote"),
       _ => ("text", "token-text"),
    }
 }

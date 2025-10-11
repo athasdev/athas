@@ -90,8 +90,14 @@ export const useFontStore = createSelectors(
         console.log("Initializing with cached fonts:", cache.availableFonts.length, "fonts");
       }
 
+      // Add web fonts as custom fonts
+      const webFonts: FontInfo[] = [
+        { family: "Space Grotesk", name: "Space Grotesk", style: "Regular", is_monospace: false },
+      ];
+
       return {
         ...initialValues,
+        availableFonts: [...webFonts, ...initialValues.availableFonts],
         actions: {
           loadAvailableFonts: async (forceRefresh = false) => {
             const current = get();
@@ -112,16 +118,26 @@ export const useFontStore = createSelectors(
               const fonts = await invoke<FontInfo[]>("get_system_fonts");
               const monospaceFonts = fonts.filter((font) => font.is_monospace);
 
+              // Add web fonts
+              const webFonts: FontInfo[] = [
+                {
+                  family: "Space Grotesk",
+                  name: "Space Grotesk",
+                  style: "Regular",
+                  is_monospace: false,
+                },
+              ];
+
               set((state) => {
-                state.availableFonts = fonts;
+                state.availableFonts = [...webFonts, ...fonts];
                 state.monospaceFonts = monospaceFonts;
                 state.isLoading = false;
                 state.lastCacheTime = Date.now();
               });
 
               // Save to cache
-              saveFontsToCache(fonts, monospaceFonts);
-              console.log("Loaded and cached", fonts.length, "fonts");
+              saveFontsToCache([...webFonts, ...fonts], monospaceFonts);
+              console.log("Loaded and cached", fonts.length + webFonts.length, "fonts");
             } catch (error) {
               console.error("Failed to load fonts:", error);
               set((state) => {
@@ -148,6 +164,7 @@ export const useFontStore = createSelectors(
             try {
               console.log("Loading monospace fonts from system...");
               const fonts = await invoke<FontInfo[]>("get_monospace_fonts");
+
               set((state) => {
                 state.monospaceFonts = fonts;
                 state.isLoading = false;

@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, Search } from "lucide-react";
+import { ArrowLeft, ChevronRight, Eye, Search } from "lucide-react";
 import { type RefObject, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
@@ -8,6 +8,7 @@ import { readDirectory } from "@/file-system/controllers/platform";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import type { FileEntry } from "@/file-system/models/app";
 import { useBufferStore } from "@/stores/buffer-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useUIState } from "@/stores/ui-state-store";
 
 export default function Breadcrumb() {
@@ -18,6 +19,8 @@ export default function Breadcrumb() {
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { rootFolderPath, handleFileSelect } = useFileSystemStore();
   const { isFindVisible, setIsFindVisible } = useUIState();
+  const isMarkdownPreview = useEditorSettingsStore.use.isMarkdownPreview();
+  const { setIsMarkdownPreview } = useEditorSettingsStore.use.actions();
 
   const handleNavigate = async (path: string) => {
     try {
@@ -29,6 +32,16 @@ export default function Breadcrumb() {
 
   const handleSearchClick = () => {
     setIsFindVisible(!isFindVisible);
+  };
+
+  const handlePreviewClick = () => {
+    setIsMarkdownPreview(!isMarkdownPreview);
+  };
+
+  const isMarkdownFile = () => {
+    if (!activeBuffer) return false;
+    const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
+    return extension === "md" || extension === "markdown";
   };
 
   const filePath = activeBuffer?.path || "";
@@ -201,7 +214,16 @@ export default function Breadcrumb() {
             </div>
           ))}
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-1">
+          {isMarkdownFile() && (
+            <button
+              onClick={handlePreviewClick}
+              className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              title="Toggle markdown preview"
+            >
+              <Eye size={12} />
+            </button>
+          )}
           <button
             onClick={onSearchClick}
             className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"

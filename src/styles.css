@@ -246,7 +246,7 @@ body {
     padding: 0;
     overflow: hidden;
     font-family:
-        var(--app-font-family, "JetBrains Mono"), "JetBrains Mono", monospace;
+        var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif;
     overscroll-behavior: none !important;
     /* Prevent elastic bounce globally */
     background: transparent;
@@ -259,28 +259,46 @@ button {
 
 /* Apply app-wide font family to all elements */
 * {
-    font-family: var(--app-font-family, "JetBrains Mono"), "JetBrains Mono", monospace;
+    font-family: var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif;
 }
 
 /* Override Tailwind's font-mono class to use our custom variable */
 .font-mono {
-    font-family: var(--app-font-family, "JetBrains Mono"), "JetBrains Mono", monospace !important;
+    font-family: var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif !important;
 }
 
 /* Specific overrides for components that should use editor font */
 .editor-container,
+.editor-container *,
 .monaco-editor,
 .editor-input,
 .line-numbers,
-.hover-tooltip {
+.hover-tooltip,
+.editor-wrapper,
+.editor-line-wrapper,
+.editor-line-content-wrapper,
+.editor-content-new,
+.editor-line,
+.editor-line-content,
+.editor-viewport,
+.editor-content,
+.virtual-editor-container,
+.editor-textarea,
+.code-editor-content {
     font-family: var(--editor-font-family, "JetBrains Mono"), "JetBrains Mono", monospace !important;
+}
+
+/* Markdown preview should use UI font */
+.markdown-preview,
+.markdown-preview * {
+    font-family: var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif !important;
 }
 
 /* CSS variables that themes can override */
 @layer base {
     :root {
         /* Font defaults */
-        --app-font-family: "JetBrains Mono", monospace;
+        --app-font-family: "Space Grotesk", sans-serif;
         --editor-font-family: "JetBrains Mono", monospace;
 
         /* Default light theme colors */

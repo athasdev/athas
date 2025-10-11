@@ -94,3 +94,50 @@
 .token-jsx-text {
   color: var(--color-text);
 }
+
+/* Markdown */
+.token-markdown-heading {
+  color: var(--color-syntax-markdown-heading, #82aaff);
+  font-weight: 700;
+}
+
+.token-markdown-bold {
+  color: var(--color-syntax-markdown-bold, #f78c6c);
+  font-weight: 700;
+}
+
+.token-markdown-italic {
+  color: var(--color-syntax-markdown-italic, #c792ea);
+  font-style: italic;
+}
+
+.token-markdown-strikethrough {
+  color: var(--color-syntax-markdown-strikethrough, #f07178);
+  text-decoration: line-through;
+}
+
+.token-markdown-link {
+  color: var(--color-syntax-markdown-link, #89ddff);
+  text-decoration: underline;
+}
+
+.token-markdown-link-text {
+  color: var(--color-syntax-markdown-link-text, #82aaff);
+}
+
+.token-markdown-code {
+  color: var(--color-syntax-markdown-code, #c3e88d);
+  background-color: var(--color-hover, rgba(255, 255, 255, 0.1));
+  border-radius: 3px;
+  padding: 2px 4px;
+}
+
+.token-markdown-list {
+  color: var(--color-syntax-markdown-list, #c792ea);
+  font-weight: 600;
+}
+
+.token-markdown-quote {
+  color: var(--color-syntax-markdown-quote, #7f848e);
+  font-style: italic;
+}

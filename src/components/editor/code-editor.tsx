@@ -19,6 +19,7 @@ import FindBar from "../find-bar";
 import Breadcrumb from "./breadcrumb";
 import { TextEditor } from "./core/text-editor";
 import { EditorStylesheet } from "./editor-stylesheet";
+import { MarkdownPreview } from "./markdown-preview";
 import { HoverTooltip } from "./overlays/hover-tooltip";
 
 interface CodeEditorProps {
@@ -37,17 +38,20 @@ export interface CodeEditorRef {
 
 const CodeEditor = ({ className }: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null as any);
-  const { setRefs, setContent, setFileInfo } = useEditorInstanceStore();
+  const { setRefs, setContent, setFileInfo } = useEditorInstanceStore.use.actions();
   // No longer need to sync content - editor-view-store computes from buffer
   const { setDisabled } = useEditorSettingsStore.use.actions();
+  const isMarkdownPreview = useEditorSettingsStore.use.isMarkdownPreview();
 
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { handleContentChange } = useAppStore.use.actions();
-  const { searchQuery, searchMatches, currentMatchIndex, setSearchMatches, setCurrentMatchIndex } =
-    useEditorSearchStore();
+  const searchQuery = useEditorSearchStore.use.searchQuery();
+  const searchMatches = useEditorSearchStore.use.searchMatches();
+  const currentMatchIndex = useEditorSearchStore.use.currentMatchIndex();
+  const { setSearchMatches, setCurrentMatchIndex } = useEditorSearchStore.use.actions();
   const isFileTreeLoading = useFileSystemStore((state) => state.isFileTreeLoading);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const { settings } = useSettingsStore();
@@ -56,6 +60,15 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const value = activeBuffer?.content || "";
   const filePath = activeBuffer?.path || "";
   const onChange = activeBuffer ? handleContentChange : () => {};
+
+  // Check if the current file is markdown
+  const isMarkdownFile = () => {
+    if (!activeBuffer) return false;
+    const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
+    return extension === "md" || extension === "markdown";
+  };
+
+  const showMarkdownPreview = isMarkdownFile() && isMarkdownPreview;
 
   // Initialize refs in store
   useEffect(() => {
@@ -281,7 +294,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
             {/* Editor content area */}
             <div className="editor-wrapper relative flex-1 overflow-hidden">
               <div className="relative h-full flex-1 bg-primary-bg">
-                <TextEditor />
+                {showMarkdownPreview ? <MarkdownPreview /> : <TextEditor />}
               </div>
             </div>
           </div>

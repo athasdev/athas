@@ -43,21 +43,23 @@ export const EditorViewport = memo(
       // Expose the container ref to parent components
       useImperativeHandle(ref, () => containerRef.current!, []);
 
+      const [localScrollTop, setLocalScrollTop] = useState(scrollTop);
       const [, setIsScrolling] = useState(false);
       const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-      const [, forceUpdate] = useState({});
+      const rafRef = useRef<number | null>(null);
       const isScrollingRef = useRef(false);
 
       // Sync scroll position from prop only when not actively scrolling
       useEffect(() => {
         if (containerRef.current && !isScrollingRef.current) {
           containerRef.current.scrollTop = scrollTop;
+          setLocalScrollTop(scrollTop);
         }
       }, [scrollTop]);
 
       const visibleRange = useMemo(() => {
-        // Use the actual scroll position from the DOM element if available
-        const actualScrollTop = containerRef.current?.scrollTop ?? scrollTop;
+        // Use the local scroll position for visible range calculation
+        const actualScrollTop = localScrollTop;
         const startLine = Math.floor(actualScrollTop / lineHeight);
         const endLine = Math.ceil((actualScrollTop + viewportHeight) / lineHeight);
         // Dynamic overscan based on viewport size
@@ -71,7 +73,7 @@ export const EditorViewport = memo(
           start: Math.max(0, startLine - overscan),
           end: Math.min(lineCount, endLine + overscan),
         };
-      }, [scrollTop, lineHeight, viewportHeight, lineCount, forceUpdate]);
+      }, [localScrollTop, lineHeight, viewportHeight, lineCount]);
 
       const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const target = e.currentTarget;
@@ -81,8 +83,14 @@ export const EditorViewport = memo(
         isScrollingRef.current = true;
         setIsScrolling(true);
 
-        // Force re-render to update visible range
-        forceUpdate({});
+        // Use requestAnimationFrame to batch scroll updates
+        if (rafRef.current) {
+          cancelAnimationFrame(rafRef.current);
+        }
+
+        rafRef.current = requestAnimationFrame(() => {
+          setLocalScrollTop(newScrollTop);
+        });
 
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
@@ -101,6 +109,9 @@ export const EditorViewport = memo(
         return () => {
           if (scrollTimeoutRef.current) {
             clearTimeout(scrollTimeoutRef.current);
+          }
+          if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current);
           }
         };
       }, []);
