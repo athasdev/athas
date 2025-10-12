@@ -30,6 +30,7 @@ const initialState = {
   // Dialog States
   isSettingsDialogVisible: false,
   isThemeSelectorVisible: false,
+  isIconThemeSelectorVisible: false,
   settingsInitialTab: "general" as SettingsTab,
 
   // Bottom Pane
@@ -74,6 +75,7 @@ export const useUIState = create(
     // Dialog State actions
     setIsSettingsDialogVisible: (v: boolean) => set({ isSettingsDialogVisible: v }),
     setIsThemeSelectorVisible: (v: boolean) => set({ isThemeSelectorVisible: v }),
+    setIsIconThemeSelectorVisible: (v: boolean) => set({ isIconThemeSelectorVisible: v }),
     setSettingsInitialTab: (tab: SettingsTab) => set({ settingsInitialTab: tab }),
     openSettingsDialog: (tab?: SettingsTab) =>
       set({

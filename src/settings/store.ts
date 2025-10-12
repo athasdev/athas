@@ -24,6 +24,7 @@ interface Settings {
   uiFontFamily: string;
   // Theme
   theme: Theme;
+  iconTheme: string;
   autoThemeLight: Theme;
   autoThemeDark: Theme;
   nativeMenuBar: boolean;
@@ -70,6 +71,7 @@ const defaultSettings: Settings = {
   uiFontFamily: "Space Grotesk",
   // Theme
   theme: "athas-dark", // Changed from "auto" since we don't support continuous monitoring
+  iconTheme: "colorful-material",
   autoThemeLight: "athas-light",
   autoThemeDark: "athas-dark",
   nativeMenuBar: false,

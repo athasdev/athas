@@ -9,6 +9,7 @@ import { MainLayout } from "./components/layout/main-layout";
 import { ToastContainer } from "./components/ui/toast";
 import WelcomeScreen from "./components/window/welcome-screen";
 import { ZoomIndicator } from "./components/zoom-indicator";
+import { initializeIconThemes } from "./extensions/icon-themes";
 import { initializeThemeSystem } from "./extensions/themes/theme-initializer";
 import {
   cleanupFileWatcherListener,
@@ -27,6 +28,9 @@ import { cn } from "./utils/cn";
 // Initialize theme system immediately when the module loads
 // This ensures themes are loaded before the settings store tries to apply them
 initializeThemeSystem().catch(console.error);
+
+// Initialize icon themes
+initializeIconThemes();
 
 function App() {
   enableMapSet();

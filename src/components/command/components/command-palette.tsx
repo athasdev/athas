@@ -31,6 +31,7 @@ const CommandPalette = () => {
     setIsCommandPaletteVisible,
     setIsSettingsDialogVisible,
     setIsThemeSelectorVisible,
+    setIsIconThemeSelectorVisible,
   } = useUIState();
   const { openQuickEdit } = useAppStore.use.actions();
 
@@ -106,6 +107,17 @@ const CommandPalette = () => {
       action: () => {
         onClose();
         setIsThemeSelectorVisible(true);
+      },
+    },
+    {
+      id: "icon-theme",
+      label: "Preferences: Icon Theme",
+      description: "Choose an icon theme",
+      icon: <Palette size={14} />,
+      category: "Theme",
+      action: () => {
+        onClose();
+        setIsIconThemeSelectorVisible(true);
       },
     },
   ];

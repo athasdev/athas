@@ -18,6 +18,7 @@ const AIChat = lazy(() => import("../ai-chat/ai-chat"));
 import BottomPane from "../bottom-pane";
 import CommandBar from "../command/components/command-bar";
 import CommandPalette from "../command/components/command-palette";
+import IconThemeSelector from "../command/components/icon-theme-selector";
 import ThemeSelector from "../command/components/theme-selector";
 import VimCommandBar from "../command/components/vim-command-bar";
 import type { Diagnostic } from "../diagnostics/diagnostics-pane";
@@ -38,7 +39,13 @@ export function MainLayout() {
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
 
-  const { isSidebarVisible, isThemeSelectorVisible, setIsThemeSelectorVisible } = useUIState();
+  const {
+    isSidebarVisible,
+    isThemeSelectorVisible,
+    setIsThemeSelectorVisible,
+    isIconThemeSelectorVisible,
+    setIsIconThemeSelectorVisible,
+  } = useUIState();
   const { settings, updateSetting } = useSettingsStore();
   const { rootFolderPath } = useFileSystemStore();
 
@@ -48,6 +55,11 @@ export function MainLayout() {
   // Handle theme change
   const handleThemeChange = (theme: string) => {
     updateSetting("theme", theme);
+  };
+
+  // Handle icon theme change
+  const handleIconThemeChange = (iconTheme: string) => {
+    updateSetting("iconTheme", iconTheme);
   };
 
   // Handle hunk staging/unstaging
@@ -208,6 +220,12 @@ export function MainLayout() {
         onClose={() => setIsThemeSelectorVisible(false)}
         onThemeChange={handleThemeChange}
         currentTheme={settings.theme}
+      />
+      <IconThemeSelector
+        isVisible={isIconThemeSelectorVisible}
+        onClose={() => setIsIconThemeSelectorVisible(false)}
+        onThemeChange={handleIconThemeChange}
+        currentTheme={settings.iconTheme}
       />
     </div>
   );

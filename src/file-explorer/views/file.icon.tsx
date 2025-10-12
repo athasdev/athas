@@ -1,5 +1,6 @@
-import { Folder, FolderOpen } from "lucide-react";
-import { getIcon } from "material-file-icons";
+import { cloneElement, isValidElement } from "react";
+import { iconThemeRegistry } from "@/extensions/icon-themes";
+import { useSettingsStore } from "@/settings/store";
 
 interface FileIconProps {
   fileName: string;
@@ -16,32 +17,40 @@ const FileIcon = ({
   size = 14,
   className = "text-text-lighter",
 }: FileIconProps) => {
-  // Use Lucide icons for directories
-  if (isDir) {
-    const Icon = isExpanded ? FolderOpen : Folder;
-    return <Icon className={className} size={size} />;
+  const { settings } = useSettingsStore();
+  const iconTheme = iconThemeRegistry.getTheme(settings.iconTheme);
+
+  if (!iconTheme) {
+    // Fallback if no theme is found
+    return <span className={className}>•</span>;
   }
 
-  // Get the icon from material-file-icons for files
-  const icon = getIcon(fileName);
+  const iconResult = iconTheme.getFileIcon(fileName, isDir, isExpanded);
 
-  // Always render in monochrome
-  const svgContent = icon.svg
-    .replace(/fill="[^"]*"/g, 'fill="currentColor"')
-    .replace(/stroke="[^"]*"/g, 'stroke="currentColor"');
+  if (iconResult.component) {
+    // If it's a valid React element, clone it and add className
+    if (isValidElement(iconResult.component)) {
+      return cloneElement(iconResult.component, { className } as any);
+    }
+    return <span className={className}>{iconResult.component}</span>;
+  }
 
-  return (
-    <span
-      className={className}
-      style={{
-        width: `${size}px`,
-        height: `${size}px`,
-        display: "inline-block",
-        lineHeight: 0,
-      }}
-      dangerouslySetInnerHTML={{ __html: svgContent }}
-    />
-  );
+  if (iconResult.svg) {
+    return (
+      <span
+        className={className}
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          display: "inline-block",
+          lineHeight: 0,
+        }}
+        dangerouslySetInnerHTML={{ __html: iconResult.svg }}
+      />
+    );
+  }
+
+  return <span className={className}>•</span>;
 };
 
 export default FileIcon;
