@@ -281,7 +281,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       aria-label="File suggestions"
     >
       {/* Search input */}
-      <div className="border-border border-b p-2">
+      <div className="sticky top-0 z-10 border-border border-b bg-secondary-bg p-2">
         <div className="relative">
           <Search
             size={12}
