@@ -74,7 +74,10 @@ const Dropdown = ({
       });
 
       setDropdownPosition({
-        top: openDirection === "up" ? position.y - 200 : position.y, // Adjust for dropdown height when opening up
+        top:
+          openDirection === "up"
+            ? position.y - (dropdownRef.current?.offsetHeight || 200)
+            : position.y, // Adjust for dropdown height when opening up
         left: position.x,
         width: rect.width,
       });
