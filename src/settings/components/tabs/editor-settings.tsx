@@ -70,6 +70,18 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
+
+        <SettingRow
+          label="Relative Line Numbers"
+          description="Show relative numbers when Vim mode is active"
+        >
+          <Switch
+            checked={settings.vimRelativeLineNumbers}
+            onChange={(checked) => updateSetting("vimRelativeLineNumbers", checked)}
+            size="sm"
+            disabled={!settings.lineNumbers}
+          />
+        </SettingRow>
       </Section>
 
       <Section title="Input">

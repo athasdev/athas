@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import SQLiteViewer from "@/database/sqlite-viewer";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { ProjectNameMenu } from "@/hooks/use-context-menus";
@@ -8,6 +8,7 @@ import { useVimKeyboard } from "@/hooks/use-vim-keyboard";
 import { useSettingsStore } from "@/settings/store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useUIState } from "@/stores/ui-state-store";
+import { useVimStore } from "@/stores/vim-store";
 import DiffViewer from "@/version-control/diff-viewer/views/diff-viewer";
 import { stageHunk, unstageHunk } from "@/version-control/git/controllers/git";
 import type { GitHunk } from "@/version-control/git/models/git-types";
@@ -47,10 +48,18 @@ export function MainLayout() {
     setIsIconThemeSelectorVisible,
   } = useUIState();
   const { settings, updateSetting } = useSettingsStore();
+  const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
+  const { setRelativeLineNumbers } = useVimStore.use.actions();
   const { rootFolderPath } = useFileSystemStore();
 
   const [diagnostics] = useState<Diagnostic[]>([]);
   const sidebarPosition = settings.sidebarPosition;
+
+  useEffect(() => {
+    if (settings.vimRelativeLineNumbers !== relativeLineNumbers) {
+      setRelativeLineNumbers(settings.vimRelativeLineNumbers, { persist: false });
+    }
+  }, [settings.vimRelativeLineNumbers, relativeLineNumbers, setRelativeLineNumbers]);
 
   // Handle theme change
   const handleThemeChange = (theme: string) => {

@@ -1,5 +1,6 @@
 import { useBufferStore } from "./buffer-store";
 import { useUIState } from "./ui-state-store";
+import { useVimStore } from "./vim-store";
 
 export interface VimCommand {
   name: string;
@@ -114,6 +115,33 @@ const gotoCommand: VimCommand = {
   },
 };
 
+const setOptionCommand: VimCommand = {
+  name: "set",
+  aliases: [],
+  description: "Update vim options",
+  execute: (args?: string[]) => {
+    if (!args || args.length === 0) {
+      return;
+    }
+
+    const option = args[0]?.toLowerCase();
+    const { setRelativeLineNumbers } = useVimStore.getState().actions;
+
+    switch (option) {
+      case "relativenumber":
+      case "rnu":
+        setRelativeLineNumbers(true);
+        return;
+      case "norelativenumber":
+      case "nornu":
+        setRelativeLineNumbers(false);
+        return;
+      default:
+        console.warn(`Unknown :set option: ${option}`);
+    }
+  },
+};
+
 // Toggle sidebar
 const sidebarCommand: VimCommand = {
   name: "sidebar",
@@ -156,6 +184,7 @@ export const vimCommands: VimCommand[] = [
   commandCommand,
   exploreCommand,
   gotoCommand,
+  setOptionCommand,
   sidebarCommand,
   terminalCommand,
 ];
