@@ -1,8 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
+import { useSettingsStore } from "@/settings/store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
+import { useVimStore } from "@/stores/vim-store";
 
 export function Cursor() {
   const cursorRef = useRef<HTMLDivElement>(null);
@@ -10,6 +12,23 @@ export function Cursor() {
   const { lineHeight, charWidth, gutterWidth } = useEditorLayout();
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
   const visible = useEditorCursorStore((state) => state.cursorVisible);
+  const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
+  const vimMode = useVimStore.use.mode();
+  const isCommandMode = useVimStore.use.isCommandMode();
+
+  const cursorStyle = useMemo(() => {
+    const isBlockCursor = vimModeEnabled && !isCommandMode && vimMode === "normal";
+    const width = Math.max(2, charWidth);
+
+    return {
+      width: isBlockCursor ? `${width}px` : "2px",
+      backgroundColor: isBlockCursor
+        ? "var(--cursor-color-block, rgba(59, 130, 246, 0.65))"
+        : "var(--cursor-color, var(--color-cursor))",
+      borderRadius: isBlockCursor ? "2px" : "1px",
+      opacity: isBlockCursor ? 0.85 : 1,
+    };
+  }, [vimModeEnabled, vimMode, isCommandMode, charWidth]);
 
   // Update position without re-rendering - cursor scrolls naturally with content
   useEffect(() => {
@@ -66,9 +85,8 @@ export function Cursor() {
       className="editor-cursor"
       style={{
         position: "absolute",
-        width: "2px",
         height: `${lineHeight}px`,
-        backgroundColor: "var(--cursor-color, var(--color-cursor))",
+        ...cursorStyle,
         pointerEvents: "none",
       }}
     />

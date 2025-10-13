@@ -46,14 +46,29 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
       // When vim mode is off, ensure editor is enabled
       setDisabled(false);
       setCursorVisibility(true);
+
+      const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement | null;
+      if (textarea) {
+        textarea.readOnly = false;
+        textarea.removeAttribute("data-vim-mode");
+        textarea.removeAttribute("readonly");
+      }
+
+      document.body.classList.remove(
+        "vim-mode-normal",
+        "vim-mode-insert",
+        "vim-mode-visual",
+        "vim-mode-command",
+      );
       return;
     }
 
     // In vim mode:
     // - Insert mode: allow typing (enabled)
-    // - Normal/Visual modes: prevent typing (disabled) but keep cursor visible for navigation
+    // - Normal/Visual modes: keep textarea read-only but enabled for navigation
     // - Command mode: disable editor, command bar handles input
-    const shouldDisableEditor = mode !== "insert";
+    const shouldDisableEditor = isCommandMode;
+    const shouldReadOnly = mode !== "insert";
     const shouldShowCursor = true; // Always show cursor in vim mode
 
     setDisabled(shouldDisableEditor);
@@ -64,6 +79,10 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
     if (textarea) {
       const vimModeAttr = isCommandMode ? "command" : mode;
       textarea.setAttribute("data-vim-mode", vimModeAttr);
+      textarea.readOnly = shouldReadOnly;
+      if (!shouldReadOnly) {
+        textarea.removeAttribute("readonly");
+      }
 
       // Add body class for global vim mode styling
       document.body.classList.remove(
@@ -214,21 +233,25 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           return true;
         // Navigation keys - hjkl movement
         case "h":
+        case "ArrowLeft":
           e.preventDefault();
           e.stopPropagation();
           vimNav.moveLeft();
           return true;
         case "j":
+        case "ArrowDown":
           e.preventDefault();
           e.stopPropagation();
           vimNav.moveDown();
           return true;
         case "k":
+        case "ArrowUp":
           e.preventDefault();
           e.stopPropagation();
           vimNav.moveUp();
           return true;
         case "l":
+        case "ArrowRight":
           e.preventDefault();
           e.stopPropagation();
           vimNav.moveRight();
