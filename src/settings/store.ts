@@ -37,6 +37,7 @@ interface Settings {
   aiCompletion: boolean;
   // Keyboard
   vimMode: boolean;
+  vimRelativeLineNumbers: boolean;
   // Language
   defaultLanguage: string;
   autoDetectLanguage: boolean;
@@ -84,6 +85,7 @@ const defaultSettings: Settings = {
   aiCompletion: true,
   // Keyboard
   vimMode: false,
+  vimRelativeLineNumbers: false,
   // Language
   defaultLanguage: "auto",
   autoDetectLanguage: true,

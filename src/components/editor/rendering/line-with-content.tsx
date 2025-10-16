@@ -5,6 +5,7 @@ import { useEditorDecorationsStore } from "@/stores/editor-decorations-store";
 import { useEditorInstanceStore } from "@/stores/editor-instance-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
 import { useGitBlameStore } from "@/stores/git-blame-store";
+import { useVimStore } from "@/stores/vim-store";
 import { InlineGitBlame } from "@/version-control/git/views/inline-git-blame";
 import { LineGutter } from "./line-gutter";
 import { LineRenderer } from "./line-renderer";
@@ -25,6 +26,7 @@ export const LineWithContent = memo<LineWithContentProps>(
       state.getDecorationsForLine(lineNumber),
     );
     const cursorLine = useEditorCursorStore((state) => state.cursorPosition.line);
+    const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
 
     // Git blame functionality - only subscribe when this is the selected line
     const { filePath } = useEditorInstanceStore();
@@ -52,6 +54,8 @@ export const LineWithContent = memo<LineWithContentProps>(
           showLineNumbers={showLineNumbers}
           gutterWidth={showLineNumbers ? gutterWidth : 16}
           decorations={decorations}
+          cursorLine={cursorLine}
+          relativeLineNumbers={relativeLineNumbers}
         />
         <div
           className="editor-line-content-wrapper"

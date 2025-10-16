@@ -4,19 +4,15 @@
   caret-color: var(--color-cursor);
 }
 
-/* Insert mode - normal thin cursor */
+/* Insert mode - keep thin caret visible */
 .editor-textarea[data-vim-mode="insert"] {
   caret-color: #22c55e; /* Green cursor for insert mode */
 }
 
-/* Normal mode - block cursor simulation */
-.editor-textarea[data-vim-mode="normal"] {
-  caret-color: #3b82f6; /* Blue cursor for normal mode */
-}
-
-/* Visual mode - selection cursor */
+/* Normal/visual mode - hide native caret, we render a custom block cursor */
+.editor-textarea[data-vim-mode="normal"],
 .editor-textarea[data-vim-mode="visual"] {
-  caret-color: #eab308; /* Yellow cursor for visual mode */
+  caret-color: transparent;
 }
 
 /* Command mode - hide cursor since command bar is active */

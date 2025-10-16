@@ -6,6 +6,8 @@ interface LineGutterProps {
   showLineNumbers: boolean;
   gutterWidth: number;
   decorations: Decoration[];
+  cursorLine: number;
+  relativeLineNumbers: boolean;
   isBreakpoint?: boolean;
   hasError?: boolean;
   hasWarning?: boolean;
@@ -16,6 +18,8 @@ export const LineGutter = ({
   showLineNumbers,
   gutterWidth,
   decorations,
+  cursorLine,
+  relativeLineNumbers,
   isBreakpoint = false,
   hasError = false,
   hasWarning = false,
@@ -27,6 +31,18 @@ export const LineGutter = ({
   // Separate git decorations from other decorations
   const gitDecorations = gutterDecorations.filter((d) => d.className?.includes("git-gutter"));
   const otherDecorations = gutterDecorations.filter((d) => !d.className?.includes("git-gutter"));
+
+  let displayNumber: string | null = null;
+  if (showLineNumbers) {
+    if (relativeLineNumbers) {
+      displayNumber =
+        cursorLine === lineNumber
+          ? String(lineNumber + 1)
+          : String(Math.abs(lineNumber - cursorLine));
+    } else {
+      displayNumber = String(lineNumber + 1);
+    }
+  }
 
   return (
     <div
@@ -99,7 +115,7 @@ export const LineGutter = ({
       ))}
 
       {/* Line numbers */}
-      {showLineNumbers && (
+      {displayNumber !== null && (
         <span
           className="line-number"
           style={{
@@ -114,7 +130,7 @@ export const LineGutter = ({
             paddingLeft: "12px", // Space from git indicators
           }}
         >
-          {lineNumber + 1}
+          {displayNumber}
         </span>
       )}
 

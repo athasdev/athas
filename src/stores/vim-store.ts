@@ -1,12 +1,14 @@
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import { useSettingsStore } from "@/settings/store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 export type VimMode = "normal" | "insert" | "visual" | "command";
 
 interface VimState {
   mode: VimMode;
+  relativeLineNumbers: boolean;
   isCommandMode: boolean; // When user presses : in normal mode
   commandInput: string; // The command being typed after :
   lastCommand: string; // Store the last executed command
@@ -19,6 +21,7 @@ interface VimState {
 
 const defaultVimState: VimState = {
   mode: "normal",
+  relativeLineNumbers: false,
   isCommandMode: false,
   commandInput: "",
   lastCommand: "",
@@ -78,6 +81,22 @@ const useVimStoreBase = create(
 
           // Return the command for external handling
           return command;
+        },
+
+        setRelativeLineNumbers: (enabled: boolean, options?: { persist?: boolean }) => {
+          if (get().relativeLineNumbers === enabled) {
+            return;
+          }
+
+          set((state) => {
+            state.relativeLineNumbers = enabled;
+          });
+
+          if (options?.persist === false) {
+            return;
+          }
+
+          void useSettingsStore.getState().updateSetting("vimRelativeLineNumbers", enabled);
         },
 
         setVisualSelection: (
