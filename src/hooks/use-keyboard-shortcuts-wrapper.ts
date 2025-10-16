@@ -62,6 +62,13 @@ export function useKeyboardShortcutsWrapper() {
         uiState.setIsCommandPaletteVisible(value);
       }
     },
+    setIsThemeSelectorVisible: (value) => {
+      if (typeof value === "function") {
+        uiState.setIsThemeSelectorVisible(value(uiState.isThemeSelectorVisible));
+      } else {
+        uiState.setIsThemeSelectorVisible(value);
+      }
+    },
     setIsSearchViewActive: uiState.setIsSearchViewActive,
     focusSearchInput,
     focusCommandPalette: () => {
@@ -92,6 +99,10 @@ export function useKeyboardShortcutsWrapper() {
           selectionRange: { start: 0, end: selection.toString().length },
         });
       }
+    },
+    onToggleSidebarPosition: () => {
+      const currentPosition = settings.sidebarPosition;
+      updateSetting("sidebarPosition", currentPosition === "left" ? "right" : "left");
     },
     coreFeatures: settings.coreFeatures,
   });

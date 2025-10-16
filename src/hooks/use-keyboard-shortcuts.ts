@@ -1,5 +1,5 @@
 import { exit } from "@tauri-apps/plugin-process";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useSettingsStore } from "@/settings/store";
 import { isMac } from "../file-system/controllers/platform";
 import type { CoreFeaturesState } from "../settings/models/feature.types";
@@ -16,6 +16,7 @@ interface UseKeyboardShortcutsProps {
   setIsRightPaneVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsCommandBarVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsCommandPaletteVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
+  setIsThemeSelectorVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsSearchViewActive: (value: boolean) => void;
   focusSearchInput: () => void;
   focusCommandPalette: () => void;
@@ -43,6 +44,7 @@ export const useKeyboardShortcuts = ({
   setIsRightPaneVisible,
   setIsCommandBarVisible,
   setIsCommandPaletteVisible,
+  setIsThemeSelectorVisible,
   setIsSearchViewActive,
   focusSearchInput,
   focusCommandPalette,
@@ -66,6 +68,10 @@ export const useKeyboardShortcuts = ({
 
   // const activeElement = useActiveElement();
 
+  // Track Cmd+K chord
+  const [isAwaitingChord, setIsAwaitingChord] = React.useState(false);
+  const chordTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't process regular shortcuts if vim mode is enabled and we're not using modifier keys
@@ -76,6 +82,44 @@ export const useKeyboardShortcuts = ({
         // Let vim mode handle basic keys without modifiers
         return;
       }
+
+      // Handle Cmd+K chord sequence
+      if ((e.metaKey || e.ctrlKey) && e.key === "k" && !e.shiftKey && !isAwaitingChord) {
+        e.preventDefault();
+        setIsAwaitingChord(true);
+
+        // Clear any existing timeout
+        if (chordTimeoutRef.current) {
+          clearTimeout(chordTimeoutRef.current);
+        }
+
+        // Reset chord state after 1 second
+        chordTimeoutRef.current = setTimeout(() => {
+          setIsAwaitingChord(false);
+        }, 1000);
+
+        return;
+      }
+
+      // Handle 'T' after Cmd+K to open theme selector
+      if (isAwaitingChord && (e.key === "t" || e.key === "T")) {
+        e.preventDefault();
+        setIsAwaitingChord(false);
+        if (chordTimeoutRef.current) {
+          clearTimeout(chordTimeoutRef.current);
+        }
+        setIsThemeSelectorVisible(true);
+        return;
+      }
+
+      // Cancel chord on any other key (except modifier keys)
+      if (isAwaitingChord && !["Meta", "Control", "Alt", "Shift"].includes(e.key)) {
+        setIsAwaitingChord(false);
+        if (chordTimeoutRef.current) {
+          clearTimeout(chordTimeoutRef.current);
+        }
+      }
+
       // Terminal toggle with Ctrl/Cmd + ` (backtick)
       if ((e.metaKey || e.ctrlKey) && e.key === "`" && coreFeatures.terminal) {
         e.preventDefault();
@@ -464,6 +508,10 @@ export const useKeyboardShortcuts = ({
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      // Clean up chord timeout on unmount
+      if (chordTimeoutRef.current) {
+        clearTimeout(chordTimeoutRef.current);
+      }
     };
   }, [
     setIsBottomPaneVisible,
@@ -473,6 +521,7 @@ export const useKeyboardShortcuts = ({
     setIsRightPaneVisible,
     setIsCommandBarVisible,
     setIsCommandPaletteVisible,
+    setIsThemeSelectorVisible,
     setIsSearchViewActive,
     focusSearchInput,
     focusCommandPalette,
@@ -489,5 +538,12 @@ export const useKeyboardShortcuts = ({
     onToggleSidebarPosition,
     coreFeatures,
     focusTerminal,
+    requestTerminalFocus,
+    settings.vimMode,
+    settings.nativeMenuBar,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    isAwaitingChord,
   ]);
 };
