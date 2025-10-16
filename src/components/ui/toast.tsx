@@ -11,38 +11,43 @@ export const ToastContainer = () => {
         <div
           key={toast.id}
           className={cn(
-            "relative flex min-w-[250px] max-w-[320px] flex-col gap-2",
+            "relative flex min-w-[280px] max-w-[380px] flex-col gap-2",
             toast.isExiting ? "animate-slide-out-right" : "animate-slide-in-right",
-            "rounded-md border border-border/50 bg-secondary-bg/95 px-3 py-2 shadow-sm backdrop-blur-sm",
+            "rounded border border-border bg-primary-bg/95 px-3 py-2 shadow-lg backdrop-blur-sm",
           )}
         >
           <div className="flex items-start gap-2">
-            {toast.type === "error" && <CircleX size={12} className="mt-0.5 text-error/80" />}
+            {toast.type === "error" && (
+              <CircleX size={14} className="mt-0.5 flex-shrink-0 text-red-400" />
+            )}
             {toast.type === "warning" && (
-              <CircleAlert size={12} className="mt-0.5 text-warning/80" />
+              <CircleAlert size={14} className="mt-0.5 flex-shrink-0 text-yellow-400" />
             )}
             {toast.type === "success" && (
-              <CircleCheck size={12} className="mt-0.5 text-success/80" />
+              <CircleCheck size={14} className="mt-0.5 flex-shrink-0 text-green-400" />
             )}
             {toast.type === "info" && (
-              <CircleQuestionMark size={12} className="mt-0.5 text-info/80" />
+              <CircleQuestionMark size={14} className="mt-0.5 flex-shrink-0 text-blue-400" />
             )}
 
-            <p className="flex-1 text-sm text-text/90">{toast.message}</p>
+            <p className="flex-1 font-mono text-text text-xs">{toast.message}</p>
 
             <button
               onClick={() => dismissToast(toast.id)}
-              className="rounded p-0.5 transition-colors hover:bg-white/10"
+              className="flex-shrink-0 rounded p-0.5 transition-colors hover:bg-hover"
             >
               <X size={12} className="text-text-lighter" />
             </button>
           </div>
 
           {toast.action && (
-            <div className="flex justify-end">
+            <div className="flex justify-end border-border border-t pt-2">
               <button
-                onClick={toast.action.onClick}
-                className="rounded bg-white/20 px-3 py-1 font-medium text-xs transition-colors hover:bg-white/30"
+                onClick={() => {
+                  toast.action?.onClick();
+                  dismissToast(toast.id);
+                }}
+                className="rounded bg-hover px-3 py-1 font-mono text-[10px] text-text uppercase tracking-wider transition-colors hover:bg-border"
               >
                 {toast.action.label}
               </button>

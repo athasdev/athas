@@ -7,6 +7,7 @@ import { useMenuEventsWrapper } from "@/hooks/use-menu-events-wrapper";
 import { useVimKeyboard } from "@/hooks/use-vim-keyboard";
 import { useSettingsStore } from "@/settings/store";
 import { useBufferStore } from "@/stores/buffer-store";
+import { useTerminalStore } from "@/stores/terminal-store";
 import { useUIState } from "@/stores/ui-state-store";
 import DiffViewer from "@/version-control/diff-viewer/views/diff-viewer";
 import { stageHunk, unstageHunk } from "@/version-control/git/controllers/git";
@@ -51,6 +52,7 @@ export function MainLayout() {
 
   const [diagnostics] = useState<Diagnostic[]>([]);
   const sidebarPosition = settings.sidebarPosition;
+  const terminalWidthMode = useTerminalStore((state) => state.widthMode);
 
   // Handle theme change
   const handleThemeChange = (theme: string) => {
@@ -127,7 +129,7 @@ export function MainLayout() {
       <div className="h-px flex-shrink-0 bg-border" />
 
       <div className="z-10 flex flex-1 flex-col overflow-hidden">
-        <div className="flex flex-1 flex-row overflow-hidden">
+        <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
           {/* Left sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
             <ResizableRightPane position="left" isVisible={settings.isAIChatVisible}>
@@ -201,8 +203,12 @@ export function MainLayout() {
           )}
         </div>
 
-        <BottomPane diagnostics={diagnostics} />
+        {/* BottomPane in editor width mode - only covers middle section */}
+        {terminalWidthMode === "editor" && <BottomPane diagnostics={diagnostics} />}
       </div>
+
+      {/* BottomPane in full width mode - covers entire window including sidebars */}
+      {terminalWidthMode === "full" && <BottomPane diagnostics={diagnostics} />}
 
       <EditorFooter />
 

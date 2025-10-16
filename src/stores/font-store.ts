@@ -103,7 +103,8 @@ export const useFontStore = createSelectors(
             const current = get();
 
             // Use cached data if available and not forcing refresh
-            if (!forceRefresh && current.availableFonts.length > 0) {
+            // But only if we have more than just the web fonts
+            if (!forceRefresh && current.availableFonts.length > 1) {
               console.log("Using already loaded fonts");
               return;
             }
@@ -151,7 +152,8 @@ export const useFontStore = createSelectors(
             const current = get();
 
             // Use cached data if available and not forcing refresh
-            if (!forceRefresh && current.monospaceFonts.length > 0) {
+            // Ensure we have actual fonts loaded
+            if (!forceRefresh && current.monospaceFonts.length > 0 && !current.isLoading) {
               console.log("Using already loaded monospace fonts");
               return;
             }

@@ -33,6 +33,7 @@ import type { Position } from "@/types/editor-types";
 import { calculateCursorPosition, calculateOffsetFromPosition } from "@/utils/editor-position";
 import { CompletionDropdown } from "../overlays/completion-dropdown";
 import EditorContextMenu from "../overlays/editor-context-menu";
+import { InlineEditToolbar } from "../overlays/inline-edit-toolbar";
 import { handleKeyboardShortcuts } from "./keyboard-shortcuts";
 import { LineBasedEditor } from "./line-based-editor";
 
@@ -99,6 +100,12 @@ export function TextEditor() {
     isOpen: boolean;
     position: { x: number; y: number };
   }>({ isOpen: false, position: { x: 0, y: 0 } });
+
+  // Inline edit toolbar state
+  const [inlineEditToolbar, setInlineEditToolbar] = useState<{
+    visible: boolean;
+    position: { x: number; y: number };
+  }>({ visible: false, position: { x: 0, y: 0 } });
 
   // Get content as string when needed
   const content = getContent();
@@ -347,8 +354,26 @@ export function TextEditor() {
         start: calculateCursorPosition(selectionStart, lines),
         end: calculateCursorPosition(selectionEnd, lines),
       });
+
+      // Show inline edit toolbar above selection
+      const textarea = textareaRef.current;
+      const rect = textarea.getBoundingClientRect();
+
+      // Calculate position based on selection
+      const textBeforeSelection = textarea.value.substring(0, selectionStart).split("\n");
+      const currentLine = textBeforeSelection.length - 1;
+      const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight);
+
+      setInlineEditToolbar({
+        visible: true,
+        position: {
+          x: rect.left + 100,
+          y: rect.top + currentLine * lineHeight - textarea.scrollTop,
+        },
+      });
     } else {
       setSelection(undefined);
+      setInlineEditToolbar({ visible: false, position: { x: 0, y: 0 } });
     }
 
     // Update cursor position after selection change
@@ -997,6 +1022,31 @@ export function TextEditor() {
     console.log("Toggle bookmark - not implemented yet");
   }, []);
 
+  const handleInlineEditSubmit = useCallback(
+    (prompt: string, providerId: string, modelId: string) => {
+      const selection = useEditorCursorStore.getState().selection;
+      if (!selection || !textareaRef.current) return;
+
+      const selectedText = content.slice(selection.start.offset, selection.end.offset);
+
+      // TODO: Integrate with AI service
+      console.log("AI Edit Request:", {
+        prompt,
+        selectedText,
+        providerId,
+        modelId,
+      });
+
+      // Close toolbar
+      setInlineEditToolbar({ visible: false, position: { x: 0, y: 0 } });
+    },
+    [content],
+  );
+
+  const handleCloseInlineEdit = useCallback(() => {
+    setInlineEditToolbar({ visible: false, position: { x: 0, y: 0 } });
+  }, []);
+
   // Get layout values for proper textarea positioning - use the same values as visual editor
   const gutterWidth = layoutGutterWidth;
 
@@ -1026,9 +1076,6 @@ export function TextEditor() {
         onFocus={() => setCursorVisibility(true)}
         onKeyDown={handleKeyDown}
         onSelect={handleSelectionChange}
-        onKeyUp={handleSelectionChange}
-        onMouseDown={handleSelectionChange}
-        onMouseUp={handleSelectionChange}
         onContextMenu={handleContextMenu}
         onScroll={() => {
           /* Handled by useEffect */
@@ -1067,6 +1114,17 @@ export function TextEditor() {
 
       {/* Completion dropdown */}
       <CompletionDropdown onApplyCompletion={handleApplyCompletion} />
+
+      {/* Inline edit toolbar */}
+      {createPortal(
+        <InlineEditToolbar
+          visible={inlineEditToolbar.visible}
+          position={inlineEditToolbar.position}
+          onPromptSubmit={handleInlineEditSubmit}
+          onClose={handleCloseInlineEdit}
+        />,
+        document.body,
+      )}
 
       {/* Context menu */}
       {createPortal(

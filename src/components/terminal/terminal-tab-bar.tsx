@@ -1,7 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
+  AlignCenter,
   ChevronDown,
   Copy,
+  Maximize,
   Maximize2,
   Minimize2,
   Pin,
@@ -15,6 +17,7 @@ import {
 import React, { type RefObject, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
+import { type TerminalWidthMode, useTerminalStore } from "@/stores/terminal-store";
 import type { Shell, Terminal } from "@/types/terminal";
 import { cn } from "@/utils/cn";
 import Dropdown from "../ui/dropdown";
@@ -147,6 +150,73 @@ const TerminalContextMenu = ({
   );
 };
 
+interface ToolbarContextMenuProps {
+  isOpen: boolean;
+  position: { x: number; y: number };
+  onClose: () => void;
+  currentMode: TerminalWidthMode;
+  onModeChange: (mode: TerminalWidthMode) => void;
+}
+
+const ToolbarContextMenu = ({
+  isOpen,
+  position,
+  onClose,
+  currentMode,
+  onModeChange,
+}: ToolbarContextMenuProps) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const documentRef = useRef(document);
+
+  useOnClickOutside(menuRef as RefObject<HTMLElement>, () => {
+    onClose();
+  });
+
+  useEventListener(
+    "keydown",
+    (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    },
+    documentRef,
+  );
+
+  if (!isOpen) return null;
+
+  const modes: { value: TerminalWidthMode; label: string; icon: React.ReactNode }[] = [
+    { value: "full", label: "Full Width", icon: <Maximize size={12} /> },
+    { value: "editor", label: "Editor Width", icon: <AlignCenter size={12} /> },
+  ];
+
+  return (
+    <div
+      ref={menuRef}
+      className="fixed z-50 w-[180px] border border-border bg-secondary-bg py-1 shadow-lg"
+      style={{ left: position.x, top: position.y }}
+    >
+      <div className="px-2 py-1 font-mono text-[10px] text-text-lighter">Terminal Width</div>
+      <div className="my-1 border-border border-t" />
+      {modes.map((mode) => (
+        <button
+          key={mode.value}
+          className={cn(
+            "flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover",
+            currentMode === mode.value && "bg-selected",
+          )}
+          onClick={() => {
+            onModeChange(mode.value);
+            onClose();
+          }}
+        >
+          {mode.icon}
+          {mode.label}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 interface TerminalTabBarProps {
   terminals: Terminal[];
   activeTerminalId: string | null;
@@ -201,6 +271,14 @@ const TerminalTabBar = ({
     position: { x: number; y: number };
     terminal: Terminal | null;
   }>({ isOpen: false, position: { x: 0, y: 0 }, terminal: null });
+
+  const [toolbarContextMenu, setToolbarContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+  }>({ isOpen: false, position: { x: 0, y: 0 } });
+
+  const widthMode = useTerminalStore((state) => state.widthMode);
+  const setWidthMode = useTerminalStore((state) => state.setWidthMode);
 
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -315,6 +393,25 @@ const TerminalTabBar = ({
     setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, terminal: null });
   };
 
+  const handleToolbarContextMenu = (e: React.MouseEvent) => {
+    // Only open on empty space, not on tabs or buttons
+    if (
+      (e.target as HTMLElement).closest("[data-tab-container]") ||
+      (e.target as HTMLElement).closest("button")
+    ) {
+      return;
+    }
+    e.preventDefault();
+    setToolbarContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+    });
+  };
+
+  const closeToolbarContextMenu = () => {
+    setToolbarContextMenu({ isOpen: false, position: { x: 0, y: 0 } });
+  };
+
   // Sort terminals: pinned tabs first, then regular tabs
   const sortedTerminals = [...terminals].sort((a, b) => {
     if (a.isPinned && !b.isPinned) return -1;
@@ -424,6 +521,7 @@ const TerminalTabBar = ({
           scrollbarWidth: "thin",
           scrollbarGutter: "stable",
         }}
+        onContextMenu={handleToolbarContextMenu}
       >
         {/* Left side - Terminal tabs */}
         <div
@@ -661,21 +759,30 @@ const TerminalTabBar = ({
       </div>
 
       {createPortal(
-        <TerminalContextMenu
-          isOpen={contextMenu.isOpen}
-          position={contextMenu.position}
-          terminal={contextMenu.terminal}
-          onClose={closeContextMenu}
-          onPin={(terminalId) => {
-            onTabPin?.(terminalId);
-          }}
-          onCloseTab={(terminalId) => {
-            onTabClose(terminalId, {} as React.MouseEvent);
-          }}
-          onCloseOthers={onCloseOtherTabs || (() => {})}
-          onCloseAll={onCloseAllTabs || (() => {})}
-          onCloseToRight={onCloseTabsToRight || (() => {})}
-        />,
+        <>
+          <TerminalContextMenu
+            isOpen={contextMenu.isOpen}
+            position={contextMenu.position}
+            terminal={contextMenu.terminal}
+            onClose={closeContextMenu}
+            onPin={(terminalId) => {
+              onTabPin?.(terminalId);
+            }}
+            onCloseTab={(terminalId) => {
+              onTabClose(terminalId, {} as React.MouseEvent);
+            }}
+            onCloseOthers={onCloseOtherTabs || (() => {})}
+            onCloseAll={onCloseAllTabs || (() => {})}
+            onCloseToRight={onCloseTabsToRight || (() => {})}
+          />
+          <ToolbarContextMenu
+            isOpen={toolbarContextMenu.isOpen}
+            position={toolbarContextMenu.position}
+            onClose={closeToolbarContextMenu}
+            currentMode={widthMode}
+            onModeChange={setWidthMode}
+          />
+        </>,
         document.body,
       )}
     </>

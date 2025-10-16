@@ -122,11 +122,11 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     console.log("Creating xterm instance...");
     try {
       const terminal = new Terminal({
-        fontFamily: `${editorFontFamily}, "Fira Code", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace`,
+        fontFamily: `${editorFontFamily}, "JetBrains Mono", "Fira Code", "Cascadia Code", Consolas, "Courier New", monospace`,
         fontSize: fontSize,
         fontWeight: "normal",
         fontWeightBold: "bold",
-        lineHeight: 1.2,
+        lineHeight: 1,
         letterSpacing: 0,
         cursorBlink: true,
         cursorStyle: "bar",
@@ -181,9 +181,20 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       // Open terminal in DOM
       terminal.open(terminalRef.current);
 
-      // Allow shortcuts to be handled
+      // Allow shortcuts to be handled, but let terminal control keys through
       terminal.attachCustomKeyEventHandler((e) => {
-        return !(e.ctrlKey || e.metaKey);
+        // Allow all Ctrl key combinations to pass through to the terminal
+        // This includes Ctrl+C, Ctrl+Z, etc.
+        if (e.ctrlKey && !e.metaKey) {
+          return true; // Allow terminal to handle
+        }
+
+        // Block Cmd/Meta key combinations so they can be handled by the app
+        if (e.metaKey) {
+          return false; // Don't let terminal handle
+        }
+
+        return true; // Allow everything else
       });
 
       // Load WebLinksAddon after terminal is open

@@ -26,10 +26,14 @@ export const FontSelector = ({
 
   // Load fonts on mount
   useEffect(() => {
+    console.log("FontSelector mounting, monospaceOnly:", monospaceOnly);
+    console.log("Available fonts:", availableFonts.length);
+    console.log("Monospace fonts:", monospaceFonts.length);
+
     if (monospaceOnly) {
-      loadMonospaceFonts();
+      loadMonospaceFonts(true); // Force refresh
     } else {
-      loadAvailableFonts();
+      loadAvailableFonts(true); // Force refresh
     }
   }, [monospaceOnly, loadAvailableFonts, loadMonospaceFonts]);
 

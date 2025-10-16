@@ -232,11 +232,23 @@
   font-weight: bold;
 }
 
-/* Hide native selected style */
+/* Hide native selected style on textarea */
 .selection-transparent::selection {
-  background: transparent;
+  background: transparent !important;
+  color: inherit !important;
 }
 
 .selection-transparent::-moz-selection {
-  background: transparent;
+  background: transparent !important;
+  color: inherit !important;
+}
+
+textarea.selection-transparent::selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+textarea.selection-transparent::-moz-selection {
+  background: transparent !important;
+  color: inherit !important;
 }

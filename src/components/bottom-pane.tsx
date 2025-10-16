@@ -67,10 +67,9 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
   return (
     <div
       className={cn(
-        "z-50 flex flex-col border-border border-t bg-secondary-bg",
-        isFullScreen ? "fixed inset-x-0" : "fixed inset-x-0 bottom-0",
+        "relative z-50 flex flex-col border-border border-t bg-secondary-bg",
+        isFullScreen && "fixed inset-x-0",
         !isBottomPaneVisible && "hidden",
-        "transition-all duration-200 ease-in-out",
       )}
       style={
         isFullScreen
@@ -80,6 +79,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
             }
           : {
               height: `${height}px`,
+              flexShrink: 0,
             }
       }
     >
@@ -87,7 +87,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
       <div
         onMouseDown={handleMouseDown}
         className={cn(
-          "group absolute top-0 right-0 left-0 h-1",
+          "group absolute top-0 right-0 left-0 z-[51] h-1",
           "cursor-ns-resize transition-colors duration-150 hover:bg-blue-500/30",
           isResizing && "bg-blue-500/50",
         )}

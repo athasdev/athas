@@ -398,7 +398,7 @@ const TerminalContainer = ({
 
       {/* Terminal Sessions */}
       <div
-        className="relative bg-primary-bg"
+        className="relative bg-primary-bg pb-2"
         style={{
           //height: "calc(100% - 28px)",
           transform: `scale(${zoomLevel})`,
