@@ -523,7 +523,7 @@ export function TextEditor() {
 
       handleSelectionChange();
     },
-    [content, handleSelectionChange],
+    [restorePositionForFile, handleSelectionChange],
   );
 
   // Restore cursor position when switching to a new file
@@ -996,7 +996,7 @@ export function TextEditor() {
     if (activeBufferId) {
       updateBufferContent(activeBufferId, newContent);
     }
-  }, [useEditorCursorStore, content, onChange, updateBufferContent, activeBufferId]);
+  }, [content, onChange, updateBufferContent, activeBufferId]);
 
   const handleMoveLineDown = useCallback(() => {
     const cursorPos = useEditorCursorStore.getState().cursorPosition;
@@ -1015,7 +1015,7 @@ export function TextEditor() {
     if (activeBufferId) {
       updateBufferContent(activeBufferId, newContent);
     }
-  }, [useEditorCursorStore, content, onChange, updateBufferContent, activeBufferId]);
+  }, [content, onChange, updateBufferContent, activeBufferId]);
 
   const handleToggleBookmark = useCallback(() => {
     // Toggle bookmark - not implemented yet
@@ -1085,7 +1085,6 @@ export function TextEditor() {
         style={{
           left: `${gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN}px`,
           top: 0,
-          caretColor: "transparent",
           right: 0,
           bottom: 0,
           fontSize: `${fontSize}px`,

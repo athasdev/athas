@@ -3,6 +3,10 @@ import { useSettingsStore } from "@/settings/store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorInstanceStore } from "@/stores/editor-instance-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
+import { executeVimCommand } from "@/stores/vim";
+import { expectsMoreKeys, isCommandComplete } from "@/stores/vim/core/command-parser";
+import { isMotion } from "@/stores/vim/core/motion-registry";
+import { isOperator } from "@/stores/vim/operators";
 import { createVimEditing } from "@/stores/vim-editing";
 import { createVimNavigation } from "@/stores/vim-navigation";
 import { useVimSearchStore } from "@/stores/vim-search";
@@ -28,10 +32,18 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
     reset,
     setLastKey,
     clearLastKey,
+    addToKeyBuffer,
+    clearKeyBuffer,
+    getKeyBuffer,
+    setVisualMode,
   } = useVimStore.use.actions();
-  const { setCursorVisibility } = useEditorCursorStore.use.actions();
+  const { setCursorVisibility, setCursorPosition } = useEditorCursorStore.use.actions();
   const { setDisabled } = useEditorInstanceStore.use.actions();
   const { startSearch, findNext, findPrevious } = useVimSearchStore.use.actions();
+
+  // Helper functions for accessing editor state
+  const getCursorPosition = () => useEditorCursorStore.getState().cursorPosition;
+  const getLines = () => useEditorViewStore.getState().lines;
 
   // Reset vim state when vim mode is enabled/disabled
   useEffect(() => {
@@ -112,6 +124,15 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
       const isCodeEditor =
         target.tagName === "TEXTAREA" && target.classList.contains("editor-textarea");
 
+      // Allow keyboard shortcuts with modifiers (Cmd/Ctrl/Alt) to pass through
+      // Exception: Ctrl+r is vim redo
+      if (
+        (e.metaKey || e.ctrlKey || e.altKey) &&
+        !(e.ctrlKey && e.key === "r" && !e.metaKey && !e.altKey)
+      ) {
+        return;
+      }
+
       if (isCodeEditor) {
         // In code editor, vim mode takes precedence
         // Let vim handle all keys when vim mode is active
@@ -151,239 +172,296 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
       // Don't handle if we're capturing input in command mode
       if (isCapturingInput()) return;
 
-      switch (e.key) {
+      const key = e.key;
+
+      // Handle special commands that don't fit the operator-motion pattern
+      // These commands are handled directly without going through the key buffer
+      switch (key) {
         case "i":
           e.preventDefault();
-          e.stopPropagation(); // Prevent other handlers from processing this
-          setMode("insert");
-          return true; // Indicate we handled the key
-        case "a":
-          e.preventDefault();
           e.stopPropagation();
-          vimEdit.appendToLine();
+          clearKeyBuffer();
           setMode("insert");
           return true;
+        case "a": {
+          e.preventDefault();
+          e.stopPropagation();
+          clearKeyBuffer();
+          // Move cursor one position right before entering insert mode
+          const currentPos = getCursorPosition();
+          const lines = getLines();
+          const newColumn = Math.min(lines[currentPos.line].length, currentPos.column + 1);
+          const newOffset = calculateOffsetFromPosition(currentPos.line, newColumn, lines);
+          const newPosition = { line: currentPos.line, column: newColumn, offset: newOffset };
+          setCursorPosition(newPosition);
+
+          // Update textarea cursor
+          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.selectionStart = textarea.selectionEnd = newOffset;
+          }
+
+          setMode("insert");
+          return true;
+        }
         case "A":
           e.preventDefault();
           e.stopPropagation();
+          clearKeyBuffer();
           vimEdit.appendToLine();
           setMode("insert");
           return true;
         case "I":
           e.preventDefault();
           e.stopPropagation();
+          clearKeyBuffer();
           vimEdit.insertAtLineStart();
           setMode("insert");
           return true;
         case "o":
           e.preventDefault();
           e.stopPropagation();
+          clearKeyBuffer();
           vimEdit.openLineBelow();
           setMode("insert");
           return true;
         case "O":
           e.preventDefault();
           e.stopPropagation();
+          clearKeyBuffer();
           vimEdit.openLineAbove();
           setMode("insert");
           return true;
         case ":":
           e.preventDefault();
           e.stopPropagation();
+          clearKeyBuffer();
           enterCommandMode();
           return true;
         case "v": {
           e.preventDefault();
           e.stopPropagation();
-          // Start visual selection at current cursor position
+          clearKeyBuffer();
           const currentPos = useEditorCursorStore.getState().cursorPosition;
           const { setVisualSelection } = useVimStore.use.actions();
           setVisualSelection(
             { line: currentPos.line, column: currentPos.column },
             { line: currentPos.line, column: currentPos.column },
           );
+          setVisualMode("char");
           setMode("visual");
+
+          // Initialize textarea selection at current position
+          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.selectionStart = textarea.selectionEnd = currentPos.offset;
+            textarea.focus();
+          }
+
           return true;
         }
         case "V": {
           e.preventDefault();
           e.stopPropagation();
-          // Start visual line selection (select entire current line)
+          clearKeyBuffer();
           const currentPos = useEditorCursorStore.getState().cursorPosition;
           const lines = useEditorViewStore.getState().lines;
-          const _lineStart = calculateOffsetFromPosition(currentPos.line, 0, lines);
-          const _lineEnd = calculateOffsetFromPosition(
-            currentPos.line,
-            lines[currentPos.line].length,
-            lines,
-          );
           const { setVisualSelection } = useVimStore.use.actions();
           setVisualSelection(
             { line: currentPos.line, column: 0 },
             { line: currentPos.line, column: lines[currentPos.line].length },
           );
+          setVisualMode("line");
           setMode("visual");
+
+          // Initialize textarea selection for the whole line
+          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+          if (textarea) {
+            const startOffset = calculateOffsetFromPosition(currentPos.line, 0, lines);
+            const endOffset = calculateOffsetFromPosition(
+              currentPos.line,
+              lines[currentPos.line].length,
+              lines,
+            );
+            textarea.selectionStart = startOffset;
+            textarea.selectionEnd = endOffset;
+            textarea.focus();
+          }
+
           return true;
         }
         case "Escape":
           e.preventDefault();
           e.stopPropagation();
-          // Already in normal mode, but ensure we exit any sub-modes
+          clearKeyBuffer();
           setMode("normal");
           return true;
-        // Navigation keys - hjkl movement
-        case "h":
-        case "ArrowLeft":
+        case "p":
           e.preventDefault();
           e.stopPropagation();
-          vimNav.moveLeft();
+          clearKeyBuffer();
+          vimEdit.paste();
           return true;
-        case "j":
-        case "ArrowDown":
+        case "P":
           e.preventDefault();
           e.stopPropagation();
-          vimNav.moveDown();
+          clearKeyBuffer();
+          vimEdit.pasteAbove();
           return true;
-        case "k":
-        case "ArrowUp":
+        case "u":
           e.preventDefault();
           e.stopPropagation();
-          vimNav.moveUp();
+          clearKeyBuffer();
+          vimEdit.undo();
           return true;
-        case "l":
-        case "ArrowRight":
+        case "r":
+          if (e.ctrlKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearKeyBuffer();
+            vimEdit.redo();
+            return true;
+          }
+          // Wait for next character for replace
           e.preventDefault();
           e.stopPropagation();
-          vimNav.moveRight();
+          setLastKey("r");
           return true;
-        case "w":
+        case "s":
           e.preventDefault();
           e.stopPropagation();
-          vimNav.moveWordForward();
+          clearKeyBuffer();
+          vimEdit.substituteChar();
+          setMode("insert");
           return true;
-        case "b":
+        case "x":
           e.preventDefault();
           e.stopPropagation();
-          vimNav.moveWordBackward();
+          clearKeyBuffer();
+          vimEdit.deleteChar();
           return true;
-        case "0":
+        case "X":
           e.preventDefault();
           e.stopPropagation();
-          vimNav.moveToLineStart();
+          clearKeyBuffer();
+          vimEdit.deleteCharBefore();
           return true;
-        case "$":
+        case "/":
           e.preventDefault();
           e.stopPropagation();
-          vimNav.moveToLineEnd();
+          clearKeyBuffer();
+          startSearch();
+          return true;
+        case "n":
+          e.preventDefault();
+          e.stopPropagation();
+          clearKeyBuffer();
+          findNext();
+          return true;
+        case "N":
+          e.preventDefault();
+          e.stopPropagation();
+          clearKeyBuffer();
+          findPrevious();
           return true;
         case "g":
           e.preventDefault();
           e.stopPropagation();
           if (lastKey === "g") {
-            // gg - go to top
             vimNav.moveToFileStart();
             clearLastKey();
+            clearKeyBuffer();
           } else {
-            // First g, wait for second key
             setLastKey("g");
           }
           return true;
         case "G":
           e.preventDefault();
           e.stopPropagation();
+          clearKeyBuffer();
           vimNav.moveToFileEnd();
           return true;
-        // Text editing commands
-        case "d":
-          e.preventDefault();
-          e.stopPropagation();
-          if (lastKey === "d") {
-            // dd - delete line
-            vimEdit.deleteLine();
-            clearLastKey();
-          } else {
-            // First d, wait for second key
-            setLastKey("d");
-          }
-          return true;
-        case "y":
-          e.preventDefault();
-          e.stopPropagation();
-          if (lastKey === "y") {
-            // yy - yank line
-            vimEdit.yankLine();
-            clearLastKey();
-          } else {
-            // First y, wait for second key
-            setLastKey("y");
-          }
-          return true;
-        case "p":
-          e.preventDefault();
-          e.stopPropagation();
-          vimEdit.paste();
-          clearLastKey(); // Clear any pending double key commands
-          return true;
-        case "P":
-          e.preventDefault();
-          e.stopPropagation();
-          vimEdit.pasteAbove();
-          clearLastKey();
-          return true;
-        case "u":
-          e.preventDefault();
-          e.stopPropagation();
-          vimEdit.undo();
-          clearLastKey();
-          return true;
-        case "r":
-          if (e.ctrlKey) {
-            e.preventDefault();
-            e.stopPropagation();
-            vimEdit.redo();
-            clearLastKey();
-            return true;
-          }
-          break;
-        case "x":
-          e.preventDefault();
-          e.stopPropagation();
-          vimEdit.deleteChar();
-          clearLastKey();
-          return true;
-        case "X":
-          e.preventDefault();
-          e.stopPropagation();
-          vimEdit.deleteCharBefore();
-          clearLastKey();
-          return true;
-        // Search commands
-        case "/":
-          e.preventDefault();
-          e.stopPropagation();
-          startSearch();
-          clearLastKey();
-          return true;
-        case "n":
-          e.preventDefault();
-          e.stopPropagation();
-          findNext();
-          clearLastKey();
-          return true;
-        case "N":
-          e.preventDefault();
-          e.stopPropagation();
-          findPrevious();
-          clearLastKey();
-          return true;
       }
 
-      // Clear lastKey if any other key is pressed
-      if (lastKey) {
+      // Handle double-key commands (dd, yy) and character replacement (r{char})
+      if (key === "d" && lastKey === "d") {
+        e.preventDefault();
+        e.stopPropagation();
+        vimEdit.deleteLine();
         clearLastKey();
+        clearKeyBuffer();
+        return true;
+      }
+      if (key === "y" && lastKey === "y") {
+        e.preventDefault();
+        e.stopPropagation();
+        vimEdit.yankLine();
+        clearLastKey();
+        clearKeyBuffer();
+        return true;
+      }
+      if (lastKey === "r" && key.length === 1) {
+        // Replace character with the pressed key
+        e.preventDefault();
+        e.stopPropagation();
+        vimEdit.replaceChar(key);
+        clearLastKey();
+        clearKeyBuffer();
+        return true;
       }
 
-      return false; // Return false for unhandled keys
+      // Now handle vim command sequences with the new modular system
+      // This supports: [count][operator][count][motion/text-object]
+      // Examples: 3j, 5w, d3w, 3dw, ciw, di", etc.
+
+      // Check if this is a valid vim command key
+      const isDigit = /^[0-9]$/.test(key);
+      const isTextObjectModifier = key === "i" || key === "a";
+      const buffer = getKeyBuffer();
+
+      // Determine if this key can be part of a vim command
+      const canBePartOfCommand =
+        isDigit ||
+        isOperator(key) ||
+        isMotion(key) ||
+        (isTextObjectModifier && buffer.length > 0 && isOperator(buffer[buffer.length - 1]));
+
+      if (!canBePartOfCommand) {
+        // Not a vim command, clear buffer and let it pass through
+        if (buffer.length > 0) {
+          clearKeyBuffer();
+        }
+        return false;
+      }
+
+      // Add key to buffer
+      e.preventDefault();
+      e.stopPropagation();
+      addToKeyBuffer(key);
+
+      const newBuffer = getKeyBuffer();
+
+      // Check if we have a complete command
+      if (isCommandComplete(newBuffer)) {
+        // Execute the command
+        const success = executeVimCommand(newBuffer);
+        clearKeyBuffer();
+
+        if (!success) {
+          console.warn("Failed to execute vim command:", newBuffer.join(""));
+        }
+        return true;
+      }
+
+      // Check if we should wait for more keys
+      if (expectsMoreKeys(newBuffer)) {
+        // Wait for more keys
+        return true;
+      }
+
+      // Invalid command, clear buffer
+      clearKeyBuffer();
+      return false;
     };
 
     const handleInsertMode = (e: KeyboardEvent) => {
@@ -398,7 +476,11 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
     };
 
     const handleVisualMode = (e: KeyboardEvent) => {
-      switch (e.key) {
+      const key = e.key;
+      const visualMode = useVimStore.getState().visualMode;
+      const visualSelection = useVimStore.getState().visualSelection;
+
+      switch (key) {
         case "Escape":
           e.preventDefault();
           e.stopPropagation();
@@ -409,18 +491,151 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           e.stopPropagation();
           enterCommandMode();
           return true;
-        // Movement keys in visual mode extend selection
-        case "h":
-        case "j":
-        case "k":
-        case "l":
-        case "w":
-        case "b":
+        case "d":
+        case "y":
+        case "c": {
           e.preventDefault();
           e.stopPropagation();
-          // Would need editor integration for visual selection
+          // Handle operators on visual selection
+          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+          if (textarea && visualSelection.start && visualSelection.end) {
+            const lines = useEditorViewStore.getState().lines;
+            const startOffset = calculateOffsetFromPosition(
+              visualSelection.start.line,
+              visualSelection.start.column,
+              lines,
+            );
+            const endOffset = calculateOffsetFromPosition(
+              visualSelection.end.line,
+              visualSelection.end.column,
+              lines,
+            );
+
+            if (key === "d") {
+              vimEdit.deleteVisualSelection(startOffset, endOffset);
+            } else if (key === "y") {
+              vimEdit.yankVisualSelection(startOffset, endOffset);
+            } else if (key === "c") {
+              vimEdit.deleteVisualSelection(startOffset, endOffset);
+              setMode("insert");
+              return true;
+            }
+          }
+          setMode("normal");
           return true;
+        }
       }
+
+      // Movement keys in visual mode extend selection
+      const isMovementKey =
+        key === "h" ||
+        key === "j" ||
+        key === "k" ||
+        key === "l" ||
+        key === "w" ||
+        key === "b" ||
+        key === "e" ||
+        key === "0" ||
+        key === "$" ||
+        key === "ArrowLeft" ||
+        key === "ArrowRight" ||
+        key === "ArrowUp" ||
+        key === "ArrowDown";
+
+      if (isMovementKey) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Get current cursor position
+        const currentPos = useEditorCursorStore.getState().cursorPosition;
+        const lines = useEditorViewStore.getState().lines;
+
+        // Execute the motion to get new cursor position
+        let newLine = currentPos.line;
+        let newColumn = currentPos.column;
+
+        switch (key) {
+          case "h":
+          case "ArrowLeft":
+            newColumn = Math.max(0, currentPos.column - 1);
+            break;
+          case "l":
+          case "ArrowRight":
+            newColumn = Math.min(lines[currentPos.line].length, currentPos.column + 1);
+            break;
+          case "j":
+          case "ArrowDown":
+            newLine = Math.min(lines.length - 1, currentPos.line + 1);
+            newColumn = Math.min(lines[newLine].length, currentPos.column);
+            break;
+          case "k":
+          case "ArrowUp":
+            newLine = Math.max(0, currentPos.line - 1);
+            newColumn = Math.min(lines[newLine].length, currentPos.column);
+            break;
+          case "w":
+            vimNav.moveWordForward();
+            return true;
+          case "b":
+            vimNav.moveWordBackward();
+            return true;
+          case "e":
+            vimNav.moveWordEnd();
+            return true;
+          case "0":
+            newColumn = 0;
+            break;
+          case "$":
+            newColumn = lines[currentPos.line].length;
+            break;
+        }
+
+        // Update cursor position
+        const newOffset = calculateOffsetFromPosition(newLine, newColumn, lines);
+        useEditorCursorStore.getState().actions.setCursorPosition({
+          line: newLine,
+          column: newColumn,
+          offset: newOffset,
+        });
+
+        // Update visual selection end
+        const { setVisualSelection } = useVimStore.use.actions();
+        if (visualSelection.start) {
+          if (visualMode === "line") {
+            // Line mode: select entire lines
+            setVisualSelection(
+              { line: visualSelection.start.line, column: 0 },
+              { line: newLine, column: lines[newLine].length },
+            );
+          } else {
+            // Character mode: select characters
+            setVisualSelection(visualSelection.start, { line: newLine, column: newColumn });
+          }
+        }
+
+        // Update textarea selection to show visual highlighting
+        const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+        if (textarea && visualSelection.start) {
+          const startOffset = calculateOffsetFromPosition(
+            visualSelection.start.line,
+            visualSelection.start.column,
+            lines,
+          );
+          const endOffset = newOffset;
+
+          if (startOffset <= endOffset) {
+            textarea.selectionStart = startOffset;
+            textarea.selectionEnd = endOffset;
+          } else {
+            textarea.selectionStart = endOffset;
+            textarea.selectionEnd = startOffset;
+          }
+          textarea.dispatchEvent(new Event("select"));
+        }
+
+        return true;
+      }
+
       return false;
     };
 

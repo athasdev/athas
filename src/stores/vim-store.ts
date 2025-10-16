@@ -13,10 +13,12 @@ interface VimState {
   commandInput: string; // The command being typed after :
   lastCommand: string; // Store the last executed command
   lastKey: string | null; // For double key commands like dd, yy
+  keyBuffer: string[]; // Buffer for multi-key commands (e.g., "3", "d", "w")
   visualSelection: {
     start: { line: number; column: number } | null;
     end: { line: number; column: number } | null;
   };
+  visualMode: "char" | "line" | null; // Track visual mode type
 }
 
 const defaultVimState: VimState = {
@@ -26,10 +28,12 @@ const defaultVimState: VimState = {
   commandInput: "",
   lastCommand: "",
   lastKey: null,
+  keyBuffer: [],
   visualSelection: {
     start: null,
     end: null,
   },
+  visualMode: null,
 };
 
 const useVimStoreBase = create(
@@ -39,6 +43,8 @@ const useVimStoreBase = create(
         setMode: (mode: VimMode) => {
           set((state) => {
             state.mode = mode;
+            // Clear key buffer when switching modes
+            state.keyBuffer = [];
             // Clear command mode when switching modes
             if (mode !== "normal") {
               state.isCommandMode = false;
@@ -48,6 +54,7 @@ const useVimStoreBase = create(
             if (mode !== "visual") {
               state.visualSelection.start = null;
               state.visualSelection.end = null;
+              state.visualMode = null;
             }
           });
         },
@@ -118,6 +125,28 @@ const useVimStoreBase = create(
         clearLastKey: () => {
           set((state) => {
             state.lastKey = null;
+          });
+        },
+
+        addToKeyBuffer: (key: string) => {
+          set((state) => {
+            state.keyBuffer.push(key);
+          });
+        },
+
+        clearKeyBuffer: () => {
+          set((state) => {
+            state.keyBuffer = [];
+          });
+        },
+
+        getKeyBuffer: (): string[] => {
+          return get().keyBuffer;
+        },
+
+        setVisualMode: (mode: "char" | "line" | null) => {
+          set((state) => {
+            state.visualMode = mode;
           });
         },
 

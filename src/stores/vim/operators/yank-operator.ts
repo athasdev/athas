@@ -1,0 +1,67 @@
+/**
+ * Yank operator (y)
+ */
+
+import type { EditorContext, Operator, VimRange } from "../core/types";
+
+/**
+ * Vim clipboard for yanked content
+ */
+interface VimClipboard {
+  content: string;
+  linewise: boolean;
+}
+
+let vimClipboard: VimClipboard = {
+  content: "",
+  linewise: false,
+};
+
+/**
+ * Yank operator - copies text to vim clipboard
+ */
+export const yankOperator: Operator = {
+  name: "yank",
+  repeatable: false, // Yanking doesn't need to be repeated with dot
+  entersInsertMode: false,
+
+  execute: (range: VimRange, context: EditorContext): void => {
+    const { content, lines } = context;
+
+    // Handle linewise yank
+    if (range.linewise) {
+      const yankedLines = lines.slice(range.start.line, range.end.line + 1);
+      vimClipboard = {
+        content: yankedLines.join("\n"),
+        linewise: true,
+      };
+      return;
+    }
+
+    // Handle character-wise yank
+    const startOffset = Math.min(range.start.offset, range.end.offset);
+    const endOffset = Math.max(range.start.offset, range.end.offset);
+
+    // For inclusive ranges, include the end character
+    const actualEndOffset = range.inclusive ? endOffset + 1 : endOffset;
+
+    vimClipboard = {
+      content: content.slice(startOffset, actualEndOffset),
+      linewise: false,
+    };
+  },
+};
+
+/**
+ * Get the current vim clipboard content
+ */
+export const getVimClipboard = (): VimClipboard => {
+  return { ...vimClipboard };
+};
+
+/**
+ * Set the vim clipboard content (useful for paste operations)
+ */
+export const setVimClipboard = (clipboard: VimClipboard): void => {
+  vimClipboard = clipboard;
+};

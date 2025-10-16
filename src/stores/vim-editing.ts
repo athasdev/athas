@@ -21,10 +21,14 @@ export interface VimEditingCommands {
   redo: () => void;
   deleteChar: () => void;
   deleteCharBefore: () => void;
+  replaceChar: (char: string) => void;
+  substituteChar: () => void;
   openLineBelow: () => void;
   openLineAbove: () => void;
   appendToLine: () => void;
   insertAtLineStart: () => void;
+  deleteVisualSelection: (startOffset: number, endOffset: number) => void;
+  yankVisualSelection: (startOffset: number, endOffset: number) => void;
 }
 
 export const createVimEditing = (): VimEditingCommands => {
@@ -281,6 +285,44 @@ export const createVimEditing = (): VimEditingCommands => {
       }
     },
 
+    replaceChar: (char: string) => {
+      saveUndoState();
+
+      const currentPos = getCursorPosition();
+      const currentContent = getContent();
+
+      if (currentPos.offset < currentContent.length) {
+        // Replace character at cursor with new character
+        const newContent =
+          currentContent.slice(0, currentPos.offset) +
+          char +
+          currentContent.slice(currentPos.offset + 1);
+
+        updateContent(newContent);
+        // Cursor position stays the same
+        updateTextareaCursor(currentPos);
+      }
+    },
+
+    substituteChar: () => {
+      saveUndoState();
+
+      const currentPos = getCursorPosition();
+      const currentContent = getContent();
+
+      if (currentPos.offset < currentContent.length) {
+        const deletedChar = currentContent[currentPos.offset];
+        vimClipboard = { content: deletedChar, type: "char" };
+
+        // Delete character and enter insert mode
+        const newContent =
+          currentContent.slice(0, currentPos.offset) + currentContent.slice(currentPos.offset + 1);
+
+        updateContent(newContent);
+        updateTextareaCursor(currentPos);
+      }
+    },
+
     openLineBelow: () => {
       saveUndoState();
 
@@ -353,6 +395,47 @@ export const createVimEditing = (): VimEditingCommands => {
       const newPosition = { line: currentPos.line, column: targetColumn, offset: newOffset };
       setCursorPosition(newPosition);
       updateTextareaCursor(newPosition);
+    },
+
+    deleteVisualSelection: (startOffset: number, endOffset: number) => {
+      saveUndoState();
+
+      const currentContent = getContent();
+      const start = Math.min(startOffset, endOffset);
+      const end = Math.max(startOffset, endOffset);
+
+      // Save deleted content to clipboard
+      const deletedContent = currentContent.slice(start, end);
+      vimClipboard = { content: deletedContent, type: "char" };
+
+      // Delete the selection
+      const newContent = currentContent.slice(0, start) + currentContent.slice(end);
+      updateContent(newContent);
+
+      // Move cursor to start of deleted selection
+      const newLines = newContent.split("\n");
+      let line = 0;
+      let offset = 0;
+
+      while (offset + newLines[line].length + 1 <= start && line < newLines.length - 1) {
+        offset += newLines[line].length + 1;
+        line++;
+      }
+
+      const column = start - offset;
+      const newPosition = { line, column, offset: start };
+      setCursorPosition(newPosition);
+      updateTextareaCursor(newPosition);
+    },
+
+    yankVisualSelection: (startOffset: number, endOffset: number) => {
+      const currentContent = getContent();
+      const start = Math.min(startOffset, endOffset);
+      const end = Math.max(startOffset, endOffset);
+
+      // Copy selected content to clipboard
+      const selectedContent = currentContent.slice(start, end);
+      vimClipboard = { content: selectedContent, type: "char" };
     },
   };
 };

@@ -14,6 +14,7 @@ export interface VimNavigationCommands {
   moveToFileEnd: () => void;
   moveWordForward: () => void;
   moveWordBackward: () => void;
+  moveWordEnd: () => void;
 }
 
 export const createVimNavigation = (): VimNavigationCommands => {
@@ -272,6 +273,55 @@ export const createVimNavigation = (): VimNavigationCommands => {
         newLine--;
         newColumn = lines[newLine].length;
       }
+
+      const newOffset = calculateOffsetFromPosition(newLine, newColumn, lines);
+      const newPosition = {
+        line: newLine,
+        column: newColumn,
+        offset: newOffset,
+      };
+      handleMovement(newPosition);
+    },
+
+    moveWordEnd: () => {
+      const currentPos = getCursorPosition();
+      const lines = getLines();
+      const currentLineText = lines[currentPos.line];
+
+      let newColumn = currentPos.column;
+      let newLine = currentPos.line;
+
+      // If we're at the end of a word, skip to next word
+      if (newColumn < currentLineText.length && /\w/.test(currentLineText[newColumn])) {
+        newColumn++;
+      }
+
+      // Skip whitespace
+      while (newColumn < currentLineText.length && /\s/.test(currentLineText[newColumn])) {
+        newColumn++;
+      }
+
+      // Move to end of word
+      while (newColumn < currentLineText.length && /\w/.test(currentLineText[newColumn])) {
+        newColumn++;
+      }
+
+      // If at end of line, move to next line
+      if (newColumn >= currentLineText.length && newLine < lines.length - 1) {
+        newLine++;
+        newColumn = 0;
+        // Find first word on next line
+        const nextLineText = lines[newLine];
+        while (newColumn < nextLineText.length && /\s/.test(nextLineText[newColumn])) {
+          newColumn++;
+        }
+        while (newColumn < nextLineText.length && /\w/.test(nextLineText[newColumn])) {
+          newColumn++;
+        }
+      }
+
+      // Vim's 'e' lands on the last character of the word, not past it
+      if (newColumn > 0) newColumn--;
 
       const newOffset = calculateOffsetFromPosition(newLine, newColumn, lines);
       const newPosition = {

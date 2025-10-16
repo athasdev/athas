@@ -19,19 +19,3 @@
 .editor-textarea[data-vim-mode="command"] {
   caret-color: transparent;
 }
-
-/* Vim mode indication in editor */
-.vim-mode-normal .editor-textarea:focus {
-  outline: 2px solid #3b82f6;
-  outline-offset: -2px;
-}
-
-.vim-mode-insert .editor-textarea:focus {
-  outline: 2px solid #22c55e;
-  outline-offset: -2px;
-}
-
-.vim-mode-visual .editor-textarea:focus {
-  outline: 2px solid #eab308;
-  outline-offset: -2px;
-}

@@ -3,8 +3,11 @@ import { Palette, Settings, Sparkles } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useFileSystemStore } from "@/file-system/controllers/store";
+import { useSettingsStore } from "@/settings/store";
 import { useAppStore } from "@/stores/app-store";
 import { useUIState } from "@/stores/ui-state-store";
+import { vimCommands } from "@/stores/vim-commands";
+import { useVimStore } from "@/stores/vim-store";
 import Command, {
   CommandEmpty,
   CommandHeader,
@@ -55,6 +58,10 @@ const CommandPalette = () => {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+
+  const { settings } = useSettingsStore();
+  const vimMode = settings.vimMode;
+  const { setMode } = useVimStore.use.actions();
 
   // Focus is handled internally when the palette becomes visible
 
@@ -122,8 +129,61 @@ const CommandPalette = () => {
     },
   ];
 
+  // Add vim commands if vim mode is enabled
+  const vimActions: Action[] = vimMode
+    ? vimCommands.map((cmd) => ({
+        id: `vim-${cmd.name}`,
+        label: `Vim: ${cmd.name}`,
+        description: cmd.description,
+        category: "Vim",
+        action: () => {
+          cmd.execute();
+          onClose();
+        },
+      }))
+    : [];
+
+  // Add mode-switching commands if vim mode is enabled
+  const vimModeActions: Action[] = vimMode
+    ? [
+        {
+          id: "vim-normal-mode",
+          label: "Vim: Enter Normal Mode",
+          description: "Switch to normal mode",
+          category: "Vim",
+          action: () => {
+            setMode("normal");
+            onClose();
+          },
+        },
+        {
+          id: "vim-insert-mode",
+          label: "Vim: Enter Insert Mode",
+          description: "Switch to insert mode",
+          category: "Vim",
+          action: () => {
+            setMode("insert");
+            onClose();
+          },
+        },
+        {
+          id: "vim-visual-mode",
+          label: "Vim: Enter Visual Mode",
+          description: "Switch to visual mode (character)",
+          category: "Vim",
+          action: () => {
+            setMode("visual");
+            onClose();
+          },
+        },
+      ]
+    : [];
+
+  // Combine all actions
+  const allActions = [...actions, ...vimActions, ...vimModeActions];
+
   // Filter actions based on query
-  const filteredActions = actions.filter(
+  const filteredActions = allActions.filter(
     (action) =>
       action.label.toLowerCase().includes(query.toLowerCase()) ||
       action.description?.toLowerCase().includes(query.toLowerCase()) ||
