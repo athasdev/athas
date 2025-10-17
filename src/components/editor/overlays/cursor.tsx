@@ -24,9 +24,9 @@ export function Cursor() {
     return {
       width: isNormalMode ? `${width}px` : "2px",
       backgroundColor: isNormalMode
-        ? "var(--cursor-color-block, #3B82F6A6)"
+        ? "var(--color-cursor-vim-normal)"
         : isInsertMode
-          ? "var(--cursor-color-insert, #22c55e)"
+          ? "var(--color-cursor-vim-insert)"
           : "var(--color-cursor)",
       borderRadius: isNormalMode ? "2px" : "1px",
       opacity: isNormalMode ? 0.85 : 1,
