@@ -17,16 +17,19 @@ export function Cursor() {
   const isCommandMode = useVimStore.use.isCommandMode();
 
   const cursorStyle = useMemo(() => {
-    const isBlockCursor = vimModeEnabled && !isCommandMode && vimMode === "normal";
+    const isNormalMode = vimModeEnabled && vimMode === "normal";
+    const isInsertMode = vimModeEnabled && vimMode === "insert";
     const width = Math.max(2, charWidth);
 
     return {
-      width: isBlockCursor ? `${width}px` : "2px",
-      backgroundColor: isBlockCursor
-        ? "var(--cursor-color-block, rgba(59, 130, 246, 0.65))"
-        : "var(--cursor-color, var(--color-cursor))",
-      borderRadius: isBlockCursor ? "2px" : "1px",
-      opacity: isBlockCursor ? 0.85 : 1,
+      width: isNormalMode ? `${width}px` : "2px",
+      backgroundColor: isNormalMode
+        ? "var(--cursor-color-block, #3B82F6A6)"
+        : isInsertMode
+          ? "var(--cursor-color-insert, #22c55e)"
+          : "var(--color-cursor)",
+      borderRadius: isNormalMode ? "2px" : "1px",
+      opacity: isNormalMode ? 0.85 : 1,
     };
   }, [vimModeEnabled, vimMode, isCommandMode, charWidth]);
 
