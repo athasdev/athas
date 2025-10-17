@@ -6,7 +6,6 @@
 /* utils like animations */
 @import "./styles/utils.css";
 @import "./styles/token-theme.css";
-@import "./styles/vim.css";
 
 /* Theme classes - defined inline since we only have 2 themes */
 @layer themes {
@@ -31,6 +30,8 @@
 
         /* Cursor color */
         --tw-cursor: #1a1a1a;
+        --tw-cursor-vim-normal: #3b82f6a6;
+        --tw-cursor-vim-insert: #22c55e;
 
         /* Diagnostic colors */
         --tw-error: #c53030;
@@ -97,6 +98,8 @@
 
         /* Cursor color - Dark */
         --tw-cursor: #e5e5e5;
+        --tw-cursor-vim-normal: #3b82f6a6;
+        --tw-cursor-vim-insert: #22c55e;
 
         /* Diagnostic colors */
         --tw-error: #f87171;
@@ -164,6 +167,8 @@
 
     /* Cursor color */
     --color-cursor: var(--tw-cursor);
+    --color-cursor-vim-normal: var(--tw-cursor-vim-normal);
+    --color-cursor-vim-insert: var(--tw-cursor-vim-insert);
 
     /* Diagnostic colors */
     --color-error: var(--tw-error);
@@ -321,6 +326,8 @@ button {
 
         /* Cursor color */
         --tw-cursor: #1a1a1a;
+        --tw-cursor-vim-normal: #3b82f6a6;
+        --tw-cursor-vim-insert: #22c55e;
 
         /* Diagnostic colors */
         --tw-error: #c53030;
@@ -388,6 +395,8 @@ button {
 
             /* Cursor color - Dark */
             --tw-cursor: #e5e5e5;
+            --tw-cursor-vim-normal: #3b82f6a6;
+            --tw-cursor-vim-insert: #22c55e;
 
             /* Diagnostic colors */
             --tw-error: #f87171;
