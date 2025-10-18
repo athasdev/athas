@@ -8,8 +8,8 @@ export const EDITOR_CONSTANTS = {
 
   // Viewport
   DEFAULT_VIEWPORT_HEIGHT: 600,
-  VIEWPORT_OVERSCAN_RATIO: 0.25,
-  MIN_OVERSCAN_LINES: 3,
+  VIEWPORT_OVERSCAN_RATIO: 0.75, // Increased for even smoother scrolling
+  MIN_OVERSCAN_LINES: 10, // Increased minimum overscan
 
   // Gutter
   MIN_GUTTER_WIDTH: 40,

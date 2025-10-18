@@ -37,7 +37,7 @@ export interface CodeEditorRef {
 }
 
 const CodeEditor = ({ className }: CodeEditorProps) => {
-  const editorRef = useRef<HTMLDivElement>(null as any);
+  const editorRef = useRef<HTMLDivElement>(null);
   const { setRefs, setContent, setFileInfo } = useEditorInstanceStore.use.actions();
   // No longer need to sync content - editor-view-store computes from buffer
   const { setDisabled } = useEditorSettingsStore.use.actions();
@@ -122,7 +122,6 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
 
   // Set up LSP completion handlers
   useEffect(() => {
-    console.log("Setting up LSP completion handlers, isLspSupported:", isLspSupported);
     lspActions.setCompletionHandlers(
       lspClient.getCompletions.bind(lspClient),
       () => isLspSupported,

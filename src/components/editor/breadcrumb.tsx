@@ -11,6 +11,12 @@ import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useUIState } from "@/stores/ui-state-store";
 
+interface DirectoryEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
+}
+
 export default function Breadcrumb() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +92,7 @@ export default function Breadcrumb() {
     const previousPath = dropdown.navigationStack[dropdown.navigationStack.length - 1];
     try {
       const entries = await readDirectory(previousPath);
-      const fileEntries: FileEntry[] = entries.map((entry: any) => ({
+      const fileEntries: FileEntry[] = entries.map((entry: DirectoryEntry) => ({
         name: entry.name || "Unknown",
         path: entry.path,
         isDir: entry.is_dir || false,
@@ -142,7 +148,7 @@ export default function Breadcrumb() {
     try {
       // Load directory contents
       const entries = await readDirectory(dirPath);
-      const fileEntries: FileEntry[] = entries.map((entry: any) => ({
+      const fileEntries: FileEntry[] = entries.map((entry: DirectoryEntry) => ({
         name: entry.name || "Unknown",
         path: entry.path,
         isDir: entry.is_dir || false,
@@ -266,7 +272,7 @@ export default function Breadcrumb() {
                     // For folders, load their contents and update dropdown
                     try {
                       const entries = await readDirectory(item.path);
-                      const fileEntries: FileEntry[] = entries.map((entry: any) => ({
+                      const fileEntries: FileEntry[] = entries.map((entry: DirectoryEntry) => ({
                         name: entry.name || "Unknown",
                         path: entry.path,
                         isDir: entry.is_dir || false,

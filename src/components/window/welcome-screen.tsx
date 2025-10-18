@@ -197,12 +197,12 @@ const WelcomeScreen = ({
             <span className="text-xs">Settings</span>
           </button>
           <a
-            href="https://docs.athas.dev"
+            href="https://athas.dev/docs"
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => {
               e.preventDefault();
-              openExternalLink("https://docs.athas.dev");
+              openExternalLink("https://athas.dev/docs");
             }}
             className="flex items-center gap-1 text-text-lighter transition-colors hover:text-text"
           >

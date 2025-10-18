@@ -2,7 +2,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type { CompletionItem } from "vscode-languageserver-protocol";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
+import { useToast } from "@/contexts/toast-context";
 import { basicEditingExtension } from "@/extensions/basic-editing-extension";
 import { editorAPI } from "@/extensions/editor-api";
 import { extensionManager } from "@/extensions/extension-manager";
@@ -24,6 +26,7 @@ import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorDecorationsStore } from "@/stores/editor-decorations-store";
 import { useEditorInstanceStore } from "@/stores/editor-instance-store";
 import { useEditorLayoutStore } from "@/stores/editor-layout-store";
+import { useEditorSearchStore } from "@/stores/editor-search-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
 import { useGitBlameStore } from "@/stores/git-blame-store";
@@ -81,12 +84,43 @@ export function TextEditor() {
   const searchDecorationIds = useRef<string[]>([]);
   const previousSearchDecorationsRef = useRef<typeof searchDecorations>([]);
 
+  // In-editor search matches (from Find Bar)
+  const inEditorSearchMatches = useEditorSearchStore.use.searchMatches();
+  const inEditorSearchDecorations = useMemo(() => {
+    return inEditorSearchMatches.map((match) => {
+      const startPos = calculateCursorPosition(match.start, lines);
+      const endPos = calculateCursorPosition(match.end, lines);
+
+      return {
+        range: {
+          start: {
+            line: startPos.line,
+            column: startPos.column,
+            offset: match.start,
+          },
+          end: {
+            line: endPos.line,
+            column: endPos.column,
+            offset: match.end,
+          },
+        },
+        className: "search-highlight",
+        type: "inline" as const,
+        key: `editor-search-${match.start}-${match.end}`,
+      };
+    });
+  }, [inEditorSearchMatches, lines]);
+
+  const inEditorSearchDecorationIds = useRef<string[]>([]);
+  const previousInEditorSearchDecorationsRef = useRef<typeof inEditorSearchDecorations>([]);
+
   // Use the same layout calculations as the visual editor
   const { lineHeight, gutterWidth: layoutGutterWidth } = useEditorLayout();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const localRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const { showToast } = useToast();
 
   const { setCursorPosition, setSelection, setDesiredColumn } = useEditorCursorStore.use.actions();
   const currentDesiredColumn = useEditorCursorStore.use.desiredColumn?.() ?? undefined;
@@ -106,6 +140,7 @@ export function TextEditor() {
     visible: boolean;
     position: { x: number; y: number };
   }>({ visible: false, position: { x: 0, y: 0 } });
+  const inlineEditToolbarTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get content as string when needed
   const content = getContent();
@@ -349,28 +384,47 @@ export function TextEditor() {
 
     const { selectionStart, selectionEnd } = textareaRef.current;
 
+    // Clear any pending inline edit toolbar timeout
+    if (inlineEditToolbarTimeoutRef.current) {
+      clearTimeout(inlineEditToolbarTimeoutRef.current);
+      inlineEditToolbarTimeoutRef.current = null;
+    }
+
     if (selectionStart !== selectionEnd) {
       setSelection({
         start: calculateCursorPosition(selectionStart, lines),
         end: calculateCursorPosition(selectionEnd, lines),
       });
 
-      // Show inline edit toolbar above selection
-      const textarea = textareaRef.current;
-      const rect = textarea.getBoundingClientRect();
+      // Hide toolbar immediately while selecting
+      setInlineEditToolbar({ visible: false, position: { x: 0, y: 0 } });
 
-      // Calculate position based on selection
-      const textBeforeSelection = textarea.value.substring(0, selectionStart).split("\n");
-      const currentLine = textBeforeSelection.length - 1;
-      const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight);
+      // Show inline edit toolbar above selection after a delay (only when selection is stable)
+      inlineEditToolbarTimeoutRef.current = setTimeout(() => {
+        if (!textareaRef.current) return;
 
-      setInlineEditToolbar({
-        visible: true,
-        position: {
-          x: rect.left + 100,
-          y: rect.top + currentLine * lineHeight - textarea.scrollTop,
-        },
-      });
+        const currentSelStart = textareaRef.current.selectionStart;
+        const currentSelEnd = textareaRef.current.selectionEnd;
+
+        // Only show if selection is still active and hasn't changed
+        if (currentSelStart !== currentSelEnd) {
+          const textarea = textareaRef.current;
+          const rect = textarea.getBoundingClientRect();
+
+          // Calculate position based on selection
+          const textBeforeSelection = textarea.value.substring(0, currentSelStart).split("\n");
+          const currentLine = textBeforeSelection.length - 1;
+          const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight);
+
+          setInlineEditToolbar({
+            visible: true,
+            position: {
+              x: rect.left + 100,
+              y: rect.top + currentLine * lineHeight - textarea.scrollTop,
+            },
+          });
+        }
+      }, 500); // 500ms delay to avoid interrupting selection
     } else {
       setSelection(undefined);
       setInlineEditToolbar({ visible: false, position: { x: 0, y: 0 } });
@@ -410,6 +464,36 @@ export function TextEditor() {
       searchDecorationIds.current = [];
     };
   }, [searchDecorations, addDecoration, removeDecoration]);
+
+  useEffect(() => {
+    const decorationsChanged =
+      inEditorSearchDecorations.length !== previousInEditorSearchDecorationsRef.current.length ||
+      inEditorSearchDecorations.some((decoration, index) => {
+        const prev = previousInEditorSearchDecorationsRef.current[index];
+        return !prev || decoration.key !== prev.key;
+      });
+
+    if (!decorationsChanged) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      inEditorSearchDecorationIds.current.forEach((id) => removeDecoration(id));
+      inEditorSearchDecorationIds.current = [];
+
+      inEditorSearchDecorations.forEach((decoration) => {
+        const decorationId = addDecoration(decoration);
+        inEditorSearchDecorationIds.current.push(decorationId);
+      });
+
+      previousInEditorSearchDecorationsRef.current = inEditorSearchDecorations;
+    });
+
+    return () => {
+      inEditorSearchDecorationIds.current.forEach((id) => removeDecoration(id));
+      inEditorSearchDecorationIds.current = [];
+    };
+  }, [inEditorSearchDecorations, addDecoration, removeDecoration]);
 
   useEffect(() => {
     const handleDocumentSelectionChange = () => {
@@ -653,7 +737,7 @@ export function TextEditor() {
 
   // Handle applying completion
   const handleApplyCompletion = useCallback(
-    (completion: any) => {
+    (completion: CompletionItem) => {
       if (!textareaRef.current) return;
 
       const cursorPos = textareaRef.current.selectionStart;
@@ -682,30 +766,14 @@ export function TextEditor() {
   );
 
   // Context menu handlers
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
 
-      // Check if right-click is at the end of a line to prevent automatic text selection
-      if (textareaRef.current) {
-        const { selectionStart, selectionEnd, value } = textareaRef.current;
-        const selectedText = value.slice(selectionStart, selectionEnd);
-
-        if (selectedText.split("\n").length > 1) {
-          // If the selected text is more than one line, clear the selection
-          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = selectionStart;
-          setCursorPosition(calculateCursorPosition(selectionStart, lines));
-          setSelection(undefined);
-        }
-      }
-
-      setContextMenu({
-        isOpen: true,
-        position: { x: e.clientX, y: e.clientY },
-      });
-    },
-    [content, lines, setCursorPosition, setSelection],
-  );
+    setContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+    });
+  }, []);
 
   const handleCloseContextMenu = useCallback(() => {
     setContextMenu({ isOpen: false, position: { x: 0, y: 0 } });
@@ -921,9 +989,78 @@ export function TextEditor() {
   }, [content, onChange, updateBufferContent, activeBufferId]);
 
   const handleToggleComment = useCallback(() => {
-    // Simple toggle comment implementation
-    console.log("Toggle comment - not implemented yet");
-  }, []);
+    const selection = useEditorCursorStore.getState().selection;
+    if (!textareaRef.current) return;
+
+    const { selectionStart } = textareaRef.current;
+
+    if (!selection || selection.start.offset === selection.end.offset) {
+      // Single line comment toggle
+      const lineStart = content.lastIndexOf("\n", selectionStart - 1) + 1;
+      const lineEnd = content.indexOf("\n", selectionStart);
+      const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
+      const lineContent = content.slice(lineStart, actualLineEnd);
+
+      const isCommented = lineContent.trim().startsWith("//");
+      const newLineContent = isCommented
+        ? lineContent.replace(/^\s*\/\/\s?/, (match) => match.slice(0, -2).slice(0, -1) || "")
+        : lineContent.replace(/^(\s*)/, "$1// ");
+
+      const newContent =
+        content.slice(0, lineStart) + newLineContent + content.slice(actualLineEnd);
+
+      onChange?.(newContent);
+      if (activeBufferId) {
+        updateBufferContent(activeBufferId, newContent);
+      }
+
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = selectionStart;
+          handleSelectionChange();
+        }
+      }, 0);
+    } else {
+      // Multi-line comment toggle
+      const startLine = selection.start.line;
+      const endLine = selection.end.line;
+      const selectedLines = lines.slice(startLine, endLine + 1);
+
+      // Check if all lines are commented
+      const allCommented = selectedLines.every(
+        (line) => line.trim().startsWith("//") || line.trim() === "",
+      );
+
+      const newLines = [...lines];
+      for (let i = startLine; i <= endLine; i++) {
+        const line = newLines[i];
+        if (allCommented) {
+          // Uncomment
+          newLines[i] = line.replace(
+            /^\s*\/\/\s?/,
+            (match) => match.slice(0, -2).slice(0, -1) || "",
+          );
+        } else {
+          // Comment only non-empty lines
+          if (line.trim()) {
+            newLines[i] = line.replace(/^(\s*)/, "$1// ");
+          }
+        }
+      }
+
+      const newContent = newLines.join("\n");
+      onChange?.(newContent);
+      if (activeBufferId) {
+        updateBufferContent(activeBufferId, newContent);
+      }
+
+      setTimeout(() => {
+        if (textareaRef.current) {
+          handleSelectionChange();
+        }
+      }, 0);
+    }
+  }, [content, lines, onChange, updateBufferContent, activeBufferId, handleSelectionChange]);
 
   const handleFormat = useCallback(async () => {
     if (!content.trim()) return;
@@ -1018,34 +1155,66 @@ export function TextEditor() {
   }, [content, onChange, updateBufferContent, activeBufferId]);
 
   const handleToggleBookmark = useCallback(() => {
-    // Toggle bookmark - not implemented yet
-    console.log("Toggle bookmark - not implemented yet");
-  }, []);
+    const cursorPos = useEditorCursorStore.getState().cursorPosition;
+    const currentLine = cursorPos.line;
 
-  const handleInlineEditSubmit = useCallback(
-    (prompt: string, providerId: string, modelId: string) => {
-      const selection = useEditorCursorStore.getState().selection;
-      if (!selection || !textareaRef.current) return;
+    // Check if this line already has a bookmark decoration
+    const decorationsStore = useEditorDecorationsStore.getState();
+    const allDecorations = Array.from(decorationsStore.decorations.values());
+    const bookmarkDecoration = allDecorations.find(
+      (d) => d.className === "bookmark" && d.range.start.line === currentLine,
+    );
 
-      const selectedText = content.slice(selection.start.offset, selection.end.offset);
+    if (bookmarkDecoration) {
+      // Remove bookmark
+      removeDecoration(bookmarkDecoration.id);
+    } else {
+      // Add bookmark
+      const startPos = {
+        line: currentLine,
+        column: 0,
+        offset: calculateOffsetFromPosition(currentLine, 0, lines),
+      };
+      const endPos = {
+        line: currentLine,
+        column: lines[currentLine]?.length || 0,
+        offset: calculateOffsetFromPosition(currentLine, lines[currentLine]?.length || 0, lines),
+      };
 
-      // TODO: Integrate with AI service
-      console.log("AI Edit Request:", {
-        prompt,
-        selectedText,
-        providerId,
-        modelId,
+      addDecoration({
+        range: { start: startPos, end: endPos },
+        type: "line",
+        className: "bookmark",
       });
+    }
+  }, [lines, addDecoration, removeDecoration]);
 
-      // Close toolbar
-      setInlineEditToolbar({ visible: false, position: { x: 0, y: 0 } });
-    },
-    [content],
-  );
+  const handleInlineEditSubmit = useCallback(() => {
+    const selection = useEditorCursorStore.getState().selection;
+    if (!selection || !textareaRef.current) return;
+
+    // TODO: Integrate with AI service
+    // Future implementation will handle AI editing here
+    // Will use: selection.start.offset, selection.end.offset, content
+
+    // Close toolbar
+    setInlineEditToolbar({ visible: false, position: { x: 0, y: 0 } });
+  }, [content]);
 
   const handleCloseInlineEdit = useCallback(() => {
     setInlineEditToolbar({ visible: false, position: { x: 0, y: 0 } });
   }, []);
+
+  const handleGitIndicatorClick = useCallback(
+    (lineNumber: number, changeType: string) => {
+      showToast({
+        message: `Line ${lineNumber + 1}: Git ${changeType} - Inline diff coming soon!`,
+        type: "info",
+        duration: 3000,
+      });
+    },
+    [showToast],
+  );
 
   // Get layout values for proper textarea positioning - use the same values as visual editor
   const gutterWidth = layoutGutterWidth;
@@ -1109,6 +1278,7 @@ export function TextEditor() {
         onSelectionDrag={handleLineBasedSelection}
         viewportRef={viewportRef}
         onContextMenu={handleContextMenu}
+        onGitIndicatorClick={handleGitIndicatorClick}
       />
 
       {/* Completion dropdown */}

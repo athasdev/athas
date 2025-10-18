@@ -1,13 +1,34 @@
 import { appDataDir } from "@tauri-apps/api/path";
-import { Palette, Settings, Sparkles } from "lucide-react";
+import {
+  ArrowUp,
+  GitBranch,
+  GitCommit,
+  Palette,
+  RefreshCw,
+  Settings,
+  Sparkles,
+  Terminal,
+} from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { useToast } from "@/contexts/toast-context";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useSettingsStore } from "@/settings/store";
 import { useAppStore } from "@/stores/app-store";
+import { useLspStore } from "@/stores/lsp-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { vimCommands } from "@/stores/vim-commands";
 import { useVimStore } from "@/stores/vim-store";
+import {
+  commitChanges,
+  discardAllChanges,
+  fetchChanges,
+  pullChanges,
+  pushChanges,
+  stageAllFiles,
+  unstageAllFiles,
+} from "@/version-control/git/controllers/git";
+import { useGitStore } from "@/version-control/git/controllers/git-store";
 import Command, {
   CommandEmpty,
   CommandHeader,
@@ -62,6 +83,11 @@ const CommandPalette = () => {
   const { settings } = useSettingsStore();
   const vimMode = settings.vimMode;
   const { setMode } = useVimStore.use.actions();
+  const lspStatus = useLspStore.use.lspStatus();
+  const { clearLspError, updateLspStatus } = useLspStore.use.actions();
+  const { rootFolderPath } = useFileSystemStore();
+  const gitStore = useGitStore();
+  const { showToast } = useToast();
 
   // Focus is handled internally when the palette becomes visible
 
@@ -125,6 +151,253 @@ const CommandPalette = () => {
       action: () => {
         onClose();
         setIsIconThemeSelectorVisible(true);
+      },
+    },
+    {
+      id: "toggle-vim-mode",
+      label: vimMode ? "Vim: Disable Vim Mode" : "Vim: Enable Vim Mode",
+      description: vimMode ? "Switch to normal editing mode" : "Enable Vim keybindings",
+      icon: <Terminal size={14} />,
+      category: "Vim",
+      action: () => {
+        useSettingsStore.getState().updateSetting("vimMode", !vimMode);
+        onClose();
+      },
+    },
+    {
+      id: "lsp-status",
+      label: "LSP: Show Status",
+      description: `Status: ${lspStatus.status} (${lspStatus.activeWorkspaces.length} workspaces)`,
+      icon: <Terminal size={14} />,
+      category: "LSP",
+      action: () => {
+        alert(
+          `LSP Status: ${lspStatus.status}\nActive workspaces: ${lspStatus.activeWorkspaces.join(", ") || "None"}\nError: ${lspStatus.lastError || "None"}`,
+        );
+        onClose();
+      },
+    },
+    {
+      id: "lsp-restart",
+      label: "LSP: Restart Server",
+      description: "Restart the LSP server",
+      icon: <RefreshCw size={14} />,
+      category: "LSP",
+      action: () => {
+        updateLspStatus("connecting");
+        clearLspError();
+        setTimeout(() => {
+          updateLspStatus("connected", [rootFolderPath || ""]);
+        }, 1000);
+        onClose();
+      },
+    },
+    {
+      id: "git-stage-all",
+      label: "Git: Stage All Changes",
+      description: "Stage all modified files",
+      icon: <GitBranch size={14} />,
+      category: "Git",
+      action: async () => {
+        if (!rootFolderPath) {
+          showToast({ message: "No repository open", type: "error" });
+          onClose();
+          return;
+        }
+        try {
+          const success = await stageAllFiles(rootFolderPath);
+          if (success) {
+            showToast({ message: "All files staged successfully", type: "success" });
+            window.dispatchEvent(new Event("refresh-git-data"));
+          } else {
+            showToast({ message: "Failed to stage files", type: "error" });
+          }
+        } catch (error) {
+          showToast({ message: `Error: ${error}`, type: "error" });
+        }
+        onClose();
+      },
+    },
+    {
+      id: "git-unstage-all",
+      label: "Git: Unstage All Changes",
+      description: "Unstage all staged files",
+      icon: <GitBranch size={14} />,
+      category: "Git",
+      action: async () => {
+        if (!rootFolderPath) {
+          showToast({ message: "No repository open", type: "error" });
+          onClose();
+          return;
+        }
+        try {
+          const success = await unstageAllFiles(rootFolderPath);
+          if (success) {
+            showToast({ message: "All files unstaged successfully", type: "success" });
+            window.dispatchEvent(new Event("refresh-git-data"));
+          } else {
+            showToast({ message: "Failed to unstage files", type: "error" });
+          }
+        } catch (error) {
+          showToast({ message: `Error: ${error}`, type: "error" });
+        }
+        onClose();
+      },
+    },
+    {
+      id: "git-commit",
+      label: "Git: Commit Changes",
+      description: "Commit staged changes",
+      icon: <GitCommit size={14} />,
+      category: "Git",
+      action: async () => {
+        if (!rootFolderPath) {
+          showToast({ message: "No repository open", type: "error" });
+          onClose();
+          return;
+        }
+        const message = prompt("Enter commit message:");
+        if (!message) {
+          onClose();
+          return;
+        }
+        try {
+          const success = await commitChanges(rootFolderPath, message);
+          if (success) {
+            showToast({ message: "Changes committed successfully", type: "success" });
+            window.dispatchEvent(new Event("refresh-git-data"));
+          } else {
+            showToast({ message: "Failed to commit changes", type: "error" });
+          }
+        } catch (error) {
+          showToast({ message: `Error: ${error}`, type: "error" });
+        }
+        onClose();
+      },
+    },
+    {
+      id: "git-push",
+      label: "Git: Push",
+      description: "Push changes to remote",
+      icon: <ArrowUp size={14} />,
+      category: "Git",
+      action: async () => {
+        if (!rootFolderPath) {
+          showToast({ message: "No repository open", type: "error" });
+          onClose();
+          return;
+        }
+        try {
+          showToast({ message: "Pushing changes...", type: "info" });
+          const success = await pushChanges(rootFolderPath);
+          if (success) {
+            showToast({ message: "Changes pushed successfully", type: "success" });
+          } else {
+            showToast({ message: "Failed to push changes", type: "error" });
+          }
+        } catch (error) {
+          showToast({ message: `Error: ${error}`, type: "error" });
+        }
+        onClose();
+      },
+    },
+    {
+      id: "git-pull",
+      label: "Git: Pull",
+      description: "Pull changes from remote",
+      icon: <RefreshCw size={14} />,
+      category: "Git",
+      action: async () => {
+        if (!rootFolderPath) {
+          showToast({ message: "No repository open", type: "error" });
+          onClose();
+          return;
+        }
+        try {
+          showToast({ message: "Pulling changes...", type: "info" });
+          const success = await pullChanges(rootFolderPath);
+          if (success) {
+            showToast({ message: "Changes pulled successfully", type: "success" });
+            window.dispatchEvent(new Event("refresh-git-data"));
+          } else {
+            showToast({ message: "Failed to pull changes", type: "error" });
+          }
+        } catch (error) {
+          showToast({ message: `Error: ${error}`, type: "error" });
+        }
+        onClose();
+      },
+    },
+    {
+      id: "git-fetch",
+      label: "Git: Fetch",
+      description: "Fetch changes from remote",
+      icon: <RefreshCw size={14} />,
+      category: "Git",
+      action: async () => {
+        if (!rootFolderPath) {
+          showToast({ message: "No repository open", type: "error" });
+          onClose();
+          return;
+        }
+        try {
+          const success = await fetchChanges(rootFolderPath);
+          if (success) {
+            showToast({ message: "Fetched successfully", type: "success" });
+          } else {
+            showToast({ message: "Failed to fetch", type: "error" });
+          }
+        } catch (error) {
+          showToast({ message: `Error: ${error}`, type: "error" });
+        }
+        onClose();
+      },
+    },
+    {
+      id: "git-discard-all",
+      label: "Git: Discard All Changes",
+      description: "Discard all uncommitted changes",
+      icon: <GitBranch size={14} />,
+      category: "Git",
+      action: async () => {
+        if (!rootFolderPath) {
+          showToast({ message: "No repository open", type: "error" });
+          onClose();
+          return;
+        }
+        if (!confirm("Are you sure you want to discard all changes? This cannot be undone.")) {
+          onClose();
+          return;
+        }
+        try {
+          const success = await discardAllChanges(rootFolderPath);
+          if (success) {
+            showToast({ message: "All changes discarded", type: "success" });
+            window.dispatchEvent(new Event("refresh-git-data"));
+          } else {
+            showToast({ message: "Failed to discard changes", type: "error" });
+          }
+        } catch (error) {
+          showToast({ message: `Error: ${error}`, type: "error" });
+        }
+        onClose();
+      },
+    },
+    {
+      id: "git-refresh",
+      label: "Git: Refresh Status",
+      description: "Refresh Git status",
+      icon: <RefreshCw size={14} />,
+      category: "Git",
+      action: () => {
+        gitStore.actions.setIsRefreshing(true);
+        window.dispatchEvent(new Event("refresh-git-data"));
+        showToast({ message: "Refreshing Git status...", type: "info" });
+        setTimeout(() => {
+          gitStore.actions.setIsRefreshing(false);
+          showToast({ message: "Git status refreshed", type: "success" });
+        }, 1000);
+        onClose();
       },
     },
   ];

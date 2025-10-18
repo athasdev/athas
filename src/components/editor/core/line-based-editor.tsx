@@ -16,10 +16,11 @@ interface LineBasedEditorProps {
   onSelectionDrag?: (start: Position, end: Position) => void;
   viewportRef?: React.MutableRefObject<HTMLDivElement | null>;
   onContextMenu?: (e: React.MouseEvent) => void;
+  onGitIndicatorClick?: (lineNumber: number, changeType: string) => void;
 }
 
 export const LineBasedEditor = memo<LineBasedEditorProps>(
-  ({ onPositionClick, onSelectionDrag, viewportRef, onContextMenu }) => {
+  ({ onPositionClick, onSelectionDrag, viewportRef, onContextMenu, onGitIndicatorClick }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const internalViewportRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +38,7 @@ export const LineBasedEditor = memo<LineBasedEditorProps>(
 
     // Scroll is now tracked locally in viewport - no need to update store on every scroll event
     // This prevents unnecessary re-renders and improves scroll performance
-    const handleScroll = (_newScrollTop: number, _newScrollLeft: number) => {
+    const handleScroll = () => {
       // Store updates removed - scroll position is tracked locally in viewport
     };
 
@@ -72,6 +73,7 @@ export const LineBasedEditor = memo<LineBasedEditorProps>(
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onContextMenu={onContextMenu}
+              onGitIndicatorClick={onGitIndicatorClick}
             />
           </EditorLayer>
           <EditorLayer type="decoration">

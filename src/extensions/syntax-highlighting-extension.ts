@@ -4,7 +4,7 @@ import { useBufferStore } from "../stores/buffer-store";
 import type { Change } from "../types/editor-types";
 import type { EditorAPI, EditorExtension } from "./extension-types";
 
-const DEBOUNCE_TIME_MS = 300;
+const DEBOUNCE_TIME_MS = 100; // Reduced for faster syntax highlighting updates
 
 class SyntaxHighlighter {
   private editor: EditorAPI;
@@ -94,12 +94,14 @@ class SyntaxHighlighter {
 
       // Fetch tokens from Rust API
       this.tokens = await getTokens(content, extension);
+      console.log("[SyntaxHighlighter] Fetched tokens:", this.tokens.length, "for", extension);
 
       // Cache tokens in buffer store
       const bufferStore = useBufferStore.getState();
       const activeBuffer = bufferStore.actions.getActiveBuffer();
       if (activeBuffer) {
         bufferStore.actions.updateBufferTokens(activeBuffer.id, this.tokens);
+        console.log("[SyntaxHighlighter] Updated buffer tokens for", activeBuffer.path);
       }
 
       // Update decorations - pass affected lines to avoid full re-render

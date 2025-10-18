@@ -15,11 +15,11 @@ interface LineWithContentProps {
   showLineNumbers: boolean;
   gutterWidth: number;
   lineHeight: number;
-  isSelected: boolean;
+  onGitIndicatorClick?: (lineNumber: number, changeType: string) => void;
 }
 
 export const LineWithContent = memo<LineWithContentProps>(
-  ({ lineNumber, showLineNumbers, gutterWidth, lineHeight, isSelected }) => {
+  ({ lineNumber, showLineNumbers, gutterWidth, lineHeight, onGitIndicatorClick }) => {
     const content = useEditorViewStore((state) => state.lines[lineNumber]);
     const tokens = useEditorViewStore((state) => state.lineTokens.get(lineNumber)) ?? [];
     const decorations = useEditorDecorationsStore((state) =>
@@ -56,6 +56,7 @@ export const LineWithContent = memo<LineWithContentProps>(
           decorations={decorations}
           cursorLine={cursorLine}
           relativeLineNumbers={relativeLineNumbers}
+          onGitIndicatorClick={onGitIndicatorClick}
         />
         <div
           className="editor-line-content-wrapper"
@@ -77,7 +78,6 @@ export const LineWithContent = memo<LineWithContentProps>(
             content={content}
             tokens={tokens}
             decorations={decorations}
-            isSelected={isSelected}
           />
           {isSelectedLine && blameLine && (
             <InlineGitBlame blameLine={blameLine} className="mr-4 ml-auto opacity-60" />
@@ -93,7 +93,7 @@ export const LineWithContent = memo<LineWithContentProps>(
       prev.showLineNumbers === next.showLineNumbers &&
       prev.gutterWidth === next.gutterWidth &&
       prev.lineHeight === next.lineHeight &&
-      prev.isSelected === next.isSelected
+      prev.onGitIndicatorClick === next.onGitIndicatorClick
     );
   },
 );

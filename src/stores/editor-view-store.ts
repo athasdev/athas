@@ -26,6 +26,10 @@ function convertToLineTokens(
   const lines = content.split("\n");
   const tokensByLine = new Map<number, LineToken[]>();
 
+  if (tokens.length === 0) {
+    return tokensByLine;
+  }
+
   // Build a byte-to-character mapping for proper UTF-8 handling
   const encoder = new TextEncoder();
   let byteOffset = 0;
@@ -42,11 +46,21 @@ function convertToLineTokens(
   byteToChar.set(byteOffset, charOffset); // End position
 
   // Convert byte offsets to character offsets
-  const charTokens = tokens.map((token) => ({
-    start: byteToChar.get(token.start) ?? 0,
-    end: byteToChar.get(token.end) ?? content.length,
-    class_name: token.class_name,
-  }));
+  const charTokens = tokens
+    .map((token) => {
+      const start = byteToChar.get(token.start) ?? 0;
+      const end = byteToChar.get(token.end) ?? content.length;
+      return { start, end, class_name: token.class_name };
+    })
+    .filter((token) => {
+      // Keep tokens that are valid for the current content
+      return (
+        token.start >= 0 &&
+        token.end <= content.length &&
+        token.start < token.end &&
+        token.end - token.start < 1000 // Skip unreasonably large tokens from misalignment
+      );
+    });
 
   let currentCharOffset = 0;
 
@@ -117,9 +131,16 @@ export const useEditorViewStore = createSelectors(
 useBufferStore.subscribe((state) => {
   const activeBuffer = state.actions.getActiveBuffer();
   if (activeBuffer) {
+    const lineTokens = convertToLineTokens(activeBuffer.content, activeBuffer.tokens);
+    console.log(
+      "[EditorViewStore] Buffer tokens:",
+      activeBuffer.tokens.length,
+      "Line tokens:",
+      lineTokens.size,
+    );
     useEditorViewStore.setState({
       lines: activeBuffer.content.split("\n"),
-      lineTokens: convertToLineTokens(activeBuffer.content, activeBuffer.tokens),
+      lineTokens,
     });
   } else {
     useEditorViewStore.setState({

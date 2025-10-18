@@ -11,6 +11,7 @@ interface LineGutterProps {
   isBreakpoint?: boolean;
   hasError?: boolean;
   hasWarning?: boolean;
+  onGitIndicatorClick?: (lineNumber: number, changeType: string) => void;
 }
 
 export const LineGutter = ({
@@ -23,6 +24,7 @@ export const LineGutter = ({
   isBreakpoint = false,
   hasError = false,
   hasWarning = false,
+  onGitIndicatorClick,
 }: LineGutterProps) => {
   const gutterDecorations = decorations.filter(
     (d) => d.type === "gutter" && d.range.start.line === lineNumber,
@@ -31,6 +33,19 @@ export const LineGutter = ({
   // Separate git decorations from other decorations
   const gitDecorations = gutterDecorations.filter((d) => d.className?.includes("git-gutter"));
   const otherDecorations = gutterDecorations.filter((d) => !d.className?.includes("git-gutter"));
+
+  const handleGitClick = (decoration: Decoration) => {
+    if (onGitIndicatorClick) {
+      const changeType = decoration.className?.includes("git-gutter-added")
+        ? "added"
+        : decoration.className?.includes("git-gutter-modified")
+          ? "modified"
+          : decoration.className?.includes("git-gutter-deleted")
+            ? "deleted"
+            : "unknown";
+      onGitIndicatorClick(lineNumber, changeType);
+    }
+  };
 
   let displayNumber: string | null = null;
   if (showLineNumbers) {
@@ -61,6 +76,7 @@ export const LineGutter = ({
         position: "relative",
         paddingLeft: "8px", // Space for git indicators
         paddingRight: "8px", // Space after line numbers
+        pointerEvents: "auto", // Ensure gutter can receive pointer events
       }}
       data-line-number={lineNumber}
     >
@@ -69,6 +85,10 @@ export const LineGutter = ({
         <div
           key={`git-decoration-${index}`}
           className={cn("gutter-decoration", decoration.className)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleGitClick(decoration);
+          }}
           style={{
             position: "absolute",
             left: "2px", // Small gap from left edge
@@ -76,17 +96,19 @@ export const LineGutter = ({
             transform: decoration.className?.includes("git-gutter-deleted")
               ? "none"
               : "translateY(-50%)",
-            width: "3px",
+            width: "4px", // Slightly wider for easier clicking
             height: decoration.className?.includes("git-gutter-deleted") ? "2px" : "100%",
-            zIndex: 1,
+            zIndex: 10,
+            cursor: onGitIndicatorClick ? "pointer" : "default",
+            pointerEvents: "auto",
           }}
           title={
             decoration.className?.includes("git-gutter-added")
-              ? `Line ${lineNumber + 1}: Added in working directory`
+              ? `Line ${lineNumber + 1}: Added in working directory (click to view)`
               : decoration.className?.includes("git-gutter-modified")
-                ? `Line ${lineNumber + 1}: Modified in working directory`
+                ? `Line ${lineNumber + 1}: Modified in working directory (click to view)`
                 : decoration.className?.includes("git-gutter-deleted")
-                  ? `Line ${lineNumber + 1}: ${decoration.content || "1"} line(s) deleted`
+                  ? `Line ${lineNumber + 1}: ${decoration.content || "1"} line(s) deleted (click to view)`
                   : undefined
           }
         >

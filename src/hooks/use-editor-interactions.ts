@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 import { useEditorViewStore } from "../stores/editor-view-store";
 import type { Position } from "../types/editor-types";
+import { getCharWidth } from "../utils/editor-position";
 
 interface UseEditorInteractionsProps {
   lineHeight: number;
@@ -22,11 +23,12 @@ export const useEditorInteractions = ({
   const GUTTER_MARGIN = 8; // mr-2 in Tailwind (0.5rem = 8px)
 
   const getPositionFromCoordinates = useCallback(
-    (clientX: number, clientY: number, containerRect: DOMRect): Position | null => {
-      // console.log("firing getPositionFromCoordinates")
-      // Calculate relative position
+    (clientX: number, clientY: number, container: HTMLElement): Position | null => {
+      const containerRect = container.getBoundingClientRect();
+
+      // Calculate relative position, accounting for scroll
       const relativeX = clientX - containerRect.left - gutterWidth - GUTTER_MARGIN;
-      const relativeY = clientY - containerRect.top;
+      const relativeY = clientY - containerRect.top + container.scrollTop;
 
       // Calculate line number
       const line = Math.floor(relativeY / lineHeight);
@@ -41,9 +43,9 @@ export const useEditorInteractions = ({
         return null;
       }
 
-      // Calculate column using fixed character width for monospace font
-      const charWidth = fontSize * 0.6;
-      const column = Math.round(relativeX / charWidth);
+      // Calculate column using properly measured character width
+      const charWidth = getCharWidth(fontSize, "JetBrains Mono, monospace");
+      const column = Math.max(0, Math.round(relativeX / charWidth));
 
       // Clamp column to line bounds (handles empty lines where length is 0)
       const clampedColumn = Math.max(0, Math.min(column, lineContent.length));
@@ -63,8 +65,7 @@ export const useEditorInteractions = ({
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLElement>) => {
       const container = e.currentTarget;
-      const rect = container.getBoundingClientRect();
-      const position = getPositionFromCoordinates(e.clientX, e.clientY, rect);
+      const position = getPositionFromCoordinates(e.clientX, e.clientY, container);
 
       if (position && onPositionClick) {
         onPositionClick(position);
@@ -76,8 +77,7 @@ export const useEditorInteractions = ({
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLElement>) => {
       const container = e.currentTarget;
-      const rect = container.getBoundingClientRect();
-      const position = getPositionFromCoordinates(e.clientX, e.clientY, rect);
+      const position = getPositionFromCoordinates(e.clientX, e.clientY, container);
 
       if (position) {
         isDraggingRef.current = true;
@@ -97,8 +97,7 @@ export const useEditorInteractions = ({
       }
 
       const container = e.currentTarget;
-      const rect = container.getBoundingClientRect();
-      const position = getPositionFromCoordinates(e.clientX, e.clientY, rect);
+      const position = getPositionFromCoordinates(e.clientX, e.clientY, container);
 
       if (position && onSelectionDrag) {
         onSelectionDrag(dragStartRef.current, position);

@@ -217,7 +217,7 @@ export const useBufferStore = createSelectors(
               if (!buffer.isVirtual) {
                 buffer.isDirty = markDirty;
               }
-              // Don't clear tokens - syntax highlighter will update them
+              // Keep old tokens - syntax highlighter will update them smoothly
             }
           });
         },

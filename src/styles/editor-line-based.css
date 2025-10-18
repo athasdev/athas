@@ -55,6 +55,35 @@
 
 .gutter-decoration {
   margin-left: 4px;
+  pointer-events: auto;
+}
+
+/* Git gutter indicators */
+.git-gutter-added {
+  background-color: #28a745;
+  transition: opacity 0.2s;
+}
+
+.git-gutter-added:hover {
+  opacity: 0.8;
+}
+
+.git-gutter-modified {
+  background-color: #007bff;
+  transition: opacity 0.2s;
+}
+
+.git-gutter-modified:hover {
+  opacity: 0.8;
+}
+
+.git-gutter-deleted {
+  background-color: #dc3545;
+  transition: opacity 0.2s;
+}
+
+.git-gutter-deleted:hover {
+  opacity: 0.8;
 }
 
 /* Virtual scrolling optimization */

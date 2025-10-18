@@ -1,5 +1,5 @@
 import { ClockIcon } from "lucide-react";
-import { type RefObject, useRef } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 import { useOnClickOutside } from "usehooks-ts";
 import { cn } from "@/utils/cn";
 import { useRecentFoldersStore } from "../file-system/controllers/recent-folders-store";
@@ -23,6 +23,18 @@ export const ProjectNameMenu = () => {
   useOnClickOutside(menuRef as RefObject<HTMLElement>, () => {
     setProjectNameMenu(null);
   });
+
+  // Close menu on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setProjectNameMenu(null);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [setProjectNameMenu]);
 
   if (!projectNameMenu) return null;
 
