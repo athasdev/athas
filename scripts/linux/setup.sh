@@ -51,7 +51,7 @@ install_system_deps() {
         "arch")
             sudo pacman -S --needed --noconfirm base-devel curl wget file openssl gtk3 webkit2gtk-4.1 libsoup3 libayatana-appindicator librsvg pkgconf
             # Deps for git2 and ssh2
-            sudo pacman -S --needed --noconfirm openssl-devel pkgconf perl-FindBin perl-IPC-Cmd perl
+            sudo pacman -S --needed --noconfirm openssl pkgconf perl
             ;;
         "opensuse")
             sudo zypper install -y gcc gcc-c++ make curl wget file libopenssl-devel gtk3-devel webkit2gtk3-devel libsoup3-devel libayatana-appindicator3-devel librsvg-devel pkg-config
