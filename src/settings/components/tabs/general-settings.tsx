@@ -1,8 +1,11 @@
+import { invoke } from "@tauri-apps/api/core";
+import { useEffect, useState } from "react";
 import Button from "@/components/ui/button";
 import Dropdown from "@/components/ui/dropdown";
 import KeybindingBadge from "@/components/ui/keybinding-badge";
 import Section, { SettingRow } from "@/components/ui/section";
 import Switch from "@/components/ui/switch";
+import { useToast } from "@/contexts/toast-context";
 import { useUpdater } from "@/settings/hooks/use-updater";
 import { useSettingsStore } from "@/settings/store";
 
@@ -20,11 +23,60 @@ export const GeneralSettings = () => {
     checkForUpdates,
     downloadAndInstall,
   } = useUpdater(false);
+  const { showToast } = useToast();
+
+  const [cliInstalled, setCliInstalled] = useState<boolean>(false);
+  const [cliChecking, setCliChecking] = useState(true);
+  const [cliInstalling, setCliInstalling] = useState(false);
 
   const sidebarOptions = [
     { value: "left", label: "Left" },
     { value: "right", label: "Right" },
   ];
+
+  useEffect(() => {
+    const checkCliStatus = async () => {
+      try {
+        const installed = await invoke<boolean>("check_cli_installed");
+        setCliInstalled(installed);
+      } catch (error) {
+        console.error("Failed to check CLI status:", error);
+      } finally {
+        setCliChecking(false);
+      }
+    };
+
+    checkCliStatus();
+  }, []);
+
+  const handleInstallCli = async () => {
+    setCliInstalling(true);
+    try {
+      const result = await invoke<string>("install_cli_command");
+      showToast({ message: result, type: "success" });
+      setCliInstalled(true);
+    } catch (error) {
+      showToast({
+        message: `Failed to install CLI: ${error}. You may need administrator privileges.`,
+        type: "error",
+      });
+    } finally {
+      setCliInstalling(false);
+    }
+  };
+
+  const handleUninstallCli = async () => {
+    setCliInstalling(true);
+    try {
+      const result = await invoke<string>("uninstall_cli_command");
+      showToast({ message: result, type: "success" });
+      setCliInstalled(false);
+    } catch (error) {
+      showToast({ message: `Failed to uninstall CLI: ${error}`, type: "error" });
+    } finally {
+      setCliInstalling(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -117,6 +169,43 @@ export const GeneralSettings = () => {
           </div>
         </SettingRow>
         {error && <div className="mt-2 text-red-500 text-xs">{error}</div>}
+      </Section>
+
+      <Section title="CLI Command">
+        <SettingRow
+          label="Terminal Command"
+          description={
+            cliChecking
+              ? "Checking..."
+              : cliInstalled
+                ? "CLI command is installed at /usr/local/bin/athas"
+                : "Install 'athas' command to launch app from terminal"
+          }
+        >
+          <div className="flex gap-2">
+            {cliInstalled ? (
+              <Button
+                onClick={handleUninstallCli}
+                disabled={cliInstalling}
+                variant="ghost"
+                size="xs"
+                className="px-2 py-1"
+              >
+                {cliInstalling ? "Uninstalling..." : "Uninstall"}
+              </Button>
+            ) : (
+              <Button
+                onClick={handleInstallCli}
+                disabled={cliInstalling || cliChecking}
+                variant="ghost"
+                size="xs"
+                className="px-2 py-1"
+              >
+                {cliInstalling ? "Installing..." : "Install"}
+              </Button>
+            )}
+          </div>
+        </SettingRow>
       </Section>
     </div>
   );

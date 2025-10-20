@@ -1,4 +1,5 @@
 pub mod claude;
+pub mod cli;
 pub mod font;
 pub mod format;
 pub mod fs;
@@ -16,6 +17,7 @@ pub mod window;
 pub mod xterm;
 
 pub use claude::*;
+pub use cli::*;
 pub use font::*;
 pub use format::*;
 pub use fs::*;

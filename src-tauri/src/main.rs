@@ -354,6 +354,10 @@ fn main() {
          filter_completions,
          // Format commands
          format_code,
+         // CLI commands
+         check_cli_installed,
+         install_cli_command,
+         uninstall_cli_command,
          // Menu commands
          menu::toggle_menu_bar,
       ])

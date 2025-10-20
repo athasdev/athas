@@ -55,6 +55,8 @@ interface Settings {
   //// File tree
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
+  // CLI
+  hasPromptedCliInstall: boolean;
 }
 
 const defaultSettings: Settings = {
@@ -111,6 +113,8 @@ const defaultSettings: Settings = {
   //// File tree
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
+  // CLI
+  hasPromptedCliInstall: false,
 };
 
 // Theme class constants

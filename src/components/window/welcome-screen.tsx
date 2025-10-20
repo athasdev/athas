@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import Button from "@/components/ui/button";
 import SettingsDialog from "@/settings/components/settings-dialog";
 import { useUpdater } from "@/settings/hooks/use-updater";
+import { useSettingsStore } from "@/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
 import { fetchRawAppVersion } from "@/utils/app-utils";
+import CliInstallPrompt from "./cli-install-prompt";
 
 interface RecentFolder {
   name: string;
@@ -24,7 +26,9 @@ const WelcomeScreen = ({
   onOpenRecentFolder,
 }: WelcomeScreenProps) => {
   const [appVersion, setAppVersion] = useState<string>("...");
+  const [showCliPrompt, setShowCliPrompt] = useState(false);
   const { openSettingsDialog, isSettingsDialogVisible, setIsSettingsDialogVisible } = useUIState();
+  const { settings } = useSettingsStore();
 
   // Hide updater in development environment
   const isDevelopment = import.meta.env.MODE === "development";
@@ -46,7 +50,16 @@ const WelcomeScreen = ({
     };
 
     loadVersion();
-  }, []);
+
+    // Show CLI install prompt on first launch
+    if (!settings.hasPromptedCliInstall) {
+      // Delay the prompt slightly so welcome screen renders first
+      const timer = setTimeout(() => {
+        setShowCliPrompt(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [settings.hasPromptedCliInstall]);
 
   const handleRecentFolderClick = (path: string) => {
     if (onOpenRecentFolder) {
@@ -230,6 +243,9 @@ const WelcomeScreen = ({
         isOpen={isSettingsDialogVisible}
         onClose={() => setIsSettingsDialogVisible(false)}
       />
+
+      {/* CLI Install Prompt */}
+      <CliInstallPrompt isVisible={showCliPrompt} onClose={() => setShowCliPrompt(false)} />
     </div>
   );
 };

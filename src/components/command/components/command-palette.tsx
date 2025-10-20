@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { appDataDir } from "@tauri-apps/api/path";
 import {
   ArrowUp,
@@ -397,6 +398,26 @@ const CommandPalette = () => {
           gitStore.actions.setIsRefreshing(false);
           showToast({ message: "Git status refreshed", type: "success" });
         }, 1000);
+        onClose();
+      },
+    },
+    {
+      id: "cli-install",
+      label: "CLI: Install Terminal Command",
+      description: "Install 'athas' command for terminal",
+      icon: <Terminal size={14} />,
+      category: "CLI",
+      action: async () => {
+        try {
+          showToast({ message: "Installing CLI command...", type: "info" });
+          const result = await invoke<string>("install_cli_command");
+          showToast({ message: result, type: "success" });
+        } catch (error) {
+          showToast({
+            message: `Failed to install CLI: ${error}. You may need administrator privileges.`,
+            type: "error",
+          });
+        }
         onClose();
       },
     },
