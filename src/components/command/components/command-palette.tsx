@@ -17,13 +17,16 @@ import {
   Info,
   Languages,
   Lightbulb,
+  Maximize,
   MessageSquare,
+  Minimize,
   MousePointer2,
   Package,
   Palette,
   PanelBottom,
   PanelLeft,
   RefreshCw,
+  RotateCcw,
   Save,
   Search,
   Settings,
@@ -31,6 +34,8 @@ import {
   Terminal,
   WrapText,
   X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -43,6 +48,7 @@ import { useLspStore } from "@/stores/lsp-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { vimCommands } from "@/stores/vim-commands";
 import { useVimStore } from "@/stores/vim-store";
+import { useZoomStore } from "@/stores/zoom-store";
 import {
   commitChanges,
   discardAllChanges,
@@ -126,6 +132,7 @@ const CommandPalette = () => {
   const activeBufferId = useBufferStore.use.activeBufferId();
   const { closeBuffer, setActiveBuffer, switchToNextBuffer, switchToPreviousBuffer } =
     useBufferStore.use.actions();
+  const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
 
   // Focus is handled internally when the palette becomes visible
 
@@ -438,6 +445,109 @@ const CommandPalette = () => {
       keybinding: ["Ctrl", "⇧", "Tab"],
       action: () => {
         switchToPreviousBuffer();
+        onClose();
+      },
+    },
+    {
+      id: "window-minimize",
+      label: "Window: Minimize",
+      description: "Minimize the window",
+      icon: <Minimize size={14} />,
+      category: "Window",
+      action: () => {
+        window.dispatchEvent(new CustomEvent("minimize-window"));
+        onClose();
+      },
+    },
+    {
+      id: "window-maximize",
+      label: "Window: Maximize",
+      description: "Maximize or restore the window",
+      icon: <Maximize size={14} />,
+      category: "Window",
+      action: () => {
+        window.dispatchEvent(new CustomEvent("maximize-window"));
+        onClose();
+      },
+    },
+    {
+      id: "window-fullscreen",
+      label: "Window: Toggle Fullscreen",
+      description: "Enter or exit fullscreen mode",
+      icon: <Maximize size={14} />,
+      category: "Window",
+      keybinding: ["F11"],
+      action: () => {
+        window.dispatchEvent(new CustomEvent("toggle-fullscreen"));
+        onClose();
+      },
+    },
+    {
+      id: "view-zoom-in",
+      label: "View: Zoom In",
+      description: "Increase zoom level",
+      icon: <ZoomIn size={14} />,
+      category: "View",
+      keybinding: ["⌘", "+"],
+      action: () => {
+        zoomIn("window");
+        onClose();
+      },
+    },
+    {
+      id: "view-zoom-out",
+      label: "View: Zoom Out",
+      description: "Decrease zoom level",
+      icon: <ZoomOut size={14} />,
+      category: "View",
+      keybinding: ["⌘", "-"],
+      action: () => {
+        zoomOut("window");
+        onClose();
+      },
+    },
+    {
+      id: "view-reset-zoom",
+      label: "View: Reset Zoom",
+      description: "Reset zoom to default level",
+      icon: <RotateCcw size={14} />,
+      category: "View",
+      keybinding: ["⌘", "0"],
+      action: () => {
+        resetZoom("window");
+        onClose();
+      },
+    },
+    {
+      id: "terminal-zoom-in",
+      label: "Terminal: Zoom In",
+      description: "Increase terminal zoom level",
+      icon: <ZoomIn size={14} />,
+      category: "Terminal",
+      action: () => {
+        zoomIn("terminal");
+        onClose();
+      },
+    },
+    {
+      id: "terminal-zoom-out",
+      label: "Terminal: Zoom Out",
+      description: "Decrease terminal zoom level",
+      icon: <ZoomOut size={14} />,
+      category: "Terminal",
+      action: () => {
+        zoomOut("terminal");
+        onClose();
+      },
+    },
+    {
+      id: "terminal-reset-zoom",
+      label: "Terminal: Reset Zoom",
+      description: "Reset terminal zoom to default level",
+      icon: <RotateCcw size={14} />,
+      category: "Terminal",
+      action: () => {
+        resetZoom("terminal");
         onClose();
       },
     },
