@@ -161,7 +161,7 @@ const CustomTitleBar = ({
     return (
       <div
         data-tauri-drag-region
-        className="relative z-50 flex h-8 select-none items-center justify-between bg-primary-bg pl-0.5"
+        className="relative z-50 flex h-9 select-none items-center justify-between bg-primary-bg pl-0.5"
       >
         {!settings.nativeMenuBar && (
           <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />

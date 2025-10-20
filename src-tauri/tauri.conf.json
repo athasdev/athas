@@ -27,8 +27,8 @@
         "minHeight": 400,
         "shadow": true,
         "trafficLightPosition": {
-          "x": 15,
-          "y": 13
+          "x": 20,
+          "y": 22
         }
       }
     ],
