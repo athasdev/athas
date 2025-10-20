@@ -3,10 +3,12 @@ import { appDataDir } from "@tauri-apps/api/path";
 import {
   AlertCircle,
   ArrowLeftRight,
+  ArrowRight,
   ArrowUp,
   ChevronRight,
   Cloud,
   Code2,
+  FilePlus,
   FileText,
   FolderOpen,
   GitBranch,
@@ -28,6 +30,7 @@ import {
   Sparkles,
   Terminal,
   WrapText,
+  X,
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -35,6 +38,7 @@ import { useToast } from "@/contexts/toast-context";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useSettingsStore } from "@/settings/store";
 import { useAppStore } from "@/stores/app-store";
+import { useBufferStore } from "@/stores/buffer-store";
 import { useLspStore } from "@/stores/lsp-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { vimCommands } from "@/stores/vim-commands";
@@ -118,6 +122,10 @@ const CommandPalette = () => {
   const { rootFolderPath } = useFileSystemStore();
   const gitStore = useGitStore();
   const { showToast } = useToast();
+  const buffers = useBufferStore.use.buffers();
+  const activeBufferId = useBufferStore.use.activeBufferId();
+  const { closeBuffer, setActiveBuffer, switchToNextBuffer, switchToPreviousBuffer } =
+    useBufferStore.use.actions();
 
   // Focus is handled internally when the palette becomes visible
 
@@ -381,6 +389,56 @@ const CommandPalette = () => {
       action: () => {
         onClose();
         setIsCommandBarVisible(true);
+      },
+    },
+    {
+      id: "file-save-as",
+      label: "File: Save As",
+      description: "Save current file with a new name",
+      icon: <FilePlus size={14} />,
+      category: "File",
+      keybinding: ["⌘", "⇧", "S"],
+      action: () => {
+        onClose();
+        window.dispatchEvent(new CustomEvent("menu-save-as"));
+      },
+    },
+    {
+      id: "file-close",
+      label: "File: Close File",
+      description: "Close current file",
+      icon: <X size={14} />,
+      category: "File",
+      keybinding: ["⌘", "W"],
+      action: () => {
+        if (activeBufferId) {
+          closeBuffer(activeBufferId);
+        }
+        onClose();
+      },
+    },
+    {
+      id: "view-next-tab",
+      label: "View: Next Tab",
+      description: "Switch to the next open file",
+      icon: <ArrowRight size={14} />,
+      category: "File",
+      keybinding: ["Ctrl", "Tab"],
+      action: () => {
+        switchToNextBuffer();
+        onClose();
+      },
+    },
+    {
+      id: "view-previous-tab",
+      label: "View: Previous Tab",
+      description: "Switch to the previous open file",
+      icon: <ArrowRight size={14} />,
+      category: "File",
+      keybinding: ["Ctrl", "⇧", "Tab"],
+      action: () => {
+        switchToPreviousBuffer();
+        onClose();
       },
     },
     {
@@ -953,8 +1011,22 @@ const CommandPalette = () => {
       ]
     : [];
 
+  // Add tab switching commands (⌘1-9) for first 9 buffers
+  const tabSwitchActions: Action[] = buffers.slice(0, 9).map((buffer, index) => ({
+    id: `switch-to-tab-${index + 1}`,
+    label: `View: Switch to Tab ${index + 1}`,
+    description: `Switch to ${buffer.name}`,
+    icon: <FileText size={14} />,
+    category: "File",
+    keybinding: ["⌘", `${index + 1}`],
+    action: () => {
+      setActiveBuffer(buffer.id);
+      onClose();
+    },
+  }));
+
   // Combine all actions
-  const allActions = [...actions, ...vimActions, ...vimModeActions];
+  const allActions = [...actions, ...vimActions, ...vimModeActions, ...tabSwitchActions];
 
   // Filter actions based on query
   const filteredActions = allActions.filter(
