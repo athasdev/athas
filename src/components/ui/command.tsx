@@ -6,16 +6,25 @@ interface CommandProps {
   isVisible: boolean;
   children: React.ReactNode;
   className?: string;
+  onClose?: () => void;
 }
 
-const Command = ({ isVisible, children, className }: CommandProps) => {
+const Command = ({ isVisible, children, className, onClose }: CommandProps) => {
   if (!isVisible) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 flex items-start justify-center pt-16">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
+      {/* Backdrop - click to close */}
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default bg-black/20"
+        onClick={onClose}
+        aria-label="Close command palette"
+        tabIndex={-1}
+      />
       <div
         className={cn(
-          "pointer-events-auto flex max-h-[320px] w-[520px] flex-col overflow-hidden",
+          "relative flex max-h-[320px] w-[520px] flex-col overflow-hidden",
           "rounded-md border border-border bg-primary-bg shadow-2xl",
           className,
         )}
