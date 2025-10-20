@@ -1,6 +1,6 @@
 import { ArrowRight, FilePlus, FileText, X } from "lucide-react";
 import type { Buffer } from "@/types/buffer";
-import type { Action } from "../../models/action.types";
+import type { Action } from "../models/action.types";
 
 interface FileActionsParams {
   activeBufferId: string | null;

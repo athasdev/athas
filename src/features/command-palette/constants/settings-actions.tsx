@@ -18,7 +18,7 @@ import {
   Terminal,
   WrapText,
 } from "lucide-react";
-import type { Action } from "../../models/action.types";
+import type { Action } from "../models/action.types";
 
 interface SettingsActionsParams {
   settings: {

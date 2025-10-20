@@ -1,5 +1,5 @@
 import { ArrowUp, GitBranch, GitCommit, RefreshCw } from "lucide-react";
-import type { Action } from "../../models/action.types";
+import type { Action } from "../models/action.types";
 
 interface GitActionsParams {
   rootFolderPath: string | null | undefined;

@@ -1,15 +1,15 @@
 import { Palette } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { iconThemeRegistry } from "@/extensions/icon-themes";
-import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
 import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
   CommandItem,
   CommandList,
-} from "../../ui/command";
+} from "@/components/ui/command";
+import { iconThemeRegistry } from "@/extensions/icon-themes";
+import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
 
 interface IconThemeInfo {
   id: string;

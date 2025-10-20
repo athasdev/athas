@@ -1,5 +1,13 @@
 import { appDataDir } from "@tauri-apps/api/path";
 import { useEffect, useRef, useState } from "react";
+import Command, {
+  CommandEmpty,
+  CommandHeader,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import KeybindingBadge from "@/components/ui/keybinding-badge";
 import { useToast } from "@/contexts/toast-context";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useSettingsStore } from "@/settings/store";
@@ -20,21 +28,13 @@ import {
   unstageAllFiles,
 } from "@/version-control/git/controllers/git";
 import { useGitStore } from "@/version-control/git/controllers/git-store";
-import Command, {
-  CommandEmpty,
-  CommandHeader,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "../../ui/command";
-import KeybindingBadge from "../../ui/keybinding-badge";
-import { createAdvancedActions } from "../constants/actions/advanced-actions";
-import { createFileActions } from "../constants/actions/file-actions";
-import { createGitActions } from "../constants/actions/git-actions";
-import { createNavigationActions } from "../constants/actions/navigation-actions";
-import { createSettingsActions } from "../constants/actions/settings-actions";
-import { createViewActions } from "../constants/actions/view-actions";
-import { createWindowActions } from "../constants/actions/window-actions";
+import { createAdvancedActions } from "../constants/advanced-actions";
+import { createFileActions } from "../constants/file-actions";
+import { createGitActions } from "../constants/git-actions";
+import { createNavigationActions } from "../constants/navigation-actions";
+import { createSettingsActions } from "../constants/settings-actions";
+import { createViewActions } from "../constants/view-actions";
+import { createWindowActions } from "../constants/window-actions";
 import type { Action } from "../models/action.types";
 
 const CommandPalette = () => {

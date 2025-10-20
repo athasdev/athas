@@ -11,7 +11,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import type { Action } from "../../models/action.types";
+import type { Action } from "../models/action.types";
 
 interface ViewActionsParams {
   isSidebarVisible: boolean;

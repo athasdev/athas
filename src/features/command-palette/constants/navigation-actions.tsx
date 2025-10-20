@@ -1,5 +1,5 @@
 import { Cloud, FileText, FolderOpen, GitBranch, Hash, Package, Search } from "lucide-react";
-import type { Action } from "../../models/action.types";
+import type { Action } from "../models/action.types";
 
 interface NavigationActionsParams {
   setIsSidebarVisible: (v: boolean) => void;

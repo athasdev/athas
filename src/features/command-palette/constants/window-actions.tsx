@@ -1,5 +1,5 @@
 import { Maximize, Minimize } from "lucide-react";
-import type { Action } from "../../models/action.types";
+import type { Action } from "../models/action.types";
 
 interface WindowActionsParams {
   onClose: () => void;
