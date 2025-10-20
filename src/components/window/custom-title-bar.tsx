@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import SettingsDialog from "@/settings/components/settings-dialog";
 import { useSettingsStore } from "@/settings/store";
 import { useProjectStore } from "@/stores/project-store";
+import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 import CustomMenuBar from "./menu-bar";
 
@@ -316,7 +317,8 @@ const CustomTitleBar = ({
 };
 
 const CustomTitleBarWithSettings = (props: Omit<CustomTitleBarProps, "onOpenSettings">) => {
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const isSettingsDialogVisible = useUIState((state) => state.isSettingsDialogVisible);
+  const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
 
   // Handle Cmd+, (Mac) or Ctrl+, (Windows/Linux) to open settings
   useEffect(() => {
@@ -326,18 +328,21 @@ const CustomTitleBarWithSettings = (props: Omit<CustomTitleBarProps, "onOpenSett
 
       if (isSettingsShortcut) {
         event.preventDefault();
-        setIsSettingsOpen(true);
+        setIsSettingsDialogVisible(true);
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [setIsSettingsDialogVisible]);
 
   return (
     <>
-      <CustomTitleBar {...props} onOpenSettings={() => setIsSettingsOpen(true)} />
-      <SettingsDialog isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <CustomTitleBar {...props} onOpenSettings={() => setIsSettingsDialogVisible(true)} />
+      <SettingsDialog
+        isOpen={isSettingsDialogVisible}
+        onClose={() => setIsSettingsDialogVisible(false)}
+      />
     </>
   );
 };

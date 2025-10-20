@@ -31,6 +31,7 @@ const initialState = {
   isSettingsDialogVisible: false,
   isThemeSelectorVisible: false,
   isIconThemeSelectorVisible: false,
+  isBranchManagerVisible: false,
   settingsInitialTab: "general" as SettingsTab,
 
   // Bottom Pane
@@ -64,24 +65,147 @@ const initialState = {
 
 export const useUIState = create(
   combine(initialState, (set, get) => ({
+    // Helper to check if any modal/overlay is open
+    hasOpenModal: () => {
+      const state = get();
+      return (
+        state.isCommandBarVisible ||
+        state.isCommandPaletteVisible ||
+        state.isThemeSelectorVisible ||
+        state.isIconThemeSelectorVisible ||
+        state.isSettingsDialogVisible ||
+        state.isBranchManagerVisible
+      );
+    },
+
+    // Close all modals/overlays (for escape key handling)
+    closeTopModal: () => {
+      const state = get();
+      // Priority order: most recently opened first
+      if (state.isThemeSelectorVisible) {
+        set({ isThemeSelectorVisible: false });
+        return true;
+      }
+      if (state.isIconThemeSelectorVisible) {
+        set({ isIconThemeSelectorVisible: false });
+        return true;
+      }
+      if (state.isCommandPaletteVisible) {
+        set({ isCommandPaletteVisible: false });
+        return true;
+      }
+      if (state.isCommandBarVisible) {
+        set({ isCommandBarVisible: false });
+        return true;
+      }
+      if (state.isSettingsDialogVisible) {
+        set({ isSettingsDialogVisible: false });
+        return true;
+      }
+      if (state.isBranchManagerVisible) {
+        set({ isBranchManagerVisible: false });
+        return true;
+      }
+      return false;
+    },
+
     setIsSidebarVisible: (v: boolean) => set({ isSidebarVisible: v }),
-    setIsCommandBarVisible: (v: boolean) => set({ isCommandBarVisible: v }),
-    setIsCommandPaletteVisible: (v: boolean) => set({ isCommandPaletteVisible: v }),
+    setIsCommandBarVisible: (v: boolean) => {
+      // Close other modals when opening command bar
+      if (v) {
+        set({
+          isCommandBarVisible: true,
+          isCommandPaletteVisible: false,
+          isThemeSelectorVisible: false,
+          isIconThemeSelectorVisible: false,
+        });
+      } else {
+        set({ isCommandBarVisible: v });
+      }
+    },
+    setIsCommandPaletteVisible: (v: boolean) => {
+      // Close other modals when opening command palette
+      if (v) {
+        set({
+          isCommandPaletteVisible: true,
+          isCommandBarVisible: false,
+          isThemeSelectorVisible: false,
+          isIconThemeSelectorVisible: false,
+        });
+      } else {
+        set({ isCommandPaletteVisible: v });
+      }
+    },
     setIsFindVisible: (v: boolean) => set({ isFindVisible: v }),
 
     setIsSearchViewActive: (v: boolean) => set({ isSearchViewActive: v }),
     setIsGitHubCopilotSettingsVisible: (v: boolean) => set({ isGitHubCopilotSettingsVisible: v }),
 
     // Dialog State actions
-    setIsSettingsDialogVisible: (v: boolean) => set({ isSettingsDialogVisible: v }),
-    setIsThemeSelectorVisible: (v: boolean) => set({ isThemeSelectorVisible: v }),
-    setIsIconThemeSelectorVisible: (v: boolean) => set({ isIconThemeSelectorVisible: v }),
+    setIsSettingsDialogVisible: (v: boolean) => {
+      // Close other modals when opening settings
+      if (v) {
+        set({
+          isSettingsDialogVisible: true,
+          isCommandBarVisible: false,
+          isCommandPaletteVisible: false,
+          isThemeSelectorVisible: false,
+          isIconThemeSelectorVisible: false,
+        });
+      } else {
+        set({ isSettingsDialogVisible: v });
+      }
+    },
+    setIsThemeSelectorVisible: (v: boolean) => {
+      // Close other modals when opening theme selector
+      if (v) {
+        set({
+          isThemeSelectorVisible: true,
+          isCommandBarVisible: false,
+          isCommandPaletteVisible: false,
+          isIconThemeSelectorVisible: false,
+        });
+      } else {
+        set({ isThemeSelectorVisible: v });
+      }
+    },
+    setIsIconThemeSelectorVisible: (v: boolean) => {
+      // Close other modals when opening icon theme selector
+      if (v) {
+        set({
+          isIconThemeSelectorVisible: true,
+          isCommandBarVisible: false,
+          isCommandPaletteVisible: false,
+          isThemeSelectorVisible: false,
+        });
+      } else {
+        set({ isIconThemeSelectorVisible: v });
+      }
+    },
     setSettingsInitialTab: (tab: SettingsTab) => set({ settingsInitialTab: tab }),
     openSettingsDialog: (tab?: SettingsTab) =>
       set({
         isSettingsDialogVisible: true,
+        isCommandBarVisible: false,
+        isCommandPaletteVisible: false,
+        isThemeSelectorVisible: false,
+        isIconThemeSelectorVisible: false,
         settingsInitialTab: tab || "general",
       }),
+    setIsBranchManagerVisible: (v: boolean) => {
+      // Close other modals when opening branch manager
+      if (v) {
+        set({
+          isBranchManagerVisible: true,
+          isCommandBarVisible: false,
+          isCommandPaletteVisible: false,
+          isThemeSelectorVisible: false,
+          isIconThemeSelectorVisible: false,
+        });
+      } else {
+        set({ isBranchManagerVisible: v });
+      }
+    },
 
     // Bottom Pane actions
     setIsBottomPaneVisible: (v: boolean) => set({ isBottomPaneVisible: v }),
