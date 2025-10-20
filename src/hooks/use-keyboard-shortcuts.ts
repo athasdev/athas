@@ -1,6 +1,7 @@
 import { exit } from "@tauri-apps/plugin-process";
 import React, { useEffect } from "react";
 import { useSettingsStore } from "@/settings/store";
+import { useUIState } from "@/stores/ui-state-store";
 import { isMac } from "../file-system/controllers/platform";
 import type { CoreFeaturesState } from "../settings/models/feature.types";
 import { useZoomStore } from "../stores/zoom-store";
@@ -74,6 +75,17 @@ export const useKeyboardShortcuts = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Global Escape handler - close top modal first
+      if (e.key === "Escape") {
+        const { hasOpenModal, closeTopModal } = useUIState.getState();
+        if (hasOpenModal()) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeTopModal();
+          return;
+        }
+      }
+
       // Don't process regular shortcuts if vim mode is enabled and we're not using modifier keys
       const isVimModeEnabled = settings.vimMode;
       const hasModifiers = e.metaKey || e.ctrlKey || e.altKey || e.shiftKey;

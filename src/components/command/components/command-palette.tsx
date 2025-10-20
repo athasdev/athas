@@ -779,16 +779,13 @@ const CommandPalette = () => {
             filteredActions[selectedIndex].action();
           }
           break;
-        case "Escape":
-          e.preventDefault();
-          onClose();
-          break;
+        // Escape is now handled globally in use-keyboard-shortcuts
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isVisible, filteredActions, selectedIndex, onClose]);
+  }, [isVisible, filteredActions, selectedIndex]);
 
   // Reset state when visibility changes
   useEffect(() => {
