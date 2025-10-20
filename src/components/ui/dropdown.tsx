@@ -45,7 +45,13 @@ const Dropdown = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  useOnClickOutside(dropdownRef as RefObject<HTMLElement>, () => setIsOpen(false));
+  useOnClickOutside(dropdownRef as RefObject<HTMLElement>, (event) => {
+    const target = event.target as HTMLElement;
+    if (target && buttonRef.current?.contains(target)) {
+      return;
+    }
+    setIsOpen(false);
+  });
 
   // Update dropdown position when opened
   useEffect(() => {
