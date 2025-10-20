@@ -1,6 +1,7 @@
 import { Check, ChevronDown, GitBranch, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/contexts/toast-context";
+import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 import {
   checkoutBranch,
@@ -24,28 +25,16 @@ const GitBranchManager = ({
   compact = false,
 }: GitBranchManagerProps) => {
   const [branches, setBranches] = useState<string[]>([]);
-  const [showModal, setShowModal] = useState(false);
   const [newBranchName, setNewBranchName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { showToast } = useToast();
+  const isBranchManagerVisible = useUIState((state) => state.isBranchManagerVisible);
+  const setIsBranchManagerVisible = useUIState((state) => state.setIsBranchManagerVisible);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     loadBranches();
   }, [repoPath]);
-
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && showModal) {
-        setShowModal(false);
-      }
-    };
-
-    if (showModal) {
-      document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
-    }
-  }, [showModal]);
 
   const loadBranches = async () => {
     if (!repoPath) return;
@@ -86,7 +75,7 @@ const GitBranchManager = ({
                       message: "Changes stashed and branch switched successfully",
                       type: "success",
                     });
-                    setShowModal(false);
+                    setIsBranchManagerVisible(false);
                     onBranchChange?.();
                   } else {
                     showToast({
@@ -105,7 +94,7 @@ const GitBranchManager = ({
           },
         });
       } else if (result.success) {
-        setShowModal(false);
+        setIsBranchManagerVisible(false);
         onBranchChange?.();
       } else {
         showToast({
@@ -162,7 +151,7 @@ const GitBranchManager = ({
     const modalWidth = 480;
     const modalMaxHeight = viewportHeight * 0.6;
 
-    const left = viewportWidth / 2 - modalWidth / 2 + 100;
+    const left = viewportWidth / 2 - modalWidth / 2;
     const top = viewportHeight / 2 - modalMaxHeight / 2;
 
     return {
@@ -176,7 +165,7 @@ const GitBranchManager = ({
     <>
       <button
         ref={buttonRef}
-        onClick={() => setShowModal(true)}
+        onClick={() => setIsBranchManagerVisible(true)}
         disabled={isLoading}
         className={cn(
           "flex items-center",
@@ -200,10 +189,19 @@ const GitBranchManager = ({
         {!compact && <ChevronDown size={8} />}
       </button>
 
-      {showModal && (
+      {isBranchManagerVisible && (
         <div
           className={cn("fixed inset-0 z-100", "bg-black bg-opacity-50")}
-          onClick={() => setShowModal(false)}
+          onClick={() => setIsBranchManagerVisible(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsBranchManagerVisible(false);
+            }
+          }}
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
         >
           <div
             className={cn(
@@ -225,7 +223,7 @@ const GitBranchManager = ({
                 Branch Manager
               </h3>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => setIsBranchManagerVisible(false)}
                 className={cn("rounded p-0.5 text-text-lighter", "hover:bg-hover hover:text-text")}
               >
                 <X size={12} />
@@ -257,6 +255,14 @@ const GitBranchManager = ({
                       if (e.key === "Enter" && newBranchName.trim()) {
                         e.preventDefault();
                         handleCreateBranch();
+                      } else if (e.key === "Escape") {
+                        // If input has text, clear it first
+                        if (newBranchName.trim()) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setNewBranchName("");
+                        }
+                        // If input is empty, let escape bubble to close the modal
                       }
                     }}
                     disabled={isLoading}

@@ -30,20 +30,6 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
     }
   }, [isOpen, settingsInitialTab]);
 
-  // Handle Escape key to close dialog
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
   const renderTabContent = () => {
     switch (activeTab) {
       case "general":

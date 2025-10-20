@@ -17,12 +17,12 @@ import type { GitHunk } from "@/version-control/git/models/git-types";
 // Lazy load AI Chat for better performance
 const AIChat = lazy(() => import("../ai-chat/ai-chat"));
 
+import CommandPalette from "@/features/command-palette/components/command-palette";
+import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
+import ThemeSelector from "@/features/command-palette/components/theme-selector";
+import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import BottomPane from "../bottom-pane";
-import CommandBar from "../command/components/command-bar";
-import CommandPalette from "../command/components/command-palette";
-import IconThemeSelector from "../command/components/icon-theme-selector";
-import ThemeSelector from "../command/components/theme-selector";
-import VimCommandBar from "../command/components/vim-command-bar";
+import CommandBar from "../command-bar/components/command-bar";
 import type { Diagnostic } from "../diagnostics/diagnostics-pane";
 import CodeEditor from "../editor/code-editor";
 import EditorFooter from "../editor-footer";

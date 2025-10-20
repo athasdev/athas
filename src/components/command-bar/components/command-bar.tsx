@@ -1,7 +1,6 @@
 import { ClockIcon, File } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
-import { shouldIgnoreInCommandPalette } from "@/components/command/constants/ignored-patterns";
 import { useRecentFilesStore } from "@/file-system/controllers/recent-files-store";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useBufferStore } from "@/stores/buffer-store";
@@ -13,6 +12,7 @@ import Command, {
   CommandItem,
   CommandList,
 } from "../../ui/command";
+import { shouldIgnoreInCommandPalette } from "../constants/ignored-patterns";
 
 // Function to check if a file should be ignored
 // Now using centralized filtering logic with improved path handling
