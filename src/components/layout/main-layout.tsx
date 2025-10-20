@@ -18,11 +18,11 @@ import type { GitHunk } from "@/version-control/git/models/git-types";
 const AIChat = lazy(() => import("../ai-chat/ai-chat"));
 
 import BottomPane from "../bottom-pane";
-import CommandBar from "../command/components/command-bar";
-import CommandPalette from "../command/components/command-palette";
 import IconThemeSelector from "../command/components/icon-theme-selector";
 import ThemeSelector from "../command/components/theme-selector";
 import VimCommandBar from "../command/components/vim-command-bar";
+import CommandBar from "../command-bar/components/command-bar";
+import CommandPalette from "../command-palette/components/command-palette";
 import type { Diagnostic } from "../diagnostics/diagnostics-pane";
 import CodeEditor from "../editor/code-editor";
 import EditorFooter from "../editor-footer";

@@ -193,6 +193,15 @@ const GitBranchManager = ({
         <div
           className={cn("fixed inset-0 z-100", "bg-black bg-opacity-50")}
           onClick={() => setIsBranchManagerVisible(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsBranchManagerVisible(false);
+            }
+          }}
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
         >
           <div
             className={cn(
@@ -246,6 +255,14 @@ const GitBranchManager = ({
                       if (e.key === "Enter" && newBranchName.trim()) {
                         e.preventDefault();
                         handleCreateBranch();
+                      } else if (e.key === "Escape") {
+                        // If input has text, clear it first
+                        if (newBranchName.trim()) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setNewBranchName("");
+                        }
+                        // If input is empty, let escape bubble to close the modal
                       }
                     }}
                     disabled={isLoading}
