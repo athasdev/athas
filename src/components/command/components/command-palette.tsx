@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { appDataDir } from "@tauri-apps/api/path";
 import {
   AlertCircle,
+  ArrowLeftRight,
   ArrowUp,
   ChevronRight,
   Cloud,
@@ -15,6 +16,8 @@ import {
   MessageSquare,
   MousePointer2,
   Palette,
+  PanelBottom,
+  PanelLeft,
   RefreshCw,
   Save,
   Search,
@@ -70,6 +73,14 @@ const CommandPalette = () => {
     setIsSettingsDialogVisible,
     setIsThemeSelectorVisible,
     setIsIconThemeSelectorVisible,
+    isSidebarVisible,
+    setIsSidebarVisible,
+    isBottomPaneVisible,
+    setIsBottomPaneVisible,
+    bottomPaneActiveTab,
+    setBottomPaneActiveTab,
+    isFindVisible,
+    setIsFindVisible,
   } = useUIState();
   const { openQuickEdit } = useAppStore.use.actions();
 
@@ -175,6 +186,110 @@ const CommandPalette = () => {
       category: "Vim",
       action: () => {
         useSettingsStore.getState().updateSetting("vimMode", !vimMode);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-sidebar",
+      label: isSidebarVisible ? "View: Hide Sidebar" : "View: Show Sidebar",
+      description: isSidebarVisible ? "Hide the sidebar panel" : "Show the sidebar panel",
+      icon: <PanelLeft size={14} />,
+      category: "View",
+      keybinding: ["⌘", "B"],
+      action: () => {
+        setIsSidebarVisible(!isSidebarVisible);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-bottom-pane",
+      label: isBottomPaneVisible ? "View: Hide Bottom Pane" : "View: Show Bottom Pane",
+      description: isBottomPaneVisible ? "Hide the bottom pane" : "Show the bottom pane",
+      icon: <PanelBottom size={14} />,
+      category: "View",
+      action: () => {
+        setIsBottomPaneVisible(!isBottomPaneVisible);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-terminal",
+      label:
+        isBottomPaneVisible && bottomPaneActiveTab === "terminal"
+          ? "View: Hide Terminal"
+          : "View: Show Terminal",
+      description: "Toggle integrated terminal panel",
+      icon: <Terminal size={14} />,
+      category: "View",
+      keybinding: ["⌘", "`"],
+      action: () => {
+        if (isBottomPaneVisible && bottomPaneActiveTab === "terminal") {
+          setIsBottomPaneVisible(false);
+        } else {
+          setBottomPaneActiveTab("terminal");
+          setIsBottomPaneVisible(true);
+        }
+        onClose();
+      },
+    },
+    {
+      id: "toggle-diagnostics-panel",
+      label:
+        isBottomPaneVisible && bottomPaneActiveTab === "diagnostics"
+          ? "View: Hide Diagnostics"
+          : "View: Show Diagnostics",
+      description: "Toggle diagnostics panel",
+      icon: <AlertCircle size={14} />,
+      category: "View",
+      keybinding: ["⌘", "⇧", "J"],
+      action: () => {
+        if (isBottomPaneVisible && bottomPaneActiveTab === "diagnostics") {
+          setIsBottomPaneVisible(false);
+        } else {
+          setBottomPaneActiveTab("diagnostics");
+          setIsBottomPaneVisible(true);
+        }
+        onClose();
+      },
+    },
+    {
+      id: "toggle-ai-chat-view",
+      label: settings.isAIChatVisible ? "View: Hide AI Chat" : "View: Show AI Chat",
+      description: settings.isAIChatVisible ? "Hide AI chat panel" : "Show AI chat panel",
+      icon: <MessageSquare size={14} />,
+      category: "View",
+      keybinding: ["⌘", "R"],
+      action: () => {
+        useSettingsStore.getState().updateSetting("isAIChatVisible", !settings.isAIChatVisible);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-find-view",
+      label: isFindVisible ? "View: Hide Find" : "View: Show Find",
+      description: isFindVisible ? "Hide find in file" : "Show find in file",
+      icon: <Search size={14} />,
+      category: "View",
+      keybinding: ["⌘", "F"],
+      action: () => {
+        setIsFindVisible(!isFindVisible);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-sidebar-position",
+      label: "View: Switch Sidebar Position",
+      description:
+        settings.sidebarPosition === "left"
+          ? "Move sidebar to right side"
+          : "Move sidebar to left side",
+      icon: <ArrowLeftRight size={14} />,
+      category: "View",
+      keybinding: ["⌘", "⇧", "B"],
+      action: () => {
+        useSettingsStore
+          .getState()
+          .updateSetting("sidebarPosition", settings.sidebarPosition === "left" ? "right" : "left");
         onClose();
       },
     },
