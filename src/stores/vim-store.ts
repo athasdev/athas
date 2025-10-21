@@ -19,6 +19,10 @@ interface VimState {
     end: { line: number; column: number } | null;
   };
   visualMode: "char" | "line" | null; // Track visual mode type
+  register: {
+    text: string;
+    isLineWise: boolean;
+  };
 }
 
 const defaultVimState: VimState = {
@@ -34,6 +38,10 @@ const defaultVimState: VimState = {
     end: null,
   },
   visualMode: null,
+  register: {
+    text: "",
+    isLineWise: false,
+  },
 };
 
 const useVimStoreBase = create(
@@ -119,6 +127,13 @@ const useVimStoreBase = create(
         setLastKey: (key: string | null) => {
           set((state) => {
             state.lastKey = key;
+          });
+        },
+
+        setRegister: (text: string, isLineWise: boolean) => {
+          set((state) => {
+            state.register.text = text;
+            state.register.isLineWise = isLineWise;
           });
         },
 
