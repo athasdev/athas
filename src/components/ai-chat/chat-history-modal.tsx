@@ -46,7 +46,7 @@ export default function ChatHistoryModal({
           </div>
         </div>
 
-        <div className="max-h-[50vh] overflow-y-auto">
+        <div className="custom-scrollbar max-h-[50vh] overflow-y-auto">
           {filteredChats.length === 0 ? (
             <div className="py-8 text-center text-text-lighter">
               <MessageSquare size={24} className="mx-auto mb-2 opacity-50" />

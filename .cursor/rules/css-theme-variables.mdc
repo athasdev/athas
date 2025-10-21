@@ -1,0 +1,95 @@
+---
+globs: *.css,*.tsx,*.ts
+---
+
+# CSS Theme Variables Guidelines
+
+## Required Theme Variables
+
+Always use CSS variables instead of hardcoded colors to maintain theme consistency across light and dark modes.
+
+### Primary Colors
+- `var(--color-primary-bg)` - Primary background color
+- `var(--color-secondary-bg)` - Secondary background color
+- `var(--color-text)` - Primary text color
+- `var(--color-text-lighter)` - Lighter text color
+- `var(--color-border)` - Border color
+
+### Scrollbar Colors
+- `var(--color-border)` - Scrollbar thumb color
+- `var(--color-secondary-bg)` - Scrollbar track color
+- `var(--color-text-lighter)` - Scrollbar thumb hover color
+
+### Editor Colors
+- `var(--editor-font-family)` - Editor font family
+- `var(--selection-bg)` - Text selection background
+- `var(--git-gutter-added)` - Git gutter added color
+- `var(--git-gutter-modified)` - Git gutter modified color
+- `var(--git-gutter-deleted)` - Git gutter deleted color
+
+## Implementation Rules
+
+### ✅ Correct Usage
+```css
+background: var(--color-primary-bg);
+color: var(--color-text);
+border: 1px solid var(--color-border);
+```
+
+### ❌ Avoid Hardcoded Colors
+```css
+background: #ffffff;  /* Don't do this */
+color: #000000;       /* Don't do this */
+border: 1px solid #ccc; /* Don't do this */
+```
+
+### Scrollbar Implementation
+```css
+scrollbar-width: thin;
+scrollbar-color: var(--color-border) var(--color-secondary-bg);
+```
+
+### Webkit Scrollbar Styling
+```css
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-secondary-bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-lighter);
+}
+```
+
+## Theme-Aware Components
+
+### Modal Components
+Use `custom-scrollbar` class for consistent scrollbar styling:
+```tsx
+<div className="custom-scrollbar max-h-[50vh] overflow-y-auto">
+```
+
+### Editor Components
+Hide scrollbars completely:
+```css
+.editor-container {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.editor-container::-webkit-scrollbar {
+    display: none;
+}
+```
+
+## Global Styling
+
+The application includes comprehensive global scrollbar styling in [src/styles.css](mdc:src/styles.css) that automatically applies theme-aware colors to all overflow elements. This ensures consistency across the entire application without requiring individual component styling.

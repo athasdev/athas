@@ -795,7 +795,7 @@ button {
 /* Ensure scrolling works properly in all browsers */
 textarea {
     scrollbar-width: thin;
-    scrollbar-color: #ccc #f5f5f5;
+    scrollbar-color: var(--color-border) var(--color-secondary-bg);
     /* Force enable scrolling in Tauri */
     overflow: auto !important;
     -webkit-overflow-scrolling: touch;
@@ -807,24 +807,77 @@ textarea::-webkit-scrollbar {
 }
 
 textarea::-webkit-scrollbar-track {
-    background: #f5f5f5;
+    background: var(--color-secondary-bg);
 }
 
 textarea::-webkit-scrollbar-thumb {
-    background: #ccc;
+    background: var(--color-border);
     border-radius: 6px;
 }
 
 textarea::-webkit-scrollbar-thumb:hover {
-    background: #999;
+    background: var(--color-text-lighter);
 }
 
-/* Force proper scrolling for all overflow auto elements */
+/* Theme-aware scrollbars for all overflow elements */
 [class*="overflow-auto"],
-.overflow-auto {
+.overflow-auto,
+[class*="overflow-y-auto"],
+.overflow-y-auto,
+[class*="overflow-x-auto"],
+.overflow-x-auto {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) var(--color-secondary-bg);
     overflow: auto !important;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: none !important;
+}
+
+[class*="overflow-auto"]::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar,
+[class*="overflow-y-auto"]::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+[class*="overflow-x-auto"]::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+[class*="overflow-auto"]::-webkit-scrollbar-track,
+.overflow-auto::-webkit-scrollbar-track,
+[class*="overflow-y-auto"]::-webkit-scrollbar-track,
+.overflow-y-auto::-webkit-scrollbar-track,
+[class*="overflow-x-auto"]::-webkit-scrollbar-track,
+.overflow-x-auto::-webkit-scrollbar-track {
+    background: var(--color-secondary-bg);
+}
+
+[class*="overflow-auto"]::-webkit-scrollbar-thumb,
+.overflow-auto::-webkit-scrollbar-thumb,
+[class*="overflow-y-auto"]::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb,
+[class*="overflow-x-auto"]::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+}
+
+[class*="overflow-auto"]::-webkit-scrollbar-thumb:hover,
+.overflow-auto::-webkit-scrollbar-thumb:hover,
+[class*="overflow-y-auto"]::-webkit-scrollbar-thumb:hover,
+.overflow-y-auto::-webkit-scrollbar-thumb:hover,
+[class*="overflow-x-auto"]::-webkit-scrollbar-thumb:hover,
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-lighter);
+}
+
+[class*="overflow-auto"]::-webkit-scrollbar-corner,
+.overflow-auto::-webkit-scrollbar-corner,
+[class*="overflow-y-auto"]::-webkit-scrollbar-corner,
+.overflow-y-auto::-webkit-scrollbar-corner,
+[class*="overflow-x-auto"]::-webkit-scrollbar-corner,
+.overflow-x-auto::-webkit-scrollbar-corner {
+    background: var(--color-secondary-bg);
 }
 
 /* Paper texture and theme-aware colors for welcome screen */

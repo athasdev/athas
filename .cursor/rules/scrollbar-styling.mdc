@@ -1,0 +1,52 @@
+---
+description: Scrollbar styling guidelines and theme consistency rules
+---
+
+# Scrollbar Styling Guidelines
+
+## Theme-Aware Scrollbar Implementation
+
+All scrollbars in the application must use theme-aware CSS variables instead of hardcoded colors to maintain consistency across light and dark themes.
+
+### Required CSS Variables
+- `var(--color-border)` - For scrollbar thumb color
+- `var(--color-secondary-bg)` - For scrollbar track color  
+- `var(--color-text-lighter)` - For scrollbar thumb hover color
+
+### Global Scrollbar Styling
+The application uses comprehensive global scrollbar styling in [src/styles.css](mdc:src/styles.css) that automatically applies theme-aware colors to all overflow elements:
+
+```css
+/* Theme-aware scrollbars for all overflow elements */
+[class*="overflow-auto"],
+.overflow-auto,
+[class*="overflow-y-auto"], 
+.overflow-y-auto,
+[class*="overflow-x-auto"],
+.overflow-x-auto {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) var(--color-secondary-bg);
+}
+```
+
+### Editor Scrollbar Behavior
+- Editor containers use `scrollbar-width: none` and `display: none` to hide scrollbars completely
+- This is implemented in [src/components/editor/editor-stylesheet.tsx](mdc:src/components/editor/editor-stylesheet.tsx)
+- Editor containers should never show visible scrollbars
+
+### Modal and Component Scrollbars
+- Use `custom-scrollbar` class for enhanced scrollbar styling
+- Example: `<div className="custom-scrollbar max-h-[50vh] overflow-y-auto">`
+- All modals automatically inherit global overflow styling
+
+### Textarea Scrollbars
+- Textarea scrollbars use theme variables: `var(--color-border)` and `var(--color-secondary-bg)`
+- Never use hardcoded colors like `#ccc` or `#f5f5f5`
+
+## Implementation Rules
+
+1. **Never use hardcoded scrollbar colors** - Always use CSS variables
+2. **Editor scrollbars must be hidden** - Use `scrollbar-width: none` and `display: none`
+3. **Modal scrollbars should be theme-aware** - Use `custom-scrollbar` class or inherit global styling
+4. **Consistent sizing** - Use 8px width for most scrollbars, 12px for textareas
+5. **Hover effects** - Always include hover states using `var(--color-text-lighter)`
