@@ -58,11 +58,11 @@ export const useFileSystemStore = createSelectors(
 
       // Actions
       handleOpenFolder: async () => {
+        const selected = await openFolder();
+
         set((state) => {
           state.isFileTreeLoading = true;
         });
-
-        const selected = await openFolder();
 
         if (!selected) {
           set((state) => {
