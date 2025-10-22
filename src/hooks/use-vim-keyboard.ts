@@ -6,6 +6,7 @@ import { useEditorViewStore } from "@/stores/editor-view-store";
 import { executeVimCommand } from "@/stores/vim";
 import { expectsMoreKeys, isCommandComplete } from "@/stores/vim/core/command-parser";
 import { isMotion } from "@/stores/vim/core/motion-registry";
+import { getTextObject } from "@/stores/vim/core/text-objects";
 import { isOperator } from "@/stores/vim/operators";
 import { createVimEditing } from "@/stores/vim-editing";
 import { createVimNavigation } from "@/stores/vim-navigation";
@@ -383,23 +384,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           return true;
       }
 
-      // Handle double-key commands (dd, yy) and character replacement (r{char})
-      if (key === "d" && lastKey === "d") {
-        e.preventDefault();
-        e.stopPropagation();
-        vimEdit.deleteLine();
-        clearLastKey();
-        clearKeyBuffer();
-        return true;
-      }
-      if (key === "y" && lastKey === "y") {
-        e.preventDefault();
-        e.stopPropagation();
-        vimEdit.yankLine();
-        clearLastKey();
-        clearKeyBuffer();
-        return true;
-      }
+      // Handle character replacement (r{char})
       if (lastKey === "r" && key.length === 1) {
         // Replace character with the pressed key
         e.preventDefault();
@@ -410,21 +395,55 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
         return true;
       }
 
+      // Handle arrow keys by mapping them to vim motions
+      if (key === "ArrowLeft" || key === "ArrowRight" || key === "ArrowUp" || key === "ArrowDown") {
+        e.preventDefault();
+        e.stopPropagation();
+        clearKeyBuffer();
+
+        let vimKey = "";
+        switch (key) {
+          case "ArrowLeft":
+            vimKey = "h";
+            break;
+          case "ArrowRight":
+            vimKey = "l";
+            break;
+          case "ArrowUp":
+            vimKey = "k";
+            break;
+          case "ArrowDown":
+            vimKey = "j";
+            break;
+        }
+
+        const success = executeVimCommand([vimKey]);
+        if (!success) {
+          console.warn("Failed to execute arrow key motion:", vimKey);
+        }
+        return true;
+      }
+
       // Now handle vim command sequences with the new modular system
       // This supports: [count][operator][count][motion/text-object]
-      // Examples: 3j, 5w, d3w, 3dw, ciw, di", etc.
+      // Examples: 3j, 5w, d3w, 3dw, ciw, di", dd, yy, etc.
 
-      // Check if this is a valid vim command key
       const isDigit = /^[0-9]$/.test(key);
       const isTextObjectModifier = key === "i" || key === "a";
       const buffer = getKeyBuffer();
+
+      // Check if key can be part of text object (i or a followed by text object key)
+      const isTextObjectKey = getTextObject(key) !== undefined;
 
       // Determine if this key can be part of a vim command
       const canBePartOfCommand =
         isDigit ||
         isOperator(key) ||
         isMotion(key) ||
-        (isTextObjectModifier && buffer.length > 0 && isOperator(buffer[buffer.length - 1]));
+        isTextObjectModifier ||
+        (isTextObjectKey &&
+          buffer.length > 0 &&
+          (buffer[buffer.length - 1] === "i" || buffer[buffer.length - 1] === "a"));
 
       if (!canBePartOfCommand) {
         // Not a vim command, clear buffer and let it pass through
@@ -443,7 +462,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
 
       // Check if we have a complete command
       if (isCommandComplete(newBuffer)) {
-        // Execute the command
+        // Execute the command using the new vim system
         const success = executeVimCommand(newBuffer);
         clearKeyBuffer();
 
@@ -527,22 +546,14 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
       }
 
       // Movement keys in visual mode extend selection
-      const isMovementKey =
-        key === "h" ||
-        key === "j" ||
-        key === "k" ||
-        key === "l" ||
-        key === "w" ||
-        key === "b" ||
-        key === "e" ||
-        key === "0" ||
-        key === "$" ||
+      // Use the new vim motion system for consistent behavior
+      if (
+        isMotion(key) ||
         key === "ArrowLeft" ||
         key === "ArrowRight" ||
         key === "ArrowUp" ||
-        key === "ArrowDown";
-
-      if (isMovementKey) {
+        key === "ArrowDown"
+      ) {
         e.preventDefault();
         e.stopPropagation();
 
@@ -550,53 +561,36 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
         const currentPos = useEditorCursorStore.getState().cursorPosition;
         const lines = useEditorViewStore.getState().lines;
 
-        // Execute the motion to get new cursor position
-        let newLine = currentPos.line;
-        let newColumn = currentPos.column;
+        let newPosition = { ...currentPos };
 
-        switch (key) {
-          case "h":
-          case "ArrowLeft":
-            newColumn = Math.max(0, currentPos.column - 1);
-            break;
-          case "l":
-          case "ArrowRight":
-            newColumn = Math.min(lines[currentPos.line].length, currentPos.column + 1);
-            break;
-          case "j":
-          case "ArrowDown":
-            newLine = Math.min(lines.length - 1, currentPos.line + 1);
-            newColumn = Math.min(lines[newLine].length, currentPos.column);
-            break;
-          case "k":
-          case "ArrowUp":
-            newLine = Math.max(0, currentPos.line - 1);
-            newColumn = Math.min(lines[newLine].length, currentPos.column);
-            break;
-          case "w":
-            vimNav.moveWordForward();
-            return true;
-          case "b":
-            vimNav.moveWordBackward();
-            return true;
-          case "e":
-            vimNav.moveWordEnd();
-            return true;
-          case "0":
-            newColumn = 0;
-            break;
-          case "$":
-            newColumn = lines[currentPos.line].length;
-            break;
+        // Handle arrow keys (map to vim motions)
+        if (key === "ArrowLeft") {
+          const success = executeVimCommand(["h"]);
+          if (success) {
+            newPosition = useEditorCursorStore.getState().cursorPosition;
+          }
+        } else if (key === "ArrowRight") {
+          const success = executeVimCommand(["l"]);
+          if (success) {
+            newPosition = useEditorCursorStore.getState().cursorPosition;
+          }
+        } else if (key === "ArrowUp") {
+          const success = executeVimCommand(["k"]);
+          if (success) {
+            newPosition = useEditorCursorStore.getState().cursorPosition;
+          }
+        } else if (key === "ArrowDown") {
+          const success = executeVimCommand(["j"]);
+          if (success) {
+            newPosition = useEditorCursorStore.getState().cursorPosition;
+          }
+        } else {
+          // Use the vim motion system directly
+          const success = executeVimCommand([key]);
+          if (success) {
+            newPosition = useEditorCursorStore.getState().cursorPosition;
+          }
         }
-
-        // Update cursor position
-        const newOffset = calculateOffsetFromPosition(newLine, newColumn, lines);
-        useEditorCursorStore.getState().actions.setCursorPosition({
-          line: newLine,
-          column: newColumn,
-          offset: newOffset,
-        });
 
         // Update visual selection end
         const { setVisualSelection } = useVimStore.use.actions();
@@ -605,11 +599,14 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
             // Line mode: select entire lines
             setVisualSelection(
               { line: visualSelection.start.line, column: 0 },
-              { line: newLine, column: lines[newLine].length },
+              { line: newPosition.line, column: lines[newPosition.line].length },
             );
           } else {
             // Character mode: select characters
-            setVisualSelection(visualSelection.start, { line: newLine, column: newColumn });
+            setVisualSelection(visualSelection.start, {
+              line: newPosition.line,
+              column: newPosition.column,
+            });
           }
         }
 
@@ -621,7 +618,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
             visualSelection.start.column,
             lines,
           );
-          const endOffset = newOffset;
+          const endOffset = newPosition.offset;
 
           if (startOffset <= endOffset) {
             textarea.selectionStart = startOffset;
