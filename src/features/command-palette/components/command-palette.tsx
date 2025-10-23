@@ -55,6 +55,7 @@ const CommandPalette = () => {
     setIsFindVisible,
     setActiveView,
     setIsCommandBarVisible,
+    setIsGlobalSearchVisible,
     setIsBranchManagerVisible,
   } = useUIState();
   const { openQuickEdit } = useAppStore.use.actions();
@@ -123,6 +124,7 @@ const CommandPalette = () => {
       setIsSidebarVisible,
       setActiveView,
       setIsCommandBarVisible,
+      setIsGlobalSearchVisible,
       onClose,
     }),
     ...createFileActions({

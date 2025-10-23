@@ -62,6 +62,13 @@ export function useKeyboardShortcutsWrapper() {
         uiState.setIsCommandPaletteVisible(value);
       }
     },
+    setIsGlobalSearchVisible: (value) => {
+      if (typeof value === "function") {
+        uiState.setIsGlobalSearchVisible(value(uiState.isGlobalSearchVisible));
+      } else {
+        uiState.setIsGlobalSearchVisible(value);
+      }
+    },
     setIsThemeSelectorVisible: (value) => {
       if (typeof value === "function") {
         uiState.setIsThemeSelectorVisible(value(uiState.isThemeSelectorVisible));
