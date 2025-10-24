@@ -176,7 +176,7 @@ export const MainSidebar = memo(() => {
       {memoizedShowFileTreeHeader && (
         <div className="flex flex-wrap items-center justify-between bg-secondary-bg px-2 py-1.5">
           <h3
-            className="min-w-0 flex-shrink cursor-pointer truncate rounded px-2 py-1 font-medium font-mono text-text text-xs tracking-wide hover:bg-hover"
+            className="min-w-0 flex-shrink cursor-pointer truncate rounded px-2 py-1 font-medium font-mono text-sm text-text tracking-wide hover:bg-hover"
             onClick={onProjectNameMenuOpen}
             onContextMenu={onProjectNameMenuOpen}
             title="Click for workspace options"
@@ -194,7 +194,7 @@ export const MainSidebar = memo(() => {
               )}
               title="Open Folder"
             >
-              <FolderOpen size={12} />
+              <FolderOpen size={13} />
             </Button>
             <Button
               onClick={handleCreateNewFile}
@@ -206,7 +206,7 @@ export const MainSidebar = memo(() => {
               )}
               title="New File"
             >
-              <FilePlus size={12} />
+              <FilePlus size={13} />
             </Button>
             <Button
               onClick={handleCreateNewFolder}
@@ -218,7 +218,7 @@ export const MainSidebar = memo(() => {
               )}
               title="New Folder"
             >
-              <FolderPlus size={12} />
+              <FolderPlus size={13} />
             </Button>
           </div>
         </div>
