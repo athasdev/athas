@@ -252,7 +252,7 @@ const CustomTitleBar = ({
       </div>
 
       {/* Right side */}
-      <div className="z-20 flex items-center gap-0.5">
+      <div className="z-20 flex items-center gap-1">
         {/* AI Chat button */}
         <button
           onClick={() => {
@@ -266,7 +266,7 @@ const CustomTitleBar = ({
           style={{ minHeight: 0, minWidth: 0 }}
           title="Toggle AI Chat"
         >
-          <Sparkles size={12} />
+          <Sparkles size={13} />
         </button>
         {/* Settings button */}
         <button
@@ -278,7 +278,7 @@ const CustomTitleBar = ({
           style={{ minHeight: 0, minWidth: 0 }}
           title="Settings"
         >
-          <Settings size={12} />
+          <Settings size={13} />
         </button>
 
         {/* Window controls - only show on Linux */}
