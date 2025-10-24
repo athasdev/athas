@@ -94,7 +94,7 @@ export const MainSidebar = memo(() => {
     };
 
     loadProjectName();
-  }, [getProjectName, isRemoteWindow]);
+  }, [isFileTreeLoading, getProjectName, isRemoteWindow]);
 
   // Register search view ref with store when it becomes available
   useEffect(() => {
