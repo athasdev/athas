@@ -39,18 +39,94 @@ fn should_ignore_file(path: &Path) -> bool {
       ".idea",
       "__pycache__",
       "vendor",
+      "coverage",
+      ".nyc_output",
+      ".pytest_cache",
+      ".turbo",
+      "out",
+      ".vercel",
+      ".DS_Store",
    ];
 
    let ignored_extensions = [
-      ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".svg", ".mp4", ".mp3", ".wav", ".avi",
-      ".mov", ".pdf", ".zip", ".tar", ".gz", ".rar", ".7z", ".exe", ".dll", ".so", ".dylib",
-      ".lock", ".min.js", ".min.css", ".map",
+      ".png",
+      ".jpg",
+      ".jpeg",
+      ".gif",
+      ".bmp",
+      ".ico",
+      ".svg",
+      ".mp4",
+      ".mp3",
+      ".wav",
+      ".avi",
+      ".mov",
+      ".pdf",
+      ".zip",
+      ".tar",
+      ".gz",
+      ".rar",
+      ".7z",
+      ".exe",
+      ".dll",
+      ".so",
+      ".dylib",
+      ".lock",
+      ".min.js",
+      ".min.css",
+      ".map",
+      ".log",
+      ".tmp",
+      ".temp",
+      ".swp",
+      ".swo",
+      ".bak",
+      ".cache",
+      ".pid",
+      ".seed",
+      ".pid.lock",
+      ".dat",
+      ".db",
+      ".sqlite",
+      ".wasm",
+   ];
+
+   let ignored_filenames = [
+      ".DS_Store",
+      "Thumbs.db",
+      "desktop.ini",
+      ".gitignore",
+      ".gitattributes",
+      ".eslintcache",
+      ".prettierignore",
+      ".npmrc",
+      ".yarnrc",
+      "npm-debug.log",
+      "yarn-error.log",
+      "yarn-debug.log",
    ];
 
    // Check if any component of the path contains an ignored directory
    for component in path.components() {
       if let Some(comp_str) = component.as_os_str().to_str() {
+         // Ignore hidden directories (starting with .)
+         if comp_str.starts_with('.') && ignored_dirs.contains(&comp_str) {
+            return true;
+         }
          if ignored_dirs.contains(&comp_str) {
+            return true;
+         }
+      }
+   }
+
+   // Check filename
+   if let Some(file_name) = path.file_name() {
+      if let Some(name_str) = file_name.to_str() {
+         // Ignore hidden files (starting with .)
+         if name_str.starts_with('.') {
+            return true;
+         }
+         if ignored_filenames.contains(&name_str) {
             return true;
          }
       }
