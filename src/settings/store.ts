@@ -14,6 +14,7 @@ interface Settings {
   autoSave: boolean;
   sidebarPosition: "left" | "right";
   mouseWheelZoom: boolean;
+  commandBarPreview: boolean;
   // Editor
   fontFamily: string;
   fontSize: number;
@@ -64,6 +65,7 @@ const defaultSettings: Settings = {
   autoSave: true,
   sidebarPosition: "left",
   mouseWheelZoom: false,
+  commandBarPreview: true,
   // Editor
   fontFamily: "JetBrains Mono",
   fontSize: 14,

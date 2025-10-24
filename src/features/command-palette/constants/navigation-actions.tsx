@@ -5,11 +5,18 @@ interface NavigationActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
   setActiveView: (view: "files" | "git" | "search" | "remote" | "extensions") => void;
   setIsCommandBarVisible: (v: boolean) => void;
+  setIsGlobalSearchVisible: (v: boolean) => void;
   onClose: () => void;
 }
 
 export const createNavigationActions = (params: NavigationActionsParams): Action[] => {
-  const { setIsSidebarVisible, setActiveView, setIsCommandBarVisible, onClose } = params;
+  const {
+    setIsSidebarVisible,
+    setActiveView,
+    setIsCommandBarVisible,
+    setIsGlobalSearchVisible,
+    onClose,
+  } = params;
 
   return [
     {
@@ -39,14 +46,26 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     {
       id: "view-show-search",
       label: "View: Show Search",
-      description: "Switch to project search view",
+      description: "Switch to project search view in sidebar",
       icon: <Search size={14} />,
       category: "Navigation",
-      keybinding: ["⌘", "⇧", "F"],
+      keybinding: ["⌘", "⇧", "H"],
       action: () => {
         setIsSidebarVisible(true);
         setActiveView("search");
         onClose();
+      },
+    },
+    {
+      id: "search-global",
+      label: "Search: Global Search",
+      description: "Open global file search with preview",
+      icon: <Search size={14} />,
+      category: "Navigation",
+      keybinding: ["⌘", "⇧", "F"],
+      action: () => {
+        onClose();
+        setIsGlobalSearchVisible(true);
       },
     },
     {
