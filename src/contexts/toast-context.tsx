@@ -14,7 +14,7 @@ interface Toast {
 }
 
 interface ToastContextType {
-  toasts: Toast[];
+  toasts: ToastContextTypeoast[];
   showToast: (toast: Omit<Toast, "id">) => string; // Return toast ID
   updateToast: (id: string, updates: Partial<Omit<Toast, "id">>) => void;
   dismissToast: (id: string) => void;

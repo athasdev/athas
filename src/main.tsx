@@ -6,7 +6,8 @@ import { ToastProvider } from "./contexts/toast-context.tsx";
 
 // helps track re-renders in development mode
 scan({
-  enabled: true,
+  enabled: import.meta.env.DEV,
+  log: import.meta.env.DEV,
 });
 
 createRoot(document.getElementById("root")!).render(
