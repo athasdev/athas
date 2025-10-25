@@ -13,6 +13,23 @@ import { getMotion } from "./motion-registry";
 import { getTextObject } from "./text-objects";
 import type { EditorContext, VimRange } from "./types";
 
+const buildLinewiseRange = (context: EditorContext, count: number): VimRange => {
+  const { cursor, lines } = context;
+  const startLine = cursor.line;
+  const endLine = Math.min(lines.length - 1, startLine + Math.max(count, 1) - 1);
+
+  const startOffset = calculateOffsetFromPosition(startLine, 0, lines);
+  const endColumn = lines[endLine]?.length ?? 0;
+  const endOffset = calculateOffsetFromPosition(endLine, endColumn, lines);
+
+  return {
+    start: { line: startLine, column: 0, offset: startOffset },
+    end: { line: endLine, column: endColumn, offset: endOffset },
+    linewise: true,
+    inclusive: true,
+  };
+};
+
 /**
  * Execute a vim command
  */
@@ -28,65 +45,6 @@ export const executeVimCommand = (keys: string[]): boolean => {
   const count = getEffectiveCount(command);
 
   try {
-    // Handle specific line wise commands like dd, yy, cc
-    // where operator and motion are the same.
-    if (command.operator && command.motion && command.operator === command.motion) {
-      const operator = getOperator(command.operator);
-      if (!operator) return false;
-
-      const startLine = context.cursor.line;
-      const endLine = Math.min(context.lines.length - 1, startLine + count - 1);
-
-      const startOffset = calculateOffsetFromPosition(startLine, 0, context.lines);
-
-      const isLastLine = endLine === context.lines.length - 1;
-
-      const endColumn = isLastLine ? context.lines[endLine].length : 0;
-
-      const effectiveEndLine = isLastLine ? endLine : endLine + 1;
-
-      const endOffset = calculateOffsetFromPosition(effectiveEndLine, endColumn, context.lines);
-
-      const range: VimRange = {
-        start: { line: startLine, column: 0, offset: startOffset },
-        end: { line: effectiveEndLine, column: endColumn, offset: endOffset },
-      };
-
-      operator.execute(range, context);
-
-      if (command.operator === "d") {
-        const nextLine = Math.min(startLine, context.lines.length - 2); // Stay on the new line
-        const newPos = {
-          line: nextLine,
-          column: 0,
-          offset: calculateOffsetFromPosition(nextLine, 0, context.lines),
-        };
-        context.setCursorPosition(newPos);
-      }
-
-      if (command.operator === "y") {
-        const nextLine = Math.min(startLine, context.lines.length - 2); // Stay on the new line
-        const newPos = {
-          line: nextLine,
-          column: 0,
-          offset: calculateOffsetFromPosition(nextLine, 0, context.lines),
-        };
-        context.setCursorPosition(newPos);
-      }
-
-      if (command.operator === "c") {
-        const nextLine = Math.min(startLine, context.lines.length - 2); // Stay on the new line
-        const newPos = {
-          line: nextLine,
-          column: 0,
-          offset: calculateOffsetFromPosition(nextLine, 0, context.lines),
-        };
-        context.setCursorPosition(newPos);
-      }
-
-      return true;
-    }
-
     // Handle operator + motion/text-object
     if (command.operator) {
       const operator = getOperator(command.operator);
@@ -94,8 +52,11 @@ export const executeVimCommand = (keys: string[]): boolean => {
 
       let range: VimRange | null;
 
+      if (command.motion && command.operator === command.motion) {
+        range = buildLinewiseRange(context, count);
+      }
       // Get range from text object
-      if (command.textObject) {
+      else if (command.textObject) {
         const textObj = getTextObject(command.textObject.object);
         if (!textObj) return false;
 
