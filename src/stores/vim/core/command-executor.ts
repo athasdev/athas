@@ -6,6 +6,7 @@
 import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
+import { calculateOffsetFromPosition } from "@/utils/editor-position";
 import { getOperator } from "../operators";
 import { getEffectiveCount, parseVimCommand } from "./command-parser";
 import { getMotion } from "./motion-registry";
@@ -27,6 +28,65 @@ export const executeVimCommand = (keys: string[]): boolean => {
   const count = getEffectiveCount(command);
 
   try {
+    // Handle specific line wise commands like dd, yy, cc
+    // where operator and motion are the same.
+    if (command.operator && command.motion && command.operator === command.motion) {
+      const operator = getOperator(command.operator);
+      if (!operator) return false;
+
+      const startLine = context.cursor.line;
+      const endLine = Math.min(context.lines.length - 1, startLine + count - 1);
+
+      const startOffset = calculateOffsetFromPosition(startLine, 0, context.lines);
+
+      const isLastLine = endLine === context.lines.length - 1;
+
+      const endColumn = isLastLine ? context.lines[endLine].length : 0;
+
+      const effectiveEndLine = isLastLine ? endLine : endLine + 1;
+
+      const endOffset = calculateOffsetFromPosition(effectiveEndLine, endColumn, context.lines);
+
+      const range: VimRange = {
+        start: { line: startLine, column: 0, offset: startOffset },
+        end: { line: effectiveEndLine, column: endColumn, offset: endOffset },
+      };
+
+      operator.execute(range, context);
+
+      if (command.operator === "d") {
+        const nextLine = Math.min(startLine, context.lines.length - 2); // Stay on the new line
+        const newPos = {
+          line: nextLine,
+          column: 0,
+          offset: calculateOffsetFromPosition(nextLine, 0, context.lines),
+        };
+        context.setCursorPosition(newPos);
+      }
+
+      if (command.operator === "y") {
+        const nextLine = Math.min(startLine, context.lines.length - 2); // Stay on the new line
+        const newPos = {
+          line: nextLine,
+          column: 0,
+          offset: calculateOffsetFromPosition(nextLine, 0, context.lines),
+        };
+        context.setCursorPosition(newPos);
+      }
+
+      if (command.operator === "c") {
+        const nextLine = Math.min(startLine, context.lines.length - 2); // Stay on the new line
+        const newPos = {
+          line: nextLine,
+          column: 0,
+          offset: calculateOffsetFromPosition(nextLine, 0, context.lines),
+        };
+        context.setCursorPosition(newPos);
+      }
+
+      return true;
+    }
+
     // Handle operator + motion/text-object
     if (command.operator) {
       const operator = getOperator(command.operator);
