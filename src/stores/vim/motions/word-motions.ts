@@ -7,6 +7,7 @@
  */
 
 import type { Position } from "@/types/editor-types";
+import { calculateCursorPosition } from "@/utils/editor-position";
 import type { Motion, VimRange } from "../core/types";
 
 /**
@@ -295,6 +296,83 @@ export const wordEnd: Motion = {
     return {
       start: cursor,
       end: endPos,
+      inclusive: true,
+    };
+  },
+};
+
+/**
+ * Motion: ge - previous end of word
+ * Moves to the end of the previous word (word semantics)
+ */
+const classifyChar = (char: string): "word" | "punct" | "other" | "whitespace" => {
+  if (isWhitespace(char)) return "whitespace";
+  if (isWordChar(char)) return "word";
+  if (isPunctuation(char)) return "punct";
+  return "other";
+};
+
+const isSameClass = (a: string, targetType: "word" | "punct" | "other"): boolean => {
+  if (targetType === "word") return isWordChar(a);
+  if (targetType === "punct") return isPunctuation(a);
+  return !isWhitespace(a) && !isWordChar(a) && !isPunctuation(a);
+};
+
+export const wordPreviousEnd: Motion = {
+  name: "ge",
+  calculate: (cursor: Position, lines: string[], count = 1): VimRange => {
+    if (lines.length === 0) {
+      return { start: cursor, end: cursor, inclusive: true };
+    }
+
+    const content = lines.join("\n");
+    if (content.length === 0) {
+      return { start: cursor, end: cursor, inclusive: true };
+    }
+
+    let offset = Math.min(Math.max(cursor.offset, 0), content.length);
+    let segmentEnd = offset;
+
+    for (let iteration = 0; iteration < count; iteration++) {
+      if (offset === 0) {
+        segmentEnd = 0;
+        break;
+      }
+
+      offset = Math.max(0, offset - 1);
+
+      while (offset > 0 && classifyChar(content[offset]) === "whitespace") {
+        offset--;
+      }
+
+      if (classifyChar(content[offset]) === "whitespace") {
+        segmentEnd = offset;
+        break;
+      }
+
+      const currentChar = content[offset];
+      const charType = classifyChar(currentChar);
+      segmentEnd = offset;
+
+      while (offset > 0) {
+        const prevChar = content[offset - 1];
+        if (classifyChar(prevChar) === "whitespace") {
+          break;
+        }
+
+        if (!isSameClass(prevChar, charType as "word" | "punct" | "other")) {
+          break;
+        }
+
+        offset--;
+      }
+    }
+
+    const targetPosition = calculateCursorPosition(segmentEnd, lines);
+
+    return {
+      start: cursor,
+      end: targetPosition,
       inclusive: true,
     };
   },

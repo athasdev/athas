@@ -23,6 +23,7 @@ import {
   wordBackward,
   wordEnd,
   wordForward,
+  wordPreviousEnd,
 } from "../motions/word-motions";
 import type { Motion } from "./types";
 
@@ -34,6 +35,7 @@ export const motionRegistry: Record<string, Motion> = {
   w: wordForward,
   b: wordBackward,
   e: wordEnd,
+  ge: wordPreviousEnd,
   W: WORDForward,
   B: WORDBackward,
   E: WORDEnd,
