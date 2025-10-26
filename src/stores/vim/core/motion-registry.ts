@@ -17,6 +17,7 @@ import {
   lineFirstNonBlankUnderscore,
   lineStart,
 } from "../motions/line-motions";
+import { viewportBottom, viewportMiddle, viewportTop } from "../motions/viewport-motions";
 import {
   WORDBackward,
   WORDEnd,
@@ -56,6 +57,11 @@ export const motionRegistry: Record<string, Motion> = {
   k: charUp,
   ";": repeatFindChar,
   ",": repeatFindCharReverse,
+
+  // Viewport motions
+  H: viewportTop,
+  M: viewportMiddle,
+  L: viewportBottom,
 };
 
 /**
