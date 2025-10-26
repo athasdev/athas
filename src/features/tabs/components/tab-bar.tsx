@@ -46,6 +46,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
   const { handleSave } = useAppStore.use.actions();
   const { settings } = useSettingsStore();
   const { updateActivePath } = useSidebarStore();
+  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
 
   // Drag state
   const [dragState, setDragState] = useState<{
@@ -355,6 +356,29 @@ const TabBar = ({ paneId }: TabBarProps) => {
     [writeText],
   );
 
+  const handleCopyRelativePath = useCallback(
+    async (path: string) => {
+      if (!rootFolderPath) {
+        // If no project is open, copy the full path
+        await writeText(path);
+        return;
+      }
+
+      // Calculate relative path
+      let relativePath = path;
+      if (path.startsWith(rootFolderPath)) {
+        relativePath = path.slice(rootFolderPath.length);
+        // Remove leading slash if present
+        if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
+          relativePath = relativePath.slice(1);
+        }
+      }
+
+      await writeText(relativePath);
+    },
+    [rootFolderPath, writeText],
+  );
+
   const closeContextMenu = () => {
     setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
   };
@@ -603,6 +627,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
         onCloseAll={handleCloseAllTabs}
         onCloseToRight={handleCloseTabsToRight}
         onCopyPath={handleCopyPath}
+        onCopyRelativePath={handleCopyRelativePath}
         onReload={(bufferId: string) => {
           // Reload the buffer by closing and reopening it
           const buffer = buffers.find((b) => b.id === bufferId);
