@@ -1,8 +1,8 @@
 // todo: we should make a context menu component that can be used for other things too
 import { Copy, FolderOpen, Pin, PinOff, RotateCcw } from "lucide-react";
 import { useEffect, useRef } from "react";
+import KeybindingBadge from "@/components/ui/keybinding-badge";
 import type { Buffer } from "@/types/buffer";
-import KeybindingBadge from "../ui/keybinding-badge";
 
 interface TabContextMenuProps {
   isOpen: boolean;

@@ -21,6 +21,7 @@ import CommandPalette from "@/features/command-palette/components/command-palett
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
+import TabBar from "@/features/tabs/components/tab-bar";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import BottomPane from "../bottom-pane";
 import CommandBar from "../command-bar/components/command-bar";
@@ -32,7 +33,6 @@ import GitHubCopilotSettings from "../github-copilot-settings";
 import { ImageViewer } from "../image-viewer/image-viewer";
 import ResizableRightPane from "../resizable-right-pane";
 import ResizableSidebar from "../resizable-sidebar/resizable-sidebar";
-import TabBar from "../tab-bar/tab-bar";
 import { VimSearchBar } from "../vim-search/vim-search-bar";
 import CustomTitleBarWithSettings from "../window/custom-title-bar";
 import { MainSidebar } from "./main-sidebar";

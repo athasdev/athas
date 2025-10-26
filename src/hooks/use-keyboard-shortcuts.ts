@@ -334,6 +334,20 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
+      // Tab navigation with Ctrl+PageDown (next tab)
+      if (e.ctrlKey && e.key === "PageDown" && !e.shiftKey) {
+        e.preventDefault();
+        switchToNextBuffer();
+        return;
+      }
+
+      // Tab navigation with Ctrl+PageUp (previous tab)
+      if (e.ctrlKey && e.key === "PageUp" && !e.shiftKey) {
+        e.preventDefault();
+        switchToPreviousBuffer();
+        return;
+      }
+
       // Number keys to switch to specific buffers (Cmd+1, Cmd+2, etc.)
       if ((e.metaKey || e.ctrlKey) && /^[1-9]$/.test(e.key)) {
         e.preventDefault();
