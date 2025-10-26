@@ -3,6 +3,7 @@ import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
 import { readFileContent } from "@/file-system/controllers/file-operations";
 import { useRecentFilesStore } from "@/file-system/controllers/recent-files-store";
+import { useSessionStore } from "@/stores/session-store";
 import { detectLanguageFromFileName } from "@/utils/language-detection";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { MultiFileDiff } from "@/version-control/diff-viewer/models/diff-types";
@@ -98,6 +99,38 @@ const generateBufferId = (path: string): string => {
   return `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
 };
 
+const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) => {
+  // Get the root folder path from file system store
+  // We'll import this dynamically to avoid circular dependencies
+  import("@/file-system/controllers/store").then(({ useFileSystemStore }) => {
+    const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
+
+    if (!rootFolderPath) return;
+
+    // Only save real files, not virtual/diff/image/sqlite buffers
+    const persistableBuffers = buffers
+      .filter((b) => !b.isVirtual && !b.isDiff && !b.isImage && !b.isSQLite)
+      .map((b) => ({
+        path: b.path,
+        name: b.name,
+        isPinned: b.isPinned,
+      }));
+
+    // Find the active buffer path
+    const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+    const activeBufferPath =
+      activeBuffer &&
+      !activeBuffer.isVirtual &&
+      !activeBuffer.isDiff &&
+      !activeBuffer.isImage &&
+      !activeBuffer.isSQLite
+        ? activeBuffer.path
+        : null;
+
+    useSessionStore.getState().saveSession(rootFolderPath, persistableBuffers, activeBufferPath);
+  });
+};
+
 export const useBufferStore = createSelectors(
   createWithEqualityFn<BufferState>()(
     immer((set, get) => ({
@@ -166,6 +199,9 @@ export const useBufferStore = createSelectors(
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
           }
 
+          // Save session
+          saveSessionToStore(get().buffers, get().activeBufferId);
+
           return newBuffer.id;
         },
 
@@ -215,6 +251,9 @@ export const useBufferStore = createSelectors(
             }));
             state.activeBufferId = newActiveId;
           });
+
+          // Save session
+          saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         setActiveBuffer: (bufferId: string) => {
@@ -302,6 +341,9 @@ export const useBufferStore = createSelectors(
               buffer.isPinned = !buffer.isPinned;
             }
           });
+
+          // Save session
+          saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         handleCloseOtherTabs: (keepBufferId: string) => {
@@ -372,6 +414,9 @@ export const useBufferStore = createSelectors(
             result.splice(endIndex, 0, removed);
             state.buffers = result;
           });
+
+          // Save session
+          saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         switchToNextBuffer: () => {

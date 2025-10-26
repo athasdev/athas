@@ -14,6 +14,7 @@ import { useFileTreeStore } from "@/file-explorer/controllers/file-tree-store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useProjectStore } from "@/stores/project-store";
+import { useSessionStore } from "@/stores/session-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { getGitStatus } from "@/version-control/git/controllers/git";
@@ -103,6 +104,9 @@ export const useFileSystemStore = createSelectors(
           state.projectFilesCache = undefined;
         });
 
+        // Restore session tabs
+        await get().restoreSession(selected);
+
         return true;
       },
 
@@ -175,6 +179,9 @@ export const useFileSystemStore = createSelectors(
           state.filesVersion++;
           state.projectFilesCache = undefined;
         });
+
+        // Restore session tabs
+        await get().restoreSession(path);
 
         return true;
       },
@@ -806,6 +813,51 @@ export const useFileSystemStore = createSelectors(
           state.files = newFiles;
           state.filesVersion++;
         });
+      },
+
+      restoreSession: async (projectPath: string) => {
+        // Get the saved session for this project
+        const session = useSessionStore.getState().getSession(projectPath);
+
+        if (!session || session.buffers.length === 0) {
+          return;
+        }
+
+        const { openBuffer } = useBufferStore.getState().actions;
+
+        // Open all saved buffers
+        for (const buffer of session.buffers) {
+          try {
+            // Check if file still exists and read its content
+            const content = await readFileContent(buffer.path);
+            const bufferId = openBuffer(
+              buffer.path,
+              buffer.name,
+              content,
+              false,
+              false,
+              false,
+              false,
+            );
+
+            // Restore pinned state
+            if (buffer.isPinned) {
+              useBufferStore.getState().actions.handleTabPin(bufferId);
+            }
+          } catch (error) {
+            console.warn(`Failed to restore buffer: ${buffer.path}`, error);
+            // Continue with other buffers even if one fails
+          }
+        }
+
+        // Restore active buffer
+        if (session.activeBufferPath) {
+          const { buffers } = useBufferStore.getState();
+          const activeBuffer = buffers.find((b) => b.path === session.activeBufferPath);
+          if (activeBuffer) {
+            useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
+          }
+        }
       },
     })),
   ),
