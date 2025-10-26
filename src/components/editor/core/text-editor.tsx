@@ -525,6 +525,14 @@ export function TextEditor() {
           extensionManager.initialize();
         }
 
+        // Load all language extensions
+        const { allLanguages } = await import("@/extensions/languages");
+        for (const language of allLanguages) {
+          if (!extensionManager.isExtensionLoaded(language.id)) {
+            await extensionManager.loadLanguageExtension(language);
+          }
+        }
+
         // Load core extensions if not already loaded (these are lightweight)
         if (!extensionManager.isExtensionLoaded("Syntax Highlighting")) {
           await extensionManager.loadExtension(syntaxHighlightingExtension);

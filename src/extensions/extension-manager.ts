@@ -5,11 +5,15 @@ import type {
   EditorExtension,
   Extension,
   ExtensionContext,
+  LanguageExtension,
+  LanguageProvider,
 } from "./extension-types";
 
 class ExtensionManager {
   private extensions: Map<string, EditorExtension> = new Map();
   private newExtensions: Map<string, Extension> = new Map(); // New extension system
+  private languageExtensions: Map<string, LanguageExtension> = new Map(); // Language extensions
+  private languageProviders: Map<string, LanguageProvider> = new Map(); // Language ID -> Provider
   private contexts: Map<string, ExtensionContext> = new Map();
   private commands: Map<string, Command> = new Map();
   private registeredCommands: Map<string, (...args: any[]) => any> = new Map(); // New command system
@@ -268,6 +272,116 @@ class ExtensionManager {
 
   getNewExtension(extensionId: string): Extension | undefined {
     return this.newExtensions.get(extensionId);
+  }
+
+  // Language extension methods
+  async loadLanguageExtension(extension: LanguageExtension): Promise<void> {
+    if (!this.editor) {
+      throw new Error("Editor API not initialized");
+    }
+
+    if (this.languageExtensions.has(extension.id)) {
+      throw new Error(`Language extension ${extension.id} is already loaded`);
+    }
+
+    // Create extension context with language registration
+    const context: ExtensionContext = {
+      editor: this.editor,
+      extensionId: extension.id,
+      storage: this.createExtensionStorage(extension.id),
+      registerCommand: (id: string, handler: (...args: any[]) => any) => {
+        this.registeredCommands.set(id, handler);
+      },
+      registerLanguage: (language) => {
+        // Register the language provider
+        const provider: LanguageProvider = {
+          id: language.id,
+          extensions: language.extensions,
+          aliases: language.aliases,
+          getTokens: (content: string) => extension.getTokens(content),
+        };
+        this.languageProviders.set(language.id, provider);
+
+        // Also map file extensions to language ID
+        for (const ext of language.extensions) {
+          this.languageProviders.set(ext, provider);
+        }
+
+        // Map aliases to language ID
+        if (language.aliases) {
+          for (const alias of language.aliases) {
+            this.languageProviders.set(alias, provider);
+          }
+        }
+      },
+    };
+
+    // Store extension and context
+    this.languageExtensions.set(extension.id, extension);
+    this.contexts.set(extension.id, context);
+
+    try {
+      // Activate extension
+      await extension.activate(context);
+      console.log(`Language extension ${extension.displayName} loaded successfully`);
+    } catch (error) {
+      // Cleanup on failure
+      this.languageExtensions.delete(extension.id);
+      this.contexts.delete(extension.id);
+      throw new Error(`Failed to activate language extension ${extension.displayName}: ${error}`);
+    }
+  }
+
+  async unloadLanguageExtension(extensionId: string): Promise<void> {
+    const extension = this.languageExtensions.get(extensionId);
+    if (!extension) {
+      throw new Error(`Language extension ${extensionId} not found`);
+    }
+
+    try {
+      await extension.deactivate();
+    } catch (error) {
+      console.error(`Error deactivating language extension ${extensionId}:`, error);
+    }
+
+    // Remove language providers
+    this.languageProviders.delete(extension.languageId);
+    for (const ext of extension.extensions) {
+      this.languageProviders.delete(ext);
+    }
+    if (extension.aliases) {
+      for (const alias of extension.aliases) {
+        this.languageProviders.delete(alias);
+      }
+    }
+
+    // Remove extension and context
+    this.languageExtensions.delete(extensionId);
+    this.contexts.delete(extensionId);
+  }
+
+  getLanguageProvider(languageIdOrExtension: string): LanguageProvider | undefined {
+    return this.languageProviders.get(languageIdOrExtension);
+  }
+
+  getAllLanguageExtensions(): LanguageExtension[] {
+    return Array.from(this.languageExtensions.values());
+  }
+
+  getSupportedLanguages(): string[] {
+    const languages = new Set<string>();
+    for (const provider of this.languageProviders.values()) {
+      languages.add(provider.id);
+    }
+    return Array.from(languages);
+  }
+
+  getSupportedFileExtensions(): string[] {
+    const extensions = new Set<string>();
+    for (const provider of this.languageProviders.values()) {
+      provider.extensions.forEach((ext) => extensions.add(ext));
+    }
+    return Array.from(extensions);
   }
 
   private generateExtensionId(name: string): string {

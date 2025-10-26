@@ -162,3 +162,27 @@ interface ExtensionStorage {
   delete: (key: string) => void;
   clear: () => void;
 }
+
+export interface LanguageExtension extends Extension {
+  readonly languageId: string;
+  readonly extensions: string[];
+  readonly aliases?: string[];
+  readonly filenames?: string[];
+
+  getTokens(content: string): Promise<Token[]>;
+}
+
+export interface Token {
+  start: number;
+  end: number;
+  token_type: string;
+  class_name: string;
+}
+
+export interface LanguageProvider {
+  id: string;
+  extensions: string[];
+  aliases?: string[];
+  filenames?: string[];
+  getTokens(content: string): Promise<Token[]>;
+}

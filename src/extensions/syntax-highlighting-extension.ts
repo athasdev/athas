@@ -1,7 +1,7 @@
-import { getTokens, type Token } from "../lib/rust-api/tokens";
+import type { Token } from "../lib/rust-api/tokens";
 import { useBufferStore } from "../stores/buffer-store";
-// No longer need editor-content-store - tokens are stored in buffer-store
 import type { Change } from "../types/editor-types";
+import { extensionManager } from "./extension-manager";
 import type { EditorAPI, EditorExtension } from "./extension-types";
 
 const DEBOUNCE_TIME_MS = 100; // Reduced for faster syntax highlighting updates
@@ -92,8 +92,17 @@ class SyntaxHighlighter {
       const content = this.editor.getContent();
       const extension = this.filePath?.split(".").pop() || "txt";
 
-      // Fetch tokens from Rust API
-      this.tokens = await getTokens(content, extension);
+      // Get language provider from extension manager
+      const languageProvider = extensionManager.getLanguageProvider(extension);
+
+      if (!languageProvider) {
+        console.warn("[SyntaxHighlighter] No language provider found for extension:", extension);
+        this.tokens = [];
+        return;
+      }
+
+      // Fetch tokens using language provider
+      this.tokens = await languageProvider.getTokens(content);
       console.log("[SyntaxHighlighter] Fetched tokens:", this.tokens.length, "for", extension);
 
       // Cache tokens in buffer store
