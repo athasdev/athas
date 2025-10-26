@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useSettingsStore } from "@/settings/store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
-import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useVimStore } from "@/stores/vim-store";
+import type { Position } from "@/types/editor-types";
 
 export function Cursor() {
   const cursorRef = useRef<HTMLDivElement>(null);
   const movementTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollTopRef = useRef(0);
+  const scrollLeftRef = useRef(0);
   const { lineHeight, charWidth, gutterWidth } = useEditorLayout();
-  const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
   const visible = useEditorCursorStore((state) => state.cursorVisible);
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const vimMode = useVimStore.use.mode();
@@ -33,7 +34,24 @@ export function Cursor() {
     };
   }, [vimModeEnabled, vimMode, isCommandMode, charWidth]);
 
-  // Update position without re-rendering - cursor scrolls naturally with content
+  const updateCursorPosition = useCallback(
+    (position: Position) => {
+      if (!cursorRef.current) return;
+
+      const x =
+        gutterWidth +
+        EDITOR_CONSTANTS.GUTTER_MARGIN +
+        position.column * charWidth -
+        scrollLeftRef.current;
+      const y = position.line * lineHeight - scrollTopRef.current;
+
+      cursorRef.current.style.left = `${x}px`;
+      cursorRef.current.style.top = `${y}px`;
+    },
+    [charWidth, gutterWidth, lineHeight],
+  );
+
+  // Update position without re-rendering - adjust for scroll offsets
   useEffect(() => {
     if (!cursorRef.current || !visible) return;
 
@@ -42,35 +60,22 @@ export function Cursor() {
       (position) => {
         if (!cursorRef.current) return;
 
-        // Position cursor at the character position (no scroll offset needed - browser handles it)
-        const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + position.column * charWidth;
-        const y = position.line * lineHeight;
-
-        // Add moving class to pause blinking
         cursorRef.current.classList.add("moving");
 
-        // Clear existing timeout
         if (movementTimeoutRef.current) {
           clearTimeout(movementTimeoutRef.current);
         }
 
-        // Remove moving class after cursor stops moving
         movementTimeoutRef.current = setTimeout(() => {
           cursorRef.current?.classList.remove("moving");
         }, 100);
 
-        // Use direct positioning for immediate updates
-        cursorRef.current.style.left = `${x}px`;
-        cursorRef.current.style.top = `${y}px`;
+        updateCursorPosition(position);
       },
     );
 
     // Set initial position
-    const position = useEditorCursorStore.getState().cursorPosition;
-    const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + position.column * charWidth;
-    const y = position.line * lineHeight;
-    cursorRef.current.style.left = `${x}px`;
-    cursorRef.current.style.top = `${y}px`;
+    updateCursorPosition(useEditorCursorStore.getState().cursorPosition);
 
     return () => {
       unsubscribe();
@@ -78,7 +83,26 @@ export function Cursor() {
         clearTimeout(movementTimeoutRef.current);
       }
     };
-  }, [lineHeight, gutterWidth, charWidth, visible, showLineNumbers]);
+  }, [updateCursorPosition, visible]);
+
+  // Track viewport scroll to offset cursor position
+  useEffect(() => {
+    const viewport = document.querySelector(".editor-viewport") as HTMLDivElement | null;
+    if (!viewport) return;
+
+    const handleScroll = () => {
+      scrollTopRef.current = viewport.scrollTop;
+      scrollLeftRef.current = viewport.scrollLeft;
+      updateCursorPosition(useEditorCursorStore.getState().cursorPosition);
+    };
+
+    handleScroll();
+    viewport.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      viewport.removeEventListener("scroll", handleScroll);
+    };
+  }, [updateCursorPosition]);
 
   if (!visible) return null;
 
