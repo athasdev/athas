@@ -121,6 +121,7 @@ export function TextEditor() {
   const localRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const { showToast } = useToast();
+  const [extensionsLoaded, setExtensionsLoaded] = useState(false);
 
   const { setCursorPosition, setSelection, setDesiredColumn } = useEditorCursorStore.use.actions();
   const currentDesiredColumn = useEditorCursorStore.use.desiredColumn?.() ?? undefined;
@@ -525,7 +526,7 @@ export function TextEditor() {
           extensionManager.initialize();
         }
 
-        // Load all language extensions
+        // Load all language extensions first - AWAIT this to prevent race condition
         const { allLanguages } = await import("@/extensions/languages");
         for (const language of allLanguages) {
           if (!extensionManager.isExtensionLoaded(language.id)) {
@@ -550,10 +551,8 @@ export function TextEditor() {
           await extensionManager.loadExtension(autoPairingExtension);
         }
 
-        // Set file path for syntax highlighting
-        if (filePath) {
-          setSyntaxHighlightingFilePath(filePath);
-        }
+        // Mark extensions as loaded
+        setExtensionsLoaded(true);
 
         // Load LSP extension asynchronously without blocking UI
         // This prevents blocking the file picker and other UI interactions
@@ -577,14 +576,14 @@ export function TextEditor() {
     loadExtensions();
 
     // No cleanup needed - extensions are managed globally
-  }, []); // Remove filePath dependency to prevent re-running
+  }, []);
 
-  // Update syntax highlighting when file path changes
+  // Update syntax highlighting when file path changes AND extensions are loaded
   useEffect(() => {
-    if (filePath) {
+    if (filePath && extensionsLoaded) {
       setSyntaxHighlightingFilePath(filePath);
     }
-  }, [filePath]);
+  }, [filePath, extensionsLoaded]);
 
   // Load git blame data when file changes
   useEffect(() => {

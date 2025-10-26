@@ -57,7 +57,7 @@ fn main() {
             app.set_menu(menu)?;
          }
 
-         log::info!("Starting app ☺️!");
+         log::info!("Starting app!");
 
          // Set up the file watcher
          app.manage(Arc::new(FileWatcher::new(app.handle().clone())));
