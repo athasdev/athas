@@ -30,6 +30,7 @@ interface UseKeyboardShortcutsProps {
   switchToPreviousBuffer: () => void;
   buffers: Buffer[];
   setActiveBuffer: (bufferId: string) => void;
+  reopenClosedTab: () => Promise<void>;
   isBottomPaneVisible: boolean;
   bottomPaneActiveTab: "terminal" | "diagnostics";
   onSave?: () => void;
@@ -59,6 +60,7 @@ export const useKeyboardShortcuts = ({
   switchToPreviousBuffer,
   buffers,
   setActiveBuffer,
+  reopenClosedTab,
   isBottomPaneVisible,
   bottomPaneActiveTab,
   onSave,
@@ -320,6 +322,13 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
+      // Reopen Closed Tab (Ctrl+Shift+T / Cmd+Shift+T)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "T" || e.key === "t")) {
+        e.preventDefault();
+        reopenClosedTab();
+        return;
+      }
+
       // Handle tab navigation on all platforms (Ctrl+Tab for next tab)
       if (e.ctrlKey && e.key === "Tab" && !e.shiftKey) {
         e.preventDefault();
@@ -329,6 +338,20 @@ export const useKeyboardShortcuts = ({
 
       // Handle tab navigation on all platforms (Ctrl+Shift+Tab for previous tab)
       if (e.ctrlKey && e.shiftKey && e.key === "Tab") {
+        e.preventDefault();
+        switchToPreviousBuffer();
+        return;
+      }
+
+      // Tab navigation with Ctrl+PageDown (next tab)
+      if (e.ctrlKey && e.key === "PageDown" && !e.shiftKey) {
+        e.preventDefault();
+        switchToNextBuffer();
+        return;
+      }
+
+      // Tab navigation with Ctrl+PageUp (previous tab)
+      if (e.ctrlKey && e.key === "PageUp" && !e.shiftKey) {
         e.preventDefault();
         switchToPreviousBuffer();
         return;

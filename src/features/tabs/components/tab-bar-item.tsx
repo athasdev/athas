@@ -15,6 +15,7 @@ interface TabBarItemProps {
   onContextMenu: (e: React.MouseEvent) => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: (e: React.DragEvent) => void;
+  onKeyDown: (e: React.KeyboardEvent) => void;
   handleTabClose: (id: string) => void;
 }
 
@@ -28,6 +29,7 @@ const TabBarItem = memo(function TabBarItem({
   onContextMenu,
   onDragStart,
   onDragEnd,
+  onKeyDown,
   handleTabClose,
 }: TabBarItemProps) {
   const handleAuxClick = useCallback(
@@ -49,6 +51,10 @@ const TabBarItem = memo(function TabBarItem({
       )}
       <div
         ref={tabRef}
+        role="tab"
+        aria-selected={isActive}
+        aria-label={`${buffer.name}${buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}`}
+        tabIndex={isActive ? 0 : -1}
         className={cn(
           "tab-bar-item group relative flex flex-shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap px-2 py-1",
           isActive ? "bg-primary-bg" : "bg-secondary-bg",
@@ -58,6 +64,7 @@ const TabBarItem = memo(function TabBarItem({
         style={{ minWidth: 120, maxWidth: 400 }}
         onMouseDown={onMouseDown}
         onContextMenu={onContextMenu}
+        onKeyDown={onKeyDown}
         draggable
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
@@ -87,8 +94,15 @@ const TabBarItem = memo(function TabBarItem({
           title={buffer.path}
         >
           {buffer.name}
-          {buffer.isDirty && <span className="ml-1 text-text-lighter">•</span>}
         </span>
+        {buffer.isDirty && (
+          <div
+            className="size-2 flex-shrink-0 rounded-full bg-accent"
+            title="Unsaved changes"
+            role="img"
+            aria-label="Unsaved changes"
+          />
+        )}
         {!buffer.isPinned && (
           <button
             type="button"

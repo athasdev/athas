@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useSettingsStore } from "@/settings/store";
+import { useAppStore } from "@/stores/app-store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
@@ -10,6 +11,7 @@ import type { Buffer } from "@/types/buffer";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
 import TabDragPreview from "./tab-drag-preview";
+import UnsavedChangesDialog from "./unsaved-changes-dialog";
 
 interface TabBarProps {
   paneId?: string; // For split view panes (future feature)
@@ -29,6 +31,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
   // Get everything from stores
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
+  const pendingClose = useBufferStore.use.pendingClose();
   const {
     handleTabClick,
     handleTabClose,
@@ -37,9 +40,13 @@ const TabBar = ({ paneId }: TabBarProps) => {
     handleCloseAllTabs,
     handleCloseTabsToRight,
     reorderBuffers,
+    confirmCloseWithoutSaving,
+    cancelPendingClose,
   } = useBufferStore.use.actions();
+  const { handleSave } = useAppStore.use.actions();
   const { settings } = useSettingsStore();
   const { updateActivePath } = useSidebarStore();
+  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
 
   // Drag state
   const [dragState, setDragState] = useState<{
@@ -67,6 +74,8 @@ const TabBar = ({ paneId }: TabBarProps) => {
     position: { x: number; y: number };
     buffer: Buffer | null;
   }>({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
+
+  const [srAnnouncement, setSrAnnouncement] = useState<string>("");
 
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -268,8 +277,13 @@ const TabBar = ({ paneId }: TabBarProps) => {
       if (e.button !== 0 || (e.target as HTMLElement).closest("button")) {
         return;
       }
-      handleTabClick(sortedBuffers[index].id);
-      updateActivePath(sortedBuffers[index].path);
+      const buffer = sortedBuffers[index];
+      handleTabClick(buffer.id);
+      updateActivePath(buffer.path);
+
+      // Announce tab switch to screen readers
+      setSrAnnouncement(`Switched to ${buffer.name}${buffer.isDirty ? ", unsaved changes" : ""}`);
+
       e.preventDefault();
       setDragState({
         isDragging: false,
@@ -282,7 +296,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
         dragDirection: null,
       });
     },
-    [handleTabClick, sortedBuffers],
+    [handleTabClick, sortedBuffers, updateActivePath],
   );
 
   const handleContextMenu = useCallback((e: React.MouseEvent, buffer: Buffer) => {
@@ -342,9 +356,53 @@ const TabBar = ({ paneId }: TabBarProps) => {
     [writeText],
   );
 
+  const handleCopyRelativePath = useCallback(
+    async (path: string) => {
+      if (!rootFolderPath) {
+        // If no project is open, copy the full path
+        await writeText(path);
+        return;
+      }
+
+      // Calculate relative path
+      let relativePath = path;
+      if (path.startsWith(rootFolderPath)) {
+        relativePath = path.slice(rootFolderPath.length);
+        // Remove leading slash if present
+        if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
+          relativePath = relativePath.slice(1);
+        }
+      }
+
+      await writeText(relativePath);
+    },
+    [rootFolderPath, writeText],
+  );
+
   const closeContextMenu = () => {
     setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
   };
+
+  const handleSaveAndClose = useCallback(async () => {
+    if (!pendingClose) return;
+
+    const buffer = buffers.find((b) => b.id === pendingClose.bufferId);
+    if (!buffer) return;
+
+    // Save the file
+    await handleSave();
+
+    // Then proceed with closing
+    confirmCloseWithoutSaving();
+  }, [pendingClose, buffers, handleSave, confirmCloseWithoutSaving]);
+
+  const handleDiscardAndClose = useCallback(() => {
+    confirmCloseWithoutSaving();
+  }, [confirmCloseWithoutSaving]);
+
+  const handleCancelClose = useCallback(() => {
+    cancelPendingClose();
+  }, [cancelPendingClose]);
 
   useEffect(() => {
     if (dragState.draggedIndex === null) return;
@@ -404,6 +462,88 @@ const TabBar = ({ paneId }: TabBarProps) => {
     tabRefs.current = tabRefs.current.slice(0, sortedBuffers.length);
   }, [sortedBuffers.length]);
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent, index: number) => {
+      const buffer = sortedBuffers[index];
+
+      switch (e.key) {
+        case "ArrowLeft":
+          e.preventDefault();
+          if (index > 0) {
+            const prevBuffer = sortedBuffers[index - 1];
+            handleTabClick(prevBuffer.id);
+            updateActivePath(prevBuffer.path);
+            setSrAnnouncement(
+              `Switched to ${prevBuffer.name}${prevBuffer.isDirty ? ", unsaved changes" : ""}`,
+            );
+            tabRefs.current[index - 1]?.focus();
+          }
+          break;
+
+        case "ArrowRight":
+          e.preventDefault();
+          if (index < sortedBuffers.length - 1) {
+            const nextBuffer = sortedBuffers[index + 1];
+            handleTabClick(nextBuffer.id);
+            updateActivePath(nextBuffer.path);
+            setSrAnnouncement(
+              `Switched to ${nextBuffer.name}${nextBuffer.isDirty ? ", unsaved changes" : ""}`,
+            );
+            tabRefs.current[index + 1]?.focus();
+          }
+          break;
+
+        case "Home":
+          e.preventDefault();
+          if (sortedBuffers.length > 0) {
+            const firstBuffer = sortedBuffers[0];
+            handleTabClick(firstBuffer.id);
+            updateActivePath(firstBuffer.path);
+            setSrAnnouncement(
+              `Switched to ${firstBuffer.name}${firstBuffer.isDirty ? ", unsaved changes" : ""}`,
+            );
+            tabRefs.current[0]?.focus();
+          }
+          break;
+
+        case "End":
+          e.preventDefault();
+          if (sortedBuffers.length > 0) {
+            const lastIndex = sortedBuffers.length - 1;
+            const lastBuffer = sortedBuffers[lastIndex];
+            handleTabClick(lastBuffer.id);
+            updateActivePath(lastBuffer.path);
+            setSrAnnouncement(
+              `Switched to ${lastBuffer.name}${lastBuffer.isDirty ? ", unsaved changes" : ""}`,
+            );
+            tabRefs.current[lastIndex]?.focus();
+          }
+          break;
+
+        case "Delete":
+        case "Backspace":
+          if (!buffer.isPinned) {
+            e.preventDefault();
+            setSrAnnouncement(`Closed ${buffer.name}`);
+            handleTabClose(buffer.id);
+            clearPositionCache(buffer.id);
+          } else {
+            setSrAnnouncement(`Cannot close pinned tab ${buffer.name}`);
+          }
+          break;
+
+        case "Enter":
+        case " ":
+          e.preventDefault();
+          handleTabClick(buffer.id);
+          updateActivePath(buffer.path);
+          setSrAnnouncement(`Activated ${buffer.name}${buffer.isDirty ? ", unsaved changes" : ""}`);
+          break;
+      }
+    },
+    [sortedBuffers, handleTabClick, updateActivePath, handleTabClose, clearPositionCache],
+  );
+
   const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
 
   if (buffers.length === 0) {
@@ -415,7 +555,12 @@ const TabBar = ({ paneId }: TabBarProps) => {
   return (
     <>
       <div className="relative">
-        <div ref={tabBarRef} className="scrollbar-hidden flex overflow-x-auto bg-secondary-bg">
+        <div
+          ref={tabBarRef}
+          className="scrollbar-hidden flex overflow-x-auto bg-secondary-bg"
+          role="tablist"
+          aria-label="Open files"
+        >
           {sortedBuffers.map((buffer, index) => {
             const isActive = buffer.id === activeBufferId;
             const isDraggedTab = isDragging && draggedIndex === index;
@@ -434,6 +579,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
                 }}
                 onMouseDown={(e) => handleMouseDown(e, index)}
                 onContextMenu={(e) => handleContextMenu(e, buffer)}
+                onKeyDown={(e) => handleKeyDown(e, index)}
                 onDragStart={(e) => handleDragStart(e, index)}
                 onDragEnd={handleDragEnd}
                 handleTabClose={(id) => {
@@ -481,6 +627,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
         onCloseAll={handleCloseAllTabs}
         onCloseToRight={handleCloseTabsToRight}
         onCopyPath={handleCopyPath}
+        onCopyRelativePath={handleCopyRelativePath}
         onReload={(bufferId: string) => {
           // Reload the buffer by closing and reopening it
           const buffer = buffers.find((b) => b.id === bufferId);
@@ -508,6 +655,20 @@ const TabBar = ({ paneId }: TabBarProps) => {
         }}
         onRevealInFinder={handleRevealInFolder}
       />
+
+      {pendingClose && (
+        <UnsavedChangesDialog
+          fileName={buffers.find((b) => b.id === pendingClose.bufferId)?.name || ""}
+          onSave={handleSaveAndClose}
+          onDiscard={handleDiscardAndClose}
+          onCancel={handleCancelClose}
+        />
+      )}
+
+      {/* Screen reader live region for announcements */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {srAnnouncement}
+      </div>
     </>
   );
 };

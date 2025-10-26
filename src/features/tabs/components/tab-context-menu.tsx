@@ -1,8 +1,8 @@
 // todo: we should make a context menu component that can be used for other things too
 import { Copy, FolderOpen, Pin, PinOff, RotateCcw } from "lucide-react";
 import { useEffect, useRef } from "react";
+import KeybindingBadge from "@/components/ui/keybinding-badge";
 import type { Buffer } from "@/types/buffer";
-import KeybindingBadge from "../ui/keybinding-badge";
 
 interface TabContextMenuProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ interface TabContextMenuProps {
   onCloseAll: () => void;
   onCloseToRight: (bufferId: string) => void;
   onCopyPath?: (path: string) => void;
+  onCopyRelativePath?: (path: string) => void;
   onReload?: (bufferId: string) => void;
   onRevealInFinder?: (path: string) => void;
 }
@@ -30,6 +31,7 @@ const TabContextMenu = ({
   onCloseAll,
   onCloseToRight,
   onCopyPath,
+  onCopyRelativePath,
   onReload,
   onRevealInFinder,
 }: TabContextMenuProps) => {
@@ -136,6 +138,19 @@ const TabContextMenu = ({
       >
         <Copy size={11} />
         Copy Path
+      </button>
+
+      <button
+        className="flex w-full items-center gap-2 px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        onClick={async () => {
+          if (onCopyRelativePath) {
+            onCopyRelativePath(buffer.path);
+          }
+          onClose();
+        }}
+      >
+        <Copy size={11} />
+        Copy Relative Path
       </button>
 
       <button
