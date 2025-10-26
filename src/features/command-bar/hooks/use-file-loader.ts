@@ -16,9 +16,12 @@ export const useFileLoader = (isVisible: boolean) => {
 
     const loadFiles = async () => {
       try {
-        // Always show loading when opening
-        setIsLoadingFiles(true);
-        setIsIndexing(files.length === 0);
+        const wasEmpty = files.length === 0;
+
+        if (wasEmpty) {
+          setIsLoadingFiles(true);
+          setIsIndexing(true);
+        }
 
         const allFiles = await getAllProjectFiles();
         const filteredFiles = allFiles
@@ -31,15 +34,9 @@ export const useFileLoader = (isVisible: boolean) => {
           }));
 
         setFiles(filteredFiles);
-        setIsLoadingFiles(false);
-
-        // Keep showing indexing for a bit if we got results quickly (means it's cached)
-        if (filteredFiles.length > 0 && isIndexing) {
-          setIsIndexing(false);
-        }
       } catch (error) {
         console.error("Failed to load project files:", error);
-        setFiles([]);
+      } finally {
         setIsLoadingFiles(false);
         setIsIndexing(false);
       }
