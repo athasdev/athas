@@ -352,6 +352,8 @@ fn main() {
          // Fuzzy matching commands
          fuzzy_match,
          filter_completions,
+         // Search commands
+         search_files_content,
          // Format commands
          format_code,
          // CLI commands

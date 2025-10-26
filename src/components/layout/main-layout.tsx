@@ -20,6 +20,7 @@ const AIChat = lazy(() => import("../ai-chat/ai-chat"));
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
+import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import BottomPane from "../bottom-pane";
 import CommandBar from "../command-bar/components/command-bar";
@@ -223,6 +224,7 @@ export function MainLayout() {
 
       {/* Global modals and overlays */}
       <CommandBar />
+      <ContentGlobalSearch />
       <VimCommandBar />
       <VimSearchBar />
       <CommandPalette />

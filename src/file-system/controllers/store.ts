@@ -552,11 +552,10 @@ export const useFileSystemStore = createSelectors(
           return projectFilesCache.files;
         }
 
-        // Return cached files immediately if available, then update in background
-        const cachedFiles = projectFilesCache?.files || [];
+        // If we have cached files for this path (even if old), return them and update in background
+        const hasCachedFiles = projectFilesCache?.files && projectFilesCache.files.length > 0;
 
-        // Background update - don't await this
-        setTimeout(async () => {
+        const scanFiles = async () => {
           try {
             const allFiles: FileEntry[] = [];
             let processedFiles = 0;
@@ -638,9 +637,17 @@ export const useFileSystemStore = createSelectors(
           } catch (error) {
             console.error("Failed to index project files:", error);
           }
-        }, 0);
+        };
 
-        return cachedFiles;
+        // If we don't have cached files, wait for the scan to complete
+        if (!hasCachedFiles) {
+          await scanFiles();
+          return get().projectFilesCache?.files || [];
+        }
+
+        // Otherwise, return cached files and update in background
+        setTimeout(scanFiles, 0);
+        return projectFilesCache?.files || [];
       },
 
       createFile: async (directoryPath: string, fileName: string) => {
