@@ -10,6 +10,7 @@ import {
   repeatFindChar,
   repeatFindCharReverse,
 } from "../motions/character-motions";
+import { fileEnd, fileStart } from "../motions/file-motions";
 import {
   lineEnd,
   lineFirstNonBlank,
@@ -39,6 +40,8 @@ export const motionRegistry: Record<string, Motion> = {
   W: WORDForward,
   B: WORDBackward,
   E: WORDEnd,
+  gg: fileStart,
+  G: fileEnd,
 
   // Line motions
   "0": lineStart,
