@@ -32,10 +32,17 @@ interface Buffer {
   }[];
 }
 
+interface PendingClose {
+  bufferId: string;
+  type: "single" | "others" | "all" | "to-right";
+  keepBufferId?: string;
+}
+
 interface BufferState {
   buffers: Buffer[];
   activeBufferId: string | null;
   maxOpenTabs: number;
+  pendingClose: PendingClose | null;
   actions: BufferActions;
 }
 
@@ -51,6 +58,7 @@ interface BufferActions {
     diffData?: GitDiff | MultiFileDiff,
   ) => string;
   closeBuffer: (bufferId: string) => void;
+  closeBufferForce: (bufferId: string) => void;
   setActiveBuffer: (bufferId: string) => void;
   updateBufferContent: (
     bufferId: string,
@@ -81,6 +89,9 @@ interface BufferActions {
   getActiveBuffer: () => Buffer | null;
   setMaxOpenTabs: (max: number) => void;
   reloadBufferFromDisk: (bufferId: string) => Promise<void>;
+  setPendingClose: (pending: PendingClose | null) => void;
+  confirmCloseWithoutSaving: () => void;
+  cancelPendingClose: () => void;
 }
 
 const generateBufferId = (path: string): string => {
@@ -93,6 +104,7 @@ export const useBufferStore = createSelectors(
       buffers: [],
       activeBufferId: null,
       maxOpenTabs: 10,
+      pendingClose: null,
       actions: {
         openBuffer: (
           path: string,
@@ -158,6 +170,26 @@ export const useBufferStore = createSelectors(
         },
 
         closeBuffer: (bufferId: string) => {
+          const buffer = get().buffers.find((b) => b.id === bufferId);
+
+          if (!buffer) return;
+
+          // Check if buffer has unsaved changes
+          if (buffer.isDirty) {
+            set((state) => {
+              state.pendingClose = {
+                bufferId,
+                type: "single",
+              };
+            });
+            return;
+          }
+
+          // No unsaved changes, close directly
+          get().actions.closeBufferForce(bufferId);
+        },
+
+        closeBufferForce: (bufferId: string) => {
           const { buffers, activeBufferId } = get();
           const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
 
@@ -275,13 +307,40 @@ export const useBufferStore = createSelectors(
         handleCloseOtherTabs: (keepBufferId: string) => {
           const { buffers } = get();
           const buffersToClose = buffers.filter((b) => b.id !== keepBufferId && !b.isPinned);
-          buffersToClose.forEach((buffer) => get().actions.closeBuffer(buffer.id));
+
+          // Check if any buffer has unsaved changes
+          const dirtyBuffer = buffersToClose.find((b) => b.isDirty);
+          if (dirtyBuffer) {
+            set((state) => {
+              state.pendingClose = {
+                bufferId: dirtyBuffer.id,
+                type: "others",
+                keepBufferId,
+              };
+            });
+            return;
+          }
+
+          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
         },
 
         handleCloseAllTabs: () => {
           const { buffers } = get();
           const buffersToClose = buffers.filter((b) => !b.isPinned);
-          buffersToClose.forEach((buffer) => get().actions.closeBuffer(buffer.id));
+
+          // Check if any buffer has unsaved changes
+          const dirtyBuffer = buffersToClose.find((b) => b.isDirty);
+          if (dirtyBuffer) {
+            set((state) => {
+              state.pendingClose = {
+                bufferId: dirtyBuffer.id,
+                type: "all",
+              };
+            });
+            return;
+          }
+
+          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
         },
 
         handleCloseTabsToRight: (bufferId: string) => {
@@ -290,7 +349,20 @@ export const useBufferStore = createSelectors(
           if (bufferIndex === -1) return;
 
           const buffersToClose = buffers.slice(bufferIndex + 1).filter((b) => !b.isPinned);
-          buffersToClose.forEach((buffer) => get().actions.closeBuffer(buffer.id));
+
+          // Check if any buffer has unsaved changes
+          const dirtyBuffer = buffersToClose.find((b) => b.isDirty);
+          if (dirtyBuffer) {
+            set((state) => {
+              state.pendingClose = {
+                bufferId: dirtyBuffer.id,
+                type: "to-right",
+              };
+            });
+            return;
+          }
+
+          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
         },
 
         reorderBuffers: (startIndex: number, endIndex: number) => {
@@ -357,6 +429,61 @@ export const useBufferStore = createSelectors(
           } catch (error) {
             console.error(`[FileWatcher] Failed to reload buffer from disk: ${buffer.path}`, error);
           }
+        },
+
+        setPendingClose: (pending: PendingClose | null) => {
+          set((state) => {
+            state.pendingClose = pending;
+          });
+        },
+
+        confirmCloseWithoutSaving: () => {
+          const { pendingClose } = get();
+          if (!pendingClose) return;
+
+          const { bufferId, type, keepBufferId } = pendingClose;
+
+          // Clear pending close first
+          set((state) => {
+            state.pendingClose = null;
+          });
+
+          // Execute the close operation based on type
+          switch (type) {
+            case "single":
+              get().actions.closeBufferForce(bufferId);
+              break;
+            case "others":
+              if (keepBufferId) {
+                const { buffers } = get();
+                const buffersToClose = buffers.filter((b) => b.id !== keepBufferId && !b.isPinned);
+                buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+              }
+              break;
+            case "all":
+              {
+                const { buffers } = get();
+                const buffersToClose = buffers.filter((b) => !b.isPinned);
+                buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+              }
+              break;
+            case "to-right":
+              {
+                const { buffers } = get();
+                const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
+                if (bufferIndex !== -1) {
+                  const buffersToClose = buffers.slice(bufferIndex + 1).filter((b) => !b.isPinned);
+                  buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+                }
+              }
+              break;
+          }
+        },
+
+        cancelPendingClose: () => {
+          set((state) => {
+            state.pendingClose = null;
+          });
         },
       },
     })),

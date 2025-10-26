@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useSettingsStore } from "@/settings/store";
+import { useAppStore } from "@/stores/app-store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
@@ -10,6 +11,7 @@ import type { Buffer } from "@/types/buffer";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
 import TabDragPreview from "./tab-drag-preview";
+import UnsavedChangesDialog from "./unsaved-changes-dialog";
 
 interface TabBarProps {
   paneId?: string; // For split view panes (future feature)
@@ -29,6 +31,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
   // Get everything from stores
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
+  const pendingClose = useBufferStore.use.pendingClose();
   const {
     handleTabClick,
     handleTabClose,
@@ -37,7 +40,10 @@ const TabBar = ({ paneId }: TabBarProps) => {
     handleCloseAllTabs,
     handleCloseTabsToRight,
     reorderBuffers,
+    confirmCloseWithoutSaving,
+    cancelPendingClose,
   } = useBufferStore.use.actions();
+  const { handleSave } = useAppStore.use.actions();
   const { settings } = useSettingsStore();
   const { updateActivePath } = useSidebarStore();
 
@@ -346,6 +352,27 @@ const TabBar = ({ paneId }: TabBarProps) => {
     setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
   };
 
+  const handleSaveAndClose = useCallback(async () => {
+    if (!pendingClose) return;
+
+    const buffer = buffers.find((b) => b.id === pendingClose.bufferId);
+    if (!buffer) return;
+
+    // Save the file
+    await handleSave();
+
+    // Then proceed with closing
+    confirmCloseWithoutSaving();
+  }, [pendingClose, buffers, handleSave, confirmCloseWithoutSaving]);
+
+  const handleDiscardAndClose = useCallback(() => {
+    confirmCloseWithoutSaving();
+  }, [confirmCloseWithoutSaving]);
+
+  const handleCancelClose = useCallback(() => {
+    cancelPendingClose();
+  }, [cancelPendingClose]);
+
   useEffect(() => {
     if (dragState.draggedIndex === null) return;
 
@@ -508,6 +535,15 @@ const TabBar = ({ paneId }: TabBarProps) => {
         }}
         onRevealInFinder={handleRevealInFolder}
       />
+
+      {pendingClose && (
+        <UnsavedChangesDialog
+          fileName={buffers.find((b) => b.id === pendingClose.bufferId)?.name || ""}
+          onSave={handleSaveAndClose}
+          onDiscard={handleDiscardAndClose}
+          onCancel={handleCancelClose}
+        />
+      )}
     </>
   );
 };
