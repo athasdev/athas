@@ -1,5 +1,6 @@
-import { Code, Package, Palette, Search } from "lucide-react";
+import { Code, Languages, Package, Palette, Search } from "lucide-react";
 import { useEffect, useState } from "react";
+import { extensionManager } from "@/extensions/extension-manager";
 import { useSettingsStore } from "@/settings/store";
 import { cn } from "@/utils/cn";
 import Button from "./ui/button";
@@ -8,9 +9,10 @@ interface Extension {
   id: string;
   name: string;
   description: string;
-  category: "language-server" | "theme";
+  category: "language" | "language-server" | "theme";
   status: "active" | "inactive";
   themeId?: string;
+  extensions?: string[];
 }
 
 interface ExtensionsViewProps {
@@ -77,16 +79,37 @@ const ExtensionCard = ({ extension, onToggle, isActive }: ExtensionCardProps) =>
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-secondary-bg p-4">
       <div className="flex items-center justify-between">
         <h3 className="font-medium text-sm text-text">{extension.name}</h3>
-        <Button
-          onClick={onToggle}
-          variant={isActive ? "default" : "outline"}
-          size="xs"
-          className="font-normal text-xs opacity-80 hover:opacity-100"
-        >
-          {isActive ? "Disable" : "Enable"}
-        </Button>
+        {extension.category !== "language" && (
+          <Button
+            onClick={onToggle}
+            variant={isActive ? "default" : "outline"}
+            size="xs"
+            className="font-normal text-xs opacity-80 hover:opacity-100"
+          >
+            {isActive ? "Disable" : "Enable"}
+          </Button>
+        )}
+        {extension.category === "language" && (
+          <span className="rounded bg-accent/20 px-2 py-0.5 font-medium text-accent text-xs">
+            Active
+          </span>
+        )}
       </div>
       <p className="text-text-lighter text-xs">{extension.description}</p>
+      {extension.extensions && extension.extensions.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {extension.extensions.slice(0, 5).map((ext) => (
+            <span key={ext} className="rounded-sm bg-hover px-1.5 py-0.5 text-text-lighter text-xs">
+              .{ext}
+            </span>
+          ))}
+          {extension.extensions.length > 5 && (
+            <span className="rounded-sm bg-hover px-1.5 py-0.5 text-text-lighter text-xs">
+              +{extension.extensions.length - 5}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -100,21 +123,48 @@ export default function ExtensionsView({
   const { settings, updateSetting } = useSettingsStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [extensions, setExtensions] = useState<Extension[]>(() => {
-    // Initialize extensions with the current theme state
-    return AVAILABLE_EXTENSIONS.map((ext) => ({
-      ...ext,
-      status: ext.category === "theme" && ext.themeId === currentTheme ? "active" : "inactive",
+    // Get loaded language extensions
+    const languageExtensions = extensionManager.getAllLanguageExtensions().map((ext) => ({
+      id: ext.id,
+      name: ext.displayName,
+      description: ext.description || `${ext.displayName} syntax highlighting`,
+      category: "language" as const,
+      status: "active" as const,
+      extensions: ext.extensions,
     }));
+
+    // Initialize extensions with the current theme state
+    return [
+      ...languageExtensions,
+      ...AVAILABLE_EXTENSIONS.map((ext) => ({
+        ...ext,
+        status: (ext.category === "theme" && ext.themeId === currentTheme
+          ? "active"
+          : "inactive") as "active" | "inactive",
+      })),
+    ];
   });
 
-  // Update extension states when currentTheme changes
+  // Update extension states when currentTheme changes or language extensions change
   useEffect(() => {
-    setExtensions((prev) =>
-      prev.map((ext) => ({
+    const languageExtensions = extensionManager.getAllLanguageExtensions().map((ext) => ({
+      id: ext.id,
+      name: ext.displayName,
+      description: ext.description || `${ext.displayName} syntax highlighting`,
+      category: "language" as const,
+      status: "active" as const,
+      extensions: ext.extensions,
+    }));
+
+    setExtensions([
+      ...languageExtensions,
+      ...AVAILABLE_EXTENSIONS.map((ext) => ({
         ...ext,
-        status: ext.category === "theme" && ext.themeId === currentTheme ? "active" : "inactive",
+        status: (ext.category === "theme" && ext.themeId === currentTheme
+          ? "active"
+          : "inactive") as "active" | "inactive",
       })),
-    );
+    ]);
   }, [currentTheme]);
 
   const handleToggle = (extension: Extension) => {
@@ -183,6 +233,21 @@ export default function ExtensionsView({
           All
         </Button>
         <Button
+          onClick={() => updateSetting("extensionsActiveTab", "language")}
+          variant="ghost"
+          size="sm"
+          data-active={settings.extensionsActiveTab === "language"}
+          className={cn(
+            "flex items-center gap-1 text-xs",
+            settings.extensionsActiveTab === "language"
+              ? "bg-selected text-text"
+              : "bg-transparent text-text-lighter hover:bg-hover",
+          )}
+        >
+          <Languages size={14} />
+          Languages
+        </Button>
+        <Button
           onClick={() => updateSetting("extensionsActiveTab", "language-server")}
           variant="ghost"
           size="sm"
@@ -195,7 +260,7 @@ export default function ExtensionsView({
           )}
         >
           <Code size={14} />
-          Language Servers
+          LSP Servers
         </Button>
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "theme")}
