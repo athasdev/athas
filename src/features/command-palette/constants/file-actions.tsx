@@ -10,6 +10,7 @@ interface FileActionsParams {
   switchToNextBuffer: () => void;
   switchToPreviousBuffer: () => void;
   setActiveBuffer: (bufferId: string) => void;
+  reopenClosedTab: () => Promise<void>;
   onClose: () => void;
 }
 

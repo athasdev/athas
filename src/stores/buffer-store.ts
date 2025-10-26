@@ -39,11 +39,18 @@ interface PendingClose {
   keepBufferId?: string;
 }
 
+interface ClosedBuffer {
+  path: string;
+  name: string;
+  isPinned: boolean;
+}
+
 interface BufferState {
   buffers: Buffer[];
   activeBufferId: string | null;
   maxOpenTabs: number;
   pendingClose: PendingClose | null;
+  closedBuffersHistory: ClosedBuffer[];
   actions: BufferActions;
 }
 
@@ -93,6 +100,7 @@ interface BufferActions {
   setPendingClose: (pending: PendingClose | null) => void;
   confirmCloseWithoutSaving: () => void;
   cancelPendingClose: () => void;
+  reopenClosedTab: () => Promise<void>;
 }
 
 const generateBufferId = (path: string): string => {
@@ -138,6 +146,7 @@ export const useBufferStore = createSelectors(
       activeBufferId: null,
       maxOpenTabs: 10,
       pendingClose: null,
+      closedBuffersHistory: [],
       actions: {
         openBuffer: (
           path: string,
@@ -226,10 +235,33 @@ export const useBufferStore = createSelectors(
         },
 
         closeBufferForce: (bufferId: string) => {
-          const { buffers, activeBufferId } = get();
+          const { buffers, activeBufferId, closedBuffersHistory } = get();
           const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
 
           if (bufferIndex === -1) return;
+
+          const closedBuffer = buffers[bufferIndex];
+
+          // Add to closed history (only real files, not virtual/diff/image/sqlite)
+          if (
+            !closedBuffer.isVirtual &&
+            !closedBuffer.isDiff &&
+            !closedBuffer.isImage &&
+            !closedBuffer.isSQLite
+          ) {
+            const closedBufferInfo: ClosedBuffer = {
+              path: closedBuffer.path,
+              name: closedBuffer.name,
+              isPinned: closedBuffer.isPinned,
+            };
+
+            // Keep only last 10 closed buffers
+            const updatedHistory = [closedBufferInfo, ...closedBuffersHistory].slice(0, 10);
+
+            set((state) => {
+              state.closedBuffersHistory = updatedHistory;
+            });
+          }
 
           const newBuffers = buffers.filter((b) => b.id !== bufferId);
           let newActiveId = activeBufferId;
@@ -529,6 +561,43 @@ export const useBufferStore = createSelectors(
           set((state) => {
             state.pendingClose = null;
           });
+        },
+
+        reopenClosedTab: async () => {
+          const { closedBuffersHistory } = get();
+
+          if (closedBuffersHistory.length === 0) {
+            return;
+          }
+
+          // Get the most recent closed buffer
+          const [closedBuffer, ...remainingHistory] = closedBuffersHistory;
+
+          // Remove it from history
+          set((state) => {
+            state.closedBuffersHistory = remainingHistory;
+          });
+
+          try {
+            // Read the file content and reopen it
+            const content = await readFileContent(closedBuffer.path);
+            const bufferId = get().actions.openBuffer(
+              closedBuffer.path,
+              closedBuffer.name,
+              content,
+              false,
+              false,
+              false,
+              false,
+            );
+
+            // Restore pinned state if it was pinned
+            if (closedBuffer.isPinned) {
+              get().actions.handleTabPin(bufferId);
+            }
+          } catch (error) {
+            console.warn(`Failed to reopen closed tab: ${closedBuffer.path}`, error);
+          }
         },
       },
     })),

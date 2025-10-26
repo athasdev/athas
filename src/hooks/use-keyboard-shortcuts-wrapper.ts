@@ -10,8 +10,13 @@ export function useKeyboardShortcutsWrapper() {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
-  const { closeBuffer, switchToNextBuffer, switchToPreviousBuffer, setActiveBuffer } =
-    useBufferStore.use.actions();
+  const {
+    closeBuffer,
+    switchToNextBuffer,
+    switchToPreviousBuffer,
+    setActiveBuffer,
+    reopenClosedTab,
+  } = useBufferStore.use.actions();
   const { handleSave, openQuickEdit } = useAppStore.use.actions();
   const { settings, updateSetting } = useSettingsStore();
   const { focusSearchInput } = useSearchViewStore();
@@ -94,6 +99,7 @@ export function useKeyboardShortcutsWrapper() {
     switchToPreviousBuffer,
     buffers,
     setActiveBuffer,
+    reopenClosedTab,
     isBottomPaneVisible: uiState.isBottomPaneVisible,
     bottomPaneActiveTab: uiState.bottomPaneActiveTab,
     onSave: handleSave,

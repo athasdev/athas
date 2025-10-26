@@ -30,6 +30,7 @@ interface UseKeyboardShortcutsProps {
   switchToPreviousBuffer: () => void;
   buffers: Buffer[];
   setActiveBuffer: (bufferId: string) => void;
+  reopenClosedTab: () => Promise<void>;
   isBottomPaneVisible: boolean;
   bottomPaneActiveTab: "terminal" | "diagnostics";
   onSave?: () => void;
@@ -59,6 +60,7 @@ export const useKeyboardShortcuts = ({
   switchToPreviousBuffer,
   buffers,
   setActiveBuffer,
+  reopenClosedTab,
   isBottomPaneVisible,
   bottomPaneActiveTab,
   onSave,
@@ -317,6 +319,13 @@ export const useKeyboardShortcuts = ({
         if (activeBuffer) {
           closeBuffer(activeBuffer.id);
         }
+        return;
+      }
+
+      // Reopen Closed Tab (Ctrl+Shift+T / Cmd+Shift+T)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "T") {
+        e.preventDefault();
+        reopenClosedTab();
         return;
       }
 
