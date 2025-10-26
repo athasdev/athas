@@ -74,6 +74,8 @@ const TabBar = ({ paneId }: TabBarProps) => {
     buffer: Buffer | null;
   }>({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
 
+  const [srAnnouncement, setSrAnnouncement] = useState<string>("");
+
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragStateRef = useRef(dragState);
@@ -274,8 +276,13 @@ const TabBar = ({ paneId }: TabBarProps) => {
       if (e.button !== 0 || (e.target as HTMLElement).closest("button")) {
         return;
       }
-      handleTabClick(sortedBuffers[index].id);
-      updateActivePath(sortedBuffers[index].path);
+      const buffer = sortedBuffers[index];
+      handleTabClick(buffer.id);
+      updateActivePath(buffer.path);
+
+      // Announce tab switch to screen readers
+      setSrAnnouncement(`Switched to ${buffer.name}${buffer.isDirty ? ", unsaved changes" : ""}`);
+
       e.preventDefault();
       setDragState({
         isDragging: false,
@@ -288,7 +295,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
         dragDirection: null,
       });
     },
-    [handleTabClick, sortedBuffers],
+    [handleTabClick, sortedBuffers, updateActivePath],
   );
 
   const handleContextMenu = useCallback((e: React.MouseEvent, buffer: Buffer) => {
@@ -431,6 +438,88 @@ const TabBar = ({ paneId }: TabBarProps) => {
     tabRefs.current = tabRefs.current.slice(0, sortedBuffers.length);
   }, [sortedBuffers.length]);
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent, index: number) => {
+      const buffer = sortedBuffers[index];
+
+      switch (e.key) {
+        case "ArrowLeft":
+          e.preventDefault();
+          if (index > 0) {
+            const prevBuffer = sortedBuffers[index - 1];
+            handleTabClick(prevBuffer.id);
+            updateActivePath(prevBuffer.path);
+            setSrAnnouncement(
+              `Switched to ${prevBuffer.name}${prevBuffer.isDirty ? ", unsaved changes" : ""}`,
+            );
+            tabRefs.current[index - 1]?.focus();
+          }
+          break;
+
+        case "ArrowRight":
+          e.preventDefault();
+          if (index < sortedBuffers.length - 1) {
+            const nextBuffer = sortedBuffers[index + 1];
+            handleTabClick(nextBuffer.id);
+            updateActivePath(nextBuffer.path);
+            setSrAnnouncement(
+              `Switched to ${nextBuffer.name}${nextBuffer.isDirty ? ", unsaved changes" : ""}`,
+            );
+            tabRefs.current[index + 1]?.focus();
+          }
+          break;
+
+        case "Home":
+          e.preventDefault();
+          if (sortedBuffers.length > 0) {
+            const firstBuffer = sortedBuffers[0];
+            handleTabClick(firstBuffer.id);
+            updateActivePath(firstBuffer.path);
+            setSrAnnouncement(
+              `Switched to ${firstBuffer.name}${firstBuffer.isDirty ? ", unsaved changes" : ""}`,
+            );
+            tabRefs.current[0]?.focus();
+          }
+          break;
+
+        case "End":
+          e.preventDefault();
+          if (sortedBuffers.length > 0) {
+            const lastIndex = sortedBuffers.length - 1;
+            const lastBuffer = sortedBuffers[lastIndex];
+            handleTabClick(lastBuffer.id);
+            updateActivePath(lastBuffer.path);
+            setSrAnnouncement(
+              `Switched to ${lastBuffer.name}${lastBuffer.isDirty ? ", unsaved changes" : ""}`,
+            );
+            tabRefs.current[lastIndex]?.focus();
+          }
+          break;
+
+        case "Delete":
+        case "Backspace":
+          if (!buffer.isPinned) {
+            e.preventDefault();
+            setSrAnnouncement(`Closed ${buffer.name}`);
+            handleTabClose(buffer.id);
+            clearPositionCache(buffer.id);
+          } else {
+            setSrAnnouncement(`Cannot close pinned tab ${buffer.name}`);
+          }
+          break;
+
+        case "Enter":
+        case " ":
+          e.preventDefault();
+          handleTabClick(buffer.id);
+          updateActivePath(buffer.path);
+          setSrAnnouncement(`Activated ${buffer.name}${buffer.isDirty ? ", unsaved changes" : ""}`);
+          break;
+      }
+    },
+    [sortedBuffers, handleTabClick, updateActivePath, handleTabClose, clearPositionCache],
+  );
+
   const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
 
   if (buffers.length === 0) {
@@ -442,7 +531,12 @@ const TabBar = ({ paneId }: TabBarProps) => {
   return (
     <>
       <div className="relative">
-        <div ref={tabBarRef} className="scrollbar-hidden flex overflow-x-auto bg-secondary-bg">
+        <div
+          ref={tabBarRef}
+          className="scrollbar-hidden flex overflow-x-auto bg-secondary-bg"
+          role="tablist"
+          aria-label="Open files"
+        >
           {sortedBuffers.map((buffer, index) => {
             const isActive = buffer.id === activeBufferId;
             const isDraggedTab = isDragging && draggedIndex === index;
@@ -461,6 +555,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
                 }}
                 onMouseDown={(e) => handleMouseDown(e, index)}
                 onContextMenu={(e) => handleContextMenu(e, buffer)}
+                onKeyDown={(e) => handleKeyDown(e, index)}
                 onDragStart={(e) => handleDragStart(e, index)}
                 onDragEnd={handleDragEnd}
                 handleTabClose={(id) => {
@@ -544,6 +639,11 @@ const TabBar = ({ paneId }: TabBarProps) => {
           onCancel={handleCancelClose}
         />
       )}
+
+      {/* Screen reader live region for announcements */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {srAnnouncement}
+      </div>
     </>
   );
 };

@@ -323,7 +323,7 @@ export const useKeyboardShortcuts = ({
       }
 
       // Reopen Closed Tab (Ctrl+Shift+T / Cmd+Shift+T)
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "T") {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "T" || e.key === "t")) {
         e.preventDefault();
         reopenClosedTab();
         return;
