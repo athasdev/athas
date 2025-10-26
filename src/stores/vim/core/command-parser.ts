@@ -4,6 +4,7 @@
  * Examples: 3dw, d3w, 2ciw, c2aw, etc.
  */
 
+import { getMotionKeys } from "./motion-registry";
 import type { VimCommand } from "./types";
 
 interface ParseState {
@@ -15,80 +16,151 @@ interface ParseState {
   textObject?: string;
 }
 
-/**
- * Parse a vim command sequence
- */
-export const parseVimCommand = (keys: string[]): VimCommand | null => {
-  if (keys.length === 0) return null;
+type ParseStatus = "complete" | "incomplete" | "invalid";
+
+interface ParseResult {
+  status: ParseStatus;
+  command?: VimCommand;
+}
+
+interface MotionMatchResult {
+  status: "complete" | "partial" | "none";
+  motion?: string;
+  length?: number;
+}
+
+let cachedMotionKeys: string[] | null = null;
+const motionKeysDescending = (): string[] => {
+  if (!cachedMotionKeys) {
+    cachedMotionKeys = [...getMotionKeys()].sort((a, b) => b.length - a.length);
+  }
+  return cachedMotionKeys;
+};
+
+const matchMotion = (keys: string[], startIndex: number): MotionMatchResult => {
+  const remaining = keys.slice(startIndex);
+  if (remaining.length === 0) {
+    return { status: "partial" };
+  }
+
+  const remainingString = remaining.join("");
+  let hasPartialMatch = false;
+
+  for (const motionKey of motionKeysDescending()) {
+    if (motionKey.length <= remaining.length) {
+      const candidate = remaining.slice(0, motionKey.length).join("");
+      if (candidate === motionKey) {
+        return {
+          status: "complete",
+          motion: motionKey,
+          length: motionKey.length,
+        };
+      }
+    } else if (motionKey.startsWith(remainingString)) {
+      hasPartialMatch = true;
+    }
+  }
+
+  if (hasPartialMatch) {
+    return { status: "partial" };
+  }
+
+  return { status: "none" };
+};
+
+const parseNumber = (keys: string[], index: number): { value?: number; nextIndex: number } => {
+  let currentIndex = index;
+  if (currentIndex >= keys.length) {
+    return { nextIndex: currentIndex };
+  }
+
+  if (!/[1-9]/.test(keys[currentIndex])) {
+    return { nextIndex: currentIndex };
+  }
+
+  let countStr = keys[currentIndex];
+  currentIndex++;
+  while (currentIndex < keys.length && /[0-9]/.test(keys[currentIndex])) {
+    countStr += keys[currentIndex];
+    currentIndex++;
+  }
+
+  return {
+    value: parseInt(countStr, 10),
+    nextIndex: currentIndex,
+  };
+};
+
+const parseVimCommandInternal = (keys: string[]): ParseResult => {
+  if (keys.length === 0) {
+    return { status: "incomplete" };
+  }
 
   const state: ParseState = {};
   let index = 0;
 
   // Parse first count (before operator)
-  let countStr = "";
-  while (index < keys.length && /[1-9]/.test(keys[index])) {
-    countStr += keys[index];
-    index++;
+  const firstCount = parseNumber(keys, index);
+  if (firstCount.value !== undefined) {
+    state.count1 = firstCount.value;
   }
-  if (index < keys.length && /[0-9]/.test(keys[index])) {
-    while (index < keys.length && /[0-9]/.test(keys[index])) {
-      countStr += keys[index];
-      index++;
-    }
-  }
-  if (countStr) {
-    state.count1 = parseInt(countStr);
-  }
+  index = firstCount.nextIndex;
 
-  if (index >= keys.length) return null;
+  if (index >= keys.length) {
+    return { status: "incomplete" };
+  }
 
   // Parse operator
   const potentialOperator = keys[index];
   if (isOperatorKey(potentialOperator)) {
     state.operator = potentialOperator;
     index++;
-  }
 
-  if (index >= keys.length) {
-    // Just an operator, need motion/text-object
-    return null;
+    if (index >= keys.length) {
+      return { status: "incomplete" };
+    }
   }
 
   // Parse second count (after operator)
-  countStr = "";
-  while (index < keys.length && /[1-9]/.test(keys[index])) {
-    countStr += keys[index];
-    index++;
+  const secondCount = parseNumber(keys, index);
+  if (secondCount.value !== undefined) {
+    state.count2 = secondCount.value;
   }
-  if (index < keys.length && /[0-9]/.test(keys[index])) {
-    while (index < keys.length && /[0-9]/.test(keys[index])) {
-      countStr += keys[index];
-      index++;
-    }
-  }
-  if (countStr) {
-    state.count2 = parseInt(countStr);
-  }
+  index = secondCount.nextIndex;
 
-  if (index >= keys.length) return null;
+  if (index >= keys.length) {
+    return { status: "incomplete" };
+  }
 
   // Parse text object mode (i or a)
   if (keys[index] === "i" || keys[index] === "a") {
     state.textObjectMode = keys[index] as "inner" | "around";
     index++;
 
-    if (index >= keys.length) return null;
+    if (index >= keys.length) {
+      return { status: "incomplete" };
+    }
 
-    // Next key should be the text object
     state.textObject = keys[index];
     index++;
   } else {
-    // Parse motion
-    state.motion = keys[index];
-    index++;
+    // Parse motion (supports multi-key motions)
+    const motionMatch = matchMotion(keys, index);
+    if (motionMatch.status === "partial") {
+      return { status: "incomplete" };
+    }
+    if (motionMatch.status === "none" || !motionMatch.motion || !motionMatch.length) {
+      return { status: "invalid" };
+    }
+
+    state.motion = motionMatch.motion;
+    index += motionMatch.length;
   }
 
-  // Build the final command
+  if (index !== keys.length) {
+    return { status: "invalid" };
+  }
+
   const command: VimCommand = {};
 
   // Combine counts (count1 * count2)
@@ -113,7 +185,26 @@ export const parseVimCommand = (keys: string[]): VimCommand | null => {
     command.motion = state.motion;
   }
 
-  return command;
+  if (command.operator && !(command.motion || command.textObject)) {
+    return { status: "incomplete" };
+  }
+
+  if (!command.operator && !command.motion) {
+    return { status: "invalid" };
+  }
+
+  return {
+    status: "complete",
+    command,
+  };
+};
+
+/**
+ * Parse a vim command sequence
+ */
+export const parseVimCommand = (keys: string[]): VimCommand | null => {
+  const result = parseVimCommandInternal(keys);
+  return result.status === "complete" ? (result.command ?? null) : null;
 };
 
 /**
@@ -135,45 +226,19 @@ export const getEffectiveCount = (command: VimCommand): number => {
  * Check if a command is complete
  */
 export const isCommandComplete = (keys: string[]): boolean => {
-  if (keys.length === 0) return false;
-
-  // Try to parse
-  const command = parseVimCommand(keys);
-  if (!command) return false;
-
-  // A command is complete if it has either:
-  // 1. An operator + (motion or text object)
-  // 2. Just a motion (for navigation)
-  if (command.operator) {
-    return !!(command.motion || command.textObject);
-  }
-
-  return !!command.motion;
+  return parseVimCommandInternal(keys).status === "complete";
 };
 
 /**
  * Check if more keys are expected
  */
 export const expectsMoreKeys = (keys: string[]): boolean => {
-  if (keys.length === 0) return true;
+  return parseVimCommandInternal(keys).status === "incomplete";
+};
 
-  // Count without operator/motion
-  if (keys.every((k) => /[0-9]/.test(k))) return true;
-
-  // Operator without motion/text-object
-  const lastKey = keys[keys.length - 1];
-  if (isOperatorKey(lastKey)) return true;
-
-  // Text object mode without object
-  if (lastKey === "i" || lastKey === "a") {
-    // Check if previous key was an operator
-    if (keys.length >= 2) {
-      const prevKey = keys[keys.length - 2];
-      if (isOperatorKey(prevKey) || /[0-9]/.test(prevKey)) {
-        return true;
-      }
-    }
-  }
-
-  return !isCommandComplete(keys);
+/**
+ * Get current parse status for a key sequence
+ */
+export const getCommandParseStatus = (keys: string[]): ParseStatus => {
+  return parseVimCommandInternal(keys).status;
 };

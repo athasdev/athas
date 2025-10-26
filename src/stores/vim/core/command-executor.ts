@@ -43,6 +43,7 @@ export const executeVimCommand = (keys: string[]): boolean => {
   if (!context) return false;
 
   const count = getEffectiveCount(command);
+  const explicitCount = command.count !== undefined;
 
   try {
     // Handle operator + motion/text-object
@@ -68,7 +69,10 @@ export const executeVimCommand = (keys: string[]): boolean => {
         const motion = getMotion(command.motion);
         if (!motion) return false;
 
-        range = motion.calculate(context.cursor, context.lines, count);
+        const motionCountArg = command.count === undefined ? undefined : command.count;
+        range = motion.calculate(context.cursor, context.lines, motionCountArg, {
+          explicitCount,
+        });
       } else {
         return false;
       }
@@ -84,7 +88,10 @@ export const executeVimCommand = (keys: string[]): boolean => {
       const motion = getMotion(command.motion);
       if (!motion) return false;
 
-      const range = motion.calculate(context.cursor, context.lines, count);
+      const motionCountArg = command.count === undefined ? undefined : command.count;
+      const range = motion.calculate(context.cursor, context.lines, motionCountArg, {
+        explicitCount,
+      });
 
       // For navigation, just move the cursor to the end of the range
       context.setCursorPosition(range.end);
