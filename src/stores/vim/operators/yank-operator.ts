@@ -30,7 +30,9 @@ export const yankOperator: Operator = {
 
     // Handle linewise yank
     if (range.linewise) {
-      const yankedLines = lines.slice(range.start.line, range.end.line + 1);
+      const startLine = Math.min(range.start.line, range.end.line);
+      const endLine = Math.max(range.start.line, range.end.line);
+      const yankedLines = lines.slice(startLine, endLine + 1);
       vimClipboard = {
         content: yankedLines.join("\n"),
         linewise: true,

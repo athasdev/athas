@@ -103,6 +103,7 @@
 export { canExecuteCommand, executeVimCommand } from "./core/command-executor";
 export {
   expectsMoreKeys,
+  getCommandParseStatus,
   getEffectiveCount,
   isCommandComplete,
   parseVimCommand,
@@ -121,7 +122,9 @@ export type {
   VimRange,
 } from "./core/types";
 export * from "./motions/character-motions";
+export * from "./motions/file-motions";
 export * from "./motions/line-motions";
+export * from "./motions/viewport-motions";
 
 // Motions (for external use if needed)
 export * from "./motions/word-motions";

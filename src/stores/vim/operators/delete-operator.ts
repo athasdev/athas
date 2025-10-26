@@ -18,15 +18,18 @@ export const deleteOperator: Operator = {
 
     // Handle linewise deletion
     if (range.linewise) {
+      const startLine = Math.min(range.start.line, range.end.line);
+      const endLine = Math.max(range.start.line, range.end.line);
+
       const newLines = lines.filter((_, index) => {
-        return index < range.start.line || index > range.end.line;
+        return index < startLine || index > endLine;
       });
 
       const newContent = newLines.length > 0 ? newLines.join("\n") : "";
       updateContent(newContent);
 
       // Position cursor at start of deletion (or beginning of file)
-      const newLine = Math.min(range.start.line, newLines.length - 1);
+      const newLine = newLines.length > 0 ? Math.min(startLine, newLines.length - 1) : 0;
       const newColumn = 0;
       const newOffset =
         newLines.length > 0 ? calculateOffsetFromPosition(newLine, newColumn, newLines) : 0;
