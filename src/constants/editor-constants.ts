@@ -18,14 +18,20 @@ export const EDITOR_CONSTANTS = {
   GIT_INDICATOR_WIDTH: 8, // Space reserved for git gutter indicators on the left
   GUTTER_MARGIN: 8, // mr-2 in Tailwind (0.5rem = 8px) - margin between gutter and content
 
-  // Z-index layers
+  // Z-index layers - ordered by priority (lowest to highest)
   Z_INDEX: {
     BASE: 0,
     DECORATION: 10,
     SELECTION: 20,
-    OVERLAY: 30,
-    DROPDOWN: 50,
-    TOOLTIP: 50,
+    CURSOR: 25,
+    GIT_BLAME: 30, // Inline git blame (lowest priority overlay)
+    OVERLAY: 40,
+    DROPDOWN: 100, // Generic dropdowns (breadcrumb, file mention, etc.)
+    COMPLETION: 100, // LSP completions
+    INLINE_TOOLBAR: 200, // Inline edit toolbar
+    TOOLTIP: 250, // Hover tooltips
+    HOVER_TOOLTIP: 250, // Hover tooltips (alias)
+    CONTEXT_MENU: 300, // Context menu (highest priority)
   },
 
   // Textarea

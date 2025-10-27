@@ -91,3 +91,80 @@ export const getCharWidth = (
   // Round to avoid subpixel issues
   return Math.round(width * 100) / 100;
 };
+
+/**
+ * Character width cache to avoid repeated DOM measurements
+ */
+const charWidthCache = new Map<string, number>();
+
+/**
+ * Get accurate character width from cache or measure
+ */
+export const getCharWidthCached = (
+  char: string,
+  fontSize: number,
+  fontFamily: string = "JetBrains Mono, monospace",
+): number => {
+  const cacheKey = `${char}-${fontSize}-${fontFamily}`;
+
+  if (charWidthCache.has(cacheKey)) {
+    return charWidthCache.get(cacheKey)!;
+  }
+
+  const measureElement = document.createElement("span");
+  measureElement.style.position = "absolute";
+  measureElement.style.visibility = "hidden";
+  measureElement.style.whiteSpace = "pre";
+  measureElement.style.fontSize = `${fontSize}px`;
+  measureElement.style.fontFamily = fontFamily;
+  measureElement.style.lineHeight = "1";
+  measureElement.style.padding = "0";
+  measureElement.style.margin = "0";
+  measureElement.style.border = "none";
+
+  measureElement.textContent = char;
+
+  document.body.appendChild(measureElement);
+  const width = measureElement.getBoundingClientRect().width;
+  document.body.removeChild(measureElement);
+
+  const roundedWidth = Math.round(width * 100) / 100;
+  charWidthCache.set(cacheKey, roundedWidth);
+
+  return roundedWidth;
+};
+
+/**
+ * Get accurate X position for a cursor at given line and column
+ * This accounts for variable-width characters, tabs, etc.
+ */
+export const getAccurateCursorX = (
+  line: string,
+  column: number,
+  fontSize: number,
+  fontFamily: string = "JetBrains Mono, monospace",
+  tabSize: number = 2,
+): number => {
+  let x = 0;
+  const limitedColumn = Math.min(column, line.length);
+
+  for (let i = 0; i < limitedColumn; i++) {
+    const char = line[i];
+    if (char === "\t") {
+      // Calculate tab width based on current position and tab size
+      const spacesUntilNextTab = tabSize - (i % tabSize);
+      x += getCharWidthCached(" ", fontSize, fontFamily) * spacesUntilNextTab;
+    } else {
+      x += getCharWidthCached(char, fontSize, fontFamily);
+    }
+  }
+
+  return x;
+};
+
+/**
+ * Clear character width cache (useful when font changes)
+ */
+export const clearCharWidthCache = () => {
+  charWidthCache.clear();
+};

@@ -3,7 +3,8 @@ import { Check, Clock, Copy, GitBranch, GitCommit } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener } from "usehooks-ts";
-import { editorAPI } from "@/extensions/editor-api";
+import { useOverlayManager } from "@/components/editor/overlays/overlay-manager";
+import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import { useThrottledCallback } from "@/hooks/use-performance";
 import { useSettingsStore } from "@/settings/store";
 import { useBufferStore } from "@/stores/buffer-store";
@@ -29,6 +30,7 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
   const documentRef = useRef(document);
   const { settings } = useSettingsStore();
   const [isCopied, setIsCopied] = useState(false);
+  const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
 
   const POPOVER_MARGIN = 8;
 
@@ -82,12 +84,14 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
     if (!showCard) {
       updatePosition();
       setShowCard(true);
+      showOverlay("git-blame");
     }
-  }, [clearHideTimeout, showCard, updatePosition]);
+  }, [clearHideTimeout, showCard, updatePosition, showOverlay]);
 
   const hidePopover = useCallback(() => {
     scheduleHide();
-  }, [scheduleHide]);
+    hideOverlay("git-blame");
+  }, [scheduleHide, hideOverlay]);
 
   const handleCopyCommitHash = useCallback(
     async (e: React.MouseEvent) => {
@@ -181,12 +185,10 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
         clientY <= popoverTop + popoverHeight;
     }
 
-    const textarea = editorAPI.getTextareaRef();
+    // Always try to show when hovering - overlay manager will handle hiding if needed
     if (isOverTrigger || isOverPopover) {
-      textarea!.classList.add("pointer-events-none");
       showPopover();
     } else {
-      textarea!.classList.remove("pointer-events-none");
       hidePopover();
     }
   }, 100);
@@ -261,11 +263,13 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
       </div>
 
       {showCard &&
+        shouldShowOverlay("git-blame") &&
         createPortal(
           <div
             ref={popoverRef}
-            className="fixed z-[99999] min-w-92 rounded-lg border border-border bg-primary-bg shadow-xl"
+            className="fixed min-w-92 rounded-lg border border-border bg-primary-bg shadow-xl"
             style={{
+              zIndex: EDITOR_CONSTANTS.Z_INDEX.GIT_BLAME,
               left: `${position.x}px`,
               top: `${position.y}px`,
             }}

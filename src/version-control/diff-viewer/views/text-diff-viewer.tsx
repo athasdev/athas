@@ -27,8 +27,7 @@ export const TextDiffViewer = memo(function TextDiffViewer({
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <FileIcon size={48} className="mx-auto mb-4 text-text-lighter opacity-50" />
-          <p className="text-sm text-text-lighter">No changes to display</p>
+          <p className="text-xs text-text-lighter py-2">No changes to display</p>
         </div>
       </div>
     );
