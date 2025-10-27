@@ -2,6 +2,16 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tree_sitter_highlight::{HighlightConfiguration, HighlightEvent, Highlighter};
 
+// Import new language parsers
+// Temporarily disabled due to tree-sitter version conflicts
+// extern crate tree_sitter_c_sharp;
+// extern crate tree_sitter_dart;
+// extern crate tree_sitter_elixir;
+// extern crate tree_sitter_kotlin;
+// extern crate tree_sitter_sql;
+// extern crate tree_sitter_swift;
+// extern crate tree_sitter_zig;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Token {
    pub start: usize,
@@ -284,6 +294,84 @@ fn get_language_config(language_name: &str) -> Result<HighlightConfiguration> {
          config.configure(HIGHLIGHT_NAMES);
          Ok(config)
       }
+      // Temporarily disabled due to tree-sitter version conflicts
+      // "kotlin" | "kt" => {
+      //    let mut config = HighlightConfiguration::new(
+      //       tree_sitter_kotlin::LANGUAGE.into(),
+      //       language_name,
+      //       tree_sitter_kotlin::HIGHLIGHTS_QUERY,
+      //       "",
+      //       "",
+      //    )?;
+      //    config.configure(HIGHLIGHT_NAMES);
+      //    Ok(config)
+      // }
+      // "swift" => {
+      //    let mut config = HighlightConfiguration::new(
+      //       tree_sitter_swift::LANGUAGE.into(),
+      //       language_name,
+      //       tree_sitter_swift::HIGHLIGHTS_QUERY,
+      //       "",
+      //       tree_sitter_swift::LOCALS_QUERY,
+      //    )?;
+      //    config.configure(HIGHLIGHT_NAMES);
+      //    Ok(config)
+      // }
+      // "csharp" | "cs" => {
+      //    let mut config = HighlightConfiguration::new(
+      //       tree_sitter_c_sharp::LANGUAGE.into(),
+      //       language_name,
+      //       tree_sitter_c_sharp::HIGHLIGHTS_QUERY,
+      //       "",
+      //       "",
+      //    )?;
+      //    config.configure(HIGHLIGHT_NAMES);
+      //    Ok(config)
+      // }
+      // "zig" => {
+      //    let mut config = HighlightConfiguration::new(
+      //       tree_sitter_zig::LANGUAGE.into(),
+      //       language_name,
+      //       tree_sitter_zig::HIGHLIGHTS_QUERY,
+      //       "",
+      //       "",
+      //    )?;
+      //    config.configure(HIGHLIGHT_NAMES);
+      //    Ok(config)
+      // }
+      // "elixir" | "ex" | "exs" => {
+      //    let mut config = HighlightConfiguration::new(
+      //       tree_sitter_elixir::LANGUAGE.into(),
+      //       language_name,
+      //       tree_sitter_elixir::HIGHLIGHTS_QUERY,
+      //       "",
+      //       "",
+      //    )?;
+      //    config.configure(HIGHLIGHT_NAMES);
+      //    Ok(config)
+      // }
+      // "dart" => {
+      //    let mut config = HighlightConfiguration::new(
+      //       tree_sitter_dart::LANGUAGE.into(),
+      //       language_name,
+      //       tree_sitter_dart::HIGHLIGHTS_QUERY,
+      //       "",
+      //       "",
+      //    )?;
+      //    config.configure(HIGHLIGHT_NAMES);
+      //    Ok(config)
+      // }
+      // "sql" => {
+      //    let mut config = HighlightConfiguration::new(
+      //       tree_sitter_sql::LANGUAGE.into(),
+      //       language_name,
+      //       tree_sitter_sql::HIGHLIGHTS_QUERY,
+      //       "",
+      //       "",
+      //    )?;
+      //    config.configure(HIGHLIGHT_NAMES);
+      //    Ok(config)
+      // }
       _ => anyhow::bail!("Unsupported language: {}", language_name),
    }
 }
@@ -350,6 +438,14 @@ pub async fn get_tokens(content: String, file_extension: String) -> Result<Vec<T
       "c" => "c",
       "cpp" | "cxx" | "cc" | "c++" | "hpp" | "hxx" | "h++" => "cpp",
       "php" => "php",
+      // Temporarily disabled due to tree-sitter version conflicts
+      // "kt" | "kts" => "kotlin",
+      // "swift" => "swift",
+      // "cs" => "csharp",
+      // "zig" => "zig",
+      // "ex" | "exs" => "elixir",
+      // "dart" => "dart",
+      // "sql" => "sql",
       _ => return Err(format!("Unsupported file extension: {}", file_extension)),
    };
 

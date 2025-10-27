@@ -14,6 +14,7 @@ interface Settings {
   autoSave: boolean;
   sidebarPosition: "left" | "right";
   mouseWheelZoom: boolean;
+  commandBarPreview: boolean;
   // Editor
   fontFamily: string;
   fontSize: number;
@@ -50,7 +51,14 @@ interface Settings {
   // Advanced
   //  > nothing here, yet
   // Other
-  extensionsActiveTab: "all" | "core" | "language-server" | "theme";
+  extensionsActiveTab:
+    | "all"
+    | "core"
+    | "language"
+    | "theme"
+    | "icon-theme"
+    | "snippet"
+    | "database";
   maxOpenTabs: number;
   //// File tree
   hiddenFilePatterns: string[];
@@ -64,6 +72,7 @@ const defaultSettings: Settings = {
   autoSave: true,
   sidebarPosition: "left",
   mouseWheelZoom: false,
+  commandBarPreview: true,
   // Editor
   fontFamily: "JetBrains Mono",
   fontSize: 14,

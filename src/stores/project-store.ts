@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { connectionStore } from "@/utils/connection-store";
+import { getFolderName } from "@/utils/path-helpers";
 
 export const useProjectStore = create(
   combine(
@@ -29,9 +30,7 @@ export const useProjectStore = create(
         const { rootFolderPath } = get();
         if (!rootFolderPath) return "Explorer";
 
-        const normalizedPath = rootFolderPath.replace(/\\/g, "/");
-        const folderName = normalizedPath.split("/").pop();
-        return folderName || "Folder";
+        return getFolderName(rootFolderPath);
       },
     }),
   ),

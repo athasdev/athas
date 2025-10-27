@@ -6,8 +6,13 @@ import { useEventListener } from "usehooks-ts";
 import { editorAPI } from "@/extensions/editor-api";
 import { useThrottledCallback } from "@/hooks/use-performance";
 import { useSettingsStore } from "@/settings/store";
+import { useBufferStore } from "@/stores/buffer-store";
+import { useEditorStateStore } from "@/stores/editor-state-store";
+import { useGitBlameStore } from "@/stores/git-blame-store";
 import { cn } from "@/utils/cn";
-import { formatDate, formatRelativeTime } from "@/utils/date";
+import { formatRelativeTime } from "@/utils/date";
+import type { MultiFileDiff } from "../../diff-viewer/models/diff-types";
+import { getCommitDiff } from "../controllers/git";
 import type { GitBlameLine } from "../models/git-types";
 
 interface InlineGitBlameProps {
@@ -84,10 +89,63 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
     scheduleHide();
   }, [scheduleHide]);
 
-  const handleCopyCommitHash = useCallback(async () => {
-    await writeText(blameLine.commit_hash.substring(0, 7));
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 1500);
+  const handleCopyCommitHash = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      await writeText(blameLine.commit_hash.substring(0, 7));
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 1500);
+    },
+    [blameLine.commit_hash],
+  );
+
+  const handleViewCommit = useCallback(async () => {
+    const { filePath } = useEditorStateStore.getState();
+    const { getRepoPath } = useGitBlameStore.getState();
+    const repoPath = getRepoPath(filePath);
+
+    if (!repoPath) return;
+
+    try {
+      const diffs = await getCommitDiff(repoPath, blameLine.commit_hash);
+
+      if (diffs && diffs.length > 0) {
+        const totalAdditions = diffs.reduce(
+          (sum, diff) => sum + diff.lines.filter((line) => line.line_type === "added").length,
+          0,
+        );
+        const totalDeletions = diffs.reduce(
+          (sum, diff) => sum + diff.lines.filter((line) => line.line_type === "removed").length,
+          0,
+        );
+
+        const multiDiff: MultiFileDiff = {
+          commitHash: blameLine.commit_hash,
+          files: diffs,
+          totalFiles: diffs.length,
+          totalAdditions,
+          totalDeletions,
+        };
+
+        const virtualPath = `diff://commit/${blameLine.commit_hash}/all-files`;
+        const displayName = `Commit ${blameLine.commit_hash.substring(0, 7)} (${diffs.length} files)`;
+
+        useBufferStore
+          .getState()
+          .actions.openBuffer(
+            virtualPath,
+            displayName,
+            JSON.stringify(multiDiff),
+            false,
+            false,
+            true,
+            true,
+            multiDiff,
+          );
+      }
+    } catch (error) {
+      console.error("Error getting commit diff:", error);
+    }
   }, [blameLine.commit_hash]);
 
   const throttleCallback = useThrottledCallback((e: MouseEvent) => {
@@ -216,36 +274,36 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
             onSelect={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-2 p-3">
-              <div className="flex size-8 items-center justify-center rounded-full bg-blue-500 text-white">
-                {blameLine.author.charAt(0).toUpperCase()}
+            <div className="flex max-w-96 flex-col gap-2 p-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate font-medium text-sm text-text">{blameLine.author}</span>
+                <div className="flex shrink-0 items-center gap-1 text-text-lighter text-xs">
+                  <Clock size={11} />
+                  <span>{formatRelativeTime(blameLine.time)}</span>
+                </div>
               </div>
-              <div className="flex flex-col gap-1">
-                <span className="font-medium text-sm text-text">{blameLine.author}</span>
-                <span className="break-all text-text-lighter text-xs">
-                  &lt;{blameLine.email}&gt;
-                </span>
-              </div>
-            </div>
 
-            <div className="p-3 pt-0">
-              <pre className="text-sm text-text-light">{blameLine.commit.trim()}</pre>
-            </div>
+              <pre className="whitespace-pre-wrap break-words text-text-light text-xs leading-relaxed">
+                {blameLine.commit.trim()}
+              </pre>
 
-            <div className="flex items-center justify-between border-border border-t p-3 text-text-lighter text-xs">
-              <div className="flex items-center gap-1">
-                <Clock size={12} />
-                <span>{formatDate(blameLine.time)}</span>
-              </div>
-              <div className="flex items-center gap-1 text-text">
-                <GitCommit size={12} />
-                <span className="font-mono">{blameLine.commit_hash.substring(0, 7)}</span>
+              <div className="flex items-center gap-1.5 text-text-lighter text-xs">
                 <button
-                  className="ml-1 text-text-lighter transition-colors hover:text-text"
-                  onClick={handleCopyCommitHash}
-                  title="Copy full commit hash"
+                  className="flex items-center gap-1.5 rounded px-1.5 py-1 transition-colors hover:bg-accent/10"
+                  onClick={handleViewCommit}
+                  title="View commit details"
                 >
-                  {isCopied ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
+                  <GitCommit size={11} />
+                  <span className="font-mono text-text">
+                    {blameLine.commit_hash.substring(0, 7)}
+                  </span>
+                </button>
+                <button
+                  className="ml-auto text-text-lighter transition-colors hover:text-text"
+                  onClick={handleCopyCommitHash}
+                  title="Copy commit hash"
+                >
+                  {isCopied ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
                 </button>
               </div>
             </div>

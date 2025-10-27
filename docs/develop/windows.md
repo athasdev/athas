@@ -5,7 +5,7 @@
 Use the automated setup script:
 
 ```bash
-bun setup-win
+bun setup
 ```
 
 ## Manual Setup
@@ -14,6 +14,7 @@ bun setup-win
 
 1. **Install Bun**: Visit [bun.sh](https://bun.sh) for installation instructions
 2. **Install Rust**: Visit [rustup.rs](https://rustup.rs) for installation instructions
+3. **Install Perl**: Visit [perl.org](https://www.perl.org) for installation instructions
 
 ### Setup
 

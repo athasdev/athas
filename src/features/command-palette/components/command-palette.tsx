@@ -55,6 +55,7 @@ const CommandPalette = () => {
     setIsFindVisible,
     setActiveView,
     setIsCommandBarVisible,
+    setIsGlobalSearchVisible,
     setIsBranchManagerVisible,
   } = useUIState();
   const { openQuickEdit } = useAppStore.use.actions();
@@ -76,8 +77,13 @@ const CommandPalette = () => {
   const { showToast } = useToast();
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
-  const { closeBuffer, setActiveBuffer, switchToNextBuffer, switchToPreviousBuffer } =
-    useBufferStore.use.actions();
+  const {
+    closeBuffer,
+    setActiveBuffer,
+    switchToNextBuffer,
+    switchToPreviousBuffer,
+    reopenClosedTab,
+  } = useBufferStore.use.actions();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
 
   // Create all actions using factory functions
@@ -123,6 +129,7 @@ const CommandPalette = () => {
       setIsSidebarVisible,
       setActiveView,
       setIsCommandBarVisible,
+      setIsGlobalSearchVisible,
       onClose,
     }),
     ...createFileActions({
@@ -132,6 +139,7 @@ const CommandPalette = () => {
       switchToNextBuffer,
       switchToPreviousBuffer,
       setActiveBuffer,
+      reopenClosedTab,
       onClose,
     }),
     ...createWindowActions({

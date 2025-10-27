@@ -57,7 +57,7 @@ fn main() {
             app.set_menu(menu)?;
          }
 
-         log::info!("Starting app ☺️!");
+         log::info!("Starting app!");
 
          // Set up the file watcher
          app.manage(Arc::new(FileWatcher::new(app.handle().clone())));
@@ -352,6 +352,8 @@ fn main() {
          // Fuzzy matching commands
          fuzzy_match,
          filter_completions,
+         // Search commands
+         search_files_content,
          // Format commands
          format_code,
          // CLI commands

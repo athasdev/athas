@@ -28,6 +28,7 @@ import { findFileInTree } from "@/file-system/controllers/file-tree-utils";
 import { moveFile, readDirectory, readFile } from "@/file-system/controllers/platform";
 import type { ContextMenuState, FileEntry } from "@/file-system/models/app";
 import { cn } from "@/utils/cn";
+import { getRelativePath } from "@/utils/path-helpers";
 import { getGitStatus } from "@/version-control/git/controllers/git";
 import type { GitFile, GitStatus } from "@/version-control/git/models/git-types";
 import FileIcon from "./file.icon";
@@ -101,16 +102,7 @@ const FileTree = ({
 
   const isUserHidden = useCallback(
     (fullPath: string, isDir: boolean): boolean => {
-      let relative = fullPath.replace(/\\/g, "/");
-
-      if (rootFolderPath) {
-        const normRoot = rootFolderPath.replace(/\\/g, "/");
-        if (relative.startsWith(normRoot)) {
-          relative = relative.slice(normRoot.length);
-        }
-      }
-
-      if (relative.startsWith("/")) relative = relative.slice(1);
+      let relative = getRelativePath(fullPath, rootFolderPath);
 
       if (!relative || relative.trim() === "") return false;
 
@@ -221,14 +213,7 @@ const FileTree = ({
     (fullPath: string, isDir: boolean): boolean => {
       if (!gitIgnore || !rootFolderPath) return false;
 
-      const normRoot = rootFolderPath.replace(/\\/g, "/");
-      let relative = fullPath.replace(/\\/g, "/");
-
-      if (relative.startsWith(normRoot)) {
-        relative = relative.slice(normRoot.length);
-      }
-
-      if (relative.startsWith("/")) relative = relative.slice(1);
+      let relative = getRelativePath(fullPath, rootFolderPath);
 
       // Handle empty relative paths (like temporary items at root)
       if (!relative || relative.trim() === "") return false;
@@ -249,17 +234,7 @@ const FileTree = ({
     (filePath: string): GitFile | null => {
       if (!gitStatus || !rootFolderPath) return null;
 
-      const normalizedFilePath = filePath.replace(/\\/g, "/");
-      const normalizedRoot = rootFolderPath.replace(/\\/g, "/");
-
-      let relativePath = normalizedFilePath;
-      if (normalizedFilePath.startsWith(normalizedRoot)) {
-        relativePath = normalizedFilePath.slice(normalizedRoot.length);
-      }
-
-      if (relativePath.startsWith("/")) {
-        relativePath = relativePath.slice(1);
-      }
+      const relativePath = getRelativePath(filePath, rootFolderPath);
 
       return gitStatus.files.find((file) => file.path === relativePath) || null;
     },
@@ -270,17 +245,7 @@ const FileTree = ({
     (dirPath: string): GitFile | null => {
       if (!gitStatus || !rootFolderPath) return null;
 
-      const normalizedDirPath = dirPath.replace(/\\/g, "/");
-      const normalizedRoot = rootFolderPath.replace(/\\/g, "/");
-
-      let relativeDirPath = normalizedDirPath;
-      if (normalizedDirPath.startsWith(normalizedRoot)) {
-        relativeDirPath = normalizedDirPath.slice(normalizedRoot.length);
-      }
-
-      if (relativeDirPath.startsWith("/")) {
-        relativeDirPath = relativeDirPath.slice(1);
-      }
+      const relativeDirPath = getRelativePath(dirPath, rootFolderPath);
 
       // Find any file within this directory that has changes
       const fileWithChanges = gitStatus.files.find((file) => {

@@ -1,6 +1,9 @@
-import { FileIcon, FilePlus, FileX, Minus, Plus, RotateCcw, X } from "lucide-react";
-import { memo, useState } from "react";
+import { FileIcon, FilePlus, FileX, X } from "lucide-react";
+import { memo } from "react";
 import Button from "@/components/ui/button";
+import { ImageViewerFooter } from "@/features/image-viewer/components/image-viewer-footer";
+import { ImageZoomControls } from "@/features/image-viewer/components/image-zoom-controls";
+import { useImageZoom } from "@/features/image-viewer/hooks/use-image-zoom";
 import { cn } from "@/utils/cn";
 import { getImgSrc } from "../controllers/diff-helpers";
 import type { ImageContainerProps, ImageDiffViewerProps } from "../models/diff-types";
@@ -50,7 +53,7 @@ export const ImageDiffViewer = memo(function ImageDiffViewer({
   onClose,
   commitHash,
 }: ImageDiffViewerProps) {
-  const [zoom, setZoom] = useState<number>(1);
+  const { zoom, zoomIn, zoomOut, resetZoom } = useImageZoom({ maxZoom: 3 });
 
   const displayFileName = fileName || diff.file_path.split("/").pop() || diff.file_path;
   const shouldShowPath = commitHash && diff.file_path && diff.file_path.includes("/");
@@ -90,30 +93,12 @@ export const ImageDiffViewer = memo(function ImageDiffViewer({
           {!diff.is_new && !diff.is_deleted && <StatusBadge text="MODIFIED" variant="modified" />}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setZoom((z) => Math.max(0.1, z - 0.1))}
-            variant="ghost"
-            size="xs"
-            title="Zoom out"
-          >
-            <Minus size={12} />
-          </Button>
-          <span
-            className={cn("min-w-[50px] px-2 text-center font-mono", "text-text-lighter text-xs")}
-          >
-            {Math.round(zoom * 100)}%
-          </span>
-          <Button
-            onClick={() => setZoom((z) => Math.min(3, z + 0.1))}
-            variant="ghost"
-            size="xs"
-            title="Zoom in"
-          >
-            <Plus size={12} />
-          </Button>
-          <Button onClick={() => setZoom(1)} variant="ghost" size="xs" title="Reset zoom">
-            <RotateCcw size={12} />
-          </Button>
+          <ImageZoomControls
+            zoom={zoom}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onResetZoom={resetZoom}
+          />
           <Button onClick={onClose} variant="ghost" size="xs" title="Close diff viewer">
             <X size={12} />
           </Button>
@@ -166,16 +151,7 @@ export const ImageDiffViewer = memo(function ImageDiffViewer({
         )}
       </div>
       {/* Footer/Info */}
-      <div
-        className={cn(
-          "flex items-center gap-4 border-border border-t",
-          "bg-secondary-bg px-4 py-2 text-text-lighter text-xs",
-        )}
-      >
-        <span>Zoom: {Math.round(zoom * 100)}%</span>
-        <span>Type: {ext}</span>
-        <span>Use +/- buttons to zoom in/out</span>
-      </div>
+      <ImageViewerFooter zoom={zoom} fileType={ext} />
     </div>
   );
 });

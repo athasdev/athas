@@ -17,6 +17,7 @@ interface UseKeyboardShortcutsProps {
   setIsRightPaneVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsCommandBarVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsCommandPaletteVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
+  setIsGlobalSearchVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsThemeSelectorVisible: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsSearchViewActive: (value: boolean) => void;
   focusSearchInput: () => void;
@@ -29,6 +30,7 @@ interface UseKeyboardShortcutsProps {
   switchToPreviousBuffer: () => void;
   buffers: Buffer[];
   setActiveBuffer: (bufferId: string) => void;
+  reopenClosedTab: () => Promise<void>;
   isBottomPaneVisible: boolean;
   bottomPaneActiveTab: "terminal" | "diagnostics";
   onSave?: () => void;
@@ -45,6 +47,7 @@ export const useKeyboardShortcuts = ({
   setIsRightPaneVisible,
   setIsCommandBarVisible,
   setIsCommandPaletteVisible,
+  setIsGlobalSearchVisible,
   setIsThemeSelectorVisible,
   setIsSearchViewActive,
   focusSearchInput,
@@ -57,6 +60,7 @@ export const useKeyboardShortcuts = ({
   switchToPreviousBuffer,
   buffers,
   setActiveBuffer,
+  reopenClosedTab,
   isBottomPaneVisible,
   bottomPaneActiveTab,
   onSave,
@@ -201,59 +205,14 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
-      // Cmd+Shift+F (Mac) or Ctrl+Shift+F (Windows/Linux) to open project search
-      const isMacOS = isMac();
-      const correctModifier = isMacOS ? e.metaKey : e.ctrlKey;
-
-      if (
-        correctModifier &&
-        e.shiftKey &&
-        (e.key === "F" || e.key === "f") &&
-        coreFeatures.search
-      ) {
+      // Global Search (Ctrl+Shift+F / Cmd+Shift+F)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "F" || e.key === "f")) {
         e.preventDefault();
-        e.stopPropagation();
-        setIsSidebarVisible(true);
-        setIsSearchViewActive(true);
-        // Focus the search input after a short delay to ensure the view is rendered
-        setTimeout(() => {
-          // Try the ref-based approach first
-          focusSearchInput();
-
-          // Fallback: direct DOM query for reliability
-          setTimeout(() => {
-            const searchInput = document.querySelector(
-              'input[placeholder="Search"]',
-            ) as HTMLInputElement;
-            if (searchInput) {
-              searchInput.focus();
-              searchInput.select();
-            }
-          }, 50);
-        }, 100);
+        setIsGlobalSearchVisible((prev) => !prev);
         return;
       }
 
-      // Also handle if Mac users are somehow sending ctrlKey instead of metaKey
-      if (
-        isMacOS &&
-        e.ctrlKey &&
-        e.shiftKey &&
-        (e.key === "F" || e.key === "f") &&
-        coreFeatures.search
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsSidebarVisible(true);
-        setIsSearchViewActive(true);
-        setTimeout(() => {
-          focusSearchInput();
-        }, 100);
-        return;
-      }
-
-      // Alternative shortcut: Cmd+Shift+H (Mac) or Ctrl+Shift+H (Windows/Linux) to open project search
-      // This is a backup in case Cmd+Shift+F is captured by the browser/system
+      // Sidebar Search (Cmd+Shift+H / Ctrl+Shift+H) - opens project search in sidebar
       if (
         (e.metaKey || e.ctrlKey) &&
         e.shiftKey &&
@@ -306,10 +265,6 @@ export const useKeyboardShortcuts = ({
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "P") {
         e.preventDefault();
         setIsCommandPaletteVisible((prev) => !prev);
-        // Focus the command palette after a short delay to ensure it's rendered
-        setTimeout(() => {
-          focusCommandPalette();
-        }, 100);
         return;
       }
 
@@ -367,6 +322,13 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
+      // Reopen Closed Tab (Ctrl+Shift+T / Cmd+Shift+T)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "T" || e.key === "t")) {
+        e.preventDefault();
+        reopenClosedTab();
+        return;
+      }
+
       // Handle tab navigation on all platforms (Ctrl+Tab for next tab)
       if (e.ctrlKey && e.key === "Tab" && !e.shiftKey) {
         e.preventDefault();
@@ -376,6 +338,20 @@ export const useKeyboardShortcuts = ({
 
       // Handle tab navigation on all platforms (Ctrl+Shift+Tab for previous tab)
       if (e.ctrlKey && e.shiftKey && e.key === "Tab") {
+        e.preventDefault();
+        switchToPreviousBuffer();
+        return;
+      }
+
+      // Tab navigation with Ctrl+PageDown (next tab)
+      if (e.ctrlKey && e.key === "PageDown" && !e.shiftKey) {
+        e.preventDefault();
+        switchToNextBuffer();
+        return;
+      }
+
+      // Tab navigation with Ctrl+PageUp (previous tab)
+      if (e.ctrlKey && e.key === "PageUp" && !e.shiftKey) {
         e.preventDefault();
         switchToPreviousBuffer();
         return;
@@ -533,6 +509,7 @@ export const useKeyboardShortcuts = ({
     setIsRightPaneVisible,
     setIsCommandBarVisible,
     setIsCommandPaletteVisible,
+    setIsGlobalSearchVisible,
     setIsThemeSelectorVisible,
     setIsSearchViewActive,
     focusSearchInput,

@@ -74,6 +74,14 @@ tree-sitter-java = "0.23.4"
 tree-sitter-c = "0.23.3"
 tree-sitter-cpp = "0.23.0"
 tree-sitter-php = "0.23.11"
+# Temporarily commented out due to tree-sitter version conflicts
+# Will be re-added once parsers are updated to tree-sitter 0.25
+# tree-sitter-kotlin = "0.3.8"  # requires tree-sitter 0.22
+# tree-sitter-swift = "0.7.1"
+# tree-sitter-zig = "1.1.2"
+# tree-sitter-elixir = "0.3.4"
+# tree-sitter-dart = "0.0.4"
+# tree-sitter-sql = "0.0.2"
 tempfile = "3.20.0"
 fontdb = "0.23.0"
 nucleo = "0.5.0"

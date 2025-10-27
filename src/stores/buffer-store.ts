@@ -3,6 +3,7 @@ import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
 import { readFileContent } from "@/file-system/controllers/file-operations";
 import { useRecentFilesStore } from "@/file-system/controllers/recent-files-store";
+import { useSessionStore } from "@/stores/session-store";
 import { detectLanguageFromFileName } from "@/utils/language-detection";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { MultiFileDiff } from "@/version-control/diff-viewer/models/diff-types";
@@ -32,10 +33,24 @@ interface Buffer {
   }[];
 }
 
+interface PendingClose {
+  bufferId: string;
+  type: "single" | "others" | "all" | "to-right";
+  keepBufferId?: string;
+}
+
+interface ClosedBuffer {
+  path: string;
+  name: string;
+  isPinned: boolean;
+}
+
 interface BufferState {
   buffers: Buffer[];
   activeBufferId: string | null;
   maxOpenTabs: number;
+  pendingClose: PendingClose | null;
+  closedBuffersHistory: ClosedBuffer[];
   actions: BufferActions;
 }
 
@@ -51,6 +66,7 @@ interface BufferActions {
     diffData?: GitDiff | MultiFileDiff,
   ) => string;
   closeBuffer: (bufferId: string) => void;
+  closeBufferForce: (bufferId: string) => void;
   setActiveBuffer: (bufferId: string) => void;
   updateBufferContent: (
     bufferId: string,
@@ -81,10 +97,46 @@ interface BufferActions {
   getActiveBuffer: () => Buffer | null;
   setMaxOpenTabs: (max: number) => void;
   reloadBufferFromDisk: (bufferId: string) => Promise<void>;
+  setPendingClose: (pending: PendingClose | null) => void;
+  confirmCloseWithoutSaving: () => void;
+  cancelPendingClose: () => void;
+  reopenClosedTab: () => Promise<void>;
 }
 
 const generateBufferId = (path: string): string => {
   return `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
+};
+
+const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) => {
+  // Get the root folder path from file system store
+  // We'll import this dynamically to avoid circular dependencies
+  import("@/file-system/controllers/store").then(({ useFileSystemStore }) => {
+    const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
+
+    if (!rootFolderPath) return;
+
+    // Only save real files, not virtual/diff/image/sqlite buffers
+    const persistableBuffers = buffers
+      .filter((b) => !b.isVirtual && !b.isDiff && !b.isImage && !b.isSQLite)
+      .map((b) => ({
+        path: b.path,
+        name: b.name,
+        isPinned: b.isPinned,
+      }));
+
+    // Find the active buffer path
+    const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+    const activeBufferPath =
+      activeBuffer &&
+      !activeBuffer.isVirtual &&
+      !activeBuffer.isDiff &&
+      !activeBuffer.isImage &&
+      !activeBuffer.isSQLite
+        ? activeBuffer.path
+        : null;
+
+    useSessionStore.getState().saveSession(rootFolderPath, persistableBuffers, activeBufferPath);
+  });
 };
 
 export const useBufferStore = createSelectors(
@@ -93,6 +145,8 @@ export const useBufferStore = createSelectors(
       buffers: [],
       activeBufferId: null,
       maxOpenTabs: 10,
+      pendingClose: null,
+      closedBuffersHistory: [],
       actions: {
         openBuffer: (
           path: string,
@@ -154,14 +208,60 @@ export const useBufferStore = createSelectors(
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
           }
 
+          // Save session
+          saveSessionToStore(get().buffers, get().activeBufferId);
+
           return newBuffer.id;
         },
 
         closeBuffer: (bufferId: string) => {
-          const { buffers, activeBufferId } = get();
+          const buffer = get().buffers.find((b) => b.id === bufferId);
+
+          if (!buffer) return;
+
+          // Check if buffer has unsaved changes
+          if (buffer.isDirty) {
+            set((state) => {
+              state.pendingClose = {
+                bufferId,
+                type: "single",
+              };
+            });
+            return;
+          }
+
+          // No unsaved changes, close directly
+          get().actions.closeBufferForce(bufferId);
+        },
+
+        closeBufferForce: (bufferId: string) => {
+          const { buffers, activeBufferId, closedBuffersHistory } = get();
           const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
 
           if (bufferIndex === -1) return;
+
+          const closedBuffer = buffers[bufferIndex];
+
+          // Add to closed history (only real files, not virtual/diff/image/sqlite)
+          if (
+            !closedBuffer.isVirtual &&
+            !closedBuffer.isDiff &&
+            !closedBuffer.isImage &&
+            !closedBuffer.isSQLite
+          ) {
+            const closedBufferInfo: ClosedBuffer = {
+              path: closedBuffer.path,
+              name: closedBuffer.name,
+              isPinned: closedBuffer.isPinned,
+            };
+
+            // Keep only last 10 closed buffers
+            const updatedHistory = [closedBufferInfo, ...closedBuffersHistory].slice(0, 10);
+
+            set((state) => {
+              state.closedBuffersHistory = updatedHistory;
+            });
+          }
 
           const newBuffers = buffers.filter((b) => b.id !== bufferId);
           let newActiveId = activeBufferId;
@@ -183,6 +283,9 @@ export const useBufferStore = createSelectors(
             }));
             state.activeBufferId = newActiveId;
           });
+
+          // Save session
+          saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         setActiveBuffer: (bufferId: string) => {
@@ -270,18 +373,48 @@ export const useBufferStore = createSelectors(
               buffer.isPinned = !buffer.isPinned;
             }
           });
+
+          // Save session
+          saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         handleCloseOtherTabs: (keepBufferId: string) => {
           const { buffers } = get();
           const buffersToClose = buffers.filter((b) => b.id !== keepBufferId && !b.isPinned);
-          buffersToClose.forEach((buffer) => get().actions.closeBuffer(buffer.id));
+
+          // Check if any buffer has unsaved changes
+          const dirtyBuffer = buffersToClose.find((b) => b.isDirty);
+          if (dirtyBuffer) {
+            set((state) => {
+              state.pendingClose = {
+                bufferId: dirtyBuffer.id,
+                type: "others",
+                keepBufferId,
+              };
+            });
+            return;
+          }
+
+          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
         },
 
         handleCloseAllTabs: () => {
           const { buffers } = get();
           const buffersToClose = buffers.filter((b) => !b.isPinned);
-          buffersToClose.forEach((buffer) => get().actions.closeBuffer(buffer.id));
+
+          // Check if any buffer has unsaved changes
+          const dirtyBuffer = buffersToClose.find((b) => b.isDirty);
+          if (dirtyBuffer) {
+            set((state) => {
+              state.pendingClose = {
+                bufferId: dirtyBuffer.id,
+                type: "all",
+              };
+            });
+            return;
+          }
+
+          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
         },
 
         handleCloseTabsToRight: (bufferId: string) => {
@@ -290,7 +423,20 @@ export const useBufferStore = createSelectors(
           if (bufferIndex === -1) return;
 
           const buffersToClose = buffers.slice(bufferIndex + 1).filter((b) => !b.isPinned);
-          buffersToClose.forEach((buffer) => get().actions.closeBuffer(buffer.id));
+
+          // Check if any buffer has unsaved changes
+          const dirtyBuffer = buffersToClose.find((b) => b.isDirty);
+          if (dirtyBuffer) {
+            set((state) => {
+              state.pendingClose = {
+                bufferId: dirtyBuffer.id,
+                type: "to-right",
+              };
+            });
+            return;
+          }
+
+          buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
         },
 
         reorderBuffers: (startIndex: number, endIndex: number) => {
@@ -300,6 +446,9 @@ export const useBufferStore = createSelectors(
             result.splice(endIndex, 0, removed);
             state.buffers = result;
           });
+
+          // Save session
+          saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         switchToNextBuffer: () => {
@@ -356,6 +505,98 @@ export const useBufferStore = createSelectors(
             console.log(`[FileWatcher] Reloaded buffer from disk: ${buffer.path}`);
           } catch (error) {
             console.error(`[FileWatcher] Failed to reload buffer from disk: ${buffer.path}`, error);
+          }
+        },
+
+        setPendingClose: (pending: PendingClose | null) => {
+          set((state) => {
+            state.pendingClose = pending;
+          });
+        },
+
+        confirmCloseWithoutSaving: () => {
+          const { pendingClose } = get();
+          if (!pendingClose) return;
+
+          const { bufferId, type, keepBufferId } = pendingClose;
+
+          // Clear pending close first
+          set((state) => {
+            state.pendingClose = null;
+          });
+
+          // Execute the close operation based on type
+          switch (type) {
+            case "single":
+              get().actions.closeBufferForce(bufferId);
+              break;
+            case "others":
+              if (keepBufferId) {
+                const { buffers } = get();
+                const buffersToClose = buffers.filter((b) => b.id !== keepBufferId && !b.isPinned);
+                buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+              }
+              break;
+            case "all":
+              {
+                const { buffers } = get();
+                const buffersToClose = buffers.filter((b) => !b.isPinned);
+                buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+              }
+              break;
+            case "to-right":
+              {
+                const { buffers } = get();
+                const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
+                if (bufferIndex !== -1) {
+                  const buffersToClose = buffers.slice(bufferIndex + 1).filter((b) => !b.isPinned);
+                  buffersToClose.forEach((buffer) => get().actions.closeBufferForce(buffer.id));
+                }
+              }
+              break;
+          }
+        },
+
+        cancelPendingClose: () => {
+          set((state) => {
+            state.pendingClose = null;
+          });
+        },
+
+        reopenClosedTab: async () => {
+          const { closedBuffersHistory } = get();
+
+          if (closedBuffersHistory.length === 0) {
+            return;
+          }
+
+          // Get the most recent closed buffer
+          const [closedBuffer, ...remainingHistory] = closedBuffersHistory;
+
+          // Remove it from history
+          set((state) => {
+            state.closedBuffersHistory = remainingHistory;
+          });
+
+          try {
+            // Read the file content and reopen it
+            const content = await readFileContent(closedBuffer.path);
+            const bufferId = get().actions.openBuffer(
+              closedBuffer.path,
+              closedBuffer.name,
+              content,
+              false,
+              false,
+              false,
+              false,
+            );
+
+            // Restore pinned state if it was pinned
+            if (closedBuffer.isPinned) {
+              get().actions.handleTabPin(bufferId);
+            }
+          } catch (error) {
+            console.warn(`Failed to reopen closed tab: ${closedBuffer.path}`, error);
           }
         },
       },
