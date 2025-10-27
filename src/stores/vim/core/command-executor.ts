@@ -1,12 +1,13 @@
 /**
  * Vim command executor
- * Orchestrates operators, motions, and text objects
+ * Orchestrates operators, motions, text objects, and actions
  */
 
 import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
 import { calculateOffsetFromPosition } from "@/utils/editor-position";
+import { getAction } from "../actions";
 import { getOperator } from "../operators";
 import { getEffectiveCount, parseVimCommand } from "./command-parser";
 import { getMotion } from "./motion-registry";
@@ -46,6 +47,19 @@ export const executeVimCommand = (keys: string[]): boolean => {
   const explicitCount = command.count !== undefined;
 
   try {
+    // Handle standalone actions (p, P, etc.)
+    if (command.action) {
+      const action = getAction(command.action);
+      if (!action) return false;
+
+      // Execute the action multiple times if count is specified
+      for (let i = 0; i < count; i++) {
+        action.execute(context);
+      }
+
+      return true;
+    }
+
     // Handle operator + motion/text-object
     if (command.operator) {
       const operator = getOperator(command.operator);
@@ -54,6 +68,7 @@ export const executeVimCommand = (keys: string[]): boolean => {
       let range: VimRange | null;
 
       if (command.motion && command.operator === command.motion) {
+        console.log("Operator Motion Same comand");
         range = buildLinewiseRange(context, count);
       }
       // Get range from text object
@@ -162,6 +177,11 @@ const getEditorContext = (): EditorContext | null => {
 export const canExecuteCommand = (keys: string[]): boolean => {
   const command = parseVimCommand(keys);
   if (!command) return false;
+
+  // Standalone actions are valid
+  if (command.action) {
+    return true;
+  }
 
   // Need operator + (motion or text-object)
   // OR just motion (for navigation)

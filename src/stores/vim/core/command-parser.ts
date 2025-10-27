@@ -1,19 +1,21 @@
 /**
  * Vim command parser
- * Handles: [count][operator][count][motion/text-object]
- * Examples: 3dw, d3w, 2ciw, c2aw, etc.
+ * Handles: [count][operator][count][motion/text-object] and [count][action]
+ * Examples: 3dw, d3w, 2ciw, c2aw, p, 3p, P, etc.
  */
 
+import { getActionKeys } from "../actions";
 import { getMotionKeys } from "./motion-registry";
 import type { VimCommand } from "./types";
 
 interface ParseState {
-  count1?: number; // Count before operator
+  count1?: number; // Count before operator/action
   operator?: string;
   count2?: number; // Count after operator
   textObjectMode?: "inner" | "around";
   motion?: string;
   textObject?: string;
+  action?: string;
 }
 
 type ParseStatus = "complete" | "incomplete" | "invalid";
@@ -99,7 +101,7 @@ const parseVimCommandInternal = (keys: string[]): ParseResult => {
   const state: ParseState = {};
   let index = 0;
 
-  // Parse first count (before operator)
+  // Parse first count (before operator/action)
   const firstCount = parseNumber(keys, index);
   if (firstCount.value !== undefined) {
     state.count1 = firstCount.value;
@@ -110,10 +112,31 @@ const parseVimCommandInternal = (keys: string[]): ParseResult => {
     return { status: "incomplete" };
   }
 
+  // Check for standalone actions first (p, P, etc.)
+  const potentialAction = keys[index];
+  if (isActionKey(potentialAction)) {
+    // Check if this is a complete action command
+    if (index === keys.length - 1) {
+      state.action = potentialAction;
+      const command: VimCommand = {};
+
+      if (state.count1) {
+        command.count = state.count1;
+      }
+      command.action = state.action;
+
+      return {
+        status: "complete",
+        command,
+      };
+    }
+    // If there are more keys after the action, it's invalid
+    return { status: "invalid" };
+  }
+
   // Parse operator
-  const potentialOperator = keys[index];
-  if (isOperatorKey(potentialOperator)) {
-    state.operator = potentialOperator;
+  if (isOperatorKey(potentialAction)) {
+    state.operator = potentialAction;
     index++;
 
     if (index >= keys.length) {
@@ -209,10 +232,16 @@ export const parseVimCommand = (keys: string[]): VimCommand | null => {
 
 /**
  * Check if a key is an operator
- * Note: Import from operators registry to stay in sync
  */
 const isOperatorKey = (key: string): boolean => {
   return ["d", "c", "y"].includes(key);
+};
+
+/**
+ * Check if a key is an action
+ */
+const isActionKey = (key: string): boolean => {
+  return getActionKeys().includes(key);
 };
 
 /**

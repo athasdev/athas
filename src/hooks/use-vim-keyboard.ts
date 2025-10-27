@@ -313,18 +313,6 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           clearKeyBuffer();
           setMode("normal");
           return true;
-        case "p":
-          e.preventDefault();
-          e.stopPropagation();
-          clearKeyBuffer();
-          vimEdit.paste();
-          return true;
-        case "P":
-          e.preventDefault();
-          e.stopPropagation();
-          clearKeyBuffer();
-          vimEdit.pasteAbove();
-          return true;
         case "u":
           e.preventDefault();
           e.stopPropagation();

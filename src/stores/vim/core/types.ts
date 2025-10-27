@@ -110,6 +110,7 @@ export interface VimCommand {
     mode: "inner" | "around";
     object: string;
   };
+  action?: string;
   register?: string;
 }
 
