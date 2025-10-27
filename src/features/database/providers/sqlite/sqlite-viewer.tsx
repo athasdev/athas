@@ -19,21 +19,24 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import Button from "../components/ui/button";
-import Dropdown from "../components/ui/dropdown";
-import { useUIState } from "../stores/ui-state-store";
-import { SqliteRowMenu, SqliteTableMenu } from "./components/context-menus";
-import { CreateRowModal, CreateTableModal, EditRowModal } from "./components/crud-modals";
-import DataViewComponent from "./components/data-view";
+import Button from "@/components/ui/button";
+import Dropdown from "@/components/ui/dropdown";
+import { useUIState } from "@/stores/ui-state-store";
+import DataViewComponent from "../../components/data-view";
 import type {
   ColumnFilter,
   ColumnInfo,
   DatabaseInfo,
   QueryResult,
-  SQLiteViewerProps,
   TableInfo,
   ViewMode,
-} from "./types";
+} from "../../models/common.types";
+import { SqliteRowMenu, SqliteTableMenu } from "./components/context-menus";
+import { CreateRowModal, CreateTableModal, EditRowModal } from "./components/crud-modals";
+
+export interface SQLiteViewerProps {
+  databasePath: string;
+}
 
 const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
   const [tables, setTables] = useState<TableInfo[]>([]);
