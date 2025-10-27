@@ -159,7 +159,7 @@ export function InlineEditToolbar({
             placeholder="Edit instruction..."
             disabled={isProcessing}
             className={cn(
-              "w-[320px] flex-1 border-none bg-transparent px-1 py-1.5 font-mono text-xs text-text outline-none placeholder:text-text-lighter",
+              "w-[320px] flex-1 border-none bg-transparent px-1 py-1.5 font-mono text-text text-xs outline-none placeholder:text-text-lighter",
               isProcessing && "opacity-50",
             )}
           />
@@ -178,7 +178,7 @@ export function InlineEditToolbar({
             onClick={handleSubmit}
             disabled={!prompt.trim() || isProcessing}
             className={cn(
-              "flex items-center gap-1 flex-shrink-0 rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-colors",
+              "flex flex-shrink-0 items-center gap-1 rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-colors",
               prompt.trim() && !isProcessing
                 ? "bg-hover text-text hover:bg-border"
                 : "cursor-not-allowed text-text-lighter opacity-50",

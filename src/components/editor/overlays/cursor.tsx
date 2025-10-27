@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
+import { editorAPI } from "@/extensions/editor-api";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useSettingsStore } from "@/settings/store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
@@ -22,6 +23,9 @@ export function Cursor() {
   const vimMode = useVimStore.use.mode();
   const isCommandMode = useVimStore.use.isCommandMode();
 
+  // Track viewport scroll position
+  const [scrollOffset, setScrollOffset] = useState({ top: 0, left: 0 });
+
   const cursorStyle = useMemo(() => {
     const isNormalMode = vimModeEnabled && vimMode === "normal";
     const isInsertMode = vimModeEnabled && vimMode === "insert";
@@ -39,64 +43,74 @@ export function Cursor() {
     };
   }, [vimModeEnabled, vimMode, isCommandMode, charWidth]);
 
-  // Update position without re-rendering - cursor scrolls naturally with content
+  // Listen to viewport scroll events
+  useEffect(() => {
+    const viewport = editorAPI.getViewportRef();
+    if (!viewport) return;
+
+    const handleScroll = () => {
+      setScrollOffset({
+        top: viewport.scrollTop,
+        left: viewport.scrollLeft,
+      });
+    };
+
+    // Set initial scroll position
+    handleScroll();
+
+    viewport.addEventListener("scroll", handleScroll);
+    return () => viewport.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Update position accounting for scroll offset
   useEffect(() => {
     if (!cursorRef.current || !visible) return;
 
+    const updateCursorPosition = (position: { line: number; column: number }) => {
+      if (!cursorRef.current) return;
+
+      // Get the line content for accurate positioning
+      const lineContent = lines[position.line] || "";
+
+      // Calculate accurate X position accounting for variable-width characters
+      const accurateX = getAccurateCursorX(
+        lineContent,
+        position.column,
+        fontSize,
+        fontFamily,
+        tabSize,
+      );
+
+      // Position cursor at the character position, accounting for scroll offset
+      const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + accurateX - scrollOffset.left;
+      const y = position.line * lineHeight - scrollOffset.top;
+
+      // Add moving class to pause blinking
+      cursorRef.current.classList.add("moving");
+
+      // Clear existing timeout
+      if (movementTimeoutRef.current) {
+        clearTimeout(movementTimeoutRef.current);
+      }
+
+      // Remove moving class after cursor stops moving
+      movementTimeoutRef.current = setTimeout(() => {
+        cursorRef.current?.classList.remove("moving");
+      }, 100);
+
+      // Use direct positioning for immediate updates
+      cursorRef.current.style.left = `${x}px`;
+      cursorRef.current.style.top = `${y}px`;
+    };
+
     const unsubscribe = useEditorCursorStore.subscribe(
       (state) => state.cursorPosition,
-      (position) => {
-        if (!cursorRef.current) return;
-
-        // Get the line content for accurate positioning
-        const lineContent = lines[position.line] || "";
-
-        // Calculate accurate X position accounting for variable-width characters
-        const accurateX = getAccurateCursorX(
-          lineContent,
-          position.column,
-          fontSize,
-          fontFamily,
-          tabSize,
-        );
-
-        // Position cursor at the character position (no scroll offset needed - browser handles it)
-        const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + accurateX;
-        const y = position.line * lineHeight;
-
-        // Add moving class to pause blinking
-        cursorRef.current.classList.add("moving");
-
-        // Clear existing timeout
-        if (movementTimeoutRef.current) {
-          clearTimeout(movementTimeoutRef.current);
-        }
-
-        // Remove moving class after cursor stops moving
-        movementTimeoutRef.current = setTimeout(() => {
-          cursorRef.current?.classList.remove("moving");
-        }, 100);
-
-        // Use direct positioning for immediate updates
-        cursorRef.current.style.left = `${x}px`;
-        cursorRef.current.style.top = `${y}px`;
-      },
+      updateCursorPosition,
     );
 
     // Set initial position
     const position = useEditorCursorStore.getState().cursorPosition;
-    const lineContent = lines[position.line] || "";
-    const accurateX = getAccurateCursorX(
-      lineContent,
-      position.column,
-      fontSize,
-      fontFamily,
-      tabSize,
-    );
-    const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + accurateX;
-    const y = position.line * lineHeight;
-    cursorRef.current.style.left = `${x}px`;
-    cursorRef.current.style.top = `${y}px`;
+    updateCursorPosition(position);
 
     return () => {
       unsubscribe();
@@ -114,6 +128,7 @@ export function Cursor() {
     fontSize,
     fontFamily,
     tabSize,
+    scrollOffset,
   ]);
 
   if (!visible) return null;
