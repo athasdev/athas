@@ -166,6 +166,9 @@ const parseVimCommandInternal = (keys: string[]): ParseResult => {
 
     state.textObject = keys[index];
     index++;
+  } else if (keys[index] === state.operator) {
+    state.motion = state.operator;
+    index++;
   } else {
     // Parse motion (supports multi-key motions)
     const motionMatch = matchMotion(keys, index);
