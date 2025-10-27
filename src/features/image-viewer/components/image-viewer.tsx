@@ -1,6 +1,6 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { ArrowDown, ArrowUp, FileIcon, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/button";
 import UnsavedChangesDialog from "@/components/ui/unsaved-changes-dialog";
 import { ImageEditorToolbar } from "@/features/image-editor/components/image-editor-toolbar";
@@ -29,7 +29,7 @@ interface ImageViewerProps {
 }
 
 export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageViewerProps) {
-  const { zoom, zoomIn, zoomOut, resetZoom } = useImageZoom({ maxZoom: 5 });
+  const { zoom, zoomIn, zoomOut, resetZoom, handleWheel } = useImageZoom({ maxZoom: 5 });
   const [initialImageSrc, setInitialImageSrc] = useState<string>("");
   const [showResizeDialog, setShowResizeDialog] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -40,6 +40,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
   const [currentSize, setCurrentSize] = useState(0);
   const { rootFolderPath } = useFileSystemStore();
   const { markBufferDirty } = useBufferStore.use.actions();
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   const fileExt = fileName.split(".").pop()?.toUpperCase() || "";
   const relativePath = getRelativePath(filePath, rootFolderPath);
@@ -114,6 +115,18 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
   useEffect(() => {
     markBufferDirty(bufferId, imageOperations.hasChanges);
   }, [imageOperations.hasChanges, bufferId, markBufferDirty]);
+
+  // Attach wheel event listener for trackpad/mouse zoom
+  useEffect(() => {
+    const container = imageContainerRef.current;
+    if (!container) return;
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener("wheel", handleWheel);
+    };
+  }, [handleWheel]);
 
   // Use the operations image if available, otherwise use initial
   const displayImageSrc = imageOperations.imageSrc || initialImageSrc;
@@ -218,6 +231,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
 
       {/* Image Content */}
       <div
+        ref={imageContainerRef}
         className={cn(
           "flex flex-1 items-center justify-center",
           "overflow-auto bg-[var(--editor-bg)] p-4",

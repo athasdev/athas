@@ -106,13 +106,18 @@ export function ImageContextMenu({
   };
 
   const handleFormatSelect = (format: ImageFormat) => {
-    onClose();
     setFormatDialogState({ isOpen: true, format });
   };
 
   const handleConvert = (format: ImageFormat, quality?: number) => {
     onConvertFormat(format, quality);
     setFormatDialogState({ isOpen: false, format: null });
+    onClose();
+  };
+
+  const handleDialogClose = () => {
+    setFormatDialogState({ isOpen: false, format: null });
+    onClose();
   };
 
   const handleCopyPath = async () => {
@@ -329,7 +334,7 @@ export function ImageContextMenu({
       {formatDialogState.format && (
         <ImageFormatDialog
           isOpen={formatDialogState.isOpen}
-          onClose={() => setFormatDialogState({ isOpen: false, format: null })}
+          onClose={handleDialogClose}
           onConvert={handleConvert}
           format={formatDialogState.format}
           currentImageSrc={currentImageSrc}
