@@ -22,6 +22,7 @@ import IconThemeSelector from "@/features/command-palette/components/icon-theme-
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
 import ExtensionsView from "@/features/extensions/components/extensions-view";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
+import { ImageViewer } from "@/features/image-viewer/components/image-viewer";
 import TabBar from "@/features/tabs/components/tab-bar";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import BottomPane from "../bottom-pane";
@@ -30,7 +31,6 @@ import type { Diagnostic } from "../diagnostics/diagnostics-pane";
 import CodeEditor from "../editor/code-editor";
 import EditorFooter from "../editor-footer";
 import GitHubCopilotSettings from "../github-copilot-settings";
-import { ImageViewer } from "../image-viewer/image-viewer";
 import ResizableRightPane from "../resizable-right-pane";
 import ResizableSidebar from "../resizable-sidebar/resizable-sidebar";
 import { VimSearchBar } from "../vim-search/vim-search-bar";
@@ -173,7 +173,13 @@ export function MainLayout() {
                   <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />
                 );
               } else if (activeBuffer.isImage) {
-                return <ImageViewer filePath={activeBuffer.path} fileName={activeBuffer.name} />;
+                return (
+                  <ImageViewer
+                    filePath={activeBuffer.path}
+                    fileName={activeBuffer.name}
+                    bufferId={activeBuffer.id}
+                  />
+                );
               } else if (activeBuffer.isSQLite) {
                 return <SQLiteViewer databasePath={activeBuffer.path} />;
               } else if (activeBuffer.path === "extensions://marketplace") {

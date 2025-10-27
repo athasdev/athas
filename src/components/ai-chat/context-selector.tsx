@@ -6,6 +6,7 @@ import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "../../file-system/controlle
 import type { FileEntry } from "../../file-system/models/app";
 import { useProjectStore } from "../../stores/project-store";
 import { cn } from "../../utils/cn";
+import { getDirectoryPath } from "../../utils/path-helpers";
 
 interface ContextSelectorProps {
   buffers: Array<{
@@ -124,28 +125,6 @@ export function ContextSelector({
       setAllFiles(formattedFiles);
     });
   }, [getAllProjectFiles]);
-
-  // Get relative path for display (same as file mention dropdown)
-  const getRelativePath = (fullPath: string): string => {
-    if (!rootFolderPath) return fullPath;
-
-    const normalizedFullPath = fullPath.replace(/\\/g, "/");
-    const normalizedRootPath = rootFolderPath.replace(/\\/g, "/");
-
-    if (normalizedFullPath.startsWith(normalizedRootPath)) {
-      const relativePath = normalizedFullPath.substring(normalizedRootPath.length);
-      return relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
-    }
-
-    return fullPath;
-  };
-
-  // Get directory path for display
-  const getDirectoryPath = (fullPath: string): string => {
-    const relativePath = getRelativePath(fullPath);
-    const lastSlashIndex = relativePath.lastIndexOf("/");
-    return lastSlashIndex > 0 ? relativePath.substring(0, lastSlashIndex) : "";
-  };
 
   // Combined list of buffers and files with fuzzy search (same logic as file mention dropdown)
   const allItems = useMemo(() => {
@@ -373,7 +352,7 @@ export function ContextSelector({
                           )
                         ) : (
                           <span className="ml-2 text-[10px] text-text-lighter opacity-60">
-                            {getDirectoryPath(item.path) || "root"}
+                            {getDirectoryPath(item.path, rootFolderPath) || "root"}
                           </span>
                         )}
                       </div>
