@@ -320,7 +320,8 @@ export const useBufferStore = createSelectors(
               if (!buffer.isVirtual) {
                 buffer.isDirty = markDirty;
               }
-              // Keep old tokens - syntax highlighter will update them smoothly
+              // Keep tokens - syntax highlighter will update them automatically
+              // The 16ms debounce ensures smooth updates without glitches
             }
           });
         },

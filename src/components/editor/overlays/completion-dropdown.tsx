@@ -1,6 +1,7 @@
-import { memo, useEffect } from "react";
+import { memo, useEffect, useState } from "react";
 import type { CompletionItem } from "vscode-languageserver-protocol";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
+import { editorAPI } from "@/extensions/editor-api";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useEditorCompletionStore } from "@/stores/editor-completion-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
@@ -31,6 +32,50 @@ export const CompletionDropdown = memo(({ onApplyCompletion }: CompletionDropdow
 
   const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
 
+  // Track viewport scroll position
+  const [scrollOffset, setScrollOffset] = useState({ top: 0, left: 0 });
+
+  // Listen to viewport scroll events
+  useEffect(() => {
+    let viewport: HTMLElement | null = null;
+    let rafId: number | null = null;
+
+    const setupScrollListener = () => {
+      viewport = editorAPI.getViewportRef();
+
+      if (!viewport) {
+        rafId = requestAnimationFrame(setupScrollListener);
+        return;
+      }
+
+      const handleScroll = () => {
+        if (!viewport) return;
+        setScrollOffset({
+          top: viewport.scrollTop,
+          left: viewport.scrollLeft,
+        });
+      };
+
+      handleScroll();
+      viewport.addEventListener("scroll", handleScroll);
+
+      return () => {
+        if (viewport) {
+          viewport.removeEventListener("scroll", handleScroll);
+        }
+      };
+    };
+
+    const cleanup = setupScrollListener();
+
+    return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      cleanup?.();
+    };
+  }, []);
+
   // Register/unregister with overlay manager
   useEffect(() => {
     if (isLspCompletionVisible) {
@@ -56,8 +101,8 @@ export const CompletionDropdown = memo(({ onApplyCompletion }: CompletionDropdow
   );
 
   // Calculate position same as cursor but offset below the current line
-  const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + accurateX;
-  const y = (cursorPosition.line + 1) * lineHeight; // +1 to appear below current line
+  const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + accurateX - scrollOffset.left;
+  const y = (cursorPosition.line + 1) * lineHeight - scrollOffset.top; // +1 to appear below current line
 
   const handleSelect = (item: CompletionItem) => {
     if (onApplyCompletion) {

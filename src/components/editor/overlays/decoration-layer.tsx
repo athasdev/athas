@@ -1,11 +1,14 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
+import { editorAPI } from "@/extensions/editor-api";
 import { extensionManager } from "@/extensions/extension-manager";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorDecorationsStore } from "@/stores/editor-decorations-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
 import type { Decoration, Position } from "@/types/editor-types";
+import { getAccurateCursorX } from "@/utils/editor-position";
 
 interface RenderedDecoration {
   key: string;
@@ -25,6 +28,53 @@ export const DecorationLayer = () => {
   const storeDecorations = useEditorDecorationsStore((state) => state.getDecorations());
   const selection = useEditorCursorStore((state) => state.selection);
   const { lineHeight, charWidth, gutterWidth } = useEditorLayout();
+  const fontSize = useEditorSettingsStore.use.fontSize();
+  const fontFamily = useEditorSettingsStore.use.fontFamily();
+  const tabSize = useEditorSettingsStore.use.tabSize();
+
+  // Track viewport scroll position
+  const [scrollOffset, setScrollOffset] = useState({ top: 0, left: 0 });
+
+  // Listen to viewport scroll events
+  useEffect(() => {
+    let viewport: HTMLElement | null = null;
+    let rafId: number | null = null;
+
+    const setupScrollListener = () => {
+      viewport = editorAPI.getViewportRef();
+
+      if (!viewport) {
+        rafId = requestAnimationFrame(setupScrollListener);
+        return;
+      }
+
+      const handleScroll = () => {
+        if (!viewport) return;
+        setScrollOffset({
+          top: viewport.scrollTop,
+          left: viewport.scrollLeft,
+        });
+      };
+
+      handleScroll();
+      viewport.addEventListener("scroll", handleScroll);
+
+      return () => {
+        if (viewport) {
+          viewport.removeEventListener("scroll", handleScroll);
+        }
+      };
+    };
+
+    const cleanup = setupScrollListener();
+
+    return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      cleanup?.();
+    };
+  }, []);
 
   const decorations = useMemo(() => {
     const allDecorations = [...storeDecorations];
@@ -59,12 +109,22 @@ export const DecorationLayer = () => {
       const end = isPositionBefore(range.start, range.end) ? range.end : range.start;
 
       if (type === "inline") {
-        // Inline decorations span within text
+        // Inline decorations span within text - use accurate positioning
         if (start.line === end.line) {
           // Single line decoration
-          const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + start.column * charWidth;
-          const y = start.line * lineHeight;
-          const width = (end.column - start.column) * charWidth;
+          const lineContent = lines[start.line] || "";
+          const startX = getAccurateCursorX(
+            lineContent,
+            start.column,
+            fontSize,
+            fontFamily,
+            tabSize,
+          );
+          const endX = getAccurateCursorX(lineContent, end.column, fontSize, fontFamily, tabSize);
+
+          const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + startX - scrollOffset.left;
+          const y = start.line * lineHeight - scrollOffset.top;
+          const width = endX - startX;
 
           rendered.push({
             key: `inline-${index}-${start.line}`,
@@ -78,10 +138,26 @@ export const DecorationLayer = () => {
         } else {
           // Multi-line decoration
           // First line
+          const firstLineContent = lines[start.line] || "";
+          const firstLineStartX = getAccurateCursorX(
+            firstLineContent,
+            start.column,
+            fontSize,
+            fontFamily,
+            tabSize,
+          );
+          const firstLineEndX = getAccurateCursorX(
+            firstLineContent,
+            firstLineContent.length,
+            fontSize,
+            fontFamily,
+            tabSize,
+          );
+
           const firstLineX =
-            gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + start.column * charWidth;
-          const firstLineY = start.line * lineHeight;
-          const firstLineWidth = (lines[start.line].length - start.column) * charWidth;
+            gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + firstLineStartX - scrollOffset.left;
+          const firstLineY = start.line * lineHeight - scrollOffset.top;
+          const firstLineWidth = firstLineEndX - firstLineStartX;
 
           rendered.push({
             key: `inline-${index}-${start.line}`,
@@ -95,15 +171,23 @@ export const DecorationLayer = () => {
 
           // Middle lines
           for (let line = start.line + 1; line < end.line; line++) {
-            const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN;
-            const y = line * lineHeight;
-            const width = lines[line].length * charWidth;
+            const lineContent = lines[line] || "";
+            const lineWidth = getAccurateCursorX(
+              lineContent,
+              lineContent.length,
+              fontSize,
+              fontFamily,
+              tabSize,
+            );
+
+            const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN - scrollOffset.left;
+            const y = line * lineHeight - scrollOffset.top;
 
             rendered.push({
               key: `inline-${index}-${line}`,
               x,
               y,
-              width,
+              width: lineWidth,
               height: lineHeight,
               className,
               type,
@@ -111,9 +195,17 @@ export const DecorationLayer = () => {
           }
 
           // Last line
-          const lastLineX = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN;
-          const lastLineY = end.line * lineHeight;
-          const lastLineWidth = end.column * charWidth;
+          const lastLineContent = lines[end.line] || "";
+          const lastLineWidth = getAccurateCursorX(
+            lastLineContent,
+            end.column,
+            fontSize,
+            fontFamily,
+            tabSize,
+          );
+
+          const lastLineX = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN - scrollOffset.left;
+          const lastLineY = end.line * lineHeight - scrollOffset.top;
 
           rendered.push({
             key: `inline-${index}-${end.line}`,
@@ -128,8 +220,8 @@ export const DecorationLayer = () => {
       } else if (type === "line") {
         // Line decorations highlight entire lines, excluding gutter
         for (let line = start.line; line <= end.line; line++) {
-          const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN;
-          const y = line * lineHeight;
+          const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN - scrollOffset.left;
+          const y = line * lineHeight - scrollOffset.top;
 
           rendered.push({
             key: `line-${index}-${line}`,
@@ -145,7 +237,16 @@ export const DecorationLayer = () => {
     });
 
     return rendered;
-  }, [decorations, lineHeight, charWidth, gutterWidth]);
+  }, [
+    decorations,
+    lineHeight,
+    charWidth,
+    gutterWidth,
+    fontSize,
+    fontFamily,
+    tabSize,
+    scrollOffset,
+  ]);
 
   return (
     <>

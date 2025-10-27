@@ -43,23 +43,49 @@ export function Cursor() {
     };
   }, [vimModeEnabled, vimMode, isCommandMode, charWidth]);
 
-  // Listen to viewport scroll events
+  // Listen to viewport scroll events - poll until viewport is available
   useEffect(() => {
-    const viewport = editorAPI.getViewportRef();
-    if (!viewport) return;
+    let viewport: HTMLElement | null = null;
+    let rafId: number | null = null;
 
-    const handleScroll = () => {
-      setScrollOffset({
-        top: viewport.scrollTop,
-        left: viewport.scrollLeft,
-      });
+    const setupScrollListener = () => {
+      viewport = editorAPI.getViewportRef();
+
+      if (!viewport) {
+        // Retry on next frame if viewport not available yet
+        rafId = requestAnimationFrame(setupScrollListener);
+        return;
+      }
+
+      const handleScroll = () => {
+        if (!viewport) return;
+        setScrollOffset({
+          top: viewport.scrollTop,
+          left: viewport.scrollLeft,
+        });
+      };
+
+      // Set initial scroll position
+      handleScroll();
+
+      viewport.addEventListener("scroll", handleScroll);
+
+      // Cleanup function
+      return () => {
+        if (viewport) {
+          viewport.removeEventListener("scroll", handleScroll);
+        }
+      };
     };
 
-    // Set initial scroll position
-    handleScroll();
+    const cleanup = setupScrollListener();
 
-    viewport.addEventListener("scroll", handleScroll);
-    return () => viewport.removeEventListener("scroll", handleScroll);
+    return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      cleanup?.();
+    };
   }, []);
 
   // Update position accounting for scroll offset

@@ -81,7 +81,7 @@ const WelcomeScreen = ({
       {/* Logo Section */}
       <div className="mb-6 flex flex-col items-center">
         <div className="mb-1 flex justify-center">
-          <img src="/logo.svg" alt="athas industries" className="h-12" draggable="false" />
+          <span className="font-bold font-mono text-4xl text-white">athas</span>
         </div>
         <div className="flex items-center gap-2 text-text-lighter">
           <p className="font-mono text-xs">v{appVersion}</p>
@@ -174,7 +174,7 @@ const WelcomeScreen = ({
         {/* Recent Folders */}
         {recentFolders.length > 0 && (
           <div className="w-full">
-            <h3 className="mb-2 font-mono text-text text-xs">Recent ({recentFolders.length})</h3>
+            <h3 className="mb-2 font-mono text-text text-xs">Recent Projects</h3>
             <div className="space-y-1.5">
               {recentFolders.map((folder, index) => (
                 <Button
