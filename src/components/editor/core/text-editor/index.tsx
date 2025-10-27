@@ -35,9 +35,9 @@ import { useLspStore } from "@/stores/lsp-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 import type { Position } from "@/types/editor-types";
 import { calculateCursorPosition, calculateOffsetFromPosition } from "@/utils/editor-position";
-import { CompletionDropdown } from "../overlays/completion-dropdown";
-import EditorContextMenu from "../overlays/editor-context-menu";
-import { InlineEditToolbar } from "../overlays/inline-edit-toolbar";
+import { CompletionDropdown } from "../../overlays/completion-dropdown";
+import EditorContextMenu from "../../overlays/editor-context-menu";
+import { InlineEditToolbar } from "../../overlays/inline-edit-toolbar";
 import { handleKeyboardShortcuts } from "./keyboard-shortcuts";
 import { LineBasedEditor } from "./line-based-editor";
 
