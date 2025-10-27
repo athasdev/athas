@@ -2,7 +2,7 @@ import { FileIcon } from "lucide-react";
 import { memo } from "react";
 import { cn } from "@/utils/cn";
 import { groupLinesIntoHunks } from "../controllers/diff-helpers";
-import { useDiffViewState } from "../controllers/useDiffViewState";
+import { useDiffViewState } from "../controllers/use-diff-view-state";
 import type { TextDiffViewerProps } from "../models/diff-types";
 import { DiffHunkHeader } from "./diff-hunk-header";
 import { DiffLine } from "./diff-line";

@@ -5,12 +5,14 @@ import type { GitBlame, GitBlameLine } from "@/version-control/git/models/git-ty
 interface GitBlameState {
   // State
   blameData: Map<string, GitBlame>;
+  repoPathMap: Map<string, string>;
   loadingFiles: Set<string>;
   errorFiles: Map<string, string>;
 
   // Actions
   loadBlameForFile: (repoPath: string, filePath: string) => Promise<void>;
   getBlameForLine: (filePath: string, lineNumber: number) => GitBlameLine | null;
+  getRepoPath: (filePath: string) => string | null;
   clearBlameForFile: (filePath: string) => void;
   clearAllBlame: () => void;
   isFileLoading: (filePath: string) => boolean;
@@ -20,6 +22,7 @@ interface GitBlameState {
 export const useGitBlameStore = create<GitBlameState>((set, get) => ({
   // Initial state
   blameData: new Map(),
+  repoPathMap: new Map(),
   loadingFiles: new Set(),
   errorFiles: new Map(),
 
@@ -55,11 +58,15 @@ export const useGitBlameStore = create<GitBlameState>((set, get) => ({
           const newBlameData = new Map(state.blameData);
           newBlameData.set(filePath, blame);
 
+          const newRepoPathMap = new Map(state.repoPathMap);
+          newRepoPathMap.set(filePath, repoPath);
+
           const newLoadingFiles = new Set(state.loadingFiles);
           newLoadingFiles.delete(filePath);
 
           return {
             blameData: newBlameData,
+            repoPathMap: newRepoPathMap,
             loadingFiles: newLoadingFiles,
           };
         });
@@ -110,11 +117,20 @@ export const useGitBlameStore = create<GitBlameState>((set, get) => ({
     return blameLine || null;
   },
 
+  // Get repo path for a file
+  getRepoPath: (filePath: string) => {
+    const state = get();
+    return state.repoPathMap.get(filePath) || null;
+  },
+
   // Clear blame data for a specific file
   clearBlameForFile: (filePath: string) => {
     set((state) => {
       const newBlameData = new Map(state.blameData);
       newBlameData.delete(filePath);
+
+      const newRepoPathMap = new Map(state.repoPathMap);
+      newRepoPathMap.delete(filePath);
 
       const newLoadingFiles = new Set(state.loadingFiles);
       newLoadingFiles.delete(filePath);
@@ -124,6 +140,7 @@ export const useGitBlameStore = create<GitBlameState>((set, get) => ({
 
       return {
         blameData: newBlameData,
+        repoPathMap: newRepoPathMap,
         loadingFiles: newLoadingFiles,
         errorFiles: newErrorFiles,
       };
@@ -134,6 +151,7 @@ export const useGitBlameStore = create<GitBlameState>((set, get) => ({
   clearAllBlame: () => {
     set({
       blameData: new Map(),
+      repoPathMap: new Map(),
       loadingFiles: new Set(),
       errorFiles: new Map(),
     });
