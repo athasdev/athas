@@ -1,8 +1,10 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { FileIcon, Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import Button from "@/components/ui/button";
+import { useFileSystemStore } from "@/file-system/controllers/store";
 import { cn } from "@/utils/cn";
-import Button from "../ui/button";
+import { getRelativePath } from "@/utils/path-helpers";
 
 interface ImageViewerProps {
   filePath: string;
@@ -13,8 +15,10 @@ interface ImageViewerProps {
 export function ImageViewer({ filePath, fileName, onClose }: ImageViewerProps) {
   const [zoom, setZoom] = useState<number>(1);
   const [imageSrc, setImageSrc] = useState<string>("");
+  const { rootFolderPath } = useFileSystemStore();
 
   const fileExt = fileName.split(".").pop()?.toUpperCase() || "";
+  const relativePath = getRelativePath(filePath, rootFolderPath);
 
   useEffect(() => {
     const loadImageSrc = async () => {
@@ -114,7 +118,7 @@ export function ImageViewer({ filePath, fileName, onClose }: ImageViewerProps) {
       >
         <span>Zoom: {Math.round(zoom * 100)}%</span>
         <span>Type: {fileExt}</span>
-        <span>Path: {filePath}</span>
+        <span>Path: {relativePath}</span>
         <span>Use +/- buttons to zoom in/out</span>
       </div>
     </div>

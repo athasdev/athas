@@ -8,6 +8,7 @@ import type { FileEntry } from "@/file-system/models/app";
 import { useAIChatStore } from "@/stores/ai-chat/store";
 import { useProjectStore } from "@/stores/project-store";
 import { cn } from "@/utils/cn";
+import { getDirectoryPath } from "@/utils/path-helpers";
 import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "../../file-system/controllers/utils";
 
 interface FileMentionDropdownProps {
@@ -148,28 +149,6 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
 
     return scoredFiles.map(({ file }) => file);
   }, [allProjectFiles, searchTerm]);
-
-  // Get relative path for display (same as command bar)
-  const getRelativePath = (fullPath: string): string => {
-    if (!rootFolderPath) return fullPath;
-
-    const normalizedFullPath = fullPath.replace(/\\/g, "/");
-    const normalizedRootPath = rootFolderPath.replace(/\\/g, "/");
-
-    if (normalizedFullPath.startsWith(normalizedRootPath)) {
-      const relativePath = normalizedFullPath.substring(normalizedRootPath.length);
-      return relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
-    }
-
-    return fullPath;
-  };
-
-  // Get directory path for display
-  const getDirectoryPath = (fullPath: string): string => {
-    const relativePath = getRelativePath(fullPath);
-    const lastSlashIndex = relativePath.lastIndexOf("/");
-    return lastSlashIndex > 0 ? relativePath.substring(0, lastSlashIndex) : "";
-  };
 
   const handleFileClick = (file: { name: string; path: string; isDir: boolean }) => {
     // Convert to FileEntry format and select
@@ -328,7 +307,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
               <div className="min-w-0 flex-1 truncate">
                 <span className="text-text">{file.name}</span>
                 <span className="ml-2 text-[10px] text-text-lighter opacity-60">
-                  {getDirectoryPath(file.path) || "root"}
+                  {getDirectoryPath(file.path, rootFolderPath) || "root"}
                 </span>
               </div>
             </button>

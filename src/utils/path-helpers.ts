@@ -1,4 +1,13 @@
 /**
+ * Normalize a file path by replacing backslashes with forward slashes
+ * @param path - The path to normalize
+ * @returns The normalized path
+ */
+export const normalizePath = (path: string): string => {
+  return path.replace(/\\/g, "/");
+};
+
+/**
  * Get the relative path from the root folder
  * @param fullPath - The full file path
  * @param rootFolderPath - The root folder path
@@ -10,8 +19,8 @@ export const getRelativePath = (
 ): string => {
   if (!rootFolderPath) return fullPath;
 
-  const normalizedFullPath = fullPath.replace(/\\/g, "/");
-  const normalizedRootPath = rootFolderPath.replace(/\\/g, "/");
+  const normalizedFullPath = normalizePath(fullPath);
+  const normalizedRootPath = normalizePath(rootFolderPath);
 
   if (normalizedFullPath.startsWith(normalizedRootPath)) {
     const relativePath = normalizedFullPath.substring(normalizedRootPath.length);
@@ -34,4 +43,15 @@ export const getDirectoryPath = (
   const relativePath = getRelativePath(fullPath, rootFolderPath);
   const lastSlashIndex = relativePath.lastIndexOf("/");
   return lastSlashIndex > 0 ? relativePath.substring(0, lastSlashIndex) : "";
+};
+
+/**
+ * Get the folder name from a path
+ * @param path - The full folder path
+ * @returns The folder name
+ */
+export const getFolderName = (path: string): string => {
+  const normalizedPath = normalizePath(path);
+  const folderName = normalizedPath.split("/").pop();
+  return folderName || "Folder";
 };

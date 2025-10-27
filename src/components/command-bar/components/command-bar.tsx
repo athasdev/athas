@@ -5,6 +5,7 @@ import { useRecentFilesStore } from "@/file-system/controllers/recent-files-stor
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useBufferStore } from "@/stores/buffer-store";
 import { useUIState } from "@/stores/ui-state-store";
+import { getRelativePath } from "@/utils/path-helpers";
 import Command, {
   CommandEmpty,
   CommandHeader,
@@ -188,32 +189,14 @@ const CommandBar = () => {
     setSelectedIndex(0);
   }, [query]);
 
-  // Memoize relative path function
-  const getRelativePath = useCallback(
-    (fullPath: string): string => {
-      if (!rootFolderPath) return fullPath;
-
-      const normalizedFullPath = fullPath.replace(/\\/g, "/");
-      const normalizedRootPath = rootFolderPath.replace(/\\/g, "/");
-
-      if (normalizedFullPath.startsWith(normalizedRootPath)) {
-        const relativePath = normalizedFullPath.substring(normalizedRootPath.length);
-        return relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
-      }
-
-      return fullPath;
-    },
-    [rootFolderPath],
-  );
-
   // Helper function to get directory path without filename
   const getDirectoryPath = useCallback(
     (fullPath: string): string => {
-      const relativePath = getRelativePath(fullPath);
+      const relativePath = getRelativePath(fullPath, rootFolderPath);
       const lastSlashIndex = relativePath.lastIndexOf("/");
       return lastSlashIndex > 0 ? relativePath.substring(0, lastSlashIndex) : "";
     },
-    [getRelativePath],
+    [rootFolderPath],
   );
 
   // Memoize file filtering and sorting
