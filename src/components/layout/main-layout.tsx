@@ -173,7 +173,13 @@ export function MainLayout() {
                   <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />
                 );
               } else if (activeBuffer.isImage) {
-                return <ImageViewer filePath={activeBuffer.path} fileName={activeBuffer.name} />;
+                return (
+                  <ImageViewer
+                    filePath={activeBuffer.path}
+                    fileName={activeBuffer.name}
+                    bufferId={activeBuffer.id}
+                  />
+                );
               } else if (activeBuffer.isSQLite) {
                 return <SQLiteViewer databasePath={activeBuffer.path} />;
               } else if (activeBuffer.path === "extensions://marketplace") {

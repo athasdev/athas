@@ -27,37 +27,34 @@ const UnsavedChangesDialog = ({ onSave, onDiscard, onCancel, fileName }: Props) 
       title="Unsaved Changes"
       icon={AlertTriangle}
       onClose={onCancel}
-      classNames={{
-        modal: "w-[380px]",
-        content: "p-3",
-      }}
-    >
-      <div className="flex flex-col gap-3">
-        <p className="text-text text-xs">
-          Do you want to save the changes you made to <strong>{fileName}</strong>?
-        </p>
-
-        <div className="flex justify-end gap-2">
+      size="sm"
+      classNames={{ content: "p-0" }}
+      footer={
+        <>
           <button
             onClick={onCancel}
-            className="rounded border border-border bg-primary-bg px-3 py-1 text-text text-xs transition-colors hover:bg-hover"
+            className="rounded border border-border bg-primary-bg px-3 py-1.5 text-text text-xs transition-colors hover:bg-hover"
           >
             Cancel
           </button>
           <button
             onClick={onDiscard}
-            className="rounded border border-border bg-primary-bg px-3 py-1 text-text text-xs transition-colors hover:bg-hover"
+            className="rounded border border-border bg-primary-bg px-3 py-1.5 text-text text-xs transition-colors hover:bg-hover"
           >
             Don't Save
           </button>
           <button
             onClick={onSave}
-            className="rounded bg-accent px-3 py-1 text-white text-xs transition-colors hover:bg-accent-hover"
+            className="rounded bg-accent px-3 py-1.5 text-white text-xs transition-colors hover:bg-accent-hover"
           >
             Save
           </button>
-        </div>
-      </div>
+        </>
+      }
+    >
+      <p className="text-text text-xs">
+        Do you want to save the changes you made to <strong>{fileName}</strong>?
+      </p>
     </Dialog>
   );
 };

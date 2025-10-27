@@ -1,6 +1,7 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import UnsavedChangesDialog from "@/components/ui/unsaved-changes-dialog";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { useSettingsStore } from "@/settings/store";
 import { useAppStore } from "@/stores/app-store";
@@ -11,7 +12,6 @@ import type { Buffer } from "@/types/buffer";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
 import TabDragPreview from "./tab-drag-preview";
-import UnsavedChangesDialog from "./unsaved-changes-dialog";
 
 interface TabBarProps {
   paneId?: string; // For split view panes (future feature)
