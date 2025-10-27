@@ -1,10 +1,13 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { FileIcon, Minus, Plus, RotateCcw, X } from "lucide-react";
+import { FileIcon, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "@/components/ui/button";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
+import { useImageZoom } from "../hooks/use-image-zoom";
+import { ImageViewerFooter } from "./image-viewer-footer";
+import { ImageZoomControls } from "./image-zoom-controls";
 
 interface ImageViewerProps {
   filePath: string;
@@ -13,7 +16,7 @@ interface ImageViewerProps {
 }
 
 export function ImageViewer({ filePath, fileName, onClose }: ImageViewerProps) {
-  const [zoom, setZoom] = useState<number>(1);
+  const { zoom, zoomIn, zoomOut, resetZoom } = useImageZoom({ maxZoom: 5 });
   const [imageSrc, setImageSrc] = useState<string>("");
   const { rootFolderPath } = useFileSystemStore();
 
@@ -51,30 +54,12 @@ export function ImageViewer({ filePath, fileName, onClose }: ImageViewerProps) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setZoom((z) => Math.max(0.1, z - 0.1))}
-            variant="ghost"
-            size="xs"
-            title="Zoom out"
-          >
-            <Minus size={12} />
-          </Button>
-          <span
-            className={cn("min-w-[50px] px-2 text-center font-mono", "text-text-lighter text-xs")}
-          >
-            {Math.round(zoom * 100)}%
-          </span>
-          <Button
-            onClick={() => setZoom((z) => Math.min(5, z + 0.1))}
-            variant="ghost"
-            size="xs"
-            title="Zoom in"
-          >
-            <Plus size={12} />
-          </Button>
-          <Button onClick={() => setZoom(1)} variant="ghost" size="xs" title="Reset zoom">
-            <RotateCcw size={12} />
-          </Button>
+          <ImageZoomControls
+            zoom={zoom}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onResetZoom={resetZoom}
+          />
           {onClose && (
             <Button onClick={onClose} variant="ghost" size="xs" title="Close image viewer">
               <X size={12} />
@@ -110,17 +95,11 @@ export function ImageViewer({ filePath, fileName, onClose }: ImageViewerProps) {
       </div>
 
       {/* Footer */}
-      <div
-        className={cn(
-          "flex items-center gap-4 border-border border-t",
-          "bg-secondary-bg px-4 py-2 text-text-lighter text-xs",
-        )}
-      >
-        <span>Zoom: {Math.round(zoom * 100)}%</span>
-        <span>Type: {fileExt}</span>
-        <span>Path: {relativePath}</span>
-        <span>Use +/- buttons to zoom in/out</span>
-      </div>
+      <ImageViewerFooter
+        zoom={zoom}
+        fileType={fileExt}
+        additionalInfo={<span>Path: {relativePath}</span>}
+      />
     </div>
   );
 }
