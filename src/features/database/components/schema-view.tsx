@@ -1,5 +1,5 @@
 import { Filter } from "lucide-react";
-import type { ColumnInfo } from "../types";
+import type { ColumnInfo } from "../models/common.types";
 
 interface SchemaViewProps {
   selectedTable: string;

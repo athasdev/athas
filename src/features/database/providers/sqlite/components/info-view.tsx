@@ -1,4 +1,4 @@
-import type { ColumnFilter, DatabaseInfo, TableInfo } from "../types";
+import type { ColumnFilter, DatabaseInfo, TableInfo } from "../../../models/common.types";
 
 interface InfoViewProps {
   fileName: string;

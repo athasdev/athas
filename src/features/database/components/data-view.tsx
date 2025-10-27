@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Input from "@/components/ui/input";
 import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
-import type { ColumnInfo, QueryResult } from "../types";
+import type { ColumnInfo, QueryResult } from "../models/common.types";
 
 interface DataViewProps {
   queryResult: QueryResult;

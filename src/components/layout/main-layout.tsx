@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import SQLiteViewer from "@/database/sqlite-viewer";
+import SQLiteViewer from "@/features/database/providers/sqlite/sqlite-viewer";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import { ProjectNameMenu } from "@/hooks/use-context-menus";
 import { useKeyboardShortcutsWrapper } from "@/hooks/use-keyboard-shortcuts-wrapper";
@@ -20,6 +20,7 @@ const AIChat = lazy(() => import("../ai-chat/ai-chat"));
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
+import ExtensionsView from "@/features/extensions/components/extensions-view";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import TabBar from "@/features/tabs/components/tab-bar";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
@@ -28,7 +29,6 @@ import CommandBar from "../command-bar/components/command-bar";
 import type { Diagnostic } from "../diagnostics/diagnostics-pane";
 import CodeEditor from "../editor/code-editor";
 import EditorFooter from "../editor-footer";
-import ExtensionsView from "../extensions-view";
 import GitHubCopilotSettings from "../github-copilot-settings";
 import { ImageViewer } from "../image-viewer/image-viewer";
 import ResizableRightPane from "../resizable-right-pane";
@@ -178,12 +178,7 @@ export function MainLayout() {
                 return <SQLiteViewer databasePath={activeBuffer.path} />;
               } else if (activeBuffer.path === "extensions://marketplace") {
                 return (
-                  <ExtensionsView
-                    onServerInstall={(server) => console.log("Install server:", server)}
-                    onServerUninstall={(serverId) => console.log("Uninstall server:", serverId)}
-                    onThemeChange={handleThemeChange}
-                    currentTheme={settings.theme}
-                  />
+                  <ExtensionsView onThemeChange={handleThemeChange} currentTheme={settings.theme} />
                 );
               } else {
                 return <CodeEditor />;

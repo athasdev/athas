@@ -51,7 +51,14 @@ interface Settings {
   // Advanced
   //  > nothing here, yet
   // Other
-  extensionsActiveTab: "all" | "core" | "language" | "language-server" | "theme";
+  extensionsActiveTab:
+    | "all"
+    | "core"
+    | "language"
+    | "theme"
+    | "icon-theme"
+    | "snippet"
+    | "database";
   maxOpenTabs: number;
   //// File tree
   hiddenFilePatterns: string[];

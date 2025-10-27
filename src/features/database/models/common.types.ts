@@ -1,7 +1,3 @@
-export interface SQLiteViewerProps {
-  databasePath: string;
-}
-
 export interface TableInfo {
   name: string;
 }

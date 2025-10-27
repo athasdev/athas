@@ -4,7 +4,7 @@ import { useOnClickOutside } from "usehooks-ts";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import { cn } from "@/utils/cn";
-import type { ColumnInfo } from "../types";
+import type { ColumnInfo } from "../../../models/common.types";
 
 interface CreateRowModalProps {
   isOpen: boolean;
