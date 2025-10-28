@@ -1,8 +1,8 @@
 import { MessageSquare, Search, Trash2, X } from "lucide-react";
 import { useState } from "react";
+import { getRelativeTime } from "@/features/ai/lib/formatting";
+import type { ChatHistoryModalProps } from "@/features/ai/types/types";
 import { cn } from "@/utils/cn";
-import type { ChatHistoryModalProps } from "./types";
-import { getRelativeTime } from "./utils";
 
 export default function ChatHistoryModal({
   isOpen,

@@ -1,8 +1,8 @@
 import { memo } from "react";
-import { useAIChatStore } from "@/stores/ai-chat/store";
-import type { ChatMode, OutputStyle } from "@/stores/ai-chat/types";
+import Dropdown from "@/components/ui/dropdown";
+import { useAIChatStore } from "@/features/ai/store/store";
+import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import { cn } from "@/utils/cn";
-import Dropdown from "../ui/dropdown";
 
 interface ModeSelectorProps {
   className?: string;
@@ -20,23 +20,17 @@ const outputStyleOptions = [
 ];
 
 export const ModeSelector = memo(function ModeSelector({ className }: ModeSelectorProps) {
-  const activeAgentSession = useAIChatStore((state) => state.getActiveAgentSession());
-  const activeAgentSessionId = useAIChatStore((state) => state.activeAgentSessionId);
-  const setAgentMode = useAIChatStore((state) => state.setAgentMode);
-  const setAgentOutputStyle = useAIChatStore((state) => state.setAgentOutputStyle);
-
-  if (!activeAgentSession || !activeAgentSessionId) {
-    return null;
-  }
-
-  const { mode, outputStyle } = activeAgentSession;
+  const mode = useAIChatStore((state) => state.mode);
+  const outputStyle = useAIChatStore((state) => state.outputStyle);
+  const setMode = useAIChatStore((state) => state.setMode);
+  const setOutputStyle = useAIChatStore((state) => state.setOutputStyle);
 
   const handleModeChange = (newMode: string) => {
-    setAgentMode(activeAgentSessionId, newMode as ChatMode);
+    setMode(newMode as ChatMode);
   };
 
   const handleOutputStyleChange = (newStyle: string) => {
-    setAgentOutputStyle(activeAgentSessionId, newStyle as OutputStyle);
+    setOutputStyle(newStyle as OutputStyle);
   };
 
   return (

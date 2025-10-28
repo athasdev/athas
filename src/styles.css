@@ -9,267 +9,268 @@
 
 /* Theme classes - defined inline since we only have 2 themes */
 @layer themes {
-    /* Force Athas Light theme */
-    .force-athas-light {
-        --tw-primary-bg: #ffffff;
-        --tw-secondary-bg: #f8f8f8;
-        --tw-text: #333333;
-        --tw-text-light: #666666;
-        --tw-text-lighter: #999999;
-        --tw-border: #e0e0e0;
-        --tw-hover: #f0f0f0;
-        --tw-selected: #e8e8e8;
+  /* Force Athas Light theme */
+  .force-athas-light {
+    --tw-primary-bg: #ffffff;
+    --tw-secondary-bg: #f8f8f8;
+    --tw-text: #333333;
+    --tw-text-light: #666666;
+    --tw-text-lighter: #999999;
+    --tw-border: #e0e0e0;
+    --tw-hover: #f0f0f0;
+    --tw-selected: #e8e8e8;
 
-        /* Paper colors */
-        --tw-paper-bg: #ffffff;
+    /* Paper colors */
+    --tw-paper-bg: #ffffff;
 
-        --tw-paper-texture-overlay: rgb(200 200 200 / 0.01);
+    --tw-paper-texture-overlay: rgb(200 200 200 / 0.01);
 
-        /* Accent color */
-        --tw-accent: #3b82f6;
+    /* Accent color */
+    --tw-accent: #3b82f6;
 
-        /* Cursor color */
-        --tw-cursor: #1a1a1a;
-        --tw-cursor-vim-normal: #3b82f6a6;
-        --tw-cursor-vim-insert: #22c55e;
+    /* Cursor color */
+    --tw-cursor: #1a1a1a;
+    --tw-cursor-vim-normal: #3b82f6a6;
+    --tw-cursor-vim-insert: #22c55e;
 
-        /* Diagnostic colors */
-        --tw-error: #c53030;
-        --tw-warning: #d69e2e;
-        --tw-success: #10b981;
-        --tw-info: #3182ce;
+    /* Diagnostic colors */
+    --tw-error: #c53030;
+    --tw-warning: #d69e2e;
+    --tw-success: #10b981;
+    --tw-info: #3182ce;
 
-        /* Git status colors */
-        --tw-git-modified: #d69e2e;
-        --tw-git-modified-staged: #e67e22;
-        --tw-git-added: #28a745;
-        --tw-git-deleted: #dc3545;
-        --tw-git-untracked: #17a2b8;
-        --tw-git-renamed: #6f42c1;
+    /* Git status colors */
+    --tw-git-modified: #d69e2e;
+    --tw-git-modified-staged: #e67e22;
+    --tw-git-added: #28a745;
+    --tw-git-deleted: #dc3545;
+    --tw-git-untracked: #17a2b8;
+    --tw-git-renamed: #6f42c1;
 
-        /* Syntax highlighting */
-        --tw-syntax-comment: #6a737d;
-        --tw-syntax-keyword: #d73a49;
-        --tw-syntax-string: #032f62;
-        --tw-syntax-number: #005cc5;
-        --tw-syntax-function: #6f42c1;
-        --tw-syntax-variable: #e36209;
-        --tw-syntax-tag: #22863a;
-        --tw-syntax-attribute: #6f42c1;
-        --tw-syntax-punctuation: #24292e;
+    /* Syntax highlighting */
+    --tw-syntax-comment: #6a737d;
+    --tw-syntax-keyword: #d73a49;
+    --tw-syntax-string: #032f62;
+    --tw-syntax-number: #005cc5;
+    --tw-syntax-function: #6f42c1;
+    --tw-syntax-variable: #e36209;
+    --tw-syntax-tag: #22863a;
+    --tw-syntax-attribute: #6f42c1;
+    --tw-syntax-punctuation: #24292e;
 
-        /* Terminal ANSI colors - harmonized with syntax highlighting */
-        --tw-terminal-black: #24292e;
-        --tw-terminal-red: #d73a49;
-        --tw-terminal-green: #22863a;
-        --tw-terminal-yellow: #e36209;
-        --tw-terminal-blue: #005cc5;
-        --tw-terminal-magenta: #6f42c1;
-        --tw-terminal-cyan: #032f62;
-        --tw-terminal-white: #666666;
-        --tw-terminal-bright-black: #6a737d;
-        --tw-terminal-bright-red: #c53030;
-        --tw-terminal-bright-green: #28a745;
-        --tw-terminal-bright-yellow: #d69e2e;
-        --tw-terminal-bright-blue: #3182ce;
-        --tw-terminal-bright-magenta: #8b5cf6;
-        --tw-terminal-bright-cyan: #0891b2;
-        --tw-terminal-bright-white: #333333;
-    }
+    /* Terminal ANSI colors - harmonized with syntax highlighting */
+    --tw-terminal-black: #24292e;
+    --tw-terminal-red: #d73a49;
+    --tw-terminal-green: #22863a;
+    --tw-terminal-yellow: #e36209;
+    --tw-terminal-blue: #005cc5;
+    --tw-terminal-magenta: #6f42c1;
+    --tw-terminal-cyan: #032f62;
+    --tw-terminal-white: #666666;
+    --tw-terminal-bright-black: #6a737d;
+    --tw-terminal-bright-red: #c53030;
+    --tw-terminal-bright-green: #28a745;
+    --tw-terminal-bright-yellow: #d69e2e;
+    --tw-terminal-bright-blue: #3182ce;
+    --tw-terminal-bright-magenta: #8b5cf6;
+    --tw-terminal-bright-cyan: #0891b2;
+    --tw-terminal-bright-white: #333333;
+  }
 
-    /* Force Athas Dark theme */
-    .force-athas-dark {
-        --tw-primary-bg: #1a1a1a;
-        --tw-secondary-bg: #2a2a2a;
-        --tw-text: #e5e5e5;
-        --tw-text-light: #b3b3b3;
-        --tw-text-lighter: #808080;
-        --tw-border: #404040;
-        --tw-hover: #333333;
-        --tw-selected: #404040;
+  /* Force Athas Dark theme */
+  .force-athas-dark {
+    --tw-primary-bg: #1a1a1a;
+    --tw-secondary-bg: #2a2a2a;
+    --tw-text: #e5e5e5;
+    --tw-text-light: #b3b3b3;
+    --tw-text-lighter: #808080;
+    --tw-border: #404040;
+    --tw-hover: #333333;
+    --tw-selected: #404040;
 
-        /* Paper/Welcome screen specific colors - Dark */
-        --tw-paper-bg: #1a1a1a;
+    /* Paper/Welcome screen specific colors - Dark */
+    --tw-paper-bg: #1a1a1a;
 
-        --tw-paper-texture-overlay: rgb(100 100 100 / 0.02);
+    --tw-paper-texture-overlay: rgb(100 100 100 / 0.02);
 
-        /* Accent color - Dark */
-        --tw-accent: #60a5fa;
+    /* Accent color - Dark */
+    --tw-accent: #60a5fa;
 
-        /* Cursor color - Dark */
-        --tw-cursor: #e5e5e5;
-        --tw-cursor-vim-normal: #3b82f6a6;
-        --tw-cursor-vim-insert: #22c55e;
+    /* Cursor color - Dark */
+    --tw-cursor: #e5e5e5;
+    --tw-cursor-vim-normal: #3b82f6a6;
+    --tw-cursor-vim-insert: #22c55e;
 
-        /* Diagnostic colors */
-        --tw-error: #f87171;
-        --tw-success: #10b981;
-        --tw-warning: #fbbf24;
-        --tw-info: #60a5fa;
+    /* Diagnostic colors */
+    --tw-error: #f87171;
+    --tw-success: #10b981;
+    --tw-warning: #fbbf24;
+    --tw-info: #60a5fa;
 
-        /* Git status colors - Dark */
-        --tw-git-modified: #fbbf24;
-        --tw-git-modified-staged: #f59e0b;
-        --tw-git-added: #10b981;
-        --tw-git-deleted: #ef4444;
-        --tw-git-untracked: #06b6d4;
-        --tw-git-renamed: #8b5cf6;
+    /* Git status colors - Dark */
+    --tw-git-modified: #fbbf24;
+    --tw-git-modified-staged: #f59e0b;
+    --tw-git-added: #10b981;
+    --tw-git-deleted: #ef4444;
+    --tw-git-untracked: #06b6d4;
+    --tw-git-renamed: #8b5cf6;
 
-        /* Syntax highlighting colors - Dark theme */
-        --tw-syntax-comment: #8b949e;
-        --tw-syntax-keyword: #ff7b72;
-        --tw-syntax-string: #a5d6ff;
-        --tw-syntax-number: #79c0ff;
-        --tw-syntax-function: #d2a8ff;
-        --tw-syntax-variable: #ffa657;
-        --tw-syntax-tag: #7ee787;
-        --tw-syntax-attribute: #d2a8ff;
-        --tw-syntax-punctuation: #b3b3b3;
+    /* Syntax highlighting colors - Dark theme */
+    --tw-syntax-comment: #8b949e;
+    --tw-syntax-keyword: #ff7b72;
+    --tw-syntax-string: #a5d6ff;
+    --tw-syntax-number: #79c0ff;
+    --tw-syntax-function: #d2a8ff;
+    --tw-syntax-variable: #ffa657;
+    --tw-syntax-tag: #7ee787;
+    --tw-syntax-attribute: #d2a8ff;
+    --tw-syntax-punctuation: #b3b3b3;
 
-        /* Terminal ANSI colors - harmonized with syntax highlighting */
-        --tw-terminal-black: #1a1a1a;
-        --tw-terminal-red: #ff7b72;
-        --tw-terminal-green: #7ee787;
-        --tw-terminal-yellow: #ffa657;
-        --tw-terminal-blue: #79c0ff;
-        --tw-terminal-magenta: #d2a8ff;
-        --tw-terminal-cyan: #a5d6ff;
-        --tw-terminal-white: #b3b3b3;
-        --tw-terminal-bright-black: #8b949e;
-        --tw-terminal-bright-red: #f87171;
-        --tw-terminal-bright-green: #86efac;
-        --tw-terminal-bright-yellow: #fbbf24;
-        --tw-terminal-bright-blue: #60a5fa;
-        --tw-terminal-bright-magenta: #c084fc;
-        --tw-terminal-bright-cyan: #67e8f9;
-        --tw-terminal-bright-white: #e5e5e5;
-    }
+    /* Terminal ANSI colors - harmonized with syntax highlighting */
+    --tw-terminal-black: #1a1a1a;
+    --tw-terminal-red: #ff7b72;
+    --tw-terminal-green: #7ee787;
+    --tw-terminal-yellow: #ffa657;
+    --tw-terminal-blue: #79c0ff;
+    --tw-terminal-magenta: #d2a8ff;
+    --tw-terminal-cyan: #a5d6ff;
+    --tw-terminal-white: #b3b3b3;
+    --tw-terminal-bright-black: #8b949e;
+    --tw-terminal-bright-red: #f87171;
+    --tw-terminal-bright-green: #86efac;
+    --tw-terminal-bright-yellow: #fbbf24;
+    --tw-terminal-bright-blue: #60a5fa;
+    --tw-terminal-bright-magenta: #c084fc;
+    --tw-terminal-bright-cyan: #67e8f9;
+    --tw-terminal-bright-white: #e5e5e5;
+  }
 }
 
 /* Define custom Tailwind theme variables using @theme directive */
 @theme inline {
-    /* Main UI colors - reference CSS variables for dynamic theming */
-    --color-primary-bg: var(--tw-primary-bg);
-    --color-secondary-bg: var(--tw-secondary-bg);
-    --color-text: var(--tw-text);
-    --color-text-light: var(--tw-text-light);
-    --color-text-lighter: var(--tw-text-lighter);
-    --color-border: var(--tw-border);
-    --color-hover: var(--tw-hover);
-    --color-selected: var(--tw-selected);
+  /* Main UI colors - reference CSS variables for dynamic theming */
+  --color-primary-bg: var(--tw-primary-bg);
+  --color-secondary-bg: var(--tw-secondary-bg);
+  --color-text: var(--tw-text);
+  --color-text-light: var(--tw-text-light);
+  --color-text-lighter: var(--tw-text-lighter);
+  --color-border: var(--tw-border);
+  --color-hover: var(--tw-hover);
+  --color-selected: var(--tw-selected);
 
-    /* Paper/Welcome screen specific colors */
-    --color-paper-bg: var(--tw-paper-bg);
-    --color-paper-texture-overlay: var(--tw-paper-texture-overlay);
+  /* Paper/Welcome screen specific colors */
+  --color-paper-bg: var(--tw-paper-bg);
+  --color-paper-texture-overlay: var(--tw-paper-texture-overlay);
 
-    /* Accent color */
-    --color-accent: var(--tw-accent);
+  /* Accent color */
+  --color-accent: var(--tw-accent);
 
-    /* Cursor color */
-    --color-cursor: var(--tw-cursor);
-    --color-cursor-vim-normal: var(--tw-cursor-vim-normal);
-    --color-cursor-vim-insert: var(--tw-cursor-vim-insert);
+  /* Cursor color */
+  --color-cursor: var(--tw-cursor);
+  --color-cursor-vim-normal: var(--tw-cursor-vim-normal);
+  --color-cursor-vim-insert: var(--tw-cursor-vim-insert);
 
-    /* Diagnostic colors */
-    --color-error: var(--tw-error);
-    --color-success: var(--tw-success);
-    --color-warning: var(--tw-warning);
-    --color-info: var(--tw-info);
+  /* Diagnostic colors */
+  --color-error: var(--tw-error);
+  --color-success: var(--tw-success);
+  --color-warning: var(--tw-warning);
+  --color-info: var(--tw-info);
 
-    /* Git status colors */
-    --color-git-modified: var(--tw-git-modified);
-    --color-git-modified-staged: var(--tw-git-modified-staged);
-    --color-git-added: var(--tw-git-added);
-    --color-git-deleted: var(--tw-git-deleted);
-    --color-git-untracked: var(--tw-git-untracked);
-    --color-git-renamed: var(--tw-git-renamed);
+  /* Git status colors */
+  --color-git-modified: var(--tw-git-modified);
+  --color-git-modified-staged: var(--tw-git-modified-staged);
+  --color-git-added: var(--tw-git-added);
+  --color-git-deleted: var(--tw-git-deleted);
+  --color-git-untracked: var(--tw-git-untracked);
+  --color-git-renamed: var(--tw-git-renamed);
 
-    /* Syntax highlighting colors */
-    --color-syntax-comment: var(--tw-syntax-comment);
-    --color-syntax-keyword: var(--tw-syntax-keyword);
-    --color-syntax-string: var(--tw-syntax-string);
-    --color-syntax-number: var(--tw-syntax-number);
-    --color-syntax-function: var(--tw-syntax-function);
-    --color-syntax-variable: var(--tw-syntax-variable);
-    --color-syntax-tag: var(--tw-syntax-tag);
-    --color-syntax-attribute: var(--tw-syntax-attribute);
-    --color-syntax-punctuation: var(--tw-syntax-punctuation);
-    --color-syntax-constant: var(--tw-syntax-constant);
-    --color-syntax-property: var(--tw-syntax-property);
-    --color-syntax-type: var(--tw-syntax-type);
-    --color-syntax-operator: var(--tw-syntax-operator);
-    --color-syntax-boolean: var(--tw-syntax-boolean);
-    --color-syntax-null: var(--tw-syntax-null);
-    --color-syntax-regex: var(--tw-syntax-regex);
-    --color-syntax-jsx: var(--tw-syntax-jsx);
-    --color-syntax-jsx-attribute: var(--tw-syntax-jsx-attribute);
+  /* Syntax highlighting colors */
+  --color-syntax-comment: var(--tw-syntax-comment);
+  --color-syntax-keyword: var(--tw-syntax-keyword);
+  --color-syntax-string: var(--tw-syntax-string);
+  --color-syntax-number: var(--tw-syntax-number);
+  --color-syntax-function: var(--tw-syntax-function);
+  --color-syntax-variable: var(--tw-syntax-variable);
+  --color-syntax-tag: var(--tw-syntax-tag);
+  --color-syntax-attribute: var(--tw-syntax-attribute);
+  --color-syntax-punctuation: var(--tw-syntax-punctuation);
+  --color-syntax-constant: var(--tw-syntax-constant);
+  --color-syntax-property: var(--tw-syntax-property);
+  --color-syntax-type: var(--tw-syntax-type);
+  --color-syntax-operator: var(--tw-syntax-operator);
+  --color-syntax-boolean: var(--tw-syntax-boolean);
+  --color-syntax-null: var(--tw-syntax-null);
+  --color-syntax-regex: var(--tw-syntax-regex);
+  --color-syntax-jsx: var(--tw-syntax-jsx);
+  --color-syntax-jsx-attribute: var(--tw-syntax-jsx-attribute);
 
-    /* Terminal colors */
-    --color-terminal-black: var(--tw-terminal-black);
-    --color-terminal-red: var(--tw-terminal-red);
-    --color-terminal-green: var(--tw-terminal-green);
-    --color-terminal-yellow: var(--tw-terminal-yellow);
-    --color-terminal-blue: var(--tw-terminal-blue);
-    --color-terminal-magenta: var(--tw-terminal-magenta);
-    --color-terminal-cyan: var(--tw-terminal-cyan);
-    --color-terminal-white: var(--tw-terminal-white);
-    --color-terminal-bright-black: var(--tw-terminal-bright-black);
-    --color-terminal-bright-red: var(--tw-terminal-bright-red);
-    --color-terminal-bright-green: var(--tw-terminal-bright-green);
-    --color-terminal-bright-yellow: var(--tw-terminal-bright-yellow);
-    --color-terminal-bright-blue: var(--tw-terminal-bright-blue);
-    --color-terminal-bright-magenta: var(--tw-terminal-bright-magenta);
-    --color-terminal-bright-cyan: var(--tw-terminal-bright-cyan);
-    --color-terminal-bright-white: var(--tw-terminal-bright-white);
+  /* Terminal colors */
+  --color-terminal-black: var(--tw-terminal-black);
+  --color-terminal-red: var(--tw-terminal-red);
+  --color-terminal-green: var(--tw-terminal-green);
+  --color-terminal-yellow: var(--tw-terminal-yellow);
+  --color-terminal-blue: var(--tw-terminal-blue);
+  --color-terminal-magenta: var(--tw-terminal-magenta);
+  --color-terminal-cyan: var(--tw-terminal-cyan);
+  --color-terminal-white: var(--tw-terminal-white);
+  --color-terminal-bright-black: var(--tw-terminal-bright-black);
+  --color-terminal-bright-red: var(--tw-terminal-bright-red);
+  --color-terminal-bright-green: var(--tw-terminal-bright-green);
+  --color-terminal-bright-yellow: var(--tw-terminal-bright-yellow);
+  --color-terminal-bright-blue: var(--tw-terminal-bright-blue);
+  --color-terminal-bright-magenta: var(--tw-terminal-bright-magenta);
+  --color-terminal-bright-cyan: var(--tw-terminal-bright-cyan);
+  --color-terminal-bright-white: var(--tw-terminal-bright-white);
 }
-
 
 /* Global smooth scrolling and box model */
 * {
-    box-sizing: border-box;
-    overscroll-behavior: none;
-    /* Prevent elastic bounce on all elements */
+  box-sizing: border-box;
+  overscroll-behavior: none;
+  /* Prevent elastic bounce on all elements */
 }
 
 #root {
-    background: transparent;
-    overscroll-behavior: none;
+  background: transparent;
+  overscroll-behavior: none;
 }
 
 html {
-    scroll-behavior: smooth;
-    overflow: hidden;
-    /* Prevent default browser scrolling */
-    overscroll-behavior: none !important;
-    /* Prevent elastic bounce globally */
-    background: transparent;
-    /* Allow transparency for rounded corners */
+  scroll-behavior: smooth;
+  overflow: hidden;
+  /* Prevent default browser scrolling */
+  overscroll-behavior: none !important;
+  /* Prevent elastic bounce globally */
+  background: transparent;
+  /* Allow transparency for rounded corners */
 }
 
 body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    font-family:
-        var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif;
-    overscroll-behavior: none !important;
-    /* Prevent elastic bounce globally */
-    background: transparent;
-    /* Allow transparency for rounded corners */
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family:
+    var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif;
+  overscroll-behavior: none !important;
+  /* Prevent elastic bounce globally */
+  background: transparent;
+  /* Allow transparency for rounded corners */
 }
 
 button {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 /* Apply app-wide font family to all elements */
 * {
-    font-family: var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif;
+  font-family:
+    var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif;
 }
 
 /* Override Tailwind's font-mono class to use our custom variable */
 .font-mono {
-    font-family: var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif !important;
+  font-family:
+    var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif !important;
 }
 
 /* Specific overrides for components that should use editor font */
@@ -290,178 +291,178 @@ button {
 .virtual-editor-container,
 .editor-textarea,
 .code-editor-content {
-    font-family: var(--editor-font-family, "JetBrains Mono"), "JetBrains Mono", monospace !important;
+  font-family:
+    var(--editor-font-family, "JetBrains Mono"), "JetBrains Mono", monospace !important;
 }
 
 /* Markdown preview should use UI font */
 .markdown-preview,
 .markdown-preview * {
-    font-family: var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif !important;
+  font-family:
+    var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif !important;
 }
 
 /* CSS variables that themes can override */
 @layer base {
+  :root {
+    /* Font defaults */
+    --app-font-family: "Space Grotesk", sans-serif;
+    --editor-font-family: "JetBrains Mono", monospace;
+
+    /* Default light theme colors */
+    --tw-primary-bg: #ffffff;
+    --tw-secondary-bg: #f8f8f8;
+    --tw-text: #333333;
+    --tw-text-light: #666666;
+    --tw-text-lighter: #999999;
+    --tw-border: #e0e0e0;
+    --tw-hover: #f0f0f0;
+    --tw-selected: #e8e8e8;
+
+    /* Paper colors */
+    --tw-paper-bg: #ffffff;
+
+    --tw-paper-texture-overlay: rgb(200 200 200 / 0.01);
+
+    /* Accent color */
+    --tw-accent: #3b82f6;
+
+    /* Cursor color */
+    --tw-cursor: #1a1a1a;
+    --tw-cursor-vim-normal: #3b82f6a6;
+    --tw-cursor-vim-insert: #22c55e;
+
+    /* Diagnostic colors */
+    --tw-error: #c53030;
+    --tw-success: #10b981;
+    --tw-warning: #d69e2e;
+    --tw-info: #3182ce;
+
+    /* Git status colors */
+    --tw-git-modified: #d69e2e;
+    --tw-git-modified-staged: #e67e22;
+    --tw-git-added: #28a745;
+    --tw-git-deleted: #dc3545;
+    --tw-git-untracked: #17a2b8;
+    --tw-git-renamed: #6f42c1;
+
+    /* Syntax highlighting */
+    --tw-syntax-comment: #6a737d;
+    --tw-syntax-keyword: #d73a49;
+    --tw-syntax-string: #032f62;
+    --tw-syntax-number: #005cc5;
+    --tw-syntax-function: #6f42c1;
+    --tw-syntax-variable: #e36209;
+    --tw-syntax-tag: #22863a;
+    --tw-syntax-attribute: #6f42c1;
+    --tw-syntax-punctuation: #24292e;
+
+    /* Terminal ANSI colors - harmonized with syntax highlighting */
+    --tw-terminal-black: #24292e;
+    --tw-terminal-red: #d73a49;
+    --tw-terminal-green: #22863a;
+    --tw-terminal-yellow: #e36209;
+    --tw-terminal-blue: #005cc5;
+    --tw-terminal-magenta: #6f42c1;
+    --tw-terminal-cyan: #032f62;
+    --tw-terminal-white: #666666;
+    --tw-terminal-bright-black: #6a737d;
+    --tw-terminal-bright-red: #c53030;
+    --tw-terminal-bright-green: #28a745;
+    --tw-terminal-bright-yellow: #d69e2e;
+    --tw-terminal-bright-blue: #3182ce;
+    --tw-terminal-bright-magenta: #8b5cf6;
+    --tw-terminal-bright-cyan: #0891b2;
+    --tw-terminal-bright-white: #333333;
+  }
+
+  @media (prefers-color-scheme: dark) {
     :root {
-        /* Font defaults */
-        --app-font-family: "Space Grotesk", sans-serif;
-        --editor-font-family: "JetBrains Mono", monospace;
+      /* Override with dark theme colors when system is in dark mode */
+      --tw-primary-bg: #1a1a1a;
+      --tw-secondary-bg: #2a2a2a;
+      --tw-text: #e5e5e5;
+      --tw-text-light: #b3b3b3;
+      --tw-text-lighter: #808080;
+      --tw-border: #404040;
+      --tw-hover: #333333;
+      --tw-selected: #404040;
 
-        /* Default light theme colors */
-        --tw-primary-bg: #ffffff;
-        --tw-secondary-bg: #f8f8f8;
-        --tw-text: #333333;
-        --tw-text-light: #666666;
-        --tw-text-lighter: #999999;
-        --tw-border: #e0e0e0;
-        --tw-hover: #f0f0f0;
-        --tw-selected: #e8e8e8;
+      /* Paper/Welcome screen specific colors - Dark */
+      --tw-paper-bg: #1a1a1a;
+      --tw-paper-texture-overlay: rgb(100 100 100 / 0.02);
 
-        /* Paper colors */
-        --tw-paper-bg: #ffffff;
+      /* Accent color - Dark */
+      --tw-accent: #60a5fa;
 
-        --tw-paper-texture-overlay: rgb(200 200 200 / 0.01);
+      /* Cursor color - Dark */
+      --tw-cursor: #e5e5e5;
+      --tw-cursor-vim-normal: #3b82f6a6;
+      --tw-cursor-vim-insert: #22c55e;
 
-        /* Accent color */
-        --tw-accent: #3b82f6;
+      /* Diagnostic colors */
+      --tw-error: #f87171;
+      --tw-success: #10b981;
+      --tw-warning: #fbbf24;
+      --tw-info: #60a5fa;
 
-        /* Cursor color */
-        --tw-cursor: #1a1a1a;
-        --tw-cursor-vim-normal: #3b82f6a6;
-        --tw-cursor-vim-insert: #22c55e;
+      /* Git status colors - Dark */
+      --tw-git-modified: #fbbf24;
+      --tw-git-modified-staged: #f59e0b;
+      --tw-git-added: #10b981;
+      --tw-git-deleted: #ef4444;
+      --tw-git-untracked: #06b6d4;
+      --tw-git-renamed: #8b5cf6;
 
-        /* Diagnostic colors */
-        --tw-error: #c53030;
-        --tw-success: #10b981;
-        --tw-warning: #d69e2e;
-        --tw-info: #3182ce;
+      /* Syntax highlighting colors - Dark theme */
+      --tw-syntax-comment: #8b949e;
+      --tw-syntax-keyword: #ff7b72;
+      --tw-syntax-string: #a5d6ff;
+      --tw-syntax-number: #79c0ff;
+      --tw-syntax-function: #d2a8ff;
+      --tw-syntax-variable: #ffa657;
+      --tw-syntax-tag: #7ee787;
+      --tw-syntax-attribute: #d2a8ff;
+      --tw-syntax-punctuation: #b3b3b3;
 
-        /* Git status colors */
-        --tw-git-modified: #d69e2e;
-        --tw-git-modified-staged: #e67e22;
-        --tw-git-added: #28a745;
-        --tw-git-deleted: #dc3545;
-        --tw-git-untracked: #17a2b8;
-        --tw-git-renamed: #6f42c1;
-
-        /* Syntax highlighting */
-        --tw-syntax-comment: #6a737d;
-        --tw-syntax-keyword: #d73a49;
-        --tw-syntax-string: #032f62;
-        --tw-syntax-number: #005cc5;
-        --tw-syntax-function: #6f42c1;
-        --tw-syntax-variable: #e36209;
-        --tw-syntax-tag: #22863a;
-        --tw-syntax-attribute: #6f42c1;
-        --tw-syntax-punctuation: #24292e;
-
-        /* Terminal ANSI colors - harmonized with syntax highlighting */
-        --tw-terminal-black: #24292e;
-        --tw-terminal-red: #d73a49;
-        --tw-terminal-green: #22863a;
-        --tw-terminal-yellow: #e36209;
-        --tw-terminal-blue: #005cc5;
-        --tw-terminal-magenta: #6f42c1;
-        --tw-terminal-cyan: #032f62;
-        --tw-terminal-white: #666666;
-        --tw-terminal-bright-black: #6a737d;
-        --tw-terminal-bright-red: #c53030;
-        --tw-terminal-bright-green: #28a745;
-        --tw-terminal-bright-yellow: #d69e2e;
-        --tw-terminal-bright-blue: #3182ce;
-        --tw-terminal-bright-magenta: #8b5cf6;
-        --tw-terminal-bright-cyan: #0891b2;
-        --tw-terminal-bright-white: #333333;
-
+      /* Terminal ANSI colors - harmonized with syntax highlighting */
+      --tw-terminal-black: #1a1a1a;
+      --tw-terminal-red: #ff7b72;
+      --tw-terminal-green: #7ee787;
+      --tw-terminal-yellow: #ffa657;
+      --tw-terminal-blue: #79c0ff;
+      --tw-terminal-magenta: #d2a8ff;
+      --tw-terminal-cyan: #a5d6ff;
+      --tw-terminal-white: #b3b3b3;
+      --tw-terminal-bright-black: #8b949e;
+      --tw-terminal-bright-red: #f87171;
+      --tw-terminal-bright-green: #86efac;
+      --tw-terminal-bright-yellow: #fbbf24;
+      --tw-terminal-bright-blue: #60a5fa;
+      --tw-terminal-bright-magenta: #c084fc;
+      --tw-terminal-bright-cyan: #67e8f9;
+      --tw-terminal-bright-white: #e5e5e5;
     }
-
-    @media (prefers-color-scheme: dark) {
-        :root {
-            /* Override with dark theme colors when system is in dark mode */
-            --tw-primary-bg: #1a1a1a;
-            --tw-secondary-bg: #2a2a2a;
-            --tw-text: #e5e5e5;
-            --tw-text-light: #b3b3b3;
-            --tw-text-lighter: #808080;
-            --tw-border: #404040;
-            --tw-hover: #333333;
-            --tw-selected: #404040;
-
-            /* Paper/Welcome screen specific colors - Dark */
-            --tw-paper-bg: #1a1a1a;
-            --tw-paper-texture-overlay: rgb(100 100 100 / 0.02);
-
-            /* Accent color - Dark */
-            --tw-accent: #60a5fa;
-
-            /* Cursor color - Dark */
-            --tw-cursor: #e5e5e5;
-            --tw-cursor-vim-normal: #3b82f6a6;
-            --tw-cursor-vim-insert: #22c55e;
-
-            /* Diagnostic colors */
-            --tw-error: #f87171;
-            --tw-success: #10b981;
-            --tw-warning: #fbbf24;
-            --tw-info: #60a5fa;
-
-            /* Git status colors - Dark */
-            --tw-git-modified: #fbbf24;
-            --tw-git-modified-staged: #f59e0b;
-            --tw-git-added: #10b981;
-            --tw-git-deleted: #ef4444;
-            --tw-git-untracked: #06b6d4;
-            --tw-git-renamed: #8b5cf6;
-
-            /* Syntax highlighting colors - Dark theme */
-            --tw-syntax-comment: #8b949e;
-            --tw-syntax-keyword: #ff7b72;
-            --tw-syntax-string: #a5d6ff;
-            --tw-syntax-number: #79c0ff;
-            --tw-syntax-function: #d2a8ff;
-            --tw-syntax-variable: #ffa657;
-            --tw-syntax-tag: #7ee787;
-            --tw-syntax-attribute: #d2a8ff;
-            --tw-syntax-punctuation: #b3b3b3;
-
-            /* Terminal ANSI colors - harmonized with syntax highlighting */
-            --tw-terminal-black: #1a1a1a;
-            --tw-terminal-red: #ff7b72;
-            --tw-terminal-green: #7ee787;
-            --tw-terminal-yellow: #ffa657;
-            --tw-terminal-blue: #79c0ff;
-            --tw-terminal-magenta: #d2a8ff;
-            --tw-terminal-cyan: #a5d6ff;
-            --tw-terminal-white: #b3b3b3;
-            --tw-terminal-bright-black: #8b949e;
-            --tw-terminal-bright-red: #f87171;
-            --tw-terminal-bright-green: #86efac;
-            --tw-terminal-bright-yellow: #fbbf24;
-            --tw-terminal-bright-blue: #60a5fa;
-            --tw-terminal-bright-magenta: #c084fc;
-            --tw-terminal-bright-cyan: #67e8f9;
-            --tw-terminal-bright-white: #e5e5e5;
-
-        }
-    }
+  }
 }
 
 /* Syntax highlighting styles */
 /* Ensure all tokens have transparent background by default */
 .token {
-    background: transparent;
+  background: transparent;
 }
 
 .token.comment,
 .token.prolog,
 .token.doctype,
 .token.cdata {
-    color: var(--syntax-comment);
-    font-style: italic;
+  color: var(--syntax-comment);
+  font-style: italic;
 }
 
 .token.punctuation {
-    color: var(--syntax-punctuation);
-    background: transparent;
+  color: var(--syntax-punctuation);
+  background: transparent;
 }
 
 .token.property,
@@ -469,12 +470,12 @@ button {
 .token.constant,
 .token.symbol,
 .token.deleted {
-    color: var(--syntax-tag);
+  color: var(--syntax-tag);
 }
 
 .token.boolean,
 .token.number {
-    color: var(--syntax-number);
+  color: var(--syntax-number);
 }
 
 .token.selector,
@@ -483,7 +484,7 @@ button {
 .token.char,
 .token.builtin,
 .token.inserted {
-    color: var(--syntax-string);
+  color: var(--syntax-string);
 }
 
 .token.operator,
@@ -492,284 +493,284 @@ button {
 .language-css .token.string,
 .style .token.string,
 .token.variable {
-    color: var(--syntax-variable);
+  color: var(--syntax-variable);
 }
 
 .token.atrule,
 .token.attr-value,
 .token.function,
 .token.class-name {
-    color: var(--syntax-function);
+  color: var(--syntax-function);
 }
 
 .token.keyword {
-    color: var(--syntax-keyword);
-    font-weight: 600;
+  color: var(--syntax-keyword);
+  font-weight: 600;
 }
 
 .token.regex,
 .token.important {
-    color: var(--syntax-variable);
+  color: var(--syntax-variable);
 }
 
 .token.important,
 .token.bold {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 .token.italic {
-    font-style: italic;
+  font-style: italic;
 }
 
 .token.entity {
-    cursor: help;
+  cursor: help;
 }
 
 /* Ruby specific tokens */
 .token.symbol {
-    color: var(--syntax-function);
+  color: var(--syntax-function);
 }
 
 .token.instance-variable,
 .token.class-variable {
-    color: var(--syntax-variable);
+  color: var(--syntax-variable);
 }
 
 /* ERB specific tokens */
 .token.erb-tag {
-    background: rgba(255, 246, 213, 0.3);
-    border-radius: 3px;
-    padding: 1px 2px;
-    margin: 0 1px;
+  background: rgba(255, 246, 213, 0.3);
+  border-radius: 3px;
+  padding: 1px 2px;
+  margin: 0 1px;
 }
 
 .token.erb-delimiter {
-    color: #d73a49;
-    font-weight: bold;
+  color: #d73a49;
+  font-weight: bold;
 }
 
 .token.erb-output-delimiter {
-    color: #22863a;
-    font-weight: bold;
+  color: #22863a;
+  font-weight: bold;
 }
 
 .token.erb-comment-delimiter {
-    color: #6a737d;
-    font-weight: bold;
+  color: #6a737d;
+  font-weight: bold;
 }
 
 .token.erb-scriptlet-delimiter {
-    color: #6f42c1;
-    font-weight: bold;
+  color: #6f42c1;
+  font-weight: bold;
 }
 
 .token.erb-output,
 .token.erb-scriptlet {
-    background: rgba(255, 235, 179, 0.15);
-    border-radius: 2px;
-    padding: 0 1px;
+  background: rgba(255, 235, 179, 0.15);
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 /* Dark theme ERB tokens */
 @media (prefers-color-scheme: dark) {
-    .token.erb-tag {
-        background: rgba(139, 69, 19, 0.2);
-    }
+  .token.erb-tag {
+    background: rgba(139, 69, 19, 0.2);
+  }
 
-    .token.erb-delimiter {
-        color: #ff7b72;
-    }
+  .token.erb-delimiter {
+    color: #ff7b72;
+  }
 
-    .token.erb-output-delimiter {
-        color: #7ee787;
-    }
+  .token.erb-output-delimiter {
+    color: #7ee787;
+  }
 
-    .token.erb-comment-delimiter {
-        color: #8b949e;
-    }
+  .token.erb-comment-delimiter {
+    color: #8b949e;
+  }
 
-    .token.erb-scriptlet-delimiter {
-        color: #d2a8ff;
-    }
+  .token.erb-scriptlet-delimiter {
+    color: #d2a8ff;
+  }
 
-    .token.erb-output,
-    .token.erb-scriptlet {
-        background: rgba(139, 69, 19, 0.1);
-    }
+  .token.erb-output,
+  .token.erb-scriptlet {
+    background: rgba(139, 69, 19, 0.1);
+  }
 }
 
 /* Custom utility classes */
 
 /* Tab bar scrollbar hiding */
 .scrollbar-none {
-    scrollbar-width: none;
-    /* Firefox */
-    -ms-overflow-style: none;
-    /* Internet Explorer 10+ */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* Internet Explorer 10+ */
 }
 
 .scrollbar-none::-webkit-scrollbar {
-    display: none;
-    /* WebKit */
+  display: none;
+  /* WebKit */
 }
 
 /* Custom scrollbar styles */
 .custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border) var(--color-secondary-bg);
-    overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) var(--color-secondary-bg);
+  overflow: auto;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  width: 8px;
+  height: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-    background: var(--color-secondary-bg);
-    border-radius: 0;
+  background: var(--color-secondary-bg);
+  border-radius: 0;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: var(--color-border);
-    border-radius: 0;
-    border: none;
+  background: var(--color-border);
+  border-radius: 0;
+  border: none;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: var(--color-text-lighter);
+  background: var(--color-text-lighter);
 }
 
 .custom-scrollbar::-webkit-scrollbar-corner {
-    background: var(--color-secondary-bg);
+  background: var(--color-secondary-bg);
 }
 
 /* Thin scrollbar for compact areas */
 .custom-scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border) transparent;
-    overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  overflow: auto;
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  width: 6px;
+  height: 6px;
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
+  background: transparent;
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar-thumb {
-    background: var(--color-border);
-    border-radius: 3px;
+  background: var(--color-border);
+  border-radius: 3px;
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: var(--color-text-lighter);
+  background: var(--color-text-lighter);
 }
 
 /* Auto-hide scrollbar for editors */
 .custom-scrollbar-auto {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border) transparent;
-    overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  overflow: auto;
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  width: 8px;
+  height: 8px;
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar-track {
-    background: transparent;
+  background: transparent;
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar-thumb {
-    background: rgba(128, 128, 128, 0.3);
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
 }
 
 .custom-scrollbar-auto:hover::-webkit-scrollbar-thumb {
-    background: var(--color-border);
+  background: var(--color-border);
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar-thumb:hover {
-    background: var(--color-text-lighter);
+  background: var(--color-text-lighter);
 }
 
 .custom-scrollbar-auto::-webkit-scrollbar-corner {
-    background: transparent;
+  background: transparent;
 }
 
 /* Smooth scrolling for all custom scrollbars */
 .custom-scrollbar,
 .custom-scrollbar-thin,
 .custom-scrollbar-auto {
-    scroll-behavior: smooth;
-    overscroll-behavior: none !important;
+  scroll-behavior: smooth;
+  overscroll-behavior: none !important;
 }
 
 /* Hide scrollbar completely for certain elements */
 .scrollbar-hidden {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .scrollbar-hidden::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
 
 /* Tab-specific scrolling */
 .tab-scroll-container {
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border) transparent;
-    overscroll-behavior-x: contain;
-    /* Prevent elastic scroll on tabs only */
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  overscroll-behavior-x: contain;
+  /* Prevent elastic scroll on tabs only */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tab-scroll-container::-webkit-scrollbar {
-    height: 6px;
+  height: 6px;
 }
 
 .tab-scroll-container::-webkit-scrollbar-track {
-    background: transparent;
+  background: transparent;
 }
 
 .tab-scroll-container::-webkit-scrollbar-thumb {
-    background: var(--color-border);
-    border-radius: 3px;
-    transition: background-color 0.2s ease;
+  background: var(--color-border);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
 }
 
 .tab-scroll-container::-webkit-scrollbar-thumb:hover {
-    background: var(--color-text-lighter);
+  background: var(--color-text-lighter);
 }
 
 /* Enhance tab scrolling behavior */
 .tab-scroll-container:hover::-webkit-scrollbar-thumb {
-    background: rgba(224, 224, 224, 0.8);
+  background: rgba(224, 224, 224, 0.8);
 }
 
 /* Ensure tabs maintain consistent spacing */
-.tab-scroll-container>* {
-    flex-shrink: 0;
+.tab-scroll-container > * {
+  flex-shrink: 0;
 }
 
 /* Prevent bounce scrolling only where needed */
 .scroll-isolated {
-    overscroll-behavior: contain;
+  overscroll-behavior: contain;
 }
 
 /* Tauri window dragging support */
 [data-tauri-drag-region] {
-    -webkit-app-region: drag;
-    app-region: drag;
+  -webkit-app-region: drag;
+  app-region: drag;
 }
 
 /* Ensure buttons and interactive elements inside drag regions are clickable */
@@ -777,13 +778,13 @@ button {
 [data-tauri-drag-region] input,
 [data-tauri-drag-region] select,
 [data-tauri-drag-region] textarea {
-    -webkit-app-region: no-drag;
-    app-region: no-drag;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 
 /* Window container styling - rounded but no borders */
 .window-container {
-    overflow: hidden;
+  overflow: hidden;
 }
 
 /* fero - commented because i dont think this really needed */
@@ -794,335 +795,345 @@ button {
 
 /* Ensure scrolling works properly in all browsers */
 textarea {
-    scrollbar-width: thin;
-    scrollbar-color: #ccc #f5f5f5;
-    /* Force enable scrolling in Tauri */
-    overflow: auto !important;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: none !important;
+  scrollbar-width: thin;
+  scrollbar-color: #ccc #f5f5f5;
+  /* Force enable scrolling in Tauri */
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none !important;
 }
 
 textarea::-webkit-scrollbar {
-    width: 12px;
+  width: 12px;
 }
 
 textarea::-webkit-scrollbar-track {
-    background: #f5f5f5;
+  background: #f5f5f5;
 }
 
 textarea::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 6px;
+  background: #ccc;
+  border-radius: 6px;
 }
 
 textarea::-webkit-scrollbar-thumb:hover {
-    background: #999;
+  background: #999;
 }
 
 /* Force proper scrolling for all overflow auto elements */
 [class*="overflow-auto"],
 .overflow-auto {
-    overflow: auto !important;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: none !important;
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none !important;
 }
 
 /* Paper texture and theme-aware colors for welcome screen */
 .paper-texture {
-    background: var(--color-primary-bg);
-    position: relative;
+  background: var(--color-primary-bg);
+  position: relative;
 }
 
 .paper-texture::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: none;
-    pointer-events: none;
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: none;
+  pointer-events: none;
 }
 
 .paper-texture::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background:
-        linear-gradient(90deg,
-            transparent 0%,
-            var(--color-paper-texture-overlay) 45%,
-            calc(var(--color-paper-texture-overlay) * 2) 50%,
-            var(--color-paper-texture-overlay) 55%,
-            transparent 100%),
-        linear-gradient(0deg,
-            transparent 0%,
-            var(--color-paper-texture-overlay) 48%,
-            calc(var(--color-paper-texture-overlay) * 2) 50%,
-            var(--color-paper-texture-overlay) 52%,
-            transparent 100%);
-    background-size:
-        300px 1px,
-        1px 300px;
-    background-position:
-        0 0,
-        0 0;
-    pointer-events: none;
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--color-paper-texture-overlay) 45%,
+      calc(var(--color-paper-texture-overlay) * 2) 50%,
+      var(--color-paper-texture-overlay) 55%,
+      transparent 100%
+    ),
+    linear-gradient(
+      0deg,
+      transparent 0%,
+      var(--color-paper-texture-overlay) 48%,
+      calc(var(--color-paper-texture-overlay) * 2) 50%,
+      var(--color-paper-texture-overlay) 52%,
+      transparent 100%
+    );
+  background-size:
+    300px 1px,
+    1px 300px;
+  background-position:
+    0 0,
+    0 0;
+  pointer-events: none;
 }
 
 .logo-blue {
-    color: #2563eb;
-    text-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+  color: #2563eb;
+  text-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
 }
 
 .logo-gradient {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #2563eb 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.2));
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #2563eb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.2));
 }
 
 /* Paper texture noise overlay */
 .paper-noise {
-    position: relative;
+  position: relative;
 }
 
 .paper-noise::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.015'/%3E%3C/svg%3E");
-    pointer-events: none;
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.015'/%3E%3C/svg%3E");
+  pointer-events: none;
 }
 
 /* Layered UI design with floating buffer */
 .buffer-container {
-    position: relative;
-    z-index: 10;
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    transition: all 0.2s ease;
+  position: relative;
+  z-index: 10;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
 }
 
 .buffer-container:hover {
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
 }
 
 .ui-layer {
-    position: relative;
-    z-index: 5;
-    background: var(--color-secondary-bg);
-    border-top: 1px solid var(--color-border);
+  position: relative;
+  z-index: 5;
+  background: var(--color-secondary-bg);
+  border-top: 1px solid var(--color-border);
 }
 
 .sidebar {
-    position: relative;
-    z-index: 7;
-    background: var(--color-secondary-bg);
-    border-right: 1px solid var(--color-border);
-    box-shadow: 1px 0 0 rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 7;
+  background: var(--color-secondary-bg);
+  border-right: 1px solid var(--color-border);
+  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.05);
 }
 
 .status-bar {
-    position: relative;
-    z-index: 8;
-    background: var(--color-secondary-bg);
-    border-top: 1px solid var(--color-border);
-    box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 8;
+  background: var(--color-secondary-bg);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.05);
 }
 
 /* Buffer styling */
 .buffer {
-    background: #ffffff;
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
 }
 
 .buffer::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background:
-        linear-gradient(90deg,
-            transparent 0%,
-            rgba(200, 200, 200, 0.01) 45%,
-            rgba(200, 200, 200, 0.02) 50%,
-            rgba(200, 200, 200, 0.01) 55%,
-            transparent 100%),
-        linear-gradient(0deg,
-            transparent 0%,
-            rgba(200, 200, 200, 0.01) 48%,
-            rgba(200, 200, 200, 0.02) 50%,
-            rgba(200, 200, 200, 0.01) 52%,
-            transparent 100%);
-    background-size:
-        300px 1px,
-        1px 300px;
-    background-position:
-        0 0,
-        0 0;
-    pointer-events: none;
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(200, 200, 200, 0.01) 45%,
+      rgba(200, 200, 200, 0.02) 50%,
+      rgba(200, 200, 200, 0.01) 55%,
+      transparent 100%
+    ),
+    linear-gradient(
+      0deg,
+      transparent 0%,
+      rgba(200, 200, 200, 0.01) 48%,
+      rgba(200, 200, 200, 0.02) 50%,
+      rgba(200, 200, 200, 0.01) 52%,
+      transparent 100%
+    );
+  background-size:
+    300px 1px,
+    1px 300px;
+  background-position:
+    0 0,
+    0 0;
+  pointer-events: none;
 }
 
 /* Pane styling */
 .pane {
-    background: var(--color-secondary-bg);
-    border: 1px solid var(--color-border);
-    border-radius: 6px;
-    position: relative;
-    z-index: 5;
-    transition: all 0.2s ease;
+  background: var(--color-secondary-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  position: relative;
+  z-index: 5;
+  transition: all 0.2s ease;
 }
 
 .pane-header {
-    background: var(--color-secondary-bg);
-    border-bottom: 1px solid var(--color-border);
-    border-radius: 6px 6px 0 0;
-    padding: 8px 12px;
-    font-size: 12px;
-    color: var(--color-text-light);
+  background: var(--color-secondary-bg);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 6px 6px 0 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--color-text-light);
 }
 
 /* Command bar styling */
 .command-bar {
-    position: relative;
-    z-index: 9;
-    background: var(--color-secondary-bg);
-    border-bottom: 1px solid var(--color-border);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 9;
+  background: var(--color-secondary-bg);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
 }
 
 /* Main layout structure */
 .main-layout {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto 1fr auto;
-    grid-template-areas:
-        "sidebar header"
-        "sidebar main"
-        "sidebar footer";
-    height: 100vh;
-    overflow: hidden;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "sidebar header"
+    "sidebar main"
+    "sidebar footer";
+  height: 100vh;
+  overflow: hidden;
 }
 
 .main-header {
-    grid-area: header;
-    z-index: 8;
+  grid-area: header;
+  z-index: 8;
 }
 
 .main-sidebar {
-    grid-area: sidebar;
-    z-index: 7;
+  grid-area: sidebar;
+  z-index: 7;
 }
 
 .main-content {
-    grid-area: main;
-    z-index: 6;
-    padding: 16px;
-    background: var(--color-secondary-bg);
-    overflow: auto;
+  grid-area: main;
+  z-index: 6;
+  padding: 16px;
+  background: var(--color-secondary-bg);
+  overflow: auto;
 }
 
 .main-footer {
-    grid-area: footer;
-    z-index: 8;
+  grid-area: footer;
+  z-index: 8;
 }
 
 /* Buffer focus effect */
 .buffer-focused {
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-    transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
 }
 
 /* Subtle transitions */
 * {
-    transition:
-        box-shadow 0.2s ease,
-        transform 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .token.erb-output,
 .token.erb-comment,
 .token.erb-scriptlet {
-    border-radius: 2px;
-    padding: 0 2px;
+  border-radius: 2px;
+  padding: 0 2px;
 }
 
 .token.unescaped-placeholder {
-    background-color: rgba(220, 53, 69, 0.1);
-    color: #dc3545;
-    border-radius: 2px;
-    padding: 0 2px;
-    font-weight: 600;
+  background-color: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border-radius: 2px;
+  padding: 0 2px;
+  font-weight: 600;
 }
 
 .token.dynamic-tag {
-    background-color: rgba(108, 117, 125, 0.1);
-    color: #6c757d;
-    border-radius: 2px;
-    padding: 0 2px;
+  background-color: rgba(108, 117, 125, 0.1);
+  color: #6c757d;
+  border-radius: 2px;
+  padding: 0 2px;
 }
 
 .token.attribute-tag {
-    color: #8e44ad;
-    font-weight: 600;
+  color: #8e44ad;
+  font-weight: 600;
 }
 
 .token.inline-js {
-    background-color: rgba(102, 175, 233, 0.1);
-    color: #007acc;
-    border-radius: 2px;
-    padding: 0 2px;
+  background-color: rgba(102, 175, 233, 0.1);
+  color: #007acc;
+  border-radius: 2px;
+  padding: 0 2px;
 }
 
 .token.static-js {
-    background-color: rgba(13, 110, 253, 0.1);
-    color: #0d6efd;
-    border-radius: 2px;
-    padding: 0 2px;
-    font-weight: 600;
+  background-color: rgba(13, 110, 253, 0.1);
+  color: #0d6efd;
+  border-radius: 2px;
+  padding: 0 2px;
+  font-weight: 600;
 }
 
 .token.tag-name {
-    color: #bb86fc;
+  color: #bb86fc;
 }
 
 .token.tag-name {
-    color: #8a2be2;
-    font-weight: 700;
+  color: #8a2be2;
+  font-weight: 700;
 }
 
 .token.ts-content,
 .token.js-content {
-    /* Remove all decorative styling - keep it clean like a code editor */
+  /* Remove all decorative styling - keep it clean like a code editor */
 }
 
 .token.dynamic-attr {
-    color: #e74c3c;
-    font-weight: 600;
+  color: #e74c3c;
+  font-weight: 600;
 }
 
 .token.parameter {
-    background-color: rgba(52, 152, 219, 0.1);
-    color: #3498db;
-    border-radius: 2px;
-    padding: 0 2px;
+  background-color: rgba(52, 152, 219, 0.1);
+  color: #3498db;
+  border-radius: 2px;
+  padding: 0 2px;
 }
 
 .tab-bar-item {
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .tab-drag-preview {
@@ -1155,4 +1166,34 @@ textarea::-webkit-scrollbar-thumb:hover {
 
   image-rendering: crisp-edges;
   image-rendering: -webkit-optimize-contrast;
+}
+
+/* AI Chat Error Blocks */
+.error-block {
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid rgb(239 68 68 / 0.3);
+  background: rgb(239 68 68 / 0.05);
+}
+
+.error-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+  font-weight: 400;
+  color: rgb(239 68 68);
+  font-size: 0.75rem;
+}
+
+.error-title {
+  line-height: 1.3;
+  font-weight: 400;
+}
+
+.error-message {
+  color: rgb(220 38 38);
+  font-size: 0.75rem;
+  line-height: 1.3;
 }

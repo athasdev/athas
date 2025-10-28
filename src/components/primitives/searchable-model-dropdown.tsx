@@ -32,7 +32,6 @@ export function SearchableModelDropdown({
       modelId: model.id,
       modelName: model.name,
       maxTokens: model.maxTokens,
-      costPer1kTokens: model.costPer1kTokens,
     })),
   );
 
@@ -173,11 +172,6 @@ export function SearchableModelDropdown({
                         <div className="font-mono text-[10px] text-text-lighter">
                           {formatTokens(model.maxTokens)}
                         </div>
-                        {model.costPer1kTokens !== undefined && (
-                          <div className="font-mono text-[10px] text-text-lighter">
-                            ${model.costPer1kTokens === 0 ? "Free" : model.costPer1kTokens}/1k
-                          </div>
-                        )}
                       </div>
                     </div>
                   );

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { SearchableModelDropdown } from "@/components/primitives/searchable-model-dropdown";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import { useToast } from "@/contexts/toast-context";
-import { useAIChatStore } from "@/stores/ai-chat/store";
+import { useAIChatStore } from "@/features/ai/store/store";
 import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 import { useOverlayManager } from "./overlay-manager";

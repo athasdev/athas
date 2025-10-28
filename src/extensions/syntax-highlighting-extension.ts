@@ -15,6 +15,7 @@ class SyntaxHighlighter {
   private pendingAffectedLines: Set<number> | undefined = undefined;
   private abortController: AbortController | null = null;
 
+  // biome-ignore lint/complexity/noUselessConstructor: Required for API contract
   constructor(_editor: EditorAPI) {}
 
   setFilePath(filePath: string) {

@@ -1,16 +1,15 @@
-import { Send, Settings, Square } from "lucide-react";
-import { memo, useCallback, useEffect, useRef } from "react";
+import { ChevronDown, Send, Square } from "lucide-react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import Button from "@/components/ui/button";
+import { useAIChatStore } from "@/features/ai/store/store";
+import type { AIChatInputBarProps } from "@/features/ai/types/types";
 import { useSettingsStore } from "@/settings/store";
-import { useAIChatStore } from "@/stores/ai-chat/store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { getModelById } from "@/types/ai-provider";
 import { cn } from "@/utils/cn";
-import Button from "../ui/button";
-import { ContextSelector } from "./context-selector";
-import { FileMentionDropdown } from "./file-mention-dropdown";
-import { ModeSelector } from "./mode-selector";
-import type { AIChatInputBarProps } from "./types";
+import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
+import { ContextSelector } from "../selectors/context-selector";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -24,26 +23,24 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const isUpdatingContentRef = useRef(false);
   const performanceTimer = useRef<number | null>(null);
 
+  // Local state for input emptiness check (to avoid subscribing to full input text)
+  const [hasInputText, setHasInputText] = useState(false);
+
   // Get state from stores with optimized selectors
   const { settings } = useSettingsStore();
   const { openSettingsDialog } = useUIState();
   const { fontSize, fontFamily } = useEditorSettingsStore();
 
-  // Get active agent session data
-  const activeAgentSession = useAIChatStore((state) => state.getActiveAgentSession());
+  // Get state from store - DO NOT subscribe to 'input' to avoid re-renders on every keystroke
+  const isTyping = useAIChatStore((state) => state.isTyping);
+  const streamingMessageId = useAIChatStore((state) => state.streamingMessageId);
+  const selectedBufferIds = useAIChatStore((state) => state.selectedBufferIds);
+  const selectedFilesPaths = useAIChatStore((state) => state.selectedFilesPaths);
+  const isContextDropdownOpen = useAIChatStore((state) => state.isContextDropdownOpen);
+  const isSendAnimating = useAIChatStore((state) => state.isSendAnimating);
+  const queueCount = useAIChatStore((state) => state.messageQueue.length);
   const hasApiKey = useAIChatStore((state) => state.hasApiKey);
   const mentionState = useAIChatStore((state) => state.mentionState);
-
-  // Get active session data or fallback to defaults
-  const input = activeAgentSession?.input || "";
-  const isTyping = activeAgentSession?.isTyping || false;
-  const streamingMessageId = activeAgentSession?.streamingMessageId || null;
-  const selectedBufferIds = activeAgentSession?.selectedBufferIds || new Set<string>();
-  const selectedFilesPaths = activeAgentSession?.selectedFilesPaths || new Set<string>();
-  const isContextDropdownOpen = activeAgentSession?.isContextDropdownOpen || false;
-  const isSendAnimating = activeAgentSession?.isSendAnimating || false;
-  const messageQueue = activeAgentSession?.messageQueue || [];
-  const queueCount = messageQueue.length;
 
   // Memoize action selectors
   const setInput = useAIChatStore((state) => state.setInput);
@@ -57,39 +54,46 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const selectNext = useAIChatStore((state) => state.selectNext);
   const selectPrevious = useAIChatStore((state) => state.selectPrevious);
   const getFilteredFiles = useAIChatStore((state) => state.getFilteredFiles);
-  const setAgentMode = useAIChatStore((state) => state.setAgentMode);
-  const setAgentOutputStyle = useAIChatStore((state) => state.setAgentOutputStyle);
 
-  // Optimized function to get plain text from contentEditable div
+  // Highly optimized function to get plain text from contentEditable div
   const getPlainTextFromDiv = useCallback(() => {
     if (!inputRef.current) return "";
 
-    // Use a simpler approach for better performance
     const element = inputRef.current;
-    let text = "";
+    const children = element.childNodes;
 
-    // Walk through child nodes directly instead of using TreeWalker
-    const processNode = (node: Node): void => {
+    // Fast path: check if there are any mention badges (without Array.from for performance)
+    let hasMentions = false;
+    for (let i = 0; i < children.length; i++) {
+      if (
+        children[i].nodeType === Node.ELEMENT_NODE &&
+        (children[i] as Element).hasAttribute("data-mention")
+      ) {
+        hasMentions = true;
+        break;
+      }
+    }
+
+    // If no mentions, just return textContent (fastest path)
+    if (!hasMentions) {
+      return element.textContent || "";
+    }
+
+    // Handle mention badges
+    let text = "";
+    for (let i = 0; i < children.length; i++) {
+      const node = children[i];
       if (node.nodeType === Node.TEXT_NODE) {
         text += node.textContent || "";
       } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as Element;
-        if (element.hasAttribute("data-mention")) {
-          const fileName = element.textContent?.trim();
-          if (fileName) {
-            text += `@[${fileName}]`;
-          }
+        const el = node as Element;
+        if (el.hasAttribute("data-mention")) {
+          const fileName = el.textContent?.trim();
+          if (fileName) text += `@[${fileName}]`;
         } else {
-          // Process child nodes
-          for (const child of Array.from(node.childNodes)) {
-            processNode(child);
-          }
+          text += node.textContent || "";
         }
       }
-    };
-
-    for (const child of Array.from(element.childNodes)) {
-      processNode(child);
     }
 
     return text;
@@ -140,45 +144,61 @@ const AIChatInputBar = memo(function AIChatInputBar({
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener("resize", handleWindowResize);
-      // Cleanup performance timer
+      // Cleanup timers
       if (performanceTimer.current) {
         clearTimeout(performanceTimer.current);
       }
     };
   }, [recalculateMentionPosition]);
 
-  // Sync contentEditable div with input state when it changes (e.g., when switching agents)
+  // Sync contentEditable div with input state when it changes externally (e.g., when switching chats)
+  // We use a ref to track the last synced input to avoid subscribing to every keystroke
+  const lastSyncedInputRef = useRef("");
+
   useEffect(() => {
-    if (!inputRef.current || isUpdatingContentRef.current) return;
+    // Only sync when input changes externally (not from user typing)
+    const checkAndSync = () => {
+      if (!inputRef.current || isUpdatingContentRef.current) return;
 
-    const currentContent = getPlainTextFromDiv();
-    if (currentContent !== input) {
-      isUpdatingContentRef.current = true;
+      const storeInput = useAIChatStore.getState().input;
+      const currentContent = getPlainTextFromDiv();
 
-      // Update contentEditable content
-      if (input === "") {
-        inputRef.current.innerHTML = "";
-      } else {
-        inputRef.current.textContent = input;
-      }
+      // Only sync if store input differs from what's in the DOM and it's an external change
+      if (storeInput !== currentContent && storeInput !== lastSyncedInputRef.current) {
+        isUpdatingContentRef.current = true;
+        lastSyncedInputRef.current = storeInput;
 
-      // Position cursor at the end
-      setTimeout(() => {
-        if (inputRef.current) {
-          const selection = window.getSelection();
-          if (selection) {
-            const range = document.createRange();
-            range.selectNodeContents(inputRef.current);
-            range.collapse(false);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          }
-          inputRef.current.focus();
+        // Update contentEditable content
+        if (storeInput === "") {
+          inputRef.current.innerHTML = "";
+        } else {
+          inputRef.current.textContent = storeInput;
         }
-        isUpdatingContentRef.current = false;
-      }, 0);
-    }
-  }, [input, getPlainTextFromDiv]);
+
+        // Position cursor at the end
+        setTimeout(() => {
+          if (inputRef.current) {
+            const selection = window.getSelection();
+            if (selection) {
+              const range = document.createRange();
+              range.selectNodeContents(inputRef.current);
+              range.collapse(false);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+            inputRef.current.focus();
+          }
+          isUpdatingContentRef.current = false;
+        }, 0);
+      }
+    };
+
+    // Check on mount and when component updates
+    checkAndSync();
+
+    // Note: We don't subscribe to continuous changes to avoid re-renders
+    // The checkAndSync on mount handles initial sync and chat switching
+  }, [getPlainTextFromDiv]);
 
   // Click outside handler for context dropdown
   useEffect(() => {
@@ -276,7 +296,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     }
   };
 
-  // Throttled mention detection to improve performance
+  // Debounced mention detection - increased delay for better performance
   const debouncedMentionDetection = useCallback(
     (plainText: string) => {
       if (performanceTimer.current) {
@@ -286,25 +306,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
       performanceTimer.current = window.setTimeout(() => {
         if (!inputRef.current) return;
 
-        // Simple approach - just check the end of the text for @ mentions
-        const selection = window.getSelection();
-        if (!selection || selection.rangeCount === 0) return;
-
-        // Get a simple cursor position estimation
-        const _range = selection.getRangeAt(0);
-        const beforeCursor = plainText.slice(0, plainText.length);
-        const lastAtIndex = beforeCursor.lastIndexOf("@");
+        const lastAtIndex = plainText.lastIndexOf("@");
 
         if (lastAtIndex !== -1) {
-          const afterAt = beforeCursor.slice(lastAtIndex + 1);
-          // Check if there's no space between @ and cursor and it's not part of a mention badge
+          const afterAt = plainText.slice(lastAtIndex + 1);
+          // Check if there's no space between @ and end, and it's not part of a mention badge
           if (!afterAt.includes(" ") && !afterAt.includes("]") && afterAt.length < 50) {
-            // Use cached position to avoid getBoundingClientRect on every call
             const position = {
               top: inputRef.current.offsetTop + inputRef.current.offsetHeight + 4,
               left: inputRef.current.offsetLeft,
             };
-
             showMention(position, afterAt, lastAtIndex);
           } else {
             hideMention();
@@ -312,30 +323,35 @@ const AIChatInputBar = memo(function AIChatInputBar({
         } else {
           hideMention();
         }
-      }, 100); // 100ms debounce for mention detection
+      }, 150); // Increased to 150ms for better performance
     },
     [showMention, hideMention],
   );
 
-  // Optimized input change handler
+  // Optimized input change handler - no throttle for immediate response
   const handleInputChange = useCallback(() => {
     if (!inputRef.current || isUpdatingContentRef.current) return;
 
-    // Get the plain text from the contentEditable div
     const plainTextFromDiv = getPlainTextFromDiv();
 
-    // Only update store if content actually changed
-    if (plainTextFromDiv !== input) {
+    // Use store's getState to avoid dependency on input prop
+    const currentInput = useAIChatStore.getState().input;
+
+    // Only update if content actually changed
+    if (plainTextFromDiv !== currentInput) {
       setInput(plainTextFromDiv);
 
-      // Only do mention detection if the text contains @ and is not too long
+      // Update local state for button enabled/disabled
+      setHasInputText(plainTextFromDiv.trim().length > 0);
+
+      // Only do mention detection if text contains @ and is reasonably short
       if (plainTextFromDiv.includes("@") && plainTextFromDiv.length < 500) {
         debouncedMentionDetection(plainTextFromDiv);
-      } else {
+      } else if (mentionState.active) {
         hideMention();
       }
     }
-  }, [input, setInput, getPlainTextFromDiv, debouncedMentionDetection, hideMention]);
+  }, [setInput, getPlainTextFromDiv, debouncedMentionDetection, hideMention, mentionState.active]);
 
   // Handle file mention selection
   const handleFileMentionSelect = useCallback(
@@ -344,8 +360,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       isUpdatingContentRef.current = true;
 
-      const beforeMention = input.slice(0, mentionState.startIndex);
-      const afterMention = input.slice(mentionState.startIndex + mentionState.search.length + 1);
+      const currentInput = useAIChatStore.getState().input;
+      const beforeMention = currentInput.slice(0, mentionState.startIndex);
+      const afterMention = currentInput.slice(
+        mentionState.startIndex + mentionState.search.length + 1,
+      );
       const newInput = `${beforeMention}@[${file.name}] ${afterMention}`;
 
       // Update input state and hide mention dropdown
@@ -409,57 +428,19 @@ const AIChatInputBar = memo(function AIChatInputBar({
         isUpdatingContentRef.current = false;
       }, 0);
     },
-    [input, mentionState.startIndex, mentionState.search.length, setInput, hideMention],
-  );
-
-  // Handle slash commands
-  const handleSlashCommand = useCallback(
-    (command: string) => {
-      if (!activeAgentSession) return false;
-
-      const parts = command.slice(1).split(" "); // Remove leading '/'
-      const cmd = parts[0];
-      const args = parts.slice(1);
-
-      switch (cmd) {
-        case "plan":
-          setAgentMode(activeAgentSession.id, "plan");
-          setInput("");
-          return true;
-        case "chat":
-          setAgentMode(activeAgentSession.id, "chat");
-          setInput("");
-          return true;
-        case "output-style":
-          if (args.length === 0) {
-            // Show current output style or cycle through them
-            const styles = ["default", "explanatory", "learning"];
-            const currentIndex = styles.indexOf(activeAgentSession.outputStyle);
-            const nextStyle = styles[(currentIndex + 1) % styles.length];
-            setAgentOutputStyle(activeAgentSession.id, nextStyle as any);
-          } else {
-            const style = args[0];
-            if (["default", "explanatory", "learning"].includes(style)) {
-              setAgentOutputStyle(activeAgentSession.id, style as any);
-            }
-          }
-          setInput("");
-          return true;
-        default:
-          return false;
-      }
-    },
-    [activeAgentSession, setAgentMode, setAgentOutputStyle, setInput],
+    [
+      mentionState.startIndex,
+      mentionState.search.length,
+      setInput,
+      hideMention,
+      fontFamily,
+      fontSize,
+    ],
   );
 
   const handleSendMessage = async () => {
-    if (!input.trim() || !hasApiKey) return;
-
-    // Check for slash commands first
-    if (input.startsWith("/")) {
-      const handled = handleSlashCommand(input);
-      if (handled) return; // Command was processed, don't send as message
-    }
+    const currentInput = useAIChatStore.getState().input;
+    if (!currentInput.trim() || !hasApiKey) return;
 
     // Trigger send animation
     setIsSendAnimating(true);
@@ -467,7 +448,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
     // Reset animation after the flying animation completes
     setTimeout(() => setIsSendAnimating(false), 800);
 
+    // Send the message first
     await onSendMessage();
+
+    // Clear input after message is sent
+    setInput("");
+    setHasInputText(false);
+    if (inputRef.current) {
+      inputRef.current.innerHTML = "";
+    }
   };
 
   return (
@@ -524,10 +513,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           />
         </div>
         <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="flex items-center">
-            <ModeSelector />
-          </div>
-          <div className="flex select-none items-center gap-1">
+          <div className="flex items-center gap-2">
             {/* Queue indicator */}
             {queueCount > 0 && (
               <div className="flex items-center gap-1 rounded bg-blue-500/10 px-2 py-1 text-blue-400 text-xs">
@@ -535,32 +521,32 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 <span>{queueCount} queued</span>
               </div>
             )}
-
+          </div>
+          <div className="flex select-none items-center gap-1">
             {/* Model selector button */}
             <button
               onClick={() => openSettingsDialog("ai")}
-              className="flex min-w-[160px] items-center gap-1.5 rounded bg-transparent px-2 py-1 font-mono text-xs transition-colors hover:bg-hover"
+              className="flex items-center gap-1 rounded bg-transparent px-2 py-1 font-mono text-xs transition-colors hover:bg-hover"
               title="Open AI settings to change model"
             >
-              <div className="min-w-0 flex-1 text-left">
-                <div className="truncate text-text text-xs">
-                  {getModelById(settings.aiProviderId, settings.aiModelId)?.name || "Select Model"}
-                </div>
+              <div className="truncate text-text-lighter text-xs">
+                {getModelById(settings.aiProviderId, settings.aiModelId)?.name ||
+                  "Claude Code Local"}
               </div>
-              <Settings size={10} className="text-text-lighter" />
+              <ChevronDown size={12} className="text-text-lighter" />
             </button>
             <Button
               type="submit"
-              disabled={!input.trim() || !hasApiKey}
+              disabled={!hasInputText || !hasApiKey}
               onClick={isTyping && streamingMessageId ? onStopStreaming : handleSendMessage}
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded p-0 text-text-lighter hover:bg-hover hover:text-text",
                 "send-button-hover button-transition focus:outline-none focus:ring-2 focus:ring-accent/50",
                 isTyping && streamingMessageId && !isSendAnimating && "button-morphing",
-                input.trim() &&
+                hasInputText &&
                   hasApiKey &&
                   "bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500/50",
-                !input.trim() || !hasApiKey ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                !hasInputText || !hasApiKey ? "cursor-not-allowed opacity-50" : "cursor-pointer",
               )}
               title={
                 isTyping && streamingMessageId

@@ -236,9 +236,6 @@ const ApiKeyModal = ({
               {provider.models.slice(0, 3).map((model) => (
                 <div key={model.id} className="flex items-center justify-between text-xs">
                   <span className="text-text">{model.name}</span>
-                  <span className="text-text-lighter">
-                    {model.costPer1kTokens && `$${model.costPer1kTokens}/1k tokens`}
-                  </span>
                 </div>
               ))}
               {provider.models.length > 3 && (

@@ -56,6 +56,7 @@ const ResizableRightPane = ({
 
       const startX = e.clientX;
       const startWidth = settings.aiChatWidth;
+      let currentWidth = startWidth;
 
       const handleMouseMove = (e: MouseEvent) => {
         const deltaX =
@@ -63,14 +64,15 @@ const ResizableRightPane = ({
             ? startX - e.clientX // Reverse direction for right pane
             : e.clientX - startX; // Normal direction for left pane
         const newWidth = Math.min(Math.max(startWidth + deltaX, MIN_WIDTH), MAX_WIDTH);
+        currentWidth = newWidth;
         setTempWidth(newWidth);
         throttledUpdateSetting(newWidth);
       };
 
       const handleMouseUp = () => {
         setIsResizing(false);
-        // Ensure final width is saved
-        throttledUpdateSetting(tempWidth);
+        // Ensure final width is saved with the last computed value
+        updateSetting("aiChatWidth", currentWidth);
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
         document.body.style.cursor = "";
@@ -82,7 +84,7 @@ const ResizableRightPane = ({
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
     },
-    [settings.aiChatWidth, position, tempWidth, throttledUpdateSetting],
+    [settings.aiChatWidth, position, throttledUpdateSetting, updateSetting],
   );
 
   if (!isVisible) {
