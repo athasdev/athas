@@ -30,7 +30,6 @@ interface CodeEditorProps {
   disabled?: boolean;
   className?: string;
 }
-
 export interface CodeEditorRef {
   editor: HTMLDivElement | null;
   textarea: HTMLDivElement | null;
