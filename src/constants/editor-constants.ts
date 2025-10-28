@@ -17,6 +17,7 @@ export const EDITOR_CONSTANTS = {
   GUTTER_PADDING: 24, // Increased to account for git indicators (8px left + 8px right + 8px spacing)
   GIT_INDICATOR_WIDTH: 8, // Space reserved for git gutter indicators on the left
   GUTTER_MARGIN: 8, // mr-2 in Tailwind (0.5rem = 8px) - margin between gutter and content
+  FIXED_GUTTER_DIGITS: 4, // Reserve space for up to 4-digit line numbers (1-9999)
 
   // Z-index layers - ordered by priority (lowest to highest)
   Z_INDEX: {

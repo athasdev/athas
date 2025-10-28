@@ -28,7 +28,6 @@ const UnsavedChangesDialog = ({ onSave, onDiscard, onCancel, fileName }: Props) 
       icon={AlertTriangle}
       onClose={onCancel}
       size="sm"
-      classNames={{ content: "p-0" }}
       footer={
         <>
           <button

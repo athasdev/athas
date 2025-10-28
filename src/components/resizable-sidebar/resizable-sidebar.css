@@ -1,28 +1,36 @@
 @import "@/styles.css";
 
-/* Resizable handle styles */
-
 .resize-handle {
-  @apply absolute top-0 h-full w-1 cursor-col-resize;
-  @apply transition-colors duration-150 hover:bg-blue-500/30;
+  position: absolute;
+  top: 0;
+  right: -5px;
+  height: 100%;
+  width: 4px;
+  cursor: col-resize;
+  z-index: 51;
+  transition: background-color 150ms ease-in-out;
+}
 
-  /* Add little offset (5px) to avoid overlap with FileTree scrollbar */
-  @apply -right-[5px];
-
-  /* Ensure it appears above .file-tree-item-dir */
-  /* Value below is minimum to avoid conflict with z-index of file-tree-item-dir */
-  @apply z-[51];
+.resize-handle:hover {
+  background-color: rgba(59, 130, 246, 0.3);
 }
 
 .resize-handle--resizing {
-  @apply bg-blue-500/50;
+  background-color: rgba(59, 130, 246, 0.5);
 }
 
 .resize-handle__indicator {
-  @apply -translate-x-[1px] absolute top-0 right-0 h-full w-[3px] bg-blue-500;
-  @apply opacity-0 transition-opacity duration-150;
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 3px;
+  background-color: rgb(59, 130, 246);
+  transform: translateX(-1px);
+  opacity: 0;
+  transition: opacity 150ms ease-in-out;
 }
 
 .resize-handle:hover .resize-handle__indicator {
-  @apply opacity-100;
+  opacity: 1;
 }
