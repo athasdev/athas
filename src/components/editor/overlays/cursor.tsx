@@ -1,20 +1,30 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
+import { editorAPI } from "@/extensions/editor-api";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useSettingsStore } from "@/settings/store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
+import { useEditorViewStore } from "@/stores/editor-view-store";
 import { useVimStore } from "@/stores/vim-store";
+import { getAccurateCursorX } from "@/utils/editor-position";
 
 export function Cursor() {
   const cursorRef = useRef<HTMLDivElement>(null);
   const movementTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { lineHeight, charWidth, gutterWidth } = useEditorLayout();
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
+  const fontSize = useEditorSettingsStore.use.fontSize();
+  const fontFamily = useEditorSettingsStore.use.fontFamily();
+  const tabSize = useEditorSettingsStore.use.tabSize();
+  const lines = useEditorViewStore.use.lines();
   const visible = useEditorCursorStore((state) => state.cursorVisible);
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const vimMode = useVimStore.use.mode();
   const isCommandMode = useVimStore.use.isCommandMode();
+
+  // Track viewport scroll position
+  const [scrollOffset, setScrollOffset] = useState({ top: 0, left: 0 });
 
   const cursorStyle = useMemo(() => {
     const isNormalMode = vimModeEnabled && vimMode === "normal";
@@ -33,44 +43,100 @@ export function Cursor() {
     };
   }, [vimModeEnabled, vimMode, isCommandMode, charWidth]);
 
-  // Update position without re-rendering - cursor scrolls naturally with content
+  // Listen to viewport scroll events - poll until viewport is available
+  useEffect(() => {
+    let viewport: HTMLElement | null = null;
+    let rafId: number | null = null;
+
+    const setupScrollListener = () => {
+      viewport = editorAPI.getViewportRef();
+
+      if (!viewport) {
+        // Retry on next frame if viewport not available yet
+        rafId = requestAnimationFrame(setupScrollListener);
+        return;
+      }
+
+      const handleScroll = () => {
+        if (!viewport) return;
+        setScrollOffset({
+          top: viewport.scrollTop,
+          left: viewport.scrollLeft,
+        });
+      };
+
+      // Set initial scroll position
+      handleScroll();
+
+      viewport.addEventListener("scroll", handleScroll);
+
+      // Cleanup function
+      return () => {
+        if (viewport) {
+          viewport.removeEventListener("scroll", handleScroll);
+        }
+      };
+    };
+
+    const cleanup = setupScrollListener();
+
+    return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      cleanup?.();
+    };
+  }, []);
+
+  // Update position accounting for scroll offset
   useEffect(() => {
     if (!cursorRef.current || !visible) return;
 
+    const updateCursorPosition = (position: { line: number; column: number }) => {
+      if (!cursorRef.current) return;
+
+      // Get the line content for accurate positioning
+      const lineContent = lines[position.line] || "";
+
+      // Calculate accurate X position accounting for variable-width characters
+      const accurateX = getAccurateCursorX(
+        lineContent,
+        position.column,
+        fontSize,
+        fontFamily,
+        tabSize,
+      );
+
+      // Position cursor at the character position, accounting for scroll offset
+      const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + accurateX - scrollOffset.left;
+      const y = position.line * lineHeight - scrollOffset.top;
+
+      // Add moving class to pause blinking
+      cursorRef.current.classList.add("moving");
+
+      // Clear existing timeout
+      if (movementTimeoutRef.current) {
+        clearTimeout(movementTimeoutRef.current);
+      }
+
+      // Remove moving class after cursor stops moving
+      movementTimeoutRef.current = setTimeout(() => {
+        cursorRef.current?.classList.remove("moving");
+      }, 100);
+
+      // Use direct positioning for immediate updates
+      cursorRef.current.style.left = `${x}px`;
+      cursorRef.current.style.top = `${y}px`;
+    };
+
     const unsubscribe = useEditorCursorStore.subscribe(
       (state) => state.cursorPosition,
-      (position) => {
-        if (!cursorRef.current) return;
-
-        // Position cursor at the character position (no scroll offset needed - browser handles it)
-        const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + position.column * charWidth;
-        const y = position.line * lineHeight;
-
-        // Add moving class to pause blinking
-        cursorRef.current.classList.add("moving");
-
-        // Clear existing timeout
-        if (movementTimeoutRef.current) {
-          clearTimeout(movementTimeoutRef.current);
-        }
-
-        // Remove moving class after cursor stops moving
-        movementTimeoutRef.current = setTimeout(() => {
-          cursorRef.current?.classList.remove("moving");
-        }, 100);
-
-        // Use direct positioning for immediate updates
-        cursorRef.current.style.left = `${x}px`;
-        cursorRef.current.style.top = `${y}px`;
-      },
+      updateCursorPosition,
     );
 
     // Set initial position
     const position = useEditorCursorStore.getState().cursorPosition;
-    const x = gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + position.column * charWidth;
-    const y = position.line * lineHeight;
-    cursorRef.current.style.left = `${x}px`;
-    cursorRef.current.style.top = `${y}px`;
+    updateCursorPosition(position);
 
     return () => {
       unsubscribe();
@@ -78,7 +144,18 @@ export function Cursor() {
         clearTimeout(movementTimeoutRef.current);
       }
     };
-  }, [lineHeight, gutterWidth, charWidth, visible, showLineNumbers]);
+  }, [
+    lineHeight,
+    gutterWidth,
+    charWidth,
+    visible,
+    showLineNumbers,
+    lines,
+    fontSize,
+    fontFamily,
+    tabSize,
+    scrollOffset,
+  ]);
 
   if (!visible) return null;
 

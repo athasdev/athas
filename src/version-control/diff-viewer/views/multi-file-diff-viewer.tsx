@@ -74,9 +74,6 @@ const FileRow = memo(function FileRow({
           )}
         </div>
         <div className="flex items-center gap-2 text-xs">
-          {summary.shouldAutoCollapse && (
-            <span className="text-[10px] text-text-lighter italic">auto-collapsed</span>
-          )}
           <span className={getStatusColor(summary.status)}>{summary.status.toUpperCase()}</span>
           {summary.additions > 0 && <span className="text-green-400">+{summary.additions}</span>}
           {summary.deletions > 0 && <span className="text-red-400">-{summary.deletions}</span>}
@@ -96,11 +93,10 @@ const FileRow = memo(function FileRow({
           ) : (
             <TextDiffViewer
               diff={diff}
-              isStaged={false} // Commit diffs are not staged
+              isStaged={false}
               viewMode="unified"
               showWhitespace={showWhitespace}
               isInMultiFileView={true}
-              // No staging actions for commit diffs
             />
           )}
         </div>

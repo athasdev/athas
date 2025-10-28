@@ -1,10 +1,12 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { SearchableModelDropdown } from "@/components/primitives/searchable-model-dropdown";
+import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import { useToast } from "@/contexts/toast-context";
 import { useAIChatStore } from "@/stores/ai-chat/store";
 import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
+import { useOverlayManager } from "./overlay-manager";
 
 interface InlineEditToolbarProps {
   visible: boolean;
@@ -27,6 +29,7 @@ export function InlineEditToolbar({
   const { hasProviderApiKey } = useAIChatStore();
   const { showToast } = useToast();
   const { openSettingsDialog } = useUIState();
+  const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
 
   // Focus input when visible
   useEffect(() => {
@@ -89,7 +92,10 @@ export function InlineEditToolbar({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSubmit();
+    } else if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
@@ -100,6 +106,15 @@ export function InlineEditToolbar({
     setCurrentModelId(modelId);
   };
 
+  // Register/unregister with overlay manager
+  useEffect(() => {
+    if (visible) {
+      showOverlay("inline-toolbar");
+    } else {
+      hideOverlay("inline-toolbar");
+    }
+  }, [visible, showOverlay, hideOverlay]);
+
   // Reset state when visibility changes
   useEffect(() => {
     if (!visible) {
@@ -107,7 +122,10 @@ export function InlineEditToolbar({
     }
   }, [visible]);
 
-  if (!visible) return null;
+  // Check if this overlay should be shown
+  const shouldShow = shouldShowOverlay("inline-toolbar");
+
+  if (!visible || !shouldShow) return null;
 
   return (
     <>
@@ -117,17 +135,20 @@ export function InlineEditToolbar({
       {/* Toolbar */}
       <div
         className={cn(
-          "fixed z-[9998] flex flex-col gap-1 rounded border border-border bg-primary-bg/95 backdrop-blur-sm",
-          "p-1.5 shadow-lg",
+          "fixed flex flex-col gap-2 rounded border border-border bg-primary-bg/95 backdrop-blur-sm",
+          "p-2 shadow-lg",
         )}
         style={{
+          zIndex: EDITOR_CONSTANTS.Z_INDEX.INLINE_TOOLBAR,
           left: `${position.x}px`,
           top: `${position.y}px`,
           transform: "translateY(-100%)",
           marginTop: "-8px",
         }}
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
-        {/* First row - Input (main focus) */}
+        {/* Input row */}
         <div className="flex items-center gap-1.5">
           <input
             ref={inputRef}
@@ -138,15 +159,15 @@ export function InlineEditToolbar({
             placeholder="Edit instruction..."
             disabled={isProcessing}
             className={cn(
-              "w-[320px] flex-1 border-none bg-transparent px-0.5 py-1 font-mono text-sm text-text outline-none placeholder:text-text-lighter",
+              "w-[320px] flex-1 border-none bg-transparent px-1 py-1.5 font-mono text-text text-xs outline-none placeholder:text-text-lighter",
               isProcessing && "opacity-50",
             )}
           />
-          {isProcessing && <Loader2 size={14} className="animate-spin text-text-lighter" />}
+          {isProcessing && <Loader2 size={12} className="animate-spin text-text-lighter" />}
         </div>
 
-        {/* Second row - Model selector and action button */}
-        <div className="flex items-center justify-between gap-2 border-border border-t pt-1">
+        {/* Model selector and action button row - no divider */}
+        <div className="flex items-center justify-between gap-2">
           <SearchableModelDropdown
             currentProviderId={currentProviderId}
             currentModelId={currentModelId}
@@ -157,11 +178,12 @@ export function InlineEditToolbar({
             onClick={handleSubmit}
             disabled={!prompt.trim() || isProcessing}
             className={cn(
-              "flex-shrink-0 rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-colors",
+              "flex flex-shrink-0 items-center gap-1 rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-colors",
               prompt.trim() && !isProcessing
                 ? "bg-hover text-text hover:bg-border"
                 : "cursor-not-allowed text-text-lighter opacity-50",
             )}
+            title="Run (⌘+Enter)"
           >
             {isProcessing ? "..." : "Run"}
           </button>

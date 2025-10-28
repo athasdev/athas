@@ -1,4 +1,3 @@
-import { FileIcon } from "lucide-react";
 import { memo } from "react";
 import { cn } from "@/utils/cn";
 import { groupLinesIntoHunks } from "../controllers/diff-helpers";
@@ -27,8 +26,7 @@ export const TextDiffViewer = memo(function TextDiffViewer({
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <FileIcon size={48} className="mx-auto mb-4 text-text-lighter opacity-50" />
-          <p className="text-sm text-text-lighter">No changes to display</p>
+          <p className="py-2 text-text-lighter text-xs">No changes to display</p>
         </div>
       </div>
     );
