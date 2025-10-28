@@ -45,8 +45,10 @@ export function Cursor() {
 
   // Listen to viewport scroll events - poll until viewport is available
   useEffect(() => {
-    let viewport: HTMLElement | null = null;
     let rafId: number | null = null;
+    let viewport: HTMLElement | null = null;
+    let scrollHandler: (() => void) | null = null;
+    let rafPending = false;
 
     const setupScrollListener = () => {
       viewport = editorAPI.getViewportRef();
@@ -57,34 +59,35 @@ export function Cursor() {
         return;
       }
 
-      const handleScroll = () => {
+      scrollHandler = () => {
         if (!viewport) return;
-        setScrollOffset({
-          top: viewport.scrollTop,
-          left: viewport.scrollLeft,
+        if (rafPending) return;
+        rafPending = true;
+        requestAnimationFrame(() => {
+          if (!viewport) return;
+          setScrollOffset({
+            top: viewport.scrollTop,
+            left: viewport.scrollLeft,
+          });
+          rafPending = false;
         });
       };
 
       // Set initial scroll position
-      handleScroll();
+      scrollHandler();
 
-      viewport.addEventListener("scroll", handleScroll);
-
-      // Cleanup function
-      return () => {
-        if (viewport) {
-          viewport.removeEventListener("scroll", handleScroll);
-        }
-      };
+      viewport.addEventListener("scroll", scrollHandler);
     };
 
-    const cleanup = setupScrollListener();
+    setupScrollListener();
 
     return () => {
       if (rafId) {
         cancelAnimationFrame(rafId);
       }
-      cleanup?.();
+      if (viewport && scrollHandler) {
+        viewport.removeEventListener("scroll", scrollHandler);
+      }
     };
   }, []);
 

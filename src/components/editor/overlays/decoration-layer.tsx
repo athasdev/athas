@@ -31,14 +31,17 @@ export const DecorationLayer = () => {
   const fontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
   const tabSize = useEditorSettingsStore.use.tabSize();
+  const lines = useEditorViewStore.use.lines();
 
   // Track viewport scroll position
   const [scrollOffset, setScrollOffset] = useState({ top: 0, left: 0 });
 
   // Listen to viewport scroll events
   useEffect(() => {
-    let viewport: HTMLElement | null = null;
     let rafId: number | null = null;
+    let viewport: HTMLElement | null = null;
+    let scrollHandler: (() => void) | null = null;
+    let rafPending = false;
 
     const setupScrollListener = () => {
       viewport = editorAPI.getViewportRef();
@@ -48,31 +51,35 @@ export const DecorationLayer = () => {
         return;
       }
 
-      const handleScroll = () => {
+      scrollHandler = () => {
         if (!viewport) return;
-        setScrollOffset({
-          top: viewport.scrollTop,
-          left: viewport.scrollLeft,
+        if (rafPending) return;
+        rafPending = true;
+        requestAnimationFrame(() => {
+          if (!viewport) return;
+          setScrollOffset({
+            top: viewport.scrollTop,
+            left: viewport.scrollLeft,
+          });
+          rafPending = false;
         });
       };
 
-      handleScroll();
-      viewport.addEventListener("scroll", handleScroll);
+      // Set initial scroll position
+      scrollHandler();
 
-      return () => {
-        if (viewport) {
-          viewport.removeEventListener("scroll", handleScroll);
-        }
-      };
+      viewport.addEventListener("scroll", scrollHandler);
     };
 
-    const cleanup = setupScrollListener();
+    setupScrollListener();
 
     return () => {
       if (rafId) {
         cancelAnimationFrame(rafId);
       }
-      cleanup?.();
+      if (viewport && scrollHandler) {
+        viewport.removeEventListener("scroll", scrollHandler);
+      }
     };
   }, []);
 
@@ -96,7 +103,6 @@ export const DecorationLayer = () => {
 
   const renderedDecorations = useMemo<RenderedDecoration[]>(() => {
     const rendered: RenderedDecoration[] = [];
-    const lines = useEditorViewStore.getState().lines;
 
     decorations.forEach((decoration, index) => {
       const { range, className = "", type } = decoration;
@@ -246,6 +252,7 @@ export const DecorationLayer = () => {
     fontFamily,
     tabSize,
     scrollOffset,
+    lines,
   ]);
 
   return (

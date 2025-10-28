@@ -15,7 +15,7 @@ export function useEditorLayout() {
     const gutterWidth = lineNumbers
       ? Math.max(
           EDITOR_CONSTANTS.MIN_GUTTER_WIDTH,
-          String(lineCount).length * EDITOR_CONSTANTS.GUTTER_CHAR_WIDTH +
+          EDITOR_CONSTANTS.FIXED_GUTTER_DIGITS * EDITOR_CONSTANTS.GUTTER_CHAR_WIDTH +
             EDITOR_CONSTANTS.GUTTER_PADDING +
             EDITOR_CONSTANTS.GIT_INDICATOR_WIDTH,
         )

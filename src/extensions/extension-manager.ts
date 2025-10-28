@@ -183,7 +183,12 @@ class ExtensionManager {
 
   isExtensionLoaded(extensionName: string): boolean {
     const extensionId = this.generateExtensionId(extensionName);
-    return this.extensions.has(extensionId) || this.newExtensions.has(extensionId);
+    // Also account for language extensions which are tracked separately
+    return (
+      this.extensions.has(extensionId) ||
+      this.newExtensions.has(extensionId) ||
+      this.languageExtensions.has(extensionId)
+    );
   }
 
   // New extension system methods

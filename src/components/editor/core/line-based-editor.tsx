@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef } from "react";
+import { editorAPI } from "@/extensions/editor-api";
 import { useEditorInteractions } from "@/hooks/use-editor-interactions";
 import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useEditorLayoutStore } from "@/stores/editor-layout-store";
@@ -42,10 +43,12 @@ export const LineBasedEditor = memo<LineBasedEditorProps>(
       // Store updates removed - scroll position is tracked locally in viewport
     };
 
-    // Store viewport ref for parent access
+    // Store viewport ref for parent access and update editorAPI
     useEffect(() => {
       if (viewportRef && internalViewportRef.current) {
         viewportRef.current = internalViewportRef.current;
+        // Update editorAPI with the viewport ref so overlays can access it
+        editorAPI.setViewportRef(internalViewportRef.current);
       }
     }, [viewportRef]);
 
