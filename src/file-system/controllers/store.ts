@@ -385,7 +385,18 @@ export const useFileSystemStore = createSelectors(
           if (!fileName) return;
         }
 
-        return get().createFile(dirPath, fileName);
+        // Split the input path into parts
+        const parts = fileName.split("/").filter(Boolean);
+        const finalFileName = parts.pop()!;
+        let currentPath = dirPath;
+
+        // Create intermediate folders if they don't exist
+        for (const folder of parts) {
+          currentPath = await get().createDirectory(currentPath, folder);
+        }
+
+        // Finally create the file inside the deepest folder
+        return get().createFile(currentPath, finalFileName);
       },
 
       handleCreateNewFolder: async () => {
