@@ -4,6 +4,7 @@
 
 import type { Action } from "../core/types";
 import { pasteAction, pasteBeforeAction } from "./paste-actions";
+import { toggleCaseAction } from "./toggle-case-action";
 
 /**
  * Registry of all available actions
@@ -11,6 +12,7 @@ import { pasteAction, pasteBeforeAction } from "./paste-actions";
 export const actionRegistry: Record<string, Action> = {
   p: pasteAction,
   P: pasteBeforeAction,
+  "~": toggleCaseAction,
 };
 
 /**
@@ -36,3 +38,4 @@ export const getActionKeys = (): string[] => {
 
 // Re-export actions
 export { pasteAction, pasteBeforeAction } from "./paste-actions";
+export { toggleCaseAction } from "./toggle-case-action";
