@@ -103,10 +103,8 @@ export function EditorStylesheet() {
         .editor-container {
           scrollbar-width: none;
           -ms-overflow-style: none;
-          /* GPU acceleration for smooth scrolling */
-          transform: translateZ(0);
-          -webkit-transform: translateZ(0);
-          will-change: scroll-position;
+          /* Avoid forced GPU transforms to prevent subpixel drift */
+          will-change: auto;
         }
         .editor-container::-webkit-scrollbar {
           display: none;
@@ -128,11 +126,9 @@ export function EditorStylesheet() {
         .editor-viewport {
           scrollbar-width: none;
           -ms-overflow-style: none;
-          /* GPU acceleration for smooth scrolling */
-          transform: translateZ(0);
-          -webkit-transform: translateZ(0);
-          backface-visibility: hidden;
-          -webkit-backface-visibility: hidden;
+          /* Avoid 3D transforms to keep overlay and base layers aligned */
+          backface-visibility: visible;
+          -webkit-backface-visibility: visible;
         }
         .editor-content-new::-webkit-scrollbar,
         .virtual-editor-container::-webkit-scrollbar,

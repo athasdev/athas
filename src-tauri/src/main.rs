@@ -294,6 +294,10 @@ fn main() {
          store_github_token,
          get_github_token,
          remove_github_token,
+         // AI Provider token commands
+         store_ai_provider_token,
+         get_ai_provider_token,
+         remove_ai_provider_token,
          // Window commands
          create_remote_window,
          // File watcher commands

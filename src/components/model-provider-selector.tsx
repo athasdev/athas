@@ -21,8 +21,6 @@ const ModelProviderSelector = ({
 }: ModelProviderSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedProviderId, setSelectedProviderId] = useState(currentProviderId);
-  const [hoveredModel, setHoveredModel] = useState<string | null>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   const currentModel = getModelById(currentProviderId, currentModelId);
 
@@ -43,10 +41,6 @@ const ModelProviderSelector = ({
     e.stopPropagation();
     onApiKeyRequest(providerId);
     isOpen && setIsOpen(false);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    setMousePos({ x: e.clientX, y: e.clientY });
   };
 
   const formatTokens = (tokens: number): string => {
@@ -138,9 +132,6 @@ const ModelProviderSelector = ({
                           : "hover:bg-hover",
                       )}
                       onClick={() => handleModelSelect(model.id)}
-                      onMouseEnter={() => setHoveredModel(model.id)}
-                      onMouseLeave={() => setHoveredModel(null)}
-                      onMouseMove={handleMouseMove}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
@@ -152,12 +143,6 @@ const ModelProviderSelector = ({
                       </div>
                       <div className="flex flex-shrink-0 items-center gap-2 text-text-lighter text-xs">
                         <span>{formatTokens(model.maxTokens)}</span>
-                        {model.costPer1kTokens !== undefined && (
-                          <span>
-                            ${model.costPer1kTokens === 0 ? "Free" : model.costPer1kTokens}
-                            /1k
-                          </span>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -172,26 +157,6 @@ const ModelProviderSelector = ({
       {isOpen && (
         <div className="fixed inset-0 z-[9998] bg-black/20" onClick={() => setIsOpen(false)} />
       )}
-
-      {/* Floating Tooltip */}
-      {hoveredModel &&
-        isOpen &&
-        (() => {
-          const model = getAvailableProviders()
-            .flatMap((p) => p.models)
-            .find((m) => m.id === hoveredModel);
-          return model?.description ? (
-            <div
-              className="pointer-events-none fixed z-[10000] max-w-xs rounded border border-border bg-primary-bg px-2 py-1 shadow-lg"
-              style={{
-                left: mousePos.x + 10,
-                top: mousePos.y - 30,
-              }}
-            >
-              <div className="text-text text-xs">{model.description}</div>
-            </div>
-          ) : null;
-        })()}
     </div>
   );
 };

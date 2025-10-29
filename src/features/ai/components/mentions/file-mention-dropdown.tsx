@@ -2,14 +2,14 @@ import { Search } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
+import { useAIChatStore } from "@/features/ai/store/store";
 import FileIcon from "@/file-explorer/views/file.icon";
 import { useFileSystemStore } from "@/file-system/controllers/store";
+import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/file-system/controllers/utils";
 import type { FileEntry } from "@/file-system/models/app";
-import { useAIChatStore } from "@/stores/ai-chat/store";
 import { useProjectStore } from "@/stores/project-store";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
-import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "../../file-system/controllers/utils";
 
 interface FileMentionDropdownProps {
   onSelect: (file: FileEntry) => void;

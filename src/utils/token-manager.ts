@@ -2,29 +2,18 @@ import { invoke } from "@tauri-apps/api/core";
 
 /**
  * Token management utilities for AI providers
- * Handles secure storage and retrieval of API tokens
+ * Handles secure storage and retrieval of API tokens using Tauri's secure storage
  */
 
 // Get API token for a specific provider
 export const getProviderApiToken = async (providerId: string): Promise<string | null> => {
   try {
-    // For now, use the same storage key but we could extend this
-    // to support multiple providers with different storage keys
-    const storageKey = providerId === "openai" ? "get_github_token" : `get_${providerId}_token`;
-
-    try {
-      const token = (await invoke(storageKey)) as string | null;
-      return token;
-    } catch {
-      // Fallback to github token for backward compatibility
-      if (providerId !== "openai") {
-        const token = (await invoke("get_github_token")) as string | null;
-        return token;
-      }
-      return null;
-    }
-  } catch (_error) {
-    console.error(`Error getting ${providerId} API token:`, _error);
+    const token = (await invoke("get_ai_provider_token", {
+      providerId,
+    })) as string | null;
+    return token;
+  } catch (error) {
+    console.error(`Error getting ${providerId} API token:`, error);
     return null;
   }
 };
@@ -32,36 +21,20 @@ export const getProviderApiToken = async (providerId: string): Promise<string | 
 // Store API token for a specific provider
 export const storeProviderApiToken = async (providerId: string, token: string): Promise<void> => {
   try {
-    // For now, use the same storage method but we could extend this
-    const storageKey = providerId === "openai" ? "store_github_token" : `store_${providerId}_token`;
-
-    try {
-      await invoke(storageKey, { token });
-    } catch {
-      // Fallback to github token storage for backward compatibility
-      await invoke("store_github_token", { token });
-    }
-  } catch (_error) {
-    console.error(`Error storing ${providerId} API token:`, _error);
-    throw _error;
+    await invoke("store_ai_provider_token", { providerId, token });
+  } catch (error) {
+    console.error(`Error storing ${providerId} API token:`, error);
+    throw error;
   }
 };
 
 // Remove API token for a specific provider
 export const removeProviderApiToken = async (providerId: string): Promise<void> => {
   try {
-    const storageKey =
-      providerId === "openai" ? "remove_github_token" : `remove_${providerId}_token`;
-
-    try {
-      await invoke(storageKey);
-    } catch {
-      // Fallback to github token removal for backward compatibility
-      await invoke("remove_github_token");
-    }
-  } catch (_error) {
-    console.error(`Error removing ${providerId} API token:`, _error);
-    throw _error;
+    await invoke("remove_ai_provider_token", { providerId });
+  } catch (error) {
+    console.error(`Error removing ${providerId} API token:`, error);
+    throw error;
   }
 };
 

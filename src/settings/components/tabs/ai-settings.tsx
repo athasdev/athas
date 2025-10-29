@@ -1,22 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
+import { AlertCircle, Check, CheckCircle, Eye, EyeOff, Key, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import ApiKeyModal from "@/components/api-key-modal";
 import Button from "@/components/ui/button";
 import Dropdown from "@/components/ui/dropdown";
 import Section, { SettingRow } from "@/components/ui/section";
-import Switch from "@/components/ui/switch";
+import { useAIChatStore } from "@/features/ai/store/store";
 import { useSettingsStore } from "@/settings/store";
-import { useAIChatStore } from "@/stores/ai-chat/store";
-import {
-  getAvailableProviders,
-  getModelById,
-  setClaudeCodeAvailability,
-} from "@/types/ai-provider";
+import { getAvailableProviders, setClaudeCodeAvailability } from "@/types/ai-provider";
 import type { ClaudeStatus } from "@/types/claude";
+import { cn } from "@/utils/cn";
 
 export const AISettings = () => {
   const { settings, updateSetting } = useSettingsStore();
-  const [apiKeysVisible, setApiKeysVisible] = useState(false);
 
   // Check Claude Code availability on mount
   useEffect(() => {
@@ -25,29 +20,35 @@ export const AISettings = () => {
         const status = await invoke<ClaudeStatus>("get_claude_status");
         setClaudeCodeAvailability(status.interceptor_running);
       } catch {
-        // If we can't check status, assume it's not available
         setClaudeCodeAvailability(false);
       }
     };
     checkClaudeCodeStatus();
   }, []);
 
-  // Local state for immediate modal response
-  const [localModalState, setLocalModalState] = useState<{
-    isOpen: boolean;
+  // State for inline API key editing
+  const [editingProvider, setEditingProvider] = useState<string | null>(null);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationStatus, setValidationStatus] = useState<{
     providerId: string | null;
-  }>({
-    isOpen: false,
-    providerId: null,
-  });
+    status: "valid" | "invalid" | null;
+    message?: string;
+  }>({ providerId: null, status: null });
 
   // API Key functions from AI chat store
   const saveApiKey = useAIChatStore((state) => state.saveApiKey);
   const removeApiKey = useAIChatStore((state) => state.removeApiKey);
   const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
+  const checkAllProviderApiKeys = useAIChatStore((state) => state.checkAllProviderApiKeys);
+
+  // Check all provider API keys on mount
+  useEffect(() => {
+    checkAllProviderApiKeys();
+  }, [checkAllProviderApiKeys]);
 
   const currentProvider = getAvailableProviders().find((p) => p.id === settings.aiProviderId);
-  const currentModel = getModelById(settings.aiProviderId, settings.aiModelId);
 
   const providerOptions = getAvailableProviders().map((provider) => ({
     value: provider.id,
@@ -72,19 +73,194 @@ export const AISettings = () => {
     updateSetting("aiModelId", modelId);
   };
 
-  const handleApiKeyRequest = (providerId: string) => {
-    setLocalModalState({ isOpen: true, providerId });
+  const startEditing = (providerId: string) => {
+    setEditingProvider(providerId);
+    setApiKeyInput("");
+    setShowKey(false);
+    setValidationStatus({ providerId: null, status: null });
   };
+
+  const cancelEditing = () => {
+    setEditingProvider(null);
+    setApiKeyInput("");
+    setShowKey(false);
+    setValidationStatus({ providerId: null, status: null });
+  };
+
+  const handleSaveKey = async (providerId: string) => {
+    if (!apiKeyInput.trim()) {
+      setValidationStatus({
+        providerId,
+        status: "invalid",
+        message: "Please enter an API key",
+      });
+      return;
+    }
+
+    setIsValidating(true);
+    setValidationStatus({ providerId: null, status: null });
+
+    try {
+      const isValid = await saveApiKey(providerId, apiKeyInput);
+
+      if (isValid) {
+        setValidationStatus({
+          providerId,
+          status: "valid",
+          message: "API key saved successfully",
+        });
+        setTimeout(() => {
+          cancelEditing();
+        }, 1500);
+      } else {
+        setValidationStatus({
+          providerId,
+          status: "invalid",
+          message: "Invalid API key. Please check and try again.",
+        });
+      }
+    } catch {
+      setValidationStatus({
+        providerId,
+        status: "invalid",
+        message: "Failed to validate API key",
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleRemoveKey = async (providerId: string) => {
+    try {
+      await removeApiKey(providerId);
+      setValidationStatus({
+        providerId,
+        status: "valid",
+        message: "API key removed",
+      });
+      setTimeout(() => {
+        setValidationStatus({ providerId: null, status: null });
+      }, 2000);
+    } catch {
+      setValidationStatus({
+        providerId,
+        status: "invalid",
+        message: "Failed to remove API key",
+      });
+    }
+  };
+
+  const renderApiKeyInput = (providerId: string, providerName: string) => {
+    const isEditing = editingProvider === providerId;
+    const hasKey = hasProviderApiKey(providerId);
+    const showingValidation = validationStatus.providerId === providerId && validationStatus.status;
+
+    if (!isEditing && !hasKey && !showingValidation) {
+      return (
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={() => startEditing(providerId)}
+          className="gap-1.5"
+        >
+          <Key size={12} />
+          Set API Key
+        </Button>
+      );
+    }
+
+    if (!isEditing && hasKey) {
+      return (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-green-500 text-xs">
+            <Check size={12} />
+            <span>Configured</span>
+          </div>
+          <Button variant="ghost" size="xs" onClick={() => startEditing(providerId)}>
+            Edit
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => handleRemoveKey(providerId)}
+            className="text-red-500 hover:bg-red-500/10"
+          >
+            <Trash2 size={12} />
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex w-full flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <input
+              type={showKey ? "text" : "password"}
+              value={apiKeyInput}
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              placeholder={`Enter ${providerName} API key...`}
+              className={cn(
+                "w-full rounded border bg-secondary-bg px-2 py-1.5 pr-8 font-mono text-text text-xs",
+                "focus:border-blue-500 focus:outline-none",
+                showingValidation && validationStatus.status === "invalid"
+                  ? "border-red-500"
+                  : "border-border",
+              )}
+              disabled={isValidating}
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey(!showKey)}
+              className="-translate-y-1/2 absolute top-1/2 right-2 text-text-lighter transition-colors hover:text-text"
+            >
+              {showKey ? <EyeOff size={12} /> : <Eye size={12} />}
+            </button>
+          </div>
+          <Button
+            variant="default"
+            size="xs"
+            onClick={() => handleSaveKey(providerId)}
+            disabled={!apiKeyInput.trim() || isValidating}
+          >
+            {isValidating ? "Saving..." : "Save"}
+          </Button>
+          <Button variant="ghost" size="xs" onClick={cancelEditing}>
+            <X size={12} />
+          </Button>
+        </div>
+
+        {showingValidation && (
+          <div
+            className={cn(
+              "flex items-center gap-1.5 text-xs",
+              validationStatus.status === "valid" ? "text-green-500" : "text-red-500",
+            )}
+          >
+            {validationStatus.status === "valid" ? (
+              <CheckCircle size={12} />
+            ) : (
+              <AlertCircle size={12} />
+            )}
+            <span>{validationStatus.message}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Get all providers that require API keys
+  const providersNeedingKeys = getAvailableProviders().filter((p) => p.requiresApiKey);
 
   return (
     <div className="space-y-4">
-      <Section title="AI Provider">
+      <Section title="Provider & Model">
         <SettingRow label="Provider" description="Choose your AI service provider">
           <Dropdown
             value={settings.aiProviderId}
             options={providerOptions}
             onChange={handleProviderChange}
-            className="w-40"
+            className="w-48"
             size="xs"
           />
         </SettingRow>
@@ -94,119 +270,20 @@ export const AISettings = () => {
             value={settings.aiModelId}
             options={modelOptions}
             onChange={handleModelChange}
-            className="w-40"
+            className="w-48"
             size="xs"
-          />
-        </SettingRow>
-
-        {currentModel && (
-          <SettingRow
-            label="Model Info"
-            description={`${currentModel.maxTokens.toLocaleString()} tokens • ${
-              currentModel.costPer1kTokens ? `$${currentModel.costPer1kTokens}/1k tokens` : "Free"
-            }`}
-          >
-            <span className="text-text-lighter text-xs">
-              {currentProvider?.requiresApiKey ? "API Key Required" : "Ready"}
-            </span>
-          </SettingRow>
-        )}
-      </Section>
-
-      <Section title="AI Features">
-        <SettingRow label="AI Chat" description="Enable AI-powered chat assistant">
-          <Switch
-            checked={settings.coreFeatures.aiChat}
-            onChange={(checked) =>
-              updateSetting("coreFeatures", { ...settings.coreFeatures, aiChat: checked })
-            }
-            size="sm"
-          />
-        </SettingRow>
-
-        <SettingRow label="AI Completion" description="Enable AI code completion in editor">
-          <Switch
-            checked={settings.aiCompletion}
-            onChange={(checked) => updateSetting("aiCompletion", checked)}
-            size="sm"
+            searchable={true}
           />
         </SettingRow>
       </Section>
 
       <Section title="API Keys">
-        <SettingRow label="Manage API Keys">
-          <Button variant="outline" size="xs" onClick={() => setApiKeysVisible(!apiKeysVisible)}>
-            {apiKeysVisible ? "Hide" : "Show"}
-          </Button>
-        </SettingRow>
-
-        {apiKeysVisible &&
-          getAvailableProviders()
-            .filter((provider) => provider.requiresApiKey)
-            .map((provider) => (
-              <SettingRow key={provider.id} label={provider.name}>
-                <Button variant="ghost" size="xs" onClick={() => handleApiKeyRequest(provider.id)}>
-                  {hasProviderApiKey(provider.id) ? "Update" : "Configure"}
-                </Button>
-              </SettingRow>
-            ))}
+        {providersNeedingKeys.map((provider) => (
+          <SettingRow key={provider.id} label={provider.name}>
+            {renderApiKeyInput(provider.id, provider.name)}
+          </SettingRow>
+        ))}
       </Section>
-
-      <Section title="Chat Behavior">
-        <SettingRow
-          label="Auto-scroll to Bottom"
-          description="Automatically scroll to new messages"
-        >
-          <Switch checked={true} onChange={() => {}} size="sm" />
-        </SettingRow>
-
-        <SettingRow
-          label="Remember Context"
-          description="Include recent file context in conversations"
-        >
-          <Switch checked={true} onChange={() => {}} size="sm" />
-        </SettingRow>
-
-        <SettingRow label="Syntax Highlighting" description="Enable code highlighting in chat">
-          <Switch checked={true} onChange={() => {}} size="sm" />
-        </SettingRow>
-      </Section>
-
-      <Section title="Performance">
-        <SettingRow label="Stream Responses" description="Show AI responses as they generate">
-          <Switch checked={true} onChange={() => {}} size="sm" />
-        </SettingRow>
-
-        <SettingRow
-          label="Max Context Length"
-          description="Maximum tokens for conversation context"
-        >
-          <Dropdown
-            value="8000"
-            options={[
-              { value: "4000", label: "4K tokens" },
-              { value: "8000", label: "8K tokens" },
-              { value: "16000", label: "16K tokens" },
-              { value: "32000", label: "32K tokens" },
-            ]}
-            onChange={() => {}}
-            className="w-24"
-            size="xs"
-          />
-        </SettingRow>
-      </Section>
-
-      {/* API Key Modal */}
-      <ApiKeyModal
-        isOpen={localModalState.isOpen}
-        onClose={() => setLocalModalState({ isOpen: false, providerId: null })}
-        providerId={localModalState.providerId || ""}
-        onSave={saveApiKey}
-        onRemove={removeApiKey}
-        hasExistingKey={
-          localModalState.providerId ? hasProviderApiKey(localModalState.providerId) : false
-        }
-      />
     </div>
   );
 };

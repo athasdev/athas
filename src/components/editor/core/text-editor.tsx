@@ -30,6 +30,7 @@ import { useEditorSearchStore } from "@/stores/editor-search-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
 import { useGitBlameStore } from "@/stores/git-blame-store";
+import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
 import { useLspStore } from "@/stores/lsp-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 import type { Position } from "@/types/editor-types";
@@ -136,12 +137,10 @@ export function TextEditor() {
     position: { x: number; y: number };
   }>({ isOpen: false, position: { x: 0, y: 0 } });
 
-  // Inline edit toolbar state
-  const [inlineEditToolbar, setInlineEditToolbar] = useState<{
-    visible: boolean;
-    position: { x: number; y: number };
-  }>({ visible: false, position: { x: 0, y: 0 } });
-  const inlineEditToolbarTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Inline edit toolbar state - controlled by store
+  const isInlineEditToolbarVisible = useInlineEditToolbarStore.use.isVisible();
+  const { hide: hideInlineEditToolbar } = useInlineEditToolbarStore.use.actions();
+  const [inlineEditToolbarPosition, setInlineEditToolbarPosition] = useState({ x: 0, y: 0 });
 
   // Get content as string when needed
   const content = getContent();
@@ -385,56 +384,21 @@ export function TextEditor() {
 
     const { selectionStart, selectionEnd } = textareaRef.current;
 
-    // Clear any pending inline edit toolbar timeout
-    if (inlineEditToolbarTimeoutRef.current) {
-      clearTimeout(inlineEditToolbarTimeoutRef.current);
-      inlineEditToolbarTimeoutRef.current = null;
-    }
-
     if (selectionStart !== selectionEnd) {
       setSelection({
         start: calculateCursorPosition(selectionStart, lines),
         end: calculateCursorPosition(selectionEnd, lines),
       });
-
-      // Hide toolbar immediately while selecting
-      setInlineEditToolbar({ visible: false, position: { x: 0, y: 0 } });
-
-      // Show inline edit toolbar above selection after a delay (only when selection is stable)
-      inlineEditToolbarTimeoutRef.current = setTimeout(() => {
-        if (!textareaRef.current) return;
-
-        const currentSelStart = textareaRef.current.selectionStart;
-        const currentSelEnd = textareaRef.current.selectionEnd;
-
-        // Only show if selection is still active and hasn't changed
-        if (currentSelStart !== currentSelEnd) {
-          const textarea = textareaRef.current;
-          const rect = textarea.getBoundingClientRect();
-
-          // Calculate position based on selection
-          const textBeforeSelection = textarea.value.substring(0, currentSelStart).split("\n");
-          const currentLine = textBeforeSelection.length - 1;
-          const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight);
-
-          setInlineEditToolbar({
-            visible: true,
-            position: {
-              x: rect.left + 100,
-              y: rect.top + currentLine * lineHeight - textarea.scrollTop,
-            },
-          });
-        }
-      }, 500); // 500ms delay to avoid interrupting selection
     } else {
       setSelection(undefined);
-      setInlineEditToolbar({ visible: false, position: { x: 0, y: 0 } });
+      // Hide toolbar when selection is cleared
+      hideInlineEditToolbar();
     }
 
     // Update cursor position after selection change
     const newCursorPosition = calculateCursorPosition(selectionEnd, lines);
     setCursorPosition(newCursorPosition);
-  }, [lines, setCursorPosition, setSelection]);
+  }, [lines, setCursorPosition, setSelection, hideInlineEditToolbar]);
 
   useEffect(() => {
     const decorationsChanged =
@@ -1196,6 +1160,26 @@ export function TextEditor() {
     }
   }, [lines, addDecoration, removeDecoration]);
 
+  // Calculate position when toolbar becomes visible
+  useEffect(() => {
+    if (isInlineEditToolbarVisible && textareaRef.current) {
+      const textarea = textareaRef.current;
+      const { selectionStart, selectionEnd } = textarea;
+
+      if (selectionStart !== selectionEnd) {
+        const rect = textarea.getBoundingClientRect();
+        const textBeforeSelection = textarea.value.substring(0, selectionStart).split("\n");
+        const currentLine = textBeforeSelection.length - 1;
+        const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight);
+
+        setInlineEditToolbarPosition({
+          x: rect.left + 100,
+          y: rect.top + currentLine * lineHeight - textarea.scrollTop,
+        });
+      }
+    }
+  }, [isInlineEditToolbarVisible]);
+
   const handleInlineEditSubmit = useCallback(() => {
     const selection = useEditorCursorStore.getState().selection;
     if (!selection || !textareaRef.current) return;
@@ -1205,12 +1189,12 @@ export function TextEditor() {
     // Will use: selection.start.offset, selection.end.offset, content
 
     // Close toolbar
-    setInlineEditToolbar({ visible: false, position: { x: 0, y: 0 } });
-  }, [content]);
+    hideInlineEditToolbar();
+  }, [hideInlineEditToolbar]);
 
   const handleCloseInlineEdit = useCallback(() => {
-    setInlineEditToolbar({ visible: false, position: { x: 0, y: 0 } });
-  }, []);
+    hideInlineEditToolbar();
+  }, [hideInlineEditToolbar]);
 
   const handleGitIndicatorClick = useCallback(
     (lineNumber: number, changeType: string) => {
@@ -1294,8 +1278,8 @@ export function TextEditor() {
       {/* Inline edit toolbar */}
       {createPortal(
         <InlineEditToolbar
-          visible={inlineEditToolbar.visible}
-          position={inlineEditToolbar.position}
+          visible={isInlineEditToolbarVisible}
+          position={inlineEditToolbarPosition}
           onPromptSubmit={handleInlineEditSubmit}
           onClose={handleCloseInlineEdit}
         />,

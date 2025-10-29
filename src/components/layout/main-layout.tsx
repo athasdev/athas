@@ -15,7 +15,7 @@ import { stageHunk, unstageHunk } from "@/version-control/git/controllers/git";
 import type { GitHunk } from "@/version-control/git/models/git-types";
 
 // Lazy load AI Chat for better performance
-const AIChat = lazy(() => import("../ai-chat/ai-chat"));
+const AIChat = lazy(() => import("@/features/ai/components/chat/ai-chat"));
 
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";

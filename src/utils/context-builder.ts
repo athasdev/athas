@@ -1,4 +1,4 @@
-import type { ChatMode, OutputStyle } from "@/stores/ai-chat/types";
+import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { ContextInfo } from "./types";
 
 // Build a comprehensive context prompt for the AI

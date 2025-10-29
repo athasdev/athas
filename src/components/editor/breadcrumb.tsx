@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, Eye, Search } from "lucide-react";
+import { ArrowLeft, ChevronRight, Eye, Search, Sparkles } from "lucide-react";
 import { type RefObject, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
@@ -8,7 +8,9 @@ import { readDirectory } from "@/file-system/controllers/platform";
 import { useFileSystemStore } from "@/file-system/controllers/store";
 import type { FileEntry } from "@/file-system/models/app";
 import { useBufferStore } from "@/stores/buffer-store";
+import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
+import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
 import { useUIState } from "@/stores/ui-state-store";
 
 interface DirectoryEntry {
@@ -27,6 +29,8 @@ export default function Breadcrumb() {
   const { isFindVisible, setIsFindVisible } = useUIState();
   const isMarkdownPreview = useEditorSettingsStore.use.isMarkdownPreview();
   const { setIsMarkdownPreview } = useEditorSettingsStore.use.actions();
+  const { toggle: toggleInlineEditToolbar } = useInlineEditToolbarStore.use.actions();
+  const selection = useEditorCursorStore.use.selection?.();
 
   const handleNavigate = async (path: string) => {
     try {
@@ -43,6 +47,12 @@ export default function Breadcrumb() {
   const handlePreviewClick = () => {
     setIsMarkdownPreview(!isMarkdownPreview);
   };
+
+  const handleInlineEditClick = () => {
+    toggleInlineEditToolbar();
+  };
+
+  const hasSelection = selection && selection.start.offset !== selection.end.offset;
 
   const isMarkdownFile = () => {
     if (!activeBuffer) return false;
@@ -230,6 +240,14 @@ export default function Breadcrumb() {
               <Eye size={12} />
             </button>
           )}
+          <button
+            onClick={handleInlineEditClick}
+            disabled={!hasSelection}
+            className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+            title="AI inline edit (select text first)"
+          >
+            <Sparkles size={12} />
+          </button>
           <button
             onClick={onSearchClick}
             className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"

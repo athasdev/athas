@@ -17,8 +17,10 @@ import {
   Type,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import KeybindingBadge from "../../ui/keybinding-badge";
+import { useOverlayManager } from "./overlay-manager";
 
 interface EditorContextMenuProps {
   isOpen: boolean;
@@ -66,6 +68,16 @@ const EditorContextMenu = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const selection = useEditorCursorStore.use.selection?.() ?? undefined;
   const hasSelection = selection && selection.start.offset !== selection.end.offset;
+  const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
+
+  // Register/unregister with overlay manager
+  useEffect(() => {
+    if (isOpen) {
+      showOverlay("context-menu");
+    } else {
+      hideOverlay("context-menu");
+    }
+  }, [isOpen, showOverlay, hideOverlay]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -126,7 +138,9 @@ const EditorContextMenu = ({
     };
   }, [isOpen, onClose, position]);
 
-  if (!isOpen) return null;
+  const shouldShow = shouldShowOverlay("context-menu");
+
+  if (!isOpen || !shouldShow) return null;
 
   const handleCopy = async () => {
     if (onCopy) {
@@ -228,8 +242,9 @@ const EditorContextMenu = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-99 w-[200px] select-none rounded-md border border-border bg-secondary-bg py-0.5 shadow-lg"
+      className="fixed w-[200px] select-none rounded-md border border-border bg-secondary-bg py-0.5 shadow-lg"
       style={{
+        zIndex: EDITOR_CONSTANTS.Z_INDEX.CONTEXT_MENU,
         left: `${position.x}px`,
         top: `${position.y}px`,
         transform: "translateZ(0)", // Force GPU acceleration for consistent rendering

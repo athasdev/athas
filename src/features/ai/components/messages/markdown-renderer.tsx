@@ -1,8 +1,10 @@
+import { ChevronDown, ChevronRight } from "lucide-react";
 import Prism from "prismjs";
 import type React from "react";
+import { useState } from "react";
+import { mapLanguage } from "@/features/ai/lib/formatting";
+import type { MarkdownRendererProps } from "@/features/ai/types/types";
 import { cn } from "@/utils/cn";
-import type { MarkdownRendererProps } from "./types";
-import { mapLanguage } from "./utils";
 
 // Import common language components
 import "prismjs/components/prism-bash";
@@ -28,8 +30,79 @@ import "prismjs/components/prism-tsx";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-yaml";
 
+// Error Block Component
+function ErrorBlock({ errorData }: { errorData: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Parse error data
+  const lines = errorData.split("\n");
+  const title =
+    lines
+      .find((l) => l.startsWith("title:"))
+      ?.replace("title:", "")
+      .trim() || "Error";
+  const code =
+    lines
+      .find((l) => l.startsWith("code:"))
+      ?.replace("code:", "")
+      .trim() || "";
+  const message =
+    lines
+      .find((l) => l.startsWith("message:"))
+      ?.replace("message:", "")
+      .trim() || "";
+  const details =
+    lines
+      .find((l) => l.startsWith("details:"))
+      ?.replace("details:", "")
+      .trim() || "";
+
+  return (
+    <div className="error-block">
+      <div className="error-header">
+        <span className="error-title">
+          {title}
+          {code ? ` (${code})` : ""}
+        </span>
+      </div>
+      <div className="error-message">{message}</div>
+      {details && (
+        <div className="mt-1.5">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-1 text-red-400 text-xs transition-colors hover:text-red-300"
+          >
+            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            {isExpanded ? "Hide" : "Show"} details
+          </button>
+          {isExpanded && (
+            <pre className="mt-1.5 overflow-x-auto rounded bg-red-950/20 p-2 text-red-300 text-xs">
+              {(() => {
+                try {
+                  const parsed = JSON.parse(details);
+                  return JSON.stringify(parsed, null, 2);
+                } catch {
+                  return details;
+                }
+              })()}
+            </pre>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Simple markdown renderer for AI responses
 export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRendererProps) {
+  // First, check for error blocks
+  if (content.includes("[ERROR_BLOCK]")) {
+    const errorMatch = content.match(/\[ERROR_BLOCK\]([\s\S]*?)\[\/ERROR_BLOCK\]/);
+    if (errorMatch) {
+      return <ErrorBlock errorData={errorMatch[1]} />;
+    }
+  }
+
   const renderContent = (text: string) => {
     // First, handle code blocks (triple backticks)
     const codeBlockParts = text.split(/(```[\s\S]*?```)/g);

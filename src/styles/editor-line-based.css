@@ -6,7 +6,7 @@
 }
 
 .editor-line-wrapper {
-  will-change: transform;
+  /* Avoid speculative transform promotion to keep pixel alignment stable */
 }
 
 .editor-line {
@@ -92,7 +92,6 @@
 }
 
 .editor-line-content-wrapper {
-  will-change: transform;
   contain: layout style;
 }
 

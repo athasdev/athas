@@ -26,8 +26,9 @@ export const useEditorInteractions = ({
     (clientX: number, clientY: number, container: HTMLElement): Position | null => {
       const containerRect = container.getBoundingClientRect();
 
-      // Calculate relative position, accounting for scroll
-      const relativeX = clientX - containerRect.left - gutterWidth - GUTTER_MARGIN;
+      // Calculate relative position, accounting for scroll offset
+      const relativeX =
+        clientX - containerRect.left - gutterWidth - GUTTER_MARGIN + container.scrollLeft;
       const relativeY = clientY - containerRect.top + container.scrollTop;
 
       // Calculate line number

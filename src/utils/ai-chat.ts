@@ -1,4 +1,4 @@
-import type { ChatMode, OutputStyle } from "@/stores/ai-chat/types";
+import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AIMessage } from "@/types/ai-chat";
 import { getModelById, getProviderById } from "../types/ai-provider";
 import { ClaudeCodeStreamHandler } from "./claude-code-handler";
@@ -108,7 +108,8 @@ export const getChatCompletionStream = async (
       console.error(`❌ ${provider.name} API error:`, response.status, response.statusText);
       const errorText = await response.text();
       console.error("❌ Error details:", errorText);
-      onError(`${provider.name} API error: ${response.status}`);
+      // Pass error details in a structured format
+      onError(`${provider.name} API error: ${response.status}|||${errorText}`);
       return;
     }
 

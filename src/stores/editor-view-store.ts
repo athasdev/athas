@@ -48,8 +48,35 @@ function convertToLineTokens(
   // Convert byte offsets to character offsets
   const charTokens = tokens
     .map((token) => {
-      const start = byteToChar.get(token.start) ?? 0;
-      const end = byteToChar.get(token.end) ?? content.length;
+      // Find closest byte positions if exact match not found
+      let start = byteToChar.get(token.start);
+      let end = byteToChar.get(token.end);
+
+      // If exact byte position not found, find the closest character position
+      if (start === undefined) {
+        // Find the largest byte offset that's <= token.start
+        let closestByte = 0;
+        for (const [byte, char] of byteToChar.entries()) {
+          if (byte <= token.start && byte > closestByte) {
+            closestByte = byte;
+            start = char;
+          }
+        }
+        if (start === undefined) start = 0;
+      }
+
+      if (end === undefined) {
+        // Find the smallest byte offset that's >= token.end
+        let closestChar = content.length;
+        for (const [byte, char] of byteToChar.entries()) {
+          if (byte >= token.end && char < closestChar) {
+            closestChar = char;
+            end = char;
+          }
+        }
+        if (end === undefined) end = content.length;
+      }
+
       return { start, end, class_name: token.class_name };
     })
     .filter((token) => {
@@ -58,7 +85,7 @@ function convertToLineTokens(
         token.start >= 0 &&
         token.end <= content.length &&
         token.start < token.end &&
-        token.end - token.start < 1000 // Skip unreasonably large tokens from misalignment
+        token.end - token.start < 10000 // Allow large tokens but skip absurdly large ones
       );
     });
 
@@ -131,6 +158,8 @@ export const useEditorViewStore = createSelectors(
 useBufferStore.subscribe((state) => {
   const activeBuffer = state.actions.getActiveBuffer();
   if (activeBuffer) {
+    // Always recalculate line tokens when content or tokens change
+    // The token filtering in convertToLineTokens handles stale tokens gracefully
     const lineTokens = convertToLineTokens(activeBuffer.content, activeBuffer.tokens);
     console.log(
       "[EditorViewStore] Buffer tokens:",
