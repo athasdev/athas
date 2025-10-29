@@ -7,8 +7,9 @@ import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
+import { useVimStore } from "@/stores/vim-store";
 import { calculateOffsetFromPosition } from "@/utils/editor-position";
-import { getAction } from "../actions";
+import { createReplaceAction, getAction } from "../actions";
 import { getOperator } from "../operators";
 import { getEffectiveCount, parseVimCommand } from "./command-parser";
 import { getMotion } from "./motion-registry";
@@ -53,6 +54,19 @@ export const executeVimCommand = (keys: string[]): boolean => {
       const action = getAction(command.action);
       if (!action) return false;
 
+      // Don't track the repeat command itself
+      if (command.action !== ".") {
+        // Store this operation for repeat functionality (but only if it's repeatable)
+        if (action.repeatable) {
+          const vimStore = useVimStore.getState();
+          vimStore.actions.setLastOperation({
+            type: "action",
+            keys: [...keys], // Clone the keys array
+            count: command.count,
+          });
+        }
+      }
+
       // Execute the action multiple times if count is specified
       for (let i = 0; i < count; i++) {
         action.execute(context);
@@ -92,11 +106,23 @@ export const executeVimCommand = (keys: string[]): boolean => {
         return false;
       }
 
+      // Store this operation for repeat functionality (if it's repeatable)
+      if (operator.repeatable) {
+        const vimStore = useVimStore.getState();
+        vimStore.actions.setLastOperation({
+          type: "command",
+          keys: [...keys], // Clone the keys array
+          count: command.count,
+        });
+      }
+
       // Execute the operator on the range
       operator.execute(range, context);
 
+      // Handle mode transitions for operators that enter insert mode
       if (operator.entersInsertMode) {
-        // Todo Implement this
+        const vimStore = useVimStore.getState();
+        vimStore.actions.setMode("insert");
       }
 
       return true;
@@ -197,4 +223,17 @@ export const canExecuteCommand = (keys: string[]): boolean => {
   }
 
   return !!command.motion;
+};
+
+export const executeReplaceCommand = (char: string, options: { count?: number } = {}): boolean => {
+  if (!char) return false;
+
+  const context = getEditorContext();
+  if (!context) return false;
+
+  const count = Math.max(1, options.count ?? 1);
+  const replaceAction = createReplaceAction(char, count);
+
+  replaceAction.execute(context);
+  return true;
 };

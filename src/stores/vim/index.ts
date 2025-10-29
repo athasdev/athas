@@ -113,7 +113,11 @@ export {
   pasteBeforeAction,
 } from "./actions";
 // Command execution
-export { canExecuteCommand, executeVimCommand } from "./core/command-executor";
+export {
+  canExecuteCommand,
+  executeReplaceCommand,
+  executeVimCommand,
+} from "./core/command-executor";
 export {
   expectsMoreKeys,
   getCommandParseStatus,

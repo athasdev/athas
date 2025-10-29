@@ -4,6 +4,8 @@
 
 import type { Action } from "../core/types";
 import { pasteAction, pasteBeforeAction } from "./paste-actions";
+import { repeatAction } from "./repeat-action";
+import { replaceAction } from "./replace-action";
 import { toggleCaseAction } from "./toggle-case-action";
 
 /**
@@ -13,6 +15,8 @@ export const actionRegistry: Record<string, Action> = {
   p: pasteAction,
   P: pasteBeforeAction,
   "~": toggleCaseAction,
+  ".": repeatAction,
+  r: replaceAction,
 };
 
 /**
@@ -38,4 +42,6 @@ export const getActionKeys = (): string[] => {
 
 // Re-export actions
 export { pasteAction, pasteBeforeAction } from "./paste-actions";
+export { repeatAction } from "./repeat-action";
+export { createReplaceAction, replaceAction } from "./replace-action";
 export { toggleCaseAction } from "./toggle-case-action";

@@ -3,8 +3,12 @@ import { useSettingsStore } from "@/settings/store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useEditorInstanceStore } from "@/stores/editor-instance-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
-import { executeVimCommand } from "@/stores/vim";
-import { getCommandParseStatus } from "@/stores/vim/core/command-parser";
+import {
+  executeReplaceCommand,
+  executeVimCommand,
+  getCommandParseStatus,
+  parseVimCommand,
+} from "@/stores/vim";
 import { createVimEditing } from "@/stores/vim-editing";
 import { useVimSearchStore } from "@/stores/vim-search";
 import { useVimStore } from "@/stores/vim-store";
@@ -15,12 +19,28 @@ interface UseVimKeyboardProps {
   onGoToLine?: (line: number) => void;
 }
 
+const getReplacementChar = (event: KeyboardEvent): string | null => {
+  if (event.key.length === 1) {
+    return event.key;
+  }
+
+  if (event.key === "Enter") {
+    return "\n";
+  }
+
+  if (event.key === "Tab") {
+    return "\t";
+  }
+
+  return null;
+};
+
 export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
   const { settings } = useSettingsStore();
   const vimMode = settings.vimMode;
   const mode = useVimStore.use.mode();
   const isCommandMode = useVimStore.use.isCommandMode();
-  const lastKey = useVimStore.use.lastKey();
+  const _lastKey = useVimStore.use.lastKey();
   const {
     setMode,
     enterCommandMode,
@@ -190,6 +210,40 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
       if (isCapturingInput()) return;
 
       const key = e.key;
+      const currentLastKey = useVimStore.getState().lastKey;
+
+      if (currentLastKey === "r") {
+        if (key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          clearLastKey();
+          clearKeyBuffer();
+          return true;
+        }
+
+        const replacementChar = getReplacementChar(e);
+        if (!replacementChar) {
+          clearLastKey();
+          clearKeyBuffer();
+          return false;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const buffer = [...useVimStore.getState().keyBuffer];
+        const command = parseVimCommand(buffer);
+        const count = command?.count ?? 1;
+        const commandKeys = [...buffer, replacementChar];
+        const success = executeReplaceCommand(replacementChar, { count });
+        if (!success) {
+          console.warn("Failed to execute replace command:", commandKeys.join(""));
+        }
+
+        clearKeyBuffer();
+        clearLastKey();
+        return true;
+      }
 
       // Handle special commands that don't fit the operator-motion pattern
       // These commands are handled directly without going through the key buffer
@@ -319,7 +373,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           clearKeyBuffer();
           vimEdit.undo();
           return true;
-        case "r":
+        case "r": {
           if (e.ctrlKey) {
             e.preventDefault();
             e.stopPropagation();
@@ -330,8 +384,15 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           // Wait for next character for replace
           e.preventDefault();
           e.stopPropagation();
+          const bufferBeforeReplace = [...useVimStore.getState().keyBuffer];
+          const candidateBuffer = [...bufferBeforeReplace, "r"];
+          if (getCommandParseStatus(candidateBuffer) === "invalid") {
+            clearKeyBuffer();
+          }
+          addToKeyBuffer("r");
           setLastKey("r");
           return true;
+        }
         case "s":
           e.preventDefault();
           e.stopPropagation();
@@ -369,17 +430,6 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           clearKeyBuffer();
           findPrevious();
           return true;
-      }
-
-      // Handle character replacement (r{char})
-      if (lastKey === "r" && key.length === 1) {
-        // Replace character with the pressed key
-        e.preventDefault();
-        e.stopPropagation();
-        vimEdit.replaceChar(key);
-        clearLastKey();
-        clearKeyBuffer();
-        return true;
       }
 
       // Handle arrow keys by mapping them to vim motions
