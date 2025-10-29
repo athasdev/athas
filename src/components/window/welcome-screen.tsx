@@ -81,7 +81,7 @@ const WelcomeScreen = ({
       {/* Logo Section */}
       <div className="mb-6 flex flex-col items-center">
         <div className="mb-1 flex justify-center">
-          <span className="font-bold font-mono text-4xl text-white">athas</span>
+          <span className="font-bold font-mono text-4xl text-text">athas</span>
         </div>
         <div className="flex items-center gap-2 text-text-lighter">
           <p className="font-mono text-xs">v{appVersion}</p>
