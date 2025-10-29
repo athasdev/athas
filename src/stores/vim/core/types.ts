@@ -24,6 +24,7 @@ export interface EditorContext {
   activeBufferId: string | null;
   updateContent: (newContent: string) => void;
   setCursorPosition: (position: Position) => void;
+  tabSize: number; // The count from the command (e.g., 3 in 3>>)
 }
 
 /**

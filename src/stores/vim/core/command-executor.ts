@@ -5,6 +5,7 @@
 
 import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
 import { calculateOffsetFromPosition } from "@/utils/editor-position";
 import { getAction } from "../actions";
@@ -68,7 +69,6 @@ export const executeVimCommand = (keys: string[]): boolean => {
       let range: VimRange | null;
 
       if (command.motion && command.operator === command.motion) {
-        console.log("Operator Motion Same comand");
         range = buildLinewiseRange(context, count);
       }
       // Get range from text object
@@ -94,6 +94,10 @@ export const executeVimCommand = (keys: string[]): boolean => {
 
       // Execute the operator on the range
       operator.execute(range, context);
+
+      if (operator.entersInsertMode) {
+        // Todo Implement this
+      }
 
       return true;
     }
@@ -135,10 +139,12 @@ const getEditorContext = (): EditorContext | null => {
   const cursorState = useEditorCursorStore.getState();
   const viewState = useEditorViewStore.getState();
   const bufferState = useBufferStore.getState();
+  const settingStore = useEditorSettingsStore.getState();
 
   const { cursorPosition } = cursorState;
   const { lines } = viewState;
   const { activeBufferId } = bufferState;
+  const { tabSize } = settingStore;
 
   if (!lines || lines.length === 0) return null;
 
@@ -168,6 +174,7 @@ const getEditorContext = (): EditorContext | null => {
     activeBufferId,
     updateContent,
     setCursorPosition,
+    tabSize,
   };
 };
 

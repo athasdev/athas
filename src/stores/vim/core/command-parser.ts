@@ -5,6 +5,7 @@
  */
 
 import { getActionKeys } from "../actions";
+import { getOperatorKeys } from "../operators";
 import { getMotionKeys } from "./motion-registry";
 import type { VimCommand } from "./types";
 
@@ -237,7 +238,7 @@ export const parseVimCommand = (keys: string[]): VimCommand | null => {
  * Check if a key is an operator
  */
 const isOperatorKey = (key: string): boolean => {
-  return ["d", "c", "y"].includes(key);
+  return getOperatorKeys().includes(key);
 };
 
 /**

@@ -5,6 +5,8 @@
 import type { Operator } from "../core/types";
 import { changeOperator } from "./change-operator";
 import { deleteOperator } from "./delete-operator";
+import { indentOperator } from "./indent-operator";
+import { outdentOperator } from "./outdent-operator";
 import { yankOperator } from "./yank-operator";
 
 /**
@@ -14,6 +16,8 @@ export const operatorRegistry: Record<string, Operator> = {
   d: deleteOperator,
   c: changeOperator,
   y: yankOperator,
+  ">": indentOperator,
+  "<": outdentOperator,
 };
 
 /**
