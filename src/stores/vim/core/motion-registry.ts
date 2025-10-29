@@ -10,12 +10,14 @@ import {
   repeatFindChar,
   repeatFindCharReverse,
 } from "../motions/character-motions";
+import { fileEnd, fileStart } from "../motions/file-motions";
 import {
   lineEnd,
   lineFirstNonBlank,
   lineFirstNonBlankUnderscore,
   lineStart,
 } from "../motions/line-motions";
+import { viewportBottom, viewportMiddle, viewportTop } from "../motions/viewport-motions";
 import {
   WORDBackward,
   WORDEnd,
@@ -23,6 +25,7 @@ import {
   wordBackward,
   wordEnd,
   wordForward,
+  wordPreviousEnd,
 } from "../motions/word-motions";
 import type { Motion } from "./types";
 
@@ -34,9 +37,12 @@ export const motionRegistry: Record<string, Motion> = {
   w: wordForward,
   b: wordBackward,
   e: wordEnd,
+  ge: wordPreviousEnd,
   W: WORDForward,
   B: WORDBackward,
   E: WORDEnd,
+  gg: fileStart,
+  G: fileEnd,
 
   // Line motions
   "0": lineStart,
@@ -51,6 +57,11 @@ export const motionRegistry: Record<string, Motion> = {
   k: charUp,
   ";": repeatFindChar,
   ",": repeatFindCharReverse,
+
+  // Viewport motions
+  H: viewportTop,
+  M: viewportMiddle,
+  L: viewportBottom,
 };
 
 /**

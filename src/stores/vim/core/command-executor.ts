@@ -1,16 +1,37 @@
 /**
  * Vim command executor
- * Orchestrates operators, motions, and text objects
+ * Orchestrates operators, motions, text objects, and actions
  */
 
 import { useBufferStore } from "@/stores/buffer-store";
 import { useEditorCursorStore } from "@/stores/editor-cursor-store";
+import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
+import { useVimStore } from "@/stores/vim-store";
+import { calculateOffsetFromPosition } from "@/utils/editor-position";
+import { createReplaceAction, getAction } from "../actions";
 import { getOperator } from "../operators";
 import { getEffectiveCount, parseVimCommand } from "./command-parser";
 import { getMotion } from "./motion-registry";
 import { getTextObject } from "./text-objects";
 import type { EditorContext, VimRange } from "./types";
+
+const buildLinewiseRange = (context: EditorContext, count: number): VimRange => {
+  const { cursor, lines } = context;
+  const startLine = cursor.line;
+  const endLine = Math.min(lines.length - 1, startLine + Math.max(count, 1) - 1);
+
+  const startOffset = calculateOffsetFromPosition(startLine, 0, lines);
+  const endColumn = lines[endLine]?.length ?? 0;
+  const endOffset = calculateOffsetFromPosition(endLine, endColumn, lines);
+
+  return {
+    start: { line: startLine, column: 0, offset: startOffset },
+    end: { line: endLine, column: endColumn, offset: endOffset },
+    linewise: true,
+    inclusive: true,
+  };
+};
 
 /**
  * Execute a vim command
@@ -25,8 +46,35 @@ export const executeVimCommand = (keys: string[]): boolean => {
   if (!context) return false;
 
   const count = getEffectiveCount(command);
+  const explicitCount = command.count !== undefined;
 
   try {
+    // Handle standalone actions (p, P, etc.)
+    if (command.action) {
+      const action = getAction(command.action);
+      if (!action) return false;
+
+      // Don't track the repeat command itself
+      if (command.action !== ".") {
+        // Store this operation for repeat functionality (but only if it's repeatable)
+        if (action.repeatable) {
+          const vimStore = useVimStore.getState();
+          vimStore.actions.setLastOperation({
+            type: "action",
+            keys: [...keys], // Clone the keys array
+            count: command.count,
+          });
+        }
+      }
+
+      // Execute the action multiple times if count is specified
+      for (let i = 0; i < count; i++) {
+        action.execute(context);
+      }
+
+      return true;
+    }
+
     // Handle operator + motion/text-object
     if (command.operator) {
       const operator = getOperator(command.operator);
@@ -34,8 +82,11 @@ export const executeVimCommand = (keys: string[]): boolean => {
 
       let range: VimRange | null;
 
+      if (command.motion && command.operator === command.motion) {
+        range = buildLinewiseRange(context, count);
+      }
       // Get range from text object
-      if (command.textObject) {
+      else if (command.textObject) {
         const textObj = getTextObject(command.textObject.object);
         if (!textObj) return false;
 
@@ -47,13 +98,32 @@ export const executeVimCommand = (keys: string[]): boolean => {
         const motion = getMotion(command.motion);
         if (!motion) return false;
 
-        range = motion.calculate(context.cursor, context.lines, count);
+        const motionCountArg = command.count === undefined ? undefined : command.count;
+        range = motion.calculate(context.cursor, context.lines, motionCountArg, {
+          explicitCount,
+        });
       } else {
         return false;
       }
 
+      // Store this operation for repeat functionality (if it's repeatable)
+      if (operator.repeatable) {
+        const vimStore = useVimStore.getState();
+        vimStore.actions.setLastOperation({
+          type: "command",
+          keys: [...keys], // Clone the keys array
+          count: command.count,
+        });
+      }
+
       // Execute the operator on the range
       operator.execute(range, context);
+
+      // Handle mode transitions for operators that enter insert mode
+      if (operator.entersInsertMode) {
+        const vimStore = useVimStore.getState();
+        vimStore.actions.setMode("insert");
+      }
 
       return true;
     }
@@ -63,7 +133,10 @@ export const executeVimCommand = (keys: string[]): boolean => {
       const motion = getMotion(command.motion);
       if (!motion) return false;
 
-      const range = motion.calculate(context.cursor, context.lines, count);
+      const motionCountArg = command.count === undefined ? undefined : command.count;
+      const range = motion.calculate(context.cursor, context.lines, motionCountArg, {
+        explicitCount,
+      });
 
       // For navigation, just move the cursor to the end of the range
       context.setCursorPosition(range.end);
@@ -92,10 +165,12 @@ const getEditorContext = (): EditorContext | null => {
   const cursorState = useEditorCursorStore.getState();
   const viewState = useEditorViewStore.getState();
   const bufferState = useBufferStore.getState();
+  const settingStore = useEditorSettingsStore.getState();
 
   const { cursorPosition } = cursorState;
   const { lines } = viewState;
   const { activeBufferId } = bufferState;
+  const { tabSize } = settingStore;
 
   if (!lines || lines.length === 0) return null;
 
@@ -125,6 +200,7 @@ const getEditorContext = (): EditorContext | null => {
     activeBufferId,
     updateContent,
     setCursorPosition,
+    tabSize,
   };
 };
 
@@ -135,6 +211,11 @@ export const canExecuteCommand = (keys: string[]): boolean => {
   const command = parseVimCommand(keys);
   if (!command) return false;
 
+  // Standalone actions are valid
+  if (command.action) {
+    return true;
+  }
+
   // Need operator + (motion or text-object)
   // OR just motion (for navigation)
   if (command.operator) {
@@ -142,4 +223,17 @@ export const canExecuteCommand = (keys: string[]): boolean => {
   }
 
   return !!command.motion;
+};
+
+export const executeReplaceCommand = (char: string, options: { count?: number } = {}): boolean => {
+  if (!char) return false;
+
+  const context = getEditorContext();
+  if (!context) return false;
+
+  const count = Math.max(1, options.count ?? 1);
+  const replaceAction = createReplaceAction(char, count);
+
+  replaceAction.execute(context);
+  return true;
 };

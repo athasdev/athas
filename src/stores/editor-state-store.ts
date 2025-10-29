@@ -3,8 +3,10 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import type { Position, Range } from "@/types/editor-types";
+import { getLineHeight } from "@/utils/editor-position";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { useBufferStore } from "./buffer-store";
+import { useEditorSettingsStore } from "./editor-settings-store";
 
 // Position Cache Manager
 class PositionCacheManager {
@@ -47,6 +49,31 @@ class PositionCacheManager {
 }
 
 const positionCache = new PositionCacheManager();
+
+const ensureCursorVisible = (position: Position) => {
+  if (typeof window === "undefined") return;
+
+  const viewport = document.querySelector(".editor-viewport") as HTMLDivElement | null;
+  if (!viewport) return;
+
+  const fontSize = useEditorSettingsStore.getState().fontSize;
+  const lineHeight = getLineHeight(fontSize);
+  const targetTop = position.line * lineHeight;
+  const targetBottom = targetTop + lineHeight;
+  const currentScrollTop = viewport.scrollTop;
+  const viewportHeight = viewport.clientHeight || 0;
+
+  if (targetTop < currentScrollTop) {
+    viewport.scrollTop = targetTop;
+  } else if (targetBottom > currentScrollTop + viewportHeight) {
+    viewport.scrollTop = Math.max(0, targetBottom - viewportHeight);
+  }
+
+  const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement | null;
+  if (textarea && textarea.scrollTop !== viewport.scrollTop) {
+    textarea.scrollTop = viewport.scrollTop;
+  }
+};
 
 // State Interface
 interface EditorState {
@@ -126,6 +153,7 @@ export const useEditorStateStore = createSelectors(
             positionCache.set(activeBufferId, position);
           }
           set({ cursorPosition: position });
+          ensureCursorVisible(position);
         },
         setSelection: (selection) => set({ selection }),
         setDesiredColumn: (column) => set({ desiredColumn: column }),

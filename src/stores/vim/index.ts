@@ -5,13 +5,14 @@
  * - Text objects (iw, aw, i", a(, etc.)
  * - Motions (w, b, e, $, 0, f, t, etc.)
  * - Operators (d, c, y)
- * - Count support (3dw, 2ciw, d3w, etc.)
- * - Easy extension with new motions, operators, and text objects
+ * - Actions (p, P)
+ * - Count support (3dw, 2ciw, d3w, 3p, etc.)
+ * - Easy extension with new motions, operators, actions, and text objects
  *
  * Architecture:
  *
  * 1. **Core Types** (core/types.ts)
- *    - Defines interfaces for Motion, Operator, TextObject, Range, etc.
+ *    - Defines interfaces for Motion, Operator, Action, TextObject, Range, etc.
  *
  * 2. **Text Objects** (core/text-objects.ts)
  *    - Implements iw, aw, i", a(, and other text objects
@@ -29,14 +30,18 @@
  *    - yank-operator.ts: y operator
  *    - Each operator acts on a Range
  *
- * 5. **Command Parser** (core/command-parser.ts)
- *    - Parses vim command sequences like "3dw", "ci(", "d2w"
+ * 5. **Actions** (actions/*.ts)
+ *    - paste-actions.ts: p, P actions
+ *    - Each action performs a standalone operation
+ *
+ * 6. **Command Parser** (core/command-parser.ts)
+ *    - Parses vim command sequences like "3dw", "ci(", "d2w", "3p"
  *    - Handles count before and after operator
  *    - Returns structured VimCommand object
  *
- * 6. **Command Executor** (core/command-executor.ts)
+ * 7. **Command Executor** (core/command-executor.ts)
  *    - Executes parsed commands
- *    - Orchestrates motions, operators, and text objects
+ *    - Orchestrates motions, operators, actions, and text objects
  *    - Manages editor context
  *
  * Usage Example:
@@ -99,10 +104,23 @@
  * ```
  */
 
+// Actions
+export {
+  getAction,
+  getActionKeys,
+  isAction,
+  pasteAction,
+  pasteBeforeAction,
+} from "./actions";
 // Command execution
-export { canExecuteCommand, executeVimCommand } from "./core/command-executor";
+export {
+  canExecuteCommand,
+  executeReplaceCommand,
+  executeVimCommand,
+} from "./core/command-executor";
 export {
   expectsMoreKeys,
+  getCommandParseStatus,
   getEffectiveCount,
   isCommandComplete,
   parseVimCommand,
@@ -112,6 +130,7 @@ export { getMotion, getMotionKeys, isMotion } from "./core/motion-registry";
 export { getTextObject } from "./core/text-objects";
 // Core types
 export type {
+  Action,
   EditorContext,
   Motion,
   Operator,
@@ -121,7 +140,9 @@ export type {
   VimRange,
 } from "./core/types";
 export * from "./motions/character-motions";
+export * from "./motions/file-motions";
 export * from "./motions/line-motions";
+export * from "./motions/viewport-motions";
 
 // Motions (for external use if needed)
 export * from "./motions/word-motions";

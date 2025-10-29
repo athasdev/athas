@@ -24,11 +24,16 @@ export interface EditorContext {
   activeBufferId: string | null;
   updateContent: (newContent: string) => void;
   setCursorPosition: (position: Position) => void;
+  tabSize: number; // The count from the command (e.g., 3 in 3>>)
 }
 
 /**
  * A motion calculates a range from a starting position
  */
+export interface MotionCalculateMeta {
+  explicitCount?: boolean;
+}
+
 export interface Motion {
   name: string;
   /**
@@ -38,7 +43,12 @@ export interface Motion {
    * @param count Optional count multiplier (e.g., 3w means count=3)
    * @returns The range this motion covers
    */
-  calculate: (cursor: Position, lines: string[], count?: number) => VimRange;
+  calculate: (
+    cursor: Position,
+    lines: string[],
+    count?: number,
+    meta?: MotionCalculateMeta,
+  ) => VimRange;
   /**
    * Whether this motion is linewise by default
    */
@@ -101,6 +111,7 @@ export interface VimCommand {
     mode: "inner" | "around";
     object: string;
   };
+  action?: string;
   register?: string;
 }
 

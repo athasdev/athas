@@ -30,12 +30,12 @@ export const charLeft: Motion = {
     const offset = calculateOffsetFromPosition(newLine, newColumn, lines);
 
     return {
-      start: {
+      start: cursor,
+      end: {
         line: newLine,
         column: newColumn,
         offset,
       },
-      end: cursor,
       inclusive: false,
     };
   },
@@ -94,16 +94,16 @@ export const charUp: Motion = {
   name: "k",
   calculate: (cursor: Position, lines: string[], count = 1): VimRange => {
     const newLine = Math.max(0, cursor.line - count);
-    const newColumn = Math.min(cursor.column, lines[newLine].length);
+    const newColumn = Math.min(cursor.column, lines[newLine]?.length || 0);
     const offset = calculateOffsetFromPosition(newLine, newColumn, lines);
 
     return {
-      start: {
+      start: cursor,
+      end: {
         line: newLine,
         column: newColumn,
         offset,
       },
-      end: cursor,
       inclusive: false,
       linewise: count > 1, // Multi-line k is linewise
     };

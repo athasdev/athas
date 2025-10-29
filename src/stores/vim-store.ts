@@ -19,6 +19,15 @@ interface VimState {
     end: { line: number; column: number } | null;
   };
   visualMode: "char" | "line" | null; // Track visual mode type
+  register: {
+    text: string;
+    isLineWise: boolean;
+  };
+  lastOperation: {
+    type: "command" | "action" | null;
+    keys: string[];
+    count?: number;
+  } | null; // For repeat (.) functionality
 }
 
 const defaultVimState: VimState = {
@@ -34,6 +43,11 @@ const defaultVimState: VimState = {
     end: null,
   },
   visualMode: null,
+  register: {
+    text: "",
+    isLineWise: false,
+  },
+  lastOperation: null,
 };
 
 const useVimStoreBase = create(
@@ -122,6 +136,13 @@ const useVimStoreBase = create(
           });
         },
 
+        setRegister: (text: string, isLineWise: boolean) => {
+          set((state) => {
+            state.register.text = text;
+            state.register.isLineWise = isLineWise;
+          });
+        },
+
         clearLastKey: () => {
           set((state) => {
             state.lastKey = null;
@@ -177,6 +198,23 @@ const useVimStoreBase = create(
             default:
               return "NORMAL";
           }
+        },
+
+        // Last operation management for repeat functionality
+        setLastOperation: (operation: VimState["lastOperation"]) => {
+          set((state) => {
+            state.lastOperation = operation;
+          });
+        },
+
+        getLastOperation: (): VimState["lastOperation"] => {
+          return get().lastOperation;
+        },
+
+        clearLastOperation: () => {
+          set((state) => {
+            state.lastOperation = null;
+          });
         },
       },
     })),
