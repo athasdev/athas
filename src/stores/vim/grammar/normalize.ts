@@ -107,6 +107,7 @@ export function normalize(cmd: Command): Command {
  * Calculate effective count for a command
  *
  * For actions: just the count (default 1)
+ * For motions: just the count (default 1)
  * For operators: countBefore * countAfter (default 1 each)
  *
  * Examples:
@@ -114,9 +115,14 @@ export function normalize(cmd: Command): Command {
  * - d3w → countBefore=undefined, countAfter=3 → count=3
  * - 2d3w → countBefore=2, countAfter=3 → count=6
  * - 5dd → countBefore=5, doubled=true → count=5
+ * - 3w → count=3 (motion)
  */
 export function effectiveCount(cmd: Command): number {
   if (cmd.kind === "action") {
+    return cmd.count ?? 1;
+  }
+
+  if (cmd.kind === "motion") {
     return cmd.count ?? 1;
   }
 
@@ -131,6 +137,7 @@ export function effectiveCount(cmd: Command): number {
  * Get the register to use for a command
  *
  * Returns the register name if specified, otherwise the default unnamed register (")
+ * Motion commands don't use registers.
  */
 export function getRegisterName(cmd: Command): string {
   if (cmd.kind === "action" && cmd.reg) {
@@ -139,6 +146,11 @@ export function getRegisterName(cmd: Command): string {
 
   if (cmd.kind === "operator" && cmd.reg) {
     return cmd.reg.name;
+  }
+
+  // Motion commands don't use registers
+  if (cmd.kind === "motion") {
+    return '"';
   }
 
   // Default to unnamed register
@@ -172,6 +184,11 @@ export function isRepeatable(cmd: Command): boolean {
     }
 
     // Undo, redo, repeat are not repeatable
+    return false;
+  }
+
+  // Motions are not repeatable (they don't modify text)
+  if (cmd.kind === "motion") {
     return false;
   }
 

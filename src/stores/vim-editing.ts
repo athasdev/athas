@@ -15,8 +15,8 @@ const redoStack: string[] = [];
 export interface VimEditingCommands {
   deleteLine: () => void;
   yankLine: () => void;
-  paste: () => void;
-  pasteAbove: () => void;
+  paste: (content?: string, type?: "line" | "char") => void;
+  pasteAbove: (content?: string, type?: "line" | "char") => void;
   undo: () => void;
   redo: () => void;
   deleteChar: () => void;
@@ -122,18 +122,22 @@ export const createVimEditing = (): VimEditingCommands => {
       vimClipboard = { content: `${lines[currentPos.line]}\n`, type: "line" };
     },
 
-    paste: () => {
-      if (!vimClipboard.content) return;
+    paste: (content?: string, type?: "line" | "char") => {
+      // Use provided content or fall back to vimClipboard
+      const pasteContent = content ?? vimClipboard.content;
+      const pasteType = type ?? vimClipboard.type;
+
+      if (!pasteContent) return;
 
       saveUndoState();
 
       const currentPos = getCursorPosition();
       const lines = getLines();
 
-      if (vimClipboard.type === "line") {
+      if (pasteType === "line") {
         // Paste as new line below current line
         const newLines = [...lines];
-        newLines.splice(currentPos.line + 1, 0, vimClipboard.content.replace(/\n$/, ""));
+        newLines.splice(currentPos.line + 1, 0, pasteContent.replace(/\n$/, ""));
         const newContent = newLines.join("\n");
 
         // Move cursor to beginning of pasted line
@@ -149,13 +153,13 @@ export const createVimEditing = (): VimEditingCommands => {
         const currentContent = getContent();
         const newContent =
           currentContent.slice(0, currentPos.offset) +
-          vimClipboard.content +
+          pasteContent +
           currentContent.slice(currentPos.offset);
 
         updateContent(newContent);
 
         // Move cursor to end of pasted content
-        const newOffset = currentPos.offset + vimClipboard.content.length;
+        const newOffset = currentPos.offset + pasteContent.length;
         const newLines = newContent.split("\n");
         let line = 0;
         let offset = 0;
@@ -172,8 +176,12 @@ export const createVimEditing = (): VimEditingCommands => {
       }
     },
 
-    pasteAbove: () => {
-      if (!vimClipboard.content || vimClipboard.type !== "line") return;
+    pasteAbove: (content?: string, type?: "line" | "char") => {
+      // Use provided content or fall back to vimClipboard
+      const pasteContent = content ?? vimClipboard.content;
+      const pasteType = type ?? vimClipboard.type;
+
+      if (!pasteContent || pasteType !== "line") return;
 
       saveUndoState();
 
@@ -182,7 +190,7 @@ export const createVimEditing = (): VimEditingCommands => {
 
       // Paste as new line above current line
       const newLines = [...lines];
-      newLines.splice(currentPos.line, 0, vimClipboard.content.replace(/\n$/, ""));
+      newLines.splice(currentPos.line, 0, pasteContent.replace(/\n$/, ""));
       const newContent = newLines.join("\n");
 
       // Move cursor to beginning of pasted line
@@ -254,8 +262,16 @@ export const createVimEditing = (): VimEditingCommands => {
           currentContent.slice(0, currentPos.offset) + currentContent.slice(currentPos.offset + 1);
 
         updateContent(newContent);
-        // Cursor position stays the same
-        updateTextareaCursor(currentPos);
+
+        // Recalculate cursor position with new content
+        const newLines = newContent.split("\n");
+        const newLine = Math.min(currentPos.line, newLines.length - 1);
+        const newColumn = Math.min(currentPos.column, newLines[newLine]?.length ?? 0);
+        const newOffset = calculateOffsetFromPosition(newLine, newColumn, newLines);
+
+        const newPosition = { line: newLine, column: newColumn, offset: newOffset };
+        setCursorPosition(newPosition);
+        updateTextareaCursor(newPosition);
       }
     },
 
@@ -299,7 +315,8 @@ export const createVimEditing = (): VimEditingCommands => {
           currentContent.slice(currentPos.offset + 1);
 
         updateContent(newContent);
-        // Cursor position stays the same
+        // Cursor position stays the same - update both store and textarea
+        setCursorPosition(currentPos);
         updateTextareaCursor(currentPos);
       }
     },

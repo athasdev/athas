@@ -38,7 +38,8 @@ interface VimState {
     type: "command" | "action" | null;
     keys: string[];
     count?: number;
-  } | null; // For repeat (.) functionality
+  } | null; // Legacy - for old parser
+  lastRepeatableCommand: any | null; // Store the last Command AST for repeat (.) functionality
 }
 
 const defaultVimState: VimState = {
@@ -70,6 +71,7 @@ const defaultVimState: VimState = {
   },
   activeRegister: null,
   lastOperation: null,
+  lastRepeatableCommand: null,
 };
 
 const useVimStoreBase = create(
@@ -236,6 +238,23 @@ const useVimStoreBase = create(
         clearLastOperation: () => {
           set((state) => {
             state.lastOperation = null;
+          });
+        },
+
+        // Last command management for new grammar-based repeat
+        setLastRepeatableCommand: (command: any) => {
+          set((state) => {
+            state.lastRepeatableCommand = command;
+          });
+        },
+
+        getLastRepeatableCommand: (): any => {
+          return get().lastRepeatableCommand;
+        },
+
+        clearLastRepeatableCommand: () => {
+          set((state) => {
+            state.lastRepeatableCommand = null;
           });
         },
 

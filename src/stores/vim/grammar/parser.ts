@@ -267,6 +267,26 @@ export function parse(keys: string[]): ParseResult {
     return { status: "incomplete" };
   }
 
+  // 5) Try MOTION (standalone cursor movement)
+  const motionResult = parseMotion(keys, i);
+  if (motionResult.status === "complete") {
+    if (motionResult.index !== keys.length) {
+      return { status: "invalid", reason: "Trailing keys after motion" };
+    }
+
+    const cmd: Command = {
+      kind: "motion",
+      count: st.count1,
+      motion: motionResult.motion,
+    };
+
+    return { status: "complete", command: cmd };
+  }
+
+  if (motionResult.status === "incomplete" || motionResult.status === "needsChar") {
+    return motionResult;
+  }
+
   // If we get here, no valid command was found
   return { status: "invalid", reason: "Unknown command prefix" };
 }

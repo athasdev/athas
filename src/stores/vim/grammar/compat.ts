@@ -20,7 +20,7 @@ import { getCommandParseStatus as getNewParseStatus, parse as parseNew } from ".
  * Set to true to use new parser, false to use old parser.
  * Can be toggled at runtime for testing.
  */
-let USE_NEW_PARSER = true;
+let USE_NEW_PARSER = true; // Default: enabled for production use
 
 /**
  * Enable or disable the new parser

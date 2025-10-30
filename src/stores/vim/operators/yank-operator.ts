@@ -2,6 +2,7 @@
  * Yank operator (y)
  */
 
+import { useVimStore } from "@/stores/vim-store";
 import type { EditorContext, Operator, VimRange } from "../core/types";
 
 /**
@@ -33,10 +34,17 @@ export const yankOperator: Operator = {
       const startLine = Math.min(range.start.line, range.end.line);
       const endLine = Math.max(range.start.line, range.end.line);
       const yankedLines = lines.slice(startLine, endLine + 1);
+      const yankedContent = yankedLines.join("\n");
       vimClipboard = {
-        content: yankedLines.join("\n"),
+        content: yankedContent,
         linewise: true,
       };
+
+      // Also store in vim store's register system
+      const vimStore = useVimStore.getState();
+      const registerName = vimStore.activeRegister || '"';
+      vimStore.actions.setRegisterContent(registerName, yankedContent, "line");
+
       return;
     }
 
@@ -46,11 +54,17 @@ export const yankOperator: Operator = {
 
     // For inclusive ranges, include the end character
     const actualEndOffset = range.inclusive ? endOffset + 1 : endOffset;
+    const yankedContent = content.slice(startOffset, actualEndOffset);
 
     vimClipboard = {
-      content: content.slice(startOffset, actualEndOffset),
+      content: yankedContent,
       linewise: false,
     };
+
+    // Also store in vim store's register system
+    const vimStore = useVimStore.getState();
+    const registerName = vimStore.activeRegister || '"';
+    vimStore.actions.setRegisterContent(registerName, yankedContent, "char");
   },
 };
 

@@ -2,7 +2,7 @@
  * AST (Abstract Syntax Tree) types for Vim grammar
  *
  * Grammar (EBNF):
- * Command        := [Register] [Count] ( Action | OperatorInvocation )
+ * Command        := [Register] [Count] ( Action | OperatorInvocation | Motion )
  * Register       := '"' RegisterName
  * Count          := DigitNonZero { Digit }
  * Action         := PutAction | CharAction | MiscAction | ModeChangeAction
@@ -41,6 +41,11 @@ export type Command =
       doubled?: boolean; // true for dd, yy, cc, >>, etc.
       target?: Target; // absent => incomplete command
       countAfter?: Count;
+    }
+  | {
+      kind: "motion";
+      count?: Count;
+      motion: Motion;
     };
 
 /**

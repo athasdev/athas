@@ -18,6 +18,7 @@ import { getTextObject } from "../core/text-objects";
 import type { EditorContext, VimRange } from "../core/types";
 import { getOperator } from "../operators";
 import type { Command, Motion } from "./ast";
+import { getMotionInfo } from "./motion-kind";
 import { effectiveCount, getRegisterName, isRepeatable, normalize } from "./normalize";
 
 /**
@@ -48,6 +49,11 @@ export function executeAST(cmd: Command): boolean {
       return executeOperator(normalized, context, count, registerName);
     }
 
+    // Handle MOTION commands (standalone cursor movement)
+    if (normalized.kind === "motion") {
+      return executeMotion(normalized, context, count);
+    }
+
     return false;
   } catch (error) {
     console.error("Error executing vim command:", error);
@@ -71,11 +77,18 @@ function executeAction(
     const vimStore = useVimStore.getState();
     const register = vimStore.actions.getRegisterContent(registerName);
 
+    if (!register.content) {
+      console.warn("Nothing in register to paste");
+      return false;
+    }
+
+    const editing = createVimEditing();
+
     for (let i = 0; i < count; i++) {
       if (action.which === "p") {
-        pastePutAction(context, register.content, register.type);
+        editing.paste(register.content, register.type);
       } else {
-        pastePutBeforeAction(context, register.content, register.type);
+        editing.pasteAbove(register.content, register.type);
       }
     }
 
@@ -111,18 +124,32 @@ function executeAction(
   // Single char operations (x, X)
   if (action.type === "singleChar") {
     const editing = createVimEditing();
-    const _vimStore = useVimStore.getState();
+    const vimStore = useVimStore.getState();
+
+    // Collect all deleted characters
+    let deletedContent = "";
+    const currentContent = context.content;
+    let currentOffset = context.cursor.offset;
 
     for (let i = 0; i < count; i++) {
       if (action.operation === "deleteChar") {
+        if (currentOffset < currentContent.length) {
+          deletedContent += currentContent[currentOffset];
+        }
         editing.deleteChar();
       } else {
+        if (currentOffset > 0) {
+          deletedContent = currentContent[currentOffset - 1] + deletedContent;
+          currentOffset--;
+        }
         editing.deleteCharBefore();
       }
     }
 
     // Store deleted content in register
-    // (deleteChar and deleteCharBefore already handle this)
+    if (deletedContent) {
+      vimStore.actions.setRegisterContent(registerName, deletedContent, "char");
+    }
 
     // Store for repeat
     if (isRepeatable(cmd)) {
@@ -153,16 +180,16 @@ function executeAction(
   // Repeat (dot command)
   if (action.type === "repeat") {
     const vimStore = useVimStore.getState();
-    const lastOp = vimStore.actions.getLastOperation();
+    const lastCmd = vimStore.actions.getLastRepeatableCommand();
 
-    if (lastOp?.keys) {
-      // Re-execute the last operation (not implemented yet - needs recursion guard)
-      // For now, return true to avoid error
-      console.warn("Dot repeat not fully implemented in new executor yet");
-      return true;
+    if (!lastCmd) {
+      console.warn("No command to repeat");
+      return false;
     }
 
-    return false;
+    // Re-execute the last command (recursive call)
+    // The lastCmd is already normalized and validated, so we can execute it directly
+    return executeAST(lastCmd);
   }
 
   // Misc actions (J, ~, etc.) - delegate to old action system
@@ -183,6 +210,44 @@ function executeAction(
   }
 
   return false;
+}
+
+/**
+ * Execute a standalone motion command (cursor movement)
+ */
+function executeMotion(
+  cmd: Extract<Command, { kind: "motion" }>,
+  context: EditorContext,
+  count: number,
+): boolean {
+  const { motion } = cmd;
+
+  // Get motion key for registry lookup
+  const motionKey = getMotionKey(motion);
+  if (!motionKey) return false;
+
+  // Get motion implementation
+  const motionImpl = getMotion(motionKey);
+  if (!motionImpl) {
+    console.warn(`Motion not implemented: ${motionKey}`);
+    return false;
+  }
+
+  // Calculate where the motion would move the cursor
+  const range = motionImpl.calculate(context.cursor, context.lines, count, {
+    explicitCount: count > 1,
+  });
+
+  if (!range) return false;
+
+  // Move cursor to the end position of the range
+  context.setCursorPosition({
+    line: range.end.line,
+    column: range.end.column,
+    offset: calculateOffsetFromPosition(range.end.line, range.end.column, context.lines),
+  });
+
+  return true;
 }
 
 /**
@@ -262,10 +327,20 @@ function calculateMotionRange(
     explicitCount: count > 1,
   });
 
-  // Apply forced kind if specified
+  // Determine motion kind using motion-kind system
+  const motionInfo = getMotionInfo(motion);
+
+  // Apply forced kind if specified, otherwise use motion's natural kind
   if (forcedKind) {
     range.linewise = forcedKind === "line";
     // TODO: Handle blockwise
+  } else {
+    range.linewise = motionInfo.kind === "line";
+  }
+
+  // Also apply inclusivity from motion info if not already set
+  if (range.inclusive === undefined) {
+    range.inclusive = motionInfo.inclusive === "inclusive";
   }
 
   return range;
@@ -360,50 +435,15 @@ function executeModeChange(mode: string, context: EditorContext, _count: number)
 }
 
 /**
- * Paste action (p)
- */
-function pastePutAction(_context: EditorContext, content: string, type: "line" | "char"): void {
-  const editing = createVimEditing();
-
-  // Temporarily set the clipboard to the register content
-  const vimStore = useVimStore.getState();
-  const oldClipboard = vimStore.register;
-
-  vimStore.actions.setRegister(content, type === "line");
-  editing.paste();
-
-  // Restore old clipboard
-  vimStore.actions.setRegister(oldClipboard.text, oldClipboard.isLineWise);
-}
-
-/**
- * Paste before action (P)
- */
-function pastePutBeforeAction(
-  _context: EditorContext,
-  content: string,
-  type: "line" | "char",
-): void {
-  const editing = createVimEditing();
-
-  // Temporarily set the clipboard to the register content
-  const vimStore = useVimStore.getState();
-  const oldClipboard = vimStore.register;
-
-  vimStore.actions.setRegister(content, type === "line");
-  editing.pasteAbove();
-
-  // Restore old clipboard
-  vimStore.actions.setRegister(oldClipboard.text, oldClipboard.isLineWise);
-}
-
-/**
  * Store command for dot repeat
  */
 function storeForRepeat(cmd: Command): void {
-  // For now, just log - full implementation requires storing AST
-  // TODO: Store AST command for proper repeat
-  console.log("Storing for repeat (not fully implemented):", cmd);
+  const vimStore = useVimStore.getState();
+
+  // Store the normalized command for repeat
+  // Deep clone to avoid reference issues
+  const clonedCmd = JSON.parse(JSON.stringify(cmd));
+  vimStore.actions.setLastRepeatableCommand(clonedCmd);
 }
 
 /**
