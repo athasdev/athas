@@ -21,11 +21,11 @@ bun release -- 2.0.0
 ```
 
 That's it! The script will:
-1. ✅ Update version in `package.json` and `src-tauri/tauri.conf.json`
-2. ✅ Show you the commits since the last release
-3. ✅ Create a commit with the version changes
-4. ✅ Create and push a git tag
-5. ✅ Trigger GitHub Actions to build and release
+1. Update version in `package.json` and `src-tauri/tauri.conf.json`
+2. Show you the commits since the last release
+3. Create a commit with the version changes
+4. Create and push a git tag
+5. Trigger GitHub Actions to build and release
 
 ## What Happens After
 
@@ -157,7 +157,7 @@ Before releasing:
 
 - [ ] All new features are tested
 - [ ] Documentation is updated
-- [ ] CHANGELOG reflects changes (optional)
+- [ ] CHANGELOG reflects changes
 - [ ] No critical bugs in the current build
 - [ ] All tests pass locally
 - [ ] Working directory is clean
