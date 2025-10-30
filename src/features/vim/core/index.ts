@@ -181,6 +181,67 @@ export type {
   VimCommand,
   VimRange,
 } from "./core/types";
+export type {
+  Action as GrammarAction,
+  Command,
+  Count,
+  ModeChangeAction,
+  Motion as GrammarMotion,
+  OperatorKey,
+  ParseIncomplete,
+  ParseInvalid,
+  ParseNeedsChar,
+  ParseOk,
+  ParseResult,
+  RegisterRef,
+  SingleCharOperation,
+  Target,
+} from "./grammar/ast";
+export {
+  executeVimCommandCompat,
+  expectsMoreKeys as expectsMoreKeysCompat,
+  getCommandParseStatusCompat,
+  isCommandComplete as isCommandCompleteCompat,
+  isCommandInvalid,
+  isNewParserEnabled,
+  parseVimCommandCompat,
+  setUseNewParser,
+} from "./grammar/compat";
+export { executeAST } from "./grammar/executor";
+export {
+  getMotionInfo,
+  isMotionInclusive,
+  type MotionInclusivity,
+  type MotionInfo,
+  type MotionKind,
+  resolveMotionKind,
+} from "./grammar/motion-kind";
+export {
+  effectiveCount,
+  getRegisterName,
+  isRepeatable,
+  normalize,
+} from "./grammar/normalize";
+// New Grammar-Based Parser System
+export {
+  getCommandParseStatus as getGrammarParseStatus,
+  parse,
+} from "./grammar/parser";
+export {
+  actions as actionTokens,
+  expectsCharArg,
+  forcedKinds as forcedKindTokens,
+  isTextObjectKey,
+  motions as motionTokens,
+  operators as operatorTokens,
+  supportsDoubling,
+} from "./grammar/tokens";
+export {
+  TokenTrie,
+  type TokKind,
+  type TokSpec,
+  type TrieMatch,
+} from "./grammar/trie";
 export * from "./motions/character-motions";
 export * from "./motions/file-motions";
 export * from "./motions/line-motions";
