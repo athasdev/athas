@@ -384,31 +384,42 @@ export const useFileSystemStore = createSelectors(
           fileName = prompt("Enter the name for the new file:") ?? undefined;
           if (!fileName) return;
         }
-
         // Split the input path into parts
         const parts = fileName.split("/").filter(Boolean);
-
         // Validate input
         if (parts.length === 0) {
           alert("Invalid file name");
           return;
         }
 
-        // Check for path traversal attempts
-        if (parts.some((part) => part === ".." || part === ".")) {
-          alert("Path traversal is not allowed");
+        const finalFileName = parts.pop()!;
+
+        // Block path traversal and illegal separators
+        const hasIllegalCharacters = (segment: string) =>
+          segment === ".." || segment === "." || segment.includes("\\") || segment.includes("/");
+
+        // Check all directory parts AND the final filename
+        if (parts.some(hasIllegalCharacters) || hasIllegalCharacters(finalFileName)) {
+          alert("Invalid file name: path traversal and special characters are not allowed");
           return;
         }
 
-        const finalFileName = parts.pop()!;
         let currentPath = dirPath;
-
         // Create intermediate folders if they don't exist
         try {
           for (const folder of parts) {
-            currentPath = await get().createDirectory(currentPath, folder);
-          }
+            const potentialPath = await join(currentPath, folder);
+            // Check if directory already exists in the file tree
+            const existingFolder = findFileInTree(get().files, potentialPath);
 
+            if (existingFolder?.isDir) {
+              // Directory already exists, just use its path
+              currentPath = potentialPath;
+            } else {
+              // Create the directory if it doesn't exist
+              currentPath = await get().createDirectory(currentPath, folder);
+            }
+          }
           // Finally create the file inside the deepest folder
           return await get().createFile(currentPath, finalFileName);
         } catch (error) {
