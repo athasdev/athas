@@ -387,16 +387,37 @@ export const useFileSystemStore = createSelectors(
 
         // Split the input path into parts
         const parts = fileName.split("/").filter(Boolean);
+
+        // Validate input
+        if (parts.length === 0) {
+          alert("Invalid file name");
+          return;
+        }
+
+        // Check for path traversal attempts
+        if (parts.some((part) => part === ".." || part === ".")) {
+          alert("Path traversal is not allowed");
+          return;
+        }
+
         const finalFileName = parts.pop()!;
         let currentPath = dirPath;
 
         // Create intermediate folders if they don't exist
-        for (const folder of parts) {
-          currentPath = await get().createDirectory(currentPath, folder);
-        }
+        try {
+          for (const folder of parts) {
+            currentPath = await get().createDirectory(currentPath, folder);
+          }
 
-        // Finally create the file inside the deepest folder
-        return get().createFile(currentPath, finalFileName);
+          // Finally create the file inside the deepest folder
+          return await get().createFile(currentPath, finalFileName);
+        } catch (error) {
+          console.error("Failed to create nested file:", error);
+          alert(
+            `Failed to create file: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+          return;
+        }
       },
 
       handleCreateNewFolder: async () => {
