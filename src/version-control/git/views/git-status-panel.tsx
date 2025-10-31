@@ -86,6 +86,18 @@ const GitStatusPanel = ({
     }
   };
 
+  const getFileName = (path: string) => {
+    if (!path) return "(unknown)";
+
+    const segments = path.split(/[\\/]/).filter(Boolean);
+    if (segments.length === 0) {
+      const trimmed = path.trim();
+      return trimmed.length > 0 ? trimmed : "(unknown)";
+    }
+
+    return segments[segments.length - 1];
+  };
+
   const handleStageFile = async (filePath: string) => {
     if (!repoPath) return;
     setIsLoading(true);
@@ -202,7 +214,7 @@ const GitStatusPanel = ({
                 </span>
                 {getFileIcon(file)}
                 <span className="flex-1 truncate text-[10px] text-text" title={file.path}>
-                  {file.path.split("/").pop()}
+                  {getFileName(file.path)}
                 </span>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100">
                   <button
@@ -265,7 +277,7 @@ const GitStatusPanel = ({
                 </span>
                 {getFileIcon(file)}
                 <span className="flex-1 truncate text-[10px] text-text" title={file.path}>
-                  {file.path.split("/").pop()}
+                  {getFileName(file.path)}
                 </span>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100">
                   <button
