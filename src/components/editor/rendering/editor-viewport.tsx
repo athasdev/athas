@@ -130,7 +130,8 @@ const EditorViewportComponent = (
       onScroll={handleScroll}
       style={{
         position: "relative",
-        overflow: "auto",
+        overflowX: "hidden",
+        overflowY: "auto",
         height: `${viewportHeight}px`,
       }}
     >
