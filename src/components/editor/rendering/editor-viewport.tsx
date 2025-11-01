@@ -89,7 +89,7 @@ const EditorViewportComponent = (
     gutterAreaWidth + contentPadding + 32,
   );
 
-  const scrollbarSize = useMemo(() => getScrollbarSize(editorZoomLevel), [editorZoomLevel]);
+  const _scrollbarSize = useMemo(() => getScrollbarSize(editorZoomLevel), [editorZoomLevel]);
 
   const visibleRange = useMemo(() => {
     // Use the local scroll position for visible range calculation
@@ -132,7 +132,6 @@ const EditorViewportComponent = (
         position: "relative",
         overflow: "auto",
         height: `${viewportHeight}px`,
-        scrollbarGutter: scrollbarSize.width > 0 ? "stable both-edges" : undefined,
       }}
     >
       {/* Gutter background for full height */}
@@ -159,8 +158,6 @@ const EditorViewportComponent = (
           width: `${Math.ceil(paddedContentWidth)}px`,
           zIndex: 1,
           tabSize: tabSize ?? 2,
-          paddingBottom:
-            scrollbarSize.height > 0 ? `${Math.ceil(scrollbarSize.height)}px` : undefined,
         }}
         onClick={onClick}
         onMouseDown={onMouseDown}
