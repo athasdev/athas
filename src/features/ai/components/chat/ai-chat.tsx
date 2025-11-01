@@ -5,16 +5,16 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import ApiKeyModal from "@/features/ai/components/api-key-modal";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import { formatTime } from "@/features/ai/lib/formatting";
-import { useAIChatStore } from "@/features/ai/store/store";
-import type { AIChatProps, Message } from "@/features/ai/types/types";
-import { useSettingsStore } from "@/features/settings/store";
-import { useProjectStore } from "@/stores/project-store";
+import type { ClaudeStatus } from "@/features/ai/models/claude";
 import {
   getAvailableProviders,
   getProviderById,
   setClaudeCodeAvailability,
-} from "@/types/ai-provider";
-import type { ClaudeStatus } from "@/types/claude";
+} from "@/features/ai/models/providers";
+import { useAIChatStore } from "@/features/ai/store/store";
+import type { AIChatProps, Message } from "@/features/ai/types/types";
+import { useSettingsStore } from "@/features/settings/store";
+import { useProjectStore } from "@/stores/project-store";
 import { getChatCompletionStream } from "@/utils/ai-chat";
 import { cn } from "@/utils/cn";
 import type { ContextInfo } from "@/utils/types";

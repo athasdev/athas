@@ -25,7 +25,7 @@
 
 ## Folder Structure
 
-- Features: `src/features/[name]/[components,hooks,utils,models,etc.]`
+- Features: `src/features/[name]/[components,hooks,utils,types,etc.]`
 - Extensions: `src/extensions/[themes,languages,etc.]`
 - Shared: `src/[components,hooks,utils,etc.]`
 - Documentation: `docs/`

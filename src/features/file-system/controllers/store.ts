@@ -24,8 +24,8 @@ import { useProjectStore } from "@/stores/project-store";
 import { useSessionStore } from "@/stores/session-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { createSelectors } from "@/utils/zustand-selectors";
-import type { FileEntry } from "../models/app";
-import type { FsActions, FsState } from "../models/interface";
+import type { FileEntry } from "../types/app";
+import type { FsActions, FsState } from "../types/interface";
 import {
   createNewDirectory,
   createNewFile,

@@ -1,6 +1,6 @@
+import type { AIMessage } from "@/features/ai/models/messages";
+import { getModelById, getProviderById } from "@/features/ai/models/providers";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
-import type { AIMessage } from "@/types/ai-chat";
-import { getModelById, getProviderById } from "../types/ai-provider";
 import { ClaudeCodeStreamHandler } from "./claude-code-handler";
 import { buildContextPrompt, buildSystemPrompt } from "./context-builder";
 import { getProvider } from "./providers";

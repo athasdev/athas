@@ -9,7 +9,7 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import FileIcon from "@/features/file-explorer/views/file.icon";
 import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import type { FileEntry } from "@/features/file-system/models/app";
+import type { FileEntry } from "@/features/file-system/types/app";
 import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
 import { useUIState } from "@/stores/ui-state-store";
 

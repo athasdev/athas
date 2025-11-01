@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { ClaudeStatus, InterceptorMessage } from "@/types/claude";
+import type { ClaudeStatus, InterceptorMessage } from "@/features/ai/models/claude";
 import { buildContextPrompt } from "./context-builder";
 import type { ContextInfo } from "./types";
 

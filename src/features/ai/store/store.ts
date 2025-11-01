@@ -2,9 +2,9 @@ import { produce } from "immer";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import { AI_PROVIDERS } from "@/features/ai/models/providers";
 import type { Chat } from "@/features/ai/types/types";
-import type { FileEntry } from "@/features/file-system/models/app";
-import { AI_PROVIDERS } from "@/types/ai-provider";
+import type { FileEntry } from "@/features/file-system/types/app";
 import {
   getProviderApiToken,
   removeProviderApiToken,

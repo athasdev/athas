@@ -17,8 +17,8 @@ import {
 import React, { type RefObject, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
+import type { Shell, Terminal } from "@/features/terminal/models/terminal";
 import { type TerminalWidthMode, useTerminalStore } from "@/stores/terminal-store";
-import type { Shell, Terminal } from "@/types/terminal";
 import { cn } from "@/utils/cn";
 import Dropdown from "../../ui/dropdown";
 import KeybindingBadge from "../../ui/keybinding-badge";

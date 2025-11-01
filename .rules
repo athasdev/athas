@@ -31,7 +31,7 @@ This project uses Zustand for state management with specific patterns:
 
 ### Folder Structure
 
-- Group related components, hooks, and utils into feature-based folders (e.g. `src/features/editor/[components,models,utils,config,constants,etc.])
+- Group related components, hooks, and utils into feature-based folders (e.g. `src/features/editor/[components,types,utils,config,constants,etc.])
 - Use `src/` for shared, generic components used across multiple features (e.g. `src/components`, `src/hooks`, `src/utils`, etc.)
 - Use `src/extensions/` for extension-specific code (e.g. themes, plugins, etc.)
 

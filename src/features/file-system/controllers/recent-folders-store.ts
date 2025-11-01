@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { RecentFolder } from "../models/recent-folders";
+import type { RecentFolder } from "../types/recent-folders";
 
 interface RecentFoldersState {
   recentFolders: RecentFolder[];

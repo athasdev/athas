@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useFontStore } from "@/stores/font-store";
-import type { FontInfo } from "@/types/font";
+import type { FontInfo } from "@/stores/types/font";
 import Dropdown from "@/ui/dropdown";
 
 interface FontSelectorProps {

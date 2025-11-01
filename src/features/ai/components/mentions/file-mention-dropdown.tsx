@@ -6,7 +6,7 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import FileIcon from "@/features/file-explorer/views/file.icon";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
-import type { FileEntry } from "@/features/file-system/models/app";
+import type { FileEntry } from "@/features/file-system/types/app";
 import { useProjectStore } from "@/stores/project-store";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";

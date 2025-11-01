@@ -1,4 +1,4 @@
-import type { FileEntry } from "../models/app";
+import type { FileEntry } from "../types/app";
 import { sortFileEntries } from "./file-tree-utils";
 
 // Common directories and patterns to ignore for performance

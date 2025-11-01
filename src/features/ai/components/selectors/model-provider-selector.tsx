@@ -1,7 +1,7 @@
 import { Check, ChevronDown, Key } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { getAvailableProviders, getModelById } from "@/types/ai-provider";
+import { getAvailableProviders, getModelById } from "@/features/ai/models/providers";
 import { cn } from "@/utils/cn";
 
 interface ModelProviderSelectorProps {

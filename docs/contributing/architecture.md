@@ -22,6 +22,6 @@ src/
 
 ## Features
 
-Uses vertical slice architecture - each feature has its own components, hooks, utils, models, etc.
+Uses vertical slice architecture - each feature has its own components, hooks, utils, types, etc.
 
 Main features: AI, editor, terminal, file explorer, git, vim mode, search, tabs, settings.

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
-import type { SearchResult } from "@/types/search-results";
+import type { SearchResult } from "@/features/layout/models/search";
 
 export const useSearchResultsStore = create(
   combine(

@@ -1,6 +1,6 @@
 import { AlertCircle, CheckCircle, ExternalLink, Key, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getProviderById } from "@/types/ai-provider";
+import { getProviderById } from "@/features/ai/models/providers";
 import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
 

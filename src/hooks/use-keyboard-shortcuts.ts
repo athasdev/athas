@@ -1,11 +1,11 @@
 import { exit } from "@tauri-apps/plugin-process";
 import React, { useEffect } from "react";
 import { useSettingsStore } from "@/features/settings/store";
+import type { Buffer } from "@/features/tabs/models/buffer";
 import { useUIState } from "@/stores/ui-state-store";
 import { isMac } from "../features/file-system/controllers/platform";
 import type { CoreFeaturesState } from "../features/settings/models/feature.types";
 import { useZoomStore } from "../stores/zoom-store";
-import type { Buffer } from "../types/buffer";
 
 //import { useActiveElement } from "./use-active-dom-element";
 

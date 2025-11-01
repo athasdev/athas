@@ -1,5 +1,5 @@
 import type { Chat, Message } from "@/features/ai/types/types";
-import type { FileEntry } from "@/features/file-system/models/app";
+import type { FileEntry } from "@/features/file-system/types/app";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";

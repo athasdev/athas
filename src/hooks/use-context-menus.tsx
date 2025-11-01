@@ -4,7 +4,7 @@ import { useOnClickOutside } from "usehooks-ts";
 import { cn } from "@/utils/cn";
 import { useRecentFoldersStore } from "../features/file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "../features/file-system/controllers/store";
-import type { RecentFolder } from "../features/file-system/models/recent-folders";
+import type { RecentFolder } from "../features/file-system/types/recent-folders";
 import { useUIState } from "../stores/ui-state-store";
 
 export const ProjectNameMenu = () => {

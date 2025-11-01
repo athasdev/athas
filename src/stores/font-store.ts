@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import type { FontInfo } from "@/stores/types/font";
 import { createSelectors } from "@/utils/zustand-selectors";
-import type { FontInfo } from "../types/font";
 
 interface FontState {
   availableFonts: FontInfo[];

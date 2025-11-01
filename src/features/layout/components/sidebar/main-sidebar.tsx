@@ -4,7 +4,7 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import FileTree from "@/features/file-explorer/views/file-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import type { FileEntry } from "@/features/file-system/models/app";
+import type { FileEntry } from "@/features/file-system/types/app";
 import RemoteConnectionView from "@/features/remote/remote-connection-view";
 import { useSettingsStore } from "@/features/settings/store";
 import GitView from "@/features/version-control/git/views/git-view";

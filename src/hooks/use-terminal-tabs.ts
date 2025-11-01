@@ -1,5 +1,5 @@
 import { useCallback, useReducer } from "react";
-import type { Terminal, TerminalAction, TerminalState } from "../types/terminal";
+import type { Terminal, TerminalAction, TerminalState } from "@/features/terminal/models/terminal";
 
 const generateTerminalId = (name: string): string => {
   return `terminal_${name.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;

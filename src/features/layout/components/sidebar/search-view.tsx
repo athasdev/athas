@@ -10,9 +10,9 @@ import {
   useState,
 } from "react";
 import { shouldIgnore } from "@/features/file-system/controllers/utils";
+import type { SearchResult, SearchViewProps } from "@/features/layout/models/search";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import type { SearchResult, SearchViewProps } from "@/types/search-results";
 import { cn } from "@/utils/cn";
 import Toggle from "../../../../ui/toggle";
 import Tooltip from "../../../../ui/tooltip";

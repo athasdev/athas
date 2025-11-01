@@ -26,7 +26,7 @@ const GIT_STATUS_DEBOUNCE_MS = 500;
 
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { moveFile, readDirectory, readFile } from "@/features/file-system/controllers/platform";
-import type { ContextMenuState, FileEntry } from "@/features/file-system/models/app";
+import type { ContextMenuState, FileEntry } from "@/features/file-system/types/app";
 import { getGitStatus } from "@/features/version-control/git/controllers/git";
 import type { GitFile, GitStatus } from "@/features/version-control/git/models/git-types";
 import { cn } from "@/utils/cn";

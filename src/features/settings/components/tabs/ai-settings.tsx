@@ -1,10 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { AlertCircle, Check, CheckCircle, Eye, EyeOff, Key, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { ClaudeStatus } from "@/features/ai/models/claude";
+import { getAvailableProviders, setClaudeCodeAvailability } from "@/features/ai/models/providers";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useSettingsStore } from "@/features/settings/store";
-import { getAvailableProviders, setClaudeCodeAvailability } from "@/types/ai-provider";
-import type { ClaudeStatus } from "@/types/claude";
 import Button from "@/ui/button";
 import Dropdown from "@/ui/dropdown";
 import Section, { SettingRow } from "@/ui/section";
