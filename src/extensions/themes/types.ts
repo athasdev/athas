@@ -1,4 +1,4 @@
-import type { EditorExtension } from "../extension-types";
+import type { EditorExtension } from "@/features/editor/extensions/types";
 
 export interface ThemeDefinition {
   id: string;

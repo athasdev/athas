@@ -51,7 +51,7 @@ class SSEStreamParser {
 
       this.handlers.onComplete();
     } catch (streamError) {
-      console.error("❌ Streaming error:", streamError);
+      console.error("Streaming error:", streamError);
       this.handlers.onError("Error reading stream");
     } finally {
       reader.releaseLock();
@@ -87,11 +87,11 @@ class SSEStreamParser {
         }
 
         if (content) {
-          console.log("✅ Sending chunk to callback:", content);
+          console.log("Sending chunk to callback:", content);
           this.handlers.onChunk(content);
         }
       } catch (parseError) {
-        console.warn("❌ Failed to parse SSE data:", parseError, "Raw data:", trimmedLine);
+        console.warn("Failed to parse SSE data:", parseError, "Raw data:", trimmedLine);
       }
     }
   }

@@ -1,4 +1,4 @@
-import { CommandEmpty } from "@/components/ui/command";
+import { CommandEmpty } from "@/ui/command";
 
 interface EmptyStateProps {
   isLoadingFiles: boolean;

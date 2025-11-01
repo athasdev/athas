@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { useRecentFilesStore } from "@/file-system/controllers/recent-files-store";
-import { useBufferStore } from "@/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
 import {
   MAX_OTHER_FILES_NO_QUERY,
   MAX_OTHER_FILES_SHOWN,
@@ -8,7 +8,7 @@ import {
   MAX_RESULTS,
   MAX_SEARCH_FILES,
 } from "../constants/limits";
-import type { CategorizedFiles, FileItem } from "../models/types";
+import type { CategorizedFiles, FileItem } from "../types/command-bar";
 import { fuzzyScore } from "../utils/fuzzy-search";
 
 export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {

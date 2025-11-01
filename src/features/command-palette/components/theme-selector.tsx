@@ -1,16 +1,16 @@
 import { Monitor, Moon, Palette, Sun, Upload } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Button from "@/components/ui/button";
+import { themeRegistry } from "@/extensions/themes/theme-registry";
+import type { ThemeDefinition } from "@/extensions/themes/types";
+import Button from "@/ui/button";
 import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { themeRegistry } from "@/extensions/themes/theme-registry";
-import type { ThemeDefinition } from "@/extensions/themes/types";
+} from "@/ui/command";
 
 interface ThemeInfo {
   id: string;

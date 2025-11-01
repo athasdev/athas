@@ -1,4 +1,4 @@
-import { extensionManager } from "../extension-manager";
+import { extensionManager } from "@/features/editor/extensions/manager";
 import { themeLoader } from "./theme-loader";
 import { themeRegistry } from "./theme-registry";
 
