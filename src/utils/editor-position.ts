@@ -88,8 +88,8 @@ export const getCharWidth = (
   const width = measureElement.getBoundingClientRect().width;
   document.body.removeChild(measureElement);
 
-  // Round to avoid subpixel issues
-  return Math.round(width * 100) / 100;
+  // Keep full precision to avoid cumulative drift on long lines
+  return width;
 };
 
 /**
@@ -128,15 +128,85 @@ export const getCharWidthCached = (
   const width = measureElement.getBoundingClientRect().width;
   document.body.removeChild(measureElement);
 
-  const roundedWidth = Math.round(width * 100) / 100;
-  charWidthCache.set(cacheKey, roundedWidth);
+  // Cache full precision so downstream consumers stay in sync with rendered text
+  charWidthCache.set(cacheKey, width);
 
-  return roundedWidth;
+  return width;
+};
+
+interface MeasurementContext {
+  element: HTMLSpanElement;
+  container: HTMLElement;
+  fontSize: number;
+  fontFamily: string;
+  tabSize: number;
+}
+
+let measurementContext: MeasurementContext | null = null;
+
+const ensureMeasurementContext = (
+  fontSize: number,
+  fontFamily: string,
+  tabSize: number,
+): MeasurementContext => {
+  const effectiveTabSize =
+    Number.isFinite(tabSize) && tabSize > 0 ? Math.max(1, Math.round(tabSize)) : 2;
+
+  const needsNewContext =
+    !measurementContext ||
+    measurementContext.fontSize !== fontSize ||
+    measurementContext.fontFamily !== fontFamily ||
+    measurementContext.tabSize !== effectiveTabSize ||
+    !document.body.contains(measurementContext.element);
+
+  if (!needsNewContext) {
+    return measurementContext!;
+  }
+
+  if (measurementContext && measurementContext.element.parentNode) {
+    measurementContext.element.parentNode.removeChild(measurementContext.element);
+  }
+
+  const element = document.createElement("span");
+  element.setAttribute("data-editor-measurement", "true");
+  element.style.position = "absolute";
+  element.style.visibility = "hidden";
+  element.style.whiteSpace = "pre";
+  element.style.pointerEvents = "none";
+  element.style.padding = "0";
+  element.style.margin = "0";
+  element.style.border = "none";
+  element.style.lineHeight = "1";
+  element.style.left = "0";
+  element.style.top = "0";
+  element.style.transform = "translate(-9999px, -9999px)";
+  element.style.fontFamily = fontFamily;
+  element.style.fontSize = `${fontSize}px`;
+  element.style.setProperty("tab-size", String(effectiveTabSize));
+  // Some browsers still expect the camelCase property
+  (element.style as unknown as { tabSize?: string }).tabSize = String(effectiveTabSize);
+
+  const container =
+    (document.querySelector(".editor-container") as HTMLElement | null) ||
+    document.body ||
+    document.documentElement;
+
+  container.appendChild(element);
+
+  measurementContext = {
+    element,
+    container,
+    fontSize,
+    fontFamily,
+    tabSize: effectiveTabSize,
+  };
+
+  return measurementContext;
 };
 
 /**
  * Get accurate X position for a cursor at given line and column
- * This accounts for variable-width characters, tabs, etc.
+ * This accounts for variable-width characters, tabs, and zoom/transform effects.
  */
 export const getAccurateCursorX = (
   line: string,
@@ -145,21 +215,65 @@ export const getAccurateCursorX = (
   fontFamily: string = "JetBrains Mono, monospace",
   tabSize: number = 2,
 ): number => {
-  let x = 0;
-  const limitedColumn = Math.min(column, line.length);
-
-  for (let i = 0; i < limitedColumn; i++) {
-    const char = line[i];
-    if (char === "\t") {
-      // Calculate tab width based on current position and tab size
-      const spacesUntilNextTab = tabSize - (i % tabSize);
-      x += getCharWidthCached(" ", fontSize, fontFamily) * spacesUntilNextTab;
-    } else {
-      x += getCharWidthCached(char, fontSize, fontFamily);
-    }
+  const limitedColumn = Math.max(0, Math.min(column, line.length));
+  if (limitedColumn === 0) {
+    return 0;
   }
 
-  return x;
+  const context = ensureMeasurementContext(fontSize, fontFamily, tabSize);
+  if (!context) {
+    return limitedColumn * fontSize * EDITOR_CONSTANTS.CHAR_WIDTH_MULTIPLIER;
+  }
+
+  const { element } = context;
+
+  // Slice up to the column so we measure the exact rendered width of the substring
+  const substring = line.slice(0, limitedColumn);
+  element.textContent = substring || "";
+
+  const width = element.getBoundingClientRect().width;
+
+  return width;
+};
+
+/**
+ * Calculate rendered width of an entire line in pixels.
+ * Uses cached character measurements to avoid unnecessary reflow.
+ */
+export const getLineRenderWidth = (
+  line: string,
+  fontSize: number,
+  fontFamily: string = "JetBrains Mono, monospace",
+  tabSize: number = 2,
+): number => {
+  if (!line) {
+    return 0;
+  }
+
+  const effectiveTabSize =
+    Number.isFinite(tabSize) && tabSize > 0 ? Math.max(1, Math.round(tabSize)) : 2;
+  const spaceWidth = getCharWidthCached(" ", fontSize, fontFamily);
+
+  let width = 0;
+  let visualColumn = 0;
+
+  for (const char of line) {
+    if (char === "\t") {
+      const remainder = visualColumn % effectiveTabSize;
+      const spacesUntilNextTab = remainder === 0 ? effectiveTabSize : effectiveTabSize - remainder;
+      width += spaceWidth * spacesUntilNextTab;
+      visualColumn += spacesUntilNextTab;
+      continue;
+    }
+
+    const charWidth = getCharWidthCached(char, fontSize, fontFamily);
+    width += charWidth;
+
+    const approximateColumns = Math.max(1, Math.round(charWidth / spaceWidth));
+    visualColumn += approximateColumns;
+  }
+
+  return width;
 };
 
 /**
@@ -167,4 +281,8 @@ export const getAccurateCursorX = (
  */
 export const clearCharWidthCache = () => {
   charWidthCache.clear();
+  if (measurementContext?.element.parentNode) {
+    measurementContext.element.parentNode.removeChild(measurementContext.element);
+  }
+  measurementContext = null;
 };
