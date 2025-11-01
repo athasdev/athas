@@ -5,6 +5,8 @@ import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useEditorLayoutStore } from "@/stores/editor-layout-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
+import { useZoomStore } from "@/stores/zoom-store";
+import { getLineRenderWidth, getScrollbarSize } from "@/utils/editor-position";
 import { LineWithContent } from "./line-with-content";
 
 interface EditorViewportProps {
@@ -31,9 +33,13 @@ const EditorViewportComponent = (
 ) => {
   const lineCount = useEditorViewStore((state) => state.lines.length);
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
+  const fontSize = useEditorSettingsStore.use.fontSize();
+  const fontFamily = useEditorSettingsStore.use.fontFamily();
   const viewportHeight = useEditorLayoutStore.use.viewportHeight();
   const tabSize = useEditorSettingsStore.use.tabSize();
   const { lineHeight, gutterWidth } = useEditorLayout();
+  const lines = useEditorViewStore.use.lines();
+  const editorZoomLevel = useZoomStore.use.editorZoomLevel();
   const internalRef = useRef<HTMLDivElement | null>(null);
 
   const setContainerRef = useCallback(
@@ -53,6 +59,37 @@ const EditorViewportComponent = (
   // Keep scroll state local to avoid excessive global updates
 
   const [localScrollTop, setLocalScrollTop] = useState(0);
+
+  const effectiveFontFamily = fontFamily
+    ? `${fontFamily}, JetBrains Mono, monospace`
+    : "JetBrains Mono, monospace";
+
+  const maxLineContentWidth = useMemo(() => {
+    if (!lines || lines.length === 0) {
+      return 0;
+    }
+
+    let maxWidth = 0;
+    for (const line of lines) {
+      const width = getLineRenderWidth(line, fontSize, effectiveFontFamily, tabSize);
+      if (width > maxWidth) {
+        maxWidth = width;
+      }
+    }
+
+    return maxWidth;
+  }, [lines, fontSize, effectiveFontFamily, tabSize]);
+
+  const gutterAreaWidth = showLineNumbers ? gutterWidth : 16;
+  const contentPadding = showLineNumbers
+    ? EDITOR_CONSTANTS.GUTTER_MARGIN
+    : 2 * EDITOR_CONSTANTS.GUTTER_MARGIN;
+  const paddedContentWidth = Math.max(
+    gutterAreaWidth + contentPadding + maxLineContentWidth + 32,
+    gutterAreaWidth + contentPadding + 32,
+  );
+
+  const _scrollbarSize = useMemo(() => getScrollbarSize(editorZoomLevel), [editorZoomLevel]);
 
   const visibleRange = useMemo(() => {
     // Use the local scroll position for visible range calculation
@@ -89,11 +126,12 @@ const EditorViewportComponent = (
   return (
     <div
       ref={setContainerRef}
-      className="editor-viewport"
+      className="editor-viewport editor-scrollable"
       onScroll={handleScroll}
       style={{
         position: "relative",
-        overflow: "auto",
+        overflowX: "hidden",
+        overflowY: "auto",
         height: `${viewportHeight}px`,
       }}
     >
@@ -118,8 +156,9 @@ const EditorViewportComponent = (
           position: "relative",
           height: `${totalHeight}px`,
           minWidth: "100%",
+          width: `${Math.ceil(paddedContentWidth)}px`,
           zIndex: 1,
-          tabSize: tabSize,
+          tabSize: tabSize ?? 2,
         }}
         onClick={onClick}
         onMouseDown={onMouseDown}

@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { useFileSystemStore } from "@/file-system/controllers/store";
+import { applyLineEnding } from "@/utils/line-endings";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { gitDiffCache } from "@/version-control/git/controllers/git-diff-cache";
 import { writeFile } from "../file-system/controllers/platform";
@@ -79,7 +80,8 @@ export const useAppStore = createSelectors(
               const newTimeoutId = setTimeout(async () => {
                 try {
                   markPendingSave(activeBuffer.path);
-                  await writeFile(activeBuffer.path, content);
+                  const contentForSave = applyLineEnding(content, activeBuffer.lineEnding);
+                  await writeFile(activeBuffer.path, contentForSave);
                   markBufferDirty(activeBuffer.id, false);
 
                   // Invalidate git diff cache for this file
@@ -140,10 +142,14 @@ export const useAppStore = createSelectors(
 
             if (connectionId) {
               try {
+                const contentForSave = applyLineEnding(
+                  activeBuffer.content,
+                  activeBuffer.lineEnding,
+                );
                 await invoke("ssh_write_file", {
                   connectionId,
                   filePath: remotePath,
-                  content: activeBuffer.content,
+                  content: contentForSave,
                 });
                 markBufferDirty(activeBuffer.id, false);
               } catch (error) {
@@ -155,7 +161,8 @@ export const useAppStore = createSelectors(
             // Handle local save
             try {
               markPendingSave(activeBuffer.path);
-              await writeFile(activeBuffer.path, activeBuffer.content);
+              const contentForSave = applyLineEnding(activeBuffer.content, activeBuffer.lineEnding);
+              await writeFile(activeBuffer.path, contentForSave);
               markBufferDirty(activeBuffer.id, false);
 
               // Invalidate git diff cache for this file
