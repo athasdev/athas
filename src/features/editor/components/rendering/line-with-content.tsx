@@ -3,7 +3,7 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorDecorationsStore } from "@/features/editor/stores/decorations-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
-import { InlineGitBlame } from "@/features/version-control/git/views/inline-git-blame";
+import { InlineGitBlame } from "@/features/version-control/git/components/inline-git-blame";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useGitBlameStore } from "@/stores/git-blame-store";
 import { LineGutter } from "./gutter";

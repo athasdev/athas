@@ -2,8 +2,8 @@ import { produce } from "immer";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import { AI_PROVIDERS } from "@/features/ai/models/providers";
-import type { Chat } from "@/features/ai/types/types";
+import type { Chat } from "@/features/ai/types/ai-chat";
+import { AI_PROVIDERS } from "@/features/ai/types/providers";
 import type { FileEntry } from "@/features/file-system/types/app";
 import {
   getProviderApiToken,
@@ -47,9 +47,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           selectedIndex: 0,
         },
 
-        // ─────────────────────────────────────────────────────────────────
         // Claude Code specific actions
-        // ─────────────────────────────────────────────────────────────────
         setMode: (mode) =>
           set((state) => {
             state.mode = mode;
@@ -60,9 +58,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.outputStyle = outputStyle;
           }),
 
-        // ─────────────────────────────────────────────────────────────────
         // Message queue actions
-        // ─────────────────────────────────────────────────────────────────
         addMessageToQueue: (message) =>
           set((state) => {
             const queuedMessage = {
@@ -92,9 +88,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.isProcessingQueue = false;
           }),
 
-        // ─────────────────────────────────────────────────────────────────
         // Input actions
-        // ─────────────────────────────────────────────────────────────────
         setInput: (input) =>
           set((state) => {
             state.input = input;
@@ -161,9 +155,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             }
           }),
 
-        // ─────────────────────────────────────────────────────────────────
         // Chat actions
-        // ─────────────────────────────────────────────────────────────────
         createNewChat: () => {
           const newChat: Chat = {
             id: Date.now().toString(),
@@ -285,9 +277,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.isChatHistoryVisible = isChatHistoryVisible;
           }),
 
-        // ─────────────────────────────────────────────────────────────────
         // Provider API key actions
-        // ─────────────────────────────────────────────────────────────────
         setApiKeyModalState: (apiKeyModalState) =>
           set((state) => {
             state.apiKeyModalState = apiKeyModalState;
@@ -425,9 +415,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           return get().providerApiKeys.get(providerId) || false;
         },
 
-        // ─────────────────────────────────────────────────────────────────
         // Mention actions
-        // ─────────────────────────────────────────────────────────────────
         showMention: (position, search, startIndex) =>
           set((state) => {
             state.mentionState = {
@@ -506,9 +494,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             .map(({ file }) => file);
         },
 
-        // ─────────────────────────────────────────────────────────────────
         // Helper getters
-        // ─────────────────────────────────────────────────────────────────
         getCurrentChat: () => {
           const state = get();
           return state.chats.find((chat) => chat.id === state.currentChatId);

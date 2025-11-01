@@ -8,7 +8,7 @@ import {
   MAX_RESULTS,
   MAX_SEARCH_FILES,
 } from "../constants/limits";
-import type { CategorizedFiles, FileItem } from "../models/types";
+import type { CategorizedFiles, FileItem } from "../types/command-bar";
 import { fuzzyScore } from "../utils/fuzzy-search";
 
 export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {

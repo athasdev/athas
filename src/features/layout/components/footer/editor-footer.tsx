@@ -26,9 +26,9 @@ import {
   getLanguageFromFilename,
 } from "../../../file-system/controllers/file-utils";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
+import GitBranchManager from "../../../version-control/git/components/git-branch-manager";
 import { getGitStatus } from "../../../version-control/git/controllers/git";
 import { useGitStore } from "../../../version-control/git/controllers/git-store";
-import GitBranchManager from "../../../version-control/git/views/git-branch-manager";
 import VimStatusIndicator from "../../../vim/components/vim-status-indicator";
 
 // LSP Status Dropdown Component

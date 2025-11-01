@@ -103,7 +103,7 @@ pub fn log_assistant_response(
       let display_response = truncate_for_display(&response_text, 150);
       let mode_icon = if is_streaming { "🌊" } else { "📦" };
       info!(
-         "{} 🤖 Assistant [{}] ({}ms): {}",
+         "{} Assistant [{}] ({}ms): {}",
          mode_icon,
          if is_streaming { "STREAM" } else { "FULL" },
          duration_ms,

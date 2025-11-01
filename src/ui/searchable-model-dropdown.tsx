@@ -1,6 +1,6 @@
 import { Check, ChevronDown, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { getAvailableProviders, getModelById } from "@/features/ai/models/providers";
+import { getAvailableProviders, getModelById } from "@/features/ai/types/providers";
 import { cn } from "@/utils/cn";
 
 interface SearchableModelDropdownProps {

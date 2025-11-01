@@ -1,7 +1,7 @@
 import { ClockIcon, File } from "lucide-react";
 import { CommandItem } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
-import type { FileCategory, FileItem } from "../models/types";
+import type { FileCategory, FileItem } from "../types/command-bar";
 
 interface FileListItemProps {
   file: FileItem;

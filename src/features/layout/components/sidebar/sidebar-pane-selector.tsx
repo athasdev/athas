@@ -1,5 +1,5 @@
 import { Folder, GitBranch, Package, Search, Server } from "lucide-react";
-import type { CoreFeaturesState } from "@/features/settings/models/feature.types";
+import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import Button from "../../../../ui/button";
 
 interface SidebarPaneSelectorProps {

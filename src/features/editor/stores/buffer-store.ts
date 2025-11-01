@@ -4,8 +4,8 @@ import { createWithEqualityFn } from "zustand/traditional";
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
-import type { MultiFileDiff } from "@/features/version-control/diff-viewer/models/diff-types";
-import type { GitDiff } from "@/features/version-control/git/models/git-types";
+import type { MultiFileDiff } from "@/features/version-control/diff-viewer/types/diff";
+import type { GitDiff } from "@/features/version-control/git/types/git";
 import { useSessionStore } from "@/stores/session-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 

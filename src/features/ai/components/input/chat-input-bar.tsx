@@ -1,8 +1,8 @@
 import { ChevronDown, Send, Square } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { getModelById } from "@/features/ai/models/providers";
 import { useAIChatStore } from "@/features/ai/store/store";
-import type { AIChatInputBarProps } from "@/features/ai/types/types";
+import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
+import { getModelById } from "@/features/ai/types/providers";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";

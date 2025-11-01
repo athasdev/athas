@@ -525,7 +525,7 @@ export function TextEditor() {
           try {
             if (!extensionManager.isExtensionLoaded("typescript-lsp")) {
               const { typescriptLSPExtension } = await import(
-                "@/extensions/language-support/typescript-lsp-extension"
+                "@/extensions/languages/typescript-lsp-extension"
               );
               await extensionManager.loadNewExtension(typescriptLSPExtension);
             }

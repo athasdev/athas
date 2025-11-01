@@ -5,6 +5,7 @@ import { enableMapSet } from "immer";
 import { useEffect } from "react";
 import { FontPreloader } from "@/features/settings/components/font-preloader";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
+import { useScroll } from "@/features/window/hooks/use-scroll";
 import { initializeIconThemes } from "./extensions/icon-themes/icon-theme-initializer";
 import { initializeThemeSystem } from "./extensions/themes/theme-initializer";
 import {
@@ -17,7 +18,6 @@ import { useFileSystemStore } from "./features/file-system/controllers/store";
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/layout/components/zoom-indicator";
 import WelcomeScreen from "./features/window/welcome-screen";
-import { useScroll } from "./hooks/use-scroll";
 import { useAppStore } from "./stores/app-store";
 import { useFontStore } from "./stores/font-store";
 import { useSidebarStore } from "./stores/sidebar-store";

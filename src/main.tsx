@@ -4,9 +4,8 @@ import { scan } from "react-scan";
 import App from "./App.tsx";
 import { ToastProvider } from "./features/layout/contexts/toast-context.tsx";
 
-// helps track re-renders in development mode
 scan({
-  enabled: true,
+  enabled: import.meta.env.VITE_REACT_SCAN === "true",
 });
 
 createRoot(document.getElementById("root")!).render(

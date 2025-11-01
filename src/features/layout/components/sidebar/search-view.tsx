@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { shouldIgnore } from "@/features/file-system/controllers/utils";
-import type { SearchResult, SearchViewProps } from "@/features/layout/models/search";
+import type { SearchResult, SearchViewProps } from "@/features/layout/types/search";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { cn } from "@/utils/cn";

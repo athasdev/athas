@@ -8,7 +8,7 @@ import type {
   GitStash,
   GitStatus,
   GitTag,
-} from "../models/git-types";
+} from "../types/git";
 import { gitDiffCache } from "./git-diff-cache";
 
 export const getGitStatus = async (repoPath: string): Promise<GitStatus | null> => {

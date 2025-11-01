@@ -2,6 +2,7 @@
 
 - Commits should have the first character uppercased
 - Do not prefix unused variables with an underscore, delete them instead
+- Do not use emojis in commit messages, logs, or documentation
 
 ## Zustand
 

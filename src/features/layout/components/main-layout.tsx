@@ -1,16 +1,16 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import SQLiteViewer from "@/features/database/providers/sqlite/sqlite-viewer";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
-import DiffViewer from "@/features/version-control/diff-viewer/views/diff-viewer";
+import DiffViewer from "@/features/version-control/diff-viewer/components/diff-viewer";
 import { stageHunk, unstageHunk } from "@/features/version-control/git/controllers/git";
-import type { GitHunk } from "@/features/version-control/git/models/git-types";
+import type { GitHunk } from "@/features/version-control/git/types/git";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
-import { ProjectNameMenu } from "@/hooks/use-context-menus";
-import { useKeyboardShortcutsWrapper } from "@/hooks/use-keyboard-shortcuts-wrapper";
-import { useMenuEventsWrapper } from "@/hooks/use-menu-events-wrapper";
+import { useKeyboardShortcutsWrapper } from "@/features/window/hooks/use-keyboard-shortcuts-wrapper";
+import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useUIState } from "@/stores/ui-state-store";
 

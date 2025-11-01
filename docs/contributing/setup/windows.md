@@ -23,5 +23,8 @@ bun setup
 bun install
 
 # Start development server
-bun tauri dev
+bun dev
+
+# Start with react-scan (tracks re-renders)
+bun dev:scan
 ```

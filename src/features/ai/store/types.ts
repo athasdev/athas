@@ -1,4 +1,4 @@
-import type { Chat, Message } from "@/features/ai/types/types";
+import type { Chat, Message } from "@/features/ai/types/ai-chat";
 import type { FileEntry } from "@/features/file-system/types/app";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";

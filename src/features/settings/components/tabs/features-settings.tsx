@@ -2,7 +2,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
 import { createCoreFeaturesList } from "../../config/features";
-import type { CoreFeature } from "../../models/feature.types";
+import type { CoreFeature } from "../../types/feature";
 
 export const FeaturesSettings = () => {
   const { settings, updateSetting } = useSettingsStore();

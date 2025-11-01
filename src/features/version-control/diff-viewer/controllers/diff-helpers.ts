@@ -1,9 +1,5 @@
-import type {
-  GitDiff,
-  GitDiffLine,
-  GitHunk,
-} from "@/features/version-control/git/models/git-types";
-import type { ParsedHunk } from "../models/diff-types";
+import type { GitDiff, GitDiffLine, GitHunk } from "@/features/version-control/git/types/git";
+import type { ParsedHunk } from "../types/diff";
 
 export const createGitHunk = (
   hunk: { header: GitDiffLine; lines: GitDiffLine[] },

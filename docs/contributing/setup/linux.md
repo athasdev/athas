@@ -31,5 +31,8 @@ sudo dnf install openssl-devel pkgconf perl-FindBin perl-IPC-Cmd perl
 bun install
 
 # Start development server
-bun tauri dev
+bun dev
+
+# Start with react-scan (tracks re-renders)
+bun dev:scan
 ```

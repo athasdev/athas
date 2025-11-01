@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { MAX_FILES_TO_PROCESS } from "../constants/limits";
-import type { FileItem } from "../models/types";
+import type { FileItem } from "../types/command-bar";
 import { shouldIgnoreFile } from "../utils/file-filtering";
 
 export const useFileLoader = (isVisible: boolean) => {

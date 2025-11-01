@@ -1,4 +1,4 @@
-import type { AIMessage } from "@/features/ai/models/messages";
+import type { AIMessage } from "@/features/ai/types/messages";
 
 export interface ProviderConfig {
   id: string;

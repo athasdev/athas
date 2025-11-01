@@ -1,7 +1,7 @@
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
-import TerminalContainer from "@/features/terminal/terminal-container";
+import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
 import { useProjectStore } from "../../../../stores/project-store";
 import { useUIState } from "../../../../stores/ui-state-store";

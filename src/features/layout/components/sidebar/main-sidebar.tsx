@@ -7,7 +7,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import RemoteConnectionView from "@/features/remote/remote-connection-view";
 import { useSettingsStore } from "@/features/settings/store";
-import GitView from "@/features/version-control/git/views/git-view";
+import GitView from "@/features/version-control/git/components/git-view";
 import { useProjectStore } from "@/stores/project-store";
 import { useSearchViewStore } from "@/stores/search-view-store";
 import { useSidebarStore } from "@/stores/sidebar-store";

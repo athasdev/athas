@@ -5,7 +5,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
-import type { Buffer } from "@/features/tabs/models/buffer";
+import type { Buffer } from "@/features/tabs/types/buffer";
 import { useAppStore } from "@/stores/app-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import UnsavedChangesDialog from "@/ui/unsaved-changes-dialog";

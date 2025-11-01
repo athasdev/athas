@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useEditorDecorationsStore } from "@/features/editor/stores/decorations-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { getFileDiff, getFileDiffAgainstContent } from "../controllers/git";
-import type { GitDiff } from "../models/git-types";
+import type { GitDiff } from "../types/git";
 
 interface GitGutterHookOptions {
   filePath: string;

@@ -5,7 +5,7 @@ import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
-import type { CoreFeaturesState } from "./models/feature.types";
+import type { CoreFeaturesState } from "./types/feature";
 
 type Theme = string;
 

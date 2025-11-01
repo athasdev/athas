@@ -25,19 +25,19 @@ export const useFileWatcherStore = create(
       console.log(`📁 setProjectRoot called with path: ${path}`);
       try {
         await invoke("set_project_root", { path });
-        console.log(`✅ Started watching project root: ${path}`);
+        console.log(`Started watching project root: ${path}`);
 
         // Start LSP for the project
         try {
-          console.log(`🚀 Attempting to start LSP for project: ${path}`);
+          console.log(`Attempting to start LSP for project: ${path}`);
           const lspClient = LspClient.getInstance();
           await lspClient.start(path);
-          console.log(`✅ Started LSP for project: ${path}`);
+          console.log(`Started LSP for project: ${path}`);
         } catch (error) {
-          console.error("❌ Failed to start LSP:", error);
+          console.error("Failed to start LSP:", error);
         }
       } catch (error) {
-        console.error("❌ Failed to set project root:", path, error);
+        console.error("Failed to set project root:", path, error);
       }
     },
 
@@ -54,7 +54,7 @@ export const useFileWatcherStore = create(
           watchedPaths: new Set(state.watchedPaths).add(path),
         }));
       } catch (error) {
-        console.error("❌ Failed to start watching:", path, error);
+        console.error("Failed to start watching:", path, error);
       }
     },
 
@@ -73,7 +73,7 @@ export const useFileWatcherStore = create(
           return { watchedPaths: newSet };
         });
       } catch (error) {
-        console.error("❌ Failed to stop watching:", path, error);
+        console.error("Failed to stop watching:", path, error);
       }
     },
 
@@ -170,7 +170,7 @@ export async function cleanupFileWatcherListener() {
     try {
       unlistenFileChanged();
     } catch (error) {
-      console.error("❌ Error cleaning up file change listener:", error);
+      console.error("Error cleaning up file change listener:", error);
     }
     unlistenFileChanged = null;
   }

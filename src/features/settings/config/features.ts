@@ -7,7 +7,7 @@ import {
   Server,
   Terminal as TerminalIcon,
 } from "lucide-react";
-import type { CoreFeature } from "../models/feature.types";
+import type { CoreFeature } from "../types/feature";
 
 export const createCoreFeaturesList = (coreFeatures: any): CoreFeature[] => [
   {

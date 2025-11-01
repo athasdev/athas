@@ -1,4 +1,4 @@
-import type { GitDiff } from "../models/git-types";
+import type { GitDiff } from "../types/git";
 
 interface CacheEntry {
   diff: GitDiff;

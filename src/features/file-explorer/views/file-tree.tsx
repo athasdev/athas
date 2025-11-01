@@ -28,7 +28,7 @@ import { findFileInTree } from "@/features/file-system/controllers/file-tree-uti
 import { moveFile, readDirectory, readFile } from "@/features/file-system/controllers/platform";
 import type { ContextMenuState, FileEntry } from "@/features/file-system/types/app";
 import { getGitStatus } from "@/features/version-control/git/controllers/git";
-import type { GitFile, GitStatus } from "@/features/version-control/git/models/git-types";
+import type { GitFile, GitStatus } from "@/features/version-control/git/types/git";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
 import FileIcon from "./file.icon";

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { getFileDiff } from "@/features/version-control/git/controllers/git";
-import type { GitDiff } from "@/features/version-control/git/models/git-types";
+import type { GitDiff } from "@/features/version-control/git/types/git";
 
 interface UseDiffDataReturn {
   diff: GitDiff | null;
