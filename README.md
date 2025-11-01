@@ -1,34 +1,31 @@
 # Athas
 
 A lightweight code editor built with React, TypeScript, and Tauri.
-Designed for developers who want a fast and customizable development environment.
 
 ## Download
 
-Download the latest version of Athas from our [releases page](https://github.com/athasdev/athas/releases).
+Get the latest version from the [releases page](https://github.com/athasdev/athas/releases).
 
-## Developing Athas
+## Development
 
-Choose your platform for detailed setup instructions:
+See [setup guides](docs/contributing/setup/) for your platform:
+- [macOS](docs/contributing/setup/macos.md)
+- [Windows](docs/contributing/setup/windows.md)
+- [Linux](docs/contributing/setup/linux.md)
 
-- [**macOS**](docs/develop/macos.md) - Setup for macOS development
-- [**Windows**](docs/develop/windows.md) - Setup for Windows development (includes automated script)
-- [**Linux**](docs/develop/linux.md) - Setup for Linux development (includes automated script)
+## Customization
 
-## Customizing
+Create custom themes by adding TOML files. See [themes documentation](docs/customization/themes.md).
 
-### Themes
+## Documentation
 
-Create custom themes by adding TOML files. See the [themes documentation](src/extensions/themes/builtin/README.md) for details.
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed contribution guidelines.
+- [Contributing](CONTRIBUTING.md)
+- [Code Style](docs/contributing/code-style.md)
+- [Architecture](docs/contributing/architecture.md)
+- [Changelog](CHANGELOG.md)
 
 ## Support
 
-If you encounter any issues or have questions:
-
-- Open an [issue](https://github.com/athasdev/athas/issues)
-- Check the [documentation](https://athas.dev/docs)
-- Join [discussions](https://github.com/athasdev/athas/discussions)
+- [Issues](https://github.com/athasdev/athas/issues)
+- [Discussions](https://github.com/athasdev/athas/discussions)
+- [Join Discord](https://discord.gg/55nmWmQwKw)

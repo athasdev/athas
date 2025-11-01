@@ -1,5 +1,5 @@
 import { File } from "lucide-react";
-import type { FileSearchResult, SearchMatch } from "@/lib/rust-api/search";
+import type { FileSearchResult, SearchMatch } from "@/features/global-search/lib/rust-api/search";
 
 interface ContentSearchResultProps {
   result: FileSearchResult;

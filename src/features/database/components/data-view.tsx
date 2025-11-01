@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, Filter } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import Input from "@/components/ui/input";
 import { useUIState } from "@/stores/ui-state-store";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import type { ColumnInfo, QueryResult } from "../models/common.types";
 

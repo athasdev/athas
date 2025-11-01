@@ -19,9 +19,9 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import Button from "@/components/ui/button";
-import Dropdown from "@/components/ui/dropdown";
 import { useUIState } from "@/stores/ui-state-store";
+import Button from "@/ui/button";
+import Dropdown from "@/ui/dropdown";
 import DataViewComponent from "../../components/data-view";
 import type {
   ColumnFilter,

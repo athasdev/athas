@@ -1,77 +1,46 @@
 # Contributing to Athas
 
-Welcome! We're happy to have you here. Thank you in advance for your contribution in Athas.
+Thank you for contributing to Athas!
 
-Note: Please check existing issues and pull requests before creating a new one.
+Please check existing issues and pull requests before creating new ones.
 
-# The Basics
+## Getting Started
 
-Athas welcomes contributions in the form of pull requests.
+**Small changes** (bug fixes, typos): Submit a PR directly.
 
-For small changes (e.g., bug fixes), feel free to submit a PR.
+**Large changes** (new features, major refactors): Open an issue first to discuss.
 
-For larger changes (e.g., new lint rules, new functionality, new configuration options), consider creating an issue outlining your proposed change. You can also join us on slack to discuss your idea with the community. We've labeled beginner-friendly tasks in the issue tracker, along with bugs and improvements that are ready for contributions.
+## Setup
 
-If you have suggestions on how we might improve the contributing documentation, let us know!
+See [setup guides](docs/contributing/setup/) for your platform.
 
-# Prerequisites
-
-Athas is a Tauri project using Bun as package manager and Biome for linting/formatting.
-
-- [Rust](https://rustup.rs) with `cargo`, `rustfmt`, and `clippy`
-- [Tauri CLI](https://tauri.app) → `bun add -D @tauri-apps/cli`
-- [Bun](https://bun.sh) as package manager
+Prerequisites:
+- [Rust](https://rustup.rs)
+- [Bun](https://bun.sh)
 - [Node.js ≥ 18](https://nodejs.org)
-
-Check with: `node -v`, `cargo --version`, `bun tauri --version`, `bun --version`
-
-# Development
-
-After cloning the repository, run Athas locally from the repository root with:
 
 ```bash
 bun install
 bun tauri dev
 ```
 
-## Code Quality
-
-Before opening a pull request, ensure your code passes all checks:
-
-```bash
-bun run check     # Run typecheck and biome check
-bun run fix       # Auto-fix formatting and linting issues
-```
-
-Available commands:
-
-- `bun run format` - Format code with Biome
-- `bun run lint` - Lint code with Biome
-- `bun run typecheck` - Run TypeScript type checking
-- `bun run check` - Run both typecheck and biome check
-- `bun run fix` - Auto-fix formatting and linting issues
-
-# Pull Request Guidelines
-
-## Commit History
-
-To maintain a clean commit history:
-
-1. **Squash commits** into logical, compact commits before opening your PR
-2. **Rebase on origin/master** to avoid merge conflicts:
-   ```bash
-   git fetch origin
-   git rebase origin/master
-   ```
-3. Each commit should represent a single logical change
-4. Use descriptive commit messages following conventional commits format
-
 ## Before Submitting
 
-- Ensure the app runs without crashing: `bun run tauri dev`
-- All checks pass: `bun run check`
-- Your branch is rebased on the latest master
-- Commits are squashed into logical units
-- Follow the PR template when opening your pull request
+1. Code passes checks: `bun check`
+2. Auto-fix issues: `bun fix`
+3. App runs: `bun tauri dev`
+4. Rebase on master: `git rebase origin/master`
+5. Squash commits into logical units
 
-This helps maintainers review and merge your contributions efficiently without resolving conflicts.
+## Guidelines
+
+- Follow [code style](docs/contributing/code-style.md)
+- Use descriptive commit messages (present tense, capitalized)
+- One logical change per commit
+- Update documentation if needed
+
+## Documentation
+
+- [Code Style](docs/contributing/code-style.md)
+- [Architecture](docs/contributing/architecture.md)
+- [Releasing](docs/contributing/releasing.md)

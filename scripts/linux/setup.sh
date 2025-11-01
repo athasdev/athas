@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🚀 Setting up Athas development environment for Linux..."
+echo "Setting up Athas development environment for Linux..."
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

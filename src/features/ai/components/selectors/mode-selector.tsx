@@ -1,7 +1,7 @@
 import { memo } from "react";
-import Dropdown from "@/components/ui/dropdown";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
+import Dropdown from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 
 interface ModeSelectorProps {

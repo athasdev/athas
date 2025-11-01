@@ -3,9 +3,66 @@
 /* Define layer order */
 @layer base, utilities, themes;
 
-/* utils like animations */
-@import "./styles/utils.css";
-@import "./styles/token-theme.css";
+/* Utils like animations - inlined from utils.css */
+@keyframes slide-in-left {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@utility animate-slide-in-left {
+    animation: slide-in-left 0.5s ease-out;
+}
+
+@keyframes slide-in-right {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@utility animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out;
+}
+
+@keyframes slide-out-right {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@utility animate-slide-out-right {
+    animation: slide-out-right 0.3s ease-in;
+}
+
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Import token theme from editor feature */
+@import "./features/editor/styles/token-theme.css";
 
 /* Theme classes - defined inline since we only have 2 themes */
 @layer themes {

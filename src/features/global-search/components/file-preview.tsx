@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import type { Token } from "@/lib/rust-api/tokens";
-import type { LineToken } from "@/types/editor-types";
+import type { Token } from "@/features/editor/lib/rust-api/tokens";
+import type { LineToken } from "@/features/editor/types/editor";
 import { useFilePreview } from "../hooks/use-file-preview";
 
 interface FilePreviewProps {

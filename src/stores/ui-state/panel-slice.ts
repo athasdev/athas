@@ -1,5 +1,5 @@
 import type { StateCreator } from "zustand";
-import type { BottomPaneTab } from "../../types/ui-state";
+import type { BottomPaneTab } from "@/stores/ui-state/types";
 
 export interface PanelState {
   isSidebarVisible: boolean;

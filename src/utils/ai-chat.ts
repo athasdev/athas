@@ -1,6 +1,6 @@
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
-import type { AIMessage } from "@/types/ai-chat";
-import { getModelById, getProviderById } from "../types/ai-provider";
+import type { AIMessage } from "@/features/ai/types/messages";
+import { getModelById, getProviderById } from "@/features/ai/types/providers";
 import { ClaudeCodeStreamHandler } from "./claude-code-handler";
 import { buildContextPrompt, buildSystemPrompt } from "./context-builder";
 import { getProvider } from "./providers";
@@ -96,7 +96,7 @@ export const getChatCompletionStream = async (
       apiKey: apiKey || undefined,
     });
 
-    console.log(`🤖 Making ${provider.name} streaming chat request with model ${model.name}...`);
+    console.log(`Making ${provider.name} streaming chat request with model ${model.name}...`);
 
     const response = await fetch(provider.apiUrl, {
       method: "POST",
@@ -105,9 +105,9 @@ export const getChatCompletionStream = async (
     });
 
     if (!response.ok) {
-      console.error(`❌ ${provider.name} API error:`, response.status, response.statusText);
+      console.error(`${provider.name} API error:`, response.status, response.statusText);
       const errorText = await response.text();
-      console.error("❌ Error details:", errorText);
+      console.error("Error details:", errorText);
       // Pass error details in a structured format
       onError(`${provider.name} API error: ${response.status}|||${errorText}`);
       return;
@@ -116,7 +116,7 @@ export const getChatCompletionStream = async (
     // Use stream processing utility
     await processStreamingResponse(response, onChunk, onComplete, onError);
   } catch (error) {
-    console.error(`❌ ${providerId} streaming chat completion error:`, error);
+    console.error(`${providerId} streaming chat completion error:`, error);
     onError(`Failed to connect to ${providerId} API`);
   }
 };

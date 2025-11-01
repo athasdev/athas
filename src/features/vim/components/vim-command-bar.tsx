@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  getVimCommandSuggestions,
+  parseAndExecuteVimCommand,
+  type VimCommand,
+} from "@/features/vim/stores/vim-commands";
+import { useVimStore } from "@/features/vim/stores/vim-store";
 import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import {
-  getVimCommandSuggestions,
-  parseAndExecuteVimCommand,
-  type VimCommand,
-} from "@/stores/vim-commands";
-import { useVimStore } from "@/stores/vim-store";
+} from "@/ui/command";
 
 const VimCommandBar = () => {
   const isCommandMode = useVimStore.use.isCommandMode();

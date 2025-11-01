@@ -3,7 +3,7 @@ import Prism from "prismjs";
 import type React from "react";
 import { useState } from "react";
 import { mapLanguage } from "@/features/ai/lib/formatting";
-import type { MarkdownRendererProps } from "@/features/ai/types/types";
+import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat";
 import { cn } from "@/utils/cn";
 
 // Import common language components

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { EditorAPI } from "../extension-types";
+import type { EditorAPI } from "@/features/editor/extensions/types";
 import { BaseThemeExtension } from "./base-theme-extension";
 import type { ThemeDefinition } from "./types";
 
