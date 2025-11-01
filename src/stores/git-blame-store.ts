@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { getGitBlame } from "@/version-control/git/controllers/git";
-import type { GitBlame, GitBlameLine } from "@/version-control/git/models/git-types";
+import { getGitBlame } from "@/features/version-control/git/controllers/git";
+import type { GitBlame, GitBlameLine } from "@/features/version-control/git/models/git-types";
 
 interface GitBlameState {
   // State

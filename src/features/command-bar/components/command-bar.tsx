@@ -1,4 +1,4 @@
-import Command, { CommandHeader, CommandInput, CommandList } from "@/components/ui/command";
+import Command, { CommandHeader, CommandInput, CommandList } from "@/ui/command";
 import { useCommandBar } from "../hooks/use-command-bar";
 import { EmptyState } from "./empty-state";
 import { FileCountBadge } from "./file-count-badge";

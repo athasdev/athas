@@ -1,10 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { save } from "@tauri-apps/plugin-dialog";
-import { useFileSystemStore } from "../file-system/controllers/store";
-import { useSettingsStore } from "../settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useFileSystemStore } from "../features/file-system/controllers/store";
+import { useSettingsStore } from "../features/settings/store";
 import { useAppStore } from "../stores/app-store";
-import { useBufferStore } from "../stores/buffer-store";
 import { useUIState } from "../stores/ui-state-store";
 import { useMenuEvents } from "./use-menu-events";
 

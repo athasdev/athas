@@ -10,7 +10,7 @@ Athas welcomes contributions in the form of pull requests.
 
 For small changes (e.g., bug fixes), feel free to submit a PR.
 
-For larger changes (e.g., new lint rules, new functionality, new configuration options), consider creating an issue outlining your proposed change. You can also join us on slack to discuss your idea with the community. We've labeled beginner-friendly tasks in the issue tracker, along with bugs and improvements that are ready for contributions.
+For larger changes (e.g., new lint rules, new functionality, new configuration options), consider creating an issue outlining your proposed change. You can also join us on Discord to discuss your idea with the community. We've labeled beginner-friendly tasks in the issue tracker, along with bugs and improvements that are ready for contributions.
 
 If you have suggestions on how we might improve the contributing documentation, let us know!
 

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useSettingsStore } from "../settings/store";
+import { useSettingsStore } from "../features/settings/store";
 import { useZoomStore } from "../stores/zoom-store";
 
 export function useScroll() {

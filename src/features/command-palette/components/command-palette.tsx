@@ -1,23 +1,10 @@
 import { appDataDir } from "@tauri-apps/api/path";
 import { useEffect, useRef, useState } from "react";
-import Command, {
-  CommandEmpty,
-  CommandHeader,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import KeybindingBadge from "@/components/ui/keybinding-badge";
-import { useToast } from "@/contexts/toast-context";
-import { useFileSystemStore } from "@/file-system/controllers/store";
-import { useSettingsStore } from "@/settings/store";
-import { useAppStore } from "@/stores/app-store";
-import { useBufferStore } from "@/stores/buffer-store";
-import { useLspStore } from "@/stores/lsp-store";
-import { useUIState } from "@/stores/ui-state-store";
-import { vimCommands } from "@/stores/vim-commands";
-import { useVimStore } from "@/stores/vim-store";
-import { useZoomStore } from "@/stores/zoom-store";
+import { useLspStore } from "@/features/editor/lsp/lsp-store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useToast } from "@/features/layout/contexts/toast-context";
+import { useSettingsStore } from "@/features/settings/store";
 import {
   commitChanges,
   discardAllChanges,
@@ -26,8 +13,21 @@ import {
   pushChanges,
   stageAllFiles,
   unstageAllFiles,
-} from "@/version-control/git/controllers/git";
-import { useGitStore } from "@/version-control/git/controllers/git-store";
+} from "@/features/version-control/git/controllers/git";
+import { useGitStore } from "@/features/version-control/git/controllers/git-store";
+import { vimCommands } from "@/features/vim/stores/vim-commands";
+import { useVimStore } from "@/features/vim/stores/vim-store";
+import { useAppStore } from "@/stores/app-store";
+import { useUIState } from "@/stores/ui-state-store";
+import { useZoomStore } from "@/stores/zoom-store";
+import Command, {
+  CommandEmpty,
+  CommandHeader,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/ui/command";
+import KeybindingBadge from "@/ui/keybinding-badge";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createFileActions } from "../constants/file-actions";
 import { createGitActions } from "../constants/git-actions";

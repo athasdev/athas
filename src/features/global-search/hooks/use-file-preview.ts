@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { readFileContent } from "@/file-system/controllers/file-operations";
-import { getTokens, type Token } from "@/lib/rust-api/tokens";
+import { getTokens, type Token } from "@/features/editor/lib/rust-api/tokens";
+import { readFileContent } from "@/features/file-system/controllers/file-operations";
 
 interface UseFilePreviewReturn {
   content: string;

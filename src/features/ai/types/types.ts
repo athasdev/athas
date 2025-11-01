@@ -1,5 +1,5 @@
 import type React from "react";
-import type { FileEntry } from "@/file-system/models/app";
+import type { FileEntry } from "@/features/file-system/models/app";
 import type { Buffer } from "@/types/buffer";
 
 interface ToolCall {

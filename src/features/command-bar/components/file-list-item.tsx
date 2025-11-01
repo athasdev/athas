@@ -1,5 +1,5 @@
 import { ClockIcon, File } from "lucide-react";
-import { CommandItem } from "@/components/ui/command";
+import { CommandItem } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
 import type { FileCategory, FileItem } from "../models/types";
 

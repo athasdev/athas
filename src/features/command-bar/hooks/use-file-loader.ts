@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useFileSystemStore } from "@/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { MAX_FILES_TO_PROCESS } from "../constants/limits";
 import type { FileItem } from "../models/types";
 import { shouldIgnoreFile } from "../utils/file-filtering";

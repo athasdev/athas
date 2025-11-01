@@ -1,6 +1,6 @@
 import { useState } from "react";
-import Dropdown from "@/components/ui/dropdown";
-import Input from "@/components/ui/input";
+import Dropdown from "@/ui/dropdown";
+import Input from "@/ui/input";
 
 interface PaginationProps {
   currentPage: number;

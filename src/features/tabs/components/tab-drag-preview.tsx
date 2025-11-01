@@ -1,5 +1,5 @@
 import { Database, Package, Pin } from "lucide-react";
-import FileIcon from "@/file-explorer/views/file.icon";
+import FileIcon from "@/features/file-explorer/views/file.icon";
 import type { Buffer } from "@/types/buffer";
 
 interface TabDragPreviewProps {

@@ -1,4 +1,4 @@
-import type { FileEntry } from "@/file-system/models/app";
+import type { FileEntry } from "@/features/file-system/models/app";
 
 export interface SearchResult {
   file: string;

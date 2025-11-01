@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useDebounce } from "use-debounce";
-import { useFileSystemStore } from "@/file-system/controllers/store";
-import type { FileSearchResult } from "@/lib/rust-api/search";
-import { searchFilesContent } from "@/lib/rust-api/search";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import type { FileSearchResult } from "@/features/global-search/lib/rust-api/search";
+import { searchFilesContent } from "@/features/global-search/lib/rust-api/search";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 
 export const useContentSearch = (isVisible: boolean) => {

@@ -1,6 +1,6 @@
-import { useSettingsStore } from "@/settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useSettingsStore } from "@/features/settings/store";
 import { useAppStore } from "../stores/app-store";
-import { useBufferStore } from "../stores/buffer-store";
 import { useSearchViewStore } from "../stores/search-view-store";
 import { useUIState } from "../stores/ui-state-store";
 import { useKeyboardShortcuts } from "./use-keyboard-shortcuts";

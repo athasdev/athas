@@ -1,9 +1,9 @@
 import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CommandInput } from "@/components/ui/command";
-import { useFileSystemStore } from "@/file-system/controllers/store";
-import { useSettingsStore } from "@/settings/store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
+import { CommandInput } from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { useContentSearch } from "../hooks/use-content-search";
 import { FilePreview } from "./file-preview";

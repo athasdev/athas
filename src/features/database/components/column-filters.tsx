@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import Dropdown from "@/components/ui/dropdown";
+import Dropdown from "@/ui/dropdown";
 import type { ColumnFilter, ColumnInfo } from "../models/common.types";
 
 interface ColumnFiltersProps {

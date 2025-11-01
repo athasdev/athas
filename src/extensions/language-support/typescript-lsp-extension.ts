@@ -1,6 +1,6 @@
-import { LspClient } from "@/lib/lsp/lsp-client";
-import { useLspStore } from "@/stores/lsp-store";
-import type { Extension, ExtensionContext } from "../extension-types";
+import type { Extension, ExtensionContext } from "@/features/editor/extensions/types";
+import { LspClient } from "@/features/editor/lsp/lsp-client";
+import { useLspStore } from "@/features/editor/lsp/lsp-store";
 
 export class TypeScriptLSPExtension implements Extension {
   public readonly id = "typescript-lsp";
