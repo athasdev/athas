@@ -97,6 +97,13 @@ export const getCharWidth = (
  */
 const charWidthCache = new Map<string, number>();
 
+interface ScrollbarSize {
+  width: number;
+  height: number;
+}
+
+let scrollbarSizeCache: ScrollbarSize | null = null;
+
 /**
  * Get accurate character width from cache or measure
  */
@@ -285,4 +292,52 @@ export const clearCharWidthCache = () => {
     measurementContext.element.parentNode.removeChild(measurementContext.element);
   }
   measurementContext = null;
+};
+
+const computeScrollbarSize = (): ScrollbarSize => {
+  if (typeof document === "undefined") {
+    return { width: 0, height: 0 };
+  }
+
+  const outer = document.createElement("div");
+  outer.style.visibility = "hidden";
+  outer.style.position = "absolute";
+  outer.style.top = "-9999px";
+  outer.style.width = "100px";
+  outer.style.height = "100px";
+  outer.style.overflow = "scroll";
+
+  const inner = document.createElement("div");
+  inner.style.width = "100%";
+  inner.style.height = "100%";
+
+  outer.appendChild(inner);
+  document.body.appendChild(outer);
+
+  const vertical = outer.offsetWidth - outer.clientWidth;
+  const horizontal = outer.offsetHeight - outer.clientHeight;
+
+  document.body.removeChild(outer);
+
+  return {
+    width: vertical > 0 ? vertical : 0,
+    height: horizontal > 0 ? horizontal : 0,
+  };
+};
+
+export const getScrollbarSize = (scale: number = 1): ScrollbarSize => {
+  if (!scrollbarSizeCache) {
+    scrollbarSizeCache = computeScrollbarSize();
+  }
+
+  const normalizedScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+
+  return {
+    width: scrollbarSizeCache.width * normalizedScale,
+    height: scrollbarSizeCache.height * normalizedScale,
+  };
+};
+
+export const clearScrollbarSizeCache = () => {
+  scrollbarSizeCache = null;
 };

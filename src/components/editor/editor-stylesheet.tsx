@@ -99,42 +99,58 @@ export function EditorStylesheet() {
           display: none;
         }
 
-        /* Hide scrollbars on editor container */
+        /* Editor container keeps transform hints without managing scrollbars */
         .editor-container {
-          scrollbar-width: none;
-          -ms-overflow-style: none;
           /* Avoid forced GPU transforms to prevent subpixel drift */
           will-change: auto;
         }
-        .editor-container::-webkit-scrollbar {
-          display: none;
-        }
 
-        /* Hide scrollbars on editor textarea */
+        /* Ensure textarea scrolling feels native */
         .editor-textarea {
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        }
-        .editor-textarea::-webkit-scrollbar {
-          display: none;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
         }
 
-        /* Hide scrollbars on viewport and content elements */
+        /* Keep 3D alignment optimisations without hiding scrollbars */
         .editor-content-new,
         .virtual-editor-container,
         [data-editor-viewport],
         .editor-viewport {
-          scrollbar-width: none;
-          -ms-overflow-style: none;
           /* Avoid 3D transforms to keep overlay and base layers aligned */
           backface-visibility: visible;
           -webkit-backface-visibility: visible;
         }
-        .editor-content-new::-webkit-scrollbar,
-        .virtual-editor-container::-webkit-scrollbar,
-        [data-editor-viewport]::-webkit-scrollbar,
-        .editor-viewport::-webkit-scrollbar {
-          display: none;
+
+        /* Theme-aware scrollbar styling for editor surfaces */
+        .editor-scrollable,
+        .editor-textarea {
+          scrollbar-width: thin;
+          scrollbar-color: var(--color-border, rgba(128, 128, 128, 0.6)) transparent;
+          -webkit-overflow-scrolling: touch;
+        }
+        .editor-scrollable::-webkit-scrollbar,
+        .editor-textarea::-webkit-scrollbar {
+          width: 12px;
+          height: 12px;
+        }
+        .editor-scrollable::-webkit-scrollbar-track,
+        .editor-textarea::-webkit-scrollbar-track {
+          background-color: transparent;
+        }
+        .editor-scrollable::-webkit-scrollbar-thumb,
+        .editor-textarea::-webkit-scrollbar-thumb {
+          background-color: var(--color-border, rgba(128, 128, 128, 0.6));
+          border-radius: 8px;
+          border: 3px solid transparent;
+          background-clip: content-box;
+        }
+        .editor-scrollable::-webkit-scrollbar-thumb:hover,
+        .editor-textarea::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(128, 128, 128, 0.75);
+        }
+        .editor-scrollable::-webkit-scrollbar-corner,
+        .editor-textarea::-webkit-scrollbar-corner {
+          background-color: transparent;
         }
 
         /* Optimize line rendering */

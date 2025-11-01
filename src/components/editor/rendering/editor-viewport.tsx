@@ -5,7 +5,8 @@ import { useEditorLayout } from "@/hooks/use-editor-layout";
 import { useEditorLayoutStore } from "@/stores/editor-layout-store";
 import { useEditorSettingsStore } from "@/stores/editor-settings-store";
 import { useEditorViewStore } from "@/stores/editor-view-store";
-import { getLineRenderWidth } from "@/utils/editor-position";
+import { useZoomStore } from "@/stores/zoom-store";
+import { getLineRenderWidth, getScrollbarSize } from "@/utils/editor-position";
 import { LineWithContent } from "./line-with-content";
 
 interface EditorViewportProps {
@@ -38,6 +39,7 @@ const EditorViewportComponent = (
   const tabSize = useEditorSettingsStore.use.tabSize();
   const { lineHeight, gutterWidth } = useEditorLayout();
   const lines = useEditorViewStore.use.lines();
+  const editorZoomLevel = useZoomStore.use.editorZoomLevel();
   const internalRef = useRef<HTMLDivElement | null>(null);
 
   const setContainerRef = useCallback(
@@ -87,6 +89,8 @@ const EditorViewportComponent = (
     gutterAreaWidth + contentPadding + 32,
   );
 
+  const scrollbarSize = useMemo(() => getScrollbarSize(editorZoomLevel), [editorZoomLevel]);
+
   const visibleRange = useMemo(() => {
     // Use the local scroll position for visible range calculation
     const actualScrollTop = localScrollTop;
@@ -122,12 +126,13 @@ const EditorViewportComponent = (
   return (
     <div
       ref={setContainerRef}
-      className="editor-viewport"
+      className="editor-viewport editor-scrollable"
       onScroll={handleScroll}
       style={{
         position: "relative",
         overflow: "auto",
         height: `${viewportHeight}px`,
+        scrollbarGutter: scrollbarSize.width > 0 ? "stable both-edges" : undefined,
       }}
     >
       {/* Gutter background for full height */}
@@ -154,6 +159,8 @@ const EditorViewportComponent = (
           width: `${Math.ceil(paddedContentWidth)}px`,
           zIndex: 1,
           tabSize: tabSize ?? 2,
+          paddingBottom:
+            scrollbarSize.height > 0 ? `${Math.ceil(scrollbarSize.height)}px` : undefined,
         }}
         onClick={onClick}
         onMouseDown={onMouseDown}
