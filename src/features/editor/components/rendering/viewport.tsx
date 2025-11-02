@@ -5,8 +5,8 @@ import { useEditorLayout } from "@/features/editor/hooks/use-layout";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
+import { getLineRenderWidth, getScrollbarSize } from "@/features/editor/utils/position";
 import { useZoomStore } from "@/stores/zoom-store";
-import { getLineRenderWidth, getScrollbarSize } from "@/utils/editor-position";
 import { LineWithContent } from "./line-with-content";
 
 interface EditorViewportProps {
