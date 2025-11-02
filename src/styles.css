@@ -761,6 +761,40 @@ button {
   background: transparent;
 }
 
+/* Editor viewport scrollbar - thin and styled like tab bar */
+.editor-scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 128, 128, 0.3) transparent;
+  overscroll-behavior: none;
+}
+
+.editor-scrollable::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.editor-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+}
+
+.editor-scrollable:hover::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
+.editor-scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-lighter);
+}
+
+.editor-scrollable::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Smooth scrolling for all custom scrollbars */
 .custom-scrollbar,
 .custom-scrollbar-thin,
@@ -768,6 +802,8 @@ button {
   scroll-behavior: smooth;
   overscroll-behavior: none !important;
 }
+
+/* Note: .editor-scrollable does NOT use scroll-behavior: smooth to ensure instant scrolling feedback */
 
 /* Hide scrollbar completely for certain elements */
 .scrollbar-hidden {
@@ -817,6 +853,41 @@ button {
 /* Ensure tabs maintain consistent spacing */
 .tab-scroll-container > * {
   flex-shrink: 0;
+}
+
+/* Tab bar thin scrollbar - similar to editor viewport */
+.tab-bar-scrollable {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 128, 128, 0.3) transparent;
+  overscroll-behavior-x: contain;
+}
+
+.tab-bar-scrollable::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tab-bar-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tab-bar-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+}
+
+.tab-bar-scrollable:hover::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
+.tab-bar-scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-lighter);
+}
+
+.tab-bar-scrollable::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Prevent bounce scrolling only where needed */
