@@ -1,7 +1,7 @@
 import { Download, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { extensionManager } from "@/extensions/extension-manager";
-import type { Extension } from "@/extensions/extension-types";
+import { extensionManager } from "@/features/editor/extensions/manager";
+import type { Extension } from "@/features/editor/extensions/types";
 import { cn } from "@/utils/cn";
 
 type ExtensionCategory = "all" | "languages" | "themes" | "icon-themes" | "snippets" | "databases";

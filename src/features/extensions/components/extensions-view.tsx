@@ -1,10 +1,10 @@
 import { Code, Download, Languages, Package, Palette, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import Button from "@/components/ui/button";
-import { extensionManager } from "@/extensions/extension-manager";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
-import { useSettingsStore } from "@/settings/store";
+import { extensionManager } from "@/features/editor/extensions/manager";
+import { useSettingsStore } from "@/features/settings/store";
+import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 interface UnifiedExtension {

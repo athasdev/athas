@@ -1,12 +1,12 @@
 import { ChevronDown, Send, Square } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import Button from "@/components/ui/button";
 import { useAIChatStore } from "@/features/ai/store/store";
-import type { AIChatInputBarProps } from "@/features/ai/types/types";
-import { useSettingsStore } from "@/settings/store";
-import { useEditorSettingsStore } from "@/stores/editor-settings-store";
+import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
+import { getModelById } from "@/features/ai/types/providers";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
-import { getModelById } from "@/types/ai-provider";
+import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { ContextSelector } from "../selectors/context-selector";

@@ -1,11 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { useFileSystemStore } from "@/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { gitDiffCache } from "@/features/version-control/git/controllers/git-diff-cache";
 import { applyLineEnding } from "@/utils/line-endings";
 import { createSelectors } from "@/utils/zustand-selectors";
-import { gitDiffCache } from "@/version-control/git/controllers/git-diff-cache";
-import { writeFile } from "../file-system/controllers/platform";
+import { writeFile } from "../features/file-system/controllers/platform";
 
 interface AppState {
   // Autosave state
@@ -46,11 +46,11 @@ export const useAppStore = createSelectors(
       actions: {
         handleContentChange: async (content: string) => {
           // Import stores dynamically to avoid circular dependencies
-          const { useBufferStore } = await import("./buffer-store");
+          const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
           const { useFileWatcherStore } = await import(
-            "../file-system/controllers/file-watcher-store"
+            "../features/file-system/controllers/file-watcher-store"
           );
-          const { useSettingsStore } = await import("@/settings/store");
+          const { useSettingsStore } = await import("@/features/settings/store");
 
           // Get dependencies from other stores
           const { activeBufferId, buffers } = useBufferStore.getState();
@@ -112,10 +112,10 @@ export const useAppStore = createSelectors(
 
         handleSave: async () => {
           // Import stores dynamically to avoid circular dependencies
-          const { useBufferStore } = await import("./buffer-store");
-          const { useSettingsStore } = await import("@/settings/store");
+          const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
+          const { useSettingsStore } = await import("@/features/settings/store");
           const { useFileWatcherStore } = await import(
-            "../file-system/controllers/file-watcher-store"
+            "../features/file-system/controllers/file-watcher-store"
           );
 
           const { activeBufferId, buffers } = useBufferStore.getState();

@@ -11,9 +11,9 @@ import {
   Undo2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { ImageFormatDialog } from "@/features/image-editor/components/image-format-dialog";
 import type { ImageFormat } from "@/features/image-editor/models/image-operation.types";
-import { useFileSystemStore } from "@/file-system/controllers/store";
 import { cn } from "@/utils/cn";
 
 interface ImageContextMenuProps {

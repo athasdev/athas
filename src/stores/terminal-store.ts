@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Terminal } from "../types/terminal";
+import type { Terminal } from "@/features/terminal/types/terminal";
 
 export type TerminalWidthMode = "full" | "editor";
 

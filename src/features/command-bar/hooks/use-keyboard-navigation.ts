@@ -6,7 +6,7 @@ import {
   KEY_ESCAPE,
   KEY_K,
 } from "../constants/keyboard-keys";
-import type { FileItem } from "../models/types";
+import type { FileItem } from "../types/command-bar";
 
 interface UseKeyboardNavigationProps {
   isVisible: boolean;

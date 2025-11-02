@@ -19,12 +19,12 @@ function log(message: string, color: keyof typeof colors = "reset") {
 }
 
 function error(message: string) {
-  log(`❌ ${message}`, "red");
+  log(`${message}`, "red");
   process.exit(1);
 }
 
 function success(message: string) {
-  log(`✅ ${message}`, "green");
+  log(`${message}`, "green");
 }
 
 function info(message: string) {
@@ -60,7 +60,9 @@ function bumpVersion(currentVersion: string, bumpType: string): string {
       if (/^\d+\.\d+\.\d+$/.test(bumpType)) {
         return bumpType;
       }
-      error(`Invalid bump type: ${bumpType}. Use: patch, minor, major, or a version number (e.g., 1.2.3)`);
+      error(
+        `Invalid bump type: ${bumpType}. Use: patch, minor, major, or a version number (e.g., 1.2.3)`,
+      );
       return ""; // unreachable
   }
 }
@@ -120,7 +122,7 @@ async function checkWorkingDirectory() {
 
 // Main release function
 async function release() {
-  log("\n🚀 Starting release process...\n", "magenta");
+  log("\nStarting release process...\n", "magenta");
 
   // Get bump type from command line args
   const bumpType = process.argv[2];
@@ -196,7 +198,7 @@ async function release() {
   success(`Created tag: v${newVersion}`);
 
   // Push changes and tag
-  log("\n🚀 Pushing to remote...\n", "magenta");
+  log("\nPushing to remote...\n", "magenta");
   await $`git push origin master`;
   success("Pushed commits");
 

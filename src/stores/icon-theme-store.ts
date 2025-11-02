@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { IconThemeDefinition } from "@/extensions/icon-themes";
-import { iconThemeRegistry } from "@/extensions/icon-themes";
+import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
+import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
 
 interface IconThemeState {
   currentTheme: string;

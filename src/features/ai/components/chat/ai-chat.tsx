@@ -2,19 +2,19 @@ import { invoke } from "@tauri-apps/api/core";
 import { Check, Copy, MessageSquare, Plus, Sparkles } from "lucide-react";
 import type React from "react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import ApiKeyModal from "@/components/api-key-modal";
+import ApiKeyModal from "@/features/ai/components/api-key-modal";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import { formatTime } from "@/features/ai/lib/formatting";
 import { useAIChatStore } from "@/features/ai/store/store";
-import type { AIChatProps, Message } from "@/features/ai/types/types";
-import { useSettingsStore } from "@/settings/store";
-import { useProjectStore } from "@/stores/project-store";
+import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
+import type { ClaudeStatus } from "@/features/ai/types/claude";
 import {
   getAvailableProviders,
   getProviderById,
   setClaudeCodeAvailability,
-} from "@/types/ai-provider";
-import type { ClaudeStatus } from "@/types/claude";
+} from "@/features/ai/types/providers";
+import { useSettingsStore } from "@/features/settings/store";
+import { useProjectStore } from "@/stores/project-store";
 import { getChatCompletionStream } from "@/utils/ai-chat";
 import { cn } from "@/utils/cn";
 import type { ContextInfo } from "@/utils/types";

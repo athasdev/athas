@@ -1,14 +1,14 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import UnsavedChangesDialog from "@/components/ui/unsaved-changes-dialog";
-import { useFileSystemStore } from "@/file-system/controllers/store";
-import { useSettingsStore } from "@/settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useSettingsStore } from "@/features/settings/store";
+import type { Buffer } from "@/features/tabs/types/buffer";
 import { useAppStore } from "@/stores/app-store";
-import { useBufferStore } from "@/stores/buffer-store";
-import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import type { Buffer } from "@/types/buffer";
+import UnsavedChangesDialog from "@/ui/unsaved-changes-dialog";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
 import TabDragPreview from "./tab-drag-preview";
@@ -81,7 +81,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragStateRef = useRef(dragState);
   const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
-  const { clearPositionCache } = useEditorCursorStore.getState().actions;
+  const { clearPositionCache } = useEditorStateStore.getState().actions;
 
   useEffect(() => {
     dragStateRef.current = dragState;
