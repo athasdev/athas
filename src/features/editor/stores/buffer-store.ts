@@ -7,6 +7,8 @@ import { useRecentFilesStore } from "@/features/file-system/controllers/recent-f
 import type { MultiFileDiff } from "@/features/version-control/diff-viewer/types/diff";
 import type { GitDiff } from "@/features/version-control/git/types/git";
 import { useSessionStore } from "@/stores/session-store";
+import type { LineEnding } from "@/utils/line-endings";
+import { normalizeLineEndings } from "@/utils/line-endings";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 interface Buffer {
@@ -14,6 +16,7 @@ interface Buffer {
   path: string;
   name: string;
   content: string;
+  lineEnding: LineEnding;
   isDirty: boolean;
   isVirtual: boolean;
   isPinned: boolean;
@@ -181,11 +184,14 @@ export const useBufferStore = createSelectors(
             newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
           }
 
+          const { normalized: normalizedContent, lineEnding } = normalizeLineEndings(content);
+
           const newBuffer: Buffer = {
             id: generateBufferId(path),
             path,
             name,
-            content,
+            content: normalizedContent,
+            lineEnding,
             isDirty: false,
             isVirtual,
             isPinned: false,
@@ -313,7 +319,8 @@ export const useBufferStore = createSelectors(
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer) {
-              buffer.content = content;
+              const { normalized: normalizedContent } = normalizeLineEndings(content);
+              buffer.content = normalizedContent;
               if (diffData) {
                 buffer.diffData = diffData;
               }
@@ -501,8 +508,17 @@ export const useBufferStore = createSelectors(
 
           try {
             const content = await readFileContent(buffer.path);
-            // Update buffer content and clear dirty flag
-            useBufferStore.getState().actions.updateBufferContent(bufferId, content, false);
+            const { normalized: normalizedContent, lineEnding } = normalizeLineEndings(content);
+
+            set((state) => {
+              const target = state.buffers.find((b) => b.id === bufferId);
+              if (target) {
+                target.content = normalizedContent;
+                target.lineEnding = lineEnding;
+                target.isDirty = false;
+              }
+            });
+
             console.log(`[FileWatcher] Reloaded buffer from disk: ${buffer.path}`);
           } catch (error) {
             console.error(`[FileWatcher] Failed to reload buffer from disk: ${buffer.path}`, error);
