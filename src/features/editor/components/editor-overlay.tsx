@@ -1,7 +1,7 @@
 /**
  * Editor Overlay - Two-layer editor architecture
  * Combines transparent input layer with syntax-highlighted background
- * with adaptive debouncing and incremental tokenization
+ * Optimized with single unified debounce for better performance
  */
 
 import "../styles/overlay-editor.css";
@@ -11,11 +11,12 @@ import { useViewportLines } from "../hooks/use-viewport-lines";
 import { useBufferStore } from "../stores/buffer-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
-import { AdaptiveDebouncer } from "../utils/adaptive-debounce";
 import { calculateCursorPosition } from "../utils/position";
 import { Gutter } from "./gutter";
 import { HighlightLayer } from "./highlight-layer";
 import { InputLayer } from "./input-layer";
+
+const UNIFIED_DEBOUNCE_MS = 100; // Single debounce for all updates
 
 interface EditorOverlayProps {
   className?: string;
@@ -25,9 +26,7 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
-  const bufferUpdateTimer = useRef<NodeJS.Timeout | null>(null);
-  const cursorUpdateTimer = useRef<NodeJS.Timeout | null>(null);
-  const adaptiveDebouncer = useRef<AdaptiveDebouncer>(new AdaptiveDebouncer(50, 150));
+  const unifiedDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   const bufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
@@ -45,12 +44,8 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
   const lines = content.split("\n");
   const lineHeight = fontSize * 1.4;
 
-  // Viewport tracking for incremental tokenization
-  const {
-    viewportRange,
-    handleScroll: handleViewportScroll,
-    initializeViewport,
-  } = useViewportLines({
+  // Viewport tracking for future incremental tokenization
+  const { handleScroll: handleViewportScroll, initializeViewport } = useViewportLines({
     lineHeight,
   });
 
@@ -60,40 +55,32 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
     incremental: true,
   });
 
-  // Handle input changes with adaptive debouncing
+  // Handle input changes with unified debouncing
   const handleInput = useCallback(
     (newContent: string) => {
-      const lineCount = newContent.split("\n").length;
-
-      // Debounce buffer store update to prevent re-render cascade
-      if (bufferUpdateTimer.current) {
-        clearTimeout(bufferUpdateTimer.current);
+      // Clear any pending debounce
+      if (unifiedDebounceTimer.current) {
+        clearTimeout(unifiedDebounceTimer.current);
       }
-      bufferUpdateTimer.current = setTimeout(() => {
-        if (bufferId) {
-          updateBufferContent(bufferId, newContent);
-        }
-      }, 16); // 16ms = 1 frame, keeps store reasonably in sync
 
-      // Debounce cursor position update to reduce overhead
-      if (cursorUpdateTimer.current) {
-        clearTimeout(cursorUpdateTimer.current);
-      }
-      cursorUpdateTimer.current = setTimeout(() => {
-        if (inputRef.current) {
-          const selectionStart = inputRef.current.selectionStart;
-          const lines = newContent.split("\n");
-          const position = calculateCursorPosition(selectionStart, lines);
-          setCursorPosition(position);
-        }
-      }, 100); // Update cursor position every 100ms instead of every keystroke
+      // Single unified debounce for all updates (100ms)
+      unifiedDebounceTimer.current = setTimeout(() => {
+        if (!bufferId || !inputRef.current) return;
 
-      // Adaptive debounced tokenization with incremental support
-      adaptiveDebouncer.current.debounce(() => {
-        tokenize(newContent, viewportRange);
-      }, lineCount);
+        // 1. Update buffer content
+        updateBufferContent(bufferId, newContent);
+
+        // 2. Update cursor position
+        const selectionStart = inputRef.current.selectionStart;
+        const lines = newContent.split("\n");
+        const position = calculateCursorPosition(selectionStart, lines);
+        setCursorPosition(position);
+
+        // 3. Trigger tokenization (simple full tokenization)
+        tokenize(newContent);
+      }, UNIFIED_DEBOUNCE_MS);
     },
-    [bufferId, updateBufferContent, setCursorPosition, tokenize, viewportRange],
+    [bufferId, updateBufferContent, setCursorPosition, tokenize],
   );
 
   // Handle Tab key
@@ -141,15 +128,11 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
     [handleViewportScroll, lines.length],
   );
 
-  // Cleanup timers on unmount
+  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
-      adaptiveDebouncer.current.cancel();
-      if (bufferUpdateTimer.current) {
-        clearTimeout(bufferUpdateTimer.current);
-      }
-      if (cursorUpdateTimer.current) {
-        clearTimeout(cursorUpdateTimer.current);
+      if (unifiedDebounceTimer.current) {
+        clearTimeout(unifiedDebounceTimer.current);
       }
     };
   }, []);
