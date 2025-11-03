@@ -166,7 +166,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
     // Create file input element
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".toml";
+    input.accept = ".json";
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {

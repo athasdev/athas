@@ -56,7 +56,7 @@ All theme colors are defined as CSS variables following this structure:
 - Enables utilities like `bg-primary-bg`, `text-text`, `border-border`
 
 **Theme System:**
-- All themes (including built-ins) are defined in TOML files in `src/extensions/themes/builtin/`
+- All themes (including built-ins) are defined in JSON files in `src/extensions/themes/builtin/`
 - Themes override CSS variables via the Theme Registry
 - No CSS classes for themes - pure variable-based theming
 - Data attributes track current theme: `data-theme="theme-id"` and `data-theme-type="light|dark"`
@@ -100,33 +100,36 @@ src/
 │       └── styles/              # Feature-specific CSS files
 └── extensions/
     └── themes/
-        ├── builtin/*.toml       # Theme definitions
+        ├── builtin/*.json       # Theme definitions
         ├── theme-registry.ts    # Theme management
         └── types.ts             # Theme interfaces
 ```
 
 ### Creating Custom Themes
 
-To add a new theme, create a TOML file in `src/extensions/themes/builtin/`:
+To add a new theme, create a JSON file in `src/extensions/themes/builtin/`:
 
-```toml
-[[themes]]
-id = "my-theme"
-name = "My Theme"
-description = "A beautiful custom theme"
-category = "Dark"
-is_dark = true
-
-[themes.css_variables]
-"--primary-bg" = "#1a1a1a"
-"--secondary-bg" = "#2a2a2a"
-"--text" = "#e5e5e5"
-# ... more variables
-
-[themes.syntax_tokens]
-"--syntax-keyword" = "#ff7b72"
-"--syntax-string" = "#a5d6ff"
-# ... more tokens
+```json
+{
+  "themes": [
+    {
+      "id": "my-theme",
+      "name": "My Theme",
+      "description": "A beautiful custom theme",
+      "category": "Dark",
+      "isDark": true,
+      "cssVariables": {
+        "--primary-bg": "#1a1a1a",
+        "--secondary-bg": "#2a2a2a",
+        "--text": "#e5e5e5"
+      },
+      "syntaxTokens": {
+        "--syntax-keyword": "#ff7b72",
+        "--syntax-string": "#a5d6ff"
+      }
+    }
+  ]
+}
 ```
 
 ### Available CSS Variables
