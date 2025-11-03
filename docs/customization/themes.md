@@ -15,9 +15,9 @@ category = "Light" # or "Dark" or "System"
 is_dark = true # optional boolean
 
 [themes.css_variables]
-"--tw-primary-bg" = "#color"
-"--tw-secondary-bg" = "#color"
-"--tw-text" = "#color"
+"--primary-bg" = "#color"
+"--secondary-bg" = "#color"
+"--text" = "#color"
 # ... more CSS variables
 
 [themes.syntax_tokens]
@@ -43,19 +43,19 @@ is_dark = true # optional boolean
 The following CSS variables are supported:
 
 ### Background Colors
-- `--tw-primary-bg`: Main background color
-- `--tw-secondary-bg`: Secondary background color
+- `--primary-bg`: Main background color
+- `--secondary-bg`: Secondary background color
 
 ### Text Colors
-- `--tw-text`: Primary text color
-- `--tw-text-light`: Secondary text color
-- `--tw-text-lighter`: Tertiary text color
+- `--text`: Primary text color
+- `--text-light`: Secondary text color
+- `--text-lighter`: Tertiary text color
 
 ### UI Colors
-- `--tw-border`: Border color
-- `--tw-hover`: Hover state color
-- `--tw-selected`: Selected state color
-- `--tw-accent`: Accent/primary color
+- `--border`: Border color
+- `--hover`: Hover state color
+- `--selected`: Selected state color
+- `--accent`: Accent/primary color
 
 ### Syntax Highlighting Colors
 - `--color-syntax-keyword`: Keywords (if, else, function, etc.)

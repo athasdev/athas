@@ -24,7 +24,7 @@ export const Gutter = forwardRef<HTMLDivElement, GutterProps>(
           fontFamily,
           lineHeight: `${lineHeight}px`,
           minWidth: "3.5rem",
-          borderRight: "1px solid var(--tw-border, rgba(255, 255, 255, 0.06))",
+          borderRight: "1px solid var(--border, rgba(255, 255, 255, 0.06))",
           paddingTop: "0.5rem",
           paddingBottom: "0.5rem",
           height: "100%",
@@ -40,8 +40,8 @@ export const Gutter = forwardRef<HTMLDivElement, GutterProps>(
               className="px-3 text-right transition-all"
               style={{
                 color: isActive
-                  ? "var(--tw-text, #d4d4d4)"
-                  : "var(--tw-text-secondary, rgba(255, 255, 255, 0.5))",
+                  ? "var(--text, #d4d4d4)"
+                  : "var(--text-light, rgba(255, 255, 255, 0.5))",
                 opacity: isActive ? 1 : 0.5,
                 fontWeight: isActive ? 500 : 400,
                 cursor: "pointer",

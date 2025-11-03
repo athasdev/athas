@@ -24,6 +24,10 @@
   white-space: pre;
   word-wrap: break-word;
   user-select: none;
+
+  /* Performance optimizations */
+  contain: layout style paint;
+  content-visibility: auto;
 }
 
 /* Foreground layer - transparent text, visible caret */
@@ -41,13 +45,18 @@
   outline: none;
   resize: none;
   color: transparent;
-  caret-color: var(--tw-text, #d4d4d4);
+  caret-color: var(--text, #d4d4d4);
   white-space: pre;
   word-wrap: break-word;
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
   tab-size: inherit;
+
+  /* Performance optimizations */
+  will-change: contents;
+  contain: layout style paint;
+  transform: translateZ(0);
 }
 
 /* Ensure both layers have matching scroll behavior */
@@ -64,12 +73,12 @@
 
 /* Selection styling for the input layer */
 .input-layer::selection {
-  background: var(--tw-selected, rgba(255, 255, 255, 0.2));
+  background: var(--selected, rgba(255, 255, 255, 0.2));
   color: transparent;
 }
 
 .input-layer::-moz-selection {
-  background: var(--tw-selected, rgba(255, 255, 255, 0.2));
+  background: var(--selected, rgba(255, 255, 255, 0.2));
   color: transparent;
 }
 

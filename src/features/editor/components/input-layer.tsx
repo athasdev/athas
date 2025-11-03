@@ -4,7 +4,7 @@
  * Uses uncontrolled input for optimal typing performance
  */
 
-import { forwardRef, useCallback, useEffect } from "react";
+import { forwardRef, memo, useCallback, useEffect } from "react";
 
 interface InputLayerProps {
   content: string;
@@ -18,7 +18,7 @@ interface InputLayerProps {
   bufferId?: string;
 }
 
-export const InputLayer = forwardRef<HTMLTextAreaElement, InputLayerProps>(
+const InputLayerComponent = forwardRef<HTMLTextAreaElement, InputLayerProps>(
   (
     { content, onInput, onKeyDown, fontSize, fontFamily, lineHeight, tabSize, onScroll, bufferId },
     ref,
@@ -37,7 +37,7 @@ export const InputLayer = forwardRef<HTMLTextAreaElement, InputLayerProps>(
           ref.current.value = content;
         }
       }
-    }, [bufferId, ref]); // Only update on buffer change, not content change
+    }, [bufferId, content, ref]); // Sync when buffer or content changes externally
 
     return (
       <textarea
@@ -63,4 +63,21 @@ export const InputLayer = forwardRef<HTMLTextAreaElement, InputLayerProps>(
   },
 );
 
-InputLayer.displayName = "InputLayer";
+InputLayerComponent.displayName = "InputLayer";
+
+// Wrap with memo to prevent re-renders during typing
+// Only re-render when buffer changes or styling changes
+export const InputLayer = memo(InputLayerComponent, (prev, next) => {
+  // Skip re-render if only content changed (textarea is uncontrolled during typing)
+  // Re-render when buffer switches or styling changes
+  return (
+    prev.bufferId === next.bufferId &&
+    prev.fontSize === next.fontSize &&
+    prev.fontFamily === next.fontFamily &&
+    prev.lineHeight === next.lineHeight &&
+    prev.tabSize === next.tabSize &&
+    prev.onInput === next.onInput &&
+    prev.onKeyDown === next.onKeyDown &&
+    prev.onScroll === next.onScroll
+  );
+});

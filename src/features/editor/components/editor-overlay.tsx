@@ -144,14 +144,15 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
     }
   }, [initializeViewport]);
 
-  // Tokenize on buffer change or when file loads
+  // Tokenize only on buffer change or when file loads (not on every keystroke)
   useEffect(() => {
-    if (content && buffer?.path) {
-      // Use simple full tokenization without viewport for now
-      // Incremental will kick in during typing via handleInput
-      tokenize(content);
+    if (buffer?.content && buffer?.path) {
+      // Initial tokenization when buffer loads
+      // handleInput handles tokenization during typing
+      tokenize(buffer.content);
     }
-  }, [bufferId, content, buffer?.path, tokenize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bufferId, buffer?.path]); // Deliberately exclude content to prevent double tokenization
 
   if (!buffer) return null;
 

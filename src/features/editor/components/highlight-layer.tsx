@@ -175,20 +175,38 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
 
 HighlightLayerComponent.displayName = "HighlightLayer";
 
-// Wrap with memo to prevent unnecessary re-renders
+// Wrap with memo to prevent unnecessary re-renders during typing
 export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
   // Return true to SKIP re-render when props haven't changed meaningfully
-  const tokensUnchanged =
-    prev.tokens.length === next.tokens.length &&
-    (prev.tokens.length === 0 ||
-      (prev.tokens[0].start === next.tokens[0].start &&
-        prev.tokens[prev.tokens.length - 1].end === next.tokens[prev.tokens.length - 1].end));
 
-  return (
-    prev.content === next.content &&
+  // Check if tokens actually changed (with safe null/undefined handling)
+  if (!prev.tokens || !next.tokens) {
+    // If either is null/undefined, only skip if both are
+    return (
+      !prev.tokens &&
+      !next.tokens &&
+      prev.fontSize === next.fontSize &&
+      prev.fontFamily === next.fontFamily &&
+      prev.lineHeight === next.lineHeight
+    );
+  }
+
+  // Both tokens arrays exist
+  const tokensUnchanged =
+    prev.tokens === next.tokens || // Same reference (fast path)
+    (prev.tokens.length === next.tokens.length &&
+      (prev.tokens.length === 0 || // Both empty
+        (prev.tokens[0]?.start === next.tokens[0]?.start &&
+          prev.tokens[prev.tokens.length - 1]?.end === next.tokens[prev.tokens.length - 1]?.end)));
+
+  // CRITICAL: During typing, content changes but tokens are stale
+  // Only re-render when tokens actually update, ignore content changes
+  // Content will be reflected once new tokens arrive after debounce
+  const shouldSkipRender =
     tokensUnchanged &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
-    prev.lineHeight === next.lineHeight
-  );
+    prev.lineHeight === next.lineHeight;
+
+  return shouldSkipRender;
 });

@@ -1,144 +1,144 @@
 /* Token theme for Tree-sitter based syntax highlighting */
-/* Uses --tw-syntax-* variables that match theme definitions */
+/* Uses --syntax-* variables that match theme definitions */
 
 /* Keywords */
 .token-keyword {
-  color: var(--tw-syntax-keyword, #c792ea);
+  color: var(--syntax-keyword, #c792ea);
   font-weight: 500;
 }
 
 /* Strings */
 .token-string {
-  color: var(--tw-syntax-string, #c3e88d);
+  color: var(--syntax-string, #c3e88d);
 }
 
 /* Numbers */
 .token-number {
-  color: var(--tw-syntax-number, #f78c6c);
+  color: var(--syntax-number, #f78c6c);
 }
 
 /* Constants */
 .token-constant {
-  color: var(--tw-syntax-constant, #89ddff);
+  color: var(--syntax-constant, #89ddff);
 }
 
 /* Comments */
 .token-comment {
-  color: var(--tw-syntax-comment, #7f848e);
+  color: var(--syntax-comment, #7f848e);
   font-style: italic;
 }
 
 /* Variables */
 .token-variable {
-  color: var(--tw-syntax-variable, #f07178);
+  color: var(--syntax-variable, #f07178);
 }
 
 /* Properties */
 .token-property {
-  color: var(--tw-syntax-property, #82aaff);
+  color: var(--syntax-property, #82aaff);
 }
 
 /* Types */
 .token-type {
-  color: var(--tw-syntax-type, #ffcb6b);
+  color: var(--syntax-type, #ffcb6b);
 }
 
 /* Functions */
 .token-function {
-  color: var(--tw-syntax-function, #82aaff);
+  color: var(--syntax-function, #82aaff);
 }
 
 /* Operators */
 .token-operator {
-  color: var(--tw-syntax-operator, #89ddff);
+  color: var(--syntax-operator, #89ddff);
 }
 
 /* Punctuation */
 .token-punctuation {
-  color: var(--tw-syntax-punctuation, var(--tw-text));
+  color: var(--syntax-punctuation, var(--text));
 }
 
 /* Default text */
 .token-text {
-  color: var(--tw-text);
+  color: var(--text);
 }
 
 /* Identifiers */
 .token-identifier {
-  color: var(--tw-text);
+  color: var(--text);
 }
 
 /* Booleans */
 .token-boolean {
-  color: var(--tw-syntax-boolean, #ff5370);
+  color: var(--syntax-boolean, #ff5370);
 }
 
 /* Null/undefined */
 .token-null {
-  color: var(--tw-syntax-null, #ff5370);
+  color: var(--syntax-null, #ff5370);
 }
 
 /* Regular expressions */
 .token-regex {
-  color: var(--tw-syntax-regex, #89ddff);
+  color: var(--syntax-regex, #89ddff);
 }
 
 /* JSX */
 .token-jsx {
-  color: var(--tw-syntax-jsx, #89ddff);
+  color: var(--syntax-jsx, #89ddff);
 }
 
 .token-jsx-attribute {
-  color: var(--tw-syntax-jsx-attribute, #c792ea);
+  color: var(--syntax-jsx-attribute, #c792ea);
 }
 
 .token-jsx-text {
-  color: var(--tw-text);
+  color: var(--text);
 }
 
 /* Markdown */
 .token-markdown-heading {
-  color: var(--tw-syntax-markdown-heading, #82aaff);
+  color: var(--syntax-markdown-heading, #82aaff);
   font-weight: 700;
 }
 
 .token-markdown-bold {
-  color: var(--tw-syntax-markdown-bold, #f78c6c);
+  color: var(--syntax-markdown-bold, #f78c6c);
   font-weight: 700;
 }
 
 .token-markdown-italic {
-  color: var(--tw-syntax-markdown-italic, #c792ea);
+  color: var(--syntax-markdown-italic, #c792ea);
   font-style: italic;
 }
 
 .token-markdown-strikethrough {
-  color: var(--tw-syntax-markdown-strikethrough, #f07178);
+  color: var(--syntax-markdown-strikethrough, #f07178);
   text-decoration: line-through;
 }
 
 .token-markdown-link {
-  color: var(--tw-syntax-markdown-link, #89ddff);
+  color: var(--syntax-markdown-link, #89ddff);
   text-decoration: underline;
 }
 
 .token-markdown-link-text {
-  color: var(--tw-syntax-markdown-link-text, #82aaff);
+  color: var(--syntax-markdown-link-text, #82aaff);
 }
 
 .token-markdown-code {
-  color: var(--tw-syntax-markdown-code, #c3e88d);
-  background-color: var(--tw-hover, rgba(255, 255, 255, 0.1));
+  color: var(--syntax-markdown-code, #c3e88d);
+  background-color: var(--hover, rgba(255, 255, 255, 0.1));
   border-radius: 3px;
   padding: 2px 4px;
 }
 
 .token-markdown-list {
-  color: var(--tw-syntax-markdown-list, #c792ea);
+  color: var(--syntax-markdown-list, #c792ea);
   font-weight: 600;
 }
 
 .token-markdown-quote {
-  color: var(--tw-syntax-markdown-quote, #7f848e);
+  color: var(--syntax-markdown-quote, #7f848e);
   font-style: italic;
 }

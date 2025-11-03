@@ -48,9 +48,6 @@ class ThemeRegistry implements ThemeRegistryAPI {
     // Apply CSS variables to document root
     const root = document.documentElement;
 
-    // Clear any existing theme-specific classes
-    root.classList.remove("force-athas-light", "force-athas-dark");
-
     // Apply CSS variables
     Object.entries(theme.cssVariables).forEach(([key, value]) => {
       root.style.setProperty(key, value);
@@ -63,15 +60,9 @@ class ThemeRegistry implements ThemeRegistryAPI {
       });
     }
 
-    // Add theme class based on isDark property
-    if (theme.isDark) {
-      root.classList.add("force-athas-dark");
-    } else {
-      root.classList.add("force-athas-light");
-    }
-
     // Set data attribute for the current theme
     root.setAttribute("data-theme", id);
+    root.setAttribute("data-theme-type", theme.isDark ? "dark" : "light");
 
     this.currentTheme = id;
     console.log(`Theme registry: Successfully applied theme ${id}`);
