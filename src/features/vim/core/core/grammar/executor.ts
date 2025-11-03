@@ -254,11 +254,19 @@ function executeMotion(
   if (!range) return false;
 
   // Move cursor to the end position of the range
+  const newOffset = calculateOffsetFromPosition(range.end.line, range.end.column, context.lines);
   context.setCursorPosition({
     line: range.end.line,
     column: range.end.column,
-    offset: calculateOffsetFromPosition(range.end.line, range.end.column, context.lines),
+    offset: newOffset,
   });
+
+  // Update textarea cursor
+  const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+  if (textarea) {
+    textarea.selectionStart = textarea.selectionEnd = newOffset;
+    textarea.dispatchEvent(new Event("select"));
+  }
 
   return true;
 }

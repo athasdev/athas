@@ -140,9 +140,9 @@ export function parse(keys: string[], mode: "normal" | "visual" = "normal"): Par
     return { status: "complete", command: cmd };
   }
 
-  if (actionMatch.kind === "partial") {
-    return { status: "incomplete" };
-  }
+  // Don't return incomplete for partial action match yet - try operators and motions first
+  // This allows commands like "gg" to work even though "g" is a prefix of "gr" action
+  const actionIsPartial = actionMatch.kind === "partial";
 
   // 4) Try OPERATOR
   const opMatch = operators.match(keys, i);
@@ -280,9 +280,8 @@ export function parse(keys: string[], mode: "normal" | "visual" = "normal"): Par
     return { status: "complete", command: cmd };
   }
 
-  if (opMatch.kind === "partial") {
-    return { status: "incomplete" };
-  }
+  // Don't return incomplete for partial operator match yet - try motions first
+  const operatorIsPartial = opMatch.kind === "partial";
 
   // In visual mode, check for text objects to extend selection (iw, aw, i", etc.)
   if (mode === "visual" && (keys[i] === "i" || keys[i] === "a")) {
@@ -334,7 +333,12 @@ export function parse(keys: string[], mode: "normal" | "visual" = "normal"): Par
     return motionResult;
   }
 
-  // If we get here, no valid command was found
+  // If we get here, check if any token type had a partial match
+  // If so, we're waiting for more keys. Otherwise, it's invalid.
+  if (actionIsPartial || operatorIsPartial) {
+    return { status: "incomplete" };
+  }
+
   return { status: "invalid", reason: "Unknown command prefix" };
 }
 
