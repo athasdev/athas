@@ -146,7 +146,7 @@ export function MainLayout() {
               <Suspense
                 fallback={
                   <div className="flex h-full items-center justify-center text-text-lighter text-xs">
-                    Loading AI Chat...
+                    Loading...
                   </div>
                 }
               >

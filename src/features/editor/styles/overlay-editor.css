@@ -1,0 +1,80 @@
+/**
+ * Overlay Editor Styles
+ * Two-layer architecture: transparent input + syntax-highlighted background
+ */
+
+.overlay-editor-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Background layer - syntax highlighted, read-only */
+.highlight-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  pointer-events: none;
+  z-index: 1;
+  padding: 0.5rem 1rem;
+  white-space: pre;
+  word-wrap: break-word;
+  user-select: none;
+}
+
+/* Foreground layer - transparent text, visible caret */
+.input-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  z-index: 2;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: transparent;
+  caret-color: var(--tw-text, #d4d4d4);
+  white-space: pre;
+  word-wrap: break-word;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  tab-size: inherit;
+}
+
+/* Ensure both layers have matching scroll behavior */
+.highlight-layer::-webkit-scrollbar,
+.input-layer::-webkit-scrollbar {
+  display: none;
+}
+
+.highlight-layer,
+.input-layer {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Selection styling for the input layer */
+.input-layer::selection {
+  background: var(--tw-selected, rgba(255, 255, 255, 0.2));
+  color: transparent;
+}
+
+.input-layer::-moz-selection {
+  background: var(--tw-selected, rgba(255, 255, 255, 0.2));
+  color: transparent;
+}
+
+/* Line structure in highlight layer */
+.highlight-layer-line {
+  display: block;
+  min-height: 1em;
+}

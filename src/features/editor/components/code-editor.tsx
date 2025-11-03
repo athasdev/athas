@@ -17,9 +17,9 @@ import { useAppStore } from "@/stores/app-store";
 import { useZoomStore } from "@/stores/zoom-store";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import Breadcrumb from "./breadcrumb";
+import { EditorOverlay } from "./editor-overlay";
 import { MarkdownPreview } from "./markdown-preview";
 import { EditorStylesheet } from "./stylesheet";
-import { TextEditor } from "./text-editor";
 
 interface CodeEditorProps {
   // All props are now optional as we get most data from stores
@@ -301,7 +301,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
             {/* Editor content area */}
             <div className="editor-wrapper relative flex-1 overflow-hidden">
               <div className="relative h-full flex-1 bg-primary-bg">
-                {showMarkdownPreview ? <MarkdownPreview /> : <TextEditor />}
+                {showMarkdownPreview ? <MarkdownPreview /> : <EditorOverlay />}
               </div>
             </div>
           </div>
