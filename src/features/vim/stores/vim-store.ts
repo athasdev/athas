@@ -26,7 +26,7 @@ interface VimState {
     start: { line: number; column: number } | null;
     end: { line: number; column: number } | null;
   };
-  visualMode: "char" | "line" | null; // Track visual mode type
+  visualMode: "char" | "line" | "block" | null; // Track visual mode type
   register: {
     text: string;
     isLineWise: boolean;
@@ -189,7 +189,7 @@ const useVimStoreBase = create(
           return get().keyBuffer;
         },
 
-        setVisualMode: (mode: "char" | "line" | null) => {
+        setVisualMode: (mode: "char" | "line" | "block" | null) => {
           set((state) => {
             state.visualMode = mode;
           });

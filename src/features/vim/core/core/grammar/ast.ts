@@ -46,6 +46,17 @@ export type Command =
       kind: "motion";
       count?: Count;
       motion: Motion;
+    }
+  | {
+      kind: "visualOperator";
+      reg?: RegisterRef;
+      operator: OperatorKey;
+    }
+  | {
+      kind: "visualTextObject";
+      reg?: RegisterRef;
+      mode: "inner" | "around";
+      object: string;
     };
 
 /**

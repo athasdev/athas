@@ -100,6 +100,11 @@ export function normalize(cmd: Command): Command {
     };
   }
 
+  // Visual commands don't need normalization
+  if (cmd.kind === "visualOperator" || cmd.kind === "visualTextObject") {
+    return cmd;
+  }
+
   return cmd;
 }
 
@@ -126,6 +131,11 @@ export function effectiveCount(cmd: Command): number {
     return cmd.count ?? 1;
   }
 
+  // Visual commands don't use counts (count is already applied to the selection)
+  if (cmd.kind === "visualOperator" || cmd.kind === "visualTextObject") {
+    return 1;
+  }
+
   // For operators
   const a = cmd.countBefore ?? 1;
   const b = cmd.countAfter ?? 1;
@@ -145,6 +155,14 @@ export function getRegisterName(cmd: Command): string {
   }
 
   if (cmd.kind === "operator" && cmd.reg) {
+    return cmd.reg.name;
+  }
+
+  if (cmd.kind === "visualOperator" && cmd.reg) {
+    return cmd.reg.name;
+  }
+
+  if (cmd.kind === "visualTextObject" && cmd.reg) {
     return cmd.reg.name;
   }
 
@@ -192,6 +210,11 @@ export function isRepeatable(cmd: Command): boolean {
     return false;
   }
 
-  // All operators are repeatable
+  // Visual text objects are not repeatable (they don't modify text, just extend selection)
+  if (cmd.kind === "visualTextObject") {
+    return false;
+  }
+
+  // Visual operators and all other operators are repeatable
   return true;
 }

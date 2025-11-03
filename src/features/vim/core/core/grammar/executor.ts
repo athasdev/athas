@@ -57,6 +57,16 @@ export function executeAST(cmd: Command): boolean {
       return executeMotion(normalized, context, count);
     }
 
+    // Handle VISUAL OPERATOR commands
+    if (normalized.kind === "visualOperator") {
+      return executeVisualOperator(normalized, context, registerName);
+    }
+
+    // Handle VISUAL TEXT OBJECT commands
+    if (normalized.kind === "visualTextObject") {
+      return executeVisualTextObject(normalized, context);
+    }
+
     return false;
   } catch (error) {
     console.error("Error executing vim command:", error);
@@ -435,6 +445,109 @@ function executeModeChange(mode: string, context: EditorContext, _count: number)
     default:
       return false;
   }
+}
+
+/**
+ * Execute a visual operator command
+ */
+function executeVisualOperator(
+  cmd: Extract<Command, { kind: "visualOperator" }>,
+  context: EditorContext,
+  _registerName: string,
+): boolean {
+  const { operator } = cmd;
+  const vimStore = useVimStore.getState();
+  const visualSelection = vimStore.visualSelection;
+  const visualMode = vimStore.visualMode;
+
+  if (!visualSelection.start || !visualSelection.end) {
+    console.warn("No visual selection");
+    return false;
+  }
+
+  // Get the operator
+  const op = getOperator(operator);
+  if (!op) {
+    console.warn(`Operator not found: ${operator}`);
+    return false;
+  }
+
+  // Convert visual selection to VimRange
+  const startOffset = calculateOffsetFromPosition(
+    visualSelection.start.line,
+    visualSelection.start.column,
+    context.lines,
+  );
+  const endOffset = calculateOffsetFromPosition(
+    visualSelection.end.line,
+    visualSelection.end.column,
+    context.lines,
+  );
+
+  const range: VimRange = {
+    start: { ...visualSelection.start, offset: startOffset },
+    end: { ...visualSelection.end, offset: endOffset },
+    linewise: visualMode === "line",
+    inclusive: true,
+  };
+
+  // Execute the operator on the range
+  op.execute(range, context);
+
+  // Handle mode transitions
+  if (op.entersInsertMode) {
+    vimStore.actions.setMode("insert");
+  } else {
+    vimStore.actions.setMode("normal");
+  }
+
+  return true;
+}
+
+/**
+ * Execute a visual text object command (extends selection to text object)
+ */
+function executeVisualTextObject(
+  cmd: Extract<Command, { kind: "visualTextObject" }>,
+  context: EditorContext,
+): boolean {
+  const { mode, object } = cmd;
+  const vimStore = useVimStore.getState();
+
+  // Get text object implementation
+  const textObj = getTextObject(object);
+  if (!textObj) {
+    console.warn(`Text object not found: ${object}`);
+    return false;
+  }
+
+  // Calculate text object range from current cursor
+  const range = textObj.calculate(context.cursor, context.lines, mode);
+  if (!range) {
+    console.warn(`Failed to calculate text object range: ${object}`);
+    return false;
+  }
+
+  // Update visual selection to the text object range
+  const { setVisualSelection } = vimStore.actions;
+  setVisualSelection(range.start, range.end);
+
+  // Update textarea selection
+  const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+  if (textarea) {
+    const startOffset = calculateOffsetFromPosition(
+      range.start.line,
+      range.start.column,
+      context.lines,
+    );
+    const endOffset = calculateOffsetFromPosition(range.end.line, range.end.column, context.lines);
+
+    textarea.selectionStart = Math.min(startOffset, endOffset);
+    textarea.selectionEnd = Math.max(startOffset, endOffset);
+    textarea.dispatchEvent(new Event("select"));
+  }
+
+  return true;
 }
 
 /**

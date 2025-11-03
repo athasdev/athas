@@ -61,8 +61,10 @@ function parseNumber(keys: string[], i: number): { val?: number; next: number } 
  * Main parser function
  *
  * Parses a sequence of keys into a Command AST or returns parse status.
+ * @param keys - The sequence of keys to parse
+ * @param mode - The current vim mode (defaults to "normal")
  */
-export function parse(keys: string[]): ParseResult {
+export function parse(keys: string[], mode: "normal" | "visual" = "normal"): ParseResult {
   if (keys.length === 0) {
     return { status: "incomplete" };
   }
@@ -147,6 +149,21 @@ export function parse(keys: string[]): ParseResult {
   if (opMatch.kind === "complete") {
     st.operator = opMatch.tok.key;
     i += opMatch.len;
+
+    // In visual mode, operators are complete commands (no target needed)
+    if (mode === "visual") {
+      if (i !== keys.length) {
+        return { status: "invalid", reason: "Trailing keys after visual operator" };
+      }
+
+      const cmd: Command = {
+        kind: "visualOperator",
+        reg: st.reg,
+        operator: st.operator as any,
+      };
+
+      return { status: "complete", command: cmd };
+    }
 
     // Check for operator doubling (dd, yy, cc, etc.)
     const dblMatch = operators.match(keys, i);
@@ -265,6 +282,36 @@ export function parse(keys: string[]): ParseResult {
 
   if (opMatch.kind === "partial") {
     return { status: "incomplete" };
+  }
+
+  // In visual mode, check for text objects to extend selection (iw, aw, i", etc.)
+  if (mode === "visual" && (keys[i] === "i" || keys[i] === "a")) {
+    const objMode = keys[i] === "i" ? "inner" : "around";
+    i++;
+
+    if (i >= keys.length) {
+      return { status: "incomplete" };
+    }
+
+    const objectKey = keys[i];
+    if (!isTextObjectKey(objectKey)) {
+      return { status: "invalid", reason: `Invalid text object: ${objectKey}` };
+    }
+
+    i++;
+
+    if (i !== keys.length) {
+      return { status: "invalid", reason: "Trailing keys after visual text object" };
+    }
+
+    const cmd: Command = {
+      kind: "visualTextObject",
+      reg: st.reg,
+      mode: objMode,
+      object: objectKey,
+    };
+
+    return { status: "complete", command: cmd };
   }
 
   // 5) Try MOTION (standalone cursor movement)
