@@ -4,9 +4,7 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-
-const VIEWPORT_BUFFER_LINES = 50; // Extra lines to tokenize above/below viewport
-const SCROLL_UPDATE_THROTTLE = 100; // ms - throttle viewport updates during scroll
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 
 export interface ViewportRange {
   startLine: number;
@@ -20,7 +18,7 @@ interface UseViewportLinesOptions {
 }
 
 export function useViewportLines(options: UseViewportLinesOptions) {
-  const { lineHeight, bufferLines = VIEWPORT_BUFFER_LINES } = options;
+  const { lineHeight, bufferLines = EDITOR_CONSTANTS.VIEWPORT_BUFFER_LINES } = options;
 
   const [viewportRange, setViewportRange] = useState<ViewportRange>({
     startLine: 0,
@@ -66,12 +64,16 @@ export function useViewportLines(options: UseViewportLinesOptions) {
       updateThrottleTimer.current = setTimeout(() => {
         const newRange = calculateViewportRange(scrollTop, containerHeightRef.current, totalLines);
 
-        // Only update if range has changed significantly (more than 10 lines)
+        // Only update if range has changed significantly
         setViewportRange((prev) => {
           const startLineDiff = Math.abs(newRange.startLine - prev.startLine);
           const endLineDiff = Math.abs(newRange.endLine - prev.endLine);
 
-          if (startLineDiff > 10 || endLineDiff > 10 || newRange.totalLines !== prev.totalLines) {
+          if (
+            startLineDiff > EDITOR_CONSTANTS.SIGNIFICANT_LINE_DIFF ||
+            endLineDiff > EDITOR_CONSTANTS.SIGNIFICANT_LINE_DIFF ||
+            newRange.totalLines !== prev.totalLines
+          ) {
             return newRange;
           }
 
@@ -79,7 +81,7 @@ export function useViewportLines(options: UseViewportLinesOptions) {
         });
 
         updateThrottleTimer.current = null;
-      }, SCROLL_UPDATE_THROTTLE);
+      }, EDITOR_CONSTANTS.SCROLL_UPDATE_THROTTLE);
     },
     [calculateViewportRange],
   );

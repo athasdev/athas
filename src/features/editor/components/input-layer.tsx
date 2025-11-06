@@ -30,14 +30,15 @@ const InputLayerComponent = forwardRef<HTMLTextAreaElement, InputLayerProps>(
       [onInput],
     );
 
-    // Sync textarea value only when buffer changes (not on every content change)
+    // Sync textarea value ONLY when buffer switches (not during typing)
+    // This keeps the textarea fully uncontrolled during typing for zero-lag input
     useEffect(() => {
       if (ref && typeof ref !== "function" && ref.current) {
         if (ref.current.value !== content) {
           ref.current.value = content;
         }
       }
-    }, [bufferId, content, ref]); // Sync when buffer or content changes externally
+    }, [bufferId, ref]); // Only sync on buffer switch, NOT on content changes
 
     return (
       <textarea

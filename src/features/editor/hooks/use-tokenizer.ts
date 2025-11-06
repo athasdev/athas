@@ -4,7 +4,9 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useRef, useState } from "react";
-import type { Token } from "../utils/html";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { logger } from "@/features/editor/utils/logger";
+import { buildLineOffsetMap, type Token } from "../utils/html";
 import type { ViewportRange } from "./use-viewport-lines";
 
 interface TokenizerOptions {
@@ -24,7 +26,6 @@ function getExtension(path: string): string {
 }
 
 const FULL_TOKENIZE_INTERVAL = 5000; // Re-tokenize full document every 5 seconds
-const SMALL_FILE_THRESHOLD = 500; // Lines - always tokenize fully for small files
 
 export function useTokenizer({ filePath, enabled = true, incremental = true }: TokenizerOptions) {
   const [tokens, setTokens] = useState<Token[]>([]);
@@ -54,7 +55,7 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
           lastFullTokenizeTime: Date.now(),
         };
       } catch (error) {
-        console.warn("[Tokenizer] Full tokenization failed:", error);
+        logger.warn("Editor", "[Tokenizer] Full tokenization failed:", error);
         setTokens([]);
       } finally {
         setLoading(false);
@@ -76,7 +77,7 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
       const lineCount = text.split("\n").length;
 
       // For small files, always tokenize fully
-      if (lineCount < SMALL_FILE_THRESHOLD) {
+      if (lineCount < EDITOR_CONSTANTS.SMALL_FILE_THRESHOLD) {
         return tokenizeFull(text);
       }
 
@@ -98,13 +99,11 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
 
         // Merge with cached tokens from outside the viewport
         const { fullTokens } = cacheRef.current;
-        const lines = text.split("\n");
-        const rangeStartOffset = lines
-          .slice(0, viewportRange.startLine)
-          .reduce((acc, line) => acc + line.length + 1, 0);
-        const rangeEndOffset = lines
-          .slice(0, viewportRange.endLine)
-          .reduce((acc, line) => acc + line.length + 1, 0);
+
+        // Use cached line offset map for O(1) lookups instead of O(n) reduce
+        const lineOffsets = buildLineOffsetMap(text);
+        const rangeStartOffset = lineOffsets[viewportRange.startLine] || 0;
+        const rangeEndOffset = lineOffsets[viewportRange.endLine] || text.length;
 
         // Filter out cached tokens that overlap with the new range
         const cachedTokensOutsideRange = fullTokens.filter(
@@ -124,7 +123,11 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
         // Check if viewport changed significantly
         lastViewportRangeRef.current = viewportRange;
       } catch (error) {
-        console.warn("[Tokenizer] Range tokenization failed, falling back to full:", error);
+        logger.warn(
+          "Editor",
+          "[Tokenizer] Range tokenization failed, falling back to full:",
+          error,
+        );
         tokenizeFull(text);
       } finally {
         setLoading(false);

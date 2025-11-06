@@ -1,7 +1,7 @@
 /**
  * Editor Overlay - Two-layer editor architecture
  * Combines transparent input layer with syntax-highlighted background
- * Optimized with single unified debounce for better performance
+ * Fully immediate updates - zero lag, instant syntax highlighting
  */
 
 import "../styles/overlay-editor.css";
@@ -16,8 +16,6 @@ import { Gutter } from "./gutter";
 import { HighlightLayer } from "./highlight-layer";
 import { InputLayer } from "./input-layer";
 
-const UNIFIED_DEBOUNCE_MS = 100; // Single debounce for all updates
-
 interface EditorOverlayProps {
   className?: string;
 }
@@ -26,13 +24,11 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
-  const unifiedDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   const bufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
   const { updateBufferContent } = useBufferStore.use.actions();
   const { setCursorPosition } = useEditorStateStore.use.actions();
-  const cursor = useEditorStateStore.use.cursorPosition();
 
   const fontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
@@ -41,6 +37,7 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
 
   const buffer = buffers.find((b) => b.id === bufferId);
   const content = buffer?.content || "";
+  const filePath = buffer?.path;
   const lines = content.split("\n");
   const lineHeight = fontSize * 1.4;
 
@@ -49,36 +46,29 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
     lineHeight,
   });
 
-  // Tokenization with incremental support
+  // Tokenization with incremental support - NO debouncing for instant syntax highlighting
   const { tokens, tokenize } = useTokenizer({
-    filePath: buffer?.path,
+    filePath,
     incremental: true,
   });
 
-  // Handle input changes with unified debouncing
+  // Handle input changes with EVERYTHING immediate - no delays!
   const handleInput = useCallback(
     (newContent: string) => {
-      // Clear any pending debounce
-      if (unifiedDebounceTimer.current) {
-        clearTimeout(unifiedDebounceTimer.current);
-      }
+      if (!bufferId || !inputRef.current) return;
 
-      // Single unified debounce for all updates (100ms)
-      unifiedDebounceTimer.current = setTimeout(() => {
-        if (!bufferId || !inputRef.current) return;
+      // 1. Update buffer content IMMEDIATELY
+      updateBufferContent(bufferId, newContent);
 
-        // 1. Update buffer content
-        updateBufferContent(bufferId, newContent);
+      // 2. Update cursor position IMMEDIATELY
+      const selectionStart = inputRef.current.selectionStart;
+      const lines = newContent.split("\n");
+      const position = calculateCursorPosition(selectionStart, lines);
+      setCursorPosition(position);
 
-        // 2. Update cursor position
-        const selectionStart = inputRef.current.selectionStart;
-        const lines = newContent.split("\n");
-        const position = calculateCursorPosition(selectionStart, lines);
-        setCursorPosition(position);
-
-        // 3. Trigger tokenization (simple full tokenization)
-        tokenize(newContent);
-      }, UNIFIED_DEBOUNCE_MS);
+      // 3. Tokenize IMMEDIATELY for instant syntax highlighting
+      // Tree-sitter is fast enough to handle this on every keystroke
+      tokenize(newContent);
     },
     [bufferId, updateBufferContent, setCursorPosition, tokenize],
   );
@@ -128,15 +118,6 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
     [handleViewportScroll, lines.length],
   );
 
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (unifiedDebounceTimer.current) {
-        clearTimeout(unifiedDebounceTimer.current);
-      }
-    };
-  }, []);
-
   // Initialize viewport on mount
   useEffect(() => {
     if (inputRef.current) {
@@ -159,13 +140,7 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
   return (
     <div className="relative flex size-full">
       {showLineNumbers && (
-        <Gutter
-          ref={gutterRef}
-          lines={lines}
-          activeLine={cursor.line}
-          fontSize={fontSize}
-          fontFamily={fontFamily}
-        />
+        <Gutter ref={gutterRef} lines={lines} fontSize={fontSize} fontFamily={fontFamily} />
       )}
 
       <div className={`overlay-editor-container flex-1 bg-primary-bg ${className || ""}`}>

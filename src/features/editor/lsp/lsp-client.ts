@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { CompletionItem, Hover } from "vscode-languageserver-protocol";
+import { logger } from "../utils/logger";
 
 export interface LspError {
   message: string;
@@ -18,34 +19,34 @@ export class LspClient {
 
   async start(workspacePath: string): Promise<void> {
     if (this.activeWorkspaces.has(workspacePath)) {
-      console.log("LSP already started for workspace:", workspacePath);
+      logger.debug("LSPClient", "LSP already started for workspace:", workspacePath);
       return;
     }
 
     try {
-      console.log("Starting LSP with workspace:", workspacePath);
+      logger.debug("LSPClient", "Starting LSP with workspace:", workspacePath);
       await invoke<void>("lsp_start", { workspacePath });
       this.activeWorkspaces.add(workspacePath);
-      console.log("LSP started successfully for workspace:", workspacePath);
+      logger.debug("LSPClient", "LSP started successfully for workspace:", workspacePath);
     } catch (error) {
-      console.error("Failed to start LSP:", error);
+      logger.error("LSPClient", "Failed to start LSP:", error);
       throw error;
     }
   }
 
   async stop(workspacePath: string): Promise<void> {
     if (!this.activeWorkspaces.has(workspacePath)) {
-      console.log("No LSP running for workspace:", workspacePath);
+      logger.debug("LSPClient", "No LSP running for workspace:", workspacePath);
       return;
     }
 
     try {
-      console.log("Stopping LSP for workspace:", workspacePath);
+      logger.debug("LSPClient", "Stopping LSP for workspace:", workspacePath);
       await invoke<void>("lsp_stop", { workspacePath });
       this.activeWorkspaces.delete(workspacePath);
-      console.log("LSP stopped successfully for workspace:", workspacePath);
+      logger.debug("LSPClient", "LSP stopped successfully for workspace:", workspacePath);
     } catch (error) {
-      console.error("Failed to stop LSP:", error);
+      logger.error("LSPClient", "Failed to stop LSP:", error);
       throw error;
     }
   }
@@ -61,21 +62,24 @@ export class LspClient {
     character: number,
   ): Promise<CompletionItem[]> {
     try {
-      console.log(`Getting completions for ${filePath}:${line}:${character}`);
-      console.log(`Active workspaces: ${Array.from(this.activeWorkspaces).join(", ")}`);
+      logger.debug("LSPClient", `Getting completions for ${filePath}:${line}:${character}`);
+      logger.debug(
+        "LSPClient",
+        `Active workspaces: ${Array.from(this.activeWorkspaces).join(", ")}`,
+      );
       const completions = await invoke<CompletionItem[]>("lsp_get_completions", {
         filePath,
         line,
         character,
       });
       if (completions.length === 0) {
-        console.warn("LSP returned 0 completions - checking LSP status");
+        logger.warn("LSPClient", "LSP returned 0 completions - checking LSP status");
       } else {
-        console.log(`Got ${completions.length} completions from LSP server`);
+        logger.debug("LSPClient", `Got ${completions.length} completions from LSP server`);
       }
       return completions;
     } catch (error) {
-      console.error("LSP completion error:", error);
+      logger.error("LSPClient", "LSP completion error:", error);
       return [];
     }
   }
@@ -88,17 +92,17 @@ export class LspClient {
         character,
       });
     } catch (error) {
-      console.error("LSP hover error:", error);
+      logger.error("LSPClient", "LSP hover error:", error);
       return null;
     }
   }
 
   async notifyDocumentOpen(filePath: string, content: string): Promise<void> {
     try {
-      console.log(`Opening document: ${filePath}`);
+      logger.debug("LSPClient", `Opening document: ${filePath}`);
       await invoke<void>("lsp_document_open", { filePath, content });
     } catch (error) {
-      console.error("LSP document open error:", error);
+      logger.error("LSPClient", "LSP document open error:", error);
     }
   }
 
@@ -110,7 +114,7 @@ export class LspClient {
         version,
       });
     } catch (error) {
-      console.error("LSP document change error:", error);
+      logger.error("LSPClient", "LSP document change error:", error);
     }
   }
 
@@ -118,7 +122,7 @@ export class LspClient {
     try {
       await invoke<void>("lsp_document_close", { filePath });
     } catch (error) {
-      console.error("LSP document close error:", error);
+      logger.error("LSPClient", "LSP document close error:", error);
     }
   }
 
@@ -126,7 +130,7 @@ export class LspClient {
     try {
       return await invoke<boolean>("lsp_is_language_supported", { filePath });
     } catch (error) {
-      console.error("LSP language support check error:", error);
+      logger.error("LSPClient", "LSP language support check error:", error);
       return false;
     }
   }

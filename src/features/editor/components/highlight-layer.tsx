@@ -5,7 +5,7 @@
  */
 
 import { forwardRef, memo, type ReactNode, useMemo } from "react";
-import type { Token } from "../utils/html";
+import { buildLineOffsetMap, type Token } from "../utils/html";
 
 interface HighlightLayerProps {
   content: string;
@@ -102,12 +102,14 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
 
     // Build a map of line index to line-specific tokens
     // This avoids passing all tokens to every line
+    // Use cached line offset map for O(1) lookups
     const lineTokensMap = useMemo(() => {
+      const lineOffsets = buildLineOffsetMap(content);
       const map = new Map<number, Token[]>();
-      let offset = 0;
       let tokenIndex = 0;
 
       for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const offset = lineOffsets[lineIndex];
         const lineLength = lines[lineIndex].length;
         const lineEnd = offset + lineLength;
         const lineTokens: Token[] = [];
@@ -130,19 +132,18 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
         }
 
         map.set(lineIndex, lineTokens);
-        offset = lineEnd + 1; // +1 for newline
       }
 
       return map;
-    }, [lines, sortedTokens]);
+    }, [lines, sortedTokens, content]);
 
     // Render lines with their specific tokens
+    // Use cached line offset map for O(1) lookups
     const renderedLines = useMemo(() => {
-      let offset = 0;
+      const lineOffsets = buildLineOffsetMap(content);
       return lines.map((line, i) => {
         const lineTokens = lineTokensMap.get(i) || [];
-        const lineStart = offset;
-        offset += line.length + 1;
+        const lineStart = lineOffsets[i];
 
         return (
           <Line
@@ -154,7 +155,7 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
           />
         );
       });
-    }, [lines, lineTokensMap]);
+    }, [lines, lineTokensMap, content]);
 
     return (
       <div

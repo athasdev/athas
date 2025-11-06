@@ -1,7 +1,9 @@
 import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
+import { logger } from "@/features/editor/utils/logger";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
 import type { MultiFileDiff } from "@/features/version-control/diff-viewer/types/diff";
@@ -144,7 +146,7 @@ export const useBufferStore = createSelectors(
     immer((set, get) => ({
       buffers: [],
       activeBufferId: null,
-      maxOpenTabs: 10,
+      maxOpenTabs: EDITOR_CONSTANTS.MAX_OPEN_TABS,
       pendingClose: null,
       closedBuffersHistory: [],
       actions: {
@@ -255,8 +257,11 @@ export const useBufferStore = createSelectors(
               isPinned: closedBuffer.isPinned,
             };
 
-            // Keep only last 10 closed buffers
-            const updatedHistory = [closedBufferInfo, ...closedBuffersHistory].slice(0, 10);
+            // Keep only last N closed buffers
+            const updatedHistory = [closedBufferInfo, ...closedBuffersHistory].slice(
+              0,
+              EDITOR_CONSTANTS.MAX_CLOSED_BUFFERS_HISTORY,
+            );
 
             set((state) => {
               state.closedBuffersHistory = updatedHistory;
@@ -503,9 +508,13 @@ export const useBufferStore = createSelectors(
             const content = await readFileContent(buffer.path);
             // Update buffer content and clear dirty flag
             useBufferStore.getState().actions.updateBufferContent(bufferId, content, false);
-            console.log(`[FileWatcher] Reloaded buffer from disk: ${buffer.path}`);
+            logger.debug("Editor", `[FileWatcher] Reloaded buffer from disk: ${buffer.path}`);
           } catch (error) {
-            console.error(`[FileWatcher] Failed to reload buffer from disk: ${buffer.path}`, error);
+            logger.error(
+              "Editor",
+              `[FileWatcher] Failed to reload buffer from disk: ${buffer.path}`,
+              error,
+            );
           }
         },
 
@@ -597,7 +606,7 @@ export const useBufferStore = createSelectors(
               get().actions.handleTabPin(bufferId);
             }
           } catch (error) {
-            console.warn(`Failed to reopen closed tab: ${closedBuffer.path}`, error);
+            logger.warn("Editor", `Failed to reopen closed tab: ${closedBuffer.path}`, error);
           }
         },
       },
@@ -620,7 +629,12 @@ export const useBufferStore = createSelectors(
       const mod = await import("@/features/editor/extensions/builtin/syntax-highlighting");
       mod.setSyntaxHighlightingFilePath(buffer.path);
     } catch (e) {
-      console.warn("[BufferStore] Failed to trigger syntax highlighting for", buffer.path, e);
+      logger.warn(
+        "Editor",
+        "[BufferStore] Failed to trigger syntax highlighting for",
+        buffer.path,
+        e,
+      );
     }
   });
 }

@@ -3,16 +3,18 @@
  */
 
 import { forwardRef } from "react";
+import { useEditorStateStore } from "../stores/state-store";
 
 interface GutterProps {
   lines: string[];
-  activeLine: number;
   fontSize: number;
   fontFamily: string;
 }
 
 export const Gutter = forwardRef<HTMLDivElement, GutterProps>(
-  ({ lines, activeLine, fontSize, fontFamily }, ref) => {
+  ({ lines, fontSize, fontFamily }, ref) => {
+    // Subscribe to cursor position directly to avoid parent re-renders
+    const activeLine = useEditorStateStore.use.cursorPosition().line;
     const lineHeight = fontSize * 1.4;
 
     return (

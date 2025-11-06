@@ -11,7 +11,7 @@ import { useEditorSettingsStore } from "./settings-store";
 // Position Cache Manager
 class PositionCacheManager {
   private cache = new Map<string, Position>();
-  private readonly MAX_CACHE_SIZE = 50;
+  private readonly MAX_CACHE_SIZE = EDITOR_CONSTANTS.MAX_POSITION_CACHE_SIZE;
 
   set(bufferId: string, position: Position): void {
     const cachedPosition = this.cache.get(bufferId);

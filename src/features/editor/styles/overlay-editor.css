@@ -24,6 +24,7 @@
   white-space: pre;
   word-wrap: break-word;
   user-select: none;
+  color: var(--text, #d4d4d4);
 
   /* Performance optimizations */
   contain: layout style paint;

@@ -1,15 +1,12 @@
 import type React from "react";
-import { useEffect, useMemo, useRef } from "react";
-import { useEditorCompletionStore } from "@/features/editor/completion/completion-store";
+import { useEffect, useRef } from "react";
 import FindBar from "@/features/editor/components/find-bar";
+import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
-import { useLspStore } from "@/features/editor/lsp/lsp-store";
-import { useHover } from "@/features/editor/lsp/use-hover";
-import { useEditorSearchStore } from "@/features/editor/search/search-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useGitGutter } from "@/features/version-control/git/controllers/use-git-gutter";
@@ -35,8 +32,11 @@ export interface CodeEditorRef {
   textarea: HTMLDivElement | null;
 }
 
+const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
+
 const CodeEditor = ({ className }: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { setRefs, setContent, setFileInfo } = useEditorStateStore.use.actions();
   // No longer need to sync content - editor-view-store computes from buffer
   const { setDisabled } = useEditorSettingsStore.use.actions();
@@ -47,10 +47,10 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { handleContentChange } = useAppStore.use.actions();
-  const searchQuery = useEditorSearchStore.use.searchQuery();
-  const searchMatches = useEditorSearchStore.use.searchMatches();
-  const currentMatchIndex = useEditorSearchStore.use.currentMatchIndex();
-  const { setSearchMatches, setCurrentMatchIndex } = useEditorSearchStore.use.actions();
+  const searchQuery = useEditorUIStore.use.searchQuery();
+  const searchMatches = useEditorUIStore.use.searchMatches();
+  const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
+  const { setSearchMatches, setCurrentMatchIndex } = useEditorUIStore.use.actions();
   const isFileTreeLoading = useFileSystemStore((state) => state.isFileTreeLoading);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const { settings } = useSettingsStore();
@@ -115,97 +115,18 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
     setDisabled(false);
   }, [setDisabled]);
 
-  // Get LSP client instance
-  const lspClient = useMemo(() => LspClient.getInstance(), []);
+  // Get cursor position for LSP integration
+  const cursorPosition = useEditorStateStore.use.cursorPosition();
 
-  // Check if current file is supported by LSP (synchronously for now)
-  const isLspSupported = useMemo(() => {
-    if (!filePath) return false;
-    const ext = filePath.split(".").pop()?.toLowerCase();
-    return ext === "ts" || ext === "tsx" || ext === "js" || ext === "jsx";
-  }, [filePath]);
-
-  // LSP store actions
-  const lspActions = useLspStore.use.actions();
-
-  // Set up LSP completion handlers
-  useEffect(() => {
-    lspActions.setCompletionHandlers(
-      lspClient.getCompletions.bind(lspClient),
-      () => isLspSupported,
-    );
-  }, [lspClient, isLspSupported, lspActions]);
-
-  // Hover hook - prepare for future use
-  useHover({
-    getHover: lspClient.getHover.bind(lspClient),
-    isLanguageSupported: () => isLspSupported,
+  // Consolidated LSP integration (document lifecycle, completions, hover)
+  useLspIntegration({
     filePath,
+    value,
+    cursorPosition,
+    editorRef,
     fontSize: settings.fontSize,
     lineNumbers: settings.lineNumbers,
   });
-
-  // Notify LSP about document changes
-  useEffect(() => {
-    if (!filePath || !activeBuffer) return;
-
-    // Document open
-    lspClient.notifyDocumentOpen(filePath, value).catch(console.error);
-
-    return () => {
-      // Document close
-      lspClient.notifyDocumentClose(filePath).catch(console.error);
-    };
-  }, [filePath, lspClient]);
-
-  // Notify LSP about content changes
-  useEffect(() => {
-    if (!filePath || !activeBuffer) return;
-
-    lspClient.notifyDocumentChange(filePath, value, 1).catch(console.error);
-  }, [value, filePath, activeBuffer, lspClient]);
-
-  // Get cursor position
-  const cursorPosition = useEditorStateStore.use.cursorPosition();
-  // Track typing speed for dynamic debouncing
-  const lastTypeTimeRef = useRef<number>(Date.now());
-  const typingSpeedRef = useRef<number>(500);
-  const isApplyingCompletion = useEditorCompletionStore.use.isApplyingCompletion();
-  const timer = useRef<NodeJS.Timeout>(undefined);
-
-  // Trigger LSP completion on cursor position change
-  useEffect(() => {
-    if (!filePath || !editorRef.current || isApplyingCompletion) {
-      timer.current && clearTimeout(timer.current);
-      return;
-    }
-
-    // Calculate typing speed
-    const now = Date.now();
-    const timeSinceLastType = now - lastTypeTimeRef.current;
-    lastTypeTimeRef.current = now;
-
-    // Adjust debounce based on typing speed
-    if (timeSinceLastType < 100) {
-      // Fast typing - increase debounce
-      typingSpeedRef.current = Math.min(800, typingSpeedRef.current + 50);
-    } else if (timeSinceLastType > 500) {
-      // Slow typing - decrease debounce
-      typingSpeedRef.current = Math.max(300, typingSpeedRef.current - 50);
-    }
-
-    // Debounce completion trigger with dynamic delay
-    timer.current = setTimeout(() => {
-      lspActions.requestCompletion({
-        filePath,
-        cursorPos: cursorPosition.offset,
-        value,
-        editorRef,
-      });
-    }, typingSpeedRef.current);
-
-    return () => clearTimeout(timer.current);
-  }, [cursorPosition, filePath, value, lspActions, isApplyingCompletion]);
 
   // Scroll management
   useEditorScroll(editorRef, null);
@@ -217,33 +138,48 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
     enabled: !!filePath && !!rootFolderPath,
   });
 
-  // Search functionality
+  // Search functionality with debouncing to prevent lag on large files
   useEffect(() => {
+    // Clear existing timer
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+
+    // Clear matches immediately if no query
     if (!searchQuery.trim() || !value) {
       setSearchMatches([]);
       setCurrentMatchIndex(-1);
       return;
     }
 
-    const matches: { start: number; end: number }[] = [];
-    const regex = new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
-    let match: RegExpExecArray | null;
+    // Debounce the expensive regex matching
+    searchTimerRef.current = setTimeout(() => {
+      const matches: { start: number; end: number }[] = [];
+      const regex = new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+      let match: RegExpExecArray | null;
 
-    match = regex.exec(value);
-    while (match !== null) {
-      matches.push({
-        start: match.index,
-        end: match.index + match[0].length,
-      });
-      // Prevent infinite loop on zero-width matches
-      if (match.index === regex.lastIndex) {
-        regex.lastIndex++;
-      }
       match = regex.exec(value);
-    }
+      while (match !== null) {
+        matches.push({
+          start: match.index,
+          end: match.index + match[0].length,
+        });
+        // Prevent infinite loop on zero-width matches
+        if (match.index === regex.lastIndex) {
+          regex.lastIndex++;
+        }
+        match = regex.exec(value);
+      }
 
-    setSearchMatches(matches);
-    setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
+      setSearchMatches(matches);
+      setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+    };
   }, [searchQuery, value, setSearchMatches, setCurrentMatchIndex]);
 
   // Effect to handle search navigation

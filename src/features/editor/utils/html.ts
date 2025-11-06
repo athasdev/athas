@@ -9,6 +9,42 @@ export interface Token {
 }
 
 /**
+ * Line offset cache for fast line-to-offset conversions
+ */
+interface LineOffsetCache {
+  offsets: number[];
+  contentHash: string;
+}
+
+let lineOffsetCache: LineOffsetCache | null = null;
+
+/**
+ * Build a map of line numbers to their starting character offsets
+ * This avoids repeated offset calculations during rendering
+ * Exported for use in tokenizer and other utilities
+ */
+export function buildLineOffsetMap(content: string): number[] {
+  // Check cache first
+  const contentHash = `${content.length}-${content.substring(0, 100)}`;
+  if (lineOffsetCache && lineOffsetCache.contentHash === contentHash) {
+    return lineOffsetCache.offsets;
+  }
+
+  const lines = content.split("\n");
+  const offsets: number[] = new Array(lines.length);
+  let offset = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    offsets[i] = offset;
+    offset += lines[i].length + 1; // +1 for newline
+  }
+
+  // Cache the result
+  lineOffsetCache = { offsets, contentHash };
+  return offsets;
+}
+
+/**
  * Escape HTML special characters (without converting newlines)
  */
 function escapeHtml(text: string): string {
@@ -69,18 +105,18 @@ export function renderWithTokens(content: string, tokens: Token[]): string {
   const lines = content.split("\n");
   const sorted = [...tokens].sort((a, b) => a.start - b.start);
 
+  // Use cached line offset map for O(1) lookups instead of O(n) calculations
+  const lineOffsets = buildLineOffsetMap(content);
+
   let html = "";
-  let offset = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const offset = lineOffsets[i];
     const lineHtml = renderLineWithTokens(line, sorted, offset);
 
     // Render each line as a div (what contenteditable expects)
     html += `<div>${lineHtml || "<br>"}</div>`;
-
-    // Update offset (add 1 for the \n character)
-    offset += line.length + 1;
   }
 
   return html;
