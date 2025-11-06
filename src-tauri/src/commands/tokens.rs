@@ -14,7 +14,9 @@ use tree_sitter_highlight::{HighlightConfiguration, HighlightEvent, Highlighter}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Token {
+   /// Zero-based character offset where the token starts.
    pub start: usize,
+   /// Zero-based character offset where the token ends (exclusive).
    pub end: usize,
    pub token_type: String,
    pub class_name: String,
@@ -460,7 +462,10 @@ pub fn tokenize_content(content: &str, language: &str) -> Result<Vec<Token>> {
       .highlight(&config, content.as_bytes(), None, |_| None)?
       .collect::<Result<Vec<_>, _>>()?;
 
-   let mut tokens = Vec::new();
+   // Collect raw byte-based tokens first. We'll normalize offsets to
+   // character positions after the highlight walk so the frontend can
+   // skip costly byte-to-char conversions.
+   let mut raw_tokens: Vec<(usize, usize, String, String)> = Vec::new();
    let mut current_highlight: Option<usize> = None;
 
    for event in highlights {
@@ -473,12 +478,7 @@ pub fn tokenize_content(content: &str, language: &str) -> Result<Vec<Token>> {
                // Skip whitespace-only tokens
                let text = &content[start..end];
                if !text.trim().is_empty() {
-                  tokens.push(Token {
-                     start,
-                     end,
-                     token_type: token_type.to_string(),
-                     class_name: class_name.to_string(),
-                  });
+                  raw_tokens.push((start, end, token_type.to_string(), class_name.to_string()));
                }
             }
          }
@@ -491,7 +491,63 @@ pub fn tokenize_content(content: &str, language: &str) -> Result<Vec<Token>> {
       }
    }
 
+   if raw_tokens.is_empty() {
+      return Ok(Vec::new());
+   }
+
+   // For ASCII content, byte and character offsets align, so we can
+   // return early without additional work.
+   if content.is_ascii() {
+      return Ok(raw_tokens
+         .into_iter()
+         .filter(|(start, end, _, _)| end > start)
+         .map(|(start, end, token_type, class_name)| Token {
+            start,
+            end,
+            token_type,
+            class_name,
+         })
+         .collect());
+   }
+
+   // Build a lookup table of byte offsets to character indices so we can
+   // translate tree-sitter's byte ranges into char-based offsets. Using a
+   // sorted Vec keeps memory overhead predictable and allows binary search
+   // per token without scanning the full string repeatedly.
+   let mut char_starts: Vec<usize> = content.char_indices().map(|(idx, _)| idx).collect();
+   char_starts.push(content.len());
+
+   let tokens = raw_tokens
+      .into_iter()
+      .filter_map(|(start_byte, end_byte, token_type, class_name)| {
+         if end_byte <= start_byte {
+            return None;
+         }
+
+         let start = byte_to_char_offset(start_byte, &char_starts);
+         let end = byte_to_char_offset(end_byte, &char_starts);
+
+         if end <= start {
+            return None;
+         }
+
+         Some(Token {
+            start,
+            end,
+            token_type,
+            class_name,
+         })
+      })
+      .collect();
+
    Ok(tokens)
+}
+
+fn byte_to_char_offset(byte_offset: usize, char_starts: &[usize]) -> usize {
+   match char_starts.binary_search(&byte_offset) {
+      Ok(idx) => idx,
+      Err(idx) => idx,
+   }
 }
 
 #[cfg(test)]
