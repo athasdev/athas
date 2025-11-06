@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useEditorDecorationsStore } from "@/features/editor/stores/decorations-store";
+import { getLargeFileMeta } from "@/features/editor/utils/large-file";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { getFileDiff, getFileDiffAgainstContent } from "../controllers/git";
 import type { GitDiff } from "../types/git";
@@ -23,12 +24,29 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const { isLarge: isLargeFile, approxLineCount } = useMemo(
+    () => getLargeFileMeta(content),
+    [content],
+  );
 
   // Memoized content hash for efficient change detection
   const contentHash = useMemo(() => {
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(content);
-    return content ? btoa(String.fromCharCode(...bytes)).slice(0, 32) : "";
+    if (!content) return "";
+
+    // Simple hash using content length + sample from start/middle/end
+    // This is much faster than encoding the entire content and avoids stack overflow
+    const len = content.length;
+    const sample =
+      len > 1000
+        ? content.slice(0, 333) +
+          content.slice(Math.floor(len / 2) - 167, Math.floor(len / 2) + 167) +
+          content.slice(-333)
+        : content;
+
+    // Create a simple hash string
+    return `${len}-${sample.length}-${sample.charCodeAt(0) || 0}-${
+      sample.charCodeAt(sample.length - 1) || 0
+    }`;
   }, [content]);
 
   // Process git diff lines into line change information
@@ -152,6 +170,17 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
         console.log(`[GitGutter] Skipping update - missing requirements`);
         return;
       }
+      if (isLargeFile) {
+        console.log(
+          `[GitGutter] Skipping update for large file (chars=${content.length}, ` +
+            `≈${approxLineCount} lines).`,
+        );
+        const decorationsStore = useEditorDecorationsStore.getState();
+        gitDecorationIdsRef.current.forEach((id) => decorationsStore.removeDecoration(id));
+        gitDecorationIdsRef.current = [];
+        lastDiffRef.current = null;
+        return;
+      }
       if (filePath.startsWith("diff://")) {
         console.log(`[GitGutter] Skipping diff:// file`);
         return;
@@ -206,7 +235,16 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
         gitDecorationIdsRef.current = [];
       }
     },
-    [enabled, filePath, rootFolderPath, processGitDiff, applyGitDecorations, content],
+    [
+      enabled,
+      filePath,
+      rootFolderPath,
+      processGitDiff,
+      applyGitDecorations,
+      content,
+      isLargeFile,
+      approxLineCount,
+    ],
   );
 
   // Debounced update function for content changes
@@ -215,14 +253,18 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
       clearTimeout(debounceTimerRef.current);
     }
 
+    if (isLargeFile) {
+      return;
+    }
+
     debounceTimerRef.current = setTimeout(() => {
       updateGitGutter(true); // Use content-based diff for live typing
     }, 500) as NodeJS.Timeout; // 500ms debounce for content changes
-  }, [updateGitGutter]);
+  }, [updateGitGutter, isLargeFile]);
 
   // Initial update when file path changes
   useEffect(() => {
-    if (filePath && rootFolderPath) {
+    if (filePath && rootFolderPath && !isLargeFile) {
       updateGitGutter(false); // Use regular diff for initial load
     }
 
@@ -232,19 +274,24 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
       gitDecorationIdsRef.current.forEach((id) => decorationsStore.removeDecoration(id));
       gitDecorationIdsRef.current = [];
     };
-  }, [filePath, rootFolderPath]);
+  }, [filePath, rootFolderPath, isLargeFile, updateGitGutter]);
 
   // Update on content changes (debounced)
   useEffect(() => {
+    if (isLargeFile) {
+      return;
+    }
+
     if (contentHash && contentHash !== lastContentHashRef.current) {
       lastContentHashRef.current = contentHash;
       debouncedUpdate();
     }
-  }, [contentHash, debouncedUpdate]);
+  }, [contentHash, debouncedUpdate, isLargeFile]);
 
   // Listen for file system changes to update git status
   useEffect(() => {
     if (!enabled || !filePath) return;
+    if (isLargeFile) return;
 
     const handleFileReload = (event: CustomEvent) => {
       const { path } = event.detail;
@@ -288,7 +335,7 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [enabled, filePath, updateGitGutter]);
+  }, [enabled, filePath, updateGitGutter, isLargeFile]);
 
   // Return current git changes for external use if needed
   return {
