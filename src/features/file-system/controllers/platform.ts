@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow, PhysicalPosition, primaryMonitor } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   BaseDirectory,
@@ -60,16 +61,55 @@ export async function deletePath(path: string): Promise<void> {
   await remove(path, { recursive: true });
 }
 
+async function getScreenCenter() {
+  const window = getCurrentWindow();
+  try {
+    const windowSize = await window.innerSize();
+    const monitor = await primaryMonitor();
+
+    if (!monitor) {
+      return new PhysicalPosition(0, 0);
+    }
+
+    const { width: screenWidth, height: screenHeight } = monitor.size;
+    const { x: screenX, y: screenY } = monitor.position;
+    // Calculate center position
+    const centerX = Math.round(screenX + (screenWidth - windowSize.width) / 2);
+    const centerY = Math.round(screenY + (screenHeight - windowSize.height) / 2);
+
+    return new PhysicalPosition(centerX, centerY);
+  } catch {
+    const position = await window.innerPosition();
+    return new PhysicalPosition(position.x, position.y);
+  }
+}
+
 /**
  * Open a folder selection dialog
  */
 export async function openFolder(): Promise<string | null> {
-  const selected = await open({
-    directory: true,
-    multiple: false,
-  });
+  const appWindow = getCurrentWindow();
+  let originalPos: Awaited<ReturnType<typeof appWindow.innerPosition>> | null = null;
 
-  return selected as string | null;
+  try {
+    originalPos = await appWindow.innerPosition();
+    const centerPos = await getScreenCenter();
+    await appWindow.setPosition(centerPos);
+
+    const selected = await open({
+      directory: true,
+      multiple: false,
+    });
+
+    return selected as string | null;
+  } finally {
+    if (originalPos) {
+      const currentPos = await appWindow.innerPosition();
+      if (originalPos.x !== currentPos.x || originalPos.y !== currentPos.y) {
+        await appWindow.setPosition(originalPos);
+      }
+    }
+  }
 }
 
 /**
