@@ -2,6 +2,7 @@
 export const EDITOR_CONSTANTS = {
   // Line height calculation
   LINE_HEIGHT_MULTIPLIER: 1.4,
+  DEFAULT_LINE_HEIGHT: 20,
 
   // Character width calculation (monospace approximation)
   CHAR_WIDTH_MULTIPLIER: 0.6,
@@ -10,6 +11,10 @@ export const EDITOR_CONSTANTS = {
   DEFAULT_VIEWPORT_HEIGHT: 600,
   VIEWPORT_OVERSCAN_RATIO: 0.75, // Increased for even smoother scrolling
   MIN_OVERSCAN_LINES: 10, // Increased minimum overscan
+  VIEWPORT_BUFFER_LINES: 50, // Extra lines to tokenize above/below viewport
+  SCROLL_UPDATE_THROTTLE: 100, // ms - throttle viewport updates during scroll
+  SIGNIFICANT_LINE_DIFF: 10, // Lines - threshold for significant range change
+  VIEWPORT_OVERLAP_THRESHOLD: 50, // Percentage - consider significant if overlap is more than 50%
 
   // Gutter
   MIN_GUTTER_WIDTH: 40,
@@ -42,4 +47,35 @@ export const EDITOR_CONSTANTS = {
   DROPDOWN_MIN_WIDTH: 200,
   DROPDOWN_MAX_WIDTH: 400,
   BREADCRUMB_DROPDOWN_MAX_HEIGHT: 300,
+
+  // Context Menu
+  CONTEXT_MENU_EDGE_MARGIN: 10,
+
+  // Performance & Caching
+  SMALL_FILE_THRESHOLD: 500, // Lines - always tokenize fully for small files
+  UNIFIED_DEBOUNCE_MS: 100, // Single debounce for all updates
+  COMPLETION_DEBOUNCE_MS: 150,
+  COMPLETION_CACHE_TTL_MS: 5000,
+  MAX_COMPLETION_CACHE_SIZE: 100,
+  MAX_POSITION_CACHE_SIZE: 50,
+
+  // Hover Tooltip
+  HOVER_TOOLTIP_DELAY: 300,
+  HOVER_TOOLTIP_HEIGHT: 200,
+  HOVER_TOOLTIP_MARGIN: 10,
+
+  // Dynamic Typing Speed
+  INITIAL_TYPING_SPEED: 500,
+  FAST_TYPING_THRESHOLD: 100,
+  SLOW_TYPING_THRESHOLD: 500,
+  MIN_TYPING_SPEED: 300,
+  MAX_TYPING_SPEED: 800,
+  TYPING_SPEED_ADJUSTMENT: 50,
+
+  // Buffer Management
+  MAX_OPEN_TABS: 10,
+  MAX_CLOSED_BUFFERS_HISTORY: 10,
+
+  // Precision
+  WIDTH_PRECISION_MULTIPLIER: 100, // For rounding width calculations
 } as const;

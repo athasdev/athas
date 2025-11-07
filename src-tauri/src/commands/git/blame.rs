@@ -14,7 +14,7 @@ pub fn git_blame_file(root_path: &str, file_path: &str) -> Result<GitBlame, Stri
       .map_err(|e| format!("Failed to get blame for file '{}': {}", file_path, e))?;
 
    // Validate that we have content to blame
-   if blame.len() == 0 {
+   if blame.is_empty() {
       return Err(format!(
          "No blame information available for file '{}'",
          file_path

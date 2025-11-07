@@ -2,7 +2,9 @@ import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { exit } from "@tauri-apps/plugin-process";
 import type React from "react";
-import { isValidElement, type JSX, useEffect, useMemo } from "react";
+import { isValidElement, type JSX, useEffect, useMemo, useState } from "react";
+import { themeRegistry } from "@/extensions/themes/theme-registry";
+import type { ThemeDefinition } from "@/extensions/themes/types";
 import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -17,11 +19,26 @@ interface Props {
 
 const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
   const { settings } = useSettingsStore();
+  const [themes, setThemes] = useState<ThemeDefinition[]>([]);
 
   const handleClickEmit = (event: string, payload?: unknown) => {
     emit(event, payload);
     setActiveMenu(null);
   };
+
+  // Load themes from theme registry
+  useEffect(() => {
+    const loadThemes = () => {
+      const registryThemes = themeRegistry.getAllThemes();
+      setThemes(registryThemes);
+    };
+
+    loadThemes();
+
+    // Listen for theme registry changes
+    const unsubscribe = themeRegistry.onRegistryChange(loadThemes);
+    return unsubscribe;
+  }, []);
 
   const menus = useMemo(
     () => ({
@@ -100,6 +117,15 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
           <MenuItem separator />
           <Submenu title="Theme">
             <MenuItem onClick={() => handleClickEmit("menu_theme_change", "auto")}>Auto</MenuItem>
+            {themes.length > 0 && <MenuItem separator />}
+            {themes.map((theme) => (
+              <MenuItem
+                key={theme.id}
+                onClick={() => handleClickEmit("menu_theme_change", theme.id)}
+              >
+                {theme.name}
+              </MenuItem>
+            ))}
           </Submenu>
         </Menu>
       ),
@@ -166,7 +192,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
         </Menu>
       ),
     }),
-    [handleClickEmit, setActiveMenu],
+    [handleClickEmit, setActiveMenu, themes],
   );
 
   // Extract shortcuts from menus

@@ -1,89 +1,68 @@
-import { invoke } from "@tauri-apps/api/core";
 import type { EditorAPI } from "@/features/editor/extensions/types";
 import { BaseThemeExtension } from "./base-theme-extension";
+// Import all theme JSON files
+import athasThemes from "./builtin/athas.json";
+import catppuccinThemes from "./builtin/catppuccin.json";
+import contrastThemes from "./builtin/contrast-themes.json";
+import draculaThemes from "./builtin/dracula.json";
+import githubThemes from "./builtin/github.json";
+import nordThemes from "./builtin/nord.json";
+import oneDarkThemes from "./builtin/one-dark.json";
+import solarizedThemes from "./builtin/solarized.json";
+import tokyoNightThemes from "./builtin/tokyo-night.json";
+import vitesseThemes from "./builtin/vitesse.json";
+import vscodeThemes from "./builtin/vscode.json";
 import type { ThemeDefinition } from "./types";
 
-interface TomlTheme {
+interface JsonTheme {
   id: string;
   name: string;
   description: string;
   category: "System" | "Light" | "Dark";
-  is_dark?: boolean;
-  css_variables: Record<string, string>;
-  syntax_tokens?: Record<string, string>;
+  isDark?: boolean;
+  cssVariables: Record<string, string>;
+  syntaxTokens?: Record<string, string>;
+}
+
+interface ThemeFile {
+  themes: JsonTheme[];
 }
 
 export class ThemeLoader extends BaseThemeExtension {
   readonly name = "Theme Loader";
   readonly version = "1.0.0";
-  readonly description = "Loads themes from TOML configuration files";
+  readonly description = "Loads themes from JSON configuration files";
   themes: ThemeDefinition[] = [];
-
-  private themesDirectory = "";
-
-  constructor(themesDirectory?: string) {
-    super();
-    this.themesDirectory = themesDirectory || "src/extensions/themes/builtin";
-  }
 
   async onInitialize(_editor: EditorAPI): Promise<void> {
     try {
-      console.log(`ThemeLoader: Loading themes from ${this.themesDirectory}`);
+      console.log("ThemeLoader: Loading themes from JSON files");
 
-      // Try different possible paths for the themes directory
-      const possiblePaths = [
-        this.themesDirectory,
-        "./src/extensions/themes/builtin",
-        "../src/extensions/themes/builtin",
-        "resources/themes/builtin",
-        "./resources/themes/builtin",
+      // Combine all theme files
+      const allThemeFiles: ThemeFile[] = [
+        athasThemes as ThemeFile,
+        catppuccinThemes as ThemeFile,
+        contrastThemes as ThemeFile,
+        draculaThemes as ThemeFile,
+        githubThemes as ThemeFile,
+        nordThemes as ThemeFile,
+        oneDarkThemes as ThemeFile,
+        solarizedThemes as ThemeFile,
+        tokyoNightThemes as ThemeFile,
+        vitesseThemes as ThemeFile,
+        vscodeThemes as ThemeFile,
       ];
 
-      let tomlThemes: TomlTheme[] = [];
-
-      for (const path of possiblePaths) {
-        try {
-          console.log("ThemeLoader: Trying path:", path);
-          tomlThemes = await invoke("load_toml_themes", {
-            themesDir: path,
-          });
-          if (tomlThemes.length > 0) {
-            console.log(
-              `ThemeLoader: Successfully loaded ${tomlThemes.length} themes from path: ${path}`,
-            );
-            break;
-          }
-        } catch (error) {
-          console.log(`ThemeLoader: Failed to load from path ${path}:`, error);
-        }
-      }
-
-      if (tomlThemes.length === 0) {
-        console.log("ThemeLoader: No themes found in any path, trying absolute path...");
-        // Try with absolute path as last resort
-        const absolutePath =
-          "/Users/mehmetozgul/Documents/GitHub/athasdev/athas/src/extensions/themes/builtin";
-        try {
-          tomlThemes = await invoke("load_toml_themes", {
-            themesDir: absolutePath,
-          });
-          if (tomlThemes.length > 0) {
-            console.log(
-              `ThemeLoader: Successfully loaded ${tomlThemes.length} themes from absolute path`,
-            );
-          }
-        } catch (error) {
-          console.log("ThemeLoader: Failed to load from absolute path:", error);
-        }
-      }
+      // Flatten all themes from all files
+      const allThemes: JsonTheme[] = allThemeFiles.flatMap((file) => file.themes);
 
       console.log(
-        `ThemeLoader: Loaded ${tomlThemes.length} themes from TOML files:`,
-        tomlThemes.map((t) => t.name),
+        `ThemeLoader: Loaded ${allThemes.length} themes from JSON files:`,
+        allThemes.map((t) => t.name),
       );
 
-      // Convert TOML themes to ThemeDefinition format
-      this.themes = tomlThemes.map((tomlTheme) => this.convertTomlToThemeDefinition(tomlTheme));
+      // Convert to ThemeDefinition format
+      this.themes = allThemes.map((jsonTheme) => this.convertJsonToThemeDefinition(jsonTheme));
 
       // Register themes with the theme registry
       const { themeRegistry } = await import("./theme-registry");
@@ -91,38 +70,37 @@ export class ThemeLoader extends BaseThemeExtension {
         themeRegistry.registerTheme(theme);
       });
 
-      // Cache the themes in Rust backend for faster access
-      await invoke("cache_themes", { themes: tomlThemes });
-
-      console.log(`ThemeLoader: Converted, registered, and cached ${this.themes.length} themes`);
+      console.log(`ThemeLoader: Registered ${this.themes.length} themes`);
     } catch (error) {
-      console.error("ThemeLoader: Failed to load TOML themes:", error);
+      console.error("ThemeLoader: Failed to load JSON themes:", error);
       // Fall back to empty themes array
       this.themes = [];
     }
   }
 
-  private convertTomlToThemeDefinition(tomlTheme: TomlTheme): ThemeDefinition {
+  private convertJsonToThemeDefinition(jsonTheme: JsonTheme): ThemeDefinition {
     return {
-      id: tomlTheme.id,
-      name: tomlTheme.name,
-      description: tomlTheme.description,
-      category: tomlTheme.category,
-      cssVariables: tomlTheme.css_variables,
-      syntaxTokens: tomlTheme.syntax_tokens,
-      isDark: tomlTheme.is_dark,
-      // No icon for TOML themes - could be added as a base64 string in TOML later
+      id: jsonTheme.id,
+      name: jsonTheme.name,
+      description: jsonTheme.description,
+      category: jsonTheme.category,
+      cssVariables: jsonTheme.cssVariables,
+      syntaxTokens: jsonTheme.syntaxTokens,
+      isDark: jsonTheme.isDark,
       icon: undefined,
     };
   }
 
   async loadFromFile(filePath: string): Promise<ThemeDefinition[]> {
     try {
-      const tomlThemes: TomlTheme[] = await invoke("load_single_toml_theme", {
-        themePath: filePath,
-      });
+      // Read JSON file
+      const response = await fetch(filePath);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch theme file: ${response.statusText}`);
+      }
 
-      return tomlThemes.map((tomlTheme) => this.convertTomlToThemeDefinition(tomlTheme));
+      const themeFile: ThemeFile = await response.json();
+      return themeFile.themes.map((jsonTheme) => this.convertJsonToThemeDefinition(jsonTheme));
     } catch (error) {
       console.error(`ThemeLoader: Failed to load theme from ${filePath}:`, error);
       return [];
@@ -130,13 +108,8 @@ export class ThemeLoader extends BaseThemeExtension {
   }
 
   async getCachedThemes(): Promise<ThemeDefinition[]> {
-    try {
-      const tomlThemes: TomlTheme[] = await invoke("get_cached_themes");
-      return tomlThemes.map((tomlTheme) => this.convertTomlToThemeDefinition(tomlTheme));
-    } catch (error) {
-      console.error("ThemeLoader: Failed to get cached themes:", error);
-      return [];
-    }
+    // Since themes are now loaded directly via imports, just return the loaded themes
+    return this.themes;
   }
 }
 

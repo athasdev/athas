@@ -1,6 +1,7 @@
 import isEqual from "fast-deep-equal";
 import { createWithEqualityFn } from "zustand/traditional";
 import type { Decoration, Position, Range } from "../types/editor";
+import { logger } from "../utils/logger";
 
 interface DecorationWithId extends Decoration {
   id: string;
@@ -63,7 +64,8 @@ export const useEditorDecorationsStore = createWithEqualityFn<EditorDecorationsS
       const id = `decoration-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       const decorationWithId: DecorationWithId = { ...decoration, id };
 
-      console.log(
+      logger.debug(
+        "Editor",
         `DecorationsStore: Adding decoration ${decoration.type} with class ${decoration.className}`,
       );
 

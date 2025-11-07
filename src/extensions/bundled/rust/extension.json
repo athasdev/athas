@@ -1,0 +1,51 @@
+{
+  "id": "athas.rust",
+  "name": "Rust",
+  "displayName": "Rust Language Support",
+  "description": "Rust language support with rust-analyzer LSP for IntelliSense, diagnostics, and more",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "rust",
+      "extensions": [".rs"],
+      "aliases": ["Rust", "rs"]
+    }
+  ],
+  "lsp": {
+    "server": {
+      "default": "rust-analyzer",
+      "darwin": "./lsp/rust-analyzer-darwin",
+      "linux": "./lsp/rust-analyzer-linux",
+      "win32": "./lsp/rust-analyzer.exe"
+    },
+    "args": [],
+    "fileExtensions": [".rs"],
+    "languageIds": ["rust"],
+    "initializationOptions": {
+      "cargo": {
+        "buildScripts": {
+          "enable": true
+        }
+      },
+      "procMacro": {
+        "enable": true
+      }
+    }
+  },
+  "commands": [
+    {
+      "command": "rust.restart",
+      "title": "Restart Rust Analyzer",
+      "category": "Rust"
+    },
+    {
+      "command": "rust.toggle",
+      "title": "Toggle Rust Analyzer",
+      "category": "Rust"
+    }
+  ],
+  "activationEvents": ["onLanguage:rust"],
+  "icon": "icon.svg"
+}
