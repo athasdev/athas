@@ -208,6 +208,38 @@ export const useBufferStore = createSelectors(
           // Track in recent files (only for real files, not virtual/diff buffers)
           if (!isVirtual && !isDiff && !isImage && !isSQLite) {
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
+
+            // Start LSP for this file if supported
+            import("@/extensions/registry/extension-registry")
+              .then(({ extensionRegistry }) => {
+                const isSupported = extensionRegistry.isLspSupported(path);
+                logger.info("BufferStore", `LSP supported for ${path}: ${isSupported}`);
+
+                if (isSupported) {
+                  logger.info("BufferStore", `Starting LSP for ${path}`);
+                  import("@/features/editor/lsp/lsp-client")
+                    .then(({ LspClient }) => {
+                      import("@/features/file-system/controllers/store").then(
+                        ({ useFileSystemStore }) => {
+                          const lspClient = LspClient.getInstance();
+                          const workspacePath =
+                            useFileSystemStore.getState().rootFolderPath || path;
+                          logger.info(
+                            "BufferStore",
+                            `Calling lspClient.start(${workspacePath}, ${path})`,
+                          );
+                          return lspClient.start(workspacePath, path);
+                        },
+                      );
+                    })
+                    .catch((error) => {
+                      logger.error("BufferStore", "Failed to start LSP:", error);
+                    });
+                }
+              })
+              .catch((error) => {
+                logger.error("BufferStore", "Failed to check LSP support:", error);
+              });
           }
 
           // Save session

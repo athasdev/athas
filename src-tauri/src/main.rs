@@ -359,6 +359,12 @@ fn main() {
          lsp_document_change,
          lsp_document_close,
          lsp_is_language_supported,
+         // Extension commands
+         download_extension,
+         install_extension,
+         uninstall_extension,
+         get_installed_extensions,
+         get_bundled_extensions_path,
          // Fuzzy matching commands
          fuzzy_match,
          filter_completions,

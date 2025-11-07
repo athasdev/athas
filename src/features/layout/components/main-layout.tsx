@@ -1,5 +1,7 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo } from "react";
 import SQLiteViewer from "@/features/database/providers/sqlite/sqlite-viewer";
+import type { Diagnostic } from "@/features/diagnostics/diagnostics-pane";
+import { useDiagnosticsStore } from "@/features/diagnostics/diagnostics-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -28,7 +30,6 @@ import ContentGlobalSearch from "@/features/global-search/components/content-glo
 import { ImageViewer } from "@/features/image-viewer/components/image-viewer";
 import TabBar from "@/features/tabs/components/tab-bar";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
-import type { Diagnostic } from "../../diagnostics/diagnostics-pane";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
@@ -54,7 +55,8 @@ export function MainLayout() {
   const { setRelativeLineNumbers } = useVimStore.use.actions();
   const { rootFolderPath } = useFileSystemStore();
 
-  const [diagnostics] = useState<Diagnostic[]>([]);
+  const { getAllDiagnostics } = useDiagnosticsStore.use.actions();
+  const diagnostics = useMemo(() => getAllDiagnostics(), [getAllDiagnostics]);
   const sidebarPosition = settings.sidebarPosition;
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
 
@@ -112,6 +114,16 @@ export function MainLayout() {
       console.error("Error unstaging hunk:", error);
     }
   };
+
+  // Handle diagnostic click - jump to diagnostic location
+  const handleDiagnosticClick = useCallback((diagnostic: Diagnostic) => {
+    // Dispatch go to line event with the diagnostic line number
+    window.dispatchEvent(
+      new CustomEvent("menu-go-to-line", {
+        detail: { line: diagnostic.line + 1 }, // +1 because diagnostics are 0-indexed
+      }),
+    );
+  }, []);
 
   // Initialize event listeners
   useMenuEventsWrapper();
@@ -215,11 +227,15 @@ export function MainLayout() {
         </div>
 
         {/* BottomPane in editor width mode - only covers middle section */}
-        {terminalWidthMode === "editor" && <BottomPane diagnostics={diagnostics} />}
+        {terminalWidthMode === "editor" && (
+          <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
+        )}
       </div>
 
       {/* BottomPane in full width mode - covers entire window including sidebars */}
-      {terminalWidthMode === "full" && <BottomPane diagnostics={diagnostics} />}
+      {terminalWidthMode === "full" && (
+        <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
+      )}
 
       <EditorFooter />
 

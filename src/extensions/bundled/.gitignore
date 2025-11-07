@@ -1,0 +1,7 @@
+# LSP server binaries - platform-specific, should be downloaded via setup script
+*/lsp/typescript-language-server-*
+*/lsp/rust-analyzer-*
+*/lsp/*.exe
+
+# Keep the directories
+!*/lsp/.gitkeep
