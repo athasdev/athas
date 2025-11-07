@@ -256,7 +256,7 @@ export const MainSidebar = memo(() => {
         >
           {isFileTreeLoading ? (
             <div className="flex flex-1 items-center justify-center">
-              <div className="text-sm text-text">Loading file tree...</div>
+              <div className="text-text text-xs">Loading...</div>
             </div>
           ) : (
             <FileTree

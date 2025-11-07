@@ -6,6 +6,7 @@ export interface FsState {
   rootFolderPath?: string;
   filesVersion: number;
   isFileTreeLoading: boolean;
+  isSwitchingProject: boolean;
 
   // Remote connection state
   isRemoteWindow: boolean;
@@ -25,6 +26,8 @@ export interface FsActions {
   handleOpenFolder: () => Promise<boolean>;
   handleOpenFolderByPath: (path: string) => Promise<boolean>;
   closeFolder: () => Promise<boolean>;
+  switchToProject: (projectId: string) => Promise<boolean>;
+  closeProject: (projectId: string) => Promise<boolean>;
   // File operations
   handleFileSelect: (
     path: string,

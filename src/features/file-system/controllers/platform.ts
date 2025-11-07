@@ -8,12 +8,10 @@ import {
   remove,
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
-import { type } from "@tauri-apps/plugin-os";
+import { isMac } from "@/utils/platform";
 
-/**
- * Check if the current platform is macOS
- */
-export const isMac = () => type() === "macos";
+// Re-export isMac for convenience
+export { isMac };
 
 /**
  * Read a text file from the filesystem
