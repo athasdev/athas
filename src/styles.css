@@ -76,10 +76,6 @@
   --color-hover: var(--hover);
   --color-selected: var(--selected);
 
-  /* Paper/Welcome screen specific colors */
-  --color-paper-bg: var(--paper-bg);
-  --color-paper-texture-overlay: var(--paper-texture-overlay);
-
   /* Accent color */
   --color-accent: var(--accent);
 
@@ -237,10 +233,6 @@ button {
     --hover: #f0f0f0;
     --selected: #e8e8e8;
 
-    /* Paper colors */
-    --paper-bg: #ffffff;
-    --paper-texture-overlay: rgb(200 200 200 / 0.01);
-
     /* Accent color */
     --accent: #3b82f6;
 
@@ -304,10 +296,6 @@ button {
       --border: #404040;
       --hover: #333333;
       --selected: #404040;
-
-      /* Paper/Welcome screen specific colors - Dark */
-      --paper-bg: #1a1a1a;
-      --paper-texture-overlay: rgb(100 100 100 / 0.02);
 
       /* Accent color - Dark */
       --accent: #60a5fa;
@@ -743,85 +731,6 @@ textarea::-webkit-scrollbar-thumb:hover {
   overflow: auto !important;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none !important;
-}
-
-/* Paper texture and theme-aware colors for welcome screen */
-.paper-texture {
-  background: var(--color-primary-bg);
-  position: relative;
-}
-
-.paper-texture::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: none;
-  pointer-events: none;
-}
-
-.paper-texture::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      var(--color-paper-texture-overlay) 45%,
-      calc(var(--color-paper-texture-overlay) * 2) 50%,
-      var(--color-paper-texture-overlay) 55%,
-      transparent 100%
-    ),
-    linear-gradient(
-      0deg,
-      transparent 0%,
-      var(--color-paper-texture-overlay) 48%,
-      calc(var(--color-paper-texture-overlay) * 2) 50%,
-      var(--color-paper-texture-overlay) 52%,
-      transparent 100%
-    );
-  background-size:
-    300px 1px,
-    1px 300px;
-  background-position:
-    0 0,
-    0 0;
-  pointer-events: none;
-}
-
-.logo-blue {
-  color: #2563eb;
-  text-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
-}
-
-.logo-gradient {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #2563eb 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.2));
-}
-
-/* Paper texture noise overlay */
-.paper-noise {
-  position: relative;
-}
-
-.paper-noise::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.015'/%3E%3C/svg%3E");
-  pointer-events: none;
 }
 
 /* Layered UI design with floating buffer */
