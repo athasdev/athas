@@ -13,11 +13,8 @@ import {
   initializeFileWatcherListener,
 } from "./features/file-system/controllers/file-watcher-store";
 import { isMac } from "./features/file-system/controllers/platform";
-import { useRecentFoldersStore } from "./features/file-system/controllers/recent-folders-store";
-import { useFileSystemStore } from "./features/file-system/controllers/store";
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/layout/components/zoom-indicator";
-import WelcomeScreen from "./features/window/welcome-screen";
 import { useAppStore } from "./stores/app-store";
 import { useFontStore } from "./stores/font-store";
 import { useSidebarStore } from "./stores/sidebar-store";
@@ -40,9 +37,7 @@ extensionLoader.initialize().catch(console.error);
 function App() {
   enableMapSet();
 
-  const { files, rootFolderPath, handleOpenFolder } = useFileSystemStore();
   const { cleanup } = useAppStore.use.actions();
-  const { recentFolders, openRecentFolder } = useRecentFoldersStore();
   const { loadAvailableFonts } = useFontStore.use.actions();
   const setRemoteWindow = useSidebarStore.use.setRemoteWindow();
   const zoomLevel = useZoomStore.use.windowZoomLevel();
@@ -162,32 +157,6 @@ function App() {
       };
     }
   }, []);
-
-  // Check for remote connection from URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const remoteParam = urlParams.get("remote");
-  const isRemoteFromUrl = !!remoteParam;
-
-  // Determine if we should show welcome screen
-  const shouldShowWelcome = files.length === 0 && !rootFolderPath && !isRemoteFromUrl;
-
-  if (shouldShowWelcome) {
-    return (
-      <div className="h-screen w-screen overflow-hidden bg-transparent" style={{ zoom: zoomLevel }}>
-        <FontPreloader />
-        <FontStyleInjector />
-        <div className="h-full w-full">
-          <WelcomeScreen
-            onOpenFolder={handleOpenFolder}
-            recentFolders={recentFolders}
-            onOpenRecentFolder={openRecentFolder}
-          />
-        </div>
-        <ZoomIndicator />
-        <ToastContainer />
-      </div>
-    );
-  }
 
   return (
     <div

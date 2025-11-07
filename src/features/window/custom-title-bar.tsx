@@ -12,15 +12,10 @@ import CustomMenuBar from "./menu-bar";
 interface CustomTitleBarProps {
   title?: string;
   showMinimal?: boolean;
-  isWelcomeScreen?: boolean;
   onOpenSettings?: () => void;
 }
 
-const CustomTitleBar = ({
-  showMinimal = false,
-  isWelcomeScreen = false,
-  onOpenSettings,
-}: CustomTitleBarProps) => {
+const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarProps) => {
   const { getProjectName } = useProjectStore();
   const { settings, updateSetting } = useSettingsStore();
 
@@ -112,14 +107,12 @@ const CustomTitleBar = ({
   const isLinux = currentPlatform === "linux";
 
   if (showMinimal) {
-    const backgroundClass = isWelcomeScreen ? "bg-paper-bg" : "bg-primary-bg";
-
     return (
       <div
         data-tauri-drag-region
         className={`relative z-50 flex select-none items-center justify-between ${
           isMacOS ? "h-11" : "h-7"
-        } ${backgroundClass}`}
+        } bg-primary-bg`}
       >
         <div className="flex-1" />
 
