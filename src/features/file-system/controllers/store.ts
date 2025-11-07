@@ -48,6 +48,25 @@ import { openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 
+/**
+ * Wraps the file tree with a root folder entry
+ */
+const wrapWithRootFolder = (
+  files: FileEntry[],
+  rootPath: string,
+  rootName: string,
+): FileEntry[] => {
+  return [
+    {
+      name: rootName,
+      path: rootPath,
+      isDir: true,
+      children: files,
+      expanded: true,
+    },
+  ];
+};
+
 export const useFileSystemStore = createSelectors(
   create<FsState & FsActions>()(
     immer((set, get) => ({
@@ -83,6 +102,7 @@ export const useFileSystemStore = createSelectors(
 
         const entries = await readDirectoryContents(selected);
         const fileTree = sortFileEntries(entries);
+        const wrappedFileTree = wrapWithRootFolder(fileTree, selected, projectName);
 
         // Clear tree UI state
         useFileTreeStore.getState().collapseAll();
@@ -107,7 +127,7 @@ export const useFileSystemStore = createSelectors(
 
         set((state) => {
           state.isFileTreeLoading = false;
-          state.files = fileTree;
+          state.files = wrappedFileTree;
           state.rootFolderPath = selected;
           state.filesVersion++;
           state.projectFilesCache = undefined;
@@ -163,6 +183,7 @@ export const useFileSystemStore = createSelectors(
 
         const entries = await readDirectoryContents(path);
         const fileTree = sortFileEntries(entries);
+        const wrappedFileTree = wrapWithRootFolder(fileTree, path, projectName);
 
         // Clear tree UI state
         useFileTreeStore.getState().collapseAll();
@@ -187,7 +208,7 @@ export const useFileSystemStore = createSelectors(
 
         set((state) => {
           state.isFileTreeLoading = false;
-          state.files = fileTree;
+          state.files = wrappedFileTree;
           state.rootFolderPath = path;
           state.filesVersion++;
           state.projectFilesCache = undefined;
@@ -913,6 +934,7 @@ export const useFileSystemStore = createSelectors(
         // Load new project's file tree
         const entries = await readDirectoryContents(tab.path);
         const fileTree = sortFileEntries(entries);
+        const wrappedFileTree = wrapWithRootFolder(fileTree, tab.path, tab.name);
 
         // Clear tree UI state
         useFileTreeStore.getState().collapseAll();
@@ -939,7 +961,7 @@ export const useFileSystemStore = createSelectors(
 
         set((state) => {
           state.isFileTreeLoading = false;
-          state.files = fileTree;
+          state.files = wrappedFileTree;
           state.rootFolderPath = tab.path;
           state.filesVersion++;
           state.projectFilesCache = undefined;
