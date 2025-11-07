@@ -5,6 +5,11 @@
  * falling back to the old parser if needed.
  */
 
+import { executeVimCommand as executeOld } from "../command-executor";
+import {
+  getCommandParseStatus as getOldParseStatus,
+  parseVimCommand as parseOld,
+} from "../command-parser";
 import type { ParseResult } from "./ast";
 import { executeAST } from "./executor";
 import { getCommandParseStatus as getNewParseStatus, parse as parseNew } from "./parser";
@@ -37,6 +42,19 @@ export function isNewParserEnabled(): boolean {
  * Tries new parser first, falls back to old parser if needed.
  */
 export function parseVimCommandCompat(keys: string[]): ParseResult | null {
+  // If new parser is disabled, use old parser
+  if (!USE_NEW_PARSER) {
+    const command = parseOld(keys);
+    if (!command) return null;
+
+    // Convert old command format to new ParseResult format
+    return {
+      status: "complete",
+      command: command as any, // Old command format is different but compatible
+    };
+  }
+
+  // Use new parser
   const result = parseNew(keys);
 
   if (result.status === "complete") {
@@ -52,6 +70,12 @@ export function parseVimCommandCompat(keys: string[]): ParseResult | null {
  * Tries new executor first, falls back to old executor if needed.
  */
 export function executeVimCommandCompat(keys: string[]): boolean {
+  // If new parser is disabled, use old executor
+  if (!USE_NEW_PARSER) {
+    return executeOld(keys);
+  }
+
+  // Use new parser and executor
   const result = parseNew(keys);
 
   if (result.status === "complete") {
@@ -70,6 +94,12 @@ export function executeVimCommandCompat(keys: string[]): boolean {
 export function getCommandParseStatusCompat(
   keys: string[],
 ): "complete" | "incomplete" | "invalid" | "needsChar" {
+  // If new parser is disabled, use old parser
+  if (!USE_NEW_PARSER) {
+    return getOldParseStatus(keys);
+  }
+
+  // Use new parser
   return getNewParseStatus(keys);
 }
 

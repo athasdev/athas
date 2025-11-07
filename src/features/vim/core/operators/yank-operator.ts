@@ -43,7 +43,7 @@ export const yankOperator: Operator = {
       // Also store in vim store's register system
       const vimStore = useVimStore.getState();
       const registerName = vimStore.activeRegister || '"';
-      vimStore.actions.setRegisterContent(registerName, yankedContent, "line");
+      vimStore.actions.setRegisterContent(registerName, yankedContent, "line", { source: "yank" });
 
       return;
     }
@@ -64,7 +64,7 @@ export const yankOperator: Operator = {
     // Also store in vim store's register system
     const vimStore = useVimStore.getState();
     const registerName = vimStore.activeRegister || '"';
-    vimStore.actions.setRegisterContent(registerName, yankedContent, "char");
+    vimStore.actions.setRegisterContent(registerName, yankedContent, "char", { source: "yank" });
   },
 };
 

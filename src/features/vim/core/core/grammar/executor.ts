@@ -139,29 +139,35 @@ function executeAction(
     const editing = createVimEditing();
     const vimStore = useVimStore.getState();
 
-    // Collect all deleted characters
-    let deletedContent = "";
+    // Precompute deleted content before making edits
     const currentContent = context.content;
-    let currentOffset = context.cursor.offset;
+    const currentOffset = context.cursor.offset;
+    let deletedContent = "";
 
+    if (action.operation === "deleteChar") {
+      // Delete characters forward: get substring from current offset
+      const endOffset = Math.min(currentOffset + count, currentContent.length);
+      deletedContent = currentContent.slice(currentOffset, endOffset);
+    } else {
+      // Delete characters backward: get substring before current offset
+      const startOffset = Math.max(0, currentOffset - count);
+      deletedContent = currentContent.slice(startOffset, currentOffset);
+    }
+
+    // Now perform the actual deletions
     for (let i = 0; i < count; i++) {
       if (action.operation === "deleteChar") {
-        if (currentOffset < currentContent.length) {
-          deletedContent += currentContent[currentOffset];
-        }
         editing.deleteChar();
       } else {
-        if (currentOffset > 0) {
-          deletedContent = currentContent[currentOffset - 1] + deletedContent;
-          currentOffset--;
-        }
         editing.deleteCharBefore();
       }
     }
 
     // Store deleted content in register
     if (deletedContent) {
-      vimStore.actions.setRegisterContent(registerName, deletedContent, "char");
+      vimStore.actions.setRegisterContent(registerName, deletedContent, "char", {
+        source: "delete",
+      });
     }
 
     // Store for repeat

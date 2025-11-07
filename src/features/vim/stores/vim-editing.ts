@@ -181,25 +181,52 @@ export const createVimEditing = (): VimEditingCommands => {
       const pasteContent = content ?? vimClipboard.content;
       const pasteType = type ?? vimClipboard.type;
 
-      if (!pasteContent || pasteType !== "line") return;
+      if (!pasteContent) return;
 
       saveUndoState();
 
       const currentPos = getCursorPosition();
       const lines = getLines();
 
-      // Paste as new line above current line
-      const newLines = [...lines];
-      newLines.splice(currentPos.line, 0, pasteContent.replace(/\n$/, ""));
-      const newContent = newLines.join("\n");
+      if (pasteType === "line") {
+        // Paste as new line above current line
+        const newLines = [...lines];
+        newLines.splice(currentPos.line, 0, pasteContent.replace(/\n$/, ""));
+        const newContent = newLines.join("\n");
 
-      // Move cursor to beginning of pasted line
-      const newOffset = calculateOffsetFromPosition(currentPos.line, 0, newLines);
+        // Move cursor to beginning of pasted line
+        const newOffset = calculateOffsetFromPosition(currentPos.line, 0, newLines);
 
-      updateContent(newContent);
-      const newPosition = { line: currentPos.line, column: 0, offset: newOffset };
-      setCursorPosition(newPosition);
-      updateTextareaCursor(newPosition);
+        updateContent(newContent);
+        const newPosition = { line: currentPos.line, column: 0, offset: newOffset };
+        setCursorPosition(newPosition);
+        updateTextareaCursor(newPosition);
+      } else {
+        // Paste characterwise content before cursor
+        const currentContent = getContent();
+        const newContent =
+          currentContent.slice(0, currentPos.offset) +
+          pasteContent +
+          currentContent.slice(currentPos.offset);
+
+        updateContent(newContent);
+
+        // Move cursor to last character of pasted content
+        const newOffset = currentPos.offset + pasteContent.length - 1;
+        const newLines = newContent.split("\n");
+        let line = 0;
+        let offset = 0;
+
+        while (offset + newLines[line].length + 1 <= newOffset && line < newLines.length - 1) {
+          offset += newLines[line].length + 1;
+          line++;
+        }
+
+        const column = newOffset - offset;
+        const newPosition = { line, column, offset: newOffset };
+        setCursorPosition(newPosition);
+        updateTextareaCursor(newPosition);
+      }
     },
 
     undo: () => {

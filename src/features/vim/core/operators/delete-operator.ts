@@ -34,7 +34,9 @@ export const deleteOperator: Operator = {
       // Also store in vim store's register system
       const vimStore = useVimStore.getState();
       const registerName = vimStore.activeRegister || '"';
-      vimStore.actions.setRegisterContent(registerName, deletedContent, "line");
+      vimStore.actions.setRegisterContent(registerName, deletedContent, "line", {
+        source: "delete",
+      });
 
       const newLines = lines.filter((_, index) => {
         return index < startLine || index > endLine;
@@ -83,7 +85,7 @@ export const deleteOperator: Operator = {
     // Also store in vim store's register system
     const vimStore = useVimStore.getState();
     const registerName = vimStore.activeRegister || '"';
-    vimStore.actions.setRegisterContent(registerName, deletedContent, "char");
+    vimStore.actions.setRegisterContent(registerName, deletedContent, "char", { source: "delete" });
 
     const newContent = content.slice(0, startOffset) + content.slice(actualEndOffset);
 

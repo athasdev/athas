@@ -259,7 +259,12 @@ const useVimStoreBase = create(
         },
 
         // Register management
-        setRegisterContent: (name: string, content: string, type: "line" | "char") => {
+        setRegisterContent: (
+          name: string,
+          content: string,
+          type: "line" | "char",
+          options?: { source?: "yank" | "delete" },
+        ) => {
           set((state) => {
             state.registers[name] = { content, type };
 
@@ -268,8 +273,9 @@ const useVimStoreBase = create(
               state.registers['"'] = { content, type };
             }
 
-            // Update yank register (0) for yank operations
-            if (name === '"' && type === "char") {
+            // Update yank register (0) only for yank operations
+            // This prevents delete operations from polluting the yank register
+            if (options?.source === "yank") {
               state.registers["0"] = { content, type };
             }
 

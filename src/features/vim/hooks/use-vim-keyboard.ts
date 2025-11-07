@@ -447,6 +447,21 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           if (textarea) {
             textarea.selectionStart = textarea.selectionEnd = newOffset;
           }
+        } else if (currentPos.column === 0 && currentPos.line > 0) {
+          // If at column 0, move to end of previous line
+          const newLine = currentPos.line - 1;
+          const newColumn = Math.max(0, lines[newLine].length - 1);
+          const newOffset = calculateOffsetFromPosition(newLine, newColumn, lines);
+          const newPosition = { line: newLine, column: newColumn, offset: newOffset };
+
+          const { setCursorPosition } = useEditorStateStore.getState().actions;
+          setCursorPosition(newPosition);
+
+          // Update textarea selection
+          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.selectionStart = textarea.selectionEnd = newOffset;
+          }
         }
 
         setMode("normal");
@@ -477,13 +492,6 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
 
       // Helper to apply motion and update visual selection
       const applyMotion = (motionKeys: string[]): boolean => {
-        console.log("=== applyMotion START ===");
-        console.log("Motion keys:", motionKeys);
-
-        const vimStoreBefore = useVimStore.getState();
-        console.log("Before motion - visualSelection:", vimStoreBefore.visualSelection);
-        console.log("Before motion - cursor:", useEditorStateStore.getState().cursorPosition);
-
         let success = false;
 
         if (isNewParserEnabled()) {
@@ -496,7 +504,6 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
         }
 
         if (!success) {
-          console.warn("Failed to execute visual motion:", motionKeys.join(""));
           return false;
         }
 
@@ -504,30 +511,19 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
         const lines = useEditorViewStore.getState().lines;
         const vimStore = useVimStore.getState();
 
-        console.log("After motion - cursor:", newPosition);
-
         // Get fresh visual selection state
         const currentVisualSelection = vimStore.visualSelection;
         const currentVisualMode = vimStore.visualMode;
-
-        console.log("After motion - visualSelection from store:", currentVisualSelection);
 
         if (currentVisualSelection.start) {
           // Line mode: always select full lines
           if (currentVisualMode === "line") {
             const newStart = { line: currentVisualSelection.start.line, column: 0 };
             const newEnd = { line: newPosition.line, column: lines[newPosition.line].length };
-            console.log("Setting line visual selection:", newStart, "to", newEnd);
             vimStore.actions.setVisualSelection(newStart, newEnd);
           } else {
             // Char/block mode: select from start to cursor
             const newEnd = { line: newPosition.line, column: newPosition.column };
-            console.log(
-              "Setting char/block visual selection:",
-              currentVisualSelection.start,
-              "to",
-              newEnd,
-            );
             vimStore.actions.setVisualSelection(currentVisualSelection.start, newEnd);
           }
         }
@@ -542,14 +538,6 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           );
           const endOffset = newPosition.offset;
 
-          console.log("Textarea offsets - start:", startOffset, "end:", endOffset);
-          console.log(
-            "Setting textarea selection:",
-            Math.min(startOffset, endOffset),
-            "to",
-            Math.max(startOffset, endOffset),
-          );
-
           textarea.selectionStart = Math.min(startOffset, endOffset);
           textarea.selectionEnd = Math.max(startOffset, endOffset);
 
@@ -557,7 +545,6 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           // textarea.dispatchEvent(new Event("select"));
         }
 
-        console.log("=== applyMotion END ===\n");
         return true;
       };
 

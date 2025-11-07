@@ -202,10 +202,14 @@ export const textObjectKeys = new Set([
   "W", // WORD
   "s", // sentence
   "p", // paragraph
-  ")", // parentheses
-  "]", // square brackets
-  "}", // curly braces
-  ">", // angle brackets
+  "(", // parentheses (opening)
+  ")", // parentheses (closing)
+  "[", // square brackets (opening)
+  "]", // square brackets (closing)
+  "{", // curly braces (opening)
+  "}", // curly braces (closing)
+  "<", // angle brackets (opening)
+  ">", // angle brackets (closing)
   '"', // double quotes
   "'", // single quotes
   "`", // backticks
