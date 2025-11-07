@@ -68,7 +68,8 @@ async function getScreenCenter() {
     const monitor = await primaryMonitor();
 
     if (!monitor) {
-      return new PhysicalPosition(0, 0);
+      const position = await window.innerPosition();
+      return new PhysicalPosition(position.x, position.y);
     }
 
     const { width: screenWidth, height: screenHeight } = monitor.size;
