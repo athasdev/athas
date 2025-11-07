@@ -48,7 +48,7 @@ async fn format_with_prettier(content: &str, language: &str) -> Result<FormatRes
    };
 
    let mut cmd = Command::new("npx");
-   cmd.args(&[
+   cmd.args([
       "prettier",
       "--parser",
       parser,
@@ -114,7 +114,7 @@ async fn format_with_prettier(content: &str, language: &str) -> Result<FormatRes
 /// Format Rust code using rustfmt
 async fn format_with_rustfmt(content: &str) -> Result<FormatResponse, String> {
    let mut cmd = Command::new("rustfmt");
-   cmd.args(&["--emit", "stdout"])
+   cmd.args(["--emit", "stdout"])
       .stdin(std::process::Stdio::piped())
       .stdout(std::process::Stdio::piped())
       .stderr(std::process::Stdio::piped());

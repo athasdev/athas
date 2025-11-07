@@ -32,6 +32,11 @@ initializeThemeSystem().catch(console.error);
 // Initialize icon themes
 initializeIconThemes();
 
+// Initialize extension system
+import { extensionLoader } from "./extensions/loader/extension-loader";
+
+extensionLoader.initialize().catch(console.error);
+
 function App() {
   enableMapSet();
 

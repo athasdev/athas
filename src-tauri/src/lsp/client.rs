@@ -13,6 +13,7 @@ use std::{
    },
    thread,
 };
+use tauri::{AppHandle, Emitter};
 use tokio::sync::oneshot;
 
 type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>>;
@@ -23,10 +24,16 @@ pub struct LspClient {
    stdin_tx: Sender<String>,
    pending_requests: PendingRequests,
    capabilities: Arc<Mutex<Option<ServerCapabilities>>>,
+   app_handle: Option<AppHandle>,
 }
 
 impl LspClient {
-   pub fn start(server_path: PathBuf, args: Vec<String>, _root_uri: Url) -> Result<(Self, Child)> {
+   pub fn start(
+      server_path: PathBuf,
+      args: Vec<String>,
+      _root_uri: Url,
+      app_handle: Option<AppHandle>,
+   ) -> Result<(Self, Child)> {
       log::info!("Starting language server: {:?} {:?}", server_path, args);
       let mut child = Command::new(server_path)
          .args(args)
@@ -45,6 +52,7 @@ impl LspClient {
       let (stdin_tx, stdin_rx) = bounded::<String>(100);
       let pending_requests = Arc::new(Mutex::new(HashMap::new()));
       let pending_requests_clone = Arc::clone(&pending_requests);
+      let app_handle_clone = app_handle.clone();
 
       // Stderr reader thread
       thread::spawn(move || {
@@ -120,10 +128,16 @@ impl LspClient {
             }
 
             if let Ok(content_str) = String::from_utf8(content)
-               && let Ok(response) = serde_json::from_str::<Value>(&content_str)
+               && let Ok(message) = serde_json::from_str::<Value>(&content_str)
             {
-               log::debug!("LSP Response: {}", content_str);
-               Self::handle_response(response, &pending_requests_clone);
+               log::debug!("LSP Message: {}", content_str);
+
+               // Check if this is a response (has id) or notification (no id)
+               if message.get("id").is_some() {
+                  Self::handle_response(message, &pending_requests_clone);
+               } else if message.get("method").is_some() {
+                  Self::handle_notification(message, &app_handle_clone);
+               }
             }
          }
       });
@@ -133,6 +147,7 @@ impl LspClient {
          stdin_tx,
          pending_requests,
          capabilities: Arc::new(Mutex::new(None)),
+         app_handle,
       };
 
       // Don't initialize here - we'll do it separately to avoid runtime issues
@@ -174,6 +189,38 @@ impl LspClient {
             let _ = tx.send(Err(anyhow::anyhow!("LSP error: {:?}", error)));
          } else if let Some(result) = response.get("result") {
             let _ = tx.send(Ok(result.clone()));
+         }
+      }
+   }
+
+   fn handle_notification(notification: Value, app_handle: &Option<AppHandle>) {
+      let method = notification.get("method").and_then(|m| m.as_str());
+      let params = notification.get("params");
+
+      match method {
+         Some("textDocument/publishDiagnostics") => {
+            if let Some(params) = params {
+               log::debug!("Received diagnostics: {:?}", params);
+
+               // Parse diagnostics
+               if let Ok(diagnostic_params) =
+                  serde_json::from_value::<PublishDiagnosticsParams>(params.clone())
+               {
+                  // Emit event to frontend
+                  if let Some(app) = app_handle {
+                     let _ = app.emit("lsp://diagnostics", &diagnostic_params);
+                     log::info!("Emitted diagnostics for file: {}", diagnostic_params.uri);
+                  }
+               } else {
+                  log::error!("Failed to parse diagnostics params");
+               }
+            }
+         }
+         Some(method_name) => {
+            log::debug!("Unhandled LSP notification: {}", method_name);
+         }
+         None => {
+            log::warn!("Received notification without method");
          }
       }
    }

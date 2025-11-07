@@ -2,24 +2,26 @@ import type { Token } from "@/features/editor/lib/rust-api/tokens";
 import { getTokens as getTokensByExtension } from "@/features/editor/lib/rust-api/tokens";
 import { useBufferStore } from "../../stores/buffer-store";
 import type { Change } from "../../types/editor";
+import { logger } from "../../utils/logger";
 import { extensionManager } from "../manager";
 import type { EditorAPI, EditorExtension } from "../types";
 
-const DEBOUNCE_TIME_MS = 16; // ~1 frame at 60fps for near-instant highlighting
+const DEBOUNCE_TIME_MS = 150; // Debounce for tokenization requests
 
 class SyntaxHighlighter {
   private tokens: Token[] = [];
   private timeoutId: NodeJS.Timeout | null = null;
-  private rafId: number | null = null;
   private filePath: string | null = null;
   private pendingAffectedLines: Set<number> | undefined = undefined;
   private abortController: AbortController | null = null;
+  private contentVersion = 0; // Track content version to prevent stale tokens
 
   // biome-ignore lint/complexity/noUselessConstructor: Required for API contract
   constructor(_editor: EditorAPI) {}
 
   setFilePath(filePath: string) {
     this.filePath = filePath;
+    this.contentVersion++; // Increment version on file switch
     // When switching files, try to use cached tokens immediately
     this.updateHighlighting(true);
   }
@@ -28,6 +30,9 @@ class SyntaxHighlighter {
     if (!this.filePath) {
       return;
     }
+
+    // Increment version on content change to invalidate pending fetches
+    this.contentVersion++;
 
     // Cancel any pending fetch operations
     if (this.abortController) {
@@ -45,12 +50,9 @@ class SyntaxHighlighter {
 
       // If not immediate (regular content change), still fetch new tokens in background
       if (!immediate) {
-        // Clear existing timeout and RAF
+        // Clear existing timeout
         if (this.timeoutId) {
           clearTimeout(this.timeoutId);
-        }
-        if (this.rafId) {
-          cancelAnimationFrame(this.rafId);
         }
 
         // Accumulate affected lines for the debounced update
@@ -61,24 +63,19 @@ class SyntaxHighlighter {
           affectedLines.forEach((line) => this.pendingAffectedLines!.add(line));
         }
 
-        // Use RAF for smoother updates
-        this.rafId = requestAnimationFrame(() => {
-          this.timeoutId = setTimeout(async () => {
-            const linesToUpdate = this.pendingAffectedLines;
-            this.pendingAffectedLines = undefined;
-            await this.fetchAndCacheTokens(linesToUpdate);
-          }, DEBOUNCE_TIME_MS);
-        });
+        // Debounce tokenization
+        this.timeoutId = setTimeout(async () => {
+          const linesToUpdate = this.pendingAffectedLines;
+          this.pendingAffectedLines = undefined;
+          await this.fetchAndCacheTokens(linesToUpdate);
+        }, DEBOUNCE_TIME_MS);
       }
       return;
     }
 
-    // Clear existing timeout and RAF
+    // Clear existing timeout
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
-    }
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
     }
 
     // If immediate flag is set, fetch without debounce
@@ -93,14 +90,12 @@ class SyntaxHighlighter {
         affectedLines.forEach((line) => this.pendingAffectedLines!.add(line));
       }
 
-      // Use RAF + debounce for optimal responsiveness
-      this.rafId = requestAnimationFrame(() => {
-        this.timeoutId = setTimeout(async () => {
-          const linesToUpdate = this.pendingAffectedLines;
-          this.pendingAffectedLines = undefined;
-          await this.fetchAndCacheTokens(linesToUpdate);
-        }, DEBOUNCE_TIME_MS);
-      });
+      // Debounce tokenization
+      this.timeoutId = setTimeout(async () => {
+        const linesToUpdate = this.pendingAffectedLines;
+        this.pendingAffectedLines = undefined;
+        await this.fetchAndCacheTokens(linesToUpdate);
+      }, DEBOUNCE_TIME_MS);
     }
   }
 
@@ -108,21 +103,24 @@ class SyntaxHighlighter {
     // Create new abort controller for this fetch
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
-    // Capture the file path at the start of the fetch to avoid race conditions
+    // Capture the file path and content version at the start to avoid race conditions
     const targetFilePath = this.filePath;
+    const expectedVersion = this.contentVersion;
 
     try {
       // Get content for the specific target file path to avoid races
       const bufferStoreAtStart = useBufferStore.getState();
       const targetBufferAtStart = bufferStoreAtStart.buffers.find((b) => b.path === targetFilePath);
       if (!targetBufferAtStart) {
-        console.warn(
-          "[SyntaxHighlighter] No buffer found for path at fetch start:",
+        logger.warn(
+          "SyntaxHighlighter",
+          "No buffer found for path at fetch start:",
           targetFilePath,
         );
         return;
       }
       const content = targetBufferAtStart.content;
+      const contentHash = content.length; // Simple hash, could use better hashing
       const rawExt = (targetFilePath?.split(".").pop() || "txt").toLowerCase();
       const normalizeExt = (ext: string) => {
         switch (ext) {
@@ -154,7 +152,7 @@ class SyntaxHighlighter {
         // Fallback to language provider if direct tokenization fails
         const languageProvider = extensionManager.getLanguageProvider(extension);
         if (!languageProvider) {
-          console.warn("[SyntaxHighlighter] No language provider found for extension:", extension);
+          logger.warn("SyntaxHighlighter", "No language provider found for extension:", extension);
           this.tokens = [];
         } else {
           this.tokens = await languageProvider.getTokens(content);
@@ -164,27 +162,52 @@ class SyntaxHighlighter {
       // Check if aborted after async operation
       if (signal.aborted) return;
 
-      console.log("[SyntaxHighlighter] Fetched tokens:", this.tokens.length, "for", extension);
+      // Verify content hasn't changed (prevent stale tokens)
+      if (this.contentVersion !== expectedVersion) {
+        logger.debug(
+          "SyntaxHighlighter",
+          "Content version mismatch, discarding stale tokens",
+          expectedVersion,
+          "vs",
+          this.contentVersion,
+        );
+        return;
+      }
 
-      // Cache tokens in buffer store for the correct buffer by file path
+      // Verify content hash matches (additional safety check)
       const bufferStore = useBufferStore.getState();
       const targetBuffer = bufferStore.buffers.find((b) => b.path === targetFilePath);
-      if (targetBuffer) {
-        bufferStore.actions.updateBufferTokens(targetBuffer.id, this.tokens);
-        console.log("[SyntaxHighlighter] Updated buffer tokens for", targetBuffer.path);
-      } else {
-        console.warn("[SyntaxHighlighter] Target buffer not found for path:", targetFilePath);
+      if (!targetBuffer) {
+        logger.warn("SyntaxHighlighter", "Target buffer not found for path:", targetFilePath);
+        return;
       }
+
+      if (targetBuffer.content.length !== contentHash) {
+        logger.debug("SyntaxHighlighter", "Content changed during tokenization, discarding tokens");
+        return;
+      }
+
+      logger.debug("SyntaxHighlighter", "Fetched tokens:", this.tokens.length, "for", extension);
+
+      // Cache tokens in buffer store
+      bufferStore.actions.updateBufferTokens(targetBuffer.id, this.tokens);
+      logger.debug("SyntaxHighlighter", "Updated buffer tokens for", targetBuffer.path);
 
       // Update decorations - pass affected lines to avoid full re-render
       this.applyDecorations(affectedLines);
     } catch (error) {
       if (signal.aborted) {
-        console.log("[SyntaxHighlighter] Token fetch aborted");
+        logger.debug("SyntaxHighlighter", "Token fetch aborted");
         return;
       }
-      console.error("Syntax highlighting error:", error);
+      logger.error("SyntaxHighlighter", "Syntax highlighting error:", error);
       this.tokens = [];
+      // Clear buffer tokens on error
+      const bufferStore = useBufferStore.getState();
+      const targetBuffer = bufferStore.buffers.find((b) => b.path === targetFilePath);
+      if (targetBuffer) {
+        bufferStore.actions.updateBufferTokens(targetBuffer.id, []);
+      }
     } finally {
       if (this.abortController?.signal === signal) {
         this.abortController = null;
@@ -200,7 +223,11 @@ class SyntaxHighlighter {
 
     // Log for debugging
     if (affectedLines && affectedLines.size > 0) {
-      console.log("[SyntaxHighlighter] Applied decorations for lines:", Array.from(affectedLines));
+      logger.debug(
+        "SyntaxHighlighter",
+        "Applied decorations for lines:",
+        Array.from(affectedLines),
+      );
     }
 
     // The buffer store update already triggers the necessary re-renders
@@ -210,9 +237,6 @@ class SyntaxHighlighter {
   dispose() {
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
-    }
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
     }
     if (this.abortController) {
       this.abortController.abort();

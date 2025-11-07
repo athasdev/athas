@@ -27,6 +27,9 @@ export abstract class AIProvider {
   abstract buildPayload(request: StreamRequest): any;
   abstract validateApiKey(apiKey: string): Promise<boolean>;
 
+  // Optional: Allows providers to customize the URL (e.g., add API key as query param)
+  buildUrl?(request: StreamRequest): string;
+
   get id(): string {
     return this.config.id;
   }

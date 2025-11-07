@@ -89,16 +89,60 @@ export const getCharWidth = (
   document.body.removeChild(measureElement);
 
   // Round to avoid subpixel issues
-  return Math.round(width * 100) / 100;
+  return (
+    Math.round(width * EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER) /
+    EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER
+  );
 };
 
 /**
- * Character width cache to avoid repeated DOM measurements
+ * Character width cache to avoid repeated measurements
  */
 const charWidthCache = new Map<string, number>();
 
 /**
- * Get accurate character width from cache or measure
+ * Canvas context for measuring text (reused to avoid creating multiple contexts)
+ */
+let measureCanvas: HTMLCanvasElement | null = null;
+let measureContext: CanvasRenderingContext2D | null = null;
+
+/**
+ * Get or create the measurement canvas context
+ */
+const getMeasureContext = (): CanvasRenderingContext2D => {
+  if (!measureContext) {
+    measureCanvas = document.createElement("canvas");
+    measureContext = measureCanvas.getContext("2d", {
+      // Performance optimization: we don't need alpha channel for text measurement
+      alpha: false,
+    })!;
+  }
+  return measureContext;
+};
+
+/**
+ * Pre-warm cache with common characters for better initial performance
+ */
+const prewarmCharCache = (fontSize: number, fontFamily: string) => {
+  const commonChars =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !@#$%^&*()_+-=[]{}|;:',.<>?/`~";
+  const ctx = getMeasureContext();
+  ctx.font = `${fontSize}px ${fontFamily}`;
+
+  for (const char of commonChars) {
+    const cacheKey = `${char}-${fontSize}-${fontFamily}`;
+    if (!charWidthCache.has(cacheKey)) {
+      const width = ctx.measureText(char).width;
+      const roundedWidth =
+        Math.round(width * EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER) /
+        EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER;
+      charWidthCache.set(cacheKey, roundedWidth);
+    }
+  }
+};
+
+/**
+ * Get accurate character width from cache or measure using canvas (much faster than DOM)
  */
 export const getCharWidthCached = (
   char: string,
@@ -111,25 +155,21 @@ export const getCharWidthCached = (
     return charWidthCache.get(cacheKey)!;
   }
 
-  const measureElement = document.createElement("span");
-  measureElement.style.position = "absolute";
-  measureElement.style.visibility = "hidden";
-  measureElement.style.whiteSpace = "pre";
-  measureElement.style.fontSize = `${fontSize}px`;
-  measureElement.style.fontFamily = fontFamily;
-  measureElement.style.lineHeight = "1";
-  measureElement.style.padding = "0";
-  measureElement.style.margin = "0";
-  measureElement.style.border = "none";
+  // Use canvas measureText for fast, non-blocking measurement
+  const ctx = getMeasureContext();
+  ctx.font = `${fontSize}px ${fontFamily}`;
 
-  measureElement.textContent = char;
+  const width = ctx.measureText(char).width;
+  const roundedWidth =
+    Math.round(width * EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER) /
+    EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER;
 
-  document.body.appendChild(measureElement);
-  const width = measureElement.getBoundingClientRect().width;
-  document.body.removeChild(measureElement);
-
-  const roundedWidth = Math.round(width * 100) / 100;
   charWidthCache.set(cacheKey, roundedWidth);
+
+  // Prewarm cache on first use for this font configuration
+  if (charWidthCache.size < 100) {
+    requestIdleCallback(() => prewarmCharCache(fontSize, fontFamily));
+  }
 
   return roundedWidth;
 };

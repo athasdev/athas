@@ -14,6 +14,11 @@ interface SSEData {
     delta?: { content?: string };
     message?: { content?: string };
   }>;
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{ text?: string }>;
+    };
+  }>;
 }
 
 class SSEStreamParser {
@@ -74,6 +79,8 @@ class SSEStreamParser {
 
         // Handle different response formats
         let content = "";
+
+        // OpenAI/OpenRouter format
         if (data.choices?.[0]) {
           const choice = data.choices[0];
           console.log("🔍 Choice data:", choice);
@@ -84,6 +91,11 @@ class SSEStreamParser {
             content = choice.message.content;
             console.log("🔍 Message content found:", content);
           }
+        }
+        // Gemini format
+        else if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+          content = data.candidates[0].content.parts[0].text;
+          console.log("🔍 Gemini content found:", content);
         }
 
         if (content) {

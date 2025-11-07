@@ -1,12 +1,12 @@
 import { memo } from "react";
-import { useEditorCompletionStore } from "@/features/editor/completion/completion-store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 
 export const HoverTooltip = memo(() => {
   const fontSize = useEditorSettingsStore((state) => state.fontSize);
   const fontFamily = useEditorSettingsStore((state) => state.fontFamily);
-  const { hoverInfo, actions } = useEditorCompletionStore();
+  const { hoverInfo, actions } = useEditorUIStore();
 
   const handleMouseEnter = () => actions.setIsHovering(true);
   const handleMouseLeave = () => actions.setIsHovering(false);
