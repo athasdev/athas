@@ -1,13 +1,37 @@
-use std::{fs, os::unix::fs::PermissionsExt, path::Path};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+use std::{fs, path::Path};
 use tauri::command;
 
+// Platform-specific CLI paths
+#[cfg(unix)]
 const CLI_SCRIPT_PATH: &str = "/usr/local/bin/athas";
+
+#[cfg(windows)]
+fn get_cli_script_path() -> Result<std::path::PathBuf, String> {
+   let home = std::env::var("USERPROFILE")
+      .map_err(|_| "Failed to get user profile directory".to_string())?;
+   Ok(std::path::PathBuf::from(home)
+      .join(".athas")
+      .join("bin")
+      .join("athas.cmd"))
+}
 
 #[command]
 pub fn check_cli_installed() -> Result<bool, String> {
-   Ok(Path::new(CLI_SCRIPT_PATH).exists())
+   #[cfg(unix)]
+   {
+      Ok(Path::new(CLI_SCRIPT_PATH).exists())
+   }
+
+   #[cfg(windows)]
+   {
+      let cli_path = get_cli_script_path()?;
+      Ok(cli_path.exists())
+   }
 }
 
+#[cfg(unix)]
 #[command]
 pub fn install_cli_command() -> Result<String, String> {
    // Create the CLI launcher script content
@@ -59,6 +83,54 @@ fi
    ))
 }
 
+#[cfg(windows)]
+#[command]
+pub fn install_cli_command() -> Result<String, String> {
+   let cli_path = get_cli_script_path()?;
+   let bin_dir = cli_path
+      .parent()
+      .ok_or_else(|| "Failed to get parent directory".to_string())?;
+
+   // Create the bin directory if it doesn't exist
+   if !bin_dir.exists() {
+      fs::create_dir_all(bin_dir).map_err(|e| format!("Failed to create bin directory: {}", e))?;
+   }
+
+   // Create the CLI launcher batch script content
+   let script_content = r#"@echo off
+REM Athas CLI launcher for Windows
+
+REM Try to find Athas.exe in common locations
+if exist "%LOCALAPPDATA%\Programs\Athas\Athas.exe" (
+    start "" "%LOCALAPPDATA%\Programs\Athas\Athas.exe" %*
+) else if exist "%PROGRAMFILES%\Athas\Athas.exe" (
+    start "" "%PROGRAMFILES%\Athas\Athas.exe" %*
+) else if exist "%PROGRAMFILES(X86)%\Athas\Athas.exe" (
+    start "" "%PROGRAMFILES(X86)%\Athas\Athas.exe" %*
+) else (
+    echo Error: Athas installation not found
+    echo Please ensure Athas is installed in one of the standard locations
+    exit /b 1
+)
+"#;
+
+   // Write the script
+   fs::write(&cli_path, script_content)
+      .map_err(|e| format!("Failed to write CLI script: {}", e))?;
+
+   let path_instruction = format!(
+      "CLI command installed successfully at {}.\n\nTo use 'athas' from anywhere, add the \
+       following directory to your PATH:\n{}\n\nYou can do this by:\n1. Search for 'Environment \
+       Variables' in Windows Settings\n2. Edit the 'Path' variable under User variables\n3. Add \
+       the directory above\n4. Restart your terminal",
+      cli_path.display(),
+      bin_dir.display()
+   );
+
+   Ok(path_instruction)
+}
+
+#[cfg(unix)]
 #[command]
 pub fn uninstall_cli_command() -> Result<String, String> {
    if !Path::new(CLI_SCRIPT_PATH).exists() {
@@ -71,6 +143,20 @@ pub fn uninstall_cli_command() -> Result<String, String> {
          e
       )
    })?;
+
+   Ok("CLI command uninstalled successfully".to_string())
+}
+
+#[cfg(windows)]
+#[command]
+pub fn uninstall_cli_command() -> Result<String, String> {
+   let cli_path = get_cli_script_path()?;
+
+   if !cli_path.exists() {
+      return Err("CLI command is not installed".to_string());
+   }
+
+   fs::remove_file(&cli_path).map_err(|e| format!("Failed to remove CLI script: {}", e))?;
 
    Ok("CLI command uninstalled successfully".to_string())
 }
