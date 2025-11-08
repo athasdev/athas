@@ -34,6 +34,26 @@ export const AI_PROVIDERS: ModelProvider[] = [
     models: [
       // Latest flagship models
       {
+        id: "gpt-5-pro",
+        name: "GPT-5 Pro",
+        maxTokens: 128000,
+      },
+      {
+        id: "gpt-5",
+        name: "GPT-5",
+        maxTokens: 1048576,
+      },
+      {
+        id: "gpt-5-mini",
+        name: "GPT-5 Mini",
+        maxTokens: 1048576,
+      },
+      {
+        id: "gpt-5-nano",
+        name: "GPT-5 Nano",
+        maxTokens: 1048576,
+      },
+      {
         id: "o3",
         name: "o3",
         maxTokens: 200000,
