@@ -849,6 +849,12 @@ export const useFileSystemStore = createSelectors(
         });
       },
 
+      setIsSwitchingProject: (value: boolean) => {
+        set((state) => {
+          state.isSwitchingProject = value;
+        });
+      },
+
       restoreSession: async (projectPath: string) => {
         // Get the saved session for this project
         const session = useSessionStore.getState().getSession(projectPath);

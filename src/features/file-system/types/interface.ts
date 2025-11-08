@@ -65,6 +65,7 @@ export interface FsActions {
 
   // Setter methods
   setFiles: (newFiles: FileEntry[]) => void;
+  setIsSwitchingProject: (value: boolean) => void;
 
   // Session restoration
   restoreSession: (projectPath: string) => Promise<void>;

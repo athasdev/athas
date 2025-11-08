@@ -5,6 +5,7 @@ Athas supports working with multiple projects simultaneously through project tab
 ## Opening Projects
 
 - Click the **+** button in the title bar to open a new project folder
+- Drag and drop a folder from your file system anywhere onto the editor window to open it as a new project
 - Each opened project appears as a tab in the title bar
 
 ## Switching Between Projects
@@ -27,8 +28,12 @@ Athas supports working with multiple projects simultaneously through project tab
 
 Right-click on any project tab to access:
 
-- **Close Other Projects** - Closes all project tabs except the one you right-clicked
 - **Copy Path** - Copies the project's full file path to clipboard
+- **Reveal in Finder** - Opens the project folder in your file manager
+- **Close Project** - Closes the selected project
+- **Close Other Projects** - Closes all project tabs except the one you right-clicked
+- **Close to Right** - Closes all projects to the right of the selected one
+- **Close All Projects** - Closes all projects except the first one
 
 ## Persistence
 

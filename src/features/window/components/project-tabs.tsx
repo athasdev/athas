@@ -1,11 +1,13 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { Folder, Plus, X } from "lucide-react";
+import { Copy, Folder, FolderOpen, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useContextMenu } from "@/hooks/use-context-menu";
 import type { ProjectTab } from "@/stores/workspace-tabs-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
+import type { ContextMenuItem } from "@/ui/context-menu";
+import { ContextMenu } from "@/ui/context-menu";
 import { cn } from "@/utils/cn";
-import ProjectTabsContextMenu from "./project-tabs-context-menu";
 
 const DRAG_THRESHOLD = 5;
 
@@ -46,11 +48,7 @@ const ProjectTabs = () => {
     tabPositions: [],
   });
 
-  const [contextMenu, setContextMenu] = useState<{
-    isOpen: boolean;
-    position: { x: number; y: number };
-    tab: ProjectTab | null;
-  }>({ isOpen: false, position: { x: 0, y: 0 }, tab: null });
+  const contextMenu = useContextMenu<ProjectTab>();
 
   useEffect(() => {
     dragStateRef.current = {
@@ -175,23 +173,6 @@ const ProjectTabs = () => {
     [switchToProject],
   );
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, tab: ProjectTab) => {
-    e.preventDefault();
-
-    const target = e.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-
-    // Center horizontally on the tab, position below
-    const x = rect.left + rect.width * 0.5;
-    const y = rect.bottom + 4;
-
-    setContextMenu({
-      isOpen: true,
-      position: { x, y },
-      tab,
-    });
-  }, []);
-
   const handleCloseTab = async (e: React.MouseEvent, projectId: string) => {
     e.stopPropagation();
     await closeProject(projectId);
@@ -201,47 +182,96 @@ const ProjectTabs = () => {
     await handleOpenFolder();
   };
 
-  const closeContextMenu = () => {
-    setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, tab: null });
-  };
+  // Build context menu items based on the selected tab
+  const getContextMenuItems = useCallback(
+    (tab: ProjectTab | null): ContextMenuItem[] => {
+      if (!tab) return [];
 
-  const handleCloseOtherTabs = (projectId: string) => {
-    projectTabs.forEach((tab) => {
-      if (tab.id !== projectId && projectTabs.length > 1) {
-        closeProject(tab.id);
-      }
-    });
-  };
+      const { handleRevealInFolder } = useFileSystemStore.getState();
 
-  const handleCloseToRight = (projectId: string) => {
-    const currentIndex = projectTabs.findIndex((t) => t.id === projectId);
-    if (currentIndex === -1) return;
+      const items: ContextMenuItem[] = [
+        {
+          id: "copy-path",
+          label: "Copy Path",
+          icon: <Copy size={11} />,
+          onClick: async () => {
+            await writeText(tab.path);
+          },
+        },
+        {
+          id: "reveal",
+          label: "Reveal in Finder",
+          icon: <FolderOpen size={11} />,
+          onClick: () => {
+            if (handleRevealInFolder) {
+              handleRevealInFolder(tab.path);
+            }
+          },
+        },
+        {
+          id: "separator-1",
+          label: "",
+          separator: true,
+          onClick: () => {},
+        },
+      ];
 
-    // Close all tabs to the right
-    for (let i = projectTabs.length - 1; i > currentIndex; i--) {
+      // Only show Close Project if there's more than one tab
       if (projectTabs.length > 1) {
-        closeProject(projectTabs[i].id);
+        items.push({
+          id: "close-project",
+          label: "Close Project",
+          icon: <X size={11} />,
+          onClick: () => {
+            closeProject(tab.id);
+          },
+        });
       }
-    }
-  };
 
-  const handleCloseAll = () => {
-    // Close all tabs except the first one (keep at least one open)
-    for (let i = projectTabs.length - 1; i >= 1; i--) {
-      closeProject(projectTabs[i].id);
-    }
-  };
+      items.push({
+        id: "close-others",
+        label: "Close Other Projects",
+        onClick: () => {
+          projectTabs.forEach((t) => {
+            if (t.id !== tab.id && projectTabs.length > 1) {
+              closeProject(t.id);
+            }
+          });
+        },
+      });
 
-  const handleCopyPath = async (path: string) => {
-    await writeText(path);
-  };
+      items.push({
+        id: "close-right",
+        label: "Close to Right",
+        onClick: () => {
+          const currentIndex = projectTabs.findIndex((t) => t.id === tab.id);
+          if (currentIndex === -1) return;
 
-  const handleRevealInFinder = (path: string) => {
-    const { handleRevealInFolder } = useFileSystemStore.getState();
-    if (handleRevealInFolder) {
-      handleRevealInFolder(path);
-    }
-  };
+          for (let i = projectTabs.length - 1; i > currentIndex; i--) {
+            if (projectTabs.length > 1) {
+              closeProject(projectTabs[i].id);
+            }
+          }
+        },
+      });
+
+      // Only show Close All if there's more than one tab
+      if (projectTabs.length > 1) {
+        items.push({
+          id: "close-all",
+          label: "Close All Projects",
+          onClick: () => {
+            for (let i = projectTabs.length - 1; i >= 1; i--) {
+              closeProject(projectTabs[i].id);
+            }
+          },
+        });
+      }
+
+      return items;
+    },
+    [projectTabs, closeProject],
+  );
 
   useEffect(() => {
     if (dragState.draggedIndex === null) return;
@@ -312,7 +342,7 @@ const ProjectTabs = () => {
                   tabRefs.current[index] = el;
                 }}
                 onMouseDown={(e) => handleMouseDown(e, index, tab)}
-                onContextMenu={(e) => handleContextMenu(e, tab)}
+                onContextMenu={(e) => contextMenu.open(e, tab)}
                 className={cn(
                   "group relative flex items-center gap-1.5 rounded px-2 py-0.5 text-xs transition-colors",
                   tab.isActive
@@ -357,18 +387,11 @@ const ProjectTabs = () => {
         </button>
       </div>
 
-      <ProjectTabsContextMenu
+      <ContextMenu
         isOpen={contextMenu.isOpen}
         position={contextMenu.position}
-        tab={contextMenu.tab}
-        totalTabs={projectTabs.length}
-        onClose={closeContextMenu}
-        onCloseProject={closeProject}
-        onCloseOthers={handleCloseOtherTabs}
-        onCloseToRight={handleCloseToRight}
-        onCloseAll={handleCloseAll}
-        onCopyPath={handleCopyPath}
-        onRevealInFinder={handleRevealInFinder}
+        items={getContextMenuItems(contextMenu.data)}
+        onClose={contextMenu.close}
       />
     </>
   );

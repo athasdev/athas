@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from "react";
 import SQLiteViewer from "@/features/database/providers/sqlite/sqlite-viewer";
 import type { Diagnostic } from "@/features/diagnostics/diagnostics-pane";
 import { useDiagnosticsStore } from "@/features/diagnostics/diagnostics-store";
@@ -13,8 +13,10 @@ import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useKeyboardShortcutsWrapper } from "@/features/window/hooks/use-keyboard-shortcuts-wrapper";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
+import { useFolderDrop } from "@/hooks/use-folder-drop";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useUIState } from "@/stores/ui-state-store";
+import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
 
 // Lazy load AI Chat for better performance
 const AIChat = lazy(() => import("@/features/ai/components/chat/ai-chat"));
@@ -53,7 +55,19 @@ export function MainLayout() {
   const { settings, updateSetting } = useSettingsStore();
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
-  const { rootFolderPath } = useFileSystemStore();
+  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
+  const switchToProject = useFileSystemStore.use.switchToProject?.();
+  const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
+
+  const hasRestoredWorkspace = useRef(false);
+
+  // Handle folder drag-and-drop
+  const { isDraggingOver } = useFolderDrop(async (path) => {
+    if (handleOpenFolderByPath) {
+      await handleOpenFolderByPath(path);
+    }
+  });
 
   const { getAllDiagnostics } = useDiagnosticsStore.use.actions();
   const diagnostics = useMemo(() => getAllDiagnostics(), [getAllDiagnostics]);
@@ -145,8 +159,44 @@ export function MainLayout() {
     },
   });
 
+  // Restore workspace on app startup
+  useEffect(() => {
+    if (hasRestoredWorkspace.current) return;
+
+    const restoreWorkspace = async () => {
+      // Get the active project tab from persisted state
+      const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+
+      if (activeTab && switchToProject && setIsSwitchingProject) {
+        hasRestoredWorkspace.current = true;
+
+        // Set flag BEFORE calling switchToProject to prevent tab bar from hiding
+        setIsSwitchingProject(true);
+
+        try {
+          await switchToProject(activeTab.id);
+        } catch (error) {
+          console.error("Failed to restore workspace:", error);
+          // Make sure to clear the flag even if restoration fails
+          setIsSwitchingProject(false);
+        }
+      }
+    };
+
+    restoreWorkspace();
+  }, [switchToProject, setIsSwitchingProject]);
+
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-primary-bg">
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-primary-bg">
+      {/* Drag-and-drop overlay */}
+      {isDraggingOver && (
+        <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-primary-bg/90 backdrop-blur-sm">
+          <div className="rounded-lg border-2 border-accent border-dashed bg-secondary-bg px-8 py-6">
+            <p className="font-medium text-text text-xl">Drop folder to open as project</p>
+          </div>
+        </div>
+      )}
+
       <CustomTitleBarWithSettings />
       <div className="h-px flex-shrink-0 bg-border" />
 
