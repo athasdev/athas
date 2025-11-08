@@ -1,5 +1,7 @@
+pub mod ai_tokens;
 pub mod claude;
 pub mod cli;
+pub mod extensions;
 pub mod font;
 pub mod format;
 pub mod fs;
@@ -17,8 +19,10 @@ pub mod watcher;
 pub mod window;
 pub mod xterm;
 
+pub use ai_tokens::*;
 pub use claude::*;
 pub use cli::*;
+pub use extensions::*;
 pub use font::*;
 pub use format::*;
 pub use fs::*;

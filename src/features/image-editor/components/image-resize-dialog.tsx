@@ -1,6 +1,6 @@
 import { Image } from "lucide-react";
 import { useEffect, useState } from "react";
-import Dialog from "@/components/ui/dialog";
+import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 
 interface ImageResizeDialogProps {

@@ -1,4 +1,4 @@
-import type { AIMessage } from "@/types/ai-chat";
+import type { AIMessage } from "@/features/ai/types/messages";
 
 export interface ProviderConfig {
   id: string;
@@ -26,6 +26,9 @@ export abstract class AIProvider {
   abstract buildHeaders(apiKey?: string): ProviderHeaders;
   abstract buildPayload(request: StreamRequest): any;
   abstract validateApiKey(apiKey: string): Promise<boolean>;
+
+  // Optional: Allows providers to customize the URL (e.g., add API key as query param)
+  buildUrl?(request: StreamRequest): string;
 
   get id(): string {
     return this.config.id;

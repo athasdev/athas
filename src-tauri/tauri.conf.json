@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Athas",
-  "version": "0.1.2",
+  "version": "0.2.4",
   "identifier": "com.code.athas",
   "build": {
     "beforeDevCommand": "bun vite",
@@ -34,10 +34,14 @@
     ],
     "security": {
       "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost",
-      "capabilities": ["main-capability"],
+      "capabilities": [
+        "main-capability"
+      ],
       "assetProtocol": {
         "enable": true,
-        "scope": ["**"]
+        "scope": [
+          "**"
+        ]
       }
     },
     "macOSPrivateApi": true
@@ -53,11 +57,14 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": [
+      "../src/extensions/bundled/**/*"
+    ],
     "macOS": {
       "frameworks": [],
       "minimumSystemVersion": "10.15",
       "exceptionDomain": "",
-      "signingIdentity": null,
+      "signingIdentity": "Developer ID Application: Mehmet Ozgul (N43BXFX4H4)",
       "providerShortName": null,
       "entitlements": null
     }

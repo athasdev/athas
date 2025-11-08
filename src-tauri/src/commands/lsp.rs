@@ -7,10 +7,12 @@ use tauri::State;
 pub async fn lsp_start(
    lsp_manager: State<'_, LspManager>,
    workspace_path: String,
+   server_path: Option<String>,
+   server_args: Option<Vec<String>>,
 ) -> LspResult<()> {
    log::info!("lsp_start command called with path: {}", workspace_path);
    lsp_manager
-      .start_lsp_for_workspace(PathBuf::from(workspace_path))
+      .start_lsp_for_workspace(PathBuf::from(workspace_path), server_path, server_args)
       .await
       .map_err(|e| {
          log::error!("Failed to start LSP: {}", e);

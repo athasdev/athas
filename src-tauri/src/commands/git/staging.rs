@@ -1,6 +1,6 @@
 use crate::commands::git::IntoStringError;
 use anyhow::{Context, Result};
-use git2::Repository;
+use git2::{ErrorCode, Repository};
 use std::path::Path;
 use tauri::command;
 
@@ -13,9 +13,36 @@ fn _git_add(repo_path: String, file_path: String) -> Result<()> {
    let repo = Repository::open(&repo_path).context("Failed to open repository")?;
    let mut index = repo.index().context("Failed to get index")?;
 
-   index
-      .add_path(Path::new(&file_path))
-      .context("Failed to add file")?;
+   let relative_path = Path::new(&file_path);
+   let absolute_path = Path::new(&repo_path).join(relative_path);
+
+   if absolute_path.is_dir() {
+      index
+         .add_all(
+            [file_path.as_str()].iter(),
+            git2::IndexAddOption::DEFAULT,
+            None,
+         )
+         .with_context(|| format!("Failed to add directory {}", file_path))?;
+   } else {
+      match index.add_path(relative_path) {
+         Ok(_) => {}
+         Err(err) => {
+            if err.code() == ErrorCode::NotFound {
+               index
+                  .add_all(
+                     [file_path.as_str()].iter(),
+                     git2::IndexAddOption::DEFAULT,
+                     None,
+                  )
+                  .with_context(|| format!("Failed to add path {}", file_path))?;
+            } else {
+               return Err(err).with_context(|| format!("Failed to add file {}", file_path));
+            }
+         }
+      }
+   }
+
    index.write().context("Failed to write index")?;
 
    Ok(())

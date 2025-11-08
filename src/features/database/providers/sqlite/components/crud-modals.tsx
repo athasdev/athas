@@ -1,8 +1,8 @@
 import { PlusIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
-import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
+import Button from "@/ui/button";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import type { ColumnInfo } from "../../../models/common.types";
 

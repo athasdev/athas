@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { CommandInput, CommandList } from "@/components/ui/command";
+import { CommandInput, CommandList } from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { useGlobalSearch } from "../hooks/use-global-search";
 import { EmptyState } from "./empty-state";

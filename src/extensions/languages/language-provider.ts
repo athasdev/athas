@@ -1,5 +1,9 @@
-import { getTokens } from "../../lib/rust-api/tokens";
-import type { ExtensionContext, LanguageExtension, Token } from "../extension-types";
+import type {
+  ExtensionContext,
+  LanguageExtension,
+  Token,
+} from "@/features/editor/extensions/types";
+import { getTokens } from "@/features/editor/lib/rust-api/tokens";
 
 export interface LanguageConfig {
   id: string;

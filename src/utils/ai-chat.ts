@@ -1,6 +1,7 @@
-import type { ChatMode, OutputStyle } from "@/stores/ai-chat/types";
-import type { AIMessage } from "@/types/ai-chat";
-import { getModelById, getProviderById } from "../types/ai-provider";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
+import type { AIMessage } from "@/features/ai/types/messages";
+import { getModelById, getProviderById } from "@/features/ai/types/providers";
 import { ClaudeCodeStreamHandler } from "./claude-code-handler";
 import { buildContextPrompt, buildSystemPrompt } from "./context-builder";
 import { getProvider } from "./providers";
@@ -87,35 +88,41 @@ export const getChatCompletionStream = async (
       throw new Error(`Provider implementation not found: ${providerId}`);
     }
 
-    const headers = providerImpl.buildHeaders(apiKey || undefined);
-    const payload = providerImpl.buildPayload({
+    const streamRequest = {
       modelId,
       messages,
       maxTokens: Math.min(1000, Math.floor(model.maxTokens * 0.25)),
       temperature: 0.7,
       apiKey: apiKey || undefined,
-    });
+    };
 
-    console.log(`🤖 Making ${provider.name} streaming chat request with model ${model.name}...`);
+    const headers = providerImpl.buildHeaders(apiKey || undefined);
+    const payload = providerImpl.buildPayload(streamRequest);
+    const url = providerImpl.buildUrl ? providerImpl.buildUrl(streamRequest) : provider.apiUrl;
 
-    const response = await fetch(provider.apiUrl, {
+    console.log(`Making ${provider.name} streaming chat request with model ${model.name}...`);
+
+    // Use Tauri's fetch for Gemini to bypass CORS restrictions
+    const fetchFn = providerId === "gemini" ? tauriFetch : fetch;
+    const response = await fetchFn(url, {
       method: "POST",
       headers,
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      console.error(`❌ ${provider.name} API error:`, response.status, response.statusText);
+      console.error(`${provider.name} API error:`, response.status, response.statusText);
       const errorText = await response.text();
-      console.error("❌ Error details:", errorText);
-      onError(`${provider.name} API error: ${response.status}`);
+      console.error("Error details:", errorText);
+      // Pass error details in a structured format
+      onError(`${provider.name} API error: ${response.status}|||${errorText}`);
       return;
     }
 
     // Use stream processing utility
     await processStreamingResponse(response, onChunk, onComplete, onError);
   } catch (error) {
-    console.error(`❌ ${providerId} streaming chat completion error:`, error);
+    console.error(`${providerId} streaming chat completion error:`, error);
     onError(`Failed to connect to ${providerId} API`);
   }
 };

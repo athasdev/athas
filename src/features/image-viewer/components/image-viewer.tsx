@@ -1,8 +1,8 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { ArrowDown, ArrowUp, FileIcon, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import Button from "@/components/ui/button";
-import UnsavedChangesDialog from "@/components/ui/unsaved-changes-dialog";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { ImageEditorToolbar } from "@/features/image-editor/components/image-editor-toolbar";
 import { ImageResizeDialog } from "@/features/image-editor/components/image-resize-dialog";
 import { useImageOperations } from "@/features/image-editor/hooks/use-image-operations";
@@ -12,8 +12,8 @@ import {
   getDataURLSize,
   saveImageToFile,
 } from "@/features/image-editor/utils/image-file-utils";
-import { useFileSystemStore } from "@/file-system/controllers/store";
-import { useBufferStore } from "@/stores/buffer-store";
+import Button from "@/ui/button";
+import UnsavedChangesDialog from "@/ui/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
 import { useImageZoom } from "../hooks/use-image-zoom";

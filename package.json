@@ -1,7 +1,7 @@
 {
   "name": "athas-code",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.4",
   "type": "module",
   "scripts": {
     "tauri": "tauri",
@@ -17,7 +17,12 @@
     "prepare": "simple-git-hooks",
     "commitlint": "commitlint",
     "setup": "bun setup.ts",
-    "dev": "WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev"
+    "dev": "WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev",
+    "dev:scan": "WEBKIT_DISABLE_DMABUF_RENDERER=1 VITE_REACT_SCAN=true tauri dev",
+    "release": "bun scripts/release.ts",
+    "release:patch": "bun scripts/release.ts patch",
+    "release:minor": "bun scripts/release.ts minor",
+    "release:major": "bun scripts/release.ts major"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",
@@ -26,6 +31,7 @@
     "@tauri-apps/plugin-clipboard-manager": "~2.3.0",
     "@tauri-apps/plugin-dialog": "^2",
     "@tauri-apps/plugin-fs": "^2",
+    "@tauri-apps/plugin-http": "^2.5.4",
     "@tauri-apps/plugin-opener": "^2.4.0",
     "@tauri-apps/plugin-os": "^2",
     "@tauri-apps/plugin-process": "^2",
@@ -33,7 +39,6 @@
     "@tauri-apps/plugin-store": "~2",
     "@tauri-apps/plugin-updater": "^2.9.0",
     "@types/prismjs": "^1.26.5",
-    "@xterm/addon-canvas": "^0.7.0",
     "@xterm/addon-clipboard": "^0.1.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-search": "^0.15.0",
@@ -51,10 +56,7 @@
     "prismjs": "^1.30.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-intersection-observer": "^9.16.0",
     "react-scan": "^0.4.3",
-    "react-window": "^1.8.11",
-    "react-window-infinite-loader": "^1.0.10",
     "tailwind-merge": "^3.3.1",
     "use-debounce": "^10.0.5",
     "use-sync-external-store": "^1.5.0",

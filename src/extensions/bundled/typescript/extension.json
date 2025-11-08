@@ -1,0 +1,46 @@
+{
+  "id": "athas.typescript",
+  "name": "TypeScript",
+  "displayName": "TypeScript Language Support",
+  "description": "TypeScript and JavaScript language support with IntelliSense, diagnostics, and more",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "typescript",
+      "extensions": [".ts", ".tsx", ".mts", ".cts"],
+      "aliases": ["TypeScript", "ts"]
+    },
+    {
+      "id": "javascript",
+      "extensions": [".js", ".jsx", ".mjs", ".cjs"],
+      "aliases": ["JavaScript", "js"]
+    }
+  ],
+  "lsp": {
+    "server": {
+      "default": "typescript-language-server",
+      "darwin": "./lsp/typescript-language-server-darwin",
+      "linux": "./lsp/typescript-language-server-linux",
+      "win32": "./lsp/typescript-language-server.exe"
+    },
+    "args": ["--stdio"],
+    "fileExtensions": [".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs"],
+    "languageIds": ["typescript", "javascript", "typescriptreact", "javascriptreact"]
+  },
+  "commands": [
+    {
+      "command": "typescript.restart",
+      "title": "Restart TypeScript Server",
+      "category": "TypeScript"
+    },
+    {
+      "command": "typescript.toggle",
+      "title": "Toggle TypeScript Server",
+      "category": "TypeScript"
+    }
+  ],
+  "activationEvents": ["onLanguage:typescript", "onLanguage:javascript"],
+  "icon": "icon.svg"
+}

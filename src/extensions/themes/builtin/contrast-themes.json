@@ -1,0 +1,112 @@
+{
+  "themes": [
+    {
+      "cssVariables": {
+        "--primary-bg": "#ffffff",
+        "--secondary-bg": "#f5f5f5",
+        "--text": "#000000",
+        "--text-light": "#333333",
+        "--text-lighter": "#666666",
+        "--border": "#cccccc",
+        "--hover": "#e5e5e5",
+        "--selected": "#e5e5e5",
+        "--accent": "#0066cc"
+      },
+      "syntaxTokens": {
+        "--syntax-keyword": "#0000ff",
+        "--syntax-string": "#008800",
+        "--syntax-number": "#cc6600",
+        "--syntax-comment": "#666666",
+        "--syntax-variable": "#cc0000",
+        "--syntax-function": "#8800cc",
+        "--syntax-constant": "#cc6600",
+        "--syntax-property": "#0066cc",
+        "--syntax-type": "#cc6600",
+        "--syntax-operator": "#0000ff",
+        "--syntax-punctuation": "#000000",
+        "--syntax-boolean": "#cc6600",
+        "--syntax-null": "#cc6600",
+        "--syntax-regex": "#008800",
+        "--syntax-jsx": "#0066cc",
+        "--syntax-jsx-attribute": "#8800cc"
+      },
+      "id": "high-contrast-light",
+      "name": "High Contrast Light",
+      "description": "Maximum contrast light theme for accessibility",
+      "category": "Light",
+      "isDark": false
+    },
+    {
+      "cssVariables": {
+        "--primary-bg": "#000000",
+        "--secondary-bg": "#1a1a1a",
+        "--text": "#ffffff",
+        "--text-light": "#cccccc",
+        "--text-lighter": "#999999",
+        "--border": "#666666",
+        "--hover": "#333333",
+        "--selected": "#333333",
+        "--accent": "#66ccff"
+      },
+      "syntaxTokens": {
+        "--syntax-keyword": "#66ccff",
+        "--syntax-string": "#66ff66",
+        "--syntax-number": "#ffcc66",
+        "--syntax-comment": "#999999",
+        "--syntax-variable": "#ff9999",
+        "--syntax-function": "#cc99ff",
+        "--syntax-constant": "#ffcc66",
+        "--syntax-property": "#66ccff",
+        "--syntax-type": "#ffcc66",
+        "--syntax-operator": "#66ccff",
+        "--syntax-punctuation": "#ffffff",
+        "--syntax-boolean": "#ffcc66",
+        "--syntax-null": "#ffcc66",
+        "--syntax-regex": "#66ff66",
+        "--syntax-jsx": "#66ccff",
+        "--syntax-jsx-attribute": "#cc99ff"
+      },
+      "id": "high-contrast-dark",
+      "name": "High Contrast Dark",
+      "description": "Maximum contrast dark theme for accessibility",
+      "category": "Dark",
+      "isDark": true
+    },
+    {
+      "cssVariables": {
+        "--primary-bg": "#000000",
+        "--secondary-bg": "#111111",
+        "--text": "#ffffff",
+        "--text-light": "#cccccc",
+        "--text-lighter": "#888888",
+        "--border": "#444444",
+        "--hover": "#222222",
+        "--selected": "#222222",
+        "--accent": "#ffffff"
+      },
+      "syntaxTokens": {
+        "--syntax-keyword": "#ffffff",
+        "--syntax-string": "#cccccc",
+        "--syntax-number": "#aaaaaa",
+        "--syntax-comment": "#666666",
+        "--syntax-variable": "#cccccc",
+        "--syntax-function": "#ffffff",
+        "--syntax-constant": "#aaaaaa",
+        "--syntax-property": "#cccccc",
+        "--syntax-type": "#ffffff",
+        "--syntax-operator": "#ffffff",
+        "--syntax-punctuation": "#ffffff",
+        "--syntax-boolean": "#aaaaaa",
+        "--syntax-null": "#aaaaaa",
+        "--syntax-regex": "#cccccc",
+        "--syntax-jsx": "#ffffff",
+        "--syntax-jsx-attribute": "#ffffff"
+      },
+      "id": "monochrome",
+      "name": "Monochrome",
+      "description": "Pure black and white theme for minimal distraction",
+      "category": "Dark",
+      "isDark": true
+    }
+  ]
+}

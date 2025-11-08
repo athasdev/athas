@@ -3,26 +3,23 @@ import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { enableMapSet } from "immer";
 import { useEffect } from "react";
-import { FontPreloader } from "./components/font-preloader";
-import { FontStyleInjector } from "./components/font-style-injector";
-import { MainLayout } from "./components/layout/main-layout";
-import { ToastContainer } from "./components/ui/toast";
-import WelcomeScreen from "./components/window/welcome-screen";
-import { ZoomIndicator } from "./components/zoom-indicator";
-import { initializeIconThemes } from "./extensions/icon-themes";
+import { FontPreloader } from "@/features/settings/components/font-preloader";
+import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
+import { useScroll } from "@/features/window/hooks/use-scroll";
+import { initializeIconThemes } from "./extensions/icon-themes/icon-theme-initializer";
 import { initializeThemeSystem } from "./extensions/themes/theme-initializer";
 import {
   cleanupFileWatcherListener,
   initializeFileWatcherListener,
-} from "./file-system/controllers/file-watcher-store";
-import { isMac } from "./file-system/controllers/platform";
-import { useRecentFoldersStore } from "./file-system/controllers/recent-folders-store";
-import { useFileSystemStore } from "./file-system/controllers/store";
-import { useScroll } from "./hooks/use-scroll";
+} from "./features/file-system/controllers/file-watcher-store";
+import { isMac } from "./features/file-system/controllers/platform";
+import { MainLayout } from "./features/layout/components/main-layout";
+import { ZoomIndicator } from "./features/layout/components/zoom-indicator";
 import { useAppStore } from "./stores/app-store";
 import { useFontStore } from "./stores/font-store";
 import { useSidebarStore } from "./stores/sidebar-store";
 import { useZoomStore } from "./stores/zoom-store";
+import { ToastContainer } from "./ui/toast";
 import { cn } from "./utils/cn";
 
 // Initialize theme system immediately when the module loads
@@ -32,12 +29,15 @@ initializeThemeSystem().catch(console.error);
 // Initialize icon themes
 initializeIconThemes();
 
+// Initialize extension system
+import { extensionLoader } from "./extensions/loader/extension-loader";
+
+extensionLoader.initialize().catch(console.error);
+
 function App() {
   enableMapSet();
 
-  const { files, rootFolderPath, handleOpenFolder } = useFileSystemStore();
   const { cleanup } = useAppStore.use.actions();
-  const { recentFolders, openRecentFolder } = useRecentFoldersStore();
   const { loadAvailableFonts } = useFontStore.use.actions();
   const setRemoteWindow = useSidebarStore.use.setRemoteWindow();
   const zoomLevel = useZoomStore.use.windowZoomLevel();
@@ -157,32 +157,6 @@ function App() {
       };
     }
   }, []);
-
-  // Check for remote connection from URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const remoteParam = urlParams.get("remote");
-  const isRemoteFromUrl = !!remoteParam;
-
-  // Determine if we should show welcome screen
-  const shouldShowWelcome = files.length === 0 && !rootFolderPath && !isRemoteFromUrl;
-
-  if (shouldShowWelcome) {
-    return (
-      <div className="h-screen w-screen overflow-hidden bg-transparent" style={{ zoom: zoomLevel }}>
-        <FontPreloader />
-        <FontStyleInjector />
-        <div className="h-full w-full">
-          <WelcomeScreen
-            onOpenFolder={handleOpenFolder}
-            recentFolders={recentFolders}
-            onOpenRecentFolder={openRecentFolder}
-          />
-        </div>
-        <ZoomIndicator />
-        <ToastContainer />
-      </div>
-    );
-  }
 
   return (
     <div

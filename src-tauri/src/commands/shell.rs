@@ -35,37 +35,37 @@ impl Shell {
             Shell {
                id: "cmd".into(),
                name: "Command Prompt".into(),
-               exec_win: shell_exe_in_path("cmd.exe".into()),
+               exec_win: shell_exe_in_path("cmd.exe"),
                exec_unix: None,
             },
             Shell {
                id: "powershell".into(),
                name: "Windows PowerShell".into(),
-               exec_win: shell_exe_in_path("powershell.exe".into()),
+               exec_win: shell_exe_in_path("powershell.exe"),
                exec_unix: None,
             },
             Shell {
                id: "pwsh".into(),
                name: "PowerShell Core".into(),
-               exec_win: shell_exe_in_path("pwsh.exe".into()),
+               exec_win: shell_exe_in_path("pwsh.exe"),
                exec_unix: None,
             },
             Shell {
                id: "nu".into(),
                name: "Nushell".into(),
-               exec_win: shell_exe_in_path("nu.exe".into()),
+               exec_win: shell_exe_in_path("nu.exe"),
                exec_unix: None,
             },
             Shell {
                id: "wsl".into(),
                name: "Windows Subsystem for Linux".into(),
-               exec_win: shell_exe_in_path("wsl.exe".into()),
+               exec_win: shell_exe_in_path("wsl.exe"),
                exec_unix: None,
             },
             Shell {
                id: "bash".into(),
                name: "Git Bash".into(),
-               exec_win: shell_exe_in_path("bash.exe".into()),
+               exec_win: shell_exe_in_path("bash.exe"),
                exec_unix: None,
             },
          ]
@@ -75,25 +75,25 @@ impl Shell {
                id: "bash".into(),
                name: "Bash".into(),
                exec_win: None,
-               exec_unix: shell_exe_in_path("bash".into()),
+               exec_unix: shell_exe_in_path("bash"),
             },
             Shell {
                id: "nu".into(),
                name: "Nushell".into(),
                exec_win: None,
-               exec_unix: shell_exe_in_path("nu".into()),
+               exec_unix: shell_exe_in_path("nu"),
             },
             Shell {
                id: "zsh".into(),
                name: "Zsh".into(),
                exec_win: None,
-               exec_unix: shell_exe_in_path("zsh".into()),
+               exec_unix: shell_exe_in_path("zsh"),
             },
             Shell {
                id: "fish".into(),
                name: "Fish".into(),
                exec_win: None,
-               exec_unix: shell_exe_in_path("fish".into()),
+               exec_unix: shell_exe_in_path("fish"),
             },
          ]
       }

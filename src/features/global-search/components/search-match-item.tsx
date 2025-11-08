@@ -1,5 +1,5 @@
-import FileIcon from "@/file-explorer/views/file.icon";
-import type { SearchMatch } from "@/lib/rust-api/search";
+import FileIcon from "@/features/file-explorer/views/file.icon";
+import type { SearchMatch } from "@/features/global-search/lib/rust-api/search";
 
 interface SearchMatchItemProps {
   filePath: string;

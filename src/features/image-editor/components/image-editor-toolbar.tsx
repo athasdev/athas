@@ -9,7 +9,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { useState } from "react";
-import Button from "@/components/ui/button";
+import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
 import type { ImageFormat } from "../models/image-operation.types";
 import { ImageFormatDialog } from "./image-format-dialog";
