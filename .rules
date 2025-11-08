@@ -180,8 +180,8 @@ To add a new theme, create a JSON file in `src/extensions/themes/builtin/`:
 
 - Update relevant documentation files when adding new features or making significant changes
 - Documentation should be clear and concise, focusing on usage and examples
-- Documentation is for users, not developers - avoid internal implementation details unless necessary for understanding usage
+- Documentation is for users, not developers - avoid internal implementation details unless necessary for understanding usage, except for `docs/contributing/`
 - For internal developer documentation, use comments in the codebase instead of separate docs
 - Use markdown format for documentation files with proper headings, lists, and code blocks
 - Documentation is stored in the same repository as the codebase for easy access and versioning (e.g. `docs/` folder or README files in relevant directories)
-- README files in relevant directories should provide an overview of the directory's purpose and contents. They are for developers, not end-users.
+- Directories should not contain README files, all documentation should be centralized in a `docs/` folders- Documents that concern developers should be stored in `docs/contributing/`
