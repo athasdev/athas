@@ -23,6 +23,7 @@ import { useGitStore } from "@/features/version-control/git/controllers/git-stor
 import { useProjectStore } from "@/stores/project-store";
 import { useSessionStore } from "@/stores/session-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
+import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { FileEntry } from "../types/app";
 import type { FsActions, FsState } from "../types/interface";
@@ -47,6 +48,25 @@ import { openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 
+/**
+ * Wraps the file tree with a root folder entry
+ */
+const wrapWithRootFolder = (
+  files: FileEntry[],
+  rootPath: string,
+  rootName: string,
+): FileEntry[] => {
+  return [
+    {
+      name: rootName,
+      path: rootPath,
+      isDir: true,
+      children: files,
+      expanded: true,
+    },
+  ];
+};
+
 export const useFileSystemStore = createSelectors(
   create<FsState & FsActions>()(
     immer((set, get) => ({
@@ -55,6 +75,7 @@ export const useFileSystemStore = createSelectors(
       rootFolderPath: undefined,
       filesVersion: 0,
       isFileTreeLoading: false,
+      isSwitchingProject: false,
       isRemoteWindow: false,
       remoteConnectionId: undefined,
       remoteConnectionName: undefined,
@@ -75,8 +96,13 @@ export const useFileSystemStore = createSelectors(
           return false;
         }
 
+        // Add project to workspace tabs
+        const projectName = selected.split("/").pop() || "Project";
+        useWorkspaceTabsStore.getState().addProjectTab(selected, projectName);
+
         const entries = await readDirectoryContents(selected);
         const fileTree = sortFileEntries(entries);
+        const wrappedFileTree = wrapWithRootFolder(fileTree, selected, projectName);
 
         // Clear tree UI state
         useFileTreeStore.getState().collapseAll();
@@ -84,7 +110,7 @@ export const useFileSystemStore = createSelectors(
         // Update project store
         const { setRootFolderPath, setProjectName } = useProjectStore.getState();
         setRootFolderPath(selected);
-        setProjectName(selected.split("/").pop() || "Project");
+        setProjectName(projectName);
 
         // Add to recent folders
         useRecentFoldersStore.getState().addToRecents(selected);
@@ -101,7 +127,7 @@ export const useFileSystemStore = createSelectors(
 
         set((state) => {
           state.isFileTreeLoading = false;
-          state.files = fileTree;
+          state.files = wrappedFileTree;
           state.rootFolderPath = selected;
           state.filesVersion++;
           state.projectFilesCache = undefined;
@@ -151,8 +177,13 @@ export const useFileSystemStore = createSelectors(
           state.isFileTreeLoading = true;
         });
 
+        // Add project to workspace tabs
+        const projectName = path.split("/").pop() || "Project";
+        useWorkspaceTabsStore.getState().addProjectTab(path, projectName);
+
         const entries = await readDirectoryContents(path);
         const fileTree = sortFileEntries(entries);
+        const wrappedFileTree = wrapWithRootFolder(fileTree, path, projectName);
 
         // Clear tree UI state
         useFileTreeStore.getState().collapseAll();
@@ -160,7 +191,7 @@ export const useFileSystemStore = createSelectors(
         // Update project store
         const { setRootFolderPath, setProjectName } = useProjectStore.getState();
         setRootFolderPath(path);
-        setProjectName(path.split("/").pop() || "Project");
+        setProjectName(projectName);
 
         // Add to recent folders
         useRecentFoldersStore.getState().addToRecents(path);
@@ -177,7 +208,7 @@ export const useFileSystemStore = createSelectors(
 
         set((state) => {
           state.isFileTreeLoading = false;
-          state.files = fileTree;
+          state.files = wrappedFileTree;
           state.rootFolderPath = path;
           state.filesVersion++;
           state.projectFilesCache = undefined;
@@ -818,6 +849,12 @@ export const useFileSystemStore = createSelectors(
         });
       },
 
+      setIsSwitchingProject: (value: boolean) => {
+        set((state) => {
+          state.isSwitchingProject = value;
+        });
+      },
+
       restoreSession: async (projectPath: string) => {
         // Get the saved session for this project
         const session = useSessionStore.getState().getSession(projectPath);
@@ -861,6 +898,137 @@ export const useFileSystemStore = createSelectors(
             useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
           }
         }
+      },
+
+      switchToProject: async (projectId: string) => {
+        const tab = useWorkspaceTabsStore
+          .getState()
+          .projectTabs.find((t: { id: string }) => t.id === projectId);
+
+        if (!tab) {
+          console.warn(`Project tab not found: ${projectId}`);
+          return false;
+        }
+
+        // Set switching flag to prevent tab bar from hiding
+        set((state) => {
+          state.isSwitchingProject = true;
+          state.isFileTreeLoading = true;
+        });
+
+        // Save current project's session before switching
+        const currentRootPath = get().rootFolderPath;
+        if (currentRootPath) {
+          const { buffers, activeBufferId } = useBufferStore.getState();
+          const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+          useSessionStore.getState().saveSession(
+            currentRootPath,
+            buffers.map((b) => ({
+              id: b.id,
+              name: b.name,
+              path: b.path,
+              isPinned: b.isPinned,
+            })),
+            activeBuffer?.path || null,
+          );
+
+          // Close all current buffers BEFORE loading new project
+          const { actions: bufferActions } = useBufferStore.getState();
+          bufferActions.closeBuffersBatch(buffers.map((b) => b.id));
+        }
+
+        // Load new project's file tree
+        const entries = await readDirectoryContents(tab.path);
+        const fileTree = sortFileEntries(entries);
+        const wrappedFileTree = wrapWithRootFolder(fileTree, tab.path, tab.name);
+
+        // Clear tree UI state
+        useFileTreeStore.getState().collapseAll();
+
+        // Update project store
+        const { setRootFolderPath, setProjectName, setActiveProjectId } =
+          useProjectStore.getState();
+        setRootFolderPath(tab.path);
+        setProjectName(tab.name);
+        setActiveProjectId(projectId);
+
+        // Update workspace tabs
+        useWorkspaceTabsStore.getState().setActiveProjectTab(projectId);
+
+        // Start file watching
+        await useFileWatcherStore.getState().setProjectRoot(tab.path);
+
+        // Initialize git status
+        const gitStatus = await getGitStatus(tab.path);
+        useGitStore.getState().actions.setGitStatus(gitStatus);
+
+        // Clear git diff cache for new project
+        gitDiffCache.clear();
+
+        set((state) => {
+          state.isFileTreeLoading = false;
+          state.files = wrappedFileTree;
+          state.rootFolderPath = tab.path;
+          state.filesVersion++;
+          state.projectFilesCache = undefined;
+        });
+
+        // Restore session tabs for this project
+        await get().restoreSession(tab.path);
+
+        // Clear switching flag
+        set((state) => {
+          state.isSwitchingProject = false;
+        });
+
+        return true;
+      },
+
+      closeProject: async (projectId: string) => {
+        const tabs = useWorkspaceTabsStore.getState().projectTabs;
+
+        // Can't close the last tab
+        if (tabs.length <= 1) {
+          console.warn("Cannot close the last project tab");
+          return false;
+        }
+
+        const tab = tabs.find((t: { id: string }) => t.id === projectId);
+        if (!tab) {
+          console.warn(`Project tab not found: ${projectId}`);
+          return false;
+        }
+
+        const wasActive = tab.isActive;
+
+        // Save session before closing if it's the active project
+        if (wasActive) {
+          const { buffers, activeBufferId } = useBufferStore.getState();
+          const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+          useSessionStore.getState().saveSession(
+            tab.path,
+            buffers.map((b) => ({
+              id: b.id,
+              name: b.name,
+              path: b.path,
+              isPinned: b.isPinned,
+            })),
+            activeBuffer?.path || null,
+          );
+        }
+
+        // Remove project tab
+        useWorkspaceTabsStore.getState().removeProjectTab(projectId);
+
+        // If we closed the active project, switch to the newly active one
+        if (wasActive) {
+          const newActiveTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+          if (newActiveTab) {
+            await get().switchToProject(newActiveTab.id);
+          }
+        }
+
+        return true;
       },
     })),
   ),

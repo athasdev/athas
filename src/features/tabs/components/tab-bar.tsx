@@ -32,6 +32,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const pendingClose = useBufferStore.use.pendingClose();
+  const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
   const {
     handleTabClick,
     handleTabClose,
@@ -546,7 +547,8 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
 
-  if (buffers.length === 0) {
+  // Don't hide tab bar if we're switching projects (even if buffers are temporarily empty)
+  if (buffers.length === 0 && !isSwitchingProject) {
     return null;
   }
 
@@ -587,6 +589,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
                   // Clear cached position for this buffer
                   clearPositionCache(id);
                 }}
+                handleTabPin={handleTabPin}
               />
             );
           })}

@@ -1,5 +1,5 @@
-import { platform } from "@tauri-apps/plugin-os";
 import { type ReactNode, useMemo } from "react";
+import { usePlatform } from "@/hooks/use-platform";
 
 interface Props {
   children?: ReactNode;
@@ -9,7 +9,7 @@ interface Props {
 }
 
 const MenuItem = ({ children, shortcut, onClick, separator }: Props) => {
-  const currentPlatform = platform();
+  const currentPlatform = usePlatform();
 
   // Convert shortcut to user's OS
   const shortcutOsSpecific = useMemo(() => {

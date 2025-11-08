@@ -59,7 +59,7 @@ export const ProjectNameMenu = () => {
           "text-left font-mono text-text text-xs hover:bg-hover",
         )}
       >
-        Add Folder to Workspace
+        Open Folder in New Tab
       </button>
 
       <button
