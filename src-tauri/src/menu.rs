@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tauri::menu::{MenuBuilder, MenuItem, Submenu, SubmenuBuilder};
+use tauri_plugin_store::StoreExt;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ThemeData {
@@ -13,11 +14,16 @@ pub async fn rebuild_menu_themes(
    app: tauri::AppHandle,
    themes: Vec<ThemeData>,
 ) -> Result<(), String> {
-   let new_menu = create_menu_with_themes(&app, Some(themes))
-      .map_err(|e| format!("Failed to create menu: {}", e))?;
-   app.set_menu(new_menu)
-      .map_err(|e| format!("Failed to set menu: {}", e))?;
-   log::info!("Menu rebuilt with dynamic themes");
+   // Only rebuild menu if native menu bar is enabled
+   if app.menu().is_some() {
+      let new_menu = create_menu_with_themes(&app, Some(themes))
+         .map_err(|e| format!("Failed to create menu: {}", e))?;
+      app.set_menu(new_menu)
+         .map_err(|e| format!("Failed to set menu: {}", e))?;
+      log::info!("Menu rebuilt with dynamic themes");
+   } else {
+      log::info!("Native menu bar is disabled, skipping menu rebuild");
+   }
    Ok(())
 }
 
@@ -26,21 +32,33 @@ pub async fn toggle_menu_bar(app: tauri::AppHandle, toggle: Option<bool>) -> Res
    let is_menu_present = app.menu().is_some();
    let should_show_menu = match toggle {
       Some(t) => t,
-      None => is_menu_present,
+      None => !is_menu_present,
    };
 
    if should_show_menu {
-      // Hide menu by setting it to None
-      app.remove_menu()
-         .map_err(|e| format!("Failed to hide menu: {}", e))?;
-      log::info!("Menu bar hidden via command");
-   } else {
       // Show menu by recreating it
       let new_menu = create_menu_with_themes(&app, None)
          .map_err(|e| format!("Failed to create menu: {}", e))?;
       app.set_menu(new_menu)
          .map_err(|e| format!("Failed to show menu: {}", e))?;
       log::info!("Menu bar shown via command");
+
+      // Update the store to persist the setting
+      if let Ok(store) = app.store("settings.json") {
+         let _ = store.set("nativeMenuBar", true);
+         let _ = store.save();
+      }
+   } else {
+      // Hide menu by setting it to None
+      app.remove_menu()
+         .map_err(|e| format!("Failed to hide menu: {}", e))?;
+      log::info!("Menu bar hidden via command");
+
+      // Update the store to persist the setting
+      if let Ok(store) = app.store("settings.json") {
+         let _ = store.set("nativeMenuBar", false);
+         let _ = store.save();
+      }
    }
    Ok(())
 }
