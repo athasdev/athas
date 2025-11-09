@@ -1,23 +1,18 @@
-import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { Menu, MenuButton, MenuItems } from "@headlessui/react";
 import {
   AlertCircle,
   ChevronDown,
   Download,
   Loader2,
-  RotateCcw,
   Terminal as TerminalIcon,
-  ToggleLeft,
-  ToggleRight,
   X,
   Zap,
   ZapOff,
 } from "lucide-react";
-import { useState } from "react";
-import { extensionManager } from "@/features/editor/extensions/manager";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "../../../../stores/ui-state-store";
@@ -34,9 +29,14 @@ import VimStatusIndicator from "../../../vim/components/vim-status-indicator";
 // LSP Status Dropdown Component
 const LspStatusDropdown = ({ activeBuffer }: { activeBuffer: any }) => {
   const lspStatus = useLspStore.use.lspStatus();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [_currentToastId, setCurrentToastId] = useState<string | null>(null);
-  const { showToast, updateToast } = useToast();
+
+  // Check if LSP is supported for this file
+  const isLspSupported = activeBuffer ? extensionRegistry.isLspSupported(activeBuffer.path) : false;
+
+  // Show dropdown for all files (will show disconnected for unsupported files)
+  if (!activeBuffer) {
+    return null;
+  }
 
   const getStatusIcon = (status: LspStatus) => {
     switch (status) {
@@ -68,69 +68,6 @@ const LspStatusDropdown = ({ activeBuffer }: { activeBuffer: any }) => {
     }
   };
 
-  const handleRestartLSP = async () => {
-    setIsProcessing(true);
-    const toastId = showToast({
-      message: "Restarting LSP...",
-      type: "info",
-      duration: 0, // Don't auto-dismiss
-    });
-    setCurrentToastId(toastId);
-
-    try {
-      await extensionManager.executeCommand("typescript.restart");
-      updateToast(toastId, {
-        message: "LSP restarted successfully",
-        type: "success",
-        duration: 3000,
-      });
-    } catch (error) {
-      console.error("Failed to restart LSP:", error);
-      updateToast(toastId, {
-        message: `Failed to restart LSP: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-        type: "error",
-        duration: 5000,
-      });
-    } finally {
-      setIsProcessing(false);
-      setCurrentToastId(null);
-    }
-  };
-
-  const handleToggleLSP = async () => {
-    const isCurrentlyConnected = lspStatus.status === "connected";
-    setIsProcessing(true);
-    const toastId = showToast({
-      message: `${isCurrentlyConnected ? "Disabling" : "Enabling"} LSP...`,
-      type: "info",
-      duration: 0, // Don't auto-dismiss
-    });
-    setCurrentToastId(toastId);
-
-    try {
-      await extensionManager.executeCommand("typescript.toggle");
-      updateToast(toastId, {
-        message: `LSP ${isCurrentlyConnected ? "disabled" : "enabled"} successfully`,
-        type: "success",
-        duration: 3000,
-      });
-    } catch (error) {
-      console.error("Failed to toggle LSP:", error);
-      updateToast(toastId, {
-        message: `Failed to ${isCurrentlyConnected ? "disable" : "enable"} LSP: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-        type: "error",
-        duration: 5000,
-      });
-    } finally {
-      setIsProcessing(false);
-      setCurrentToastId(null);
-    }
-  };
-
   const getDropdownTitle = (status: LspStatus) => {
     switch (status) {
       case "connected":
@@ -156,73 +93,52 @@ const LspStatusDropdown = ({ activeBuffer }: { activeBuffer: any }) => {
         <ChevronDown size={8} className="text-text-lighter" />
       </MenuButton>
 
-      <MenuItems className="absolute right-0 bottom-full z-50 mb-1 w-48 rounded-md border border-border bg-secondary-bg shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+      <MenuItems className="absolute right-0 bottom-full z-50 mb-1 w-56 rounded-md border border-border bg-secondary-bg shadow-xl focus:outline-none">
         <div className="p-2">
-          {/* Status Info */}
+          {/* Language Info */}
           <div className="mb-2 border-border border-b pb-2">
-            <div className="flex items-center gap-2 text-xs">
-              {getStatusIcon(lspStatus.status)}
-              <span className="font-medium text-text">
-                {lspStatus.status === "connected"
-                  ? "LSP Connected"
-                  : lspStatus.status === "connecting"
-                    ? "LSP Connecting"
-                    : lspStatus.status === "error"
-                      ? "LSP Error"
-                      : "LSP Disconnected"}
-              </span>
+            <div className="font-medium text-text text-xs">
+              {getLanguageFromFilename(getFilenameFromPath(activeBuffer.path))}
             </div>
-            {lspStatus.activeWorkspaces.length > 0 && (
-              <div className="mt-1 text-[10px] text-text-lighter">
-                Workspaces: {lspStatus.activeWorkspaces.length}
+            <div className="mt-0.5 text-[10px] text-text-lighter">
+              {activeBuffer.path.substring(activeBuffer.path.lastIndexOf("/") + 1)}
+            </div>
+          </div>
+
+          {/* LSP Status Info */}
+          {isLspSupported ? (
+            <div className="rounded-md bg-primary-bg p-2">
+              <div className="flex items-center gap-2 text-xs">
+                {getStatusIcon(lspStatus.status)}
+                <span className="font-medium text-text">
+                  {lspStatus.status === "connected"
+                    ? "Language Server Connected"
+                    : lspStatus.status === "connecting"
+                      ? "Connecting to Language Server..."
+                      : lspStatus.status === "error"
+                        ? "Language Server Error"
+                        : "Language Server Disconnected"}
+                </span>
               </div>
-            )}
-            {lspStatus.lastError && (
-              <div className="mt-1 truncate text-[10px] text-red-400">{lspStatus.lastError}</div>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="space-y-1">
-            <MenuItem>
-              {({ active }) => (
-                <button
-                  onClick={handleRestartLSP}
-                  disabled={isProcessing}
-                  className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs transition-colors ${
-                    active ? "bg-hover text-text" : "text-text-lighter"
-                  } ${isProcessing ? "cursor-not-allowed opacity-50" : ""}`}
-                >
-                  <RotateCcw size={10} />
-                  {isProcessing ? "Restarting..." : "Restart LSP"}
-                </button>
+              {lspStatus.activeWorkspaces.length > 0 && (
+                <div className="mt-1.5 text-[10px] text-text-lighter">
+                  <div className="flex items-center gap-1">
+                    <span className="opacity-60">Workspaces:</span>
+                    <span className="font-medium">{lspStatus.activeWorkspaces.join(", ")}</span>
+                  </div>
+                </div>
               )}
-            </MenuItem>
-
-            <MenuItem>
-              {({ active }) => (
-                <button
-                  onClick={handleToggleLSP}
-                  disabled={isProcessing}
-                  className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs transition-colors ${
-                    active ? "bg-hover text-text" : "text-text-lighter"
-                  } ${isProcessing ? "cursor-not-allowed opacity-50" : ""}`}
-                >
-                  {lspStatus.status === "connected" ? (
-                    <>
-                      <ToggleRight size={10} />
-                      Disable LSP
-                    </>
-                  ) : (
-                    <>
-                      <ToggleLeft size={10} />
-                      Enable LSP
-                    </>
-                  )}
-                </button>
+              {lspStatus.lastError && (
+                <div className="mt-1.5 rounded bg-red-500/10 px-1.5 py-1 text-[10px] text-red-400">
+                  {lspStatus.lastError}
+                </div>
               )}
-            </MenuItem>
-          </div>
+            </div>
+          ) : (
+            <div className="rounded-md bg-primary-bg px-2 py-2 text-center text-[10px] text-text-lighter">
+              Language server not available for this file type
+            </div>
+          )}
         </div>
       </MenuItems>
     </Menu>
@@ -284,15 +200,25 @@ const EditorFooter = () => {
           </button>
         )}
 
-        {/* Diagnostics indicator (placeholder for now) */}
+        {/* Diagnostics indicator - clickable */}
         {settings.coreFeatures.diagnostics && (
-          <div
-            className="flex items-center gap-0.5 rounded px-1 py-0.5 text-text-lighter"
+          <button
+            onClick={() => {
+              uiState.setBottomPaneActiveTab("diagnostics");
+              const showingDiagnostics =
+                !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "diagnostics";
+              uiState.setIsBottomPaneVisible(showingDiagnostics);
+            }}
+            className={`flex items-center gap-0.5 rounded px-1 py-0.5 transition-colors ${
+              uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"
+                ? "bg-selected text-text"
+                : "text-text-lighter hover:bg-hover"
+            }`}
             style={{ minHeight: 0, minWidth: 0 }}
-            title="Diagnostics (coming soon)"
+            title="Toggle Diagnostics Panel"
           >
             <AlertCircle size={12} />
-          </div>
+          </button>
         )}
 
         {/* Vim status indicator */}

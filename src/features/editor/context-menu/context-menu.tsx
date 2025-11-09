@@ -19,6 +19,7 @@ import {
 import { useEffect, useRef } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { logger } from "@/features/editor/utils/logger";
 import KeybindingBadge from "@/ui/keybinding-badge";
 import { useOverlayManager } from "../components/overlays/overlay-manager";
 
@@ -106,22 +107,22 @@ const EditorContextMenu = ({
 
       // Prevent menu from going off the right edge
       if (adjustedX + rect.width > viewportWidth) {
-        adjustedX = viewportWidth - rect.width - 10;
+        adjustedX = viewportWidth - rect.width - EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN;
       }
 
       // Prevent menu from going off the bottom edge
       if (adjustedY + rect.height > viewportHeight) {
-        adjustedY = viewportHeight - rect.height - 10;
+        adjustedY = viewportHeight - rect.height - EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN;
       }
 
       // Prevent menu from going off the left edge
       if (adjustedX < 0) {
-        adjustedX = 10;
+        adjustedX = EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN;
       }
 
       // Prevent menu from going off the top edge
       if (adjustedY < 0) {
-        adjustedY = 10;
+        adjustedY = EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN;
       }
 
       // Apply the adjusted position directly
@@ -148,7 +149,7 @@ const EditorContextMenu = ({
     } else if (hasSelection && selection) {
       // Default copy behavior will be handled by the parent component
       // This is a fallback that won't actually work without parent handling
-      console.warn("Copy action requires parent component to handle onCopy");
+      logger.warn("Editor", "Copy action requires parent component to handle onCopy");
     }
     onClose();
   };

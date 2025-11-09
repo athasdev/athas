@@ -1,5 +1,5 @@
 import { useBufferStore } from "../../stores/buffer-store";
-import type { EditorAPI, EditorExtension } from "../types";
+import type { EditorExtension } from "../types";
 
 export const basicEditingExtension: EditorExtension = {
   name: "Basic Editing",
@@ -11,8 +11,7 @@ export const basicEditingExtension: EditorExtension = {
       id: "editor.indent",
       name: "Indent",
       execute: (args) => {
-        const editor = args?.editor as EditorAPI;
-        if (!editor) return;
+        const { editor } = args;
         const tabSize = editor.getSettings().tabSize;
         editor.insertText(" ".repeat(tabSize));
       },
@@ -21,8 +20,7 @@ export const basicEditingExtension: EditorExtension = {
       id: "editor.moveToLineStart",
       name: "Move to Start of Line",
       execute: (args) => {
-        const editor = args?.editor as EditorAPI;
-        if (!editor) return;
+        const { editor } = args;
 
         const cursor = editor.getCursorPosition();
         const lines = editor.getLines();
@@ -44,8 +42,7 @@ export const basicEditingExtension: EditorExtension = {
       id: "editor.moveToLineEnd",
       name: "Move to End of Line",
       execute: (args) => {
-        const editor = args?.editor as EditorAPI;
-        if (!editor) return;
+        const { editor } = args;
 
         const cursor = editor.getCursorPosition();
         const lines = editor.getLines();
@@ -69,8 +66,7 @@ export const basicEditingExtension: EditorExtension = {
       id: "editor.moveToDocumentStart",
       name: "Move to Start of Document",
       execute: (args) => {
-        const editor = args?.editor as EditorAPI;
-        if (!editor) return;
+        const { editor } = args;
 
         editor.setCursorPosition({
           line: 0,
@@ -83,8 +79,7 @@ export const basicEditingExtension: EditorExtension = {
       id: "editor.moveToDocumentEnd",
       name: "Move to End of Document",
       execute: (args) => {
-        const editor = args?.editor as EditorAPI;
-        if (!editor) return;
+        const { editor } = args;
 
         const lines = editor.getLines();
         const lastLine = lines.length - 1;

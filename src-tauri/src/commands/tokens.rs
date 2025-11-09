@@ -494,6 +494,123 @@ pub fn tokenize_content(content: &str, language: &str) -> Result<Vec<Token>> {
    Ok(tokens)
 }
 
+/// Tokenize a specific range of lines (for incremental updates)
+#[tauri::command]
+pub async fn get_tokens_range(
+   content: String,
+   file_extension: String,
+   start_line: usize,
+   end_line: usize,
+) -> Result<Vec<Token>, String> {
+   let language = match file_extension.as_str() {
+      "js" | "jsx" => "javascript",
+      "ts" => "typescript",
+      "tsx" => "tsx",
+      "json" => "json",
+      "yml" | "yaml" => "yaml",
+      "go" => "go",
+      "rb" | "ruby" => "ruby",
+      "rs" => "rust",
+      "erb" | "html.erb" => "erb",
+      "py" => "python",
+      "html" | "htm" => "html",
+      "css" => "css",
+      "md" | "markdown" => "markdown",
+      "sh" | "bash" => "bash",
+      "toml" => "toml",
+      "java" => "java",
+      "c" => "c",
+      "cpp" | "cxx" | "cc" | "c++" | "hpp" | "hxx" | "h++" => "cpp",
+      "php" => "php",
+      _ => return Err(format!("Unsupported file extension: {}", file_extension)),
+   };
+
+   // Split content into lines
+   let lines: Vec<&str> = content.lines().collect();
+
+   // Validate range
+   if start_line >= lines.len() {
+      return Ok(Vec::new());
+   }
+
+   let end_line = end_line.min(lines.len());
+
+   // Extract the range to tokenize
+   let range_content = lines[start_line..end_line].join("\n");
+
+   // Calculate offset to start of range
+   let offset: usize = lines[..start_line]
+      .iter()
+      .map(|line| line.len() + 1) // +1 for newline
+      .sum();
+
+   // Tokenize the range
+   let mut tokens =
+      tokenize_content(&range_content, language).map_err(|e| format!("Failed to tokenize: {e}"))?;
+
+   // Adjust token positions to be relative to full document
+   for token in &mut tokens {
+      token.start += offset;
+      token.end += offset;
+   }
+
+   Ok(tokens)
+}
+
+/// Token with line information for frontend consumption
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LineToken {
+   pub line: usize,
+   pub from: usize, // Column offset in line
+   pub to: usize,   // Column offset in line
+   pub token_type: String,
+   pub class_name: String,
+}
+
+/// Get tokens organized by line (more frontend-friendly)
+#[tauri::command]
+pub async fn get_tokens_by_line(
+   content: String,
+   file_extension: String,
+) -> Result<Vec<LineToken>, String> {
+   let tokens = get_tokens(content.clone(), file_extension).await?;
+
+   // Convert to line-based tokens
+   let lines: Vec<&str> = content.lines().collect();
+   let mut line_offsets = vec![0];
+
+   for line in &lines {
+      line_offsets.push(line_offsets.last().unwrap() + line.len() + 1);
+   }
+
+   let mut line_tokens = Vec::new();
+
+   for token in tokens {
+      // Find which line this token is on
+      let line = line_offsets
+         .iter()
+         .position(|&offset| offset > token.start)
+         .unwrap_or(lines.len())
+         .saturating_sub(1);
+
+      if line < lines.len() {
+         let line_start = line_offsets[line];
+         let from = token.start - line_start;
+         let to = token.end - line_start;
+
+         line_tokens.push(LineToken {
+            line,
+            from,
+            to,
+            token_type: token.token_type,
+            class_name: token.class_name,
+         });
+      }
+   }
+
+   Ok(line_tokens)
+}
+
 #[cfg(test)]
 mod tests {
    use super::*;

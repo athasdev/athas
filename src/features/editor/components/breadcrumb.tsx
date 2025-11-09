@@ -6,6 +6,7 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { logger } from "@/features/editor/utils/logger";
 import FileIcon from "@/features/file-explorer/views/file.icon";
 import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -36,7 +37,7 @@ export default function Breadcrumb() {
     try {
       await handleFileSelect(path, false);
     } catch (error) {
-      console.error("Failed to navigate to path:", path, error);
+      logger.error("Editor", "Failed to navigate to path:", path, error);
     }
   };
 
@@ -127,7 +128,7 @@ export default function Breadcrumb() {
           : null,
       );
     } catch (error) {
-      console.error("Failed to go back:", error);
+      logger.error("Editor", "Failed to go back:", error);
     }
   };
 
@@ -187,7 +188,7 @@ export default function Breadcrumb() {
         });
       }
     } catch (error) {
-      console.error("Failed to load directory contents:", error);
+      logger.error("Editor", "Failed to load directory contents:", error);
     }
   };
 
@@ -317,7 +318,7 @@ export default function Breadcrumb() {
                           : null,
                       );
                     } catch (error) {
-                      console.error("Failed to load folder contents:", error);
+                      logger.error("Editor", "Failed to load folder contents:", error);
                     }
                   } else {
                     // For files, navigate and close dropdown

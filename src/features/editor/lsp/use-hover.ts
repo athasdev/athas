@@ -1,8 +1,11 @@
 import { useCallback, useRef } from "react";
-import { useEditorUIStore as useEditorCompletionStore } from "../stores/ui-store";
+import type { Hover, MarkedString, MarkupContent } from "vscode-languageserver-types";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { useEditorUIStore } from "../stores/ui-store";
+import { logger } from "../utils/logger";
 
 interface UseHoverProps {
-  getHover?: (filePath: string, line: number, character: number) => Promise<any>;
+  getHover?: (filePath: string, line: number, character: number) => Promise<Hover | null>;
   isLanguageSupported?: (filePath: string) => boolean;
   filePath: string;
   fontSize: number;
@@ -18,7 +21,7 @@ export const useHover = ({
 }: UseHoverProps) => {
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { actions, isHovering } = useEditorCompletionStore();
+  const { actions, isHovering } = useEditorUIStore();
 
   const handleHover = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -51,32 +54,31 @@ export const useHover = ({
             if (hoverResult?.contents) {
               let content = "";
 
+              const formatHoverItem = (item: string | MarkedString | MarkupContent): string => {
+                if (typeof item === "string") {
+                  return item;
+                }
+                if ("language" in item && item.language && item.value) {
+                  return `\`\`\`${item.language}\n${item.value}\n\`\`\``;
+                }
+                if ("kind" in item && item.value) {
+                  return item.value;
+                }
+                return "";
+              };
+
               if (typeof hoverResult.contents === "string") {
                 content = hoverResult.contents;
               } else if (Array.isArray(hoverResult.contents)) {
-                content = hoverResult.contents
-                  .map((item: any) => {
-                    if (typeof item === "string") {
-                      return item;
-                    } else if (item.language && item.value) {
-                      return `\`\`\`${item.language}\n${item.value}\n\`\`\``;
-                    } else if (item.kind === "markdown" && item.value) {
-                      return item.value;
-                    } else if (item.value) {
-                      return item.value;
-                    }
-                    return "";
-                  })
-                  .filter(Boolean)
-                  .join("\n\n");
-              } else if (hoverResult.contents.value) {
-                content = hoverResult.contents.value;
+                content = hoverResult.contents.map(formatHoverItem).filter(Boolean).join("\n\n");
+              } else {
+                content = formatHoverItem(hoverResult.contents);
               }
 
               if (content.trim()) {
-                const tooltipWidth = 400;
-                const tooltipHeight = 200;
-                const margin = 10;
+                const tooltipWidth = EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH;
+                const tooltipHeight = EDITOR_CONSTANTS.HOVER_TOOLTIP_HEIGHT;
+                const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
 
                 let tooltipX = e.clientX + 15;
                 let tooltipY = e.clientY + 15;
@@ -105,10 +107,10 @@ export const useHover = ({
               }
             }
           } catch (error) {
-            console.error("LSP hover error:", error);
+            logger.error("Editor", "LSP hover error:", error);
           }
         }
-      }, 300);
+      }, EDITOR_CONSTANTS.HOVER_TOOLTIP_DELAY);
     },
     [getHover, isLanguageSupported, filePath, fontSize, lineNumbers, actions.setHoverInfo],
   );

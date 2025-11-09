@@ -1,12 +1,5 @@
 import type { Change, Decoration, LSPPosition, Position, Range } from "../types/editor";
 
-export interface Command {
-  id: string;
-  name: string;
-  execute: (args?: any) => void | Promise<void>;
-  when?: () => boolean;
-}
-
 export interface EditorAPI {
   // Content operations
   getContent: () => string;
@@ -42,10 +35,10 @@ export interface EditorAPI {
   getSettings: () => EditorSettings;
   updateSettings: (settings: Partial<EditorSettings>) => void;
 
-  // Events
-  on: (event: EditorEvent, handler: EventHandler) => () => void;
-  off: (event: EditorEvent, handler: EventHandler) => void;
-  emitEvent: (event: EditorEvent, data?: any) => void;
+  // Events - Type-safe event subscription
+  on: <E extends EditorEvent>(event: E, handler: EventHandler<E>) => () => void;
+  off: <E extends EditorEvent>(event: E, handler: EventHandler<E>) => void;
+  emitEvent: <E extends EditorEvent>(event: E, data: EditorEventPayload[E]) => void;
 
   // Internal - set textarea ref for cursor sync
   setTextareaRef?: (ref: HTMLTextAreaElement | null) => void;
@@ -59,15 +52,38 @@ export interface EditorSettings {
   theme: string;
 }
 
-export type EditorEvent =
-  | "contentChange"
-  | "selectionChange"
-  | "cursorChange"
-  | "settingsChange"
-  | "decorationChange"
-  | "keydown";
+// Command arguments always include the editor reference
+export interface CommandArgs {
+  editor: EditorAPI;
+  [key: string]: unknown;
+}
 
-export type EventHandler = (data?: any) => void;
+export interface Command<TArgs extends CommandArgs = CommandArgs> {
+  id: string;
+  name: string;
+  execute: (args: TArgs) => void | Promise<void>;
+  when?: () => boolean;
+}
+
+// Event payload types for type-safe event handling
+export type EditorEventPayload = {
+  contentChange: { content: string; changes: Change[] };
+  selectionChange: Range | null;
+  cursorChange: Position;
+  settingsChange: Partial<EditorSettings>;
+  decorationChange:
+    | { type: "add"; decoration: Decoration; id: string }
+    | { type: "remove"; id: string }
+    | { type: "update"; id: string; decoration: Partial<Decoration> }
+    | { type: "clear" };
+  keydown: { event: KeyboardEvent; content: string; position: Position };
+};
+
+export type EditorEvent = keyof EditorEventPayload;
+
+export type EventHandler<E extends EditorEvent = EditorEvent> = (
+  data: EditorEventPayload[E],
+) => void;
 
 export interface EditorExtension {
   name: string;
@@ -109,8 +125,8 @@ export interface Extension {
   activate(context: ExtensionContext): Promise<void> | void;
   deactivate(): Promise<void> | void;
 
-  getSettings?(): Record<string, any>;
-  updateSettings?(settings: Record<string, any>): void;
+  getSettings?(): Record<string, unknown>;
+  updateSettings?(settings: Record<string, unknown>): void;
 }
 
 export interface LanguageContribution {
@@ -133,13 +149,15 @@ export interface KeybindingContribution {
   when?: string;
 }
 
+export type SettingValue = string | number | boolean | unknown[] | Record<string, unknown>;
+
 export interface SettingContribution {
   id: string;
   title: string;
   type: "string" | "number" | "boolean" | "array" | "object";
-  default: any;
+  default: SettingValue;
   description?: string;
-  enum?: any[];
+  enum?: SettingValue[];
 }
 
 export interface ThemeContribution {
@@ -152,7 +170,10 @@ export interface ExtensionContext {
   editor: EditorAPI;
   extensionId: string;
   storage: ExtensionStorage;
-  registerCommand: (id: string, handler: (...args: any[]) => any) => void;
+  registerCommand: <TArgs = unknown, TReturn = unknown>(
+    id: string,
+    handler: (args?: TArgs) => TReturn | Promise<TReturn>,
+  ) => void;
   registerLanguage: (language: LanguageContribution) => void;
 }
 

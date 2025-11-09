@@ -9,12 +9,10 @@ import {
   remove,
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
-import { type } from "@tauri-apps/plugin-os";
+import { isMac } from "@/utils/platform";
 
-/**
- * Check if the current platform is macOS
- */
-export const isMac = () => type() === "macos";
+// Re-export isMac for convenience
+export { isMac };
 
 /**
  * Read a text file from the filesystem
@@ -147,6 +145,11 @@ export async function moveFile(sourcePath: string, targetPath: string): Promise<
   await invoke("move_file", { sourcePath, targetPath });
 }
 
+/**
+ * Cross-platform file rename utility
+ * @param sourcePath The current path of the file
+ * @param targetPath The new path of the file
+ */
 export async function renameFile(sourcePath: string, targetPath: string): Promise<void> {
   await invoke("rename_file", { sourcePath, targetPath });
 }

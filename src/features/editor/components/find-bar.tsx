@@ -1,17 +1,17 @@
 import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef } from "react";
-import { useEditorSearchStore } from "@/features/editor/search/search-store";
+import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 
 const FindBar = () => {
   // Get data from stores
   const { isFindVisible, setIsFindVisible } = useUIState();
-  const searchQuery = useEditorSearchStore.use.searchQuery();
-  const searchMatches = useEditorSearchStore.use.searchMatches();
-  const currentMatchIndex = useEditorSearchStore.use.currentMatchIndex();
-  const { setSearchQuery, searchNext, searchPrevious } = useEditorSearchStore.use.actions();
+  const searchQuery = useEditorUIStore.use.searchQuery();
+  const searchMatches = useEditorUIStore.use.searchMatches();
+  const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
+  const { setSearchQuery, searchNext, searchPrevious } = useEditorUIStore.use.actions();
 
   const isVisible = isFindVisible;
   const onClose = () => setIsFindVisible(false);

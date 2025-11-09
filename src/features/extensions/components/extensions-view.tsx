@@ -1,6 +1,18 @@
-import { Code, Download, Languages, Package, Palette, Search, Trash2 } from "lucide-react";
+import {
+  Code,
+  Download,
+  Languages,
+  Package,
+  Palette,
+  RefreshCw,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
+import { extensionDownloader } from "@/extensions/marketplace/services/extension-downloader";
+import type { ExtensionInstallStatus } from "@/extensions/marketplace/types/marketplace";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import { useSettingsStore } from "@/features/settings/store";
@@ -15,6 +27,8 @@ interface UnifiedExtension {
   isInstalled: boolean;
   version?: string;
   extensions?: string[];
+  publisher?: string;
+  isMarketplace?: boolean;
 }
 
 interface ExtensionsViewProps {
@@ -25,9 +39,11 @@ interface ExtensionsViewProps {
 const ExtensionCard = ({
   extension,
   onToggle,
+  isInstalling,
 }: {
   extension: UnifiedExtension;
   onToggle: () => void;
+  isInstalling?: boolean;
 }) => {
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-secondary-bg p-4">
@@ -35,12 +51,21 @@ const ExtensionCard = ({
         <div className="min-w-0 flex-1">
           <h3 className="mb-1 font-medium text-sm text-text">{extension.name}</h3>
           <p className="text-text-lighter text-xs">{extension.description}</p>
+          {extension.publisher && (
+            <p className="mt-1 text-text-lighter text-xs">by {extension.publisher}</p>
+          )}
         </div>
-        {extension.isInstalled ? (
+        {isInstalling ? (
+          <div className="flex flex-shrink-0 items-center gap-1 rounded border border-accent bg-accent/5 px-2 py-1 text-accent">
+            <RefreshCw size={11} className="animate-spin" />
+            <span className="text-xs">Installing</span>
+          </div>
+        ) : extension.isInstalled ? (
           <button
             onClick={onToggle}
-            className="flex flex-shrink-0 items-center gap-1 rounded border border-border bg-transparent px-2 py-1 text-text-lighter transition-colors hover:border-red-500/50 hover:bg-red-500/5 hover:text-red-500"
-            title="Uninstall"
+            disabled={!extension.isMarketplace}
+            className="flex flex-shrink-0 items-center gap-1 rounded border border-border bg-transparent px-2 py-1 text-text-lighter transition-colors hover:border-red-500/50 hover:bg-red-500/5 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+            title={!extension.isMarketplace ? "Cannot uninstall bundled extensions" : "Uninstall"}
           >
             <Trash2 size={11} />
             <span className="text-xs">Uninstall</span>
@@ -78,22 +103,68 @@ export default function ExtensionsView({ onThemeChange, currentTheme }: Extensio
   const { settings, updateSetting } = useSettingsStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [extensions, setExtensions] = useState<UnifiedExtension[]>([]);
+  const [installStatuses, setInstallStatuses] = useState<Map<string, ExtensionInstallStatus>>(
+    new Map(),
+  );
 
-  const loadAllExtensions = () => {
+  const loadAllExtensions = async () => {
     const allExtensions: UnifiedExtension[] = [];
 
-    // Load language extensions
+    // Load marketplace extensions
+    try {
+      const registry = await extensionDownloader.getRegistry();
+      registry.extensions.forEach((ext) => {
+        const category = ext.categories[0]?.toLowerCase() as UnifiedExtension["category"];
+        if (category) {
+          allExtensions.push({
+            id: ext.id,
+            name: ext.displayName,
+            description: ext.description,
+            category,
+            isInstalled: extensionDownloader.isInstalled(ext.id),
+            version: ext.version,
+            publisher: ext.publisher,
+            isMarketplace: true,
+            extensions: ext.languages?.[0]?.extensions.map((e) => e.replace(".", "")),
+          });
+        }
+      });
+    } catch (error) {
+      console.error("Failed to load marketplace extensions:", error);
+    }
+
+    // Load language extensions from Extension Registry (bundled extensions)
+    const bundledExtensions = extensionRegistry.getAllExtensions();
+    bundledExtensions.forEach((ext) => {
+      if (ext.manifest.languages && ext.manifest.languages.length > 0) {
+        const lang = ext.manifest.languages[0]; // Use first language for display
+        allExtensions.push({
+          id: ext.manifest.id,
+          name: ext.manifest.displayName,
+          description: ext.manifest.description,
+          category: "language",
+          isInstalled: ext.state === "activated" || ext.state === "installed",
+          version: ext.manifest.version,
+          extensions: lang.extensions.map((e) => e.replace(".", "")),
+        });
+      }
+    });
+
+    // Also load from Extension Manager (legacy extensions)
     const languageExtensions = extensionManager.getAllLanguageExtensions();
     languageExtensions.forEach((ext) => {
-      allExtensions.push({
-        id: ext.id,
-        name: ext.displayName,
-        description: ext.description || `${ext.displayName} syntax highlighting`,
-        category: "language",
-        isInstalled: true, // All loaded language extensions are installed
-        version: ext.version,
-        extensions: ext.extensions,
-      });
+      // Skip if already added from registry
+      if (!allExtensions.some((e) => e.id === ext.id)) {
+        allExtensions.push({
+          id: ext.id,
+          name: ext.displayName,
+          description: ext.description || `${ext.displayName} syntax highlighting`,
+          category: "language",
+          isInstalled: true,
+          version: ext.version,
+          extensions: ext.extensions,
+        });
+      }
     });
 
     // Load themes
@@ -137,9 +208,49 @@ export default function ExtensionsView({ onThemeChange, currentTheme }: Extensio
 
   useEffect(() => {
     loadAllExtensions();
+
+    const handleInstallStatus = (event: Event) => {
+      const customEvent = event as CustomEvent<ExtensionInstallStatus>;
+      const status = customEvent.detail;
+      setInstallStatuses((prev) => new Map(prev.set(status.id, status)));
+
+      // Reload extensions when installation completes
+      if (status.status === "installed" || status.status === "failed") {
+        loadAllExtensions();
+      }
+    };
+
+    window.addEventListener("extension-install-status", handleInstallStatus);
+
+    return () => {
+      window.removeEventListener("extension-install-status", handleInstallStatus);
+    };
   }, [currentTheme, settings.iconTheme]);
 
-  const handleToggle = (extension: UnifiedExtension) => {
+  const handleToggle = async (extension: UnifiedExtension) => {
+    // Handle marketplace extensions
+    if (extension.isMarketplace) {
+      if (extension.isInstalled) {
+        try {
+          await extensionDownloader.uninstallExtension(extension.id);
+          loadAllExtensions();
+        } catch (error) {
+          alert(`Failed to uninstall: ${error instanceof Error ? error.message : "Unknown error"}`);
+        }
+      } else {
+        const confirmed = confirm(`Install ${extension.name}?`);
+        if (!confirmed) return;
+
+        try {
+          await extensionDownloader.downloadExtension(extension.id);
+        } catch (error) {
+          alert(`Failed to install: ${error instanceof Error ? error.message : "Unknown error"}`);
+        }
+      }
+      return;
+    }
+
+    // Handle bundled extensions
     if (extension.category === "language") {
       // Find the actual extension and toggle it
       const langExt = extensionManager
@@ -302,13 +413,20 @@ export default function ExtensionsView({ onThemeChange, currentTheme }: Extensio
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredExtensions.map((extension) => (
-              <ExtensionCard
-                key={extension.id}
-                extension={extension}
-                onToggle={() => handleToggle(extension)}
-              />
-            ))}
+            {filteredExtensions.map((extension) => {
+              const installStatus = installStatuses.get(extension.id);
+              const isInstalling =
+                installStatus?.status === "downloading" || installStatus?.status === "installing";
+
+              return (
+                <ExtensionCard
+                  key={extension.id}
+                  extension={extension}
+                  onToggle={() => handleToggle(extension)}
+                  isInstalling={isInstalling}
+                />
+              );
+            })}
           </div>
         )}
       </div>

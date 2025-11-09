@@ -5,10 +5,17 @@ import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorViewStore } from "../stores/view-store";
 import type { Decoration, Position, Range } from "../types/editor";
-import type { EditorAPI, EditorEvent, EditorSettings, EventHandler } from "./types";
+import { logger } from "../utils/logger";
+import type {
+  EditorAPI,
+  EditorEvent,
+  EditorEventPayload,
+  EditorSettings,
+  EventHandler,
+} from "./types";
 
 class EditorAPIImpl implements EditorAPI {
-  private eventHandlers: Map<EditorEvent, Set<EventHandler>> = new Map();
+  private eventHandlers: Map<EditorEvent, Set<EventHandler<EditorEvent>>> = new Map();
   private cursorPosition: Position = { line: 0, column: 0, offset: 0 };
   private selection: Range | null = null;
   private textareaRef: HTMLTextAreaElement | null = null;
@@ -209,11 +216,11 @@ class EditorAPIImpl implements EditorAPI {
 
   // History operations (TODO: Implement when history store is ready)
   undo(): void {
-    console.warn("Undo not yet implemented");
+    logger.warn("Editor", "Undo not yet implemented");
   }
 
   redo(): void {
-    console.warn("Redo not yet implemented");
+    logger.warn("Editor", "Redo not yet implemented");
   }
 
   canUndo(): boolean {
@@ -256,24 +263,24 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   // Events
-  on(event: EditorEvent, handler: EventHandler): () => void {
+  on<E extends EditorEvent>(event: E, handler: EventHandler<E>): () => void {
     const handlers = this.eventHandlers.get(event);
     if (handlers) {
-      handlers.add(handler);
+      handlers.add(handler as EventHandler<EditorEvent>);
     }
 
     // Return unsubscribe function
     return () => this.off(event, handler);
   }
 
-  off(event: EditorEvent, handler: EventHandler): void {
+  off<E extends EditorEvent>(event: E, handler: EventHandler<E>): void {
     const handlers = this.eventHandlers.get(event);
     if (handlers) {
-      handlers.delete(handler);
+      handlers.delete(handler as EventHandler<EditorEvent>);
     }
   }
 
-  private emit(event: EditorEvent, data?: any): void {
+  private emit<E extends EditorEvent>(event: E, data: EditorEventPayload[E]): void {
     const handlers = this.eventHandlers.get(event);
     if (handlers) {
       handlers.forEach((handler) => handler(data));
@@ -281,7 +288,7 @@ class EditorAPIImpl implements EditorAPI {
   }
 
   // Public method to safely emit events (for extensions)
-  emitEvent(event: EditorEvent, data?: any): void {
+  emitEvent<E extends EditorEvent>(event: E, data: EditorEventPayload[E]): void {
     this.emit(event, data);
   }
 

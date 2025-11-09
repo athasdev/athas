@@ -2,6 +2,7 @@ import isEqual from "fast-deep-equal";
 import { createWithEqualityFn } from "zustand/traditional";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { LineToken } from "../types/editor";
+import { logger } from "../utils/logger";
 import { useBufferStore } from "./buffer-store";
 
 interface EditorViewState {
@@ -161,7 +162,8 @@ useBufferStore.subscribe((state) => {
     // Always recalculate line tokens when content or tokens change
     // The token filtering in convertToLineTokens handles stale tokens gracefully
     const lineTokens = convertToLineTokens(activeBuffer.content, activeBuffer.tokens);
-    console.log(
+    logger.debug(
+      "Editor",
       "[EditorViewStore] Buffer tokens:",
       activeBuffer.tokens.length,
       "Line tokens:",
