@@ -233,7 +233,9 @@ pub async fn ssh_connect(
 
    // Store the session
    {
-      let mut connections = CONNECTIONS.lock().map_err(|e| format!("Failed to lock connections: {}", e))?;
+      let mut connections = CONNECTIONS
+         .lock()
+         .map_err(|e| format!("Failed to lock connections: {}", e))?;
       connections.insert(connection_id, (session, sftp));
    }
 
@@ -242,7 +244,9 @@ pub async fn ssh_connect(
 
 #[command]
 pub async fn ssh_disconnect(app: tauri::AppHandle, connection_id: String) -> Result<(), String> {
-   let mut connections = CONNECTIONS.lock().map_err(|e| format!("Failed to lock connections: {}", e))?;
+   let mut connections = CONNECTIONS
+      .lock()
+      .map_err(|e| format!("Failed to lock connections: {}", e))?;
    if let Some((session, sftp_opt)) = connections.remove(&connection_id) {
       // Explicitly close SFTP handle before disconnecting session
       if let Some(sftp) = sftp_opt {
@@ -262,7 +266,9 @@ pub async fn ssh_disconnect(app: tauri::AppHandle, connection_id: String) -> Res
 
 #[command]
 pub async fn ssh_disconnect_only(connection_id: String) -> Result<(), String> {
-   let mut connections = CONNECTIONS.lock().map_err(|e| format!("Failed to lock connections: {}", e))?;
+   let mut connections = CONNECTIONS
+      .lock()
+      .map_err(|e| format!("Failed to lock connections: {}", e))?;
    if let Some((session, sftp_opt)) = connections.remove(&connection_id) {
       // Explicitly close SFTP handle before disconnecting session
       if let Some(sftp) = sftp_opt {
@@ -280,7 +286,9 @@ pub async fn ssh_write_file(
    file_path: String,
    content: String,
 ) -> Result<(), String> {
-   let connections = CONNECTIONS.lock().map_err(|e| format!("Failed to lock connections: {}", e))?;
+   let connections = CONNECTIONS
+      .lock()
+      .map_err(|e| format!("Failed to lock connections: {}", e))?;
    let (session, sftp_opt) = connections
       .get(&connection_id)
       .ok_or("Connection not found")?;
