@@ -233,7 +233,7 @@ pub async fn ssh_connect(
 
    // Store the session
    {
-      let mut connections = CONNECTIONS.lock().unwrap();
+      let mut connections = CONNECTIONS.lock().map_err(|e| format!("Failed to lock connections: {}", e))?;
       connections.insert(connection_id, (session, sftp));
    }
 
@@ -242,8 +242,12 @@ pub async fn ssh_connect(
 
 #[command]
 pub async fn ssh_disconnect(app: tauri::AppHandle, connection_id: String) -> Result<(), String> {
-   let mut connections = CONNECTIONS.lock().unwrap();
-   if let Some((session, _)) = connections.remove(&connection_id) {
+   let mut connections = CONNECTIONS.lock().map_err(|e| format!("Failed to lock connections: {}", e))?;
+   if let Some((session, sftp_opt)) = connections.remove(&connection_id) {
+      // Explicitly close SFTP handle before disconnecting session
+      if let Some(sftp) = sftp_opt {
+         drop(sftp);
+      }
       let _ = session.disconnect(None, "Disconnecting", None);
    }
 
@@ -258,8 +262,12 @@ pub async fn ssh_disconnect(app: tauri::AppHandle, connection_id: String) -> Res
 
 #[command]
 pub async fn ssh_disconnect_only(connection_id: String) -> Result<(), String> {
-   let mut connections = CONNECTIONS.lock().unwrap();
-   if let Some((session, _)) = connections.remove(&connection_id) {
+   let mut connections = CONNECTIONS.lock().map_err(|e| format!("Failed to lock connections: {}", e))?;
+   if let Some((session, sftp_opt)) = connections.remove(&connection_id) {
+      // Explicitly close SFTP handle before disconnecting session
+      if let Some(sftp) = sftp_opt {
+         drop(sftp);
+      }
       let _ = session.disconnect(None, "Disconnecting", None);
    }
 
@@ -272,7 +280,7 @@ pub async fn ssh_write_file(
    file_path: String,
    content: String,
 ) -> Result<(), String> {
-   let connections = CONNECTIONS.lock().unwrap();
+   let connections = CONNECTIONS.lock().map_err(|e| format!("Failed to lock connections: {}", e))?;
    let (session, sftp_opt) = connections
       .get(&connection_id)
       .ok_or("Connection not found")?;
@@ -308,6 +316,8 @@ pub async fn ssh_write_file(
          .send_eof()
          .map_err(|e| format!("Failed to send EOF: {}", e))?;
 
+      // Explicitly close the channel and wait for it to close
+      channel.close().ok();
       channel.wait_close().ok();
       Ok(())
    }
