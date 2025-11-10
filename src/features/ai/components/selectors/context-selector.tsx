@@ -304,7 +304,7 @@ export function ContextSelector({
             {/* Unified file list */}
             <div className="py-1" role="listbox" aria-label="Files and buffers">
               {allItems.length === 0 ? (
-                <div className="px-3 py-2 text-center font-mono text-text-lighter text-xs">
+                <div className="ui-font px-3 py-2 text-center text-text-lighter text-xs">
                   {searchTerm ? "No matching files found" : "No files available"}
                 </div>
               ) : (
@@ -319,7 +319,7 @@ export function ContextSelector({
                       }
                     }}
                     className={cn(
-                      "group flex w-full cursor-pointer items-center gap-2 px-3 py-1 text-left font-mono text-xs transition-colors hover:bg-hover focus:outline-none focus:ring-1 focus:ring-accent/50",
+                      "group ui-font flex w-full cursor-pointer items-center gap-2 px-3 py-1 text-left text-xs transition-colors hover:bg-hover focus:outline-none focus:ring-1 focus:ring-accent/50",
                       item.isSelected && "bg-selected",
                     )}
                     aria-label={`${item.isSelected ? "Remove" : "Add"} ${item.name} ${item.isSelected ? "from" : "to"} context`}

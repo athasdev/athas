@@ -89,7 +89,7 @@ const TabBarItem = memo(function TabBarItem({
         </div>
         <span
           className={cn(
-            "flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs",
+            "ui-font flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs",
             isActive ? "text-text" : "text-text-light",
           )}
           title={buffer.path}

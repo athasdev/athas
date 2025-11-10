@@ -101,7 +101,7 @@ const ProjectTabsContextMenu = ({
       }}
     >
       <button
-        className="flex w-full items-center gap-2 px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCopyPath(tab.path);
           onClose();
@@ -112,7 +112,7 @@ const ProjectTabsContextMenu = ({
       </button>
 
       <button
-        className="flex w-full items-center gap-2 px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onRevealInFinder(tab.path);
           onClose();
@@ -126,7 +126,7 @@ const ProjectTabsContextMenu = ({
 
       {totalTabs > 1 && (
         <button
-          className="flex w-full items-center gap-2 px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+          className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
           onClick={() => {
             onCloseProject(tab.id);
             onClose();
@@ -138,7 +138,7 @@ const ProjectTabsContextMenu = ({
       )}
 
       <button
-        className="w-full px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font w-full px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseOthers(tab.id);
           onClose();
@@ -148,7 +148,7 @@ const ProjectTabsContextMenu = ({
       </button>
 
       <button
-        className="w-full px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font w-full px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseToRight(tab.id);
           onClose();
@@ -159,7 +159,7 @@ const ProjectTabsContextMenu = ({
 
       {totalTabs > 1 && (
         <button
-          className="w-full px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+          className="ui-font w-full px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
           onClick={() => {
             onCloseAll();
             onClose();

@@ -280,7 +280,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       {/* Files list */}
       <div className="items-container py-1" role="listbox" aria-label="File list">
         {filteredFiles.length === 0 ? (
-          <div className="px-3 py-2 text-center font-mono text-text-lighter text-xs">
+          <div className="ui-font px-3 py-2 text-center text-text-lighter text-xs">
             {searchTerm ? "No matching files found" : "No files available"}
           </div>
         ) : (
@@ -289,7 +289,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
               key={file.path}
               onClick={() => handleFileClick(file)}
               className={cn(
-                "flex w-full items-center gap-2 px-3 py-1 text-left font-mono text-xs transition-colors",
+                "ui-font flex w-full items-center gap-2 px-3 py-1 text-left text-xs transition-colors",
                 "focus:outline-none focus:ring-1 focus:ring-accent/50",
                 index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
               )}

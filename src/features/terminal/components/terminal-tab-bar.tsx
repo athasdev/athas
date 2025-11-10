@@ -73,7 +73,7 @@ const TerminalContextMenu = ({
       style={{ left: position.x, top: position.y }}
     >
       <button
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onPin(terminal.id);
           onClose();
@@ -86,7 +86,7 @@ const TerminalContextMenu = ({
       <div className="my-1 border-border border-t" />
 
       <button
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           // Duplicate terminal with same directory
           onClose();
@@ -97,7 +97,7 @@ const TerminalContextMenu = ({
       </button>
 
       <button
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           // Clear terminal screen
           onClose();
@@ -110,7 +110,7 @@ const TerminalContextMenu = ({
       <div className="my-1 border-border border-t" />
 
       <button
-        className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseTab(terminal.id);
           onClose();
@@ -120,7 +120,7 @@ const TerminalContextMenu = ({
         <KeybindingBadge keys={["⌘", "W"]} className="opacity-60" />
       </button>
       <button
-        className="w-full px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font w-full px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseOthers(terminal.id);
           onClose();
@@ -129,7 +129,7 @@ const TerminalContextMenu = ({
         Close Others
       </button>
       <button
-        className="w-full px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font w-full px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseToRight(terminal.id);
           onClose();
@@ -138,7 +138,7 @@ const TerminalContextMenu = ({
         Close to Right
       </button>
       <button
-        className="w-full px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font w-full px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseAll();
           onClose();
@@ -195,13 +195,13 @@ const ToolbarContextMenu = ({
       className="fixed z-50 w-[180px] border border-border bg-secondary-bg py-1 shadow-lg"
       style={{ left: position.x, top: position.y }}
     >
-      <div className="px-2 py-1 font-mono text-[10px] text-text-lighter">Terminal Width</div>
+      <div className="ui-font px-2 py-1 text-[10px] text-text-lighter">Terminal Width</div>
       <div className="my-1 border-border border-t" />
       {modes.map((mode) => (
         <button
           key={mode.value}
           className={cn(
-            "flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover",
+            "ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover",
             currentMode === mode.value && "bg-selected",
           )}
           onClick={() => {
@@ -470,7 +470,7 @@ const TerminalTabBar = ({
       >
         <div className="flex items-center gap-1.5">
           <TerminalIcon size={10} className="text-text-lighter" />
-          <span className="font-mono text-text-lighter text-xs">No terminals</span>
+          <span className="ui-font text-text-lighter text-xs">No terminals</span>
         </div>
         {onNewTerminal && (
           <div className="flex items-center gap-1">
@@ -596,7 +596,7 @@ const TerminalTabBar = ({
 
                     {/* Terminal Name */}
                     <span
-                      className={`flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs ${isActive ? "text-text" : "text-text-light"} `}
+                      className={`ui-font flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs ${isActive ? "text-text" : "text-text-light"} `}
                     >
                       {terminal.name}
                     </span>
@@ -736,7 +736,7 @@ const TerminalTabBar = ({
                 el.style.top = `${dragCurrentPosition.y - rect.height / 2}px`;
               }
             }}
-            className="fixed z-50 flex cursor-pointer items-center gap-1.5 border border-border bg-bg px-2 py-1.5 font-mono text-xs shadow-lg"
+            className="ui-font fixed z-50 flex cursor-pointer items-center gap-1.5 border border-border bg-bg px-2 py-1.5 text-xs shadow-lg"
             style={{
               opacity: 0.95,
               minWidth: 60,

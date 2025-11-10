@@ -176,7 +176,7 @@ const ExpandedCommitDetails = memo(
             </span>
             <button
               onClick={handleCopyClick}
-              className="inline-flex items-center gap-1 rounded bg-secondary-bg px-2 py-0.5 font-mono text-[8px] transition-colors hover:bg-hover"
+              className="ui-font inline-flex items-center gap-1 rounded bg-secondary-bg px-2 py-0.5 text-[8px] transition-colors hover:bg-hover"
             >
               <Hash size={6} />
               {isCopied ? "Copied" : commit.hash.substring(0, 7)}
@@ -218,7 +218,7 @@ const FileItem = memo(({ file, onFileClick }: FileItemProps) => {
       className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-[9px] hover:bg-hover"
       onClick={handleClick}
     >
-      <span className={`font-mono ${statusColor}`}>{statusChar}</span>
+      <span className={`ui-font ${statusColor}`}>{statusChar}</span>
       <span className="truncate text-text">{file.file_path}</span>
       {file.is_renamed && file.old_path && (
         <span className="text-text-lighter">← {file.old_path}</span>

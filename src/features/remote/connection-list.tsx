@@ -56,7 +56,7 @@ const ConnectionList = ({
     <div className="flex h-full select-none flex-col bg-secondary-bg">
       {/* Header */}
       <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-2 py-1.5">
-        <h3 className="font-medium font-mono text-text text-xs tracking-wide">Remote</h3>
+        <h3 className="ui-font font-medium text-text text-xs tracking-wide">Remote</h3>
         <Button
           onClick={onAddNew}
           variant="ghost"
@@ -135,7 +135,7 @@ const ConnectionList = ({
                       >
                         {connection.name}
                       </span>
-                      <span className="flex-shrink-0 rounded bg-hover px-1 font-mono text-text-lighter text-xs">
+                      <span className="ui-font flex-shrink-0 rounded bg-hover px-1 text-text-lighter text-xs">
                         {connection.type.toUpperCase()}
                       </span>
                     </div>
@@ -212,7 +212,7 @@ const ConnectionList = ({
               }
               setConnectionMenu(null);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
+            className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
           >
             <Edit size={12} />
             Edit
@@ -226,7 +226,7 @@ const ConnectionList = ({
             }}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-1.5 text-left",
-              "font-mono text-red-400 text-xs hover:bg-red-500/10",
+              "ui-font text-red-400 text-xs hover:bg-red-500/10",
             )}
           >
             <Trash2 size={12} />

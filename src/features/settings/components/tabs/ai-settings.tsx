@@ -201,7 +201,7 @@ export const AISettings = () => {
               onChange={(e) => setApiKeyInput(e.target.value)}
               placeholder={`Enter ${providerName} API key...`}
               className={cn(
-                "w-full rounded border bg-secondary-bg px-2 py-1.5 pr-8 font-mono text-text text-xs",
+                "ui-font w-full rounded border bg-secondary-bg px-2 py-1.5 pr-8 text-text text-xs",
                 "focus:border-blue-500 focus:outline-none",
                 showingValidation && validationStatus.status === "invalid"
                   ? "border-red-500"

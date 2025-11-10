@@ -218,7 +218,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                     <div className="mb-2 flex items-start justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="mb-1 flex items-center gap-2">
-                          <span className="font-mono text-text-lighter text-xs">
+                          <span className="ui-font text-text-lighter text-xs">
                             {`stash@{${stash.index}}`}
                           </span>
                         </div>

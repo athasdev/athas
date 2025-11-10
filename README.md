@@ -23,6 +23,7 @@ Create custom themes by adding TOML files. See [themes documentation](docs/custo
 - [Code Style](docs/contributing/code-style.md)
 - [Architecture](docs/contributing/architecture.md)
 - [Changelog](CHANGELOG.md)
+- [Third-Party Licenses](THIRD_PARTY_LICENSES.md)
 
 ## Support
 

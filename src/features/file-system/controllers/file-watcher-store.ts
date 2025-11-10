@@ -22,17 +22,13 @@ export const useFileWatcherStore = create(
   combine(initialState, (set, get) => ({
     // Set the project root and start watching it
     setProjectRoot: async (path: string) => {
-      console.log(`📁 setProjectRoot called with path: ${path}`);
       try {
         await invoke("set_project_root", { path });
-        console.log(`Started watching project root: ${path}`);
 
         // Start LSP for the project
         try {
-          console.log(`Attempting to start LSP for project: ${path}`);
           const lspClient = LspClient.getInstance();
           await lspClient.start(path);
-          console.log(`Started LSP for project: ${path}`);
         } catch (error) {
           console.error("Failed to start LSP:", error);
         }
@@ -127,7 +123,6 @@ export async function initializeFileWatcherListener() {
   // Listen for file changes
   unlistenFileChanged = await listen<FileChangeEvent>("file-changed", async (event) => {
     const { path, event_type } = event.payload;
-    console.log(`📋 [FileWatcher] File change event: ${path}, type: ${event_type}`);
 
     // Skip if file was deleted
     if (event_type === "deleted") {
@@ -137,7 +132,6 @@ export async function initializeFileWatcherListener() {
     // Check if this file has a pending save
     const { pendingSaves } = useFileWatcherStore.getState();
     if (pendingSaves.has(path)) {
-      console.log(`📋 [FileWatcher] Ignoring change for ${path} - pending save`);
       // Don't clear here - let the auto-clear timeout handle it
       return;
     }

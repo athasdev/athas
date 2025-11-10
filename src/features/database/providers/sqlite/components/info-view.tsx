@@ -26,8 +26,8 @@ export default function InfoView({
       <div className="divide-y divide-border">
         {/* Database stats */}
         <div className="p-3">
-          <div className="mb-1 font-mono text-sm">{fileName}</div>
-          <div className="flex gap-4 font-mono text-text-lighter text-xs">
+          <div className="ui-font mb-1 text-sm">{fileName}</div>
+          <div className="ui-font flex gap-4 text-text-lighter text-xs">
             <span>{dbInfo?.tables || 0} tables</span>
             <span>{dbInfo?.indexes || 0} indexes</span>
             <span>v{dbInfo?.version || "0"}</span>
@@ -38,13 +38,13 @@ export default function InfoView({
 
         {/* Tables */}
         <div className="p-3">
-          <div className="mb-2 font-mono text-text-lighter text-xs">tables</div>
+          <div className="ui-font mb-2 text-text-lighter text-xs">tables</div>
           <div className="space-y-1">
             {tables.map((table) => (
               <button
                 key={table.name}
                 onClick={() => onTableChange(table.name)}
-                className={`block w-full px-2 py-1 text-left font-mono text-xs transition-colors hover:bg-hover ${
+                className={`ui-font block w-full px-2 py-1 text-left text-xs transition-colors hover:bg-hover ${
                   selectedTable === table.name ? "bg-selected" : ""
                 }`}
               >
@@ -57,13 +57,13 @@ export default function InfoView({
         {/* SQL History */}
         {sqlHistory.length > 0 && (
           <div className="p-3">
-            <div className="mb-2 font-mono text-text-lighter text-xs">recent queries</div>
+            <div className="ui-font mb-2 text-text-lighter text-xs">recent queries</div>
             <div className="max-h-32 space-y-1 overflow-y-auto">
               {sqlHistory.map((query, index) => (
                 <button
                   key={index}
                   onClick={() => onQuerySelect(query)}
-                  className="block w-full truncate px-2 py-1 text-left font-mono text-xs transition-colors hover:bg-hover"
+                  className="ui-font block w-full truncate px-2 py-1 text-left text-xs transition-colors hover:bg-hover"
                   title={query}
                 >
                   {query}

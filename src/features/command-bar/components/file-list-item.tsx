@@ -28,7 +28,7 @@ export const FileListItem = ({
       data-item-index={index}
       onClick={() => onClick(file.path)}
       isSelected={isSelected}
-      className="font-mono"
+      className="ui-font"
     >
       <File
         size={11}
