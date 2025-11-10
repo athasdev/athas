@@ -44,6 +44,7 @@ const TerminalContainer = ({
   const [newTerminalName, setNewTerminalName] = useState("");
   const hasInitializedRef = useRef(false);
   const terminalSessionRefs = useRef<Map<string, { focus: () => void }>>(new Map());
+  const tabFocusTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const { registerTerminalFocus, clearTerminalFocus } = useUIState();
 
   const handleNewTerminal = useCallback(() => {
@@ -51,12 +52,19 @@ const TerminalContainer = ({
     const newTerminalId = createTerminal(dirName, currentDirectory);
     // Focus the new terminal after creation
     if (newTerminalId) {
-      setTimeout(() => {
+      // Clear any existing timeout for this terminal
+      const existingTimeout = tabFocusTimeoutRef.current.get(newTerminalId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+      const timeoutId = setTimeout(() => {
         const terminalRef = terminalSessionRefs.current.get(newTerminalId);
         if (terminalRef) {
           terminalRef.focus();
         }
+        tabFocusTimeoutRef.current.delete(newTerminalId);
       }, 150);
+      tabFocusTimeoutRef.current.set(newTerminalId, timeoutId);
     }
   }, [createTerminal, currentDirectory]);
 
@@ -68,16 +76,31 @@ const TerminalContainer = ({
     }
   }, [terminals.length, handleNewTerminal]);
 
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      tabFocusTimeoutRef.current.forEach((timeout) => clearTimeout(timeout));
+      tabFocusTimeoutRef.current.clear();
+    };
+  }, []);
+
   const handleTabClick = useCallback(
     (terminalId: string) => {
       setActiveTerminal(terminalId);
+      // Clear any existing timeout for this terminal
+      const existingTimeout = tabFocusTimeoutRef.current.get(terminalId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
       // Focus the terminal after a short delay to ensure it's rendered
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         const terminalRef = terminalSessionRefs.current.get(terminalId);
         if (terminalRef) {
           terminalRef.focus();
         }
+        tabFocusTimeoutRef.current.delete(terminalId);
       }, 50);
+      tabFocusTimeoutRef.current.set(terminalId, timeoutId);
     },
     [setActiveTerminal],
   );

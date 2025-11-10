@@ -76,6 +76,8 @@ export const useKeyboardShortcuts = ({
   // Track Cmd+K chord
   const [isAwaitingChord, setIsAwaitingChord] = React.useState(false);
   const chordTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const terminalFocusTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const searchFocusTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -145,7 +147,10 @@ export const useKeyboardShortcuts = ({
           setBottomPaneActiveTab("terminal");
           setIsBottomPaneVisible(true);
           // Request terminal focus through UI state
-          setTimeout(() => {
+          if (terminalFocusTimeoutRef.current) {
+            clearTimeout(terminalFocusTimeoutRef.current);
+          }
+          terminalFocusTimeoutRef.current = setTimeout(() => {
             if (requestTerminalFocus) {
               requestTerminalFocus();
             } else if (focusTerminal) {
@@ -165,7 +170,10 @@ export const useKeyboardShortcuts = ({
           setBottomPaneActiveTab("terminal");
           setIsBottomPaneVisible(true);
           // Request terminal focus through UI state
-          setTimeout(() => {
+          if (terminalFocusTimeoutRef.current) {
+            clearTimeout(terminalFocusTimeoutRef.current);
+          }
+          terminalFocusTimeoutRef.current = setTimeout(() => {
             if (requestTerminalFocus) {
               requestTerminalFocus();
             } else if (focusTerminal) {
@@ -223,8 +231,12 @@ export const useKeyboardShortcuts = ({
         e.stopPropagation();
         setIsSidebarVisible(true);
         setIsSearchViewActive(true);
-        setTimeout(() => {
+        if (searchFocusTimeoutRef.current) {
+          clearTimeout(searchFocusTimeoutRef.current);
+        }
+        searchFocusTimeoutRef.current = setTimeout(() => {
           focusSearchInput();
+          searchFocusTimeoutRef.current = null;
         }, 100);
         return;
       }
@@ -499,6 +511,14 @@ export const useKeyboardShortcuts = ({
       // Clean up chord timeout on unmount
       if (chordTimeoutRef.current) {
         clearTimeout(chordTimeoutRef.current);
+      }
+      // Clean up terminal focus timeout
+      if (terminalFocusTimeoutRef.current) {
+        clearTimeout(terminalFocusTimeoutRef.current);
+      }
+      // Clean up search focus timeout
+      if (searchFocusTimeoutRef.current) {
+        clearTimeout(searchFocusTimeoutRef.current);
       }
     };
   }, [
