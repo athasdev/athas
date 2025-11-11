@@ -115,7 +115,7 @@ jobs:
             
             ### Installation
             - **macOS**: Download the `.dmg` file
-            - **Windows**: Download the `.msi` file  
+            - **Windows**: Download the `.exe` file  
             - **Linux**: Download the `.AppImage` file
             
             Full changelog: https://github.com/athasdev/athas/compare/v__PREVIOUS_VERSION__...v__VERSION__

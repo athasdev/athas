@@ -87,6 +87,9 @@ export const useAppStore = createSelectors(
                   if (rootFolderPath) {
                     gitDiffCache.invalidate(rootFolderPath, activeBuffer.path);
                     // Small delay to ensure git operations are complete before updating gutter
+                    // Note: This timeout is intentionally not stored as it's very short (50ms)
+                    // and will complete before any cleanup is needed. If component unmounts
+                    // during this time, the event will still fire but won't cause issues.
                     setTimeout(() => {
                       window.dispatchEvent(
                         new CustomEvent("git-status-updated", {

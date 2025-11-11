@@ -9,6 +9,7 @@ interface TerminalSessionProps {
   onDirectoryChange?: (terminalId: string, directory: string) => void;
   onActivity?: (terminalId: string) => void;
   onRegisterRef?: (terminalId: string, ref: { focus: () => void } | null) => void;
+  onTerminalExit?: (terminalId: string) => void;
 }
 
 const TerminalSession = ({
@@ -16,6 +17,7 @@ const TerminalSession = ({
   isActive,
   onActivity,
   onRegisterRef,
+  onTerminalExit,
 }: TerminalSessionProps) => {
   const terminalRef = useRef<any>(null);
   const xtermInstanceRef = useRef<any>(null);
@@ -61,6 +63,7 @@ const TerminalSession = ({
             xtermInstanceRef.current = ref;
             terminalRef.current = ref;
           }}
+          onTerminalExit={onTerminalExit}
         />
       </TerminalErrorBoundary>
     </div>
