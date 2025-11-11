@@ -234,6 +234,21 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
+        id: "claude-sonnet-4-5-20250929",
+        name: "Claude Sonnet 4.5",
+        maxTokens: 200000,
+      },
+      {
+        id: "claude-haiku-4-5-20251001",
+        name: "Claude Haiku 4.5",
+        maxTokens: 200000,
+      },
+      {
+        id: "claude-opus-4-1-20250805",
+        name: "Claude Opus 4.1",
+        maxTokens: 200000,
+      },
+      {
         id: "claude-opus-4",
         name: "Claude Opus 4",
         maxTokens: 200000,
