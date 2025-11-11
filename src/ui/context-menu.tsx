@@ -111,7 +111,7 @@ export const ContextMenu = ({ isOpen, position, items, onClose, className }: Con
             }}
             disabled={item.disabled}
             className={cn(
-              "flex w-full items-center gap-2 px-2.5 py-1 text-left font-mono text-text text-xs",
+              "ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs",
               item.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
             )}
           >

@@ -96,7 +96,7 @@ export function SearchableModelDropdown({
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex items-center gap-1 rounded bg-transparent px-2 py-1 font-mono text-xs transition-colors hover:bg-hover",
+          "ui-font flex items-center gap-1 rounded bg-transparent px-2 py-1 text-xs transition-colors hover:bg-hover",
           compact ? "min-w-[120px]" : "min-w-[160px]",
         )}
       >
@@ -128,7 +128,7 @@ export function SearchableModelDropdown({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="search models..."
-                className="flex-1 border-none bg-transparent font-mono text-text text-xs outline-none placeholder:text-text-lighter"
+                className="ui-font flex-1 border-none bg-transparent text-text text-xs outline-none placeholder:text-text-lighter"
               />
             </div>
 
@@ -157,19 +157,19 @@ export function SearchableModelDropdown({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="truncate font-mono text-text text-xs">
+                          <span className="ui-font truncate text-text text-xs">
                             {model.modelName}
                           </span>
                           {isSelected && (
                             <Check size={10} className="flex-shrink-0 text-text-lighter" />
                           )}
                         </div>
-                        <div className="truncate font-mono text-[10px] text-text-lighter">
+                        <div className="ui-font truncate text-[10px] text-text-lighter">
                           {model.providerName}
                         </div>
                       </div>
                       <div className="flex-shrink-0 text-right">
-                        <div className="font-mono text-[10px] text-text-lighter">
+                        <div className="ui-font text-[10px] text-text-lighter">
                           {formatTokens(model.maxTokens)}
                         </div>
                       </div>

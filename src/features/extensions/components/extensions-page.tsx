@@ -231,7 +231,7 @@ export function ExtensionsPage() {
                                   onClick={() => executeCommand(command.id)}
                                   className="block w-full rounded bg-hover px-2 py-1 text-left text-text text-xs transition-colors hover:bg-selected"
                                 >
-                                  <span className="font-mono text-accent">{command.id}</span>
+                                  <span className="ui-font text-accent">{command.id}</span>
                                   <span className="ml-2">{command.title}</span>
                                 </button>
                               ))}

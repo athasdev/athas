@@ -9,6 +9,8 @@ interface TerminalSearchProps {
   onPrevious: (term: string) => void;
   onClose: () => void;
   isVisible: boolean;
+  currentMatch: number;
+  totalMatches: number;
 }
 
 export const TerminalSearch: React.FC<TerminalSearchProps> = ({
@@ -17,10 +19,10 @@ export const TerminalSearch: React.FC<TerminalSearchProps> = ({
   onPrevious,
   onClose,
   isVisible,
+  currentMatch,
+  totalMatches,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentMatch, setCurrentMatch] = useState(0);
-  const [totalMatches, _setTotalMatches] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -41,14 +43,12 @@ export const TerminalSearch: React.FC<TerminalSearchProps> = ({
   const handleNext = () => {
     if (searchTerm) {
       onNext(searchTerm);
-      setCurrentMatch((prev) => (prev < totalMatches ? prev + 1 : prev));
     }
   };
 
   const handlePrevious = () => {
     if (searchTerm) {
       onPrevious(searchTerm);
-      setCurrentMatch((prev) => (prev > 1 ? prev - 1 : prev));
     }
   };
 
@@ -67,57 +67,64 @@ export const TerminalSearch: React.FC<TerminalSearchProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className="absolute top-2 right-12 z-50 flex items-center gap-2 rounded-md border border-border bg-secondary-bg p-2 shadow-lg">
+    <div className="absolute top-1.5 right-10 z-50 flex items-center gap-1 border border-border bg-secondary-bg px-1.5 py-1 shadow-lg">
       <input
         ref={inputRef}
         type="text"
         value={searchTerm}
         onChange={handleSearchChange}
         onKeyDown={handleKeyDown}
-        placeholder="Find in terminal..."
+        placeholder="Find..."
         className={cn(
-          "w-48 bg-transparent px-2 py-1 text-sm",
+          "ui-font w-32 bg-transparent px-1.5 py-0.5 text-text text-xs",
           "border-none outline-none focus:outline-none",
           "placeholder:text-text-lighter",
         )}
       />
 
       {searchTerm && totalMatches > 0 && (
-        <span className="text-text-light text-xs">
+        <span className="ui-font whitespace-nowrap text-[10px] text-text-lighter">
           {currentMatch}/{totalMatches}
         </span>
       )}
 
+      <div className="mx-0.5 h-3 w-px bg-border" />
+
       <button
+        type="button"
         onClick={handlePrevious}
-        disabled={!searchTerm || totalMatches === 0}
+        disabled={!searchTerm}
         className={cn(
-          "rounded p-1 transition-colors hover:bg-hover",
-          (!searchTerm || totalMatches === 0) && "cursor-not-allowed opacity-50",
+          "flex items-center justify-center rounded p-0.5 text-text-light transition-colors hover:bg-hover hover:text-text",
+          !searchTerm && "cursor-not-allowed opacity-40",
         )}
-        title="Previous match (Shift+Enter)"
+        title="Previous (Shift+Enter)"
       >
-        <ChevronUp className="h-3 w-3" />
+        <ChevronUp size={12} />
       </button>
 
       <button
+        type="button"
         onClick={handleNext}
-        disabled={!searchTerm || totalMatches === 0}
+        disabled={!searchTerm}
         className={cn(
-          "rounded p-1 transition-colors hover:bg-hover",
-          (!searchTerm || totalMatches === 0) && "cursor-not-allowed opacity-50",
+          "flex items-center justify-center rounded p-0.5 text-text-light transition-colors hover:bg-hover hover:text-text",
+          !searchTerm && "cursor-not-allowed opacity-40",
         )}
-        title="Next match (Enter)"
+        title="Next (Enter)"
       >
-        <ChevronDown className="h-3 w-3" />
+        <ChevronDown size={12} />
       </button>
 
+      <div className="mx-0.5 h-3 w-px bg-border" />
+
       <button
+        type="button"
         onClick={onClose}
-        className="rounded p-1 transition-colors hover:bg-hover"
+        className="flex items-center justify-center rounded p-0.5 text-text-light transition-colors hover:bg-hover hover:text-text"
         title="Close (Esc)"
       >
-        <X className="h-3 w-3" />
+        <X size={12} />
       </button>
     </div>
   );

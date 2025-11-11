@@ -1,7 +1,28 @@
+/* ============================================
+   FONT LOADING - Before Tailwind import
+   ============================================ */
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono/JetBrainsMono-VariableFont.woff2") format("woff2");
+  font-weight: 100 800;
+  font-display: swap;
+  font-style: normal;
+}
+
 @import "tailwindcss";
 
+/* ============================================
+   TAILWIND THEME - Define font utilities
+   ============================================ */
+
+@theme {
+  --font-sans: "JetBrains Mono", monospace;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
 /* Define layer order */
-@layer base, utilities, themes;
+@layer base, utilities;
 
 /* Utils like animations - inlined from utils.css */
 @keyframes slide-in-left {
@@ -163,8 +184,7 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family:
-    var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif;
+  /* Font inherits from html */
   overscroll-behavior: none !important;
   /* Prevent elastic bounce globally */
   background: transparent;
@@ -175,21 +195,24 @@ button {
   cursor: pointer;
 }
 
-/* Apply app-wide font family to all elements */
-* {
-  font-family:
-    var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif;
-}
+/* ============================================
+   FONT UTILITIES - Simplified
+   ============================================ */
 
-/* Override Tailwind's font-mono class to use our custom variable */
 .font-mono {
-  font-family:
-    var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif !important;
+  font-family: var(--editor-font-family);
 }
 
-/* Specific overrides for components that should use editor font */
+.ui-font {
+  font-family: var(--app-font-family);
+}
+
+/* ============================================
+   COMPONENT-SPECIFIC FONT OVERRIDES
+   ============================================ */
+
+/* Editor and code components */
 .editor-container,
-.editor-container *,
 .monaco-editor,
 .editor-input,
 .line-numbers,
@@ -205,23 +228,20 @@ button {
 .virtual-editor-container,
 .editor-textarea,
 .code-editor-content {
-  font-family:
-    var(--editor-font-family, "JetBrains Mono"), "JetBrains Mono", monospace !important;
+  font-family: var(--editor-font-family);
 }
 
-/* Markdown preview should use UI font */
-.markdown-preview,
-.markdown-preview * {
-  font-family:
-    var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif !important;
+/* Markdown preview uses UI font */
+.markdown-preview {
+  font-family: var(--app-font-family);
 }
 
 /* CSS variables that themes can override */
 @layer base {
   :root {
-    /* Font defaults */
-    --app-font-family: "Space Grotesk", sans-serif;
-    --editor-font-family: "JetBrains Mono", monospace;
+    /* Font variables for runtime control - use @theme font definitions */
+    --app-font-family: var(--font-sans);
+    --editor-font-family: var(--font-mono);
 
     /* Default light theme colors */
     --primary-bg: #ffffff;
@@ -348,6 +368,13 @@ button {
       --terminal-bright-cyan: #67e8f9;
       --terminal-bright-white: #e5e5e5;
     }
+  }
+
+  /* ============================================
+     Set default font on html - everything inherits naturally
+     ============================================ */
+  html {
+    font-family: var(--app-font-family);
   }
 }
 

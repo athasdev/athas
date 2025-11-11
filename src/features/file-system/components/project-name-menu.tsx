@@ -56,7 +56,7 @@ export const ProjectNameMenu = () => {
         }}
         className={cn(
           "flex w-full items-center gap-2 px-3 py-1.5",
-          "text-left font-mono text-text text-xs hover:bg-hover",
+          "ui-font text-left text-text text-xs hover:bg-hover",
         )}
       >
         Open Folder in New Tab
@@ -71,7 +71,7 @@ export const ProjectNameMenu = () => {
         }}
         className={cn(
           "flex w-full items-center gap-2 px-3 py-1.5",
-          "text-left font-mono text-text text-xs hover:bg-hover",
+          "ui-font text-left text-text text-xs hover:bg-hover",
         )}
       >
         Collapse All Folders
@@ -80,7 +80,7 @@ export const ProjectNameMenu = () => {
       {recentFolders.length > 0 && (
         <>
           <div className="my-1 border-border border-t"></div>
-          <div className="flex items-center gap-1 px-3 py-1 font-mono text-text-lighter text-xs tracking-wide">
+          <div className="ui-font flex items-center gap-1 px-3 py-1 text-text-lighter text-xs tracking-wide">
             <ClockIcon size="10" />
             Recent Folders
           </div>
@@ -95,7 +95,7 @@ export const ProjectNameMenu = () => {
               }}
               className={cn(
                 "flex w-full items-center gap-2 px-3 py-1.5",
-                "text-left font-mono text-text text-xs hover:bg-hover",
+                "ui-font text-left text-text text-xs hover:bg-hover",
               )}
             >
               <div className="flex min-w-0 flex-1 flex-col items-start">

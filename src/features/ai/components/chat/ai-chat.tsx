@@ -582,7 +582,7 @@ details: ${errorDetails || mainError}
   return (
     <div
       className={cn(
-        "ai-chat-container flex h-full flex-col font-mono text-xs",
+        "ai-chat-container ui-font flex h-full flex-col text-xs",
         "bg-secondary-bg text-text",
         className,
       )}

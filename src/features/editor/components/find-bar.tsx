@@ -89,12 +89,12 @@ const FindBar = () => {
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Find in file..."
-          className="flex-1 border-none bg-transparent font-mono text-text text-xs focus:outline-none focus:ring-0"
+          className="ui-font flex-1 border-none bg-transparent text-text text-xs focus:outline-none focus:ring-0"
           style={{ outline: "none", boxShadow: "none" }}
         />
 
         {searchQuery && (
-          <div className="flex items-center gap-1 font-mono text-text-lighter text-xs">
+          <div className="ui-font flex items-center gap-1 text-text-lighter text-xs">
             <span>{totalMatches > 0 ? `${currentMatch}/${totalMatches}` : "0/0"}</span>
           </div>
         )}

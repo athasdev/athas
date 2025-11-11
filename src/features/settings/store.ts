@@ -78,7 +78,7 @@ const defaultSettings: Settings = {
   wordWrap: true,
   lineNumbers: true,
   // UI
-  uiFontFamily: "Space Grotesk",
+  uiFontFamily: "JetBrains Mono",
   // Theme
   theme: "athas-dark", // Changed from "auto" since we don't support continuous monitoring
   iconTheme: "colorful-material",

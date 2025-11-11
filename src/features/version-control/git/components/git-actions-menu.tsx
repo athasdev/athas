@@ -137,7 +137,7 @@ const GitActionsMenu = ({
             disabled={isLoading}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50",
+              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
             )}
           >
             <Upload size={12} />
@@ -153,7 +153,7 @@ const GitActionsMenu = ({
             disabled={isLoading}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50",
+              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
             )}
           >
             <Download size={12} />
@@ -169,7 +169,7 @@ const GitActionsMenu = ({
             disabled={isLoading}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50",
+              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
             )}
           >
             <GitPullRequest size={12} />
@@ -187,7 +187,7 @@ const GitActionsMenu = ({
             }}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover",
+              "ui-font text-left text-text text-xs hover:bg-hover",
             )}
           >
             <Archive size={12} />
@@ -202,7 +202,7 @@ const GitActionsMenu = ({
             }}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover",
+              "ui-font text-left text-text text-xs hover:bg-hover",
             )}
           >
             <Server size={12} />
@@ -217,7 +217,7 @@ const GitActionsMenu = ({
             }}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover",
+              "ui-font text-left text-text text-xs hover:bg-hover",
             )}
           >
             <Tag size={12} />
@@ -236,7 +236,7 @@ const GitActionsMenu = ({
             disabled={isRefreshing}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50",
+              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
             )}
           >
             <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
@@ -255,7 +255,7 @@ const GitActionsMenu = ({
             disabled={isLoading}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-red-400 text-xs hover:bg-hover disabled:opacity-50",
+              "ui-font text-left text-red-400 text-xs hover:bg-hover disabled:opacity-50",
             )}
           >
             <RotateCcw size={12} />
@@ -274,7 +274,7 @@ const GitActionsMenu = ({
             disabled={isLoading}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50",
+              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
             )}
           >
             <Settings size={12} />
@@ -292,7 +292,7 @@ const GitActionsMenu = ({
             disabled={isRefreshing}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-1.5",
-              "text-left font-mono text-text text-xs hover:bg-hover disabled:opacity-50",
+              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
             )}
           >
             <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />

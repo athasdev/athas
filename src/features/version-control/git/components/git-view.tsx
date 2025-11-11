@@ -360,7 +360,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
           <div className="flex items-center gap-2">{renderGitButton()}</div>
         </div>
         <div className="flex flex-1 items-center justify-center p-4">
-          <div className="text-center font-mono text-text-lighter text-xs">
+          <div className="ui-font text-center text-text-lighter text-xs">
             <div className="mb-1">No Git repository detected</div>
             <div className="text-[10px] opacity-75">Open a Git project folder</div>
           </div>
@@ -381,9 +381,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
           <div className="flex items-center gap-2">{renderGitButton()}</div>
         </div>
         <div className="flex flex-1 items-center justify-center p-4">
-          <div className="text-center font-mono text-text-lighter text-xs">
-            Loading Git status...
-          </div>
+          <div className="ui-font text-center text-text-lighter text-xs">Loading Git status...</div>
         </div>
       </div>
     );
@@ -401,7 +399,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
           <div className="flex items-center gap-2">{renderGitButton()}</div>
         </div>
         <div className="flex flex-1 items-center justify-center p-4">
-          <div className="text-center font-mono text-text-lighter text-xs">
+          <div className="ui-font text-center text-text-lighter text-xs">
             <div className="mb-1">Not a Git repository</div>
             <div className="text-[10px] opacity-75">Initialize with: git init</div>
           </div>
@@ -414,7 +412,7 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
 
   return (
     <>
-      <div className="flex h-full select-none flex-col bg-secondary-bg font-mono text-xs">
+      <div className="ui-font flex h-full select-none flex-col bg-secondary-bg text-xs">
         {/* Header */}
         <div
           className={cn(

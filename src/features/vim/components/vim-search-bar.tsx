@@ -57,18 +57,18 @@ export const VimSearchBar: React.FC = () => {
   return (
     <div className="fixed right-0 bottom-0 left-0 z-50 border-border border-t bg-background p-2">
       <div className="mx-auto flex max-w-4xl items-center gap-2">
-        <span className="font-mono text-foreground">/</span>
+        <span className="ui-font text-foreground">/</span>
         <input
           ref={inputRef}
           type="text"
           value={searchTerm}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          className="flex-1 border-none bg-transparent font-mono text-foreground outline-none"
+          className="ui-font flex-1 border-none bg-transparent text-foreground outline-none"
           placeholder="Search..."
           autoComplete="off"
         />
-        {matchInfo && <span className="font-mono text-muted-foreground text-sm">{matchInfo}</span>}
+        {matchInfo && <span className="ui-font text-muted-foreground text-sm">{matchInfo}</span>}
       </div>
     </div>
   );

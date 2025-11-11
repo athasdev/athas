@@ -335,7 +335,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
       e.dataTransfer.effectAllowed = "move";
       const dragImage = document.createElement("div");
       dragImage.className =
-        "bg-primary-bg border border-border rounded px-2 py-1 text-xs font-mono shadow-lg";
+        "bg-primary-bg border border-border rounded px-2 py-1 text-xs ui-font shadow-lg";
       dragImage.textContent = buffer.name;
       dragImage.style.position = "absolute";
       dragImage.style.top = "-1000px";

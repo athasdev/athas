@@ -15,7 +15,7 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const baseClasses =
-    "inline-flex items-center justify-center font-mono font-medium transition-all duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed rounded-md";
+    "inline-flex items-center justify-center ui-font font-medium transition-all duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed rounded-md";
 
   const variants = {
     default: "bg-hover text-text hover:bg-selected",

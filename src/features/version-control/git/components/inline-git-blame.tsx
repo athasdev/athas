@@ -298,9 +298,7 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
                   title="View commit details"
                 >
                   <GitCommit size={11} />
-                  <span className="font-mono text-text">
-                    {blameLine.commit_hash.substring(0, 7)}
-                  </span>
+                  <span className="ui-font text-text">{blameLine.commit_hash.substring(0, 7)}</span>
                 </button>
                 <button
                   className="ml-auto text-text-lighter transition-colors hover:text-text"

@@ -17,8 +17,8 @@ export default function SchemaView({
   return (
     <div className="flex-1 overflow-auto">
       <div className="border-border border-b bg-secondary-bg p-3">
-        <div className="font-mono text-sm">{selectedTable}</div>
-        <div className="font-mono text-text-lighter text-xs">{tableMeta.length} columns</div>
+        <div className="ui-font text-sm">{selectedTable}</div>
+        <div className="ui-font text-text-lighter text-xs">{tableMeta.length} columns</div>
       </div>
 
       <div className="divide-y divide-border">
@@ -29,13 +29,13 @@ export default function SchemaView({
           >
             <div className="flex min-w-0 flex-1 items-center gap-2">
               {getColumnIcon(column.type, column.primary_key)}
-              <div className="truncate font-mono text-sm">{column.name}</div>
-              <div className="font-mono text-text-lighter text-xs">{column.type}</div>
-              {column.primary_key && <div className="font-mono text-text-lighter text-xs">PK</div>}
-              {column.notnull && <div className="font-mono text-text-lighter text-xs">NN</div>}
+              <div className="ui-font truncate text-sm">{column.name}</div>
+              <div className="ui-font text-text-lighter text-xs">{column.type}</div>
+              {column.primary_key && <div className="ui-font text-text-lighter text-xs">PK</div>}
+              {column.notnull && <div className="ui-font text-text-lighter text-xs">NN</div>}
               {column.default_value && (
                 <div
-                  className="truncate font-mono text-text-lighter text-xs"
+                  className="ui-font truncate text-text-lighter text-xs"
                   title={`default: ${column.default_value}`}
                 >
                   def: {column.default_value}
@@ -44,7 +44,7 @@ export default function SchemaView({
             </div>
             <button
               onClick={() => onAddColumnFilter(column.name)}
-              className="px-2 py-1 font-mono text-text-lighter text-xs opacity-60 transition-colors hover:text-text hover:opacity-100"
+              className="ui-font px-2 py-1 text-text-lighter text-xs opacity-60 transition-colors hover:text-text hover:opacity-100"
               title="Filter by this column"
             >
               <Filter size={12} />

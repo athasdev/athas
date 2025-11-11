@@ -68,7 +68,7 @@ const FileRow = memo(function FileRow({
             <ChevronDown size={12} className="flex-shrink-0 text-text-lighter" />
           )}
           {getStatusIcon(summary.status)}
-          <span className="truncate font-mono text-text text-xs">{diff.file_path}</span>
+          <span className="ui-font truncate text-text text-xs">{diff.file_path}</span>
           {diff.is_renamed && diff.old_path && (
             <span className="text-text-lighter text-xs">← {diff.old_path}</span>
           )}
