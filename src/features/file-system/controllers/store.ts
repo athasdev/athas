@@ -975,9 +975,11 @@ export const useFileSystemStore = createSelectors(
             activeBuffer?.path || null,
           );
 
-          // Close all current buffers BEFORE loading new project
           const { actions: bufferActions } = useBufferStore.getState();
-          bufferActions.closeBuffersBatch(buffers.map((b) => b.id));
+          bufferActions.closeBuffersBatch(
+            buffers.map((b) => b.id),
+            true,
+          );
         }
 
         // Load new project's file tree
