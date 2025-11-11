@@ -210,7 +210,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   return (
     <>
       <EditorStylesheet />
-      <div className="flex h-full flex-col">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Breadcrumbs */}
         {settings.coreFeatures.breadcrumbs && <Breadcrumb />}
 
