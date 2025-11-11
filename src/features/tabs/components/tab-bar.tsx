@@ -547,8 +547,8 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
 
-  // Don't hide tab bar if we're switching projects (even if buffers are temporarily empty)
-  if (buffers.length === 0 && !isSwitchingProject) {
+  // Only hide tab bar if there's no project open at all
+  if (buffers.length === 0 && !rootFolderPath && !isSwitchingProject) {
     return null;
   }
 
@@ -556,7 +556,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   return (
     <>
-      <div className="relative">
+      <div className="relative flex-shrink-0">
         <div
           ref={tabBarRef}
           className="scrollbar-hidden flex overflow-x-auto bg-secondary-bg"
