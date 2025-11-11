@@ -71,6 +71,10 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   });
   const isInitializingRef = useRef(false);
   const currentConnectionIdRef = useRef<string | null>(null);
+  const initFitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const themeRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resizeRafRef = useRef<number | null>(null);
+  const focusRafRef = useRef<number | null>(null);
 
   const { updateSession, getSession } = useTerminalStore();
   const { currentTheme } = useThemeStore();
@@ -254,10 +258,14 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       }
 
       // Fit terminal to container after a short delay
-      setTimeout(() => {
+      if (initFitTimeoutRef.current) {
+        clearTimeout(initFitTimeoutRef.current);
+      }
+      initFitTimeoutRef.current = setTimeout(() => {
         if (fitAddon && terminalRef.current) {
           fitAddon.fit();
         }
+        initFitTimeoutRef.current = null;
       }, 150);
 
       // Store refs
@@ -511,13 +519,24 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     const newTheme = getTerminalTheme();
     xtermRef.current.options.theme = newTheme;
     // Force a complete refresh to apply theme changes immediately
-    setTimeout(() => {
+    if (themeRefreshTimeoutRef.current) {
+      clearTimeout(themeRefreshTimeoutRef.current);
+    }
+    themeRefreshTimeoutRef.current = setTimeout(() => {
       if (xtermRef.current) {
         xtermRef.current.refresh(0, xtermRef.current.rows - 1);
         // Also trigger a resize to ensure proper rendering
         fitAddonRef.current?.fit();
       }
+      themeRefreshTimeoutRef.current = null;
     }, 10);
+
+    return () => {
+      if (themeRefreshTimeoutRef.current) {
+        clearTimeout(themeRefreshTimeoutRef.current);
+        themeRefreshTimeoutRef.current = null;
+      }
+    };
   }, [currentTheme, getTerminalTheme]);
 
   // Handle font changes from editor settings
@@ -565,6 +584,24 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   // Cleanup on actual unmount
   useEffect(() => {
     return () => {
+      // Clear all timeouts and animation frames
+      if (initFitTimeoutRef.current) {
+        clearTimeout(initFitTimeoutRef.current);
+        initFitTimeoutRef.current = null;
+      }
+      if (themeRefreshTimeoutRef.current) {
+        clearTimeout(themeRefreshTimeoutRef.current);
+        themeRefreshTimeoutRef.current = null;
+      }
+      if (resizeRafRef.current) {
+        cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
+      if (focusRafRef.current) {
+        cancelAnimationFrame(focusRafRef.current);
+        focusRafRef.current = null;
+      }
+
       if (xtermRef.current) {
         // Close backend connection
         const session = getSession(sessionId);
@@ -589,7 +626,10 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
     const resizeObserver = new ResizeObserver(() => {
       // Debounce resize to avoid excessive calls
-      requestAnimationFrame(() => {
+      if (resizeRafRef.current) {
+        cancelAnimationFrame(resizeRafRef.current);
+      }
+      resizeRafRef.current = requestAnimationFrame(() => {
         if (fitAddonRef.current && xtermRef.current && terminalRef.current) {
           try {
             // Force a reflow to ensure dimensions are correct
@@ -601,13 +641,14 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
             console.warn("Failed to fit terminal:", e);
           }
         }
+        resizeRafRef.current = null;
       });
     });
 
     resizeObserver.observe(terminalRef.current);
 
     // Initial fit after a short delay
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       if (fitAddonRef.current && xtermRef.current) {
         try {
           fitAddonRef.current.fit();
@@ -619,6 +660,11 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
     return () => {
       resizeObserver.disconnect();
+      clearTimeout(timeoutId);
+      if (resizeRafRef.current) {
+        cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
     };
   }, [isInitialized]);
 
@@ -626,10 +672,21 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   useEffect(() => {
     if (isActive && xtermRef.current && isInitialized) {
       // Use requestAnimationFrame to ensure DOM is ready
-      requestAnimationFrame(() => {
+      if (focusRafRef.current) {
+        cancelAnimationFrame(focusRafRef.current);
+      }
+      focusRafRef.current = requestAnimationFrame(() => {
         xtermRef.current?.focus();
+        focusRafRef.current = null;
       });
     }
+
+    return () => {
+      if (focusRafRef.current) {
+        cancelAnimationFrame(focusRafRef.current);
+        focusRafRef.current = null;
+      }
+    };
   }, [isActive, isInitialized]);
 
   // Zoom handlers
