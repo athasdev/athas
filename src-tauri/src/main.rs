@@ -11,8 +11,10 @@ use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri_plugin_os::platform;
 use tauri_plugin_store::StoreExt;
+use terminal::{
+   TerminalManager, close_terminal, create_terminal, get_shells, terminal_resize, terminal_write,
+};
 use tokio::sync::Mutex;
-use xterm_terminal::XtermManager;
 
 mod claude_bridge;
 mod commands;
@@ -20,10 +22,8 @@ mod file_watcher;
 mod logger;
 mod lsp;
 mod menu;
-use crate::shell::get_shells;
 mod ssh;
 mod terminal;
-mod xterm_terminal;
 
 fn main() {
    tauri::Builder::default()
@@ -253,7 +253,7 @@ fn main() {
 
          Ok(())
       })
-      .manage(Arc::new(XtermManager::new()))
+      .manage(Arc::new(TerminalManager::new()))
       .invoke_handler(tauri::generate_handler![
          // File system commands
          move_file,
@@ -307,12 +307,11 @@ fn main() {
          start_watching,
          stop_watching,
          set_project_root,
-         // Xterm commands
-         create_xterm_terminal,
+         // Terminal commands
+         create_terminal,
          terminal_write,
          terminal_resize,
-         close_xterm_terminal,
-         // Other commands for terminal (switching shells)
+         close_terminal,
          get_shells,
          // execute_shell,
          // SSH commands

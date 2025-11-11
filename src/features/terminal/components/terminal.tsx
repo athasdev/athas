@@ -291,7 +291,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         // If we already have a connection, close it first
         if (existingSession?.connectionId) {
           try {
-            await invoke("close_xterm_terminal", {
+            await invoke("close_terminal", {
               id: existingSession.connectionId,
             });
           } catch (e) {
@@ -300,7 +300,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         }
 
         // Create new connection
-        const connectionId = await invoke<string>("create_xterm_terminal", {
+        const connectionId = await invoke<string>("create_terminal", {
           config: {
             working_directory: existingSession?.currentDirectory || rootFolderPath || undefined,
             shell: existingSession?.shell || undefined,
@@ -344,7 +344,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
                 if (callback) {
                   console.log("Detected exit command, closing terminal session:", sessionId);
                   // Close backend connection
-                  invoke("close_xterm_terminal", { id: currentId }).catch((e) => {
+                  invoke("close_terminal", { id: currentId }).catch((e) => {
                     console.error("Failed to close backend terminal connection:", e);
                   });
                   // Close the terminal tab
@@ -559,7 +559,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
       // Close the backend connection
       try {
-        await invoke("close_xterm_terminal", { id: connectionId });
+        await invoke("close_terminal", { id: connectionId });
         console.log("Backend terminal connection closed for:", connectionId);
       } catch (e) {
         console.error("Failed to close backend terminal connection:", e);
@@ -682,7 +682,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         // Close backend connection
         const session = getSession(sessionId);
         if (session?.connectionId) {
-          invoke("close_xterm_terminal", { id: session.connectionId });
+          invoke("close_terminal", { id: session.connectionId });
         }
 
         xtermRef.current.dispose();
