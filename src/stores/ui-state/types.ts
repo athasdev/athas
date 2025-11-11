@@ -2,6 +2,7 @@ export type SettingsTab =
   | "general"
   | "editor"
   | "theme"
+  | "extensions"
   | "ai"
   | "keyboard"
   | "language"

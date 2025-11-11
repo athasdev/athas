@@ -3,6 +3,7 @@ import {
   Keyboard,
   Languages,
   Monitor,
+  Package,
   PenTool,
   Settings,
   Settings2,
@@ -43,6 +44,11 @@ const tabs: TabItem[] = [
     id: "theme",
     label: "Theme",
     icon: Monitor,
+  },
+  {
+    id: "extensions",
+    label: "Extensions",
+    icon: Package,
   },
   {
     id: "ai",

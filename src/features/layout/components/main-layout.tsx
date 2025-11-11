@@ -27,7 +27,6 @@ import CommandPalette from "@/features/command-palette/components/command-palett
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
 import CodeEditor from "@/features/editor/components/code-editor";
-import ExtensionsView from "@/features/extensions/components/extensions-view";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { ImageViewer } from "@/features/image-viewer/components/image-viewer";
 import TabBar from "@/features/tabs/components/tab-bar";
@@ -244,10 +243,6 @@ export function MainLayout() {
                 );
               } else if (activeBuffer.isSQLite) {
                 return <SQLiteViewer databasePath={activeBuffer.path} />;
-              } else if (activeBuffer.path === "extensions://marketplace") {
-                return (
-                  <ExtensionsView onThemeChange={handleThemeChange} currentTheme={settings.theme} />
-                );
               } else {
                 return <CodeEditor />;
               }

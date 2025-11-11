@@ -33,13 +33,7 @@ const flattenFileTree = (files: FileEntry[]): FileEntry[] => {
 
 export const MainSidebar = memo(() => {
   // Get state from stores
-  const {
-    isGitViewActive,
-    isSearchViewActive,
-    isRemoteViewActive,
-    setActiveView,
-    isExtensionsViewActive,
-  } = useUIState();
+  const { isGitViewActive, isSearchViewActive, isRemoteViewActive, setActiveView } = useUIState();
 
   // Ref for SearchView to enable focus functionality
   const searchViewRef = useRef<SearchViewRef>(null);
@@ -91,20 +85,6 @@ export const MainSidebar = memo(() => {
     }
   }, [isSearchViewActive, setSearchViewRef]);
 
-  // Handlers
-  const onOpenExtensions = () => {
-    const { openBuffer } = useBufferStore.getState().actions;
-    openBuffer(
-      "extensions://marketplace",
-      "Extensions",
-      "", // Content will be handled by the component
-      false, // not an image
-      false, // not SQLite
-      false, // not a diff
-      true, // is virtual
-    );
-  };
-
   // Get all project files by flattening the file tree - memoized for performance
   const allProjectFiles = useMemo(() => {
     return flattenFileTree(files);
@@ -117,11 +97,9 @@ export const MainSidebar = memo(() => {
         isGitViewActive={isGitViewActive}
         isSearchViewActive={isSearchViewActive}
         isRemoteViewActive={isRemoteViewActive}
-        isExtensionsViewActive={isExtensionsViewActive}
         isRemoteWindow={isRemoteWindow}
         coreFeatures={settings.coreFeatures}
         onViewChange={setActiveView}
-        onOpenExtensions={onOpenExtensions}
       />
 
       {/* Remote Window Header */}
