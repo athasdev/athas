@@ -65,6 +65,10 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   const serializeAddonRef = useRef<SerializeAddon | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [searchResults, setSearchResults] = useState<{ current: number; total: number }>({
+    current: 0,
+    total: 0,
+  });
   const isInitializingRef = useRef(false);
   const currentConnectionIdRef = useRef<string | null>(null);
   const initFitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -77,6 +81,25 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   const { fontSize: editorFontSize, fontFamily: editorFontFamily } = useEditorSettingsStore();
   const { rootFolderPath } = useProjectStore();
   const [fontSize, setFontSize] = useState(editorFontSize);
+
+  // Parse OSC 7 sequence for working directory tracking
+  const parseOSC7 = useCallback((data: string): string | null => {
+    // OSC 7 format: ESC]7;file://hostname/pathBEL
+    // Build regex dynamically to avoid control character linting warnings
+    const ESC = String.fromCharCode(0x1b);
+    const BEL = String.fromCharCode(0x07);
+    const osc7Regex = new RegExp(`${ESC}\\]7;file://[^/]*([^${BEL}]+)${BEL}`);
+    const match = data.match(osc7Regex);
+    if (match?.[1]) {
+      try {
+        // Decode URI component to handle special characters
+        return decodeURIComponent(match[1]);
+      } catch {
+        return match[1];
+      }
+    }
+    return null;
+  }, []);
 
   const getTerminalTheme = useCallback((): TerminalTheme => {
     const computedStyle = getComputedStyle(document.documentElement);
@@ -451,6 +474,13 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       const data = event.payload as { data: string };
       if (xtermRef.current) {
         xtermRef.current.write(data.data);
+
+        // Check for OSC 7 sequence to track working directory
+        const newDirectory = parseOSC7(data.data);
+        if (newDirectory) {
+          console.log("Working directory changed to:", newDirectory);
+          updateSession(sessionId, { currentDirectory: newDirectory });
+        }
       }
     });
 
@@ -481,7 +511,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       unlistenClosed.then((fn) => fn());
       unlistenThemeChange();
     };
-  }, [sessionId, isInitialized, connectionId]);
+  }, [sessionId, isInitialized, connectionId, parseOSC7, updateSession, getTerminalTheme]);
 
   // Handle theme changes
   useEffect(() => {
@@ -730,19 +760,37 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
   // Search handlers
   const handleSearch = useCallback((term: string) => {
-    searchAddonRef.current?.findNext(term);
+    if (!term || !searchAddonRef.current) {
+      setSearchResults({ current: 0, total: 0 });
+      return;
+    }
+    const found = searchAddonRef.current.findNext(term);
+    if (found) {
+      setSearchResults((prev) => ({ ...prev, current: prev.current + 1 }));
+    } else {
+      setSearchResults({ current: 0, total: 0 });
+    }
   }, []);
 
   const handleSearchNext = useCallback((term: string) => {
-    searchAddonRef.current?.findNext(term);
+    if (!term || !searchAddonRef.current) return;
+    const found = searchAddonRef.current.findNext(term);
+    if (found) {
+      setSearchResults((prev) => ({ ...prev, current: prev.current + 1 }));
+    }
   }, []);
 
   const handleSearchPrevious = useCallback((term: string) => {
-    searchAddonRef.current?.findPrevious(term);
+    if (!term || !searchAddonRef.current) return;
+    const found = searchAddonRef.current.findPrevious(term);
+    if (found) {
+      setSearchResults((prev) => ({ ...prev, current: Math.max(1, prev.current - 1) }));
+    }
   }, []);
 
   const handleSearchClose = useCallback(() => {
     setIsSearchVisible(false);
+    setSearchResults({ current: 0, total: 0 });
     xtermRef.current?.focus();
   }, []);
 
@@ -777,6 +825,8 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         onNext={handleSearchNext}
         onPrevious={handleSearchPrevious}
         onClose={handleSearchClose}
+        currentMatch={searchResults.current}
+        totalMatches={searchResults.total}
       />
       <div
         ref={terminalRef}
