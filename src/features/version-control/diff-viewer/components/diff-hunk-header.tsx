@@ -28,9 +28,7 @@ export function DiffHunkHeader({
           >
             {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
           </button>
-          <span
-            className={cn("rounded bg-blue-500/10 px-2 py-1", "font-mono text-blue-400 text-xs")}
-          >
+          <span className={cn("rounded bg-blue-500/10 px-2 py-1", "ui-font text-blue-400 text-xs")}>
             {hunk.header.content}
           </span>
           <div className="flex items-center gap-2 text-xs">

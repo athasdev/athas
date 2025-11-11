@@ -1,5 +1,68 @@
-import { useCallback, useReducer } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import type { Terminal, TerminalAction, TerminalState } from "@/features/terminal/types/terminal";
+
+interface PersistedTerminal {
+  id: string;
+  name: string;
+  currentDirectory: string;
+  isPinned: boolean;
+  shell?: string;
+  title?: string;
+}
+
+const PERSISTENCE_KEY = "terminal-sessions";
+const PERSISTENCE_ENABLED_KEY = "terminal-persistence-enabled";
+
+const isPersistenceEnabled = (): boolean => {
+  try {
+    const enabled = localStorage.getItem(PERSISTENCE_ENABLED_KEY);
+    return enabled === null || enabled === "true"; // Default to true
+  } catch {
+    return true;
+  }
+};
+
+const saveTerminalsToStorage = (terminals: Terminal[]) => {
+  if (!isPersistenceEnabled()) return;
+
+  try {
+    const persistedTerminals: PersistedTerminal[] = terminals.map((t) => ({
+      id: t.id,
+      name: t.name,
+      currentDirectory: t.currentDirectory,
+      isPinned: t.isPinned || false,
+      shell: t.shell,
+      title: t.title,
+    }));
+    localStorage.setItem(PERSISTENCE_KEY, JSON.stringify(persistedTerminals));
+  } catch (error) {
+    console.error("Failed to save terminals to storage:", error);
+  }
+};
+
+const loadTerminalsFromStorage = (): PersistedTerminal[] => {
+  if (!isPersistenceEnabled()) return [];
+
+  try {
+    const stored = localStorage.getItem(PERSISTENCE_KEY);
+    if (!stored) return [];
+    return JSON.parse(stored);
+  } catch (error) {
+    console.error("Failed to load terminals from storage:", error);
+    return [];
+  }
+};
+
+export const setTerminalPersistence = (enabled: boolean) => {
+  try {
+    localStorage.setItem(PERSISTENCE_ENABLED_KEY, String(enabled));
+    if (!enabled) {
+      localStorage.removeItem(PERSISTENCE_KEY);
+    }
+  } catch (error) {
+    console.error("Failed to update persistence setting:", error);
+  }
+};
 
 const generateTerminalId = (name: string): string => {
   return `terminal_${name.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
@@ -168,6 +231,11 @@ export const useTerminalTabs = () => {
     activeTerminalId: null,
   });
 
+  // Save terminals to storage whenever state changes
+  useEffect(() => {
+    saveTerminalsToStorage(state.terminals);
+  }, [state.terminals]);
+
   const createTerminal = useCallback(
     (name: string, currentDirectory: string, shell?: string): string => {
       // Generate the terminal ID here so we can return it
@@ -248,6 +316,27 @@ export const useTerminalTabs = () => {
     [],
   );
 
+  const getPersistedTerminals = useCallback((): PersistedTerminal[] => {
+    return loadTerminalsFromStorage();
+  }, []);
+
+  const restoreTerminalsFromPersisted = useCallback((persistedTerminals: PersistedTerminal[]) => {
+    persistedTerminals.forEach((pt) => {
+      dispatch({
+        type: "CREATE_TERMINAL",
+        payload: {
+          name: pt.name,
+          currentDirectory: pt.currentDirectory,
+          shell: pt.shell,
+          id: pt.id,
+        },
+      });
+      if (pt.isPinned) {
+        dispatch({ type: "PIN_TERMINAL", payload: { id: pt.id, isPinned: true } });
+      }
+    });
+  }, []);
+
   return {
     terminals: state.terminals,
     activeTerminalId: state.activeTerminalId,
@@ -263,5 +352,7 @@ export const useTerminalTabs = () => {
     switchToNextTerminal,
     switchToPrevTerminal,
     setTerminalSplitMode,
+    getPersistedTerminals,
+    restoreTerminalsFromPersisted,
   };
 };

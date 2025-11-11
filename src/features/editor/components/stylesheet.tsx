@@ -2,53 +2,9 @@ export function EditorStylesheet() {
   return (
     <style>
       {`
-        /* Font loading and display rules */
-        @font-face {
-          font-family: 'JetBrains Mono';
-          font-display: swap;
-          font-weight: normal;
-          font-style: normal;
-        }
-        @font-face {
-          font-family: 'Fira Code';
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'Source Code Pro';
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'Hack';
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'Inconsolata';
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'Ubuntu Mono';
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'Roboto Mono';
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'DejaVu Sans Mono';
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'Liberation Mono';
-          font-display: swap;
-        }
-        @font-face {
-          font-family: 'Noto Sans Mono';
-          font-display: swap;
-        }
-
-        /* Force font override class */
+        /* Font override for editor components */
         .code-editor-font-override {
-          font-family: var(--editor-font-family) !important;
+          font-family: var(--editor-font-family);
         }
 
         .code-editor-content {

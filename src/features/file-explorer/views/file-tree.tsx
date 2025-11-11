@@ -601,7 +601,7 @@ const FileTree = ({
               onBlur={() => handleBlur(file)}
               className={cn(
                 "flex-1 border-text border-b border-none bg-transparent",
-                "font-mono text-text text-xs outline-none focus:border-text-lighter",
+                "ui-font text-text text-xs outline-none focus:border-text-lighter",
               )}
               placeholder={file.isDir ? "folder name" : "file name"}
             />
@@ -649,7 +649,7 @@ const FileTree = ({
               "flex min-h-[22px] w-full min-w-max cursor-pointer",
               "select-none items-center gap-1.5",
               "whitespace-nowrap border-none bg-transparent",
-              "px-1.5 py-1 text-left font-mono text-text text-xs",
+              "ui-font px-1.5 py-1 text-left text-text text-xs",
               "shadow-none outline-none transition-colors duration-150",
               "hover:bg-hover focus:outline-none",
               activePath === file.path && "bg-selected",
@@ -838,7 +838,7 @@ const FileTree = ({
                   }}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-1.5",
-                    "text-left font-mono text-text text-xs hover:bg-hover",
+                    "ui-font text-left text-text text-xs hover:bg-hover",
                   )}
                 >
                   <FilePlus size={12} />
@@ -857,7 +857,7 @@ const FileTree = ({
                   }}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-1.5",
-                    "text-left font-mono text-text text-xs hover:bg-hover",
+                    "ui-font text-left text-text text-xs hover:bg-hover",
                   )}
                 >
                   <FolderPlus size={12} />
@@ -876,7 +876,7 @@ const FileTree = ({
                   }}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-1.5",
-                    "text-left font-mono text-text text-xs hover:bg-hover",
+                    "ui-font text-left text-text text-xs hover:bg-hover",
                   )}
                 >
                   <Upload size={12} />
@@ -895,7 +895,7 @@ const FileTree = ({
                   }}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-1.5",
-                    "text-left font-mono text-text text-xs hover:bg-hover",
+                    "ui-font text-left text-text text-xs hover:bg-hover",
                   )}
                 >
                   <RefreshCw size={12} />
@@ -915,7 +915,7 @@ const FileTree = ({
                   }}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-1.5",
-                    "text-left font-mono text-text text-xs hover:bg-hover",
+                    "ui-font text-left text-text text-xs hover:bg-hover",
                   )}
                 >
                   <Terminal size={12} />
@@ -930,7 +930,7 @@ const FileTree = ({
                   }}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-1.5",
-                    "text-left font-mono text-text text-xs hover:bg-hover",
+                    "ui-font text-left text-text text-xs hover:bg-hover",
                   )}
                 >
                   <Search size={12} />
@@ -947,7 +947,7 @@ const FileTree = ({
                     }}
                     className={cn(
                       "flex w-full items-center gap-2 px-3 py-1.5",
-                      "text-left font-mono text-text text-xs hover:bg-hover",
+                      "ui-font text-left text-text text-xs hover:bg-hover",
                     )}
                   >
                     <ImageIcon size={12} />
@@ -970,7 +970,7 @@ const FileTree = ({
                   }}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-1.5",
-                    "text-left font-mono text-text text-xs hover:bg-hover",
+                    "ui-font text-left text-text text-xs hover:bg-hover",
                   )}
                 >
                   <FolderOpen size={12} />
@@ -992,7 +992,7 @@ const FileTree = ({
                   }}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-1.5",
-                    "text-left font-mono text-text text-xs hover:bg-hover",
+                    "ui-font text-left text-text text-xs hover:bg-hover",
                   )}
                 >
                   <Copy size={12} />
@@ -1011,7 +1011,7 @@ const FileTree = ({
                   }}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-1.5",
-                    "text-left font-mono text-text text-xs hover:bg-hover",
+                    "ui-font text-left text-text text-xs hover:bg-hover",
                   )}
                 >
                   <FileText size={12} />
@@ -1042,7 +1042,7 @@ const FileTree = ({
                   }}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-1.5",
-                    "text-left font-mono text-text text-xs hover:bg-hover",
+                    "ui-font text-left text-text text-xs hover:bg-hover",
                   )}
                 >
                   <Info size={12} />
@@ -1064,7 +1064,7 @@ const FileTree = ({
               }}
               className={cn(
                 "flex w-full items-center gap-2 px-3 py-1.5",
-                "text-left font-mono text-text text-xs hover:bg-hover",
+                "ui-font text-left text-text text-xs hover:bg-hover",
               )}
             >
               <Link size={12} />
@@ -1089,7 +1089,7 @@ const FileTree = ({
               }}
               className={cn(
                 "flex w-full items-center gap-2 px-3 py-1.5",
-                "text-left font-mono text-text text-xs hover:bg-hover",
+                "ui-font text-left text-text text-xs hover:bg-hover",
               )}
             >
               <FileText size={12} />
@@ -1109,7 +1109,7 @@ const FileTree = ({
               }}
               className={cn(
                 "flex w-full items-center gap-2 px-3 py-1.5",
-                "text-left font-mono text-text text-xs hover:bg-hover",
+                "ui-font text-left text-text text-xs hover:bg-hover",
               )}
             >
               <Scissors size={12} />
@@ -1126,7 +1126,7 @@ const FileTree = ({
               }}
               className={cn(
                 "flex w-full items-center gap-2 px-3 py-1.5",
-                "text-left font-mono text-text text-xs hover:bg-hover",
+                "ui-font text-left text-text text-xs hover:bg-hover",
               )}
             >
               <Edit size={12} />
@@ -1154,7 +1154,7 @@ const FileTree = ({
               }}
               className={cn(
                 "flex w-full items-center gap-2 px-3 py-1.5",
-                "text-left font-mono text-text text-xs hover:bg-hover",
+                "ui-font text-left text-text text-xs hover:bg-hover",
               )}
             >
               <Eye size={12} />
@@ -1175,7 +1175,7 @@ const FileTree = ({
               }}
               className={cn(
                 "flex w-full items-center gap-2 px-3 py-1.5",
-                "text-left font-mono text-text text-xs hover:bg-hover hover:text-red-500",
+                "ui-font text-left text-text text-xs hover:bg-hover hover:text-red-500",
               )}
             >
               <Trash size={12} />

@@ -3,7 +3,6 @@ import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { enableMapSet } from "immer";
 import { useEffect } from "react";
-import { FontPreloader } from "@/features/settings/components/font-preloader";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
 import { useScroll } from "@/features/window/hooks/use-scroll";
 import { initializeIconThemes } from "./extensions/icon-themes/icon-theme-initializer";
@@ -163,7 +162,6 @@ function App() {
       className={cn("h-screen w-screen overflow-hidden bg-transparent")}
       style={{ zoom: zoomLevel }}
     >
-      <FontPreloader />
       <FontStyleInjector />
       <div
         className={cn("window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg")}

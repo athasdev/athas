@@ -176,7 +176,7 @@ const ExpandedCommitDetails = memo(
             </span>
             <button
               onClick={handleCopyClick}
-              className="inline-flex items-center gap-1 rounded bg-secondary-bg px-2 py-0.5 font-mono text-[8px] transition-colors hover:bg-hover"
+              className="ui-font inline-flex items-center gap-1 rounded bg-secondary-bg px-2 py-0.5 text-[8px] transition-colors hover:bg-hover"
             >
               <Hash size={6} />
               {isCopied ? "Copied" : commit.hash.substring(0, 7)}
@@ -218,7 +218,7 @@ const FileItem = memo(({ file, onFileClick }: FileItemProps) => {
       className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-[9px] hover:bg-hover"
       onClick={handleClick}
     >
-      <span className={`font-mono ${statusColor}`}>{statusChar}</span>
+      <span className={`ui-font ${statusColor}`}>{statusChar}</span>
       <span className="truncate text-text">{file.file_path}</span>
       {file.is_renamed && file.old_path && (
         <span className="text-text-lighter">← {file.old_path}</span>
@@ -235,6 +235,9 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
   const [copiedHashes, setCopiedHashes] = useState<Set<string>>(new Set());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
+  const copyHashTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const scrollSetupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollSetupRafRef = useRef<number | null>(null);
 
   const toggleCommitExpansion = useCallback(
     (commitHash: string) => {
@@ -277,13 +280,20 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
   const copyCommitHash = useCallback((hash: string) => {
     navigator.clipboard.writeText(hash);
     setCopiedHashes((prev) => new Set(prev).add(hash));
-    setTimeout(() => {
+    // Clear any existing timeout for this hash
+    const existingTimeout = copyHashTimeoutRef.current.get(hash);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+    const timeoutId = setTimeout(() => {
       setCopiedHashes((prev) => {
         const newSet = new Set(prev);
         newSet.delete(hash);
         return newSet;
       });
+      copyHashTimeoutRef.current.delete(hash);
     }, 1000);
+    copyHashTimeoutRef.current.set(hash, timeoutId);
   }, []);
 
   const handleViewCommitDiff = useCallback(
@@ -343,23 +353,37 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
     }
 
     if (!setupScrollListener()) {
-      const rafId = requestAnimationFrame(() => {
+      if (scrollSetupRafRef.current) {
+        cancelAnimationFrame(scrollSetupRafRef.current);
+      }
+      scrollSetupRafRef.current = requestAnimationFrame(() => {
         if (!setupScrollListener()) {
-          const timeoutId = setTimeout(() => {
+          if (scrollSetupTimeoutRef.current) {
+            clearTimeout(scrollSetupTimeoutRef.current);
+          }
+          scrollSetupTimeoutRef.current = setTimeout(() => {
             setupScrollListener();
+            scrollSetupTimeoutRef.current = null;
           }, 100);
-
-          return () => clearTimeout(timeoutId);
         }
+        scrollSetupRafRef.current = null;
       });
-
-      return () => {
-        cancelAnimationFrame(rafId);
-        removeScrollListener();
-      };
     }
 
-    return removeScrollListener;
+    return () => {
+      if (scrollSetupRafRef.current) {
+        cancelAnimationFrame(scrollSetupRafRef.current);
+        scrollSetupRafRef.current = null;
+      }
+      if (scrollSetupTimeoutRef.current) {
+        clearTimeout(scrollSetupTimeoutRef.current);
+        scrollSetupTimeoutRef.current = null;
+      }
+      // Clear all copy hash timeouts
+      copyHashTimeoutRef.current.forEach((timeout) => clearTimeout(timeout));
+      copyHashTimeoutRef.current.clear();
+      removeScrollListener();
+    };
   }, [commits.length, hasMoreCommits, isLoadingMoreCommits, repoPath, actions]);
 
   if (commits.length === 0) {

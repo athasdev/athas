@@ -97,6 +97,9 @@ export function useMenuEvents(props: UseMenuEventsProps) {
   useEffect(() => {
     setupMenuListeners(handlersRef);
 
-    return () => {};
+    return () => {
+      cleanupMenuListeners();
+      window.removeEventListener("beforeunload", cleanupMenuListeners);
+    };
   }, []);
 }

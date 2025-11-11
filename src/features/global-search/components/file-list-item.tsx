@@ -31,7 +31,7 @@ export const FileListItem = ({
       onClick={() => onClick(file.path)}
       onMouseEnter={onMouseEnter}
       isSelected={isSelected}
-      className="font-mono"
+      className="ui-font"
     >
       <File
         size={11}

@@ -159,7 +159,7 @@ const ContentGlobalSearch = () => {
                 value={query}
                 onChange={setQuery}
                 placeholder="Search in files..."
-                className="font-mono"
+                className="ui-font"
               />
               {hasResults && (
                 <span className="flex-shrink-0 text-[10px] text-text-lighter">

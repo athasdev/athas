@@ -12,7 +12,7 @@ function ImageContainer({ label, labelColor, base64, alt, zoom }: ImageContainer
   const containerBase = "flex flex-col items-center justify-center p-4";
   return (
     <div className={containerBase}>
-      <span className={`mb-2 font-mono ${labelColor} text-xs`}>{label}</span>
+      <span className={`ui-font mb-2 ${labelColor} text-xs`}>{label}</span>
       {base64 ? (
         <img
           src={getImgSrc(base64)}
@@ -83,7 +83,7 @@ export const ImageDiffViewer = memo(function ImageDiffViewer({
             <FileIcon size={14} className="text-text" />
           )}
           <div className="flex items-center gap-2">
-            <span className="font-mono text-text text-xs">
+            <span className="ui-font text-text text-xs">
               {displayFileName} {ext && <>• {ext}</>}
             </span>
             {relativePath && <span className="text-text-lighter text-xs">in {relativePath}</span>}

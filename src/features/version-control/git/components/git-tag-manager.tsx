@@ -204,9 +204,7 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
                       <div className="min-w-0 flex-1">
                         <div className="mb-1 flex items-center gap-2">
                           <Tag size={12} className="text-text-lighter" />
-                          <span className="font-medium font-mono text-text text-xs">
-                            {tag.name}
-                          </span>
+                          <span className="ui-font font-medium text-text text-xs">{tag.name}</span>
                         </div>
 
                         {tag.message && (
@@ -216,7 +214,7 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
                         <div className="flex items-center gap-3 text-[9px] text-text-lighter">
                           <div className="flex items-center gap-1">
                             <GitCommit size={8} />
-                            <span className="font-mono">{tag.commit.substring(0, 7)}</span>
+                            <span className="ui-font">{tag.commit.substring(0, 7)}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar size={8} />
