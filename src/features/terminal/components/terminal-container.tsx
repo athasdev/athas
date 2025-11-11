@@ -26,7 +26,7 @@ const TerminalContainer = ({
     terminals,
     activeTerminalId,
     createTerminal,
-    closeTerminal,
+    closeTerminal: originalCloseTerminal,
     setActiveTerminal,
     updateTerminalName,
     updateTerminalDirectory,
@@ -39,6 +39,15 @@ const TerminalContainer = ({
     getPersistedTerminals,
     restoreTerminalsFromPersisted,
   } = useTerminalTabs();
+
+  // Wrapper to add logging and ensure terminal closes properly
+  const closeTerminal = useCallback(
+    (terminalId: string) => {
+      console.log("closeTerminal called for terminal:", terminalId);
+      originalCloseTerminal(terminalId);
+    },
+    [originalCloseTerminal],
+  );
 
   const zoomLevel = useZoomStore.use.terminalZoomLevel();
 
@@ -516,6 +525,7 @@ const TerminalContainer = ({
                       onDirectoryChange={handleDirectoryChange}
                       onActivity={handleActivity}
                       onRegisterRef={registerTerminalRef}
+                      onTerminalExit={closeTerminal}
                     />
                   </div>
                   {terminal.splitMode &&
@@ -534,6 +544,7 @@ const TerminalContainer = ({
                             onDirectoryChange={handleDirectoryChange}
                             onActivity={handleActivity}
                             onRegisterRef={registerTerminalRef}
+                            onTerminalExit={closeTerminal}
                           />
                         </div>
                       );

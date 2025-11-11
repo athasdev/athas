@@ -25,6 +25,7 @@ interface XtermTerminalProps {
   isActive: boolean;
   onReady?: () => void;
   onTerminalRef?: (ref: any) => void;
+  onTerminalExit?: (sessionId: string) => void;
 }
 
 interface TerminalTheme {
@@ -57,6 +58,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   isActive,
   onReady,
   onTerminalRef,
+  onTerminalExit,
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
@@ -71,10 +73,17 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   });
   const isInitializingRef = useRef(false);
   const currentConnectionIdRef = useRef<string | null>(null);
+  const onTerminalExitRef = useRef(onTerminalExit);
+  const currentInputLineRef = useRef<string>("");
   const initFitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const themeRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const resizeRafRef = useRef<number | null>(null);
   const focusRafRef = useRef<number | null>(null);
+
+  // Keep ref in sync with prop
+  useEffect(() => {
+    onTerminalExitRef.current = onTerminalExit;
+  }, [onTerminalExit]);
 
   const { updateSession, getSession } = useTerminalStore();
   const { currentTheme } = useThemeStore();
@@ -308,8 +317,56 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
         // Handle terminal input
         terminal.onData((data) => {
-          // Use the ref to always have the current connection ID
           const currentId = currentConnectionIdRef.current || connectionId;
+
+          // Track input to detect "exit" command
+          // Check if this data contains a newline/carriage return (command submitted)
+          const hasNewline = data.includes("\n") || data.includes("\r");
+
+          if (hasNewline) {
+            // Command is being submitted - check if it's "exit"
+            currentInputLineRef.current += data;
+            const trimmedLine = currentInputLineRef.current.trim();
+
+            // Check if the command is exactly "exit" (case-insensitive, allowing whitespace)
+            if (/^\s*exit\s*$/i.test(trimmedLine)) {
+              // Reset input tracking
+              currentInputLineRef.current = "";
+
+              // Send the exit command to the terminal first
+              invoke("terminal_write", { id: currentId, data }).catch((e) => {
+                console.error("Failed to write to terminal:", e);
+              });
+
+              // Wait a moment for the shell to process exit, then close the terminal
+              setTimeout(() => {
+                const callback = onTerminalExitRef.current;
+                if (callback) {
+                  console.log("Detected exit command, closing terminal session:", sessionId);
+                  // Close backend connection
+                  invoke("close_xterm_terminal", { id: currentId }).catch((e) => {
+                    console.error("Failed to close backend terminal connection:", e);
+                  });
+                  // Close the terminal tab
+                  callback(sessionId);
+                }
+              }, 100);
+              return;
+            } else {
+              // Not an exit command, reset tracking
+              currentInputLineRef.current = "";
+            }
+          } else {
+            // No newline yet, accumulate input
+            currentInputLineRef.current += data;
+
+            // Prevent unbounded growth
+            if (currentInputLineRef.current.length > 1000) {
+              currentInputLineRef.current = currentInputLineRef.current.slice(-100);
+            }
+          }
+
+          // Send data to terminal
           invoke("terminal_write", { id: currentId, data }).catch((e) => {
             console.error("Failed to write to terminal:", e);
           });
@@ -492,9 +549,28 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       }
     });
 
-    const unlistenClosed = listen(closedEventName, () => {
-      console.log("Terminal closed:", connectionId);
-      if (xtermRef.current) {
+    const unlistenClosed = listen(closedEventName, async () => {
+      console.log(
+        "Terminal closed event received for connection:",
+        connectionId,
+        "session:",
+        sessionId,
+      );
+
+      // Close the backend connection
+      try {
+        await invoke("close_xterm_terminal", { id: connectionId });
+        console.log("Backend terminal connection closed for:", connectionId);
+      } catch (e) {
+        console.error("Failed to close backend terminal connection:", e);
+      }
+
+      // Call the exit callback to close the terminal tab
+      const callback = onTerminalExitRef.current;
+      if (callback) {
+        console.log("Calling onTerminalExit callback for session:", sessionId);
+        callback(sessionId);
+      } else if (xtermRef.current) {
         xtermRef.current.writeln("\r\n\x1b[33mTerminal session closed\x1b[0m");
       }
     });
