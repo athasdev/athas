@@ -6,6 +6,7 @@ import { cn } from "@/utils/cn";
 
 interface TabBarItemProps {
   buffer: Buffer;
+  displayName: string;
   index: number;
   isActive: boolean;
   isDraggedTab: boolean;
@@ -22,6 +23,7 @@ interface TabBarItemProps {
 
 const TabBarItem = memo(function TabBarItem({
   buffer,
+  displayName,
   isActive,
   isDraggedTab,
   showDropIndicatorBefore,
@@ -94,7 +96,7 @@ const TabBarItem = memo(function TabBarItem({
           )}
           title={buffer.path}
         >
-          {buffer.name}
+          {displayName}
         </span>
         {buffer.isDirty && (
           <div
