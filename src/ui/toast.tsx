@@ -30,7 +30,7 @@ export const ToastContainer = () => {
               <CircleQuestionMark size={14} className="mt-0.5 flex-shrink-0 text-blue-400" />
             )}
 
-            <p className="flex-1 font-mono text-text text-xs">{toast.message}</p>
+            <p className="ui-font flex-1 text-text text-xs">{toast.message}</p>
 
             <button
               onClick={() => dismissToast(toast.id)}
@@ -47,7 +47,7 @@ export const ToastContainer = () => {
                   toast.action?.onClick();
                   dismissToast(toast.id);
                 }}
-                className="rounded bg-hover px-3 py-1 font-mono text-[10px] text-text uppercase tracking-wider transition-colors hover:bg-border"
+                className="ui-font rounded bg-hover px-3 py-1 text-[10px] text-text uppercase tracking-wider transition-colors hover:bg-border"
               >
                 {toast.action.label}
               </button>

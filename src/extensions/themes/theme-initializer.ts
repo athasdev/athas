@@ -1,8 +1,26 @@
+import { invoke } from "@tauri-apps/api/core";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import { themeLoader } from "./theme-loader";
 import { themeRegistry } from "./theme-registry";
 
 let isThemeSystemInitialized = false;
+
+// Helper function to rebuild native menu with current themes
+const rebuildNativeMenu = async () => {
+  try {
+    const themes = themeRegistry.getAllThemes();
+    const themeData = themes.map((theme) => ({
+      id: theme.id,
+      name: theme.name,
+      category: theme.category,
+    }));
+
+    await invoke("rebuild_menu_themes", { themes: themeData });
+    console.log("Native menu rebuilt with themes:", themeData.length);
+  } catch (error) {
+    console.error("Failed to rebuild native menu:", error);
+  }
+};
 
 export const initializeThemeSystem = async () => {
   if (isThemeSystemInitialized) {
@@ -72,6 +90,14 @@ export const initializeThemeSystem = async () => {
 
     // Mark theme registry as ready
     themeRegistry.markAsReady();
+
+    // Rebuild native menu with loaded themes
+    await rebuildNativeMenu();
+
+    // Listen for theme registry changes and rebuild menu
+    themeRegistry.onRegistryChange(() => {
+      rebuildNativeMenu();
+    });
 
     console.log("Theme system initialized successfully");
   } catch (error) {

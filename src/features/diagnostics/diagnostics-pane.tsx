@@ -93,7 +93,7 @@ const DiagnosticsPane = ({
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="mb-0 flex items-center gap-1 text-text-lighter text-xs">
-                          <span className="font-mono text-xs opacity-70">
+                          <span className="ui-font text-xs opacity-70">
                             {diagnostic.line}:{diagnostic.column}
                           </span>
                           {diagnostic.source && (
@@ -141,7 +141,7 @@ const DiagnosticsPane = ({
       {/* Header - more compact */}
       <div className="flex items-center justify-between border-border border-b bg-primary-bg px-2 py-1">
         <div className="flex items-center gap-2">
-          <h3 className="font-medium font-mono text-text text-xs">Problems</h3>
+          <h3 className="ui-font font-medium text-text text-xs">Problems</h3>
           <div className="flex items-center gap-2 text-xs">
             {errorCount > 0 && (
               <div className="flex items-center gap-0.5 text-error opacity-80">

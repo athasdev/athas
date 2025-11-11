@@ -22,6 +22,17 @@ export interface Shell {
   exec_win?: string; // search for paths in %PATH% matching *.exe
 }
 
+export interface TerminalProfile {
+  id: string;
+  name: string;
+  shell?: string;
+  startupDirectory?: string;
+  env?: Record<string, string>;
+  startupCommands?: string[];
+  icon?: string;
+  color?: string;
+}
+
 export interface TerminalState {
   terminals: Terminal[];
   activeTerminalId: string | null;

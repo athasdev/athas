@@ -1,7 +1,9 @@
 import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
+import { logger } from "@/features/editor/utils/logger";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
 import type { MultiFileDiff } from "@/features/version-control/diff-viewer/types/diff";
@@ -67,6 +69,7 @@ interface BufferActions {
   ) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
+  closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
   setActiveBuffer: (bufferId: string) => void;
   updateBufferContent: (
     bufferId: string,
@@ -144,7 +147,7 @@ export const useBufferStore = createSelectors(
     immer((set, get) => ({
       buffers: [],
       activeBufferId: null,
-      maxOpenTabs: 10,
+      maxOpenTabs: EDITOR_CONSTANTS.MAX_OPEN_TABS,
       pendingClose: null,
       closedBuffersHistory: [],
       actions: {
@@ -206,6 +209,38 @@ export const useBufferStore = createSelectors(
           // Track in recent files (only for real files, not virtual/diff buffers)
           if (!isVirtual && !isDiff && !isImage && !isSQLite) {
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
+
+            // Start LSP for this file if supported
+            import("@/extensions/registry/extension-registry")
+              .then(({ extensionRegistry }) => {
+                const isSupported = extensionRegistry.isLspSupported(path);
+                logger.info("BufferStore", `LSP supported for ${path}: ${isSupported}`);
+
+                if (isSupported) {
+                  logger.info("BufferStore", `Starting LSP for ${path}`);
+                  import("@/features/editor/lsp/lsp-client")
+                    .then(({ LspClient }) => {
+                      import("@/features/file-system/controllers/store").then(
+                        ({ useFileSystemStore }) => {
+                          const lspClient = LspClient.getInstance();
+                          const workspacePath =
+                            useFileSystemStore.getState().rootFolderPath || path;
+                          logger.info(
+                            "BufferStore",
+                            `Calling lspClient.start(${workspacePath}, ${path})`,
+                          );
+                          return lspClient.start(workspacePath, path);
+                        },
+                      );
+                    })
+                    .catch((error) => {
+                      logger.error("BufferStore", "Failed to start LSP:", error);
+                    });
+                }
+              })
+              .catch((error) => {
+                logger.error("BufferStore", "Failed to check LSP support:", error);
+              });
           }
 
           // Save session
@@ -255,8 +290,11 @@ export const useBufferStore = createSelectors(
               isPinned: closedBuffer.isPinned,
             };
 
-            // Keep only last 10 closed buffers
-            const updatedHistory = [closedBufferInfo, ...closedBuffersHistory].slice(0, 10);
+            // Keep only last N closed buffers
+            const updatedHistory = [closedBufferInfo, ...closedBuffersHistory].slice(
+              0,
+              EDITOR_CONSTANTS.MAX_CLOSED_BUFFERS_HISTORY,
+            );
 
             set((state) => {
               state.closedBuffersHistory = updatedHistory;
@@ -286,6 +324,27 @@ export const useBufferStore = createSelectors(
 
           // Save session
           saveSessionToStore(get().buffers, get().activeBufferId);
+        },
+
+        closeBuffersBatch: (bufferIds: string[], skipSessionSave = false) => {
+          if (bufferIds.length === 0) return;
+
+          set((state) => {
+            state.buffers = state.buffers.filter((b) => !bufferIds.includes(b.id));
+
+            if (bufferIds.includes(state.activeBufferId || "")) {
+              if (state.buffers.length > 0) {
+                state.activeBufferId = state.buffers[0].id;
+                state.buffers[0].isActive = true;
+              } else {
+                state.activeBufferId = null;
+              }
+            }
+          });
+
+          if (!skipSessionSave) {
+            saveSessionToStore(get().buffers, get().activeBufferId);
+          }
         },
 
         setActiveBuffer: (bufferId: string) => {
@@ -503,9 +562,13 @@ export const useBufferStore = createSelectors(
             const content = await readFileContent(buffer.path);
             // Update buffer content and clear dirty flag
             useBufferStore.getState().actions.updateBufferContent(bufferId, content, false);
-            console.log(`[FileWatcher] Reloaded buffer from disk: ${buffer.path}`);
+            logger.debug("Editor", `[FileWatcher] Reloaded buffer from disk: ${buffer.path}`);
           } catch (error) {
-            console.error(`[FileWatcher] Failed to reload buffer from disk: ${buffer.path}`, error);
+            logger.error(
+              "Editor",
+              `[FileWatcher] Failed to reload buffer from disk: ${buffer.path}`,
+              error,
+            );
           }
         },
 
@@ -597,7 +660,7 @@ export const useBufferStore = createSelectors(
               get().actions.handleTabPin(bufferId);
             }
           } catch (error) {
-            console.warn(`Failed to reopen closed tab: ${closedBuffer.path}`, error);
+            logger.warn("Editor", `Failed to reopen closed tab: ${closedBuffer.path}`, error);
           }
         },
       },
@@ -620,7 +683,12 @@ export const useBufferStore = createSelectors(
       const mod = await import("@/features/editor/extensions/builtin/syntax-highlighting");
       mod.setSyntaxHighlightingFilePath(buffer.path);
     } catch (e) {
-      console.warn("[BufferStore] Failed to trigger syntax highlighting for", buffer.path, e);
+      logger.warn(
+        "Editor",
+        "[BufferStore] Failed to trigger syntax highlighting for",
+        buffer.path,
+        e,
+      );
     }
   });
 }

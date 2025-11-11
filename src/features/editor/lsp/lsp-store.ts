@@ -1,13 +1,16 @@
 import type { CompletionItem } from "vscode-languageserver-protocol";
 import { create } from "zustand";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { logger } from "@/features/editor/utils/logger";
 import { detectCompletionContext, extractPrefix, filterCompletions } from "@/utils/fuzzy-matcher";
 import { createSelectors } from "@/utils/zustand-selectors";
-import { useEditorUIStore as useEditorCompletionStore } from "../stores/ui-store";
+import { useEditorUIStore } from "../stores/ui-store";
 
 // Performance optimizations
-const COMPLETION_DEBOUNCE_MS = 150;
-const COMPLETION_CACHE_TTL_MS = 5000;
-const MAX_CACHE_SIZE = 100;
+const COMPLETION_DEBOUNCE_MS = EDITOR_CONSTANTS.COMPLETION_DEBOUNCE_MS;
+const COMPLETION_CACHE_TTL_MS = EDITOR_CONSTANTS.COMPLETION_CACHE_TTL_MS;
+const MAX_CACHE_SIZE = EDITOR_CONSTANTS.MAX_COMPLETION_CACHE_SIZE;
+const COMPLETION_HIDE_DELAY_MS = 200; // Stability period before hiding to prevent flicker
 
 // Cache interfaces
 interface CacheEntry {
@@ -38,6 +41,7 @@ interface LspState {
   // Request tracking
   currentCompletionRequest: AbortController | null;
   debounceTimer: NodeJS.Timeout | null;
+  hideCompletionTimer: NodeJS.Timeout | null;
 
   // Cache
   completionCache: CompletionCache;
@@ -77,6 +81,10 @@ interface LspActions {
   cleanExpiredCache: () => void;
   limitCacheSize: () => void;
 
+  // Completion visibility helpers to prevent flickering
+  scheduleHideCompletion: () => void;
+  cancelHideCompletion: () => void;
+
   applyCompletion: (params: { completion: CompletionItem; value: string; cursorPos: number }) => {
     newValue: string;
     newCursorPos: number;
@@ -94,6 +102,7 @@ export const useLspStore = createSelectors(
     isLanguageSupported: undefined,
     currentCompletionRequest: null,
     debounceTimer: null,
+    hideCompletionTimer: null,
     completionCache: {},
     lspStatus: {
       status: "disconnected" as LspStatus,
@@ -143,6 +152,35 @@ export const useLspStore = createSelectors(
         }
       },
 
+      // Schedule hiding completion dropdown with delay to prevent flicker
+      scheduleHideCompletion: () => {
+        const { hideCompletionTimer } = get();
+        const completionActions = useEditorUIStore.getState().actions;
+
+        // Clear any existing timer
+        if (hideCompletionTimer) {
+          clearTimeout(hideCompletionTimer);
+        }
+
+        // Schedule hide after delay
+        const newTimer = setTimeout(() => {
+          completionActions.setIsLspCompletionVisible(false);
+          set({ hideCompletionTimer: null });
+        }, COMPLETION_HIDE_DELAY_MS);
+
+        set({ hideCompletionTimer: newTimer });
+      },
+
+      // Cancel scheduled hide (when showing completions)
+      cancelHideCompletion: () => {
+        const { hideCompletionTimer } = get();
+
+        if (hideCompletionTimer) {
+          clearTimeout(hideCompletionTimer);
+          set({ hideCompletionTimer: null });
+        }
+      },
+
       requestCompletion: async ({ filePath, cursorPos, value, editorRef }) => {
         const { debounceTimer, actions } = get();
 
@@ -156,7 +194,7 @@ export const useLspStore = createSelectors(
           try {
             await actions.performCompletionRequest({ filePath, cursorPos, value, editorRef });
           } catch (error) {
-            console.error("Debounced completion request failed:", error);
+            logger.error("Editor", "Debounced completion request failed:", error);
           }
         }, COMPLETION_DEBOUNCE_MS);
 
@@ -171,13 +209,9 @@ export const useLspStore = createSelectors(
           completionCache,
           actions,
         } = get();
-        const { actions: completionActions } = useEditorCompletionStore.getState();
+        const { actions: completionActions } = useEditorUIStore.getState();
 
-        // Cancel any existing request
-        if (currentCompletionRequest) {
-          currentCompletionRequest.abort();
-        }
-
+        // Early returns BEFORE aborting to avoid unnecessary cancellations
         if (
           !getCompletions ||
           !filePath ||
@@ -197,9 +231,9 @@ export const useLspStore = createSelectors(
         // Smart triggering: check context before requesting completions
         const currentChar = cursorPos > 0 ? value[cursorPos - 1] : "";
 
-        // Only skip if we just typed whitespace
+        // Only skip if we just typed whitespace - use delayed hide to prevent flicker
         if (/\s/.test(currentChar)) {
-          completionActions.setIsLspCompletionVisible(false);
+          actions.scheduleHideCompletion();
           return;
         }
 
@@ -228,17 +262,24 @@ export const useLspStore = createSelectors(
               });
 
               if (filtered.length > 0) {
+                actions.cancelHideCompletion(); // Cancel any pending hide
                 completionActions.setFilteredCompletions(filtered);
                 completionActions.setIsLspCompletionVisible(true);
                 completionActions.setSelectedLspIndex(0);
               } else {
-                completionActions.setIsLspCompletionVisible(false);
+                actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
               }
             } else {
-              completionActions.setIsLspCompletionVisible(false);
+              actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
             }
           }
           return;
+        }
+
+        // Cancel any existing request only when we're about to make a new one
+        if (currentCompletionRequest) {
+          currentCompletionRequest.abort();
+          set({ currentCompletionRequest: null });
         }
 
         // Create new abort controller for this request
@@ -287,23 +328,24 @@ export const useLspStore = createSelectors(
               });
 
               if (filtered.length > 0) {
+                actions.cancelHideCompletion(); // Cancel any pending hide
                 completionActions.setFilteredCompletions(filtered);
                 completionActions.setIsLspCompletionVisible(true);
                 completionActions.setSelectedLspIndex(0);
               } else {
-                completionActions.setIsLspCompletionVisible(false);
+                actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
               }
             } else {
-              completionActions.setIsLspCompletionVisible(false);
+              actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
             }
           } else {
-            // Hide completion UI if no completions
-            completionActions.setIsLspCompletionVisible(false);
+            // Hide completion UI if no completions - use delayed hide
+            actions.scheduleHideCompletion();
           }
         } catch (error) {
           // Ignore if request was aborted
           if (error instanceof Error && error.name !== "AbortError") {
-            console.error("LSP completion error:", error);
+            logger.error("Editor", "LSP completion error:", error);
           }
         } finally {
           // Clear the request reference
@@ -314,7 +356,7 @@ export const useLspStore = createSelectors(
       },
 
       applyCompletion: ({ completion, value, cursorPos }) => {
-        const { actions: completionActions } = useEditorCompletionStore.getState();
+        const { actions: completionActions } = useEditorUIStore.getState();
 
         completionActions.setIsApplyingCompletion(true);
 

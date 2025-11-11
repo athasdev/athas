@@ -38,8 +38,8 @@ export const TextDiffViewer = memo(function TextDiffViewer({
       {diff.is_renamed && diff.old_path && diff.new_path && (
         <div className="border-border border-b bg-blue-500/10 px-4 py-2">
           <p className="text-blue-400 text-xs">
-            Renamed from <span className="font-mono">{diff.old_path}</span> to{" "}
-            <span className="font-mono">{diff.new_path}</span>
+            Renamed from <span className="ui-font">{diff.old_path}</span> to{" "}
+            <span className="ui-font">{diff.new_path}</span>
           </p>
         </div>
       )}

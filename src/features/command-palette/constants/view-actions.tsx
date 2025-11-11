@@ -166,8 +166,11 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         : "Use native operating system menu bar",
       icon: <Menu size={14} />,
       category: "View",
-      action: () => {
-        updateSetting("nativeMenuBar", !settings.nativeMenuBar);
+      action: async () => {
+        const newValue = !settings.nativeMenuBar;
+        updateSetting("nativeMenuBar", newValue);
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("toggle_menu_bar", { toggle: newValue });
         onClose();
       },
     },

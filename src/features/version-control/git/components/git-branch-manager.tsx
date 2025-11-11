@@ -180,7 +180,7 @@ const GitBranchManager = ({
         />
         <span
           className={cn(
-            "flex items-center truncate font-mono",
+            "ui-font flex items-center truncate",
             compact ? "max-w-20 pt-0.5 text-xs" : "max-w-32",
           )}
         >
@@ -282,7 +282,7 @@ const GitBranchManager = ({
                 </div>
                 {currentBranch && (
                   <p className="text-[10px] text-text-lighter">
-                    From: <span className="font-mono">{currentBranch}</span>
+                    From: <span className="ui-font">{currentBranch}</span>
                   </p>
                 )}
               </div>
@@ -323,7 +323,7 @@ const GitBranchManager = ({
                             <Check size={10} className="text-green-400" />
                           )}
                           <GitBranch size={10} className="text-text-lighter" />
-                          <span className="truncate font-mono">{branch}</span>
+                          <span className="ui-font truncate">{branch}</span>
                           {branch === currentBranch && (
                             <span className="ml-auto text-[9px] text-green-400">current</span>
                           )}
@@ -353,7 +353,7 @@ const GitBranchManager = ({
             <div className={cn("rounded-b-lg border-border border-t bg-secondary-bg", "px-3 py-2")}>
               <div className="flex items-center justify-between text-[10px] text-text-lighter">
                 <span>
-                  Current: <span className="font-mono text-text">{currentBranch}</span>
+                  Current: <span className="ui-font text-text">{currentBranch}</span>
                 </span>
                 <span>
                   Press <kbd className="rounded bg-hover px-1 py-0.5 text-[9px]">Esc</kbd> to close

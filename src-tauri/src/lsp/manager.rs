@@ -14,10 +14,10 @@ use std::{
 };
 use tauri::{AppHandle, Manager as TauriManager};
 
-type WorkspaceClients = Arc<Mutex<HashMap<PathBuf, (LspClient, Child, String)>>>;
+type WorkspaceClients = Arc<Mutex<HashMap<(PathBuf, String), (LspClient, Child, String)>>>;
 
 pub struct LspManager {
-   // Map workspace paths to their LSP clients
+   // Map (workspace path, language) to their LSP clients
    workspace_clients: WorkspaceClients,
    registry: LspRegistry,
    app_handle: AppHandle,
@@ -81,49 +81,80 @@ impl LspManager {
       }
    }
 
-   pub async fn start_lsp_for_workspace(&self, workspace_path: PathBuf) -> Result<()> {
+   pub async fn start_lsp_for_workspace(
+      &self,
+      workspace_path: PathBuf,
+      server_path_override: Option<String>,
+      server_args_override: Option<Vec<String>>,
+   ) -> Result<()> {
       log::info!("Starting LSP for workspace: {:?}", workspace_path);
 
-      // Check if LSP already running for this workspace
+      // Use provided server path or find appropriate LSP server for workspace
+      let (server_path, server_args, server_name) = if let Some(path) = server_path_override {
+         log::info!("Using provided server path override: {}", path);
+         let args = server_args_override.unwrap_or_default();
+         let name = path.split('/').last().unwrap_or("custom").to_string();
+
+         // Use the path directly - it should already be absolute from the frontend
+         let resolved_path = PathBuf::from(&path);
+
+         log::info!("Resolved LSP server path: {:?}", resolved_path);
+         log::info!("Path exists: {}", resolved_path.exists());
+
+         (resolved_path, args, name)
+      } else {
+         // Fallback to registry-based detection
+         let server_config = self
+            .registry
+            .find_server_for_workspace(&workspace_path)
+            .context("No LSP server found for workspace")?;
+
+         log::info!("Using LSP server '{}' for workspace", server_config.name);
+
+         let server_path = self.get_server_path(&server_config.name)?;
+         (
+            server_path,
+            server_config.args.clone(),
+            server_config.name.clone(),
+         )
+      };
+
+      let root_uri = Url::from_file_path(&workspace_path)
+         .map_err(|_| anyhow::anyhow!("Invalid workspace path"))?;
+
+      let (client, child) = LspClient::start(
+         server_path,
+         server_args,
+         root_uri.clone(),
+         Some(self.app_handle.clone()),
+      )?;
+
+      // Initialize the client
+      client.initialize(root_uri).await?;
+
+      // Check if LSP already running for this workspace+language
+      let workspace_key = (workspace_path.clone(), server_name.clone());
       if self
          .workspace_clients
          .lock()
          .unwrap()
-         .contains_key(&workspace_path)
+         .contains_key(&workspace_key)
       {
-         log::info!("LSP already running for workspace: {:?}", workspace_path);
+         log::info!(
+            "LSP '{}' already running for workspace: {:?}",
+            server_name,
+            workspace_path
+         );
          return Ok(());
       }
-
-      // Find appropriate LSP server for workspace
-      let server_config = self
-         .registry
-         .find_server_for_workspace(&workspace_path)
-         .context("No LSP server found for workspace")?;
-
-      log::info!("Using LSP server '{}' for workspace", server_config.name);
-
-      // Get server executable path
-      let server_path = self.get_server_path(&server_config.name)?;
-      let root_uri = Url::from_file_path(&workspace_path)
-         .map_err(|_| anyhow::anyhow!("Invalid workspace path"))?;
-
-      let (client, child) =
-         LspClient::start(server_path, server_config.args.clone(), root_uri.clone())?;
-
-      // Initialize the client
-      client.initialize(root_uri).await?;
 
       self
          .workspace_clients
          .lock()
          .unwrap()
-         .insert(workspace_path, (client, child, server_config.name.clone()));
+         .insert(workspace_key, (client, child, server_name.clone()));
 
-      log::info!(
-         "LSP '{}' started and initialized successfully",
-         server_config.name
-      );
+      log::info!("LSP '{}' started and initialized successfully", server_name);
       Ok(())
    }
 
@@ -131,9 +162,12 @@ impl LspManager {
       let path = PathBuf::from(file_path);
       let clients = self.workspace_clients.lock().unwrap();
 
+      // Find the right language server for this file
+      let server_config = self.registry.find_server_for_file(&path)?;
+
       // Find workspace that contains this file
-      for (workspace_path, (client, _, _)) in clients.iter() {
-         if path.starts_with(workspace_path) {
+      for ((workspace_path, server_name), (client, _, _)) in clients.iter() {
+         if path.starts_with(workspace_path) && server_name == &server_config.name {
             return Some(client.clone());
          }
       }
@@ -292,22 +326,37 @@ impl LspManager {
 
    pub fn shutdown(&self) {
       let mut clients = self.workspace_clients.lock().unwrap();
-      for (workspace, (_, mut child, name)) in clients.drain() {
-         log::info!("Shutting down LSP '{}' for workspace {:?}", name, workspace);
+      for ((workspace, server_name), (_, mut child, _)) in clients.drain() {
+         log::info!(
+            "Shutting down LSP '{}' for workspace {:?}",
+            server_name,
+            workspace
+         );
          let _ = child.kill();
       }
    }
 
    pub fn shutdown_workspace(&self, workspace_path: &PathBuf) -> Result<()> {
       let mut clients = self.workspace_clients.lock().unwrap();
-      if let Some((_, mut child, name)) = clients.remove(workspace_path) {
-         log::info!(
-            "Shutting down LSP '{}' for workspace {:?}",
-            name,
-            workspace_path
-         );
-         child.kill()?;
+
+      // Find all LSP servers for this workspace (all languages)
+      let keys_to_remove: Vec<_> = clients
+         .keys()
+         .filter(|(ws, _)| ws == workspace_path)
+         .cloned()
+         .collect();
+
+      for key in keys_to_remove {
+         if let Some((_, mut child, name)) = clients.remove(&key) {
+            log::info!(
+               "Shutting down LSP '{}' for workspace {:?}",
+               name,
+               workspace_path
+            );
+            child.kill()?;
+         }
       }
+
       Ok(())
    }
 

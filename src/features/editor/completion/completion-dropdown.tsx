@@ -1,11 +1,11 @@
 import { memo, useEffect, useState } from "react";
 import type { CompletionItem } from "vscode-languageserver-protocol";
-import { useEditorCompletionStore } from "@/features/editor/completion/completion-store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useEditorLayout } from "@/features/editor/hooks/use-layout";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { getAccurateCursorX } from "@/features/editor/utils/position";
 import { cn } from "@/utils/cn";
@@ -17,11 +17,11 @@ interface CompletionDropdownProps {
 }
 
 export const CompletionDropdown = memo(({ onApplyCompletion }: CompletionDropdownProps) => {
-  const isLspCompletionVisible = useEditorCompletionStore.use.isLspCompletionVisible();
-  const filteredCompletions = useEditorCompletionStore.use.filteredCompletions();
-  const selectedLspIndex = useEditorCompletionStore.use.selectedLspIndex();
-  const currentPrefix = useEditorCompletionStore.use.currentPrefix();
-  const { setIsLspCompletionVisible } = useEditorCompletionStore.use.actions();
+  const isLspCompletionVisible = useEditorUIStore.use.isLspCompletionVisible();
+  const filteredCompletions = useEditorUIStore.use.filteredCompletions();
+  const selectedLspIndex = useEditorUIStore.use.selectedLspIndex();
+  const currentPrefix = useEditorUIStore.use.currentPrefix();
+  const { setIsLspCompletionVisible } = useEditorUIStore.use.actions();
 
   const cursorPosition = useEditorStateStore.use.cursorPosition();
   const { lineHeight, gutterWidth } = useEditorLayout();
@@ -131,7 +131,7 @@ export const CompletionDropdown = memo(({ onApplyCompletion }: CompletionDropdow
             <div
               key={index}
               className={cn(
-                "cursor-pointer px-3 py-1.5 font-mono text-xs",
+                "ui-font cursor-pointer px-3 py-1.5 text-xs",
                 isSelected ? "bg-blue-500 text-white" : "text-text hover:bg-hover",
               )}
               onClick={() => handleSelect(item)}

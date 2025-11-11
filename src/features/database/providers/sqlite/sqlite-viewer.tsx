@@ -649,9 +649,9 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <Database size={14} className="text-text-lighter" />
-              <span className="font-mono text-sm">{fileName}</span>
+              <span className="ui-font text-sm">{fileName}</span>
               {dbInfo && (
-                <span className="font-mono text-text-lighter text-xs">
+                <span className="ui-font text-text-lighter text-xs">
                   {dbInfo.tables}t {dbInfo.indexes}i
                 </span>
               )}
@@ -661,7 +661,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setViewMode("data")}
-                className={`flex items-center gap-1 px-2 py-1 font-mono text-xs transition-colors ${
+                className={`ui-font flex items-center gap-1 px-2 py-1 text-xs transition-colors ${
                   viewMode === "data" ? "text-text" : "text-text-lighter hover:text-text"
                 }`}
                 title="Data view"
@@ -671,7 +671,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
               </button>
               <button
                 onClick={() => setViewMode("schema")}
-                className={`flex items-center gap-1 px-2 py-1 font-mono text-xs transition-colors ${
+                className={`ui-font flex items-center gap-1 px-2 py-1 text-xs transition-colors ${
                   viewMode === "schema" ? "text-text" : "text-text-lighter hover:text-text"
                 }`}
                 title="Schema view"
@@ -681,7 +681,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
               </button>
               <button
                 onClick={() => setViewMode("info")}
-                className={`flex items-center gap-1 px-2 py-1 font-mono text-xs transition-colors ${
+                className={`ui-font flex items-center gap-1 px-2 py-1 text-xs transition-colors ${
                   viewMode === "info" ? "text-text" : "text-text-lighter hover:text-text"
                 }`}
                 title="Database info"
@@ -696,7 +696,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
             {viewMode === "data" && !isCustomQuery && (
               <button
                 onClick={() => setShowColumnTypes(!showColumnTypes)}
-                className="flex items-center gap-1 px-2 py-1 font-mono text-text-lighter text-xs transition-colors hover:text-text"
+                className="ui-font flex items-center gap-1 px-2 py-1 text-text-lighter text-xs transition-colors hover:text-text"
                 title="Toggle column types"
               >
                 <Type size={12} />
@@ -706,7 +706,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
             {viewMode === "data" && (
               <button
                 onClick={() => setIsCustomQuery(true)}
-                className="flex items-center gap-1 px-2 py-1 font-mono text-text-lighter text-xs transition-colors hover:text-text"
+                className="ui-font flex items-center gap-1 px-2 py-1 text-text-lighter text-xs transition-colors hover:text-text"
                 disabled={isCustomQuery}
                 title="Custom SQL query"
               >
@@ -718,7 +718,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
               <>
                 <button
                   onClick={exportAsCSV}
-                  className="flex items-center gap-1 px-2 py-1 font-mono text-text-lighter text-xs transition-colors hover:text-text"
+                  className="ui-font flex items-center gap-1 px-2 py-1 text-text-lighter text-xs transition-colors hover:text-text"
                   title="Export as CSV"
                 >
                   <Download size={12} />
@@ -726,7 +726,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                 </button>
                 <button
                   onClick={copyAsJSON}
-                  className="flex items-center gap-1 px-2 py-1 font-mono text-text-lighter text-xs transition-colors hover:text-text"
+                  className="ui-font flex items-center gap-1 px-2 py-1 text-text-lighter text-xs transition-colors hover:text-text"
                   title="Copy as JSON"
                 >
                   <Copy size={12} />
@@ -743,7 +743,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
         <div className="flex w-64 flex-col border-border border-r bg-secondary-bg">
           <div className="group p-3 pb-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 font-mono text-text-lighter text-xs">
+              <div className="ui-font flex items-center gap-1.5 text-text-lighter text-xs">
                 <Database size={12} />
                 Tables ({tables.length})
               </div>
@@ -763,7 +763,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                 key={table.name}
                 onClick={() => handleTableChange(table.name)}
                 onContextMenu={(e) => handleTableContextMenu(e, table.name)}
-                className={`flex w-full items-center gap-1.5 px-3 py-1.5 text-left font-mono text-xs hover:bg-hover ${
+                className={`ui-font flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs hover:bg-hover ${
                   selectedTable === table.name ? "bg-selected" : ""
                 }`}
               >
@@ -777,7 +777,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
           {sqlHistory.length > 0 && (
             <div className="border-border border-t">
               <div className="border-border border-b p-2">
-                <div className="px-2 py-1 font-medium font-mono text-text-lighter text-xs uppercase">
+                <div className="ui-font px-2 py-1 font-medium text-text-lighter text-xs uppercase">
                   Recent Queries
                 </div>
               </div>
@@ -789,7 +789,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                       setCustomQuery(query);
                       setIsCustomQuery(true);
                     }}
-                    className="w-full truncate px-3 py-1.5 text-left font-mono text-xs hover:bg-hover"
+                    className="ui-font w-full truncate px-3 py-1.5 text-left text-xs hover:bg-hover"
                     title={query}
                   >
                     <Code size={10} className="mr-1.5 inline" />
@@ -811,7 +811,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                   <textarea
                     value={customQuery}
                     onChange={(e) => setCustomQuery(e.target.value)}
-                    className="h-16 flex-1 resize-none rounded border border-border bg-primary-bg px-2 py-1.5 font-mono text-xs focus:border-blue-500 focus:outline-none"
+                    className="ui-font h-16 flex-1 resize-none rounded border border-border bg-primary-bg px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
                     placeholder="SELECT * FROM table_name WHERE condition LIMIT 100"
                     disabled={isLoading}
                   />
@@ -853,7 +853,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                       setCurrentPage(1);
                     }}
                     placeholder="Search in table..."
-                    className="w-full rounded border border-border bg-primary-bg py-1.5 pr-2 pl-8 font-mono text-xs focus:border-blue-500 focus:outline-none"
+                    className="ui-font w-full rounded border border-border bg-primary-bg py-1.5 pr-2 pl-8 text-xs focus:border-blue-500 focus:outline-none"
                   />
                   {searchTerm && (
                     <button
@@ -881,12 +881,12 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
           {viewMode === "data" && columnFilters.length > 0 && (
             <div className="border-border border-b bg-secondary-bg px-3 py-2">
               <div className="mb-2 flex items-center justify-between">
-                <span className="font-mono text-text-lighter text-xs">
+                <span className="ui-font text-text-lighter text-xs">
                   {columnFilters.length} filters
                 </span>
                 <button
                   onClick={() => setColumnFilters([])}
-                  className="font-mono text-text-lighter text-xs hover:text-text"
+                  className="ui-font text-text-lighter text-xs hover:text-text"
                 >
                   clear
                 </button>
@@ -925,7 +925,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                       value={filter.value}
                       onChange={(e) => updateColumnFilter(index, { value: e.target.value })}
                       placeholder="value"
-                      className="flex-1 border border-border bg-primary-bg px-1 py-0.5 font-mono text-xs"
+                      className="ui-font flex-1 border border-border bg-primary-bg px-1 py-0.5 text-xs"
                     />
 
                     {filter.operator === "between" && (
@@ -934,7 +934,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                         value={filter.value2 || ""}
                         onChange={(e) => updateColumnFilter(index, { value2: e.target.value })}
                         placeholder="value2"
-                        className="flex-1 border border-border bg-primary-bg px-1 py-0.5 font-mono text-xs"
+                        className="ui-font flex-1 border border-border bg-primary-bg px-1 py-0.5 text-xs"
                       />
                     )}
 
@@ -961,7 +961,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
           {/* Loading indicator */}
           {isLoading && (
             <div className="flex flex-1 items-center justify-center p-8">
-              <div className="flex items-center gap-2 font-mono text-sm text-text-lighter">
+              <div className="ui-font flex items-center gap-2 text-sm text-text-lighter">
                 <RefreshCw size={16} className="animate-spin" />
                 Loading...
               </div>
@@ -973,7 +973,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
             <div className="flex min-h-0 flex-1 flex-col">
               {/* Data View Header */}
               <div className="group flex items-center justify-between border-border border-b bg-secondary-bg px-3 py-2">
-                <div className="font-mono text-text-lighter text-xs">
+                <div className="ui-font text-text-lighter text-xs">
                   {queryResult.rows.length} rows
                 </div>
                 {selectedTable && (
@@ -1009,10 +1009,8 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
           {!isLoading && viewMode === "schema" && selectedTable && tableMeta.length > 0 && (
             <div className="flex-1 overflow-auto">
               <div className="border-border border-b bg-secondary-bg p-3">
-                <div className="font-mono text-sm">{selectedTable}</div>
-                <div className="font-mono text-text-lighter text-xs">
-                  {tableMeta.length} columns
-                </div>
+                <div className="ui-font text-sm">{selectedTable}</div>
+                <div className="ui-font text-text-lighter text-xs">{tableMeta.length} columns</div>
               </div>
 
               <div className="divide-y divide-border">
@@ -1023,17 +1021,17 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-2">
                       {getColumnIcon(column.type, column.primary_key)}
-                      <div className="truncate font-mono text-sm">{column.name}</div>
-                      <div className="font-mono text-text-lighter text-xs">{column.type}</div>
+                      <div className="ui-font truncate text-sm">{column.name}</div>
+                      <div className="ui-font text-text-lighter text-xs">{column.type}</div>
                       {column.primary_key && (
-                        <div className="font-mono text-text-lighter text-xs">PK</div>
+                        <div className="ui-font text-text-lighter text-xs">PK</div>
                       )}
                       {column.notnull && (
-                        <div className="font-mono text-text-lighter text-xs">NN</div>
+                        <div className="ui-font text-text-lighter text-xs">NN</div>
                       )}
                       {column.default_value && (
                         <div
-                          className="truncate font-mono text-text-lighter text-xs"
+                          className="ui-font truncate text-text-lighter text-xs"
                           title={`default: ${column.default_value}`}
                         >
                           def: {column.default_value}
@@ -1042,7 +1040,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                     </div>
                     <button
                       onClick={() => addColumnFilter(column.name)}
-                      className="px-2 py-1 font-mono text-text-lighter text-xs opacity-60 transition-colors hover:text-text hover:opacity-100"
+                      className="ui-font px-2 py-1 text-text-lighter text-xs opacity-60 transition-colors hover:text-text hover:opacity-100"
                       title="Filter by this column"
                     >
                       <Filter size={12} />
@@ -1059,8 +1057,8 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
               <div className="divide-y divide-border">
                 {/* Database stats */}
                 <div className="p-3">
-                  <div className="mb-1 font-mono text-sm">{fileName}</div>
-                  <div className="flex gap-4 font-mono text-text-lighter text-xs">
+                  <div className="ui-font mb-1 text-sm">{fileName}</div>
+                  <div className="ui-font flex gap-4 text-text-lighter text-xs">
                     <span>{dbInfo?.tables || 0} tables</span>
                     <span>{dbInfo?.indexes || 0} indexes</span>
                     <span>v{dbInfo?.version || "0"}</span>
@@ -1071,7 +1069,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
 
                 {/* Tables */}
                 <div className="p-3">
-                  <div className="mb-2 font-mono text-text-lighter text-xs">tables</div>
+                  <div className="ui-font mb-2 text-text-lighter text-xs">tables</div>
                   <div className="space-y-1">
                     {tables.map((table) => (
                       <button
@@ -1080,7 +1078,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                           handleTableChange(table.name);
                           setViewMode("data");
                         }}
-                        className={`block w-full px-2 py-1 text-left font-mono text-xs transition-colors hover:bg-hover ${
+                        className={`ui-font block w-full px-2 py-1 text-left text-xs transition-colors hover:bg-hover ${
                           selectedTable === table.name ? "bg-selected" : ""
                         }`}
                       >
@@ -1093,7 +1091,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                 {/* SQL History */}
                 {sqlHistory.length > 0 && (
                   <div className="p-3">
-                    <div className="mb-2 font-mono text-text-lighter text-xs">recent queries</div>
+                    <div className="ui-font mb-2 text-text-lighter text-xs">recent queries</div>
                     <div className="max-h-32 space-y-1 overflow-y-auto">
                       {sqlHistory.map((query, index) => (
                         <button
@@ -1103,7 +1101,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                             setIsCustomQuery(true);
                             setViewMode("data");
                           }}
-                          className="block w-full truncate px-2 py-1 text-left font-mono text-xs transition-colors hover:bg-hover"
+                          className="ui-font block w-full truncate px-2 py-1 text-left text-xs transition-colors hover:bg-hover"
                           title={query}
                         >
                           {query}
@@ -1136,26 +1134,26 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                   size="xs"
                   className="min-w-16"
                 />
-                <span className="font-mono text-text-lighter text-xs">per page</span>
+                <span className="ui-font text-text-lighter text-xs">per page</span>
               </div>
 
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="px-2 py-1 font-mono text-text-lighter text-xs transition-colors hover:text-text disabled:opacity-50"
+                  className="ui-font px-2 py-1 text-text-lighter text-xs transition-colors hover:text-text disabled:opacity-50"
                 >
                   ← Prev
                 </button>
 
-                <span className="px-2 font-mono text-xs">
+                <span className="ui-font px-2 text-xs">
                   {currentPage} / {totalPages}
                 </span>
 
                 <button
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-2 py-1 font-mono text-text-lighter text-xs transition-colors hover:text-text disabled:opacity-50"
+                  className="ui-font px-2 py-1 text-text-lighter text-xs transition-colors hover:text-text disabled:opacity-50"
                 >
                   Next →
                 </button>

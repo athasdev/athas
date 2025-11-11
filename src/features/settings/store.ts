@@ -63,8 +63,6 @@ interface Settings {
   //// File tree
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
-  // CLI
-  hasPromptedCliInstall: boolean;
 }
 
 const defaultSettings: Settings = {
@@ -80,7 +78,7 @@ const defaultSettings: Settings = {
   wordWrap: true,
   lineNumbers: true,
   // UI
-  uiFontFamily: "Space Grotesk",
+  uiFontFamily: "JetBrains Mono",
   // Theme
   theme: "athas-dark", // Changed from "auto" since we don't support continuous monitoring
   iconTheme: "colorful-material",
@@ -122,8 +120,6 @@ const defaultSettings: Settings = {
   //// File tree
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
-  // CLI
-  hasPromptedCliInstall: false,
 };
 
 // Theme class constants

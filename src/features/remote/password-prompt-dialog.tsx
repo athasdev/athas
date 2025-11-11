@@ -93,7 +93,7 @@ const PasswordPromptDialog = ({
         <div className="flex items-center justify-between border-border border-b p-4">
           <div className="flex items-center gap-2">
             <Lock size={16} className="text-text" />
-            <h3 className="font-mono text-sm text-text">Enter Password</h3>
+            <h3 className="ui-font text-sm text-text">Enter Password</h3>
           </div>
           <button onClick={onClose} className="text-text-lighter transition-colors hover:text-text">
             <X size={16} />

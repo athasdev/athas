@@ -18,6 +18,7 @@ interface TabBarItemProps {
   onDragEnd: (e: React.DragEvent) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   handleTabClose: (id: string) => void;
+  handleTabPin: (id: string) => void;
 }
 
 const TabBarItem = memo(function TabBarItem({
@@ -33,6 +34,7 @@ const TabBarItem = memo(function TabBarItem({
   onDragEnd,
   onKeyDown,
   handleTabClose,
+  handleTabPin,
 }: TabBarItemProps) {
   const handleAuxClick = useCallback(
     (e: React.MouseEvent) => {
@@ -58,12 +60,12 @@ const TabBarItem = memo(function TabBarItem({
         aria-label={`${buffer.name}${buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         className={cn(
-          "tab-bar-item group relative flex flex-shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap px-2 py-1",
+          "tab-bar-item group relative flex flex-shrink-0 cursor-pointer select-none items-center gap-1 whitespace-nowrap border-border border-r px-1.5 py-0.5",
           isActive ? "bg-primary-bg" : "bg-secondary-bg",
-          buffer.isPinned ? "border-l-2 border-l-blue-500" : "",
+          buffer.isPinned ? "border-l-2 border-l-accent" : "",
           isDraggedTab ? "opacity-30" : "opacity-100",
         )}
-        style={{ minWidth: 120, maxWidth: 400 }}
+        style={{ minWidth: 100, maxWidth: 300 }}
         onMouseDown={onMouseDown}
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
@@ -75,7 +77,7 @@ const TabBarItem = memo(function TabBarItem({
         {isActive && <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-accent" />}
         <div className="grid size-3 max-h-3 max-w-3 shrink-0 place-content-center py-3">
           {buffer.path === "extensions://marketplace" ? (
-            <Package size={12} className="text-blue-500" />
+            <Package size={12} className="text-accent" />
           ) : buffer.isSQLite ? (
             <Database size={12} className="text-text-lighter" />
           ) : (
@@ -87,10 +89,9 @@ const TabBarItem = memo(function TabBarItem({
             />
           )}
         </div>
-        {buffer.isPinned && <Pin size={8} className="flex-shrink-0 text-blue-500" />}
         <span
           className={cn(
-            "flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs",
+            "ui-font flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs",
             isActive ? "text-text" : "text-text-light",
           )}
           title={buffer.path}
@@ -105,29 +106,33 @@ const TabBarItem = memo(function TabBarItem({
             aria-label="Unsaved changes"
           />
         )}
-        {!buffer.isPinned && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
+        {/* Pin button (replaces close button when pinned) */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (buffer.isPinned) {
+              handleTabPin(buffer.id);
+            } else {
               handleTabClose(buffer.id);
-            }}
-            className={cn(
-              "flex-shrink-0 cursor-pointer select-none rounded p-0.5",
-              "text-text-lighter transition-all duration-150",
-              "hover:bg-hover hover:text-text hover:opacity-100 group-hover:opacity-100",
-              {
-                "opacity-100": isActive,
-                "opacity-0": !isActive,
-              },
-            )}
-            title={`Close ${buffer.name}`}
-            tabIndex={-1}
-            draggable={false}
-          >
-            <X className="pointer-events-none select-none" size={12} />
-          </button>
-        )}
+            }
+          }}
+          className={cn(
+            "-translate-y-1/2 absolute top-1/2 right-1 flex size-4 cursor-pointer select-none items-center justify-center rounded transition-opacity",
+            "bg-primary-bg text-text-lighter",
+            "hover:bg-hover hover:text-text",
+            buffer.isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+          )}
+          title={buffer.isPinned ? "Unpin tab" : `Close ${buffer.name}`}
+          tabIndex={-1}
+          draggable={false}
+        >
+          {buffer.isPinned ? (
+            <Pin className="pointer-events-none select-none text-accent" size={10} />
+          ) : (
+            <X className="pointer-events-none select-none" size={10} />
+          )}
+        </button>
       </div>
     </>
   );

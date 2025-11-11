@@ -60,8 +60,6 @@ interface EditorUIActions {
   setSearchMatches: (matches: SearchMatch[]) => void;
   setCurrentMatchIndex: (index: number) => void;
   clearSearch: () => void;
-  nextSearchMatch: () => void;
-  prevSearchMatch: () => void;
   searchNext: () => void;
   searchPrevious: () => void;
 }
@@ -109,21 +107,6 @@ export const useEditorUIStore = createSelectors(
           searchMatches: [],
           currentMatchIndex: -1,
         }),
-      nextSearchMatch: () => {
-        const { searchMatches, currentMatchIndex } = get();
-        if (searchMatches.length > 0) {
-          const nextIndex = (currentMatchIndex + 1) % searchMatches.length;
-          set({ currentMatchIndex: nextIndex });
-        }
-      },
-      prevSearchMatch: () => {
-        const { searchMatches, currentMatchIndex } = get();
-        if (searchMatches.length > 0) {
-          const prevIndex =
-            currentMatchIndex <= 0 ? searchMatches.length - 1 : currentMatchIndex - 1;
-          set({ currentMatchIndex: prevIndex });
-        }
-      },
       searchNext: () => {
         const { searchMatches, currentMatchIndex } = get();
         if (searchMatches.length > 0) {
@@ -148,7 +131,3 @@ useSettingsStore.subscribe((state) => {
   const { aiCompletion } = state.settings;
   useEditorUIStore.getState().actions.setAiCompletion(aiCompletion);
 });
-
-// Legacy exports for backward compatibility (to be removed after migration)
-export const useEditorCompletionStore = useEditorUIStore;
-export const useEditorSearchStore = useEditorUIStore;

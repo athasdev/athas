@@ -1,17 +1,17 @@
 import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef } from "react";
-import { useEditorSearchStore } from "@/features/editor/search/search-store";
+import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 
 const FindBar = () => {
   // Get data from stores
   const { isFindVisible, setIsFindVisible } = useUIState();
-  const searchQuery = useEditorSearchStore.use.searchQuery();
-  const searchMatches = useEditorSearchStore.use.searchMatches();
-  const currentMatchIndex = useEditorSearchStore.use.currentMatchIndex();
-  const { setSearchQuery, searchNext, searchPrevious } = useEditorSearchStore.use.actions();
+  const searchQuery = useEditorUIStore.use.searchQuery();
+  const searchMatches = useEditorUIStore.use.searchMatches();
+  const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
+  const { setSearchQuery, searchNext, searchPrevious } = useEditorUIStore.use.actions();
 
   const isVisible = isFindVisible;
   const onClose = () => setIsFindVisible(false);
@@ -89,12 +89,12 @@ const FindBar = () => {
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="Find in file..."
-          className="flex-1 border-none bg-transparent font-mono text-text text-xs focus:outline-none focus:ring-0"
+          className="ui-font flex-1 border-none bg-transparent text-text text-xs focus:outline-none focus:ring-0"
           style={{ outline: "none", boxShadow: "none" }}
         />
 
         {searchQuery && (
-          <div className="flex items-center gap-1 font-mono text-text-lighter text-xs">
+          <div className="ui-font flex items-center gap-1 text-text-lighter text-xs">
             <span>{totalMatches > 0 ? `${currentMatch}/${totalMatches}` : "0/0"}</span>
           </div>
         )}

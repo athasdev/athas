@@ -1,4 +1,5 @@
 import type { Decoration } from "../types/editor";
+import { logger } from "../utils/logger";
 import type {
   Command,
   EditorAPI,
@@ -69,7 +70,7 @@ class ExtensionManager {
       },
       registerLanguage: (language) => {
         // Language registration would be implemented here
-        console.log("Registering language:", language);
+        logger.debug("Editor", "Registering language:", language);
       },
     };
 
@@ -211,7 +212,7 @@ class ExtensionManager {
       },
       registerLanguage: (language) => {
         // Language registration would be implemented here
-        console.log("Registering language:", language);
+        logger.debug("Editor", "Registering language:", language);
       },
     };
 
@@ -222,7 +223,7 @@ class ExtensionManager {
     try {
       // Activate extension
       await extension.activate(context);
-      console.log(`Extension ${extension.displayName} loaded successfully`);
+      logger.debug("Editor", `Extension ${extension.displayName} loaded successfully`);
     } catch (error) {
       // Cleanup on failure
       this.newExtensions.delete(extension.id);
@@ -241,7 +242,7 @@ class ExtensionManager {
       // Deactivate extension
       await extension.deactivate();
     } catch (error) {
-      console.error(`Error deactivating extension ${extensionId}:`, error);
+      logger.error("Editor", `Error deactivating extension ${extensionId}:`, error);
     }
 
     // Cleanup commands
@@ -328,7 +329,7 @@ class ExtensionManager {
     try {
       // Activate extension
       await extension.activate(context);
-      console.log(`Language extension ${extension.displayName} loaded successfully`);
+      logger.debug("Editor", `Language extension ${extension.displayName} loaded successfully`);
     } catch (error) {
       // Cleanup on failure
       this.languageExtensions.delete(extension.id);
@@ -346,7 +347,7 @@ class ExtensionManager {
     try {
       await extension.deactivate();
     } catch (error) {
-      console.error(`Error deactivating language extension ${extensionId}:`, error);
+      logger.error("Editor", `Error deactivating language extension ${extensionId}:`, error);
     }
 
     // Remove language providers
@@ -402,7 +403,7 @@ class ExtensionManager {
 
   private registerKeybinding(key: string, commandId: string): void {
     if (this.keybindings.has(key)) {
-      console.warn(`Keybinding ${key} is already registered, overwriting`);
+      logger.warn("Editor", `Keybinding ${key} is already registered, overwriting`);
     }
     this.keybindings.set(key, commandId);
   }

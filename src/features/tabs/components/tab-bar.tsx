@@ -33,6 +33,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const pendingClose = useBufferStore.use.pendingClose();
+  const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
   const {
     handleTabClick,
     handleTabClose,
@@ -353,7 +354,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
       e.dataTransfer.effectAllowed = "move";
       const dragImage = document.createElement("div");
       dragImage.className =
-        "bg-primary-bg border border-border rounded px-2 py-1 text-xs font-mono shadow-lg";
+        "bg-primary-bg border border-border rounded px-2 py-1 text-xs ui-font shadow-lg";
       dragImage.textContent = buffer.name;
       dragImage.style.position = "absolute";
       dragImage.style.top = "-1000px";
@@ -565,7 +566,8 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
 
-  if (buffers.length === 0) {
+  // Only hide tab bar if there's no project open at all
+  if (buffers.length === 0 && !rootFolderPath && !isSwitchingProject) {
     return null;
   }
 
@@ -573,7 +575,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   return (
     <>
-      <div className="relative">
+      <div className="relative flex-shrink-0">
         <div
           ref={tabBarRef}
           className="tab-bar-scrollable flex overflow-x-auto bg-secondary-bg"
@@ -608,6 +610,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
                   // Clear cached position for this buffer
                   clearPositionCache(id);
                 }}
+                handleTabPin={handleTabPin}
               />
             );
           })}

@@ -120,25 +120,25 @@ fn should_ignore_file(path: &Path) -> bool {
    }
 
    // Check filename
-   if let Some(file_name) = path.file_name() {
-      if let Some(name_str) = file_name.to_str() {
-         // Ignore hidden files (starting with .)
-         if name_str.starts_with('.') {
-            return true;
-         }
-         if ignored_filenames.contains(&name_str) {
-            return true;
-         }
+   if let Some(file_name) = path.file_name()
+      && let Some(name_str) = file_name.to_str()
+   {
+      // Ignore hidden files (starting with .)
+      if name_str.starts_with('.') {
+         return true;
+      }
+      if ignored_filenames.contains(&name_str) {
+         return true;
       }
    }
 
    // Check file extension
-   if let Some(ext) = path.extension() {
-      if let Some(ext_str) = ext.to_str() {
-         let ext_with_dot = format!(".{}", ext_str);
-         if ignored_extensions.contains(&ext_with_dot.as_str()) {
-            return true;
-         }
+   if let Some(ext) = path.extension()
+      && let Some(ext_str) = ext.to_str()
+   {
+      let ext_with_dot = format!(".{}", ext_str);
+      if ignored_extensions.contains(&ext_with_dot.as_str()) {
+         return true;
       }
    }
 
@@ -159,7 +159,6 @@ pub fn search_files_content(request: SearchFilesRequest) -> Result<Vec<FileSearc
    let case_sensitive = request.case_sensitive.unwrap_or(false);
    let max_results = request.max_results.unwrap_or(100);
    let mut results: Vec<FileSearchResult> = Vec::new();
-   let mut total_files_searched = 0;
 
    let query_lower = if case_sensitive {
       request.query.clone()
@@ -190,13 +189,11 @@ pub fn search_files_content(request: SearchFilesRequest) -> Result<Vec<FileSearc
       }
 
       // Skip files larger than 1MB
-      if let Ok(metadata) = fs::metadata(path) {
-         if metadata.len() > 1_000_000 {
-            continue;
-         }
+      if let Ok(metadata) = fs::metadata(path)
+         && metadata.len() > 1_000_000
+      {
+         continue;
       }
-
-      total_files_searched += 1;
 
       // Read file content
       let content = match fs::read_to_string(path) {

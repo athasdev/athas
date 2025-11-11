@@ -11,7 +11,7 @@ export default function MentionBadge({ fileName, className }: MentionBadgeProps)
     <span
       className={cn(
         "inline-flex items-center gap-1 rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-blue-400 text-xs",
-        "select-none font-mono",
+        "ui-font select-none",
         className,
       )}
     >
