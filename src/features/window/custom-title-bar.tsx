@@ -7,6 +7,8 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
+import { connectionStore } from "@/utils/connection-store";
+import { getFolderName } from "@/utils/path-helpers";
 import CustomMenuBar from "./menu-bar";
 
 interface CustomTitleBarProps {
@@ -21,10 +23,36 @@ const CustomTitleBar = ({
   isWelcomeScreen = false,
   onOpenSettings,
 }: CustomTitleBarProps) => {
-  const { getProjectName } = useProjectStore();
   const { settings, updateSetting } = useSettingsStore();
 
-  const [projectName, setProjectName] = useState<string>("");
+  // Reactive selector for project name
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const [projectName, setProjectName] = useState<string>("Explorer");
+
+  // Handle remote connections and initial project name setup
+  useEffect(() => {
+    const setupProjectName = async () => {
+      // Check if this is a remote window
+      const urlParams = new URLSearchParams(window.location.search);
+      const remoteConnectionId = urlParams.get("remote");
+
+      if (remoteConnectionId) {
+        try {
+          const connection = await connectionStore.getConnection(remoteConnectionId);
+          setProjectName(connection ? `Remote: ${connection.name}` : "Remote");
+        } catch (error) {
+          console.error("Error getting remote connection:", error);
+          setProjectName("Remote");
+        }
+      } else {
+        // For local projects, compute name synchronously
+        setProjectName(rootFolderPath ? getFolderName(rootFolderPath) : "Explorer");
+      }
+    };
+
+    setupProjectName();
+  }, [rootFolderPath]);
+
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
@@ -68,19 +96,10 @@ const CustomTitleBar = ({
       } catch (error) {
         console.error("Error checking maximized state:", error);
       }
-
-      // Get project name asynchronously
-      try {
-        const name = await getProjectName();
-        setProjectName(name);
-      } catch (error) {
-        console.error("Error getting project name:", error);
-        setProjectName("Explorer");
-      }
     };
 
     initWindow();
-  }, [getProjectName]);
+  }, []);
 
   const handleMinimize = async () => {
     try {
