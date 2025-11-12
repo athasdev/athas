@@ -69,6 +69,7 @@ interface BufferActions {
   ) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
+  closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
   setActiveBuffer: (bufferId: string) => void;
   updateBufferContent: (
     bufferId: string,
@@ -323,6 +324,27 @@ export const useBufferStore = createSelectors(
 
           // Save session
           saveSessionToStore(get().buffers, get().activeBufferId);
+        },
+
+        closeBuffersBatch: (bufferIds: string[], skipSessionSave = false) => {
+          if (bufferIds.length === 0) return;
+
+          set((state) => {
+            state.buffers = state.buffers.filter((b) => !bufferIds.includes(b.id));
+
+            if (bufferIds.includes(state.activeBufferId || "")) {
+              if (state.buffers.length > 0) {
+                state.activeBufferId = state.buffers[0].id;
+                state.buffers[0].isActive = true;
+              } else {
+                state.activeBufferId = null;
+              }
+            }
+          });
+
+          if (!skipSessionSave) {
+            saveSessionToStore(get().buffers, get().activeBufferId);
+          }
         },
 
         setActiveBuffer: (bufferId: string) => {

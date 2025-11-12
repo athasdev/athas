@@ -132,13 +132,13 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
           <div key={index} className="group relative my-2">
             <pre className="max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
               <div className="mb-1 flex items-center justify-between">
-                {language && <div className="font-mono text-text-lighter text-xs">{language}</div>}
+                {language && <div className="ui-font text-text-lighter text-xs">{language}</div>}
                 {onApplyCode && code.trim() && (
                   <button
                     onClick={() => onApplyCode(code)}
                     className={cn(
                       "whitespace-nowrap rounded border border-border bg-primary-bg",
-                      "px-2 py-1 font-mono text-text text-xs",
+                      "ui-font px-2 py-1 text-text text-xs",
                       "opacity-0 transition-colors hover:bg-hover group-hover:opacity-100",
                     )}
                     title="Apply this code to current buffer"
@@ -148,7 +148,7 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
                 )}
               </div>
               <code
-                className="block whitespace-pre-wrap break-all font-mono text-text text-xs"
+                className="ui-font block whitespace-pre-wrap break-all text-text text-xs"
                 dangerouslySetInnerHTML={{ __html: highlightedCode }}
               />
             </pre>
@@ -257,7 +257,7 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
         return (
           <code
             key={index}
-            className="rounded border border-border bg-secondary-bg px-1 font-mono text-xs"
+            className="ui-font rounded border border-border bg-secondary-bg px-1 text-xs"
           >
             {code}
           </code>

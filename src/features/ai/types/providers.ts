@@ -34,6 +34,26 @@ export const AI_PROVIDERS: ModelProvider[] = [
     models: [
       // Latest flagship models
       {
+        id: "gpt-5-pro",
+        name: "GPT-5 Pro",
+        maxTokens: 128000,
+      },
+      {
+        id: "gpt-5",
+        name: "GPT-5",
+        maxTokens: 1048576,
+      },
+      {
+        id: "gpt-5-mini",
+        name: "GPT-5 Mini",
+        maxTokens: 1048576,
+      },
+      {
+        id: "gpt-5-nano",
+        name: "GPT-5 Nano",
+        maxTokens: 1048576,
+      },
+      {
         id: "o3",
         name: "o3",
         maxTokens: 200000,
@@ -213,6 +233,21 @@ export const AI_PROVIDERS: ModelProvider[] = [
     apiUrl: "https://api.anthropic.com/v1/messages",
     requiresApiKey: true,
     models: [
+      {
+        id: "claude-sonnet-4-5-20250929",
+        name: "Claude Sonnet 4.5",
+        maxTokens: 200000,
+      },
+      {
+        id: "claude-haiku-4-5-20251001",
+        name: "Claude Haiku 4.5",
+        maxTokens: 200000,
+      },
+      {
+        id: "claude-opus-4-1-20250805",
+        name: "Claude Opus 4.1",
+        maxTokens: 200000,
+      },
       {
         id: "claude-opus-4",
         name: "Claude Opus 4",

@@ -24,7 +24,6 @@ pub struct LspClient {
    stdin_tx: Sender<String>,
    pending_requests: PendingRequests,
    capabilities: Arc<Mutex<Option<ServerCapabilities>>>,
-   app_handle: Option<AppHandle>,
 }
 
 impl LspClient {
@@ -147,7 +146,6 @@ impl LspClient {
          stdin_tx,
          pending_requests,
          capabilities: Arc::new(Mutex::new(None)),
-         app_handle,
       };
 
       // Don't initialize here - we'll do it separately to avoid runtime issues

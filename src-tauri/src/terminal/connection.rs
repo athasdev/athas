@@ -1,34 +1,22 @@
-use crate::shell::Shell;
+use crate::terminal::config::TerminalConfig;
 use anyhow::{Result, anyhow};
 use portable_pty::{CommandBuilder, PtyPair, PtySize};
-use serde::{Deserialize, Serialize};
 use std::{
-   collections::HashMap,
    io::{Read, Write},
    sync::{Arc, Mutex},
    thread,
 };
 use tauri::{AppHandle, Emitter};
-use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct XtermConfig {
-   pub working_directory: Option<String>,
-   pub shell: Option<Shell>,
-   pub environment: Option<HashMap<String, String>>,
-   pub rows: u16,
-   pub cols: u16,
-}
-
-pub struct XtermConnection {
+pub struct TerminalConnection {
    pub id: String,
    pub pty_pair: PtyPair,
    pub app_handle: AppHandle,
    pub writer: Arc<Mutex<Option<Box<dyn Write + Send>>>>,
 }
 
-impl XtermConnection {
-   pub fn new(id: String, config: XtermConfig, app_handle: AppHandle) -> Result<Self> {
+impl TerminalConnection {
+   pub fn new(id: String, config: TerminalConfig, app_handle: AppHandle) -> Result<Self> {
       let pty_system = portable_pty::native_pty_system();
 
       let pty_pair = pty_system.openpty(PtySize {
@@ -50,7 +38,7 @@ impl XtermConnection {
       })
    }
 
-   fn build_command(config: &XtermConfig) -> Result<CommandBuilder> {
+   fn build_command(config: &TerminalConfig) -> Result<CommandBuilder> {
       let default_shell = if cfg!(target_os = "windows") {
          "cmd.exe".to_string()
       } else {
@@ -159,56 +147,6 @@ impl XtermConnection {
          pixel_width: 0,
          pixel_height: 0,
       })?;
-      Ok(())
-   }
-}
-
-pub struct XtermManager {
-   connections: Arc<Mutex<HashMap<String, XtermConnection>>>,
-}
-
-impl XtermManager {
-   pub fn new() -> Self {
-      Self {
-         connections: Arc::new(Mutex::new(HashMap::new())),
-      }
-   }
-
-   pub fn create_terminal(&self, config: XtermConfig, app_handle: AppHandle) -> Result<String> {
-      let id = Uuid::new_v4().to_string();
-      let connection = XtermConnection::new(id.clone(), config, app_handle)?;
-
-      // Start the reader thread
-      connection.start_reader_thread();
-
-      // Store the connection
-      let mut connections = self.connections.lock().unwrap();
-      connections.insert(id.clone(), connection);
-
-      Ok(id)
-   }
-
-   pub fn write_to_terminal(&self, id: &str, data: &str) -> Result<()> {
-      let connections = self.connections.lock().unwrap();
-      if let Some(connection) = connections.get(id) {
-         connection.write(data)
-      } else {
-         Err(anyhow!("Terminal connection not found"))
-      }
-   }
-
-   pub fn resize_terminal(&self, id: &str, rows: u16, cols: u16) -> Result<()> {
-      let connections = self.connections.lock().unwrap();
-      if let Some(connection) = connections.get(id) {
-         connection.resize(rows, cols)
-      } else {
-         Err(anyhow!("Terminal connection not found"))
-      }
-   }
-
-   pub fn close_terminal(&self, id: &str) -> Result<()> {
-      let mut connections = self.connections.lock().unwrap();
-      connections.remove(id);
       Ok(())
    }
 }

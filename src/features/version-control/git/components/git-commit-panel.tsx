@@ -79,7 +79,7 @@ const GitCommitPanel = ({ stagedFilesCount, repoPath, onCommitSuccess }: GitComm
             placeholder="Enter commit message..."
             className={cn(
               "w-full resize-none border border-border bg-primary-bg px-2 py-1.5",
-              "font-mono text-text text-xs focus:border-blue-500 focus:outline-none",
+              "ui-font text-text text-xs focus:border-blue-500 focus:outline-none",
             )}
             rows={3}
             disabled={isCommitting}
@@ -93,7 +93,7 @@ const GitCommitPanel = ({ stagedFilesCount, repoPath, onCommitSuccess }: GitComm
               disabled={isCommitDisabled}
               className={cn(
                 "flex items-center gap-1 rounded border px-3 py-1.5",
-                "font-mono text-xs transition-colors duration-150",
+                "ui-font text-xs transition-colors duration-150",
                 isCommitDisabled
                   ? "cursor-not-allowed border-border bg-secondary-bg text-text-lighter"
                   : "border-blue-500 bg-blue-600 text-white hover:bg-blue-700",

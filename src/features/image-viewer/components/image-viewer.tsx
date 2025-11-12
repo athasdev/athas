@@ -189,7 +189,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
       >
         <div className="flex items-center gap-2">
           <FileIcon size={14} className="text-text" />
-          <span className="font-mono text-text text-xs">
+          <span className="ui-font text-text text-xs">
             {fileName} {fileExt && <>• {fileExt}</>}
           </span>
         </div>

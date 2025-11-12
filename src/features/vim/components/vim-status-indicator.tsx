@@ -81,7 +81,7 @@ const VimStatusIndicator = () => {
       {/* Mode indicator */}
       <div
         className={cn(
-          "rounded-sm border px-1 py-[1px] font-mono font-semibold text-xs tracking-wider",
+          "ui-font rounded-sm border px-1 py-[1px] font-semibold text-xs tracking-wider",
           "transition-colors duration-200",
           getModeColor(),
         )}
@@ -93,7 +93,7 @@ const VimStatusIndicator = () => {
       {keyDisplay && (
         <div
           className={cn(
-            "rounded-sm border px-1 py-[1px] font-mono text-xs",
+            "ui-font rounded-sm border px-1 py-[1px] text-xs",
             "border-gray-500/20 bg-gray-500/10 text-gray-300",
           )}
           title="Current keystroke sequence"

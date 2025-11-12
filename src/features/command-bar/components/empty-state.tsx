@@ -41,7 +41,7 @@ export const EmptyState = ({
 
   return (
     <CommandEmpty>
-      <div className="font-mono text-text-lighter">{getMessage()}</div>
+      <div className="ui-font text-text-lighter">{getMessage()}</div>
     </CommandEmpty>
   );
 };

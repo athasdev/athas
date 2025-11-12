@@ -131,7 +131,7 @@ const GitHubCopilotSettings = () => {
         {/* Header */}
         <div className="flex items-center gap-3 border-border border-b px-4 py-3">
           <Zap size={16} className="text-text" />
-          <h2 className="font-medium font-mono text-sm text-text">AI Code Completion Setup</h2>
+          <h2 className="ui-font font-medium text-sm text-text">AI Code Completion Setup</h2>
           <div className="flex-1" />
           <button onClick={onClose} className="text-text-lighter transition-colors hover:text-text">
             ×
@@ -162,7 +162,7 @@ const GitHubCopilotSettings = () => {
               placeholder="sk-xxxxxxxxxxxxxxxxxxxx"
               className={cn(
                 "w-full rounded border border-border bg-secondary-bg",
-                "px-3 py-2 font-mono text-text text-xs",
+                "ui-font px-3 py-2 text-text text-xs",
                 "focus:border-blue-500 focus:outline-none",
               )}
               disabled={isValidating}

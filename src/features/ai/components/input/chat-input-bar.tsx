@@ -526,7 +526,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             {/* Model selector button */}
             <button
               onClick={() => openSettingsDialog("ai")}
-              className="flex items-center gap-1 rounded bg-transparent px-2 py-1 font-mono text-xs transition-colors hover:bg-hover"
+              className="ui-font flex items-center gap-1 rounded bg-transparent px-2 py-1 text-xs transition-colors hover:bg-hover"
               title="Open AI settings to change model"
             >
               <div className="truncate text-text-lighter text-xs">

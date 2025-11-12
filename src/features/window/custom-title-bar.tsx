@@ -1,12 +1,12 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { platform } from "@tauri-apps/plugin-os";
 import { Maximize2, MenuIcon, Minimize2, Minus, Settings, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
-import { useProjectStore } from "@/stores/project-store";
+import { useIsLinux, useIsMac } from "@/hooks/use-platform";
 import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
+import ProjectTabs from "./components/project-tabs";
 import CustomMenuBar from "./menu-bar";
 
 interface CustomTitleBarProps {
@@ -16,25 +16,14 @@ interface CustomTitleBarProps {
 }
 
 const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarProps) => {
-  const { getProjectName } = useProjectStore();
   const { settings, updateSetting } = useSettingsStore();
 
-  const [projectName, setProjectName] = useState<string>("");
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
-  const [currentPlatform, setCurrentPlatform] = useState<string>(() => {
-    if (typeof navigator !== "undefined") {
-      if (navigator.userAgent.includes("Mac")) {
-        return "macos";
-      } else if (navigator.userAgent.includes("Linux")) {
-        return "linux";
-      } else {
-        return "windows";
-      }
-    }
-    return "other";
-  });
+
+  const isMacOS = useIsMac();
+  const isLinux = useIsLinux();
 
   useEffect(() => {
     const initWindow = async () => {
@@ -42,40 +31,15 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
       setCurrentWindow(window);
 
       try {
-        const platformName = await platform();
-        setCurrentPlatform(platformName);
-      } catch (error) {
-        console.error("Error getting platform:", error);
-        if (typeof navigator !== "undefined") {
-          if (navigator.userAgent.includes("Mac")) {
-            setCurrentPlatform("macos");
-          } else if (navigator.userAgent.includes("Linux")) {
-            setCurrentPlatform("linux");
-          } else {
-            setCurrentPlatform("windows");
-          }
-        }
-      }
-
-      try {
         const maximized = await window.isMaximized();
         setIsMaximized(maximized);
       } catch (error) {
         console.error("Error checking maximized state:", error);
       }
-
-      // Get project name asynchronously
-      try {
-        const name = await getProjectName();
-        setProjectName(name);
-      } catch (error) {
-        console.error("Error getting project name:", error);
-        setProjectName("Explorer");
-      }
     };
 
     initWindow();
-  }, [getProjectName]);
+  }, []);
 
   const handleMinimize = async () => {
     try {
@@ -102,9 +66,6 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
       console.error("Error closing window:", error);
     }
   };
-
-  const isMacOS = currentPlatform === "macos";
-  const isLinux = currentPlatform === "linux";
 
   if (showMinimal) {
     return (
@@ -139,7 +100,7 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
             </button>
             <button
               onClick={handleClose}
-              className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-red-600"
+              className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-error"
               title="Close"
             >
               <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
@@ -164,13 +125,9 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
         {/* macOS traffic light space holder */}
         <div className="flex items-center space-x-2 pl-4" />
 
-        {/* Center - Project name for macOS */}
-        <div className="-translate-x-1/2 pointer-events-none absolute left-1/2 flex transform items-center">
-          {projectName && (
-            <span className="max-w-60 truncate text-center font-medium text-[10px] text-text">
-              {projectName}
-            </span>
-          )}
+        {/* Center - Project tabs for macOS */}
+        <div className="-translate-x-1/2 pointer-events-auto absolute left-1/2 flex transform items-center">
+          <ProjectTabs />
         </div>
 
         {/* Settings and AI Chat buttons */}
@@ -230,18 +187,16 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
           </button>
         )}
 
-        {projectName && (
-          <span
-            className={cn(
-              "max-w-96 truncate font-medium text-text text-xs",
-              !settings.nativeMenuBar &&
-                !settings.compactMenuBar &&
-                "-translate-x-1/2 absolute left-1/2",
-            )}
-          >
-            {projectName}
-          </span>
-        )}
+        {/* Project tabs */}
+        <div
+          className={cn(
+            !settings.nativeMenuBar &&
+              !settings.compactMenuBar &&
+              "-translate-x-1/2 absolute left-1/2",
+          )}
+        >
+          <ProjectTabs />
+        </div>
       </div>
 
       {/* Right side */}
@@ -297,7 +252,7 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
             </button>
             <button
               onClick={handleClose}
-              className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-red-600"
+              className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-error"
               title="Close"
             >
               <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />

@@ -158,7 +158,7 @@ const EditorFooter = () => {
 
   return (
     <div className="flex min-h-[32px] items-center justify-between border-border border-t bg-secondary-bg px-2 py-1 ">
-      <div className="flex items-center gap-0.5 font-mono text-text-lighter text-xs">
+      <div className="ui-font flex items-center gap-0.5 text-text-lighter text-xs">
         {/* Git branch manager */}
         {rootFolderPath && gitStatus?.branch && (
           <GitBranchManager
@@ -249,7 +249,7 @@ const EditorFooter = () => {
       </div>
 
       {activeBuffer && (
-        <div className="flex items-center gap-2 font-mono text-[10px] text-text-lighter">
+        <div className="ui-font flex items-center gap-2 text-[10px] text-text-lighter">
           <span>
             Ln {cursorPosition.line + 1}, Col {cursorPosition.column + 1}
           </span>

@@ -11,8 +11,10 @@ use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri_plugin_os::platform;
 use tauri_plugin_store::StoreExt;
+use terminal::{
+   TerminalManager, close_terminal, create_terminal, get_shells, terminal_resize, terminal_write,
+};
 use tokio::sync::Mutex;
-use xterm_terminal::XtermManager;
 
 mod claude_bridge;
 mod commands;
@@ -20,14 +22,12 @@ mod file_watcher;
 mod logger;
 mod lsp;
 mod menu;
-use crate::shell::get_shells;
 mod ssh;
 mod terminal;
-mod xterm_terminal;
 
 fn main() {
    tauri::Builder::default()
-      .plugin(tauri_plugin_store::Builder::new().build())
+      .plugin(tauri_plugin_store::Builder::default().build())
       .plugin(tauri_plugin_clipboard_manager::init())
       .plugin(logger::init(log::LevelFilter::Info))
       .plugin(tauri_plugin_window_state::Builder::new().build())
@@ -35,7 +35,6 @@ fn main() {
       .plugin(tauri_plugin_dialog::init())
       .plugin(tauri_plugin_shell::init())
       .plugin(tauri_plugin_opener::init())
-      .plugin(tauri_plugin_store::Builder::default().build())
       .plugin(tauri_plugin_os::init())
       .plugin(tauri_plugin_http::init())
       .plugin(tauri_plugin_process::init())
@@ -254,7 +253,7 @@ fn main() {
 
          Ok(())
       })
-      .manage(Arc::new(XtermManager::new()))
+      .manage(Arc::new(TerminalManager::new()))
       .invoke_handler(tauri::generate_handler![
          // File system commands
          move_file,
@@ -308,12 +307,11 @@ fn main() {
          start_watching,
          stop_watching,
          set_project_root,
-         // Xterm commands
-         create_xterm_terminal,
+         // Terminal commands
+         create_terminal,
          terminal_write,
          terminal_resize,
-         close_xterm_terminal,
-         // Other commands for terminal (switching shells)
+         close_terminal,
          get_shells,
          // execute_shell,
          // SSH commands

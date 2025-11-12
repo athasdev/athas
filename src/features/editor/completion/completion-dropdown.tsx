@@ -131,7 +131,7 @@ export const CompletionDropdown = memo(({ onApplyCompletion }: CompletionDropdow
             <div
               key={index}
               className={cn(
-                "cursor-pointer px-3 py-1.5 font-mono text-xs",
+                "ui-font cursor-pointer px-3 py-1.5 text-xs",
                 isSelected ? "bg-blue-500 text-white" : "text-text hover:bg-hover",
               )}
               onClick={() => handleSelect(item)}

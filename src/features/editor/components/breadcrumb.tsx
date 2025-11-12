@@ -212,7 +212,7 @@ export default function Breadcrumb() {
   return (
     <>
       <div className="flex min-h-[28px] select-none items-center justify-between border-border border-b bg-terniary-bg px-3 py-1">
-        <div className="flex items-center gap-0.5 overflow-hidden font-mono text-text-lighter text-xs">
+        <div className="ui-font flex items-center gap-0.5 overflow-hidden text-text-lighter text-xs">
           {segments.map((segment, index) => (
             <div key={index} className="flex min-w-0 items-center gap-0.5">
               {index > 0 && (
@@ -276,7 +276,7 @@ export default function Breadcrumb() {
             {dropdown.navigationStack.length > 0 && (
               <button
                 onClick={handleGoBack}
-                className="flex w-full items-center gap-2 border-border border-b px-3 py-1.5 text-left font-mono text-text-lighter text-xs hover:bg-hover hover:text-text"
+                className="ui-font flex w-full items-center gap-2 border-border border-b px-3 py-1.5 text-left text-text-lighter text-xs hover:bg-hover hover:text-text"
               >
                 <ArrowLeft size={12} className="flex-shrink-0" />
                 <span>Go back</span>
@@ -326,7 +326,7 @@ export default function Breadcrumb() {
                     setDropdown(null);
                   }
                 }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
+                className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
               >
                 <FileIcon
                   fileName={item.name}

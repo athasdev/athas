@@ -1,6 +1,5 @@
-import { FilePlus, FolderOpen, FolderPlus, Server } from "lucide-react";
-import type React from "react";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { Server } from "lucide-react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import FileTree from "@/features/file-explorer/views/file-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -8,12 +7,10 @@ import type { FileEntry } from "@/features/file-system/types/app";
 import RemoteConnectionView from "@/features/remote/remote-connection-view";
 import { useSettingsStore } from "@/features/settings/store";
 import GitView from "@/features/version-control/git/components/git-view";
-import { useProjectStore } from "@/stores/project-store";
 import { useSearchViewStore } from "@/stores/search-view-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
-import Button from "../../../../ui/button";
 import SearchView, { type SearchViewRef } from "./search-view";
 import { SidebarPaneSelector } from "./sidebar-pane-selector";
 
@@ -36,16 +33,7 @@ const flattenFileTree = (files: FileEntry[]): FileEntry[] => {
 
 export const MainSidebar = memo(() => {
   // Get state from stores
-  const {
-    isGitViewActive,
-    isSearchViewActive,
-    isRemoteViewActive,
-    setActiveView,
-    setProjectNameMenu,
-    isExtensionsViewActive,
-  } = useUIState();
-  const { getProjectName } = useProjectStore();
-  const [projectName, setProjectName] = useState<string>("Explorer");
+  const { isGitViewActive, isSearchViewActive, isRemoteViewActive, setActiveView } = useUIState();
 
   // Ref for SearchView to enable focus functionality
   const searchViewRef = useRef<SearchViewRef>(null);
@@ -53,13 +41,10 @@ export const MainSidebar = memo(() => {
 
   // file system store
   const setFiles = useFileSystemStore.use.setFiles?.();
-  const handleOpenFolder = useFileSystemStore.use.handleOpenFolder?.();
-  const handleCreateNewFile = useFileSystemStore.use.handleCreateNewFile?.();
   const handleCreateNewFolderInDirectory =
     useFileSystemStore.use.handleCreateNewFolderInDirectory?.();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const handleCreateNewFileInDirectory = useFileSystemStore.use.handleCreateNewFileInDirectory?.();
-  const handleCreateNewFolder = useFileSystemStore.use.handleCreateNewFolder?.();
   const handleDeletePath = useFileSystemStore.use.handleDeletePath?.();
   const refreshDirectory = useFileSystemStore.use.refreshDirectory?.();
   const handleFileMove = useFileSystemStore.use.handleFileMove?.();
@@ -82,20 +67,6 @@ export const MainSidebar = memo(() => {
 
   const { settings } = useSettingsStore();
 
-  // Load project name asynchronously
-  useEffect(() => {
-    const loadProjectName = async () => {
-      try {
-        const name = await getProjectName();
-        setProjectName(name);
-      } catch (error) {
-        console.error("Error loading project name:", error);
-      }
-    };
-
-    loadProjectName();
-  }, [isFileTreeLoading, getProjectName, isRemoteWindow]);
-
   // Register search view ref with store when it becomes available
   useEffect(() => {
     if (searchViewRef.current) {
@@ -114,34 +85,10 @@ export const MainSidebar = memo(() => {
     }
   }, [isSearchViewActive, setSearchViewRef]);
 
-  // Handlers
-  const onOpenExtensions = () => {
-    const { openBuffer } = useBufferStore.getState().actions;
-    openBuffer(
-      "extensions://marketplace",
-      "Extensions",
-      "", // Content will be handled by the component
-      false, // not an image
-      false, // not SQLite
-      false, // not a diff
-      true, // is virtual
-    );
-  };
-
-  const onProjectNameMenuOpen = (event: React.MouseEvent) => {
-    event.preventDefault();
-    setProjectNameMenu({ x: event.clientX, y: event.clientY });
-  };
-
   // Get all project files by flattening the file tree - memoized for performance
   const allProjectFiles = useMemo(() => {
     return flattenFileTree(files);
   }, [files]);
-
-  // Memoize expensive computations
-  const memoizedShowFileTreeHeader = useMemo(() => {
-    return !isGitViewActive && !isSearchViewActive && !isRemoteViewActive && !isRemoteWindow;
-  }, [isGitViewActive, isSearchViewActive, isRemoteViewActive, isRemoteWindow]);
 
   return (
     <div className="flex h-full flex-col ">
@@ -150,77 +97,18 @@ export const MainSidebar = memo(() => {
         isGitViewActive={isGitViewActive}
         isSearchViewActive={isSearchViewActive}
         isRemoteViewActive={isRemoteViewActive}
-        isExtensionsViewActive={isExtensionsViewActive}
         isRemoteWindow={isRemoteWindow}
         coreFeatures={settings.coreFeatures}
         onViewChange={setActiveView}
-        onOpenExtensions={onOpenExtensions}
       />
 
       {/* Remote Window Header */}
       {isRemoteWindow && remoteConnectionName && (
         <div className="flex items-center border-border border-b bg-secondary-bg px-2 py-1.5">
           <Server size={12} className="mr-2 text-text-lighter" />
-          <span
-            className="flex-1 cursor-pointer rounded px-2 py-1 font-medium text-text text-xs hover:bg-hover"
-            onClick={onProjectNameMenuOpen}
-            onContextMenu={onProjectNameMenuOpen}
-            title="Click for workspace options"
-          >
+          <span className="flex-1 px-2 py-1 font-medium text-text text-xs">
             {remoteConnectionName}
           </span>
-        </div>
-      )}
-
-      {/* File Tree Header */}
-      {memoizedShowFileTreeHeader && (
-        <div className="flex flex-wrap items-center justify-between bg-secondary-bg px-2 py-1.5">
-          <h3
-            className="min-w-0 flex-shrink cursor-pointer truncate rounded px-2 py-1 font-medium font-mono text-text text-xs tracking-wide hover:bg-hover"
-            onClick={onProjectNameMenuOpen}
-            onContextMenu={onProjectNameMenuOpen}
-            title="Click for workspace options"
-          >
-            {projectName}
-          </h3>
-          <div className="flex flex-shrink-0 items-center gap-0.5">
-            <Button
-              onClick={handleOpenFolder}
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "flex h-5 w-5 items-center justify-center rounded p-0",
-                "text-text-lighter hover:bg-hover hover:text-text",
-              )}
-              title="Open Folder"
-            >
-              <FolderOpen size={12} />
-            </Button>
-            <Button
-              onClick={handleCreateNewFile}
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "flex h-5 w-5 items-center justify-center rounded p-0",
-                "text-text-lighter hover:bg-hover hover:text-text",
-              )}
-              title="New File"
-            >
-              <FilePlus size={12} />
-            </Button>
-            <Button
-              onClick={handleCreateNewFolder}
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "flex h-5 w-5 items-center justify-center rounded p-0",
-                "text-text-lighter hover:bg-hover hover:text-text",
-              )}
-              title="New Folder"
-            >
-              <FolderPlus size={12} />
-            </Button>
-          </div>
         </div>
       )}
 
@@ -256,7 +144,7 @@ export const MainSidebar = memo(() => {
         >
           {isFileTreeLoading ? (
             <div className="flex flex-1 items-center justify-center">
-              <div className="text-sm text-text">Loading file tree...</div>
+              <div className="text-text text-xs">Loading...</div>
             </div>
           ) : (
             <FileTree

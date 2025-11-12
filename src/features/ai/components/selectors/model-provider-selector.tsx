@@ -54,7 +54,7 @@ const ModelProviderSelector = ({
       {/* Current Selection Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex min-w-[160px] items-center gap-1.5 rounded bg-transparent px-2 py-1 font-mono text-xs transition-colors hover:bg-hover"
+        className="ui-font flex min-w-[160px] items-center gap-1.5 rounded bg-transparent px-2 py-1 text-xs transition-colors hover:bg-hover"
       >
         <div className="min-w-0 flex-1 text-left">
           <div className="truncate text-text text-xs">{currentModel?.name || "Select Model"}</div>

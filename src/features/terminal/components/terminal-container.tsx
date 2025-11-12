@@ -26,7 +26,7 @@ const TerminalContainer = ({
     terminals,
     activeTerminalId,
     createTerminal,
-    closeTerminal,
+    closeTerminal: originalCloseTerminal,
     setActiveTerminal,
     updateTerminalName,
     updateTerminalDirectory,
@@ -36,7 +36,18 @@ const TerminalContainer = ({
     switchToNextTerminal,
     switchToPrevTerminal,
     setTerminalSplitMode,
+    getPersistedTerminals,
+    restoreTerminalsFromPersisted,
   } = useTerminalTabs();
+
+  // Wrapper to add logging and ensure terminal closes properly
+  const closeTerminal = useCallback(
+    (terminalId: string) => {
+      console.log("closeTerminal called for terminal:", terminalId);
+      originalCloseTerminal(terminalId);
+    },
+    [originalCloseTerminal],
+  );
 
   const zoomLevel = useZoomStore.use.terminalZoomLevel();
 
@@ -44,6 +55,7 @@ const TerminalContainer = ({
   const [newTerminalName, setNewTerminalName] = useState("");
   const hasInitializedRef = useRef(false);
   const terminalSessionRefs = useRef<Map<string, { focus: () => void }>>(new Map());
+  const tabFocusTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const { registerTerminalFocus, clearTerminalFocus } = useUIState();
 
   const handleNewTerminal = useCallback(() => {
@@ -51,33 +63,80 @@ const TerminalContainer = ({
     const newTerminalId = createTerminal(dirName, currentDirectory);
     // Focus the new terminal after creation
     if (newTerminalId) {
-      setTimeout(() => {
+      // Clear any existing timeout for this terminal
+      const existingTimeout = tabFocusTimeoutRef.current.get(newTerminalId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+      const timeoutId = setTimeout(() => {
         const terminalRef = terminalSessionRefs.current.get(newTerminalId);
         if (terminalRef) {
           terminalRef.focus();
         }
+        tabFocusTimeoutRef.current.delete(newTerminalId);
       }, 150);
+      tabFocusTimeoutRef.current.set(newTerminalId, timeoutId);
     }
   }, [createTerminal, currentDirectory]);
 
-  // Create initial terminal on mount if none exist
+  const handleTabCreate = useCallback(
+    (directory: string, shell?: string) => {
+      const dirName = directory.split("/").pop() || "terminal";
+      const newTerminalId = createTerminal(dirName, directory, shell);
+      // Focus the new terminal after creation
+      if (newTerminalId) {
+        setTimeout(() => {
+          const terminalRef = terminalSessionRefs.current.get(newTerminalId);
+          if (terminalRef) {
+            terminalRef.focus();
+          }
+        }, 150);
+      }
+    },
+    [createTerminal],
+  );
+
+  // Restore persisted terminals or create initial terminal on mount
   useEffect(() => {
     if (!hasInitializedRef.current && terminals.length === 0) {
       hasInitializedRef.current = true;
-      handleNewTerminal();
+
+      // Try to restore persisted terminals
+      const persistedTerminals = getPersistedTerminals();
+      if (persistedTerminals.length > 0) {
+        restoreTerminalsFromPersisted(persistedTerminals);
+      } else {
+        // No persisted terminals, create a new one
+        handleNewTerminal();
+      }
     }
-  }, [terminals.length, handleNewTerminal]);
+  }, [terminals.length, handleNewTerminal, getPersistedTerminals, restoreTerminalsFromPersisted]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      tabFocusTimeoutRef.current.forEach((timeout) => clearTimeout(timeout));
+      tabFocusTimeoutRef.current.clear();
+    };
+  }, []);
 
   const handleTabClick = useCallback(
     (terminalId: string) => {
       setActiveTerminal(terminalId);
+      // Clear any existing timeout for this terminal
+      const existingTimeout = tabFocusTimeoutRef.current.get(terminalId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
       // Focus the terminal after a short delay to ensure it's rendered
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         const terminalRef = terminalSessionRefs.current.get(terminalId);
         if (terminalRef) {
           terminalRef.focus();
         }
+        tabFocusTimeoutRef.current.delete(terminalId);
       }, 50);
+      tabFocusTimeoutRef.current.set(terminalId, timeoutId);
     },
     [setActiveTerminal],
   );
@@ -98,6 +157,17 @@ const TerminalContainer = ({
       }
     },
     [terminals, pinTerminal],
+  );
+
+  const handleTabRename = useCallback(
+    (terminalId: string) => {
+      const terminal = terminals.find((t) => t.id === terminalId);
+      if (terminal) {
+        setRenamingTerminalId(terminalId);
+        setNewTerminalName(terminal.name);
+      }
+    },
+    [terminals],
   );
 
   const handleCloseOtherTabs = useCallback(
@@ -155,13 +225,21 @@ const TerminalContainer = ({
     if (activeTerminal.splitMode) {
       // Toggle off split view for this terminal
       setTerminalSplitMode(activeTerminalId, false);
+      // Close the companion terminal if it exists
+      if (activeTerminal.splitWithId) {
+        closeTerminal(activeTerminal.splitWithId);
+      }
     } else {
-      // Always create a companion terminal for split view within the same tab
-      // This creates a virtual split, not a new tab
-      const companionId = `${activeTerminalId}_split`;
+      // Create an actual companion terminal with independent session
+      const companionName = `${activeTerminal.name} (Split)`;
+      const companionId = createTerminal(
+        companionName,
+        activeTerminal.currentDirectory,
+        activeTerminal.shell,
+      );
       setTerminalSplitMode(activeTerminalId, true, companionId);
     }
-  }, [activeTerminalId, terminals, setTerminalSplitMode]);
+  }, [activeTerminalId, terminals, setTerminalSplitMode, createTerminal, closeTerminal]);
 
   const handleDirectoryChange = useCallback(
     (terminalId: string, directory: string) => {
@@ -339,10 +417,24 @@ const TerminalContainer = ({
   useEffect(() => {
     if (terminals.length === 0 && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
-      const dirName = currentDirectory.split("/").pop() || "terminal";
-      createTerminal(dirName, currentDirectory);
+
+      // Try to restore persisted terminals
+      const persistedTerminals = getPersistedTerminals();
+      if (persistedTerminals.length > 0) {
+        restoreTerminalsFromPersisted(persistedTerminals);
+      } else {
+        // No persisted terminals, create a new one
+        const dirName = currentDirectory.split("/").pop() || "terminal";
+        createTerminal(dirName, currentDirectory);
+      }
     }
-  }, [terminals.length, currentDirectory, createTerminal]);
+  }, [
+    terminals.length,
+    currentDirectory,
+    createTerminal,
+    getPersistedTerminals,
+    restoreTerminalsFromPersisted,
+  ]);
 
   // Create first terminal if none exist (fallback UI)
   if (terminals.length === 0) {
@@ -355,7 +447,9 @@ const TerminalContainer = ({
           onTabClose={handleTabClose}
           onTabReorder={reorderTerminals}
           onTabPin={handleTabPin}
+          onTabRename={handleTabRename}
           onNewTerminal={handleNewTerminal}
+          onTabCreate={handleTabCreate}
           onCloseOtherTabs={handleCloseOtherTabs}
           onCloseAllTabs={handleCloseAllTabs}
           onCloseTabsToRight={handleCloseTabsToRight}
@@ -385,7 +479,9 @@ const TerminalContainer = ({
         onTabClose={handleTabClose}
         onTabReorder={reorderTerminals}
         onTabPin={handleTabPin}
+        onTabRename={handleTabRename}
         onNewTerminal={handleNewTerminal}
+        onTabCreate={handleTabCreate}
         onCloseOtherTabs={handleCloseOtherTabs}
         onCloseAllTabs={handleCloseAllTabs}
         onCloseTabsToRight={handleCloseTabsToRight}
@@ -398,7 +494,7 @@ const TerminalContainer = ({
 
       {/* Terminal Sessions */}
       <div
-        className="relative bg-primary-bg pb-2"
+        className="relative bg-primary-bg"
         style={{
           //height: "calc(100% - 28px)",
           transform: `scale(${zoomLevel})`,
@@ -429,24 +525,30 @@ const TerminalContainer = ({
                       onDirectoryChange={handleDirectoryChange}
                       onActivity={handleActivity}
                       onRegisterRef={registerTerminalRef}
+                      onTerminalExit={closeTerminal}
                     />
                   </div>
-                  {terminal.splitMode && terminal.splitWithId && (
-                    <div className="w-1/2 pl-[16px]">
-                      <TerminalSession
-                        key={terminal.splitWithId}
-                        terminal={{
-                          ...terminal,
-                          id: terminal.splitWithId,
-                          name: `${terminal.name} (split)`,
-                        }}
-                        isActive={terminal.id === activeTerminalId}
-                        onDirectoryChange={handleDirectoryChange}
-                        onActivity={handleActivity}
-                        onRegisterRef={registerTerminalRef}
-                      />
-                    </div>
-                  )}
+                  {terminal.splitMode &&
+                    terminal.splitWithId &&
+                    (() => {
+                      const companionTerminal = terminals.find(
+                        (t) => t.id === terminal.splitWithId,
+                      );
+                      if (!companionTerminal) return null;
+                      return (
+                        <div className="w-1/2 pl-[16px]">
+                          <TerminalSession
+                            key={companionTerminal.id}
+                            terminal={companionTerminal}
+                            isActive={false}
+                            onDirectoryChange={handleDirectoryChange}
+                            onActivity={handleActivity}
+                            onRegisterRef={registerTerminalRef}
+                            onTerminalExit={closeTerminal}
+                          />
+                        </div>
+                      );
+                    })()}
                 </div>
               ))}
             </div>

@@ -89,7 +89,7 @@ export const ThemeSettings = () => {
             checked={settings.nativeMenuBar}
             onChange={(checked) => {
               updateSetting("nativeMenuBar", checked);
-              invoke("toggle_menu_bar", { toggle: !checked });
+              invoke("toggle_menu_bar", { toggle: checked });
             }}
             size="sm"
           />
