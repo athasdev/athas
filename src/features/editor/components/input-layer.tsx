@@ -10,6 +10,9 @@ interface InputLayerProps {
   content: string;
   onInput: (content: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onKeyUp?: () => void;
+  onSelect?: () => void;
+  onClick?: () => void;
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
@@ -20,7 +23,20 @@ interface InputLayerProps {
 
 const InputLayerComponent = forwardRef<HTMLTextAreaElement, InputLayerProps>(
   (
-    { content, onInput, onKeyDown, fontSize, fontFamily, lineHeight, tabSize, onScroll, bufferId },
+    {
+      content,
+      onInput,
+      onKeyDown,
+      onKeyUp,
+      onSelect,
+      onClick,
+      fontSize,
+      fontFamily,
+      lineHeight,
+      tabSize,
+      onScroll,
+      bufferId,
+    },
     ref,
   ) => {
     const handleChange = useCallback(
@@ -46,6 +62,9 @@ const InputLayerComponent = forwardRef<HTMLTextAreaElement, InputLayerProps>(
         defaultValue={content}
         onChange={handleChange}
         onKeyDown={onKeyDown}
+        onKeyUp={onKeyUp}
+        onSelect={onSelect}
+        onClick={onClick}
         onScroll={onScroll}
         className="input-layer"
         style={{
@@ -79,6 +98,9 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.tabSize === next.tabSize &&
     prev.onInput === next.onInput &&
     prev.onKeyDown === next.onKeyDown &&
-    prev.onScroll === next.onScroll
+    prev.onScroll === next.onScroll &&
+    prev.onSelect === next.onSelect &&
+    prev.onKeyUp === next.onKeyUp &&
+    prev.onClick === next.onClick
   );
 });

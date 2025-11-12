@@ -45,9 +45,9 @@ const ExtensionCard = ({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h3 className="mb-0.5 font-medium text-text text-xs">{extension.name}</h3>
-          <p className="text-text-lighter text-[11px] leading-tight">{extension.description}</p>
+          <p className="text-[11px] text-text-lighter leading-tight">{extension.description}</p>
           {extension.publisher && (
-            <p className="mt-0.5 text-text-lighter text-[10px]">by {extension.publisher}</p>
+            <p className="mt-0.5 text-[10px] text-text-lighter">by {extension.publisher}</p>
           )}
         </div>
         {isInstalling ? (
@@ -81,13 +81,13 @@ const ExtensionCard = ({
           {extension.extensions.slice(0, 5).map((ext) => (
             <span
               key={ext}
-              className="rounded-sm bg-hover px-1 py-0.5 text-text-lighter text-[10px]"
+              className="rounded-sm bg-hover px-1 py-0.5 text-[10px] text-text-lighter"
             >
               .{ext}
             </span>
           ))}
           {extension.extensions.length > 5 && (
-            <span className="rounded-sm bg-hover px-1 py-0.5 text-text-lighter text-[10px]">
+            <span className="rounded-sm bg-hover px-1 py-0.5 text-[10px] text-text-lighter">
               +{extension.extensions.length - 5}
             </span>
           )}
@@ -297,7 +297,7 @@ export const ExtensionsSettings = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className={cn(
               "w-full rounded border border-border bg-secondary-bg",
-              "py-1 pr-2 pl-7 text-text text-[11px] placeholder-text-lighter",
+              "py-1 pr-2 pl-7 text-[11px] text-text placeholder-text-lighter",
               "focus:border-accent focus:outline-none",
             )}
           />
