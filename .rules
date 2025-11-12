@@ -21,10 +21,150 @@ This project uses Zustand for state management with specific patterns:
 - Group all actions in an `actions` object within the store
 - Always use `createSelectors` wrapper for stores
 
-### Tailwind
+## Styling
 
-- Don't use @apply
-- Use size instead of w and h classes where possible (e.g. use `size-6` instead of `w-6 h-6`)
+This project uses a standardized styling approach with clear guidelines on when to use each technique.
+
+### Primary Approach: Tailwind Utilities
+
+- Tailwind CSS is the **primary styling method** for 90% of components
+- Use utility classes directly in component JSX
+- Use the `cn()` utility (from `src/utils/cn.ts`) for conditional classes
+- **Never use `@apply`** directive
+- Use `size-*` instead of `w-* h-*` where possible (e.g. `size-6` instead of `w-6 h-6`)
+
+Example:
+```tsx
+<div className={cn("flex items-center gap-2", isActive && "bg-selected")}>
+  <Icon className="size-4" />
+  <span className="text-sm text-light">Label</span>
+</div>
+```
+
+### CSS Variables for Theming
+
+All theme colors are defined as CSS variables following this structure:
+
+**Variable Naming Convention:**
+- Use semantic names without prefixes: `--primary-bg`, `--text`, `--accent`
+- No `--tw-` prefix (this was removed during standardization)
+- Variables are defined in `:root` with system theme fallbacks via `@media (prefers-color-scheme: dark)`
+
+**Tailwind Integration:**
+- CSS variables map to Tailwind colors via `@theme inline` directive
+- Use pattern: `--color-{name}: var(--{name})`
+- Enables utilities like `bg-primary-bg`, `text-text`, `border-border`
+
+**Theme System:**
+- All themes (including built-ins) are defined in JSON files in `src/extensions/themes/builtin/`
+- Themes override CSS variables via the Theme Registry
+- No CSS classes for themes - pure variable-based theming
+- Data attributes track current theme: `data-theme="theme-id"` and `data-theme-type="light|dark"`
+
+### When to Use CSS Files
+
+Use dedicated CSS files for:
+
+1. **Complex Component Styles**
+   - Multi-layer architectures (e.g. editor overlay system)
+   - Performance-critical components requiring specific CSS properties
+   - Components with >10 utility classes that would clutter JSX
+
+2. **Global Styles**
+   - Animations and keyframes
+   - Custom scrollbar styles
+   - CSS resets and base styles
+   - Font-face declarations
+
+3. **Feature-Specific Styles**
+   - Colocate with feature: `src/features/[feature]/styles/*.css`
+   - Examples: `editor/styles/overlay-editor.css`, `terminal/styles/terminal.css`
+
+### When to Use Inline Styles
+
+Only use inline `style={{}}` for:
+- **Dynamic values from JavaScript** (measurements, positions, transforms)
+- Values that change frequently or are computed at runtime
+
+**Never use inline styles for:**
+- Static styling (use Tailwind or CSS files)
+- Theme colors (use CSS variables)
+
+### File Organization
+
+```
+src/
+├── styles.css                    # Global styles, Tailwind imports, theme config
+├── features/
+│   └── [feature]/
+│       └── styles/              # Feature-specific CSS files
+└── extensions/
+    └── themes/
+        ├── builtin/*.json       # Theme definitions
+        ├── theme-registry.ts    # Theme management
+        └── types.ts             # Theme interfaces
+```
+
+### Creating Custom Themes
+
+To add a new theme, create a JSON file in `src/extensions/themes/builtin/`:
+
+```json
+{
+  "themes": [
+    {
+      "id": "my-theme",
+      "name": "My Theme",
+      "description": "A beautiful custom theme",
+      "category": "Dark",
+      "isDark": true,
+      "cssVariables": {
+        "--primary-bg": "#1a1a1a",
+        "--secondary-bg": "#2a2a2a",
+        "--text": "#e5e5e5"
+      },
+      "syntaxTokens": {
+        "--syntax-keyword": "#ff7b72",
+        "--syntax-string": "#a5d6ff"
+      }
+    }
+  ]
+}
+```
+
+### Available CSS Variables
+
+**UI Colors:**
+- `--primary-bg`, `--secondary-bg`
+- `--text`, `--text-light`, `--text-lighter`
+- `--border`, `--hover`, `--selected`
+- `--accent`
+
+**Editor:**
+- `--cursor`, `--cursor-vim-normal`, `--cursor-vim-insert`
+
+**Semantic Colors:**
+- `--error`, `--warning`, `--success`, `--info`
+
+**Git Status:**
+- `--git-modified`, `--git-added`, `--git-deleted`, `--git-untracked`, `--git-renamed`
+
+**Syntax Highlighting:**
+- `--syntax-comment`, `--syntax-keyword`, `--syntax-string`, `--syntax-number`
+- `--syntax-function`, `--syntax-variable`, `--syntax-tag`, `--syntax-attribute`
+- `--syntax-punctuation`, `--syntax-constant`, `--syntax-property`, `--syntax-type`
+
+**Terminal Colors:**
+- `--terminal-{color}` for black, red, green, yellow, blue, magenta, cyan, white
+- `--terminal-bright-{color}` for bright variants
+
+### Best Practices
+
+1. **Consistency**: Use Tailwind utilities for all standard component styling
+2. **Performance**: Use CSS files for complex layouts with many styles
+3. **Theming**: Always use CSS variables for colors, never hardcode hex values
+4. **Maintainability**: Keep styles close to their components using feature-based organization
+5. **Customization**: Make components themeable by using semantic CSS variable names
 
 ### Accessibility
 
@@ -40,8 +180,8 @@ This project uses Zustand for state management with specific patterns:
 
 - Update relevant documentation files when adding new features or making significant changes
 - Documentation should be clear and concise, focusing on usage and examples
-- Documentation is for users, not developers - avoid internal implementation details unless necessary for understanding usage
+- Documentation is for users, not developers - avoid internal implementation details unless necessary for understanding usage, except for `docs/contributing/`
 - For internal developer documentation, use comments in the codebase instead of separate docs
 - Use markdown format for documentation files with proper headings, lists, and code blocks
 - Documentation is stored in the same repository as the codebase for easy access and versioning (e.g. `docs/` folder or README files in relevant directories)
-- README files in relevant directories should provide an overview of the directory's purpose and contents. They are for developers, not end-users.
+- Directories should not contain README files, all documentation should be centralized in a `docs/` folders- Documents that concern developers should be stored in `docs/contributing/`

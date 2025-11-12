@@ -40,7 +40,7 @@ const CommandBar = () => {
           value={query}
           onChange={setQuery}
           placeholder="Type to search files..."
-          className="font-mono"
+          className="ui-font"
         />
         <FileCountBadge
           totalFiles={files.length}

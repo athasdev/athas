@@ -154,7 +154,7 @@ const ApiKeyModal = ({
         <div className="flex items-center justify-between border-border border-b p-4">
           <div className="flex items-center gap-2">
             <Key size={16} className="text-text" />
-            <h3 className="font-mono text-sm text-text">{provider.name} API Key</h3>
+            <h3 className="ui-font text-sm text-text">{provider.name} API Key</h3>
           </div>
           <button onClick={onClose} className="text-text-lighter transition-colors hover:text-text">
             <X size={16} />
@@ -184,7 +184,7 @@ const ApiKeyModal = ({
               placeholder={getApiKeyPlaceholder()}
               className={cn(
                 "w-full rounded border border-border bg-secondary-bg",
-                "px-3 py-2 font-mono text-text text-xs",
+                "ui-font px-3 py-2 text-text text-xs",
                 "focus:border-blue-500 focus:outline-none",
               )}
               disabled={isValidating}

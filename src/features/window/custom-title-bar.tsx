@@ -1,94 +1,38 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { platform } from "@tauri-apps/plugin-os";
 import { Maximize2, MenuIcon, Minimize2, Minus, Settings, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
-import { useProjectStore } from "@/stores/project-store";
+import { useIsLinux, useIsMac } from "@/hooks/use-platform";
 import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/utils/connection-store";
 import { getFolderName } from "@/utils/path-helpers";
+import ProjectTabs from "./components/project-tabs";
 import CustomMenuBar from "./menu-bar";
 
 interface CustomTitleBarProps {
   title?: string;
   showMinimal?: boolean;
-  isWelcomeScreen?: boolean;
   onOpenSettings?: () => void;
 }
 
-const CustomTitleBar = ({
-  showMinimal = false,
-  isWelcomeScreen = false,
-  onOpenSettings,
-}: CustomTitleBarProps) => {
+const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarProps) => {
   const { settings, updateSetting } = useSettingsStore();
-
-  // Reactive selector for project name
-  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const [projectName, setProjectName] = useState<string>("Explorer");
-
-  // Handle remote connections and initial project name setup
-  useEffect(() => {
-    const setupProjectName = async () => {
-      // Check if this is a remote window
-      const urlParams = new URLSearchParams(window.location.search);
-      const remoteConnectionId = urlParams.get("remote");
-
-      if (remoteConnectionId) {
-        try {
-          const connection = await connectionStore.getConnection(remoteConnectionId);
-          setProjectName(connection ? `Remote: ${connection.name}` : "Remote");
-        } catch (error) {
-          console.error("Error getting remote connection:", error);
-          setProjectName("Remote");
-        }
-      } else {
-        // For local projects, compute name synchronously
-        setProjectName(rootFolderPath ? getFolderName(rootFolderPath) : "Explorer");
-      }
-    };
-
-    setupProjectName();
-  }, [rootFolderPath]);
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
-  const [currentPlatform, setCurrentPlatform] = useState<string>(() => {
-    if (typeof navigator !== "undefined") {
-      if (navigator.userAgent.includes("Mac")) {
-        return "macos";
-      } else if (navigator.userAgent.includes("Linux")) {
-        return "linux";
-      } else {
-        return "windows";
-      }
-    }
-    return "other";
-  });
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const [projectName, setProjectName] = useState<string>("Explorer");
+  
+  const isMacOS = useIsMac();
+  const isLinux = useIsLinux();
 
   useEffect(() => {
     const initWindow = async () => {
       const window = getCurrentWindow();
       setCurrentWindow(window);
-
-      try {
-        const platformName = await platform();
-        setCurrentPlatform(platformName);
-      } catch (error) {
-        console.error("Error getting platform:", error);
-        if (typeof navigator !== "undefined") {
-          if (navigator.userAgent.includes("Mac")) {
-            setCurrentPlatform("macos");
-          } else if (navigator.userAgent.includes("Linux")) {
-            setCurrentPlatform("linux");
-          } else {
-            setCurrentPlatform("windows");
-          }
-        }
-      }
 
       try {
         const maximized = await window.isMaximized();
@@ -126,19 +70,35 @@ const CustomTitleBar = ({
       console.error("Error closing window:", error);
     }
   };
+  
+ useEffect(() => {
+    const setupProjectName = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const remoteConnectionId = urlParams.get("remote");
 
-  const isMacOS = currentPlatform === "macos";
-  const isLinux = currentPlatform === "linux";
+      if (remoteConnectionId) {
+        try {
+          const connection = await connectionStore.getConnection(remoteConnectionId);
+          setProjectName(connection ? `Remote: ${connection.name}` : "Remote");
+        } catch (error) {
+          console.error("Error getting remote connection:", error);
+          setProjectName("Remote");
+        }
+      } else {
+        setProjectName(rootFolderPath ? getFolderName(rootFolderPath) : "Explorer");
+      }
+    };
+
+    setupProjectName();
+  }, [rootFolderPath]);
 
   if (showMinimal) {
-    const backgroundClass = isWelcomeScreen ? "bg-paper-bg" : "bg-primary-bg";
-
     return (
       <div
         data-tauri-drag-region
         className={`relative z-50 flex select-none items-center justify-between ${
           isMacOS ? "h-11" : "h-7"
-        } ${backgroundClass}`}
+        } bg-primary-bg`}
       >
         <div className="flex-1" />
 
@@ -165,7 +125,7 @@ const CustomTitleBar = ({
             </button>
             <button
               onClick={handleClose}
-              className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-red-600"
+              className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-error"
               title="Close"
             >
               <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
@@ -190,13 +150,9 @@ const CustomTitleBar = ({
         {/* macOS traffic light space holder */}
         <div className="flex items-center space-x-2 pl-4" />
 
-        {/* Center - Project name for macOS */}
-        <div className="-translate-x-1/2 pointer-events-none absolute left-1/2 flex transform items-center">
-          {projectName && (
-            <span className="max-w-60 truncate text-center font-medium text-[10px] text-text">
-              {projectName}
-            </span>
-          )}
+        {/* Center - Project tabs for macOS */}
+        <div className="-translate-x-1/2 pointer-events-auto absolute left-1/2 flex transform items-center">
+          <ProjectTabs />
         </div>
 
         {/* Settings and AI Chat buttons */}
@@ -256,18 +212,16 @@ const CustomTitleBar = ({
           </button>
         )}
 
-        {projectName && (
-          <span
-            className={cn(
-              "max-w-96 truncate font-medium text-text text-xs",
-              !settings.nativeMenuBar &&
-                !settings.compactMenuBar &&
-                "-translate-x-1/2 absolute left-1/2",
-            )}
-          >
-            {projectName}
-          </span>
-        )}
+        {/* Project tabs */}
+        <div
+          className={cn(
+            !settings.nativeMenuBar &&
+              !settings.compactMenuBar &&
+              "-translate-x-1/2 absolute left-1/2",
+          )}
+        >
+          <ProjectTabs />
+        </div>
       </div>
 
       {/* Right side */}
@@ -323,7 +277,7 @@ const CustomTitleBar = ({
             </button>
             <button
               onClick={handleClose}
-              className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-red-600"
+              className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-error"
               title="Close"
             >
               <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />

@@ -1,4 +1,4 @@
-import { Folder, GitBranch, Package, Search, Server } from "lucide-react";
+import { Folder, GitBranch, Search, Server } from "lucide-react";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import Button from "../../../../ui/button";
 
@@ -6,25 +6,20 @@ interface SidebarPaneSelectorProps {
   isGitViewActive: boolean;
   isSearchViewActive: boolean;
   isRemoteViewActive: boolean;
-  isExtensionsViewActive: boolean;
   isRemoteWindow: boolean;
   coreFeatures: CoreFeaturesState;
-  onViewChange: (view: "files" | "git" | "search" | "remote" | "extensions") => void;
-  onOpenExtensions: () => void;
+  onViewChange: (view: "files" | "git" | "search" | "remote") => void;
 }
 
 export const SidebarPaneSelector = ({
   isGitViewActive,
   isSearchViewActive,
   isRemoteViewActive,
-  isExtensionsViewActive,
   isRemoteWindow,
   coreFeatures,
   onViewChange,
-  onOpenExtensions,
 }: SidebarPaneSelectorProps) => {
-  const isFilesActive =
-    !isGitViewActive && !isSearchViewActive && !isRemoteViewActive && !isExtensionsViewActive;
+  const isFilesActive = !isGitViewActive && !isSearchViewActive && !isRemoteViewActive;
 
   return (
     <div className="flex gap-0.5 border-border border-b bg-secondary-bg p-1.5">
@@ -93,24 +88,6 @@ export const SidebarPaneSelector = ({
           <Server size={14} />
         </Button>
       )}
-
-      <Button
-        onClick={() => {
-          onViewChange("extensions");
-          onOpenExtensions();
-        }}
-        variant="ghost"
-        size="sm"
-        data-active={isExtensionsViewActive}
-        className={`flex h-6 w-6 items-center justify-center rounded p-0 text-xs ${
-          isExtensionsViewActive
-            ? "bg-selected text-text"
-            : "text-text-lighter hover:bg-hover hover:text-text"
-        }`}
-        title="Extensions"
-      >
-        <Package size={14} />
-      </Button>
     </div>
   );
 };

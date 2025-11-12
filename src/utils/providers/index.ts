@@ -1,3 +1,4 @@
+import { GeminiProvider } from "./gemini-provider";
 import { OpenAIProvider } from "./openai-provider";
 import { OpenRouterProvider } from "./openrouter-provider";
 import type { AIProvider, ProviderConfig } from "./provider-interface";
@@ -23,6 +24,15 @@ function initializeProviders(): void {
     maxTokens: 4096,
   };
   providers.set("openrouter", new OpenRouterProvider(openRouterConfig));
+
+  const geminiConfig: ProviderConfig = {
+    id: "gemini",
+    name: "Gemini",
+    apiUrl: "https://generativelanguage.googleapis.com/v1beta/models",
+    requiresApiKey: true,
+    maxTokens: 8192,
+  };
+  providers.set("gemini", new GeminiProvider(geminiConfig));
 }
 
 export function getProvider(providerId: string): AIProvider | undefined {

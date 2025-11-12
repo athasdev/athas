@@ -11,8 +11,10 @@ use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri_plugin_os::platform;
 use tauri_plugin_store::StoreExt;
+use terminal::{
+   TerminalManager, close_terminal, create_terminal, get_shells, terminal_resize, terminal_write,
+};
 use tokio::sync::Mutex;
-use xterm_terminal::XtermManager;
 
 mod claude_bridge;
 mod commands;
@@ -20,14 +22,12 @@ mod file_watcher;
 mod logger;
 mod lsp;
 mod menu;
-use crate::shell::get_shells;
 mod ssh;
 mod terminal;
-mod xterm_terminal;
 
 fn main() {
    tauri::Builder::default()
-      .plugin(tauri_plugin_store::Builder::new().build())
+      .plugin(tauri_plugin_store::Builder::default().build())
       .plugin(tauri_plugin_clipboard_manager::init())
       .plugin(logger::init(log::LevelFilter::Info))
       .plugin(tauri_plugin_window_state::Builder::new().build())
@@ -35,7 +35,6 @@ fn main() {
       .plugin(tauri_plugin_dialog::init())
       .plugin(tauri_plugin_shell::init())
       .plugin(tauri_plugin_opener::init())
-      .plugin(tauri_plugin_store::Builder::default().build())
       .plugin(tauri_plugin_os::init())
       .plugin(tauri_plugin_http::init())
       .plugin(tauri_plugin_process::init())
@@ -237,11 +236,15 @@ fn main() {
                         log::error!("Failed to toggle fullscreen: {}", e);
                      }
                   }
-                  // Theme menu items
-                  theme_id if theme_id.starts_with("theme_") => {
-                     if let Some(theme) = theme_id.strip_prefix("theme_") {
-                        let _ = window.emit("menu_theme_change", theme);
-                     }
+                  // Theme menu items - handle theme IDs from registry
+                  // Theme IDs are either "auto" or contain hyphens (e.g., "catppuccin-mocha")
+                  "auto" => {
+                     let _ = window.emit("menu_theme_change", "auto");
+                  }
+                  theme_id if theme_id.contains('-') => {
+                     // Theme IDs from registry use hyphens (e.g., "catppuccin-mocha",
+                     // "tokyo-night")
+                     let _ = window.emit("menu_theme_change", theme_id);
                   }
                   _ => {}
                }
@@ -250,7 +253,7 @@ fn main() {
 
          Ok(())
       })
-      .manage(Arc::new(XtermManager::new()))
+      .manage(Arc::new(TerminalManager::new()))
       .invoke_handler(tauri::generate_handler![
          // File system commands
          move_file,
@@ -304,12 +307,11 @@ fn main() {
          start_watching,
          stop_watching,
          set_project_root,
-         // Xterm commands
-         create_xterm_terminal,
+         // Terminal commands
+         create_terminal,
          terminal_write,
          terminal_resize,
-         close_xterm_terminal,
-         // Other commands for terminal (switching shells)
+         close_terminal,
          get_shells,
          // execute_shell,
          // SSH commands
@@ -337,6 +339,8 @@ fn main() {
          validate_font,
          // Token commands
          get_tokens,
+         get_tokens_range,
+         get_tokens_by_line,
          // SQLite commands
          get_sqlite_tables,
          query_sqlite,
@@ -353,6 +357,12 @@ fn main() {
          lsp_document_change,
          lsp_document_close,
          lsp_is_language_supported,
+         // Extension commands
+         download_extension,
+         install_extension,
+         uninstall_extension,
+         get_installed_extensions,
+         get_bundled_extensions_path,
          // Fuzzy matching commands
          fuzzy_match,
          filter_completions,
@@ -366,6 +376,7 @@ fn main() {
          uninstall_cli_command,
          // Menu commands
          menu::toggle_menu_bar,
+         menu::rebuild_menu_themes,
       ])
       .run(tauri::generate_context!())
       .expect("error while running tauri application");

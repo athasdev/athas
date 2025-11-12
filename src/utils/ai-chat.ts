@@ -1,3 +1,4 @@
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { getModelById, getProviderById } from "@/features/ai/types/providers";
@@ -87,18 +88,23 @@ export const getChatCompletionStream = async (
       throw new Error(`Provider implementation not found: ${providerId}`);
     }
 
-    const headers = providerImpl.buildHeaders(apiKey || undefined);
-    const payload = providerImpl.buildPayload({
+    const streamRequest = {
       modelId,
       messages,
       maxTokens: Math.min(1000, Math.floor(model.maxTokens * 0.25)),
       temperature: 0.7,
       apiKey: apiKey || undefined,
-    });
+    };
+
+    const headers = providerImpl.buildHeaders(apiKey || undefined);
+    const payload = providerImpl.buildPayload(streamRequest);
+    const url = providerImpl.buildUrl ? providerImpl.buildUrl(streamRequest) : provider.apiUrl;
 
     console.log(`Making ${provider.name} streaming chat request with model ${model.name}...`);
 
-    const response = await fetch(provider.apiUrl, {
+    // Use Tauri's fetch for Gemini to bypass CORS restrictions
+    const fetchFn = providerId === "gemini" ? tauriFetch : fetch;
+    const response = await fetchFn(url, {
       method: "POST",
       headers,
       body: JSON.stringify(payload),

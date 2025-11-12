@@ -22,11 +22,8 @@ export default function ColumnFilters({
   return (
     <div className="border-border border-b bg-secondary-bg px-3 py-2">
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-mono text-text-lighter text-xs">{columnFilters.length} filters</span>
-        <button
-          onClick={onClearAll}
-          className="font-mono text-text-lighter text-xs hover:text-text"
-        >
+        <span className="ui-font text-text-lighter text-xs">{columnFilters.length} filters</span>
+        <button onClick={onClearAll} className="ui-font text-text-lighter text-xs hover:text-text">
           clear
         </button>
       </div>
@@ -64,7 +61,7 @@ export default function ColumnFilters({
               value={filter.value}
               onChange={(e) => onUpdateFilter(index, { value: e.target.value })}
               placeholder="value"
-              className="flex-1 border border-border bg-primary-bg px-1 py-0.5 font-mono text-xs"
+              className="ui-font flex-1 border border-border bg-primary-bg px-1 py-0.5 text-xs"
             />
 
             {filter.operator === "between" && (
@@ -73,7 +70,7 @@ export default function ColumnFilters({
                 value={filter.value2 || ""}
                 onChange={(e) => onUpdateFilter(index, { value2: e.target.value })}
                 placeholder="value2"
-                className="flex-1 border border-border bg-primary-bg px-1 py-0.5 font-mono text-xs"
+                className="ui-font flex-1 border border-border bg-primary-bg px-1 py-0.5 text-xs"
               />
             )}
 

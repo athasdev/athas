@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 interface BufferSession {
+  id?: string;
   path: string;
   name: string;
   isPinned: boolean;

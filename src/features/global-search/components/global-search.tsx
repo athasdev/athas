@@ -71,7 +71,7 @@ const GlobalSearch = () => {
                 value={query}
                 onChange={setQuery}
                 placeholder="Search files globally..."
-                className="font-mono"
+                className="ui-font"
               />
               <FileCountBadge
                 totalFiles={files.length}

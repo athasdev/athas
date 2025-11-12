@@ -54,6 +54,17 @@ impl LspRegistry {
       });
    }
 
+   pub fn find_server_for_file(&self, file_path: &Path) -> Option<&LspServerConfig> {
+      // Get file extension
+      let extension = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+      // Find server that handles this extension
+      self
+         .servers
+         .iter()
+         .find(|s| s.file_extensions.contains(&extension.to_string()))
+   }
+
    pub fn find_server_for_workspace(&self, workspace: &Path) -> Option<&LspServerConfig> {
       // Always try TypeScript server for JS/TS projects - it handles both
       if self.is_javascript_or_typescript_project(workspace) {

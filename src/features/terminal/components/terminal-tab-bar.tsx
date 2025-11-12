@@ -1,154 +1,31 @@
 import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 import {
   AlignCenter,
   ChevronDown,
-  Copy,
   Maximize,
   Maximize2,
   Minimize2,
   Pin,
-  PinOff,
   Plus,
-  RotateCcw,
   SplitSquareHorizontal,
   Terminal as TerminalIcon,
   X,
 } from "lucide-react";
-import React, { type RefObject, useEffect, useRef, useState } from "react";
+import type React from "react";
+import type { RefObject } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import type { Shell, Terminal } from "@/features/terminal/types/terminal";
+import { useProjectStore } from "@/stores/project-store";
 import { type TerminalWidthMode, useTerminalStore } from "@/stores/terminal-store";
 import { cn } from "@/utils/cn";
 import Dropdown from "../../../ui/dropdown";
-import KeybindingBadge from "../../../ui/keybinding-badge";
 import Tooltip from "../../../ui/tooltip";
-
-interface TerminalContextMenuProps {
-  isOpen: boolean;
-  position: { x: number; y: number };
-  terminal: Terminal | null;
-  onClose: () => void;
-  onPin: (terminalId: string) => void;
-  onCloseTab: (terminalId: string) => void;
-  onCloseOthers: (terminalId: string) => void;
-  onCloseAll: () => void;
-  onCloseToRight: (terminalId: string) => void;
-}
-
-const TerminalContextMenu = ({
-  isOpen,
-  position,
-  terminal,
-  onClose,
-  onPin,
-  onCloseTab,
-  onCloseOthers,
-  onCloseAll,
-  onCloseToRight,
-}: TerminalContextMenuProps) => {
-  const menuRef = useRef<HTMLDivElement>(null);
-  const documentRef = useRef(document);
-
-  useOnClickOutside(menuRef as RefObject<HTMLElement>, () => {
-    onClose();
-  });
-
-  useEventListener(
-    "keydown",
-    (e) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    },
-    documentRef,
-  );
-
-  if (!isOpen || !terminal) return null;
-
-  return (
-    <div
-      ref={menuRef}
-      className="fixed z-50 w-[180px] border border-border bg-secondary-bg py-1 shadow-lg"
-      style={{ left: position.x, top: position.y }}
-    >
-      <button
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onPin(terminal.id);
-          onClose();
-        }}
-      >
-        {terminal.isPinned ? <PinOff size={12} /> : <Pin size={12} />}
-        {terminal.isPinned ? "Unpin Terminal" : "Pin Terminal"}
-      </button>
-
-      <div className="my-1 border-border border-t" />
-
-      <button
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
-        onClick={() => {
-          // Duplicate terminal with same directory
-          onClose();
-        }}
-      >
-        <Copy size={12} />
-        Duplicate Terminal
-      </button>
-
-      <button
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
-        onClick={() => {
-          // Clear terminal screen
-          onClose();
-        }}
-      >
-        <RotateCcw size={12} />
-        Clear Terminal
-      </button>
-
-      <div className="my-1 border-border border-t" />
-
-      <button
-        className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onCloseTab(terminal.id);
-          onClose();
-        }}
-      >
-        <span>Close</span>
-        <KeybindingBadge keys={["⌘", "W"]} className="opacity-60" />
-      </button>
-      <button
-        className="w-full px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onCloseOthers(terminal.id);
-          onClose();
-        }}
-      >
-        Close Others
-      </button>
-      <button
-        className="w-full px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onCloseToRight(terminal.id);
-          onClose();
-        }}
-      >
-        Close to Right
-      </button>
-      <button
-        className="w-full px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onCloseAll();
-          onClose();
-        }}
-      >
-        Close All
-      </button>
-    </div>
-  );
-};
+import TerminalTabBarItem from "./terminal-tab-bar-item";
+import TerminalTabContextMenu from "./terminal-tab-context-menu";
 
 interface ToolbarContextMenuProps {
   isOpen: boolean;
@@ -195,13 +72,13 @@ const ToolbarContextMenu = ({
       className="fixed z-50 w-[180px] border border-border bg-secondary-bg py-1 shadow-lg"
       style={{ left: position.x, top: position.y }}
     >
-      <div className="px-2 py-1 font-mono text-[10px] text-text-lighter">Terminal Width</div>
+      <div className="ui-font px-2 py-1 text-[10px] text-text-lighter">Terminal Width</div>
       <div className="my-1 border-border border-t" />
       {modes.map((mode) => (
         <button
           key={mode.value}
           className={cn(
-            "flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover",
+            "ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover",
             currentMode === mode.value && "bg-selected",
           )}
           onClick={() => {
@@ -224,7 +101,9 @@ interface TerminalTabBarProps {
   onTabClose: (terminalId: string, event: React.MouseEvent) => void;
   onTabReorder?: (fromIndex: number, toIndex: number) => void;
   onTabPin?: (terminalId: string) => void;
+  onTabRename?: (terminalId: string) => void;
   onNewTerminal?: () => void;
+  onTabCreate?: (directory: string, shell?: string) => void;
   onCloseOtherTabs?: (terminalId: string) => void;
   onCloseAllTabs?: () => void;
   onCloseTabsToRight?: (terminalId: string) => void;
@@ -242,7 +121,9 @@ const TerminalTabBar = ({
   onTabClose,
   onTabReorder,
   onTabPin,
+  onTabRename,
   onNewTerminal,
+  onTabCreate,
   onCloseOtherTabs,
   onCloseAllTabs,
   onCloseTabsToRight,
@@ -286,6 +167,12 @@ const TerminalTabBar = ({
   const handleMouseDown = (e: React.MouseEvent, index: number) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) {
       return;
+    }
+
+    // Click the tab immediately (like project tabs pattern)
+    const terminal = sortedTerminals[index];
+    if (terminal) {
+      onTabClick(terminal.id);
     }
 
     e.preventDefault();
@@ -389,6 +276,27 @@ const TerminalTabBar = ({
     });
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    // Drag functionality is handled via mouseDown/mouseMove
+    e.preventDefault();
+  };
+
+  const handleDragEnd = () => {
+    // Cleanup is handled in handleMouseUp
+  };
+
+  const handleKeyDown = (_e: React.KeyboardEvent) => {
+    // TODO: Add keyboard navigation support
+  };
+
+  const handleTabPin = (terminalId: string) => {
+    onTabPin?.(terminalId);
+  };
+
+  const handleTabCloseWrapper = (terminalId: string) => {
+    onTabClose(terminalId, {} as React.MouseEvent);
+  };
+
   const closeContextMenu = () => {
     setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, terminal: null });
   };
@@ -470,13 +378,20 @@ const TerminalTabBar = ({
       >
         <div className="flex items-center gap-1.5">
           <TerminalIcon size={10} className="text-text-lighter" />
-          <span className="font-mono text-text-lighter text-xs">No terminals</span>
+          <span className="ui-font text-text-lighter text-xs">No terminals</span>
         </div>
         {onNewTerminal && (
           <div className="flex items-center gap-1">
             <Tooltip content="New Terminal (Cmd+T)" side="bottom">
               <button
-                onClick={onNewTerminal}
+                onClick={() => {
+                  if (selectedShell && onTabCreate) {
+                    const { rootFolderPath } = useProjectStore.getState();
+                    onTabCreate(rootFolderPath || process.cwd(), selectedShell);
+                  } else {
+                    onNewTerminal?.();
+                  }
+                }}
                 className={cn(
                   "flex items-center gap-0.5 px-1.5 py-1",
                   "text-text-lighter text-xs transition-colors hover:bg-hover",
@@ -544,82 +459,29 @@ const TerminalTabBar = ({
         >
           {sortedTerminals.map((terminal, index) => {
             const isActive = terminal.id === activeTerminalId;
-            // Drop indicator should be shown before the tab at dropTarget
-            const showDropIndicator =
+            const isDraggedTab = isDragging && draggedIndex === index;
+            const showDropIndicatorBefore =
               dropTarget === index && draggedIndex !== null && !isDraggedOutside;
 
             return (
-              <React.Fragment key={terminal.id}>
-                {/* Drop indicator before tab */}
-                {showDropIndicator && (
-                  <div className="relative flex items-center">
-                    <div
-                      className="absolute top-0 bottom-0 z-10 h-full w-0.5 bg-accent"
-                      style={{ height: "100%" }}
-                    />
-                  </div>
-                )}
-                <Tooltip
-                  content={`${terminal.name}${terminal.isPinned ? " (Pinned)" : ""}\n${terminal.currentDirectory}`}
-                  side="bottom"
-                >
-                  <div
-                    ref={(el) => {
-                      tabRefs.current[index] = el;
-                    }}
-                    className={`group relative flex flex-shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap px-3 py-1 transition-all duration-150 ${
-                      isActive
-                        ? "bg-bg text-text"
-                        : "bg-transparent text-text-lighter hover:text-text"
-                    } ${terminal.isPinned ? "border-l-2 border-l-blue-500" : ""}`}
-                    style={{ minWidth: "120px", maxWidth: "200px" }}
-                    onMouseDown={(e) => handleMouseDown(e, index)}
-                    onClick={() => {
-                      if (!isDragging) {
-                        onTabClick(terminal.id);
-                      }
-                    }}
-                    onContextMenu={(e) => handleContextMenu(e, terminal)}
-                  >
-                    {/* Active tab indicator */}
-                    {isActive && (
-                      <div className="absolute right-0 bottom-0 left-0 h-[2px] bg-blue-500" />
-                    )}
-
-                    {/* Terminal Icon */}
-                    <div className="flex-shrink-0">
-                      <TerminalIcon size={12} className="text-text-lighter" />
-                    </div>
-
-                    {/* Pin indicator */}
-                    {terminal.isPinned && <Pin size={8} className="flex-shrink-0 text-blue-500" />}
-
-                    {/* Terminal Name */}
-                    <span
-                      className={`flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs ${isActive ? "text-text" : "text-text-light"} `}
-                    >
-                      {terminal.name}
-                    </span>
-
-                    {/* Close Button */}
-                    {!terminal.isPinned && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onTabClose(terminal.id, e);
-                        }}
-                        className={cn(
-                          "flex-shrink-0 cursor-pointer rounded p-0.5",
-                          "text-text-lighter opacity-0 transition-all duration-150",
-                          "hover:bg-hover hover:text-text hover:opacity-100 group-hover:opacity-100",
-                        )}
-                      >
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
-                </Tooltip>
-              </React.Fragment>
+              <TerminalTabBarItem
+                key={terminal.id}
+                terminal={terminal}
+                index={index}
+                isActive={isActive}
+                isDraggedTab={isDraggedTab}
+                showDropIndicatorBefore={showDropIndicatorBefore}
+                tabRef={(el) => {
+                  tabRefs.current[index] = el;
+                }}
+                onMouseDown={(e) => handleMouseDown(e, index)}
+                onContextMenu={(e) => handleContextMenu(e, terminal)}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onKeyDown={handleKeyDown}
+                handleTabClose={handleTabCloseWrapper}
+                handleTabPin={handleTabPin}
+              />
             );
           })}
           {/* Drop indicator after the last tab */}
@@ -638,7 +500,14 @@ const TerminalTabBar = ({
           <div className="flex flex-shrink-0 items-center gap-0.5 rounded p-0.5 transition-colors hover:bg-hover">
             <Tooltip content="New Terminal (Cmd+T)" side="bottom">
               <button
-                onClick={onNewTerminal}
+                onClick={() => {
+                  if (selectedShell && onTabCreate) {
+                    const { rootFolderPath } = useProjectStore.getState();
+                    onTabCreate(rootFolderPath || process.cwd(), selectedShell);
+                  } else {
+                    onNewTerminal?.();
+                  }
+                }}
                 className={cn(
                   "flex flex-shrink-0 cursor-pointer items-center ",
                   "text-text-lighter",
@@ -736,7 +605,7 @@ const TerminalTabBar = ({
                 el.style.top = `${dragCurrentPosition.y - rect.height / 2}px`;
               }
             }}
-            className="fixed z-50 flex cursor-pointer items-center gap-1.5 border border-border bg-bg px-2 py-1.5 font-mono text-xs shadow-lg"
+            className="ui-font fixed z-50 flex cursor-pointer items-center gap-1.5 border border-border bg-bg px-2 py-1.5 text-xs shadow-lg"
             style={{
               opacity: 0.95,
               minWidth: 60,
@@ -760,7 +629,7 @@ const TerminalTabBar = ({
 
       {createPortal(
         <>
-          <TerminalContextMenu
+          <TerminalTabContextMenu
             isOpen={contextMenu.isOpen}
             position={contextMenu.position}
             terminal={contextMenu.terminal}
@@ -774,6 +643,56 @@ const TerminalTabBar = ({
             onCloseOthers={onCloseOtherTabs || (() => {})}
             onCloseAll={onCloseAllTabs || (() => {})}
             onCloseToRight={onCloseTabsToRight || (() => {})}
+            onClear={(terminalId) => {
+              const session = useTerminalStore.getState().getSession(terminalId);
+              if (session?.ref?.current) {
+                session.ref.current.clear();
+              }
+            }}
+            onDuplicate={(terminalId) => {
+              const terminal = terminals.find((t) => t.id === terminalId);
+              if (terminal) {
+                onTabCreate?.(terminal.currentDirectory, terminal.shell);
+              }
+            }}
+            onRename={(terminalId) => {
+              onTabRename?.(terminalId);
+            }}
+            onExport={async (terminalId) => {
+              const session = useTerminalStore.getState().getSession(terminalId);
+              const terminal = terminals.find((t) => t.id === terminalId);
+              if (session?.ref?.current && terminal) {
+                try {
+                  const content = session.ref.current.serialize();
+                  if (!content) {
+                    console.warn("No terminal content to export");
+                    return;
+                  }
+
+                  const defaultFileName = `${terminal.name.replace(/[^a-zA-Z0-9]/g, "_")}_${new Date().toISOString().split("T")[0]}.txt`;
+                  const filePath = await save({
+                    defaultPath: defaultFileName,
+                    filters: [
+                      {
+                        name: "Text Files",
+                        extensions: ["txt"],
+                      },
+                      {
+                        name: "All Files",
+                        extensions: ["*"],
+                      },
+                    ],
+                  });
+
+                  if (filePath) {
+                    await writeTextFile(filePath, content);
+                    console.log(`Terminal output exported to: ${filePath}`);
+                  }
+                } catch (error) {
+                  console.error("Failed to export terminal output:", error);
+                }
+              }
+            }}
           />
           <ToolbarContextMenu
             isOpen={toolbarContextMenu.isOpen}

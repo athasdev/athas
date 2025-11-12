@@ -1,30 +1,102 @@
-use tauri::menu::{MenuBuilder, MenuItem, SubmenuBuilder};
+use serde::{Deserialize, Serialize};
+use tauri::menu::{MenuBuilder, MenuItem, Submenu, SubmenuBuilder};
+use tauri_plugin_store::StoreExt;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ThemeData {
+   pub id: String,
+   pub name: String,
+   pub category: String,
+}
+
+#[tauri::command]
+pub async fn rebuild_menu_themes(
+   app: tauri::AppHandle,
+   themes: Vec<ThemeData>,
+) -> Result<(), String> {
+   // Only rebuild menu if native menu bar is enabled
+   if app.menu().is_some() {
+      let new_menu = create_menu_with_themes(&app, Some(themes))
+         .map_err(|e| format!("Failed to create menu: {}", e))?;
+      app.set_menu(new_menu)
+         .map_err(|e| format!("Failed to set menu: {}", e))?;
+      log::info!("Menu rebuilt with dynamic themes");
+   } else {
+      log::info!("Native menu bar is disabled, skipping menu rebuild");
+   }
+   Ok(())
+}
 
 #[tauri::command]
 pub async fn toggle_menu_bar(app: tauri::AppHandle, toggle: Option<bool>) -> Result<(), String> {
    let is_menu_present = app.menu().is_some();
    let should_show_menu = match toggle {
       Some(t) => t,
-      None => is_menu_present,
+      None => !is_menu_present,
    };
 
    if should_show_menu {
+      // Show menu by recreating it
+      let new_menu = create_menu_with_themes(&app, None)
+         .map_err(|e| format!("Failed to create menu: {}", e))?;
+      app.set_menu(new_menu)
+         .map_err(|e| format!("Failed to show menu: {}", e))?;
+      log::info!("Menu bar shown via command");
+
+      // Update the store to persist the setting
+      if let Ok(store) = app.store("settings.json") {
+         let _ = store.set("nativeMenuBar", true);
+         let _ = store.save();
+      }
+   } else {
       // Hide menu by setting it to None
       app.remove_menu()
          .map_err(|e| format!("Failed to hide menu: {}", e))?;
       log::info!("Menu bar hidden via command");
-   } else {
-      // Show menu by recreating it
-      let new_menu = create_menu(&app).map_err(|e| format!("Failed to create menu: {}", e))?;
-      app.set_menu(new_menu)
-         .map_err(|e| format!("Failed to show menu: {}", e))?;
-      log::info!("Menu bar shown via command");
+
+      // Update the store to persist the setting
+      if let Ok(store) = app.store("settings.json") {
+         let _ = store.set("nativeMenuBar", false);
+         let _ = store.save();
+      }
    }
    Ok(())
 }
 
+fn build_theme_submenu<R: tauri::Runtime>(
+   app: &tauri::AppHandle<R>,
+   themes: Option<Vec<ThemeData>>,
+) -> Result<Submenu<R>, tauri::Error> {
+   let mut theme_builder = SubmenuBuilder::new(app, "Theme").text("auto", "Auto");
+
+   if let Some(theme_list) = themes {
+      // Add separator and all themes without grouping
+      if !theme_list.is_empty() {
+         theme_builder = theme_builder.separator();
+         for theme in &theme_list {
+            theme_builder = theme_builder.text(&theme.id, &theme.name);
+         }
+      }
+   } else {
+      // Fallback to hardcoded themes if none provided
+      theme_builder = theme_builder
+         .separator()
+         .text("athas-light", "Athas Light")
+         .text("athas-dark", "Athas Dark")
+   }
+
+   theme_builder.build()
+}
+
 pub fn create_menu<R: tauri::Runtime>(
    app: &tauri::AppHandle<R>,
+) -> Result<tauri::menu::Menu<R>, tauri::Error> {
+   create_menu_with_themes(app, None)
+}
+
+pub fn create_menu_with_themes<R: tauri::Runtime>(
+   app: &tauri::AppHandle<R>,
+   themes: Option<Vec<ThemeData>>,
 ) -> Result<tauri::menu::Menu<R>, tauri::Error> {
    // Unified File menu for all platforms - clean and consistent
    let file_menu = SubmenuBuilder::new(app, "File")
@@ -116,19 +188,8 @@ pub fn create_menu<R: tauri::Runtime>(
       )?)
       .build()?;
 
-   // Theme submenu
-   let theme_menu = SubmenuBuilder::new(app, "Theme")
-      .text("theme_auto", "Auto")
-      .separator()
-      .text("theme_light", "Light")
-      .text("theme_dark", "Dark")
-      .text("theme_midnight", "Midnight")
-      .separator()
-      .text("theme_catppuccin_mocha", "Catppuccin Mocha")
-      .text("theme_tokyo_night", "Tokyo Night")
-      .text("theme_dracula", "Dracula")
-      .text("theme_nord", "Nord")
-      .build()?;
+   // Theme submenu - built dynamically from theme data
+   let theme_menu = build_theme_submenu(app, themes)?;
 
    // View menu
    let view_menu = SubmenuBuilder::new(app, "View")

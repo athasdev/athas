@@ -2,6 +2,7 @@ import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { type RefObject, useCallback } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { logger } from "@/features/editor/utils/logger";
 
 // Manages clipboard operations (copy/cut/paste)
 export function useClipboard(
@@ -20,7 +21,7 @@ export function useClipboard(
       try {
         await navigator.clipboard.writeText(selectedText);
       } catch (error) {
-        console.error("Failed to copy text:", error);
+        logger.error("Editor", "Failed to copy text:", error);
       }
     }
   }, [content, textareaRef]);
@@ -49,7 +50,7 @@ export function useClipboard(
           }
         }, 0);
       } catch (error) {
-        console.error("Failed to cut text:", error);
+        logger.error("Editor", "Failed to cut text:", error);
       }
     }
   }, [content, onChange, updateBufferContent, activeBufferId, handleSelectionChange, textareaRef]);
@@ -89,7 +90,7 @@ export function useClipboard(
         }, 0);
       }
     } catch (error) {
-      console.error("Failed to paste text:", error);
+      logger.error("Editor", "Failed to paste text:", error);
     }
   }, [content, onChange, updateBufferContent, activeBufferId, handleSelectionChange, textareaRef]);
 

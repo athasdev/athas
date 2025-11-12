@@ -1,0 +1,148 @@
+{
+  "themes": [
+    {
+      "cssVariables": {
+        "--primary-bg": "#eff1f5",
+        "--secondary-bg": "#e6e9ef",
+        "--text": "#4c4f69",
+        "--text-light": "#6c6f85",
+        "--text-lighter": "#9ca0b0",
+        "--border": "#bcc0cc",
+        "--hover": "#dce0e8",
+        "--selected": "#ccd0da",
+        "--accent": "#1e66f5"
+      },
+      "syntaxTokens": {
+        "--syntax-keyword": "#8839ef",
+        "--syntax-string": "#40a02b",
+        "--syntax-number": "#fe640b",
+        "--syntax-comment": "#9ca0b0",
+        "--syntax-variable": "#d20f39",
+        "--syntax-function": "#1e66f5",
+        "--syntax-constant": "#fe640b",
+        "--syntax-property": "#04a5e5",
+        "--syntax-type": "#df8e1d",
+        "--syntax-operator": "#179299",
+        "--syntax-punctuation": "#4c4f69",
+        "--syntax-boolean": "#fe640b",
+        "--syntax-null": "#fe640b",
+        "--syntax-regex": "#40a02b",
+        "--syntax-jsx": "#d20f39",
+        "--syntax-jsx-attribute": "#8839ef"
+      },
+      "id": "catppuccin-latte",
+      "name": "Catppuccin Latte",
+      "description": "Light variant with warm, cozy colors",
+      "category": "Light",
+      "isDark": false
+    },
+    {
+      "cssVariables": {
+        "--primary-bg": "#303446",
+        "--secondary-bg": "#292c3c",
+        "--text": "#c6d0f5",
+        "--text-light": "#b5bfe2",
+        "--text-lighter": "#a5adce",
+        "--border": "#51576d",
+        "--hover": "#414559",
+        "--selected": "#51576d",
+        "--accent": "#99d1db"
+      },
+      "syntaxTokens": {
+        "--syntax-keyword": "#ca9ee6",
+        "--syntax-string": "#a6d189",
+        "--syntax-number": "#ef9f76",
+        "--syntax-comment": "#737994",
+        "--syntax-variable": "#e78284",
+        "--syntax-function": "#8caaee",
+        "--syntax-constant": "#ef9f76",
+        "--syntax-property": "#99d1db",
+        "--syntax-type": "#e5c890",
+        "--syntax-operator": "#81c8be",
+        "--syntax-punctuation": "#c6d0f5",
+        "--syntax-boolean": "#ef9f76",
+        "--syntax-null": "#ef9f76",
+        "--syntax-regex": "#a6d189",
+        "--syntax-jsx": "#e78284",
+        "--syntax-jsx-attribute": "#ca9ee6"
+      },
+      "id": "catppuccin-frappe",
+      "name": "Catppuccin Frappé",
+      "description": "Dark variant with soft, calm colors",
+      "category": "Dark",
+      "isDark": true
+    },
+    {
+      "cssVariables": {
+        "--primary-bg": "#24273a",
+        "--secondary-bg": "#1e2030",
+        "--text": "#cad3f5",
+        "--text-light": "#b8c0e0",
+        "--text-lighter": "#a5adcb",
+        "--border": "#494d64",
+        "--hover": "#363a4f",
+        "--selected": "#494d64",
+        "--accent": "#8aadf4"
+      },
+      "syntaxTokens": {
+        "--syntax-keyword": "#c6a0f6",
+        "--syntax-string": "#a6da95",
+        "--syntax-number": "#f5a97f",
+        "--syntax-comment": "#6e738d",
+        "--syntax-variable": "#f5bde6",
+        "--syntax-function": "#8aadf4",
+        "--syntax-constant": "#f5a97f",
+        "--syntax-property": "#8bd5ca",
+        "--syntax-type": "#eed49f",
+        "--syntax-operator": "#91d7e3",
+        "--syntax-punctuation": "#cad3f5",
+        "--syntax-boolean": "#f5a97f",
+        "--syntax-null": "#f5a97f",
+        "--syntax-regex": "#a6da95",
+        "--syntax-jsx": "#f5bde6",
+        "--syntax-jsx-attribute": "#c6a0f6"
+      },
+      "id": "catppuccin-macchiato",
+      "name": "Catppuccin Macchiato",
+      "description": "Medium dark variant with balanced contrast",
+      "category": "Dark",
+      "isDark": true
+    },
+    {
+      "cssVariables": {
+        "--primary-bg": "#1e1e2e",
+        "--secondary-bg": "#181825",
+        "--text": "#cdd6f4",
+        "--text-light": "#bac2de",
+        "--text-lighter": "#a6adc8",
+        "--border": "#45475a",
+        "--hover": "#313244",
+        "--selected": "#45475a",
+        "--accent": "#89b4fa"
+      },
+      "syntaxTokens": {
+        "--syntax-keyword": "#cba6f7",
+        "--syntax-string": "#a6e3a1",
+        "--syntax-number": "#fab387",
+        "--syntax-comment": "#6c7086",
+        "--syntax-variable": "#f38ba8",
+        "--syntax-function": "#89b4fa",
+        "--syntax-constant": "#fab387",
+        "--syntax-property": "#89dceb",
+        "--syntax-type": "#f9e2af",
+        "--syntax-operator": "#94e2d5",
+        "--syntax-punctuation": "#cdd6f4",
+        "--syntax-boolean": "#fab387",
+        "--syntax-null": "#fab387",
+        "--syntax-regex": "#a6e3a1",
+        "--syntax-jsx": "#f38ba8",
+        "--syntax-jsx-attribute": "#cba6f7"
+      },
+      "id": "catppuccin-mocha",
+      "name": "Catppuccin Mocha",
+      "description": "Darkest variant with warm, cozy colors",
+      "category": "Dark",
+      "isDark": true
+    }
+  ]
+}

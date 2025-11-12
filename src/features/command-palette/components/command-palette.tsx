@@ -57,6 +57,7 @@ const CommandPalette = () => {
     setIsCommandBarVisible,
     setIsGlobalSearchVisible,
     setIsBranchManagerVisible,
+    openSettingsDialog,
   } = useUIState();
   const { openQuickEdit } = useAppStore.use.actions();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
@@ -130,6 +131,7 @@ const CommandPalette = () => {
       setActiveView,
       setIsCommandBarVisible,
       setIsGlobalSearchVisible,
+      openSettingsDialog,
       onClose,
     }),
     ...createFileActions({

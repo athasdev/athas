@@ -175,7 +175,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
                       <div className="min-w-0 flex-1">
                         <div className="mb-1 flex items-center gap-2">
                           <Globe size={12} className="text-text-lighter" />
-                          <span className="font-medium font-mono text-text text-xs">
+                          <span className="ui-font font-medium text-text text-xs">
                             {remote.name}
                           </span>
                         </div>

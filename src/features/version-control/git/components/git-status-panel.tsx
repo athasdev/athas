@@ -342,7 +342,7 @@ const GitStatusPanel = ({
               onOpenFile(contextMenu.filePath);
               setContextMenu(null);
             }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-text text-xs hover:bg-hover"
+            className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
           >
             <FileText size={12} />
             Open File

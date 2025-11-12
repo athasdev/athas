@@ -25,6 +25,7 @@ interface XtermTerminalProps {
   isActive: boolean;
   onReady?: () => void;
   onTerminalRef?: (ref: any) => void;
+  onTerminalExit?: (sessionId: string) => void;
 }
 
 interface TerminalTheme {
@@ -57,6 +58,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   isActive,
   onReady,
   onTerminalRef,
+  onTerminalExit,
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
@@ -65,14 +67,48 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   const serializeAddonRef = useRef<SerializeAddon | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [searchResults, setSearchResults] = useState<{ current: number; total: number }>({
+    current: 0,
+    total: 0,
+  });
   const isInitializingRef = useRef(false);
   const currentConnectionIdRef = useRef<string | null>(null);
+  const onTerminalExitRef = useRef(onTerminalExit);
+  const currentInputLineRef = useRef<string>("");
+  const initFitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const themeRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resizeRafRef = useRef<number | null>(null);
+  const focusRafRef = useRef<number | null>(null);
+
+  // Keep ref in sync with prop
+  useEffect(() => {
+    onTerminalExitRef.current = onTerminalExit;
+  }, [onTerminalExit]);
 
   const { updateSession, getSession } = useTerminalStore();
   const { currentTheme } = useThemeStore();
   const { fontSize: editorFontSize, fontFamily: editorFontFamily } = useEditorSettingsStore();
   const { rootFolderPath } = useProjectStore();
   const [fontSize, setFontSize] = useState(editorFontSize);
+
+  // Parse OSC 7 sequence for working directory tracking
+  const parseOSC7 = useCallback((data: string): string | null => {
+    // OSC 7 format: ESC]7;file://hostname/pathBEL
+    // Build regex dynamically to avoid control character linting warnings
+    const ESC = String.fromCharCode(0x1b);
+    const BEL = String.fromCharCode(0x07);
+    const osc7Regex = new RegExp(`${ESC}\\]7;file://[^/]*([^${BEL}]+)${BEL}`);
+    const match = data.match(osc7Regex);
+    if (match?.[1]) {
+      try {
+        // Decode URI component to handle special characters
+        return decodeURIComponent(match[1]);
+      } catch {
+        return match[1];
+      }
+    }
+    return null;
+  }, []);
 
   const getTerminalTheme = useCallback((): TerminalTheme => {
     const computedStyle = getComputedStyle(document.documentElement);
@@ -231,10 +267,14 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       }
 
       // Fit terminal to container after a short delay
-      setTimeout(() => {
+      if (initFitTimeoutRef.current) {
+        clearTimeout(initFitTimeoutRef.current);
+      }
+      initFitTimeoutRef.current = setTimeout(() => {
         if (fitAddon && terminalRef.current) {
           fitAddon.fit();
         }
+        initFitTimeoutRef.current = null;
       }, 150);
 
       // Store refs
@@ -251,7 +291,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         // If we already have a connection, close it first
         if (existingSession?.connectionId) {
           try {
-            await invoke("close_xterm_terminal", {
+            await invoke("close_terminal", {
               id: existingSession.connectionId,
             });
           } catch (e) {
@@ -260,7 +300,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         }
 
         // Create new connection
-        const connectionId = await invoke<string>("create_xterm_terminal", {
+        const connectionId = await invoke<string>("create_terminal", {
           config: {
             working_directory: existingSession?.currentDirectory || rootFolderPath || undefined,
             shell: existingSession?.shell || undefined,
@@ -277,8 +317,56 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
         // Handle terminal input
         terminal.onData((data) => {
-          // Use the ref to always have the current connection ID
           const currentId = currentConnectionIdRef.current || connectionId;
+
+          // Track input to detect "exit" command
+          // Check if this data contains a newline/carriage return (command submitted)
+          const hasNewline = data.includes("\n") || data.includes("\r");
+
+          if (hasNewline) {
+            // Command is being submitted - check if it's "exit"
+            currentInputLineRef.current += data;
+            const trimmedLine = currentInputLineRef.current.trim();
+
+            // Check if the command is exactly "exit" (case-insensitive, allowing whitespace)
+            if (/^\s*exit\s*$/i.test(trimmedLine)) {
+              // Reset input tracking
+              currentInputLineRef.current = "";
+
+              // Send the exit command to the terminal first
+              invoke("terminal_write", { id: currentId, data }).catch((e) => {
+                console.error("Failed to write to terminal:", e);
+              });
+
+              // Wait a moment for the shell to process exit, then close the terminal
+              setTimeout(() => {
+                const callback = onTerminalExitRef.current;
+                if (callback) {
+                  console.log("Detected exit command, closing terminal session:", sessionId);
+                  // Close backend connection
+                  invoke("close_terminal", { id: currentId }).catch((e) => {
+                    console.error("Failed to close backend terminal connection:", e);
+                  });
+                  // Close the terminal tab
+                  callback(sessionId);
+                }
+              }, 100);
+              return;
+            } else {
+              // Not an exit command, reset tracking
+              currentInputLineRef.current = "";
+            }
+          } else {
+            // No newline yet, accumulate input
+            currentInputLineRef.current += data;
+
+            // Prevent unbounded growth
+            if (currentInputLineRef.current.length > 1000) {
+              currentInputLineRef.current = currentInputLineRef.current.slice(-100);
+            }
+          }
+
+          // Send data to terminal
           invoke("terminal_write", { id: currentId, data }).catch((e) => {
             console.error("Failed to write to terminal:", e);
           });
@@ -443,6 +531,13 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       const data = event.payload as { data: string };
       if (xtermRef.current) {
         xtermRef.current.write(data.data);
+
+        // Check for OSC 7 sequence to track working directory
+        const newDirectory = parseOSC7(data.data);
+        if (newDirectory) {
+          console.log("Working directory changed to:", newDirectory);
+          updateSession(sessionId, { currentDirectory: newDirectory });
+        }
       }
     });
 
@@ -454,9 +549,28 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       }
     });
 
-    const unlistenClosed = listen(closedEventName, () => {
-      console.log("Terminal closed:", connectionId);
-      if (xtermRef.current) {
+    const unlistenClosed = listen(closedEventName, async () => {
+      console.log(
+        "Terminal closed event received for connection:",
+        connectionId,
+        "session:",
+        sessionId,
+      );
+
+      // Close the backend connection
+      try {
+        await invoke("close_terminal", { id: connectionId });
+        console.log("Backend terminal connection closed for:", connectionId);
+      } catch (e) {
+        console.error("Failed to close backend terminal connection:", e);
+      }
+
+      // Call the exit callback to close the terminal tab
+      const callback = onTerminalExitRef.current;
+      if (callback) {
+        console.log("Calling onTerminalExit callback for session:", sessionId);
+        callback(sessionId);
+      } else if (xtermRef.current) {
         xtermRef.current.writeln("\r\n\x1b[33mTerminal session closed\x1b[0m");
       }
     });
@@ -473,7 +587,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       unlistenClosed.then((fn) => fn());
       unlistenThemeChange();
     };
-  }, [sessionId, isInitialized, connectionId]);
+  }, [sessionId, isInitialized, connectionId, parseOSC7, updateSession, getTerminalTheme]);
 
   // Handle theme changes
   useEffect(() => {
@@ -481,13 +595,24 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     const newTheme = getTerminalTheme();
     xtermRef.current.options.theme = newTheme;
     // Force a complete refresh to apply theme changes immediately
-    setTimeout(() => {
+    if (themeRefreshTimeoutRef.current) {
+      clearTimeout(themeRefreshTimeoutRef.current);
+    }
+    themeRefreshTimeoutRef.current = setTimeout(() => {
       if (xtermRef.current) {
         xtermRef.current.refresh(0, xtermRef.current.rows - 1);
         // Also trigger a resize to ensure proper rendering
         fitAddonRef.current?.fit();
       }
+      themeRefreshTimeoutRef.current = null;
     }, 10);
+
+    return () => {
+      if (themeRefreshTimeoutRef.current) {
+        clearTimeout(themeRefreshTimeoutRef.current);
+        themeRefreshTimeoutRef.current = null;
+      }
+    };
   }, [currentTheme, getTerminalTheme]);
 
   // Handle font changes from editor settings
@@ -535,11 +660,29 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   // Cleanup on actual unmount
   useEffect(() => {
     return () => {
+      // Clear all timeouts and animation frames
+      if (initFitTimeoutRef.current) {
+        clearTimeout(initFitTimeoutRef.current);
+        initFitTimeoutRef.current = null;
+      }
+      if (themeRefreshTimeoutRef.current) {
+        clearTimeout(themeRefreshTimeoutRef.current);
+        themeRefreshTimeoutRef.current = null;
+      }
+      if (resizeRafRef.current) {
+        cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
+      if (focusRafRef.current) {
+        cancelAnimationFrame(focusRafRef.current);
+        focusRafRef.current = null;
+      }
+
       if (xtermRef.current) {
         // Close backend connection
         const session = getSession(sessionId);
         if (session?.connectionId) {
-          invoke("close_xterm_terminal", { id: session.connectionId });
+          invoke("close_terminal", { id: session.connectionId });
         }
 
         xtermRef.current.dispose();
@@ -559,7 +702,10 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
     const resizeObserver = new ResizeObserver(() => {
       // Debounce resize to avoid excessive calls
-      requestAnimationFrame(() => {
+      if (resizeRafRef.current) {
+        cancelAnimationFrame(resizeRafRef.current);
+      }
+      resizeRafRef.current = requestAnimationFrame(() => {
         if (fitAddonRef.current && xtermRef.current && terminalRef.current) {
           try {
             // Force a reflow to ensure dimensions are correct
@@ -571,13 +717,14 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
             console.warn("Failed to fit terminal:", e);
           }
         }
+        resizeRafRef.current = null;
       });
     });
 
     resizeObserver.observe(terminalRef.current);
 
     // Initial fit after a short delay
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       if (fitAddonRef.current && xtermRef.current) {
         try {
           fitAddonRef.current.fit();
@@ -589,6 +736,11 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
     return () => {
       resizeObserver.disconnect();
+      clearTimeout(timeoutId);
+      if (resizeRafRef.current) {
+        cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
     };
   }, [isInitialized]);
 
@@ -596,10 +748,21 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   useEffect(() => {
     if (isActive && xtermRef.current && isInitialized) {
       // Use requestAnimationFrame to ensure DOM is ready
-      requestAnimationFrame(() => {
+      if (focusRafRef.current) {
+        cancelAnimationFrame(focusRafRef.current);
+      }
+      focusRafRef.current = requestAnimationFrame(() => {
         xtermRef.current?.focus();
+        focusRafRef.current = null;
       });
     }
+
+    return () => {
+      if (focusRafRef.current) {
+        cancelAnimationFrame(focusRafRef.current);
+        focusRafRef.current = null;
+      }
+    };
   }, [isActive, isInitialized]);
 
   // Zoom handlers
@@ -673,19 +836,37 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
   // Search handlers
   const handleSearch = useCallback((term: string) => {
-    searchAddonRef.current?.findNext(term);
+    if (!term || !searchAddonRef.current) {
+      setSearchResults({ current: 0, total: 0 });
+      return;
+    }
+    const found = searchAddonRef.current.findNext(term);
+    if (found) {
+      setSearchResults((prev) => ({ ...prev, current: prev.current + 1 }));
+    } else {
+      setSearchResults({ current: 0, total: 0 });
+    }
   }, []);
 
   const handleSearchNext = useCallback((term: string) => {
-    searchAddonRef.current?.findNext(term);
+    if (!term || !searchAddonRef.current) return;
+    const found = searchAddonRef.current.findNext(term);
+    if (found) {
+      setSearchResults((prev) => ({ ...prev, current: prev.current + 1 }));
+    }
   }, []);
 
   const handleSearchPrevious = useCallback((term: string) => {
-    searchAddonRef.current?.findPrevious(term);
+    if (!term || !searchAddonRef.current) return;
+    const found = searchAddonRef.current.findPrevious(term);
+    if (found) {
+      setSearchResults((prev) => ({ ...prev, current: Math.max(1, prev.current - 1) }));
+    }
   }, []);
 
   const handleSearchClose = useCallback(() => {
     setIsSearchVisible(false);
+    setSearchResults({ current: 0, total: 0 });
     xtermRef.current?.focus();
   }, []);
 
@@ -720,6 +901,8 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         onNext={handleSearchNext}
         onPrevious={handleSearchPrevious}
         onClose={handleSearchClose}
+        currentMatch={searchResults.current}
+        totalMatches={searchResults.total}
       />
       <div
         ref={terminalRef}

@@ -19,7 +19,7 @@ export default function Toggle({
   ...props
 }: ToggleProps) {
   const baseClasses =
-    "inline-flex items-center justify-center font-mono font-medium transition-all duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed rounded select-none";
+    "inline-flex items-center justify-center ui-font font-medium transition-all duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed rounded select-none";
 
   const sizes = {
     xs: "px-1 py-1 text-xs h-5 min-w-[20px]",
