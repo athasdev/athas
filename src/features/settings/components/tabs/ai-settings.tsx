@@ -252,6 +252,11 @@ export const AISettings = () => {
   // Get all providers that require API keys
   const providersNeedingKeys = getAvailableProviders().filter((p) => p.requiresApiKey);
 
+  // Get all providers that require authentication (but not API keys)
+  const providersNeedingAuth = getAvailableProviders().filter(
+    (p) => p.requiresAuth && !p.requiresApiKey,
+  );
+
   return (
     <div className="space-y-4">
       <Section title="Provider & Model">
@@ -277,13 +282,31 @@ export const AISettings = () => {
         </SettingRow>
       </Section>
 
-      <Section title="API Keys">
-        {providersNeedingKeys.map((provider) => (
-          <SettingRow key={provider.id} label={provider.name}>
-            {renderApiKeyInput(provider.id, provider.name)}
-          </SettingRow>
-        ))}
-      </Section>
+      {providersNeedingKeys.length > 0 && (
+        <Section title="API Keys">
+          {providersNeedingKeys.map((provider) => (
+            <SettingRow key={provider.id} label={provider.name}>
+              {renderApiKeyInput(provider.id, provider.name)}
+            </SettingRow>
+          ))}
+        </Section>
+      )}
+
+      {providersNeedingAuth.length > 0 && (
+        <Section title="Authentication">
+          {providersNeedingAuth.map((provider) => (
+            <SettingRow
+              key={provider.id}
+              label={provider.name}
+              description="Requires OAuth authentication"
+            >
+              <div className="flex items-center gap-2 rounded border border-border bg-secondary-bg px-3 py-1.5">
+                <span className="text-text-lighter text-xs">Coming Soon</span>
+              </div>
+            </SettingRow>
+          ))}
+        </Section>
+      )}
     </div>
   );
 };
