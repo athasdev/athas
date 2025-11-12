@@ -1,6 +1,5 @@
 import { Server } from "lucide-react";
 import { memo, useEffect, useMemo, useRef } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import FileTree from "@/features/file-explorer/views/file-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
