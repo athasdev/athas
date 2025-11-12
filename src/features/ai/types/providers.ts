@@ -3,6 +3,7 @@ interface ModelProvider {
   name: string;
   apiUrl: string;
   requiresApiKey: boolean;
+  requiresAuth?: boolean;
   models: Model[];
 }
 
@@ -289,7 +290,8 @@ export const AI_PROVIDERS: ModelProvider[] = [
     id: "copilot",
     name: "GitHub Copilot",
     apiUrl: "https://api.githubcopilot.com/chat/completions",
-    requiresApiKey: true,
+    requiresApiKey: false,
+    requiresAuth: true,
     models: [
       {
         id: "gpt-4.1",
