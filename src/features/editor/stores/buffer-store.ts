@@ -2,6 +2,7 @@ import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
 import { logger } from "@/features/editor/utils/logger";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -355,6 +356,8 @@ export const useBufferStore = createSelectors(
               isActive: b.id === bufferId,
             }));
           });
+          // Restore cursor position for the new buffer
+          useEditorStateStore.getState().actions.restorePositionForFile(bufferId);
         },
 
         updateBufferContent: (
@@ -420,6 +423,8 @@ export const useBufferStore = createSelectors(
               isActive: b.id === bufferId,
             }));
           });
+          // Restore cursor position for the new buffer
+          useEditorStateStore.getState().actions.restorePositionForFile(bufferId);
         },
 
         handleTabClose: (bufferId: string) => {
@@ -517,13 +522,18 @@ export const useBufferStore = createSelectors(
 
           const currentIndex = buffers.findIndex((b) => b.id === activeBufferId);
           const nextIndex = (currentIndex + 1) % buffers.length;
+          const nextBufferId = buffers[nextIndex].id;
+
           set((state) => {
-            state.activeBufferId = buffers[nextIndex].id;
+            state.activeBufferId = nextBufferId;
             state.buffers = state.buffers.map((b) => ({
               ...b,
-              isActive: b.id === buffers[nextIndex].id,
+              isActive: b.id === nextBufferId,
             }));
           });
+
+          // Restore cursor position for the new buffer
+          useEditorStateStore.getState().actions.restorePositionForFile(nextBufferId);
         },
 
         switchToPreviousBuffer: () => {
@@ -532,13 +542,18 @@ export const useBufferStore = createSelectors(
 
           const currentIndex = buffers.findIndex((b) => b.id === activeBufferId);
           const prevIndex = (currentIndex - 1 + buffers.length) % buffers.length;
+          const prevBufferId = buffers[prevIndex].id;
+
           set((state) => {
-            state.activeBufferId = buffers[prevIndex].id;
+            state.activeBufferId = prevBufferId;
             state.buffers = state.buffers.map((b) => ({
               ...b,
-              isActive: b.id === buffers[prevIndex].id,
+              isActive: b.id === prevBufferId,
             }));
           });
+
+          // Restore cursor position for the new buffer
+          useEditorStateStore.getState().actions.restorePositionForFile(prevBufferId);
         },
 
         getActiveBuffer: (): Buffer | null => {

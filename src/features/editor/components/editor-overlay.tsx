@@ -29,6 +29,7 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
   const buffers = useBufferStore.use.buffers();
   const { updateBufferContent } = useBufferStore.use.actions();
   const { setCursorPosition } = useEditorStateStore.use.actions();
+  const cursorPosition = useEditorStateStore.use.cursorPosition();
 
   const fontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
@@ -73,10 +74,25 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
     [bufferId, updateBufferContent, setCursorPosition, tokenize],
   );
 
+  // Track cursor position changes even when content doesn't change (arrow keys, mouse clicks, etc.)
+  const handleCursorChange = useCallback(() => {
+    if (!bufferId || !inputRef.current) return;
+
+    const selectionStart = inputRef.current.selectionStart;
+    const lines = content.split("\n");
+    const position = calculateCursorPosition(selectionStart, lines);
+    setCursorPosition(position);
+  }, [bufferId, content, setCursorPosition]);
+
   // Handle Tab key
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Tab") {
+        // Don't handle Tab if Ctrl or Cmd is held (for tab switching)
+        if (e.ctrlKey || e.metaKey) {
+          return; // Let it bubble up to global keyboard handler
+        }
+
         e.preventDefault();
         const textarea = e.currentTarget;
         const start = textarea.selectionStart;
@@ -135,6 +151,25 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bufferId, buffer?.path]); // Deliberately exclude content to prevent double tokenization
 
+  // Restore cursor position when switching buffers
+  useEffect(() => {
+    if (inputRef.current && bufferId && cursorPosition) {
+      // Small delay to ensure content is loaded
+      setTimeout(() => {
+        if (inputRef.current) {
+          const offset = cursorPosition.offset || 0;
+          // Ensure offset is within bounds
+          const maxOffset = inputRef.current.value.length;
+          const safeOffset = Math.min(offset, maxOffset);
+          inputRef.current.selectionStart = safeOffset;
+          inputRef.current.selectionEnd = safeOffset;
+          // Focus the textarea
+          inputRef.current.focus();
+        }
+      }, 0);
+    }
+  }, [bufferId, cursorPosition]);
+
   if (!buffer) return null;
 
   return (
@@ -158,6 +193,9 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
           onInput={handleInput}
           onKeyDown={handleKeyDown}
           onScroll={handleScroll}
+          onSelect={handleCursorChange}
+          onKeyUp={handleCursorChange}
+          onClick={handleCursorChange}
           fontSize={fontSize}
           fontFamily={fontFamily}
           lineHeight={lineHeight}
