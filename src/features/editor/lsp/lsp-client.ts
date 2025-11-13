@@ -129,6 +129,66 @@ export class LspClient {
     }
   }
 
+  async startForFile(filePath: string, workspacePath: string): Promise<void> {
+    try {
+      logger.debug("LSPClient", "Starting LSP for file:", filePath);
+
+      // Get LSP server info from extension registry
+      const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
+
+      const serverPath = extensionRegistry.getLspServerPath(filePath) || undefined;
+      const serverArgs = extensionRegistry.getLspServerArgs(filePath);
+      const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
+
+      logger.info("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
+
+      // Check if this language server is already running for this file
+      if (serverPath && languageId) {
+        const serverKey = `${workspacePath}:${languageId}`;
+        if (this.activeLanguageServers.has(serverKey)) {
+          logger.debug("LSPClient", `LSP for ${languageId} already running for file`);
+          return;
+        }
+      }
+
+      logger.info("LSPClient", `Invoking lsp_start_for_file with:`, {
+        filePath,
+        workspacePath,
+        serverPath,
+        serverArgs,
+      });
+
+      await invoke<void>("lsp_start_for_file", {
+        filePath,
+        workspacePath,
+        serverPath,
+        serverArgs,
+      });
+
+      // Track this language server
+      if (languageId) {
+        const serverKey = `${workspacePath}:${languageId}`;
+        this.activeLanguageServers.add(serverKey);
+      }
+
+      logger.debug("LSPClient", "LSP started successfully for file:", filePath);
+    } catch (error) {
+      logger.error("LSPClient", "Failed to start LSP for file:", error);
+      throw error;
+    }
+  }
+
+  async stopForFile(filePath: string): Promise<void> {
+    try {
+      logger.debug("LSPClient", "Stopping LSP for file:", filePath);
+      await invoke<void>("lsp_stop_for_file", { filePath });
+      logger.debug("LSPClient", "LSP stopped successfully for file:", filePath);
+    } catch (error) {
+      logger.error("LSPClient", "Failed to stop LSP for file:", error);
+      throw error;
+    }
+  }
+
   async stopAll(): Promise<void> {
     // Get unique workspace paths from all active language servers
     const workspaces = new Set<string>();

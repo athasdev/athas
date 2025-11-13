@@ -211,36 +211,66 @@ export const useBufferStore = createSelectors(
           if (!isVirtual && !isDiff && !isImage && !isSQLite) {
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
 
-            // Start LSP for this file if supported
-            import("@/extensions/registry/extension-registry")
-              .then(({ extensionRegistry }) => {
-                const isSupported = extensionRegistry.isLspSupported(path);
-                logger.info("BufferStore", `LSP supported for ${path}: ${isSupported}`);
+            // Check if extension is available and start LSP or prompt installation
+            import("@/extensions/registry/extension-store")
+              .then(({ useExtensionStore }) => {
+                const { getExtensionForFile, isExtensionInstalled } =
+                  useExtensionStore.getState().actions;
 
-                if (isSupported) {
-                  logger.info("BufferStore", `Starting LSP for ${path}`);
-                  import("@/features/editor/lsp/lsp-client")
-                    .then(({ LspClient }) => {
-                      import("@/features/file-system/controllers/store").then(
-                        ({ useFileSystemStore }) => {
-                          const lspClient = LspClient.getInstance();
-                          const workspacePath =
-                            useFileSystemStore.getState().rootFolderPath || path;
-                          logger.info(
-                            "BufferStore",
-                            `Calling lspClient.start(${workspacePath}, ${path})`,
-                          );
-                          return lspClient.start(workspacePath, path);
+                const extension = getExtensionForFile(path);
+
+                if (extension) {
+                  const installed = isExtensionInstalled(extension.manifest.id);
+                  logger.info(
+                    "BufferStore",
+                    `Extension ${extension.manifest.name} for ${path}: installed=${installed}`,
+                  );
+
+                  if (installed) {
+                    // Extension installed, start LSP
+                    logger.info("BufferStore", `Starting LSP for ${path}`);
+                    import("@/features/editor/lsp/lsp-client")
+                      .then(({ LspClient }) => {
+                        import("@/features/file-system/controllers/store").then(
+                          ({ useFileSystemStore }) => {
+                            const lspClient = LspClient.getInstance();
+                            const workspacePath =
+                              useFileSystemStore.getState().rootFolderPath || path;
+                            logger.info(
+                              "BufferStore",
+                              `Calling lspClient.startForFile(${path}, ${workspacePath})`,
+                            );
+                            return lspClient.startForFile(path, workspacePath);
+                          },
+                        );
+                      })
+                      .catch((error) => {
+                        logger.error("BufferStore", "Failed to start LSP:", error);
+                      });
+                  } else {
+                    // Extension not installed, emit event for UI to handle
+                    logger.info(
+                      "BufferStore",
+                      `Extension ${extension.manifest.name} not installed for ${path}`,
+                    );
+
+                    // Dispatch custom event for extension installation prompt
+                    window.dispatchEvent(
+                      new CustomEvent("extension-install-needed", {
+                        detail: {
+                          extensionId: extension.manifest.id,
+                          extensionName: extension.manifest.displayName,
+                          filePath: path,
                         },
-                      );
-                    })
-                    .catch((error) => {
-                      logger.error("BufferStore", "Failed to start LSP:", error);
-                    });
+                      }),
+                    );
+                  }
+                } else {
+                  logger.info("BufferStore", `No extension available for ${path}`);
                 }
               })
               .catch((error) => {
-                logger.error("BufferStore", "Failed to check LSP support:", error);
+                logger.error("BufferStore", "Failed to check extension support:", error);
               });
           }
 
@@ -278,13 +308,25 @@ export const useBufferStore = createSelectors(
 
           const closedBuffer = buffers[bufferIndex];
 
-          // Add to closed history (only real files, not virtual/diff/image/sqlite)
+          // Stop LSP for this file (only for real files, not virtual/diff/image/sqlite)
           if (
             !closedBuffer.isVirtual &&
             !closedBuffer.isDiff &&
             !closedBuffer.isImage &&
             !closedBuffer.isSQLite
           ) {
+            // Stop LSP for this file in background (don't block buffer closing)
+            import("@/features/editor/lsp/lsp-client")
+              .then(({ LspClient }) => {
+                const lspClient = LspClient.getInstance();
+                logger.info("BufferStore", `Stopping LSP for ${closedBuffer.path}`);
+                return lspClient.stopForFile(closedBuffer.path);
+              })
+              .catch((error) => {
+                logger.error("BufferStore", "Failed to stop LSP:", error);
+              });
+
+            // Add to closed history
             const closedBufferInfo: ClosedBuffer = {
               path: closedBuffer.path,
               name: closedBuffer.name,

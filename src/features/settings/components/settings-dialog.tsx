@@ -64,7 +64,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       onClose={onClose}
       title="Settings"
       classNames={{
-        modal: "h-[600px] max-h-[90vh] w-[800px] max-w-[90vw]",
+        modal: "h-[80vh] max-h-[900px] w-[85vw] max-w-[1200px]",
         content: "flex p-0",
       }}
     >

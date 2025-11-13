@@ -1,20 +1,11 @@
-import {
-  Code,
-  Download,
-  Languages,
-  Package,
-  Palette,
-  RefreshCw,
-  Search,
-  Trash2,
-} from "lucide-react";
+import { Download, Languages, Package, Palette, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
-import { extensionDownloader } from "@/extensions/marketplace/services/extension-downloader";
-import type { ExtensionInstallStatus } from "@/extensions/marketplace/types/marketplace";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { extensionManager } from "@/features/editor/extensions/manager";
+import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -23,7 +14,7 @@ interface UnifiedExtension {
   id: string;
   name: string;
   description: string;
-  category: "language" | "theme" | "icon-theme" | "snippet" | "database";
+  category: "language" | "theme" | "icon-theme" | "database";
   isInstalled: boolean;
   version?: string;
   extensions?: string[];
@@ -41,7 +32,7 @@ const ExtensionCard = ({
   isInstalling?: boolean;
 }) => {
   return (
-    <div className="flex flex-col gap-1.5 rounded border border-border bg-secondary-bg p-2.5">
+    <div className="flex flex-col gap-1 rounded border border-border bg-secondary-bg p-2">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h3 className="mb-0.5 font-medium text-text text-xs">{extension.name}</h3>
@@ -101,39 +92,40 @@ export const ExtensionsSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [extensions, setExtensions] = useState<UnifiedExtension[]>([]);
-  const [installStatuses, setInstallStatuses] = useState<Map<string, ExtensionInstallStatus>>(
-    new Map(),
-  );
+  const { showToast } = useToast();
+
+  // Get extension store state
+  const availableExtensions = useExtensionStore.use.availableExtensions();
+  const { installExtension, uninstallExtension } = useExtensionStore.use.actions();
 
   const loadAllExtensions = async () => {
     const allExtensions: UnifiedExtension[] = [];
+    const seenIds = new Set<string>();
 
-    // Load marketplace extensions
-    try {
-      const registry = await extensionDownloader.getRegistry();
-      registry.extensions.forEach((ext) => {
-        const category = ext.categories[0]?.toLowerCase() as UnifiedExtension["category"];
-        if (category) {
-          allExtensions.push({
-            id: ext.id,
-            name: ext.displayName,
-            description: ext.description,
-            category,
-            isInstalled: extensionDownloader.isInstalled(ext.id),
-            version: ext.version,
-            publisher: ext.publisher,
-            isMarketplace: true,
-            extensions: ext.languages?.[0]?.extensions.map((e) => e.replace(".", "")),
-          });
-        }
-      });
-    } catch (error) {
-      console.error("Failed to load marketplace extensions:", error);
+    // Load from new extension store (primary source)
+    for (const [, ext] of availableExtensions) {
+      if (ext.manifest.languages && ext.manifest.languages.length > 0) {
+        const lang = ext.manifest.languages[0];
+        allExtensions.push({
+          id: ext.manifest.id,
+          name: ext.manifest.displayName,
+          description: ext.manifest.description,
+          category: "language",
+          isInstalled: ext.isInstalled,
+          version: ext.manifest.version,
+          extensions: lang.extensions.map((e: string) => e.replace(".", "")),
+          publisher: ext.manifest.publisher,
+          isMarketplace: true, // From new store, can be uninstalled
+        });
+        seenIds.add(ext.manifest.id);
+      }
     }
 
-    // Load language extensions from Extension Registry (bundled extensions)
+    // Load language extensions from Extension Registry (skip if already loaded)
     const bundledExtensions = extensionRegistry.getAllExtensions();
     bundledExtensions.forEach((ext) => {
+      if (seenIds.has(ext.manifest.id)) return; // Skip duplicates
+
       if (ext.manifest.languages && ext.manifest.languages.length > 0) {
         const lang = ext.manifest.languages[0];
         allExtensions.push({
@@ -145,23 +137,25 @@ export const ExtensionsSettings = () => {
           version: ext.manifest.version,
           extensions: lang.extensions.map((e) => e.replace(".", "")),
         });
+        seenIds.add(ext.manifest.id);
       }
     });
 
-    // Also load from Extension Manager (legacy extensions)
+    // Also load from Extension Manager (skip if already loaded)
     const languageExtensions = extensionManager.getAllLanguageExtensions();
     languageExtensions.forEach((ext) => {
-      if (!allExtensions.some((e) => e.id === ext.id)) {
-        allExtensions.push({
-          id: ext.id,
-          name: ext.displayName,
-          description: ext.description || `${ext.displayName} syntax highlighting`,
-          category: "language",
-          isInstalled: true,
-          version: ext.version,
-          extensions: ext.extensions,
-        });
-      }
+      if (seenIds.has(ext.id)) return; // Skip duplicates
+
+      allExtensions.push({
+        id: ext.id,
+        name: ext.displayName,
+        description: ext.description || `${ext.displayName} syntax highlighting`,
+        category: "language",
+        isInstalled: true,
+        version: ext.version,
+        extensions: ext.extensions,
+      });
+      seenIds.add(ext.id);
     });
 
     // Load themes
@@ -205,41 +199,44 @@ export const ExtensionsSettings = () => {
 
   useEffect(() => {
     loadAllExtensions();
-
-    const handleInstallStatus = (event: Event) => {
-      const customEvent = event as CustomEvent<ExtensionInstallStatus>;
-      const status = customEvent.detail;
-      setInstallStatuses((prev) => new Map(prev.set(status.id, status)));
-
-      if (status.status === "installed" || status.status === "failed") {
-        loadAllExtensions();
-      }
-    };
-
-    window.addEventListener("extension-install-status", handleInstallStatus);
-
-    return () => {
-      window.removeEventListener("extension-install-status", handleInstallStatus);
-    };
   }, [settings.theme, settings.iconTheme]);
 
   const handleToggle = async (extension: UnifiedExtension) => {
     if (extension.isMarketplace) {
+      // Use extension store methods for marketplace extensions
       if (extension.isInstalled) {
         try {
-          await extensionDownloader.uninstallExtension(extension.id);
+          await uninstallExtension(extension.id);
           loadAllExtensions();
+          showToast({
+            message: `${extension.name} uninstalled successfully`,
+            type: "success",
+            duration: 3000,
+          });
         } catch (error) {
-          alert(`Failed to uninstall: ${error instanceof Error ? error.message : "Unknown error"}`);
+          console.error(`Failed to uninstall ${extension.name}:`, error);
+          showToast({
+            message: `Failed to uninstall ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            type: "error",
+            duration: 5000,
+          });
         }
       } else {
-        const confirmed = confirm(`Install ${extension.name}?`);
-        if (!confirmed) return;
-
         try {
-          await extensionDownloader.downloadExtension(extension.id);
+          await installExtension(extension.id);
+          loadAllExtensions();
+          showToast({
+            message: `${extension.name} installed successfully`,
+            type: "success",
+            duration: 3000,
+          });
         } catch (error) {
-          alert(`Failed to install: ${error instanceof Error ? error.message : "Unknown error"}`);
+          console.error(`Failed to install ${extension.name}:`, error);
+          showToast({
+            message: `Failed to install ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            type: "error",
+            duration: 5000,
+          });
         }
       }
       return;
@@ -284,7 +281,7 @@ export const ExtensionsSettings = () => {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-1.5 flex items-center gap-2">
         <div className="relative flex-1">
           <Search
             className="-translate-y-1/2 absolute top-1/2 left-2 transform text-text-lighter"
@@ -304,7 +301,7 @@ export const ExtensionsSettings = () => {
         </div>
       </div>
 
-      <div className="mb-2 flex flex-wrap gap-1">
+      <div className="mb-1.5 flex flex-wrap gap-1">
         <Button
           onClick={() => updateSetting("extensionsActiveTab", "all")}
           variant="ghost"
@@ -365,21 +362,6 @@ export const ExtensionsSettings = () => {
           Icon Themes
         </Button>
         <Button
-          onClick={() => updateSetting("extensionsActiveTab", "snippet")}
-          variant="ghost"
-          size="xs"
-          data-active={settings.extensionsActiveTab === "snippet"}
-          className={cn(
-            "flex h-6 items-center gap-1 px-2 text-[11px]",
-            settings.extensionsActiveTab === "snippet"
-              ? "bg-selected text-text"
-              : "bg-transparent text-text-lighter hover:bg-hover",
-          )}
-        >
-          <Code size={11} />
-          Snippets
-        </Button>
-        <Button
           onClick={() => updateSetting("extensionsActiveTab", "database")}
           variant="ghost"
           size="xs"
@@ -396,18 +378,18 @@ export const ExtensionsSettings = () => {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-auto pr-2">
+      <div className="flex-1 overflow-auto pr-1.5">
         {filteredExtensions.length === 0 ? (
           <div className="py-6 text-center text-text-lighter">
             <Package size={20} className="mx-auto mb-1.5 opacity-50" />
             <p className="text-[11px]">No extensions found matching your search.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-2">
             {filteredExtensions.map((extension) => {
-              const installStatus = installStatuses.get(extension.id);
-              const isInstalling =
-                installStatus?.status === "downloading" || installStatus?.status === "installing";
+              // Check if extension is currently installing from the new store
+              const extensionFromStore = availableExtensions.get(extension.id);
+              const isInstalling = extensionFromStore?.isInstalling || false;
 
               return (
                 <ExtensionCard

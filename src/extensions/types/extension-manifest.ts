@@ -26,6 +26,15 @@ export interface ExtensionManifest {
   // Tree-sitter grammar
   grammar?: GrammarConfiguration;
 
+  // Formatter configuration
+  formatter?: FormatterConfiguration;
+
+  // Linter configuration
+  linter?: LinterConfiguration;
+
+  // Snippets
+  snippets?: SnippetContribution[];
+
   // Commands contributed by this extension
   commands?: CommandContribution[];
 
@@ -52,6 +61,9 @@ export interface ExtensionManifest {
     type: string;
     url: string;
   };
+
+  // Installation metadata (for downloadable extensions)
+  installation?: InstallationMetadata;
 }
 
 export type ExtensionCategory =
@@ -168,4 +180,115 @@ export interface ExtensionActivationContext {
   storagePath: string;
   globalStoragePath: string;
   subscriptions: Array<{ dispose: () => void }>;
+}
+
+export interface FormatterConfiguration {
+  // Formatter executable per platform
+  command: PlatformExecutable;
+
+  // Arguments to pass to formatter
+  args?: string[];
+
+  // Environment variables
+  env?: Record<string, string>;
+
+  // Supported languages for this formatter
+  languages: string[];
+
+  // Format on save
+  formatOnSave?: boolean;
+
+  // Input method: 'stdin' or 'file'
+  inputMethod?: "stdin" | "file";
+
+  // Output method: 'stdout' or 'file' (modifies in-place)
+  outputMethod?: "stdout" | "file";
+}
+
+export interface LinterConfiguration {
+  // Linter executable per platform
+  command: PlatformExecutable;
+
+  // Arguments to pass to linter
+  args?: string[];
+
+  // Environment variables
+  env?: Record<string, string>;
+
+  // Supported languages for this linter
+  languages: string[];
+
+  // Lint on save
+  lintOnSave?: boolean;
+
+  // Lint on type
+  lintOnType?: boolean;
+
+  // Input method: 'stdin' or 'file'
+  inputMethod?: "stdin" | "file";
+
+  // Diagnostic format parser
+  // 'lsp' - uses LSP diagnostic format
+  // 'regex' - custom regex pattern
+  diagnosticFormat?: "lsp" | "regex";
+
+  // Regex pattern for parsing diagnostics (if diagnosticFormat is 'regex')
+  diagnosticPattern?: string;
+}
+
+export interface SnippetContribution {
+  // Language ID this snippet applies to
+  language: string;
+
+  // Snippet definitions
+  snippets: Snippet[];
+}
+
+export interface Snippet {
+  // Snippet prefix (trigger text)
+  prefix: string;
+
+  // Snippet body (lines or string)
+  body: string[] | string;
+
+  // Description
+  description?: string;
+
+  // Scope (e.g., 'source.typescript')
+  scope?: string;
+}
+
+export interface InstallationMetadata {
+  // Download URL for the extension package
+  downloadUrl: string;
+
+  // Package size in bytes
+  size: number;
+
+  // SHA256 checksum for verification
+  checksum: string;
+
+  // Minimum editor version required
+  minEditorVersion?: string;
+
+  // Maximum editor version supported
+  maxEditorVersion?: string;
+
+  // Platform-specific packages
+  platforms?: {
+    darwin?: PlatformPackage;
+    linux?: PlatformPackage;
+    win32?: PlatformPackage;
+  };
+}
+
+export interface PlatformPackage {
+  // Platform-specific download URL
+  downloadUrl: string;
+
+  // Platform-specific size
+  size: number;
+
+  // Platform-specific checksum
+  checksum: string;
 }

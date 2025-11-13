@@ -1,3 +1,4 @@
+use crate::extensions::{DownloadInfo, ExtensionInstaller, ExtensionMetadata};
 use sha2::{Digest, Sha256};
 use std::{
    env,
@@ -5,7 +6,7 @@ use std::{
    io::Write,
    path::{Path, PathBuf},
 };
-use tauri::command;
+use tauri::{AppHandle, command};
 
 #[command]
 pub async fn download_extension(
@@ -133,12 +134,10 @@ pub fn get_installed_extensions() -> Result<Vec<String>, String> {
       let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
       let path = entry.path();
 
-      if path.is_dir() {
-         if let Some(name) = path.file_name() {
-            if let Some(name_str) = name.to_str() {
-               extensions.push(name_str.to_string());
-            }
-         }
+      if path.is_dir()
+         && let Some(name) = path.file_name().and_then(|n| n.to_str())
+      {
+         extensions.push(name.to_string());
       }
    }
 
@@ -179,6 +178,74 @@ pub fn get_bundled_extensions_path() -> Result<String, String> {
    log::info!("Bundled extensions path: {:?}", extensions_path);
 
    Ok(extensions_path
+      .to_str()
+      .ok_or("Failed to convert path to string")?
+      .to_string())
+}
+
+// New installer commands using the ExtensionInstaller
+
+#[command]
+pub async fn install_extension_from_url(
+   app_handle: AppHandle,
+   extension_id: String,
+   url: String,
+   checksum: String,
+   size: u64,
+) -> Result<(), String> {
+   log::info!("Installing extension {} from {}", extension_id, url);
+
+   let installer = ExtensionInstaller::new(app_handle)
+      .map_err(|e| format!("Failed to create installer: {}", e))?;
+
+   let download_info = DownloadInfo {
+      url,
+      checksum,
+      size,
+   };
+
+   installer
+      .install_extension(extension_id, download_info)
+      .await
+      .map_err(|e| format!("Failed to install extension: {}", e))
+}
+
+#[command]
+pub fn uninstall_extension_new(app_handle: AppHandle, extension_id: String) -> Result<(), String> {
+   log::info!("Uninstalling extension {}", extension_id);
+
+   let installer = ExtensionInstaller::new(app_handle)
+      .map_err(|e| format!("Failed to create installer: {}", e))?;
+
+   installer
+      .uninstall_extension(&extension_id)
+      .map_err(|e| format!("Failed to uninstall extension: {}", e))
+}
+
+#[command]
+pub fn list_installed_extensions_new(
+   app_handle: AppHandle,
+) -> Result<Vec<ExtensionMetadata>, String> {
+   log::info!("Listing installed extensions");
+
+   let installer = ExtensionInstaller::new(app_handle)
+      .map_err(|e| format!("Failed to create installer: {}", e))?;
+
+   installer
+      .list_installed_extensions()
+      .map_err(|e| format!("Failed to list extensions: {}", e))
+}
+
+#[command]
+pub fn get_extension_path(app_handle: AppHandle, extension_id: String) -> Result<String, String> {
+   log::info!("Getting path for extension {}", extension_id);
+
+   let installer = ExtensionInstaller::new(app_handle)
+      .map_err(|e| format!("Failed to create installer: {}", e))?;
+
+   let path = installer.get_extension_dir(&extension_id);
+
+   Ok(path
       .to_str()
       .ok_or("Failed to convert path to string")?
       .to_string())

@@ -28,10 +28,15 @@ initializeThemeSystem().catch(console.error);
 // Initialize icon themes
 initializeIconThemes();
 
+import { useExtensionInstallPrompt } from "./extensions/hooks/use-extension-install-prompt";
 // Initialize extension system
 import { extensionLoader } from "./extensions/loader/extension-loader";
+import { initializeExtensionStore } from "./extensions/registry/extension-store";
 
 extensionLoader.initialize().catch(console.error);
+
+// Initialize extension store (load available and installed extensions)
+initializeExtensionStore().catch(console.error);
 
 function App() {
   enableMapSet();
@@ -62,6 +67,9 @@ function App() {
 
   // Mouse wheel zoom functionality
   useScroll();
+
+  // Extension installation prompts
+  useExtensionInstallPrompt();
 
   // Initialize file watcher
   useEffect(() => {

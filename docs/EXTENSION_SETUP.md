@@ -1,39 +1,62 @@
-# Extension System Setup Guide
+# Extension System Guide
 
-This guide explains how to set up and develop the extension system in Athas.
+This guide explains the extension system in Athas.
 
-## Quick Start
+## Overview
 
-### 1. Install LSP Servers
+Athas uses a lightweight, on-demand extension system. Language support extensions are NOT bundled with the app. Instead, users install extensions as needed when they open files.
 
-Before building the app, you need to set up the bundled LSP servers:
+## How It Works
+
+1. **Open a file** (e.g., `app.ts`)
+2. **Extension detection** - Athas detects you need the TypeScript extension
+3. **Installation prompt** - If not installed, you'll see: "TypeScript extension not installed. Install it to enable language support?"
+4. **One-click install** - Click "Install" and the extension downloads automatically
+5. **Ready to use** - LSP, formatter, linter, and snippets are now available
+
+## For Users
+
+### Installing Extensions
+
+Extensions are installed automatically when you:
+- Open a file that requires an extension
+- Click "Install" on the prompt
+
+You can also browse and install extensions from:
+- **Settings → Extensions** - View all available extensions
+- Search, filter by category, and manage installed extensions
+
+### Managing Extensions
+
+- **View installed**: Settings → Extensions → "All" tab
+- **Uninstall**: Click the "Uninstall" button on any installed extension
+- **Reinstall**: Click "Install" again if something goes wrong
+
+## For Developers
+
+### Extension Architecture
+
+Extensions are self-contained packages that include:
+- **LSP server** - Language intelligence (completions, diagnostics, hover)
+- **Formatter** - Code formatting (Prettier, rustfmt, etc.)
+- **Linter** - Code linting (ESLint, clippy, etc.)
+- **Snippets** - Code snippets with placeholders
+- **Syntax highlighting** - TextMate grammars or Tree-sitter
+
+### No Setup Required
+
+Unlike the old system:
+- ❌ No `setup-lsp-servers.sh` script
+- ❌ No bundled binaries in the repository
+- ❌ No manual installation steps
+- ✅ Extensions download on-demand
+- ✅ Automatic checksum verification
+- ✅ Clean repository (no large binaries)
+
+### Build and Run
 
 ```bash
-# Install TypeScript Language Server
-npm install -g typescript-language-server typescript
-# OR
-bun add -g typescript-language-server typescript
-
-# Install Rust Analyzer
-rustup component add rust-analyzer
-```
-
-### 2. Run Setup Script
-
-```bash
-# From the project root
-./scripts/setup-lsp-servers.sh
-```
-
-This script will:
-- Detect your platform (macOS, Linux, Windows)
-- Copy LSP server binaries to the appropriate extension directories
-- Make binaries executable
-
-### 3. Build and Run
-
-```bash
-# Development
+# Development (no setup needed!)
 bun tauri dev
 
 # Production build
