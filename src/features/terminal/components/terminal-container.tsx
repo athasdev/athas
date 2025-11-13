@@ -290,9 +290,12 @@ const TerminalContainer = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       // Handle terminal tab navigation regardless of focus (when bottom pane is visible)
       const isBottomPaneVisible = document.querySelector('[data-terminal-container="active"]');
-      if (isBottomPaneVisible) {
-        // Terminal tab navigation with Ctrl+Tab and Ctrl+Shift+Tab
-        if (e.ctrlKey && e.key === "Tab") {
+      // Terminal tab navigation with Ctrl+Tab and Ctrl+Shift+Tab
+      // Only intercept when terminal is focused AND bottom pane is visible
+      if (isBottomPaneVisible && e.ctrlKey && e.key === "Tab") {
+        // Check if the terminal or its children have focus
+        const terminalContainer = document.querySelector('[data-terminal-container="active"]');
+        if (terminalContainer?.contains(document.activeElement)) {
           e.preventDefault();
           e.stopPropagation();
           if (e.shiftKey) {
