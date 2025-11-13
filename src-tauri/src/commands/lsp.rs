@@ -32,6 +32,40 @@ pub fn lsp_stop(lsp_manager: State<'_, LspManager>, workspace_path: String) -> L
 }
 
 #[tauri::command]
+pub async fn lsp_start_for_file(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+   workspace_path: String,
+   server_path: Option<String>,
+   server_args: Option<Vec<String>>,
+) -> LspResult<()> {
+   log::info!("lsp_start_for_file command called for file: {}", file_path);
+   lsp_manager
+      .start_lsp_for_file(
+         PathBuf::from(file_path),
+         PathBuf::from(workspace_path),
+         server_path,
+         server_args,
+      )
+      .await
+      .map_err(|e| {
+         log::error!("Failed to start LSP for file: {}", e);
+         e.into()
+      })
+}
+
+#[tauri::command]
+pub fn lsp_stop_for_file(lsp_manager: State<'_, LspManager>, file_path: String) -> LspResult<()> {
+   log::info!("lsp_stop_for_file command called for file: {}", file_path);
+   lsp_manager
+      .stop_lsp_for_file(&PathBuf::from(file_path))
+      .map_err(|e| {
+         log::error!("Failed to stop LSP for file: {}", e);
+         e.into()
+      })
+}
+
+#[tauri::command]
 pub async fn lsp_get_completions(
    lsp_manager: State<'_, LspManager>,
    file_path: String,

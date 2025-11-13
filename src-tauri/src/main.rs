@@ -18,6 +18,7 @@ use tokio::sync::Mutex;
 
 mod claude_bridge;
 mod commands;
+mod extensions;
 mod file_watcher;
 mod logger;
 mod lsp;
@@ -351,6 +352,8 @@ fn main() {
          // LSP commands
          lsp_start,
          lsp_stop,
+         lsp_start_for_file,
+         lsp_stop_for_file,
          lsp_get_completions,
          lsp_get_hover,
          lsp_document_open,
@@ -363,6 +366,10 @@ fn main() {
          uninstall_extension,
          get_installed_extensions,
          get_bundled_extensions_path,
+         install_extension_from_url,
+         uninstall_extension_new,
+         list_installed_extensions_new,
+         get_extension_path,
          // Fuzzy matching commands
          fuzzy_match,
          filter_completions,

@@ -5,6 +5,8 @@ interface SearchMatchItemProps {
   filePath: string;
   displayPath: string;
   match: SearchMatch;
+  index: number;
+  isSelected: boolean;
   onClick: () => void;
   onHover?: () => void;
 }
@@ -27,6 +29,8 @@ export const SearchMatchItem = ({
   filePath,
   displayPath,
   match,
+  index,
+  isSelected,
   onClick,
   onHover,
 }: SearchMatchItemProps) => {
@@ -35,9 +39,10 @@ export const SearchMatchItem = ({
 
   return (
     <button
+      data-item-index={index}
       onClick={onClick}
       onMouseEnter={onHover}
-      className="flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-hover"
+      className={`flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-hover ${isSelected ? "bg-hover" : ""}`}
     >
       {/* File icon, name and path */}
       <div className="flex min-w-0 flex-1 items-center gap-2">

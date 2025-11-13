@@ -14,10 +14,18 @@ use std::{
 };
 use tauri::{AppHandle, Manager as TauriManager};
 
-type WorkspaceClients = Arc<Mutex<HashMap<(PathBuf, String), (LspClient, Child, String)>>>;
+struct LspInstance {
+   client: LspClient,
+   child: Child,
+   server_name: String,
+   ref_count: usize,
+   files: Vec<PathBuf>,
+}
+
+type WorkspaceClients = Arc<Mutex<HashMap<(PathBuf, String), LspInstance>>>;
 
 pub struct LspManager {
-   // Map (workspace path, language) to their LSP clients
+   // Map (workspace path, language) to their LSP clients with reference counting
    workspace_clients: WorkspaceClients,
    registry: LspRegistry,
    app_handle: AppHandle,
@@ -93,7 +101,7 @@ impl LspManager {
       let (server_path, server_args, server_name) = if let Some(path) = server_path_override {
          log::info!("Using provided server path override: {}", path);
          let args = server_args_override.unwrap_or_default();
-         let name = path.split('/').last().unwrap_or("custom").to_string();
+         let name = path.split('/').next_back().unwrap_or("custom").to_string();
 
          // Use the path directly - it should already be absolute from the frontend
          let resolved_path = PathBuf::from(&path);
@@ -148,13 +156,147 @@ impl LspManager {
          return Ok(());
       }
 
-      self
-         .workspace_clients
-         .lock()
-         .unwrap()
-         .insert(workspace_key, (client, child, server_name.clone()));
+      self.workspace_clients.lock().unwrap().insert(
+         workspace_key,
+         LspInstance {
+            client,
+            child,
+            server_name: server_name.clone(),
+            ref_count: 0,
+            files: Vec::new(),
+         },
+      );
 
       log::info!("LSP '{}' started and initialized successfully", server_name);
+      Ok(())
+   }
+
+   /// Start LSP server for a specific file (buffer-scoped)
+   /// This will start the LSP server if it's not already running for the workspace/language
+   /// and increment the reference count
+   pub async fn start_lsp_for_file(
+      &self,
+      file_path: PathBuf,
+      workspace_path: PathBuf,
+      server_path_override: Option<String>,
+      server_args_override: Option<Vec<String>>,
+   ) -> Result<()> {
+      log::info!("Starting LSP for file: {:?}", file_path);
+
+      // Find appropriate LSP server for this file
+      let (server_path, server_args, server_name) = if let Some(path) = server_path_override {
+         log::info!("Using provided server path override: {}", path);
+         let args = server_args_override.unwrap_or_default();
+         let name = path.split('/').next_back().unwrap_or("custom").to_string();
+         let resolved_path = PathBuf::from(&path);
+         (resolved_path, args, name)
+      } else {
+         let server_config = self
+            .registry
+            .find_server_for_file(&file_path)
+            .context("No LSP server found for file")?;
+
+         log::info!("Using LSP server '{}' for file", server_config.name);
+         let server_path = self.get_server_path(&server_config.name)?;
+         (
+            server_path,
+            server_config.args.clone(),
+            server_config.name.clone(),
+         )
+      };
+
+      let workspace_key = (workspace_path.clone(), server_name.clone());
+
+      // Check if LSP already running for this workspace+language
+      {
+         let mut clients = self.workspace_clients.lock().unwrap();
+         if let Some(instance) = clients.get_mut(&workspace_key) {
+            // Increment ref count and add file to tracking
+            instance.ref_count += 1;
+            if !instance.files.contains(&file_path) {
+               instance.files.push(file_path.clone());
+            }
+            log::info!(
+               "Reusing existing LSP '{}' for file (ref_count: {})",
+               server_name,
+               instance.ref_count
+            );
+            return Ok(());
+         }
+      } // Lock is automatically dropped here
+
+      let root_uri = Url::from_file_path(&workspace_path)
+         .map_err(|_| anyhow::anyhow!("Invalid workspace path"))?;
+
+      let (client, child) = LspClient::start(
+         server_path,
+         server_args,
+         root_uri.clone(),
+         Some(self.app_handle.clone()),
+      )?;
+
+      // Initialize the client
+      client.initialize(root_uri).await?;
+
+      // Store the new instance
+      self.workspace_clients.lock().unwrap().insert(
+         workspace_key,
+         LspInstance {
+            client,
+            child,
+            server_name: server_name.clone(),
+            ref_count: 1,
+            files: vec![file_path],
+         },
+      );
+
+      log::info!("LSP '{}' started successfully for file", server_name);
+      Ok(())
+   }
+
+   /// Stop LSP server for a specific file (buffer-scoped)
+   /// This will decrement the reference count and shutdown the server if it reaches 0
+   pub fn stop_lsp_for_file(&self, file_path: &PathBuf) -> Result<()> {
+      log::info!("Stopping LSP for file: {:?}", file_path);
+
+      let mut clients = self.workspace_clients.lock().unwrap();
+
+      // Find the LSP instance that contains this file
+      let mut to_remove: Option<(PathBuf, String)> = None;
+
+      for (key, instance) in clients.iter_mut() {
+         if instance.files.contains(file_path) {
+            // Remove file from tracking
+            instance.files.retain(|f| f != file_path);
+            instance.ref_count = instance.ref_count.saturating_sub(1);
+
+            log::info!(
+               "Decremented ref_count for LSP '{}' (now: {})",
+               instance.server_name,
+               instance.ref_count
+            );
+
+            // If ref count reaches 0, mark for removal
+            if instance.ref_count == 0 {
+               log::info!(
+                  "LSP '{}' ref_count reached 0, shutting down",
+                  instance.server_name
+               );
+               to_remove = Some(key.clone());
+            }
+
+            break;
+         }
+      }
+
+      // Shutdown and remove the instance if ref count reached 0
+      if let Some(key) = to_remove
+         && let Some(mut instance) = clients.remove(&key)
+      {
+         log::info!("Shutting down LSP '{}'", instance.server_name);
+         let _ = instance.child.kill();
+      }
+
       Ok(())
    }
 
@@ -166,9 +308,9 @@ impl LspManager {
       let server_config = self.registry.find_server_for_file(&path)?;
 
       // Find workspace that contains this file
-      for ((workspace_path, server_name), (client, _, _)) in clients.iter() {
+      for ((workspace_path, server_name), instance) in clients.iter() {
          if path.starts_with(workspace_path) && server_name == &server_config.name {
-            return Some(client.clone());
+            return Some(instance.client.clone());
          }
       }
 
@@ -326,13 +468,13 @@ impl LspManager {
 
    pub fn shutdown(&self) {
       let mut clients = self.workspace_clients.lock().unwrap();
-      for ((workspace, server_name), (_, mut child, _)) in clients.drain() {
+      for ((workspace, server_name), mut instance) in clients.drain() {
          log::info!(
             "Shutting down LSP '{}' for workspace {:?}",
             server_name,
             workspace
          );
-         let _ = child.kill();
+         let _ = instance.child.kill();
       }
    }
 
@@ -347,13 +489,13 @@ impl LspManager {
          .collect();
 
       for key in keys_to_remove {
-         if let Some((_, mut child, name)) = clients.remove(&key) {
+         if let Some(mut instance) = clients.remove(&key) {
             log::info!(
                "Shutting down LSP '{}' for workspace {:?}",
-               name,
+               instance.server_name,
                workspace_path
             );
-            child.kill()?;
+            instance.child.kill()?;
          }
       }
 

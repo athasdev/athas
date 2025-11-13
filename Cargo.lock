@@ -359,6 +359,7 @@ dependencies = [
  "crossbeam-channel",
  "dirs 5.0.1",
  "env_logger",
+ "flate2",
  "fontdb",
  "futures-util",
  "git2",
@@ -377,7 +378,9 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "sha256",
  "ssh2",
+ "tar",
  "tauri",
  "tauri-build",
  "tauri-plugin-clipboard-manager",
@@ -5146,6 +5149,19 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
+]
+
+[[package]]
+name = "sha256"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f880fc8562bdeb709793f00eb42a2ad0e672c4f883bbe59122b926eca935c8f6"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "hex",
+ "sha2",
+ "tokio",
 ]
 
 [[package]]

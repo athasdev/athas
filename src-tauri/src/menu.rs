@@ -45,7 +45,7 @@ pub async fn toggle_menu_bar(app: tauri::AppHandle, toggle: Option<bool>) -> Res
 
       // Update the store to persist the setting
       if let Ok(store) = app.store("settings.json") {
-         let _ = store.set("nativeMenuBar", true);
+         store.set("nativeMenuBar", true);
          let _ = store.save();
       }
    } else {
@@ -56,7 +56,7 @@ pub async fn toggle_menu_bar(app: tauri::AppHandle, toggle: Option<bool>) -> Res
 
       // Update the store to persist the setting
       if let Ok(store) = app.store("settings.json") {
-         let _ = store.set("nativeMenuBar", false);
+         store.set("nativeMenuBar", false);
          let _ = store.save();
       }
    }
