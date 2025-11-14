@@ -6,6 +6,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAppStore } from "@/stores/app-store";
 import { useUIState } from "@/stores/ui-state-store";
+import { fetchRawAppVersion } from "@/utils/app-utils";
 import { useMenuEvents } from "./use-menu-events";
 
 export function useMenuEventsWrapper() {
@@ -136,9 +137,10 @@ export function useMenuEventsWrapper() {
     onNextTab: switchToNextBuffer,
     onPrevTab: switchToPreviousBuffer,
     onThemeChange: (theme: string) => updateSetting("theme", theme),
-    onAbout: () => {
+    onAbout: async () => {
+      const version = await fetchRawAppVersion();
       const aboutText = `Athas Code Editor
-Version: 0.1.0
+Version: ${version}
 Built with: React, TypeScript, Tauri
 License: MIT
 
@@ -178,9 +180,10 @@ For more help: https://github.com/athasdev/athas`;
 
       alert(helpText);
     },
-    onAboutAthas: () => {
+    onAboutAthas: async () => {
+      const version = await fetchRawAppVersion();
       const aboutText = `Athas Code Editor
-Version: 0.1.0
+Version: ${version}
 Built with: React, TypeScript, Tauri
 License: MIT
 
