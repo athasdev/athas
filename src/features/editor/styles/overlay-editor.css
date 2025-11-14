@@ -75,16 +75,37 @@
 /* Selection styling for the input layer */
 .input-layer::selection {
   background: var(--selected, rgba(255, 255, 255, 0.2));
-  color: transparent;
+  color: var(--text, #d4d4d4);
 }
 
 .input-layer::-moz-selection {
   background: var(--selected, rgba(255, 255, 255, 0.2));
-  color: transparent;
+  color: var(--text, #d4d4d4);
 }
 
 /* Line structure in highlight layer */
 .highlight-layer-line {
   display: block;
   min-height: 1em;
+}
+
+/* Multi-cursor layer */
+.multi-cursor-layer {
+  padding: 0.5rem 1rem;
+}
+
+/* Cursor blink animation */
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
 }
