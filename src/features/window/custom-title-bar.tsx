@@ -5,6 +5,7 @@ import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
 import { useIsLinux, useIsMac } from "@/hooks/use-platform";
 import { useUIState } from "@/stores/ui-state-store";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import ProjectTabs from "./components/project-tabs";
 import CustomMenuBar from "./menu-bar";
@@ -80,31 +81,34 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
         {/* Window controls - only show on Linux */}
         {isLinux && (
           <div className="flex items-center">
-            <button
-              onClick={handleMinimize}
-              className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
-              title="Minimize"
-            >
-              <Minus className="h-3.5 w-3.5 text-text-lighter" />
-            </button>
-            <button
-              onClick={handleToggleMaximize}
-              className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
-              title={isMaximized ? "Restore" : "Maximize"}
-            >
-              {isMaximized ? (
-                <Minimize2 className="h-3.5 w-3.5 text-text-lighter" />
-              ) : (
-                <Maximize2 className="h-3.5 w-3.5 text-text-lighter" />
-              )}
-            </button>
-            <button
-              onClick={handleClose}
-              className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-error"
-              title="Close"
-            >
-              <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
-            </button>
+            <Tooltip content="Minimize" side="bottom">
+              <button
+                onClick={handleMinimize}
+                className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
+              >
+                <Minus className="h-3.5 w-3.5 text-text-lighter" />
+              </button>
+            </Tooltip>
+            <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
+              <button
+                onClick={handleToggleMaximize}
+                className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
+              >
+                {isMaximized ? (
+                  <Minimize2 className="h-3.5 w-3.5 text-text-lighter" />
+                ) : (
+                  <Maximize2 className="h-3.5 w-3.5 text-text-lighter" />
+                )}
+              </button>
+            </Tooltip>
+            <Tooltip content="Close" side="bottom">
+              <button
+                onClick={handleClose}
+                className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-error"
+              >
+                <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
+              </button>
+            </Tooltip>
           </div>
         )}
       </div>
@@ -132,31 +136,33 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
 
         {/* Settings and AI Chat buttons */}
         <div className="flex items-center gap-0.5">
-          <button
-            onClick={() => {
-              updateSetting("isAIChatVisible", !settings.isAIChatVisible);
-            }}
-            className={`flex items-center justify-center rounded p-1 transition-colors ${
-              settings.isAIChatVisible
-                ? "bg-selected text-text"
-                : "text-text-lighter hover:bg-hover hover:text-text"
-            }`}
-            style={{ minHeight: 0, minWidth: 0 }}
-            title="Toggle AI Chat"
-          >
-            <Sparkles size={14} />
-          </button>
-          <button
-            onClick={onOpenSettings}
-            className={cn(
-              "mr-4 flex items-center justify-center rounded p-1",
-              "text-text-lighter transition-colors hover:bg-hover hover:text-text",
-            )}
-            style={{ minHeight: 0, minWidth: 0 }}
-            title="Settings"
-          >
-            <Settings size={14} />
-          </button>
+          <Tooltip content="AI Chat" side="bottom">
+            <button
+              onClick={() => {
+                updateSetting("isAIChatVisible", !settings.isAIChatVisible);
+              }}
+              className={`flex items-center justify-center rounded p-1 transition-colors ${
+                settings.isAIChatVisible
+                  ? "bg-selected text-text"
+                  : "text-text-lighter hover:bg-hover hover:text-text"
+              }`}
+              style={{ minHeight: 0, minWidth: 0 }}
+            >
+              <Sparkles size={14} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Settings" side="bottom">
+            <button
+              onClick={onOpenSettings}
+              className={cn(
+                "mr-4 flex items-center justify-center rounded p-1",
+                "text-text-lighter transition-colors hover:bg-hover hover:text-text",
+              )}
+              style={{ minHeight: 0, minWidth: 0 }}
+            >
+              <Settings size={14} />
+            </button>
+          </Tooltip>
         </div>
       </div>
     );
@@ -176,15 +182,16 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
       <div className="flex flex-1 items-center px-2">
         {/* Menu bar button */}
         {!settings.nativeMenuBar && settings.compactMenuBar && (
-          <button
-            onClick={() => {
-              setMenuBarActiveMenu("File");
-            }}
-            className={`mr-2 flex items-center justify-center rounded py-0.5 text-text`}
-            title="Open Menu Bar"
-          >
-            <MenuIcon size={16} />
-          </button>
+          <Tooltip content="Menu" side="bottom">
+            <button
+              onClick={() => {
+                setMenuBarActiveMenu("File");
+              }}
+              className={`mr-2 flex items-center justify-center rounded py-0.5 text-text`}
+            >
+              <MenuIcon size={16} />
+            </button>
+          </Tooltip>
         )}
 
         {/* Project tabs */}
@@ -202,61 +209,66 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
       {/* Right side */}
       <div className="z-20 flex items-center gap-0.5">
         {/* AI Chat button */}
-        <button
-          onClick={() => {
-            updateSetting("isAIChatVisible", !settings.isAIChatVisible);
-          }}
-          className={`flex items-center justify-center rounded px-1 py-0.5 transition-colors ${
-            settings.isAIChatVisible
-              ? "bg-selected text-text"
-              : "text-text-lighter hover:bg-hover hover:text-text"
-          }`}
-          style={{ minHeight: 0, minWidth: 0 }}
-          title="Toggle AI Chat"
-        >
-          <Sparkles size={12} />
-        </button>
+        <Tooltip content="AI Chat" side="bottom">
+          <button
+            onClick={() => {
+              updateSetting("isAIChatVisible", !settings.isAIChatVisible);
+            }}
+            className={`flex items-center justify-center rounded px-1 py-0.5 transition-colors ${
+              settings.isAIChatVisible
+                ? "bg-selected text-text"
+                : "text-text-lighter hover:bg-hover hover:text-text"
+            }`}
+            style={{ minHeight: 0, minWidth: 0 }}
+          >
+            <Sparkles size={12} />
+          </button>
+        </Tooltip>
         {/* Settings button */}
-        <button
-          onClick={onOpenSettings}
-          className={cn(
-            "mr-2 flex items-center justify-center rounded px-1 py-0.5",
-            "text-text-lighter transition-colors hover:bg-hover hover:text-text",
-          )}
-          style={{ minHeight: 0, minWidth: 0 }}
-          title="Settings"
-        >
-          <Settings size={12} />
-        </button>
+        <Tooltip content="Settings" side="bottom">
+          <button
+            onClick={onOpenSettings}
+            className={cn(
+              "mr-2 flex items-center justify-center rounded px-1 py-0.5",
+              "text-text-lighter transition-colors hover:bg-hover hover:text-text",
+            )}
+            style={{ minHeight: 0, minWidth: 0 }}
+          >
+            <Settings size={12} />
+          </button>
+        </Tooltip>
 
         {/* Window controls - only show on Linux */}
         {isLinux && (
           <div className="flex items-center">
-            <button
-              onClick={handleMinimize}
-              className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
-              title="Minimize"
-            >
-              <Minus className="h-3.5 w-3.5 text-text-lighter" />
-            </button>
-            <button
-              onClick={handleToggleMaximize}
-              className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
-              title={isMaximized ? "Restore" : "Maximize"}
-            >
-              {isMaximized ? (
-                <Minimize2 className="h-3.5 w-3.5 text-text-lighter" />
-              ) : (
-                <Maximize2 className="h-3.5 w-3.5 text-text-lighter" />
-              )}
-            </button>
-            <button
-              onClick={handleClose}
-              className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-error"
-              title="Close"
-            >
-              <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
-            </button>
+            <Tooltip content="Minimize" side="bottom">
+              <button
+                onClick={handleMinimize}
+                className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
+              >
+                <Minus className="h-3.5 w-3.5 text-text-lighter" />
+              </button>
+            </Tooltip>
+            <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
+              <button
+                onClick={handleToggleMaximize}
+                className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
+              >
+                {isMaximized ? (
+                  <Minimize2 className="h-3.5 w-3.5 text-text-lighter" />
+                ) : (
+                  <Maximize2 className="h-3.5 w-3.5 text-text-lighter" />
+                )}
+              </button>
+            </Tooltip>
+            <Tooltip content="Close" side="bottom">
+              <button
+                onClick={handleClose}
+                className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-error"
+              >
+                <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
+              </button>
+            </Tooltip>
           </div>
         )}
       </div>

@@ -11,6 +11,13 @@ import {
   storeProviderApiToken,
   validateProviderApiKey,
 } from "@/utils/ai-chat";
+import {
+  deleteChatFromDb,
+  initChatDatabase,
+  loadAllChatsFromDb,
+  loadChatFromDb,
+  saveChatToDb,
+} from "@/utils/chat-history-db";
 import type { AIChatActions, AIChatState } from "./types";
 
 export const useAIChatStore = create<AIChatState & AIChatActions>()(
@@ -173,6 +180,10 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.isTyping = false;
             state.streamingMessageId = null;
           });
+          // Save to SQLite
+          saveChatToDb(newChat).catch((err) =>
+            console.error("Failed to save new chat to database:", err),
+          );
           return newChat.id;
         },
 
@@ -185,6 +196,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.isTyping = false;
             state.streamingMessageId = null;
           });
+          // Load messages from database
+          get().loadChatMessages(chatId);
         },
 
         deleteChat: (chatId) => {
@@ -206,6 +219,10 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               }
             }
           });
+          // Delete from SQLite
+          deleteChatFromDb(chatId).catch((err) =>
+            console.error("Failed to delete chat from database:", err),
+          );
         },
 
         updateChatTitle: (chatId, title) => {
@@ -215,6 +232,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               chat.title = title;
             }
           });
+          // Save to SQLite
+          get().syncChatToDatabase(chatId);
         },
 
         addMessage: (chatId, message) => {
@@ -225,6 +244,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               chat.lastMessageAt = new Date();
             }
           });
+          // Save to SQLite
+          get().syncChatToDatabase(chatId);
         },
 
         updateMessage: (chatId, messageId, updates) => {
@@ -238,6 +259,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               }
             }
           });
+          // Save to SQLite
+          get().syncChatToDatabase(chatId);
         },
 
         regenerateResponse: () => {
@@ -268,6 +291,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               currentChat.lastMessageAt = new Date();
             }
           });
+
+          // Save to SQLite
+          if (state.currentChatId) {
+            get().syncChatToDatabase(state.currentChatId);
+          }
 
           return lastUserMessage.content;
         },
@@ -494,6 +522,53 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             .map(({ file }) => file);
         },
 
+        // SQLite database actions
+        initializeDatabase: async () => {
+          try {
+            await initChatDatabase();
+            console.log("Chat database initialized");
+          } catch (error) {
+            console.error("Failed to initialize chat database:", error);
+          }
+        },
+
+        loadChatsFromDatabase: async () => {
+          try {
+            const chatsMetadata = await loadAllChatsFromDb();
+            set((state) => {
+              state.chats = chatsMetadata as Chat[];
+            });
+            console.log(`Loaded ${chatsMetadata.length} chats from database`);
+          } catch (error) {
+            console.error("Failed to load chats from database:", error);
+          }
+        },
+
+        loadChatMessages: async (chatId: string) => {
+          try {
+            const fullChat = await loadChatFromDb(chatId);
+            set((state) => {
+              const chatIndex = state.chats.findIndex((c) => c.id === chatId);
+              if (chatIndex !== -1) {
+                state.chats[chatIndex] = fullChat;
+              }
+            });
+          } catch (error) {
+            console.error(`Failed to load messages for chat ${chatId}:`, error);
+          }
+        },
+
+        syncChatToDatabase: async (chatId: string) => {
+          try {
+            const chat = get().chats.find((c) => c.id === chatId);
+            if (chat) {
+              await saveChatToDb(chat);
+            }
+          } catch (error) {
+            console.error(`Failed to sync chat ${chatId} to database:`, error);
+          }
+        },
+
         // Helper getters
         getCurrentChat: () => {
           const state = get();
@@ -507,42 +582,19 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         },
       }),
       {
-        name: "athas-ai-chat-v4",
+        name: "athas-ai-chat-settings-v5",
         version: 1,
         partialize: (state) => ({
-          chats: state.chats,
-          currentChatId: state.currentChatId,
           mode: state.mode,
           outputStyle: state.outputStyle,
         }),
         merge: (persistedState, currentState) =>
           produce(currentState, (draft) => {
-            // Merge persisted state into draft
-            Object.assign(draft, persistedState);
-            // Convert date strings back to Date objects
-            if (draft.chats) {
-              // Restore Sets from arrays
-              draft.selectedBufferIds = new Set(draft.selectedBufferIds);
-              draft.selectedFilesPaths = new Set(draft.selectedFilesPaths);
-              // Ensure mode and outputStyle exist (for backward compatibility)
-              if (!draft.mode) {
-                draft.mode = "chat";
-              }
-              if (!draft.outputStyle) {
-                draft.outputStyle = "default";
-              }
-              draft.chats.forEach((chat) => {
-                chat.createdAt = new Date(chat.createdAt);
-                chat.lastMessageAt = new Date(chat.lastMessageAt);
-                chat.messages.forEach((msg) => {
-                  msg.timestamp = new Date(msg.timestamp);
-                  if (msg.toolCalls) {
-                    msg.toolCalls.forEach((tc) => {
-                      tc.timestamp = new Date(tc.timestamp);
-                    });
-                  }
-                });
-              });
+            // Only merge mode and outputStyle from localStorage
+            // Chats are loaded from SQLite separately
+            if (persistedState) {
+              draft.mode = (persistedState as any).mode || "chat";
+              draft.outputStyle = (persistedState as any).outputStyle || "default";
             }
           }),
       },

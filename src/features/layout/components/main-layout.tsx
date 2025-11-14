@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from "react";
+import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import SQLiteViewer from "@/features/database/providers/sqlite/sqlite-viewer";
 import type { Diagnostic } from "@/features/diagnostics/diagnostics-pane";
 import { useDiagnosticsStore } from "@/features/diagnostics/diagnostics-store";
@@ -40,6 +41,9 @@ import { MainSidebar } from "./sidebar/main-sidebar";
 import ResizableSidebar from "./sidebar/resizable-sidebar";
 
 export function MainLayout() {
+  // Initialize AI chat storage (SQLite database + migration)
+  useChatInitialization();
+
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;

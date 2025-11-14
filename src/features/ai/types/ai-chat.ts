@@ -2,7 +2,7 @@ import type React from "react";
 import type { FileEntry } from "@/features/file-system/types/app";
 import type { Buffer } from "@/features/tabs/types/buffer";
 
-interface ToolCall {
+export interface ToolCall {
   name: string;
   input: any;
   output?: any;
