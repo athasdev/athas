@@ -69,7 +69,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       }}
     >
       <div className="flex h-full w-full">
-        {/* Sidebar with vertical tabs */}
+        {/* Sidebar */}
         <div className="w-40 border-border border-r bg-secondary-bg">
           <SettingsVerticalTabs activeTab={activeTab} onTabChange={setActiveTab} />
         </div>

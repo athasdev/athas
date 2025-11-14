@@ -48,6 +48,8 @@ const ApiKeyModal = ({
         return "No API key needed - subscription based";
       case "openrouter":
         return "sk-or-v1-xxxxxxxxxxxxxxxxxxxx";
+      case "grok":
+        return "xai-xxxxxxxxxxxxxxxxxxxx";
       default:
         return "Enter your API key...";
     }
@@ -77,6 +79,18 @@ const ApiKeyModal = ({
             "Note: OpenRouter provides access to many models",
           ],
           link: "https://openrouter.ai/keys",
+        };
+      case "grok":
+        return {
+          title: "How to get your xAI Grok API key:",
+          steps: [
+            "Go to the xAI API Keys page",
+            'Click "Create API Key"',
+            "Copy the generated key immediately (you won't see it again)",
+            "Paste the key above",
+            "Note: Grok offers advanced reasoning capabilities",
+          ],
+          link: "https://console.x.ai",
         };
       default:
         return {

@@ -4,7 +4,6 @@ import type React from "react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import ApiKeyModal from "@/features/ai/components/api-key-modal";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
-import { formatTime } from "@/features/ai/lib/formatting";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import type { ClaudeStatus } from "@/features/ai/types/claude";
@@ -18,7 +17,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { getChatCompletionStream } from "@/utils/ai-chat";
 import { cn } from "@/utils/cn";
 import type { ContextInfo } from "@/utils/types";
-import ChatHistoryModal from "../history/chat-history-modal";
+import ChatHistorySidebar from "../history/chat-history-sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import ToolCallDisplay from "../messages/tool-call-display";
@@ -777,14 +776,13 @@ details: ${errorDetails || mainError}
       />
 
       {/* Chat History Modal */}
-      <ChatHistoryModal
-        isOpen={isChatHistoryVisible}
-        onClose={() => setIsChatHistoryVisible(false)}
+      <ChatHistorySidebar
         chats={chats}
         currentChatId={currentChatId}
         onSwitchToChat={switchToChat}
         onDeleteChat={handleDeleteChat}
-        formatTime={formatTime}
+        isOpen={isChatHistoryVisible}
+        onClose={() => setIsChatHistoryVisible(false)}
       />
     </div>
   );

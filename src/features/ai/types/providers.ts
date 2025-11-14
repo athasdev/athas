@@ -287,6 +287,34 @@ export const AI_PROVIDERS: ModelProvider[] = [
     ],
   },
   {
+    id: "grok",
+    name: "xAI Grok",
+    apiUrl: "https://api.x.ai/v1/chat/completions",
+    requiresApiKey: true,
+    models: [
+      {
+        id: "grok-4",
+        name: "Grok 4",
+        maxTokens: 131072,
+      },
+      {
+        id: "grok-4-0709",
+        name: "Grok 4 (0709)",
+        maxTokens: 131072,
+      },
+      {
+        id: "grok-4-fast",
+        name: "Grok 4 Fast",
+        maxTokens: 131072,
+      },
+      {
+        id: "grok-3",
+        name: "Grok 3",
+        maxTokens: 131072,
+      },
+    ],
+  },
+  {
     id: "copilot",
     name: "GitHub Copilot",
     apiUrl: "https://api.githubcopilot.com/chat/completions",

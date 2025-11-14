@@ -294,6 +294,223 @@ class ExtensionRegistry {
 
     return Array.from(languageIds);
   }
+
+  /**
+   * Get formatter configuration for a file
+   */
+  getFormatterForFile(filePath: string): {
+    command: string;
+    args: string[];
+    inputMethod?: "stdin" | "file";
+    outputMethod?: "stdout" | "file";
+  } | null {
+    const ext = filePath.substring(filePath.lastIndexOf("."));
+    const extension = this.getExtensionByFileExtension(ext);
+
+    if (!extension?.manifest.formatter) {
+      return null;
+    }
+
+    const formatterConfig = extension.manifest.formatter;
+
+    // Get platform-specific command
+    const command =
+      formatterConfig.command[this.platform] || formatterConfig.command.default || null;
+
+    if (!command) {
+      return null;
+    }
+
+    // Resolve command path if relative
+    let resolvedCommand = command;
+    if (command.startsWith("./")) {
+      resolvedCommand = `${extension.path}/${command.substring(2)}`;
+    }
+
+    return {
+      command: resolvedCommand,
+      args: formatterConfig.args || [],
+      inputMethod: formatterConfig.inputMethod,
+      outputMethod: formatterConfig.outputMethod,
+    };
+  }
+
+  /**
+   * Get formatter for a language ID
+   */
+  getFormatterForLanguage(languageId: string): {
+    command: string;
+    args: string[];
+    inputMethod?: "stdin" | "file";
+    outputMethod?: "stdout" | "file";
+  } | null {
+    const extension = this.getExtensionByLanguageId(languageId);
+
+    if (!extension?.manifest.formatter) {
+      return null;
+    }
+
+    const formatterConfig = extension.manifest.formatter;
+
+    const command =
+      formatterConfig.command[this.platform] || formatterConfig.command.default || null;
+
+    if (!command) {
+      return null;
+    }
+
+    let resolvedCommand = command;
+    if (command.startsWith("./")) {
+      resolvedCommand = `${extension.path}/${command.substring(2)}`;
+    }
+
+    return {
+      command: resolvedCommand,
+      args: formatterConfig.args || [],
+      inputMethod: formatterConfig.inputMethod,
+      outputMethod: formatterConfig.outputMethod,
+    };
+  }
+
+  /**
+   * Get linter configuration for a file
+   */
+  getLinterForFile(filePath: string): {
+    command: string;
+    args: string[];
+    inputMethod?: "stdin" | "file";
+    diagnosticFormat?: "lsp" | "regex";
+    diagnosticPattern?: string;
+  } | null {
+    const ext = filePath.substring(filePath.lastIndexOf("."));
+    const extension = this.getExtensionByFileExtension(ext);
+
+    if (!extension?.manifest.linter) {
+      return null;
+    }
+
+    const linterConfig = extension.manifest.linter;
+
+    const command = linterConfig.command[this.platform] || linterConfig.command.default || null;
+
+    if (!command) {
+      return null;
+    }
+
+    let resolvedCommand = command;
+    if (command.startsWith("./")) {
+      resolvedCommand = `${extension.path}/${command.substring(2)}`;
+    }
+
+    return {
+      command: resolvedCommand,
+      args: linterConfig.args || [],
+      inputMethod: linterConfig.inputMethod,
+      diagnosticFormat: linterConfig.diagnosticFormat,
+      diagnosticPattern: linterConfig.diagnosticPattern,
+    };
+  }
+
+  /**
+   * Get linter for a language ID
+   */
+  getLinterForLanguage(languageId: string): {
+    command: string;
+    args: string[];
+    inputMethod?: "stdin" | "file";
+    diagnosticFormat?: "lsp" | "regex";
+    diagnosticPattern?: string;
+  } | null {
+    const extension = this.getExtensionByLanguageId(languageId);
+
+    if (!extension?.manifest.linter) {
+      return null;
+    }
+
+    const linterConfig = extension.manifest.linter;
+
+    const command = linterConfig.command[this.platform] || linterConfig.command.default || null;
+
+    if (!command) {
+      return null;
+    }
+
+    let resolvedCommand = command;
+    if (command.startsWith("./")) {
+      resolvedCommand = `${extension.path}/${command.substring(2)}`;
+    }
+
+    return {
+      command: resolvedCommand,
+      args: linterConfig.args || [],
+      inputMethod: linterConfig.inputMethod,
+      diagnosticFormat: linterConfig.diagnosticFormat,
+      diagnosticPattern: linterConfig.diagnosticPattern,
+    };
+  }
+
+  /**
+   * Get snippets for a language ID
+   */
+  getSnippetsForLanguage(languageId: string): Array<{
+    prefix: string;
+    body: string | string[];
+    description?: string;
+    scope?: string;
+  }> {
+    const snippets: Array<{
+      prefix: string;
+      body: string | string[];
+      description?: string;
+      scope?: string;
+    }> = [];
+
+    for (const extension of this.extensions.values()) {
+      if (extension.manifest.snippets) {
+        for (const snippetContribution of extension.manifest.snippets) {
+          if (snippetContribution.language === languageId) {
+            snippets.push(...snippetContribution.snippets);
+          }
+        }
+      }
+    }
+
+    return snippets;
+  }
+
+  /**
+   * Get all snippets from all extensions
+   */
+  getAllSnippets(): Array<{
+    language: string;
+    prefix: string;
+    body: string | string[];
+    description?: string;
+    scope?: string;
+  }> {
+    const snippets: Array<{
+      language: string;
+      prefix: string;
+      body: string | string[];
+      description?: string;
+      scope?: string;
+    }> = [];
+
+    for (const extension of this.extensions.values()) {
+      if (extension.manifest.snippets) {
+        for (const snippetContribution of extension.manifest.snippets) {
+          for (const snippet of snippetContribution.snippets) {
+            snippets.push({
+              language: snippetContribution.language,
+              ...snippet,
+            });
+          }
+        }
+      }
+    }
+
+    return snippets;
+  }
 }
 
 // Global extension registry instance

@@ -1,6 +1,8 @@
 import type { CompletionItem } from "vscode-languageserver-protocol";
 import { create } from "zustand";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { expandSnippet } from "@/features/editor/snippets/snippet-expander";
 import { logger } from "@/features/editor/utils/logger";
 import { detectCompletionContext, extractPrefix, filterCompletions } from "@/utils/fuzzy-matcher";
 import { createSelectors } from "@/utils/zustand-selectors";
@@ -11,6 +13,35 @@ const COMPLETION_DEBOUNCE_MS = EDITOR_CONSTANTS.COMPLETION_DEBOUNCE_MS;
 const COMPLETION_CACHE_TTL_MS = EDITOR_CONSTANTS.COMPLETION_CACHE_TTL_MS;
 const MAX_CACHE_SIZE = EDITOR_CONSTANTS.MAX_COMPLETION_CACHE_SIZE;
 const COMPLETION_HIDE_DELAY_MS = 200; // Stability period before hiding to prevent flicker
+
+/**
+ * Get snippet completions for a file
+ */
+function getSnippetCompletions(filePath: string, prefix: string): CompletionItem[] {
+  const languageId = extensionRegistry.getLanguageId(filePath);
+  if (!languageId) return [];
+
+  const snippets = extensionRegistry.getSnippetsForLanguage(languageId);
+
+  // Filter by prefix if provided
+  const matchingSnippets = prefix
+    ? snippets.filter((snippet) => snippet.prefix.toLowerCase().startsWith(prefix.toLowerCase()))
+    : snippets;
+
+  // Convert to LSP CompletionItem format
+  return matchingSnippets.map((snippet) => ({
+    label: snippet.prefix,
+    kind: 15, // CompletionItemKind.Snippet
+    detail: snippet.description || "Snippet",
+    insertText: Array.isArray(snippet.body) ? snippet.body.join("\n") : snippet.body,
+    insertTextFormat: 2, // InsertTextFormat.Snippet
+    sortText: `0_${snippet.prefix}`, // Sort snippets before other completions
+    data: {
+      isSnippet: true,
+      snippet,
+    },
+  }));
+}
 
 // Cache interfaces
 interface CacheEntry {
@@ -246,8 +277,10 @@ export const useLspStore = createSelectors(
         const cachedEntry = completionCache[cacheKey];
 
         if (cachedEntry && Date.now() - cachedEntry.timestamp < COMPLETION_CACHE_TTL_MS) {
-          // Use cached completions if they match the current prefix or are compatible
-          const completions = cachedEntry.completions;
+          // Use cached completions and merge with snippets
+          const lspCompletions = cachedEntry.completions;
+          const snippetCompletions = getSnippetCompletions(filePath, prefix);
+          const completions = [...snippetCompletions, ...lspCompletions];
 
           if (completions.length > 0) {
             completionActions.setLspCompletions(completions);
@@ -288,7 +321,7 @@ export const useLspStore = createSelectors(
 
         try {
           const startTime = performance.now();
-          const completions = await getCompletions(filePath, line, character);
+          const lspCompletions = await getCompletions(filePath, line, character);
 
           // Check if request was cancelled
           if (abortController.signal.aborted) {
@@ -297,13 +330,17 @@ export const useLspStore = createSelectors(
 
           const _elapsed = performance.now() - startTime;
 
+          // Get snippet completions and merge with LSP completions
+          const snippetCompletions = getSnippetCompletions(filePath, prefix);
+          const completions = [...snippetCompletions, ...lspCompletions];
+
           if (completions.length > 0) {
-            // Cache the results
+            // Cache the results (cache LSP completions separately)
             const { completionCache: currentCache } = get();
             const newCache = {
               ...currentCache,
               [cacheKey]: {
-                completions,
+                completions: lspCompletions,
                 timestamp: Date.now(),
                 prefix,
               },
@@ -314,7 +351,7 @@ export const useLspStore = createSelectors(
             actions.cleanExpiredCache();
             actions.limitCacheSize();
 
-            // Store original completions
+            // Store original completions (merged)
             completionActions.setLspCompletions(completions);
 
             // Filter completions using fuzzy matching if we have a prefix
@@ -359,16 +396,59 @@ export const useLspStore = createSelectors(
         const { actions: completionActions } = useEditorUIStore.getState();
 
         completionActions.setIsApplyingCompletion(true);
+        completionActions.setIsLspCompletionVisible(false);
 
+        // Calculate word boundaries
         const before = value.substring(0, cursorPos);
         const after = value.substring(cursorPos);
         const wordMatch = before.match(/\w*$/);
         const wordStart = wordMatch ? cursorPos - wordMatch[0].length : cursorPos;
+        const prefixLength = wordMatch ? wordMatch[0].length : 0;
+
+        // Check if this is a snippet completion
+        if (completion.data?.isSnippet && completion.insertTextFormat === 2) {
+          try {
+            const snippet = completion.data.snippet;
+            if (!snippet) {
+              // Fallback to regular insertion
+              const insertText = completion.insertText || completion.label;
+              return {
+                newValue: value.substring(0, wordStart) + insertText + after,
+                newCursorPos: wordStart + insertText.length,
+              };
+            }
+
+            // Calculate position for snippet expansion
+            const lines = value.substring(0, cursorPos).split("\n");
+            const line = lines.length - 1;
+            const column = lines[lines.length - 1].length;
+
+            // Expand the snippet with variables resolved
+            const session = expandSnippet(
+              { body: snippet.body, prefix: snippet.prefix },
+              { line, column, offset: cursorPos },
+              { fileName: "", filePath: "" },
+            );
+
+            const expandedBody = session.parsedSnippet.expandedBody;
+            const newValue = value.substring(0, cursorPos - prefixLength) + expandedBody + after;
+
+            // Position cursor at end of expanded snippet (or first tab stop if handling that)
+            const newCursorPos = cursorPos - prefixLength + expandedBody.length;
+
+            logger.info("LSP", `Expanded snippet: ${snippet.prefix}`);
+
+            return { newValue, newCursorPos };
+          } catch (error) {
+            logger.error("LSP", "Failed to expand snippet:", error);
+            // Fallback to regular insertion
+          }
+        }
+
+        // Regular completion (non-snippet)
         const insertText = completion.insertText || completion.label;
         const newValue = value.substring(0, wordStart) + insertText + after;
         const newCursorPos = wordStart + insertText.length;
-
-        completionActions.setIsLspCompletionVisible(false);
 
         return { newValue, newCursorPos };
       },
