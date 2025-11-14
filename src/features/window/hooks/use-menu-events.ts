@@ -45,12 +45,10 @@ async function setupMenuListeners(handlers: any) {
     listen("menu_go_to_line", () => currentHandlers.current.onGoToLine()),
     listen("menu_next_tab", () => currentHandlers.current.onNextTab()),
     listen("menu_prev_tab", () => currentHandlers.current.onPrevTab()),
-    listen("menu_theme_change", (event) => {
-      currentHandlers.current.onThemeChange(event.payload as string);
-    }),
-    listen("menu_about", () => {
-      currentHandlers.current.onAbout();
-    }),
+    listen("menu_theme_change", (event) =>
+      currentHandlers.current.onThemeChange(event.payload as string),
+    ),
+    listen("menu_about", () => currentHandlers.current.onAbout()),
     listen("menu_help", () => currentHandlers.current.onHelp()),
     listen("menu_about_athas", () => currentHandlers.current.onAboutAthas()),
     listen("menu_toggle_menu_bar", () => currentHandlers.current.onToggleMenuBar()),
@@ -83,7 +81,7 @@ interface UseMenuEventsProps {
   onNextTab: () => void;
   onPrevTab: () => void;
   onThemeChange: (theme: string) => void;
-  onAbout: () => void;
+  onAbout: () => void | Promise<void>;
   onHelp: () => void;
   onAboutAthas: () => void;
   onToggleMenuBar: () => void;
