@@ -4,8 +4,9 @@ import { load, type Store } from "@tauri-apps/plugin-store";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-
+import { settingsSearchIndex } from "./config/search-index";
 import type { CoreFeaturesState } from "./types/feature";
+import type { SearchResult, SearchState } from "./types/search";
 
 type Theme = string;
 
@@ -266,6 +267,12 @@ export const useSettingsStore = create(
     combine(
       {
         settings: defaultSettings,
+        search: {
+          query: "",
+          results: [] as SearchResult[],
+          isSearching: false,
+          selectedResultId: null,
+        } as SearchState,
       },
       (set) => ({
         // Update settings from JSON string
@@ -302,6 +309,95 @@ export const useSettingsStore = create(
           if (key === "theme") applyTheme(value as Theme);
 
           await saveSettingsToStore({ [key]: value });
+        },
+
+        // Search actions
+        setSearchQuery: (query: string) => {
+          set((state) => {
+            state.search.query = query;
+          });
+          // Trigger search automatically when query changes
+          useSettingsStore.getState().runSearch();
+        },
+
+        runSearch: () => {
+          const query = useSettingsStore.getState().search.query.trim().toLowerCase();
+
+          if (!query) {
+            set((state) => {
+              state.search.results = [];
+              state.search.isSearching = false;
+            });
+            return;
+          }
+
+          set((state) => {
+            state.search.isSearching = true;
+          });
+
+          // Normalize and search
+          const normalizedQuery = query
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase();
+
+          const tokens = normalizedQuery.split(/\s+/);
+
+          const results: SearchResult[] = settingsSearchIndex
+            .map((record) => {
+              const searchableText = [
+                record.label,
+                record.description,
+                record.section,
+                ...(record.keywords || []),
+              ]
+                .join(" ")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase();
+
+              let score = 0;
+
+              // Check each token
+              for (const token of tokens) {
+                if (searchableText.includes(token)) {
+                  // Boost score if token matches label
+                  if (record.label.toLowerCase().includes(token)) {
+                    score += 10;
+                  }
+                  // Boost score if token matches keywords
+                  if (record.keywords?.some((kw) => kw.toLowerCase().includes(token))) {
+                    score += 5;
+                  }
+                  // Regular match in description or section
+                  score += 1;
+                }
+              }
+
+              return { ...record, score };
+            })
+            .filter((result) => result.score > 0)
+            .sort((a, b) => b.score - a.score);
+
+          set((state) => {
+            state.search.results = results;
+            state.search.isSearching = false;
+          });
+        },
+
+        clearSearch: () => {
+          set((state) => {
+            state.search.query = "";
+            state.search.results = [];
+            state.search.isSearching = false;
+            state.search.selectedResultId = null;
+          });
+        },
+
+        selectSearchResult: (resultId: string) => {
+          set((state) => {
+            state.search.selectedResultId = resultId;
+          });
         },
       }),
     ),
