@@ -5,7 +5,9 @@
  */
 
 import "../styles/overlay-editor.css";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import EditorContextMenu from "../context-menu/context-menu";
 import { useTokenizer } from "../hooks/use-tokenizer";
 import { useViewportLines } from "../hooks/use-viewport-lines";
 import { useLspStore } from "../lsp/lsp-store";
@@ -51,6 +53,12 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
   const buffer = buffers.find((b) => b.id === bufferId);
   const content = buffer?.content || "";
   const filePath = buffer?.path;
+
+  // Context menu state
+  const [contextMenuState, setContextMenuState] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+  }>({ isOpen: false, position: { x: 0, y: 0 } });
 
   // Memoize expensive calculations
   const lines = useMemo(() => content.split("\n"), [content]);
@@ -152,6 +160,76 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
     },
     [bufferId, content, multiCursorState, enableMultiCursor, addCursor, clearSecondaryCursors],
   );
+
+  // Handle context menu
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setContextMenuState({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+    });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenuState({ isOpen: false, position: { x: 0, y: 0 } });
+  }, []);
+
+  // Context menu action handlers
+  const handleCopy = useCallback(() => {
+    if (!inputRef.current) return;
+    document.execCommand("copy");
+  }, []);
+
+  const handleCut = useCallback(() => {
+    if (!inputRef.current) return;
+    document.execCommand("cut");
+  }, []);
+
+  const handlePaste = useCallback(async () => {
+    if (!inputRef.current) return;
+    try {
+      const text = await navigator.clipboard.readText();
+      const textarea = inputRef.current;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newContent = content.substring(0, start) + text + content.substring(end);
+
+      if (bufferId) {
+        updateBufferContent(bufferId, newContent);
+      }
+
+      textarea.value = newContent;
+      const newPosition = start + text.length;
+      textarea.selectionStart = textarea.selectionEnd = newPosition;
+
+      handleInput(newContent);
+    } catch (error) {
+      console.error("Failed to paste:", error);
+    }
+  }, [content, bufferId, updateBufferContent, handleInput]);
+
+  const handleSelectAll = useCallback(() => {
+    if (!inputRef.current) return;
+    inputRef.current.select();
+  }, []);
+
+  const handleDelete = useCallback(() => {
+    if (!inputRef.current) return;
+    const textarea = inputRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    if (start !== end) {
+      const newContent = content.substring(0, start) + content.substring(end);
+      if (bufferId) {
+        updateBufferContent(bufferId, newContent);
+      }
+      textarea.value = newContent;
+      textarea.selectionStart = textarea.selectionEnd = start;
+      handleInput(newContent);
+    }
+  }, [content, bufferId, updateBufferContent, handleInput]);
 
   // Get completion state
   const isLspCompletionVisible = useEditorUIStore.use.isLspCompletionVisible();
@@ -426,6 +504,7 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
           onScroll={handleScroll}
           onSelect={handleCursorChange}
           onClick={handleClick}
+          onContextMenu={handleContextMenu}
           fontSize={fontSize}
           fontFamily={fontFamily}
           lineHeight={lineHeight}
@@ -443,6 +522,20 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
           />
         )}
       </div>
+      {contextMenuState.isOpen &&
+        createPortal(
+          <EditorContextMenu
+            isOpen={contextMenuState.isOpen}
+            position={contextMenuState.position}
+            onClose={closeContextMenu}
+            onCopy={handleCopy}
+            onCut={handleCut}
+            onPaste={handlePaste}
+            onSelectAll={handleSelectAll}
+            onDelete={handleDelete}
+          />,
+          document.body,
+        )}
     </div>
   );
 }
