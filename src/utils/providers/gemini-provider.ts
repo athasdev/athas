@@ -33,19 +33,14 @@ export class GeminiProvider extends AIProvider {
 
   async validateApiKey(apiKey: string): Promise<boolean> {
     try {
-      const response = await tauriFetch("https://generativelanguage.googleapis.com/v1beta/models", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
+      const response = await tauriFetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+        {
+          method: "GET",
         },
-      });
+      );
 
-      if (response.ok) {
-        return true;
-      }
-      console.error(`${this.name} API validation error:`, response.status);
-      return false;
+      return response.ok;
     } catch (error) {
       console.error(`${this.id} API key validation error:`, error);
       return false;

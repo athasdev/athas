@@ -1,10 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Check, Copy, MessageSquare, Plus, Sparkles } from "lucide-react";
+import { Check, Copy, History, Plus, Sparkles } from "lucide-react";
 import type React from "react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import ApiKeyModal from "@/features/ai/components/api-key-modal";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
-import { formatTime } from "@/features/ai/lib/formatting";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import type { ClaudeStatus } from "@/features/ai/types/claude";
@@ -15,10 +14,11 @@ import {
 } from "@/features/ai/types/providers";
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
+import Tooltip from "@/ui/tooltip";
 import { getChatCompletionStream } from "@/utils/ai-chat";
 import { cn } from "@/utils/cn";
 import type { ContextInfo } from "@/utils/types";
-import ChatHistoryModal from "../history/chat-history-modal";
+import ChatHistorySidebar from "../history/sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import ToolCallDisplay from "../messages/tool-call-display";
@@ -599,15 +599,6 @@ details: ${errorDetails || mainError}
           borderBottom: "1px solid var(--color-border)",
         }}
       >
-        <button
-          onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-          className="rounded p-1 transition-colors hover:bg-hover"
-          style={{ color: "var(--color-text-lighter)" }}
-          title="Toggle chat history"
-          aria-label="Toggle chat history"
-        >
-          <MessageSquare size={14} />
-        </button>
         {currentChatId ? (
           <EditableChatTitle
             title={currentChat ? currentChat.title : "New Chat"}
@@ -617,15 +608,26 @@ details: ${errorDetails || mainError}
           <span className="font-medium">New Chat</span>
         )}
         <div className="flex-1" />
-        <button
-          onClick={handleNewChat}
-          className="flex items-center gap-1 rounded px-2 py-1 transition-colors hover:bg-hover"
-          style={{ color: "var(--color-text-lighter)" }}
-          title="New chat"
-          aria-label="New chat"
-        >
-          <Plus size={10} />
-        </button>
+        <Tooltip content="Chat History" side="bottom">
+          <button
+            onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
+            className="rounded p-1 transition-colors hover:bg-hover"
+            style={{ color: "var(--color-text-lighter)" }}
+            aria-label="Toggle chat history"
+          >
+            <History size={14} />
+          </button>
+        </Tooltip>
+        <Tooltip content="New Chat" side="bottom">
+          <button
+            onClick={handleNewChat}
+            className="flex items-center gap-1 rounded px-2 py-1 transition-colors hover:bg-hover"
+            style={{ color: "var(--color-text-lighter)" }}
+            aria-label="New chat"
+          >
+            <Plus size={10} />
+          </button>
+        </Tooltip>
       </div>
 
       {/* Messages */}
@@ -777,14 +779,13 @@ details: ${errorDetails || mainError}
       />
 
       {/* Chat History Modal */}
-      <ChatHistoryModal
-        isOpen={isChatHistoryVisible}
-        onClose={() => setIsChatHistoryVisible(false)}
+      <ChatHistorySidebar
         chats={chats}
         currentChatId={currentChatId}
         onSwitchToChat={switchToChat}
         onDeleteChat={handleDeleteChat}
-        formatTime={formatTime}
+        isOpen={isChatHistoryVisible}
+        onClose={() => setIsChatHistoryVisible(false)}
       />
     </div>
   );

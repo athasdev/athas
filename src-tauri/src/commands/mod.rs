@@ -1,4 +1,5 @@
 pub mod ai_tokens;
+pub mod chat_history;
 pub mod claude;
 pub mod cli;
 pub mod extensions;
@@ -17,6 +18,7 @@ pub mod watcher;
 pub mod window;
 
 pub use ai_tokens::*;
+pub use chat_history::*;
 pub use claude::*;
 pub use cli::*;
 pub use extensions::*;

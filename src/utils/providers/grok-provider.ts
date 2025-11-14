@@ -1,11 +1,9 @@
 import { AIProvider, type ProviderHeaders, type StreamRequest } from "./provider-interface";
 
-export class OpenRouterProvider extends AIProvider {
+export class GrokProvider extends AIProvider {
   buildHeaders(apiKey?: string): ProviderHeaders {
     const headers: ProviderHeaders = {
       "Content-Type": "application/json",
-      "HTTP-Referer": "https://localhost",
-      "X-Title": "Code Editor",
     };
 
     if (apiKey) {
@@ -27,7 +25,7 @@ export class OpenRouterProvider extends AIProvider {
 
   async validateApiKey(apiKey: string): Promise<boolean> {
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/auth/key", {
+      const response = await fetch("https://api.x.ai/v1/api-key", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${apiKey}`,

@@ -1,4 +1,5 @@
 import { GeminiProvider } from "./gemini-provider";
+import { GrokProvider } from "./grok-provider";
 import { OpenAIProvider } from "./openai-provider";
 import { OpenRouterProvider } from "./openrouter-provider";
 import type { AIProvider, ProviderConfig } from "./provider-interface";
@@ -33,6 +34,15 @@ function initializeProviders(): void {
     maxTokens: 8192,
   };
   providers.set("gemini", new GeminiProvider(geminiConfig));
+
+  const grokConfig: ProviderConfig = {
+    id: "grok",
+    name: "xAI Grok",
+    apiUrl: "https://api.x.ai/v1/chat/completions",
+    requiresApiKey: true,
+    maxTokens: 131072,
+  };
+  providers.set("grok", new GrokProvider(grokConfig));
 }
 
 export function getProvider(providerId: string): AIProvider | undefined {

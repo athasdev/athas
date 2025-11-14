@@ -37,7 +37,7 @@ const GitHubCopilotSettings = () => {
 
           {/* Coming Soon Notice */}
           <div className="space-y-3 rounded border border-border bg-secondary-bg p-4">
-            <div className="flex items-center gap-2 text-text text-sm font-medium">
+            <div className="flex items-center gap-2 font-medium text-sm text-text">
               <AlertCircle size={14} className="text-blue-400" />
               <span>Coming Soon</span>
             </div>

@@ -79,6 +79,12 @@ export interface AIChatActions {
   regenerateResponse: () => string | null;
   setIsChatHistoryVisible: (isChatHistoryVisible: boolean) => void;
 
+  // SQLite database actions
+  initializeDatabase: () => Promise<void>;
+  loadChatsFromDatabase: () => Promise<void>;
+  loadChatMessages: (chatId: string) => Promise<void>;
+  syncChatToDatabase: (chatId: string) => Promise<void>;
+
   // Provider API key actions
   setApiKeyModalState: (apiKeyModalState: { isOpen: boolean; providerId: string | null }) => void;
   checkApiKey: (providerId: string) => Promise<void>;

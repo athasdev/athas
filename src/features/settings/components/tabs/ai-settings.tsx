@@ -265,8 +265,8 @@ export const AISettings = () => {
             value={settings.aiProviderId}
             options={providerOptions}
             onChange={handleProviderChange}
-            className="w-48"
             size="xs"
+            searchable={true}
           />
         </SettingRow>
 
@@ -275,7 +275,6 @@ export const AISettings = () => {
             value={settings.aiModelId}
             options={modelOptions}
             onChange={handleModelChange}
-            className="w-48"
             size="xs"
             searchable={true}
           />

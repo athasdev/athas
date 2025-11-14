@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle, ExternalLink, Key, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getProviderById } from "@/features/ai/types/providers";
 import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -28,6 +28,12 @@ const ApiKeyModal = ({
 
   const provider = getProviderById(providerId);
 
+  const inputRef = useCallback((node: HTMLInputElement | null) => {
+    if (node !== null) {
+      node.focus();
+    }
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       if (hasExistingKey) {
@@ -48,6 +54,8 @@ const ApiKeyModal = ({
         return "No API key needed - subscription based";
       case "openrouter":
         return "sk-or-v1-xxxxxxxxxxxxxxxxxxxx";
+      case "grok":
+        return "xai-xxxxxxxxxxxxxxxxxxxx";
       default:
         return "Enter your API key...";
     }
@@ -77,6 +85,18 @@ const ApiKeyModal = ({
             "Note: OpenRouter provides access to many models",
           ],
           link: "https://openrouter.ai/keys",
+        };
+      case "grok":
+        return {
+          title: "How to get your xAI Grok API key:",
+          steps: [
+            "Go to the xAI API Keys page",
+            'Click "Create API Key"',
+            "Copy the generated key immediately (you won't see it again)",
+            "Paste the key above",
+            "Note: Grok offers advanced reasoning capabilities",
+          ],
+          link: "https://console.x.ai",
         };
       default:
         return {
@@ -177,6 +197,7 @@ const ApiKeyModal = ({
             </label>
 
             <input
+              ref={inputRef}
               id="api-key-input"
               type="password"
               value={apiKey}

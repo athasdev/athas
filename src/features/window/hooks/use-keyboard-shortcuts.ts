@@ -1,5 +1,6 @@
 import { exit } from "@tauri-apps/plugin-process";
 import React, { useEffect } from "react";
+import { editorAPI } from "@/features/editor/extensions/api";
 import { isMac } from "@/features/file-system/controllers/platform";
 import { useSettingsStore } from "@/features/settings/store";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
@@ -311,7 +312,7 @@ export const useKeyboardShortcuts = ({
       // Undo (Ctrl+Z / Cmd+Z)
       if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
-        document.execCommand("undo");
+        editorAPI.undo();
         return;
       }
 
@@ -321,7 +322,7 @@ export const useKeyboardShortcuts = ({
         ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "Z")
       ) {
         e.preventDefault();
-        document.execCommand("redo");
+        editorAPI.redo();
         return;
       }
 

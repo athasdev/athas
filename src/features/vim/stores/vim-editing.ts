@@ -1,4 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useHistoryStore } from "@/features/editor/stores/history-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
 import { useEditorStateStore } from "@/stores/editor-cursor-store";
@@ -9,8 +10,6 @@ interface VimClipboard {
 }
 
 let vimClipboard: VimClipboard = { content: "", type: "char" };
-const undoStack: string[] = [];
-const redoStack: string[] = [];
 
 export interface VimEditingCommands {
   deleteLine: () => void;
@@ -50,25 +49,31 @@ export const createVimEditing = (): VimEditingCommands => {
     if (activeBufferId) {
       actions.updateBufferContent(activeBufferId, newContent);
 
-      // Update textarea
+      // Update textarea value directly without triggering input event
+      // Vim mode manages its own history, so we don't want to trigger
+      // the app-store's debounced history tracking
       const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
       if (textarea) {
         textarea.value = newContent;
-        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+        // Don't dispatch input event - vim handles its own history
       }
     }
   };
 
   // Save state for undo
   const saveUndoState = () => {
-    const currentContent = getContent();
-    undoStack.push(currentContent);
-    redoStack.length = 0; // Clear redo stack when new action is performed
+    const { activeBufferId } = useBufferStore.getState();
+    if (!activeBufferId) return;
 
-    // Limit undo stack size
-    if (undoStack.length > 100) {
-      undoStack.shift();
-    }
+    const currentContent = getContent();
+    const currentPos = getCursorPosition();
+
+    // Push to centralized history store
+    useHistoryStore.getState().actions.pushHistory(activeBufferId, {
+      content: currentContent,
+      cursorPosition: currentPos,
+      timestamp: Date.now(),
+    });
   };
 
   // Update textarea cursor position
@@ -230,49 +235,68 @@ export const createVimEditing = (): VimEditingCommands => {
     },
 
     undo: () => {
-      if (undoStack.length === 0) return;
+      const { activeBufferId } = useBufferStore.getState();
+      if (!activeBufferId) return;
 
-      const currentContent = getContent();
-      const previousContent = undoStack.pop()!;
+      const historyStore = useHistoryStore.getState();
+      if (!historyStore.actions.canUndo(activeBufferId)) return;
 
-      // Save current state to redo stack
-      redoStack.push(currentContent);
-
-      updateContent(previousContent);
-
-      // Try to maintain cursor position
       const currentPos = getCursorPosition();
-      const newLines = previousContent.split("\n");
-      const newLine = Math.min(currentPos.line, newLines.length - 1);
-      const newColumn = Math.min(currentPos.column, newLines[newLine].length);
-      const newOffset = calculateOffsetFromPosition(newLine, newColumn, newLines);
 
-      const newPosition = { line: newLine, column: newColumn, offset: newOffset };
-      setCursorPosition(newPosition);
-      updateTextareaCursor(newPosition);
+      // Get previous state from history
+      const entry = historyStore.actions.undo(activeBufferId);
+      if (!entry) return;
+
+      // Restore content
+      updateContent(entry.content);
+
+      // Restore cursor position if available, otherwise maintain current position
+      if (entry.cursorPosition) {
+        setCursorPosition(entry.cursorPosition);
+        updateTextareaCursor(entry.cursorPosition);
+      } else {
+        // Try to maintain cursor position within new content bounds
+        const newLines = entry.content.split("\n");
+        const newLine = Math.min(currentPos.line, newLines.length - 1);
+        const newColumn = Math.min(currentPos.column, newLines[newLine].length);
+        const newOffset = calculateOffsetFromPosition(newLine, newColumn, newLines);
+
+        const newPosition = { line: newLine, column: newColumn, offset: newOffset };
+        setCursorPosition(newPosition);
+        updateTextareaCursor(newPosition);
+      }
     },
 
     redo: () => {
-      if (redoStack.length === 0) return;
+      const { activeBufferId } = useBufferStore.getState();
+      if (!activeBufferId) return;
 
-      const currentContent = getContent();
-      const nextContent = redoStack.pop()!;
+      const historyStore = useHistoryStore.getState();
+      if (!historyStore.actions.canRedo(activeBufferId)) return;
 
-      // Save current state to undo stack
-      undoStack.push(currentContent);
+      // Get next state from history
+      const entry = historyStore.actions.redo(activeBufferId);
+      if (!entry) return;
 
-      updateContent(nextContent);
+      // Restore content
+      updateContent(entry.content);
 
-      // Try to maintain cursor position
-      const currentPos = getCursorPosition();
-      const newLines = nextContent.split("\n");
-      const newLine = Math.min(currentPos.line, newLines.length - 1);
-      const newColumn = Math.min(currentPos.column, newLines[newLine].length);
-      const newOffset = calculateOffsetFromPosition(newLine, newColumn, newLines);
+      // Restore cursor position if available, otherwise maintain current position
+      if (entry.cursorPosition) {
+        setCursorPosition(entry.cursorPosition);
+        updateTextareaCursor(entry.cursorPosition);
+      } else {
+        // Try to maintain cursor position within new content bounds
+        const currentPos = getCursorPosition();
+        const newLines = entry.content.split("\n");
+        const newLine = Math.min(currentPos.line, newLines.length - 1);
+        const newColumn = Math.min(currentPos.column, newLines[newLine].length);
+        const newOffset = calculateOffsetFromPosition(newLine, newColumn, newLines);
 
-      const newPosition = { line: newLine, column: newColumn, offset: newOffset };
-      setCursorPosition(newPosition);
-      updateTextareaCursor(newPosition);
+        const newPosition = { line: newLine, column: newColumn, offset: newOffset };
+        setCursorPosition(newPosition);
+        updateTextareaCursor(newPosition);
+      }
     },
 
     deleteChar: () => {

@@ -1,5 +1,6 @@
 import { Folder, GitBranch, Search, Server } from "lucide-react";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
+import Tooltip from "@/ui/tooltip";
 import Button from "../../../../ui/button";
 
 interface SidebarPaneSelectorProps {
@@ -23,70 +24,74 @@ export const SidebarPaneSelector = ({
 
   return (
     <div className="flex gap-0.5 border-border border-b bg-secondary-bg p-1.5">
-      <Button
-        onClick={() => onViewChange("files")}
-        variant="ghost"
-        size="sm"
-        data-active={isFilesActive}
-        className={`flex h-6 w-6 items-center justify-center rounded p-0 text-xs ${
-          isFilesActive
-            ? "bg-selected text-text"
-            : "text-text-lighter hover:bg-hover hover:text-text"
-        }`}
-        title="File Explorer"
-      >
-        <Folder size={14} />
-      </Button>
-
-      {coreFeatures.search && (
+      <Tooltip content="File Explorer" side="right">
         <Button
-          onClick={() => onViewChange("search")}
+          onClick={() => onViewChange("files")}
           variant="ghost"
           size="sm"
-          data-active={isSearchViewActive}
+          data-active={isFilesActive}
           className={`flex h-6 w-6 items-center justify-center rounded p-0 text-xs ${
-            isSearchViewActive
+            isFilesActive
               ? "bg-selected text-text"
               : "text-text-lighter hover:bg-hover hover:text-text"
           }`}
-          title="Search"
         >
-          <Search size={14} />
+          <Folder size={14} />
         </Button>
+      </Tooltip>
+
+      {coreFeatures.search && (
+        <Tooltip content="Search" side="right">
+          <Button
+            onClick={() => onViewChange("search")}
+            variant="ghost"
+            size="sm"
+            data-active={isSearchViewActive}
+            className={`flex h-6 w-6 items-center justify-center rounded p-0 text-xs ${
+              isSearchViewActive
+                ? "bg-selected text-text"
+                : "text-text-lighter hover:bg-hover hover:text-text"
+            }`}
+          >
+            <Search size={14} />
+          </Button>
+        </Tooltip>
       )}
 
       {coreFeatures.git && (
-        <Button
-          onClick={() => onViewChange("git")}
-          variant="ghost"
-          size="sm"
-          data-active={isGitViewActive}
-          className={`flex h-6 w-6 items-center justify-center rounded p-0 text-xs ${
-            isGitViewActive
-              ? "bg-selected text-text"
-              : "text-text-lighter hover:bg-hover hover:text-text"
-          }`}
-          title="Git Source Control"
-        >
-          <GitBranch size={14} />
-        </Button>
+        <Tooltip content="Source Control" side="right">
+          <Button
+            onClick={() => onViewChange("git")}
+            variant="ghost"
+            size="sm"
+            data-active={isGitViewActive}
+            className={`flex h-6 w-6 items-center justify-center rounded p-0 text-xs ${
+              isGitViewActive
+                ? "bg-selected text-text"
+                : "text-text-lighter hover:bg-hover hover:text-text"
+            }`}
+          >
+            <GitBranch size={14} />
+          </Button>
+        </Tooltip>
       )}
 
       {coreFeatures.remote && !isRemoteWindow && (
-        <Button
-          onClick={() => onViewChange("remote")}
-          variant="ghost"
-          size="sm"
-          data-active={isRemoteViewActive}
-          className={`flex h-6 w-6 items-center justify-center rounded p-0 text-xs ${
-            isRemoteViewActive
-              ? "bg-selected text-text"
-              : "text-text-lighter hover:bg-hover hover:text-text"
-          }`}
-          title="Remote Connections"
-        >
-          <Server size={14} />
-        </Button>
+        <Tooltip content="Remote Connections" side="right">
+          <Button
+            onClick={() => onViewChange("remote")}
+            variant="ghost"
+            size="sm"
+            data-active={isRemoteViewActive}
+            className={`flex h-6 w-6 items-center justify-center rounded p-0 text-xs ${
+              isRemoteViewActive
+                ? "bg-selected text-text"
+                : "text-text-lighter hover:bg-hover hover:text-text"
+            }`}
+          >
+            <Server size={14} />
+          </Button>
+        </Tooltip>
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import { EDITOR_CONSTANTS } from "../config/constants";
 import { useBufferStore } from "../stores/buffer-store";
 import { useEditorDecorationsStore } from "../stores/decorations-store";
+import { useHistoryStore } from "../stores/history-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorViewStore } from "../stores/view-store";
@@ -214,21 +215,81 @@ class EditorAPIImpl implements EditorAPI {
     return this.getLines().length;
   }
 
-  // History operations (TODO: Implement when history store is ready)
+  // History operations
   undo(): void {
-    logger.warn("Editor", "Undo not yet implemented");
+    const bufferStore = useBufferStore.getState();
+    const activeBufferId = bufferStore.activeBufferId;
+
+    if (!activeBufferId) {
+      logger.warn("Editor", "No active buffer for undo");
+      return;
+    }
+
+    const historyStore = useHistoryStore.getState();
+    const entry = historyStore.actions.undo(activeBufferId);
+
+    if (entry) {
+      // Restore content
+      bufferStore.actions.updateBufferContent(activeBufferId, entry.content, false);
+
+      // Restore cursor position if available
+      if (entry.cursorPosition) {
+        this.setCursorPosition(entry.cursorPosition);
+      }
+
+      // Restore selection if it existed
+      if (entry.selection) {
+        this.setSelection(entry.selection);
+      }
+
+      // Emit content change event
+      this.emitEvent("contentChange", { content: entry.content, changes: [] });
+    }
   }
 
   redo(): void {
-    logger.warn("Editor", "Redo not yet implemented");
+    const bufferStore = useBufferStore.getState();
+    const activeBufferId = bufferStore.activeBufferId;
+
+    if (!activeBufferId) {
+      logger.warn("Editor", "No active buffer for redo");
+      return;
+    }
+
+    const historyStore = useHistoryStore.getState();
+    const entry = historyStore.actions.redo(activeBufferId);
+
+    if (entry) {
+      // Restore content
+      bufferStore.actions.updateBufferContent(activeBufferId, entry.content, false);
+
+      // Restore cursor position if available
+      if (entry.cursorPosition) {
+        this.setCursorPosition(entry.cursorPosition);
+      }
+
+      // Restore selection if it existed
+      if (entry.selection) {
+        this.setSelection(entry.selection);
+      }
+
+      // Emit content change event
+      this.emitEvent("contentChange", { content: entry.content, changes: [] });
+    }
   }
 
   canUndo(): boolean {
-    return false;
+    const activeBufferId = useBufferStore.getState().activeBufferId;
+    if (!activeBufferId) return false;
+
+    return useHistoryStore.getState().actions.canUndo(activeBufferId);
   }
 
   canRedo(): boolean {
-    return false;
+    const activeBufferId = useBufferStore.getState().activeBufferId;
+    if (!activeBufferId) return false;
+
+    return useHistoryStore.getState().actions.canRedo(activeBufferId);
   }
 
   // Settings

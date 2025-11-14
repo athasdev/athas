@@ -5,6 +5,7 @@
 
 import type { RefObject } from "react";
 import { useEffect, useMemo, useRef } from "react";
+import { useSnippetCompletion } from "@/features/editor/hooks/use-snippet-completion";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useHover } from "@/features/editor/lsp/use-hover";
@@ -49,6 +50,9 @@ export const useLspIntegration = ({
 
   // LSP store actions
   const lspActions = useLspStore.use.actions();
+
+  // Snippet completion integration
+  const snippetCompletion = useSnippetCompletion(filePath);
 
   // Use fixed debounce for predictable completion behavior
   const completionTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -139,5 +143,6 @@ export const useLspIntegration = ({
   return {
     lspClient,
     isLspSupported,
+    snippetCompletion,
   };
 };

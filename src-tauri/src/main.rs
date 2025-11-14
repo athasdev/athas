@@ -302,6 +302,14 @@ fn main() {
          store_ai_provider_token,
          get_ai_provider_token,
          remove_ai_provider_token,
+         // Chat history commands
+         init_chat_database,
+         save_chat,
+         load_all_chats,
+         load_chat,
+         delete_chat,
+         search_chats,
+         get_chat_stats,
          // Window commands
          create_remote_window,
          // File watcher commands

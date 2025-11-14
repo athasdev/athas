@@ -83,9 +83,9 @@ const Dropdown = ({
         top:
           openDirection === "up"
             ? position.y - (dropdownRef.current?.offsetHeight || 200)
-            : position.y, // Adjust for dropdown height when opening up
+            : position.y,
         left: position.x,
-        width: rect.width,
+        width: rect.width + 48,
       });
       // Focus search input when dropdown opens
       if (searchable && searchInputRef.current) {
@@ -124,14 +124,14 @@ const Dropdown = ({
       <div
         ref={dropdownRef}
         className={cn(
-          "fixed z-[9999] max-h-96 min-w-max max-w-xs overflow-auto",
+          "fixed z-[9999] max-h-96 overflow-auto",
           "rounded border border-border bg-primary-bg shadow-xl",
           searchable ? "pt-0" : "py-1",
         )}
         style={{
           top: dropdownPosition.top,
           left: dropdownPosition.left,
-          minWidth: dropdownPosition.width,
+          width: dropdownPosition.width,
         }}
       >
         {searchable && (
@@ -146,7 +146,7 @@ const Dropdown = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search fonts..."
+                placeholder="Search..."
                 className="w-full rounded border border-border bg-secondary-bg py-1 pr-2 pl-6 text-text text-xs placeholder-text-lighter focus:border-blue-500 focus:outline-none"
                 onClick={(e) => e.stopPropagation()}
               />

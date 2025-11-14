@@ -5,12 +5,14 @@
  */
 
 import "../styles/overlay-editor.css";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTokenizer } from "../hooks/use-tokenizer";
 import { useViewportLines } from "../hooks/use-viewport-lines";
+import { useLspStore } from "../lsp/lsp-store";
 import { useBufferStore } from "../stores/buffer-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
+import { useEditorUIStore } from "../stores/ui-store";
 import { calculateCursorPosition } from "../utils/position";
 import { Gutter } from "./gutter";
 import { HighlightLayer } from "./highlight-layer";
@@ -39,8 +41,10 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
   const buffer = buffers.find((b) => b.id === bufferId);
   const content = buffer?.content || "";
   const filePath = buffer?.path;
-  const lines = content.split("\n");
-  const lineHeight = fontSize * 1.4;
+
+  // Memoize expensive calculations
+  const lines = useMemo(() => content.split("\n"), [content]);
+  const lineHeight = useMemo(() => fontSize * 1.4, [fontSize]);
 
   // Viewport tracking for future incremental tokenization
   const { handleScroll: handleViewportScroll, initializeViewport } = useViewportLines({
@@ -84,9 +88,66 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
     setCursorPosition(position);
   }, [bufferId, content, setCursorPosition]);
 
-  // Handle Tab key
+  // Get completion state
+  const isLspCompletionVisible = useEditorUIStore.use.isLspCompletionVisible();
+  const filteredCompletions = useEditorUIStore.use.filteredCompletions();
+  const selectedLspIndex = useEditorUIStore.use.selectedLspIndex();
+  const { setSelectedLspIndex, setIsLspCompletionVisible } = useEditorUIStore.use.actions();
+  const lspActions = useLspStore.use.actions();
+
+  // Handle keyboard navigation for completions and Tab key
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Handle completion dropdown navigation
+      if (isLspCompletionVisible && filteredCompletions.length > 0) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setSelectedLspIndex(
+            selectedLspIndex < filteredCompletions.length - 1 ? selectedLspIndex + 1 : 0,
+          );
+          return;
+        }
+
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setSelectedLspIndex(
+            selectedLspIndex > 0 ? selectedLspIndex - 1 : filteredCompletions.length - 1,
+          );
+          return;
+        }
+
+        if (e.key === "Enter" || e.key === "Tab") {
+          e.preventDefault();
+          const selectedCompletion = filteredCompletions[selectedLspIndex]?.item;
+          if (selectedCompletion) {
+            const textarea = e.currentTarget;
+            const currentContent = textarea.value;
+            const cursorPos = textarea.selectionStart;
+
+            const result = lspActions.applyCompletion({
+              completion: selectedCompletion,
+              value: currentContent,
+              cursorPos,
+            });
+
+            // Update textarea
+            textarea.value = result.newValue;
+            textarea.selectionStart = textarea.selectionEnd = result.newCursorPos;
+
+            // Trigger buffer update
+            handleInput(result.newValue);
+          }
+          return;
+        }
+
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setIsLspCompletionVisible(false);
+          return;
+        }
+      }
+
+      // Handle Tab key for indentation (when completion is not visible)
       if (e.key === "Tab") {
         // Don't handle Tab if Ctrl or Cmd is held (for tab switching)
         if (e.ctrlKey || e.metaKey) {
@@ -114,7 +175,16 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
         handleInput(newContent);
       }
     },
-    [tabSize, handleInput],
+    [
+      tabSize,
+      handleInput,
+      isLspCompletionVisible,
+      filteredCompletions,
+      selectedLspIndex,
+      setSelectedLspIndex,
+      setIsLspCompletionVisible,
+      lspActions,
+    ],
   );
 
   // Sync scroll between input and highlight layers + track viewport
