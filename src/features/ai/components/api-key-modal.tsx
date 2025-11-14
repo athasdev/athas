@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle, ExternalLink, Key, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getProviderById } from "@/features/ai/types/providers";
 import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -27,6 +27,12 @@ const ApiKeyModal = ({
   const [errorMessage, setErrorMessage] = useState("");
 
   const provider = getProviderById(providerId);
+
+  const inputRef = useCallback((node: HTMLInputElement | null) => {
+    if (node !== null) {
+      node.focus();
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -191,6 +197,7 @@ const ApiKeyModal = ({
             </label>
 
             <input
+              ref={inputRef}
               id="api-key-input"
               type="password"
               value={apiKey}

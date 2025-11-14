@@ -25,20 +25,14 @@ export class GrokProvider extends AIProvider {
 
   async validateApiKey(apiKey: string): Promise<boolean> {
     try {
-      const response = await fetch("https://api.x.ai/v1/models", {
+      const response = await fetch("https://api.x.ai/v1/api-key", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
         },
       });
 
-      if (response.ok) {
-        return true;
-      } else {
-        console.error(`${this.name} API validation error:`, response.status);
-        return false;
-      }
+      return response.ok;
     } catch (error) {
       console.error(`${this.id} API key validation error:`, error);
       return false;

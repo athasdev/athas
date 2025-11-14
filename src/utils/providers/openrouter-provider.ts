@@ -27,21 +27,14 @@ export class OpenRouterProvider extends AIProvider {
 
   async validateApiKey(apiKey: string): Promise<boolean> {
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/models", {
+      const response = await fetch("https://openrouter.ai/api/v1/auth/key", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": "https://localhost",
-          "X-Title": "Code Editor",
         },
       });
 
-      if (response.ok) {
-        return true;
-      } else {
-        console.error(`${this.name} API validation error:`, response.status);
-        return false;
-      }
+      return response.ok;
     } catch (error) {
       console.error(`${this.id} API key validation error:`, error);
       return false;

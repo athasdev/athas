@@ -266,6 +266,7 @@ export const AISettings = () => {
             options={providerOptions}
             onChange={handleProviderChange}
             size="xs"
+            searchable={true}
           />
         </SettingRow>
 

@@ -33,12 +33,7 @@ export class OpenAIProvider extends AIProvider {
         },
       });
 
-      if (response.ok) {
-        return true;
-      } else {
-        console.error(`${this.name} API validation error:`, response.status);
-        return false;
-      }
+      return response.ok;
     } catch (error) {
       console.error(`${this.id} API key validation error:`, error);
       return false;
