@@ -83,7 +83,7 @@ interface UseMenuEventsProps {
   onThemeChange: (theme: string) => void;
   onAbout: () => void | Promise<void>;
   onHelp: () => void;
-  onAboutAthas: () => void;
+  onAboutAthas: () => void | Promise<void>;
   onToggleMenuBar: () => void;
 }
 
