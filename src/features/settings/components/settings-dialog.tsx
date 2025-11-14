@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSettingsStore } from "@/features/settings/store";
 import { type SettingsTab, useUIState } from "@/stores/ui-state-store";
 import Dialog from "@/ui/dialog";
 import { SettingsVerticalTabs } from "./settings-vertical-tabs";
@@ -23,12 +24,21 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   const { settingsInitialTab } = useUIState();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
 
+  const clearSearch = useSettingsStore((state) => state.clearSearch);
+
   // Set the active tab to the initial tab when the dialog opens
   useEffect(() => {
     if (isOpen) {
       setActiveTab(settingsInitialTab);
     }
   }, [isOpen, settingsInitialTab]);
+
+  // Clear search when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      clearSearch();
+    }
+  }, [isOpen, clearSearch]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -70,7 +80,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
     >
       <div className="flex h-full w-full">
         {/* Sidebar */}
-        <div className="w-40 border-border border-r bg-secondary-bg">
+        <div className="w-48 border-border border-r bg-secondary-bg">
           <SettingsVerticalTabs activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
 
