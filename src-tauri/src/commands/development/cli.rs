@@ -71,7 +71,8 @@ fi
       .map_err(|e| format!("Failed to set executable permissions: {}", e))?;
 
    Ok(format!(
-      "CLI command installed successfully at {}.\n\nNote: Make sure {} is in your PATH. Add this to your ~/.zshrc or ~/.bashrc:\nexport PATH=\"$HOME/.local/bin:$PATH\"",
+      "CLI command installed successfully at {}.\n\nNote: Make sure {} is in your PATH. Add this \
+       to your ~/.zshrc or ~/.bashrc:\nexport PATH=\"$HOME/.local/bin:$PATH\"",
       cli_path.display(),
       bin_dir.display()
    ))
