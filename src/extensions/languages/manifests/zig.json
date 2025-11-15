@@ -1,0 +1,17 @@
+{
+  "id": "language.zig",
+  "name": "Zig",
+  "version": "1.0.0",
+  "description": "Zig language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "zig",
+      "extensions": ["zig"],
+      "aliases": ["zig"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-zig.wasm",
+      "highlightQuery": "/tree-sitter/queries/zig/highlights.scm"
+    }
+  }
+}

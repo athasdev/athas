@@ -1,0 +1,17 @@
+{
+  "id": "language.php",
+  "name": "PHP",
+  "version": "1.0.0",
+  "description": "PHP language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "php",
+      "extensions": ["php"],
+      "aliases": ["php"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-php.wasm",
+      "highlightQuery": "/tree-sitter/queries/php/highlights.scm"
+    }
+  }
+}

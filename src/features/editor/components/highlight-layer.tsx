@@ -180,6 +180,24 @@ HighlightLayerComponent.displayName = "HighlightLayer";
 export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
   // Return true to SKIP re-render when props haven't changed meaningfully
 
+  // Always re-render if content changed significantly (different number of lines)
+  // This ensures proper sync when switching buffers or opening new files
+  const prevLineCount = prev.content.split("\n").length;
+  const nextLineCount = next.content.split("\n").length;
+  if (prevLineCount !== nextLineCount) {
+    return false; // Force re-render
+  }
+
+  // Always re-render if content length changed significantly (>10% difference)
+  // This catches major edits like paste, cut, or buffer switches
+  const prevLength = prev.content.length;
+  const nextLength = next.content.length;
+  const lengthDiff = Math.abs(nextLength - prevLength);
+  const lengthChangePercent = prevLength > 0 ? lengthDiff / prevLength : lengthDiff > 0 ? 1 : 0;
+  if (lengthChangePercent > 0.1) {
+    return false; // Force re-render
+  }
+
   // Check if tokens actually changed (with safe null/undefined handling)
   if (!prev.tokens || !next.tokens) {
     // If either is null/undefined, only skip if both are

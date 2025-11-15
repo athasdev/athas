@@ -1,0 +1,17 @@
+{
+  "id": "language.json",
+  "name": "JSON",
+  "version": "1.0.0",
+  "description": "JSON language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "json",
+      "extensions": ["json"],
+      "aliases": ["json"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-json.wasm",
+      "highlightQuery": "/tree-sitter/queries/json/highlights.scm"
+    }
+  }
+}

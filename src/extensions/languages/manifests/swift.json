@@ -1,0 +1,17 @@
+{
+  "id": "language.swift",
+  "name": "Swift",
+  "version": "1.0.0",
+  "description": "Swift language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "swift",
+      "extensions": ["swift"],
+      "aliases": ["swift"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-swift.wasm",
+      "highlightQuery": "/tree-sitter/queries/swift/highlights.scm"
+    }
+  }
+}

@@ -1,10 +1,9 @@
-import type { Token } from "@/features/editor/lib/rust-api/tokens";
-import { getTokens as getTokensByExtension } from "@/features/editor/lib/rust-api/tokens";
+import { wasmParserLoader } from "../../lib/wasm-parser";
 import { useBufferStore } from "../../stores/buffer-store";
 import type { Change } from "../../types/editor";
 import { logger } from "../../utils/logger";
 import { extensionManager } from "../manager";
-import type { EditorAPI, EditorExtension } from "../types";
+import type { EditorAPI, EditorExtension, Token } from "../types";
 
 const DEBOUNCE_TIME_MS = 150; // Debounce for tokenization requests
 
@@ -100,6 +99,19 @@ class SyntaxHighlighter {
   }
 
   private async fetchAndCacheTokens(affectedLines?: Set<number>) {
+    // Check if WASM is initialized (graceful degradation)
+    if (!wasmParserLoader.isInitialized()) {
+      logger.debug("SyntaxHighlighter", "WASM not initialized yet, scheduling retry");
+      // Schedule retry after WASM loads
+      setTimeout(() => {
+        if (this.filePath) {
+          // Only retry if we still have a file path (not disposed)
+          this.fetchAndCacheTokens(affectedLines);
+        }
+      }, 100);
+      return;
+    }
+
     // Create new abort controller for this fetch
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
@@ -144,18 +156,21 @@ class SyntaxHighlighter {
       // Check if aborted before proceeding
       if (signal.aborted) return;
 
-      // Prefer direct tokenization by actual file extension to avoid
-      // mismatches (e.g., jsx/tsx falling back to js/ts providers)
-      try {
-        this.tokens = await getTokensByExtension(content, extension);
-      } catch (_e) {
-        // Fallback to language provider if direct tokenization fails
-        const languageProvider = extensionManager.getLanguageProvider(extension);
-        if (!languageProvider) {
-          logger.warn("SyntaxHighlighter", "No language provider found for extension:", extension);
-          this.tokens = [];
-        } else {
+      // Ensure language provider is loaded (lazy loading)
+      const languageProvider = await extensionManager.ensureLanguageProvider(extension);
+      if (!languageProvider) {
+        logger.debug(
+          "SyntaxHighlighter",
+          "No language provider available for extension:",
+          extension,
+        );
+        this.tokens = [];
+      } else {
+        try {
           this.tokens = await languageProvider.getTokens(content);
+        } catch (error) {
+          logger.error("SyntaxHighlighter", `Failed to tokenize with ${extension}:`, error);
+          this.tokens = [];
         }
       }
 

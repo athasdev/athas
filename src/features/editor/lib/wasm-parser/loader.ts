@@ -1,0 +1,243 @@
+/**
+ * WASM Parser Loader
+ * Handles loading and initializing Tree-sitter WASM parsers
+ */
+
+import { Language, Parser, type Query } from "web-tree-sitter";
+import { logger } from "../../utils/logger";
+import { indexedDBParserCache } from "./cache-indexeddb";
+import type { LoadedParser, ParserConfig } from "./types";
+
+class WasmParserLoader {
+  private static instance: WasmParserLoader;
+  private initialized = false;
+  private parsers: Map<string, LoadedParser> = new Map();
+  private loadingParsers: Map<string, Promise<LoadedParser>> = new Map();
+
+  private constructor() {}
+
+  static getInstance(): WasmParserLoader {
+    if (!WasmParserLoader.instance) {
+      WasmParserLoader.instance = new WasmParserLoader();
+    }
+    return WasmParserLoader.instance;
+  }
+
+  /**
+   * Initialize Tree-sitter WASM
+   * Must be called once before loading any parsers
+   */
+  async initialize(): Promise<void> {
+    if (this.initialized) return;
+
+    try {
+      await Parser.init({
+        locateFile(scriptName: string) {
+          return `/tree-sitter/${scriptName}`;
+        },
+      });
+      this.initialized = true;
+      logger.info("WasmParser", "Tree-sitter WASM initialized");
+    } catch (error) {
+      logger.error("WasmParser", "Failed to initialize Tree-sitter WASM", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if WASM is initialized and ready to use
+   */
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+
+  /**
+   * Load a parser for a specific language
+   * Returns cached parser if already loaded
+   */
+  async loadParser(config: ParserConfig): Promise<LoadedParser> {
+    const { languageId } = config;
+
+    // Return cached parser if exists
+    if (this.parsers.has(languageId)) {
+      return this.parsers.get(languageId)!;
+    }
+
+    // Return ongoing loading promise if exists
+    if (this.loadingParsers.has(languageId)) {
+      return this.loadingParsers.get(languageId)!;
+    }
+
+    // Start loading parser
+    const loadPromise = this._loadParserInternal(config);
+    this.loadingParsers.set(languageId, loadPromise);
+
+    try {
+      const loadedParser = await loadPromise;
+      this.parsers.set(languageId, loadedParser);
+      this.loadingParsers.delete(languageId);
+      return loadedParser;
+    } catch (error) {
+      this.loadingParsers.delete(languageId);
+      throw error;
+    }
+  }
+
+  private async _loadParserInternal(config: ParserConfig): Promise<LoadedParser> {
+    const { languageId, wasmPath, highlightQuery } = config;
+
+    try {
+      // Ensure Tree-sitter is initialized
+      if (!this.initialized) {
+        await this.initialize();
+      }
+
+      // Try to load from IndexedDB cache first
+      const cached = await indexedDBParserCache.get(languageId);
+
+      let wasmBytes: Uint8Array;
+      let queryText = highlightQuery;
+
+      if (cached) {
+        logger.info("WasmParser", `Loading ${languageId} from IndexedDB cache`);
+
+        // Convert blob to ArrayBuffer
+        const arrayBuffer = await cached.wasmBlob.arrayBuffer();
+        wasmBytes = new Uint8Array(arrayBuffer);
+
+        // Use cached highlight query if available
+        if (cached.highlightQuery && !highlightQuery) {
+          queryText = cached.highlightQuery;
+        }
+      } else {
+        logger.info("WasmParser", `Loading parser for ${languageId} from ${wasmPath}`);
+
+        // Check if wasmPath is a URL (starts with http:// or https://)
+        const isRemoteUrl = wasmPath.startsWith("http://") || wasmPath.startsWith("https://");
+
+        if (isRemoteUrl) {
+          // Download from remote URL
+          logger.info("WasmParser", `Downloading ${languageId} from remote: ${wasmPath}`);
+
+          const response = await fetch(wasmPath);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const arrayBuffer = await response.arrayBuffer();
+          wasmBytes = new Uint8Array(arrayBuffer);
+
+          // Cache for future use
+          try {
+            await indexedDBParserCache.set({
+              languageId,
+              wasmBlob: new Blob([wasmBytes]),
+              highlightQuery: queryText || "",
+              version: "1.0.0", // TODO: Get version from manifest
+              checksum: "", // TODO: Calculate checksum
+              downloadedAt: Date.now(),
+              lastUsedAt: Date.now(),
+              size: wasmBytes.byteLength,
+              sourceUrl: wasmPath,
+            });
+            logger.info("WasmParser", `Cached ${languageId} to IndexedDB`);
+          } catch (cacheError) {
+            logger.warn("WasmParser", `Failed to cache ${languageId}:`, cacheError);
+            // Continue even if caching fails
+          }
+        } else {
+          // Load from local path (backward compatibility)
+          logger.info("WasmParser", `Loading ${languageId} from local path: ${wasmPath}`);
+
+          const response = await fetch(wasmPath);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const arrayBuffer = await response.arrayBuffer();
+          wasmBytes = new Uint8Array(arrayBuffer);
+        }
+      }
+
+      // Create parser instance
+      const parser = new Parser();
+
+      // Load language from WASM bytes
+      const language = await Language.load(wasmBytes);
+      parser.setLanguage(language);
+
+      // Compile highlight query if provided
+      let query: Query | undefined;
+      if (queryText) {
+        try {
+          query = language.query(queryText);
+        } catch (error) {
+          logger.warn("WasmParser", `Failed to compile highlight query for ${languageId}`, error);
+        }
+      }
+
+      logger.info("WasmParser", `Successfully loaded parser for ${languageId}`);
+
+      return {
+        parser,
+        language,
+        highlightQuery: query,
+        languageId,
+      };
+    } catch (error) {
+      logger.error("WasmParser", `Failed to load parser for ${languageId}`, error);
+      throw new Error(`Failed to load parser for ${languageId}: ${error}`);
+    }
+  }
+
+  /**
+   * Check if a parser is loaded
+   */
+  isLoaded(languageId: string): boolean {
+    return this.parsers.has(languageId);
+  }
+
+  /**
+   * Get a loaded parser (throws if not loaded)
+   */
+  getParser(languageId: string): LoadedParser {
+    const parser = this.parsers.get(languageId);
+    if (!parser) {
+      throw new Error(`Parser for ${languageId} is not loaded`);
+    }
+    return parser;
+  }
+
+  /**
+   * Unload a parser to free memory
+   */
+  unloadParser(languageId: string): void {
+    const parser = this.parsers.get(languageId);
+    if (parser) {
+      parser.parser.delete();
+      this.parsers.delete(languageId);
+      logger.info("WasmParser", `Unloaded parser for ${languageId}`);
+    }
+  }
+
+  /**
+   * Clear all loaded parsers
+   */
+  clear(): void {
+    for (const [languageId, parser] of this.parsers) {
+      parser.parser.delete();
+      logger.info("WasmParser", `Unloaded parser for ${languageId}`);
+    }
+    this.parsers.clear();
+    this.loadingParsers.clear();
+  }
+
+  /**
+   * Get list of loaded parser language IDs
+   */
+  getLoadedLanguages(): string[] {
+    return Array.from(this.parsers.keys());
+  }
+}
+
+export const wasmParserLoader = WasmParserLoader.getInstance();

@@ -1,0 +1,17 @@
+{
+  "id": "language.solidity",
+  "name": "Solidity",
+  "version": "1.0.0",
+  "description": "Solidity language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "solidity",
+      "extensions": ["sol"],
+      "aliases": ["solidity"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-solidity.wasm",
+      "highlightQuery": "/tree-sitter/queries/solidity/highlights.scm"
+    }
+  }
+}
