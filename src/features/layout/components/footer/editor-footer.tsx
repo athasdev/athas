@@ -15,6 +15,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
+import { useSessionTime } from "@/hooks/useSessionTime";
 import { useUIState } from "../../../../stores/ui-state-store";
 import {
   getFilenameFromPath,
@@ -25,6 +26,15 @@ import GitBranchManager from "../../../version-control/git/components/git-branch
 import { getGitStatus } from "../../../version-control/git/controllers/git";
 import { useGitStore } from "../../../version-control/git/controllers/git-store";
 import VimStatusIndicator from "../../../vim/components/vim-status-indicator";
+
+// Format time from seconds to HH:MM:SS
+function formatTime(sec: number) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
 
 // LSP Status Dropdown Component
 const LspStatusDropdown = ({ activeBuffer }: { activeBuffer: any }) => {
@@ -155,6 +165,7 @@ const EditorFooter = () => {
   const { gitStatus, actions } = useGitStore();
   const { available, downloading, installing, updateInfo, downloadAndInstall } = useUpdater(false);
   const cursorPosition = useEditorStateStore.use.cursorPosition();
+  const { seconds, enabled } = useSessionTime();
 
   return (
     <div className="flex min-h-[32px] items-center justify-between border-border border-t bg-secondary-bg px-2 py-1 ">
@@ -223,6 +234,13 @@ const EditorFooter = () => {
 
         {/* Vim status indicator */}
         <VimStatusIndicator />
+
+        {/* Session Time - shown only when enabled */}
+        {enabled && (
+          <div className="flex items-center gap-1 rounded px-1 py-0.5 text-[10px] text-text-lighter">
+            Session: {formatTime(seconds)}
+          </div>
+        )}
 
         {/* Update indicator */}
         {available && (
