@@ -112,6 +112,21 @@ export const GeneralSettings = () => {
         </SettingRow>
       </Section>
 
+      <Section title="Session">
+        <SettingRow
+          label="Session Time Tracking"
+          description="Track and display session time in status bar"
+        >
+          <Switch
+            checked={localStorage.getItem("sessionTimeEnabled") === "true"}
+            onChange={(checked) => {
+              localStorage.setItem("sessionTimeEnabled", checked ? "true" : "false");
+            }}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
+
       <Section title="Quick Access">
         <SettingRow label="Open Settings" description="Keyboard shortcut to open settings">
           <KeybindingBadge keys={isMac ? ["⌘", ","] : ["Ctrl", ","]} />
