@@ -370,6 +370,61 @@ class ExtensionManager {
     return this.languageProviders.get(languageIdOrExtension);
   }
 
+  /**
+   * Ensure a language provider is loaded for the given file extension or language ID
+   * Loads the language extension on-demand if not already loaded
+   */
+  async ensureLanguageProvider(fileExtOrLanguageId: string): Promise<LanguageProvider | undefined> {
+    // Check if already loaded
+    const existing = this.languageProviders.get(fileExtOrLanguageId);
+    if (existing) {
+      return existing;
+    }
+
+    // Try to load the language extension on-demand
+    try {
+      // Import the language registry to find the matching language
+      const { allLanguages } = await import("@/extensions/languages/language-registry");
+
+      // Find language extension that supports this file extension or language ID
+      const languageExt = allLanguages.find((lang) => {
+        return (
+          lang.languageId === fileExtOrLanguageId ||
+          lang.extensions.includes(fileExtOrLanguageId) ||
+          lang.extensions.some((ext) => ext === `.${fileExtOrLanguageId}`) ||
+          lang.aliases?.includes(fileExtOrLanguageId)
+        );
+      });
+
+      if (!languageExt) {
+        logger.debug("ExtensionManager", `No language extension found for: ${fileExtOrLanguageId}`);
+        return undefined;
+      }
+
+      // Check if already loaded (might have been loaded between the check and import)
+      if (this.languageExtensions.has(languageExt.id)) {
+        return this.languageProviders.get(fileExtOrLanguageId);
+      }
+
+      // Load the language extension
+      logger.info(
+        "ExtensionManager",
+        `Lazy loading language extension: ${languageExt.displayName}`,
+      );
+      await this.loadLanguageExtension(languageExt);
+
+      // Return the now-loaded provider
+      return this.languageProviders.get(fileExtOrLanguageId);
+    } catch (error) {
+      logger.error(
+        "ExtensionManager",
+        `Failed to lazy load language provider for ${fileExtOrLanguageId}:`,
+        error,
+      );
+      return undefined;
+    }
+  }
+
   getAllLanguageExtensions(): LanguageExtension[] {
     return Array.from(this.languageExtensions.values());
   }

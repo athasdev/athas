@@ -13,7 +13,6 @@ pub mod lsp;
 pub mod search;
 pub mod sqlite;
 pub mod theme;
-pub mod tokens;
 pub mod watcher;
 pub mod window;
 
@@ -32,6 +31,5 @@ pub use lsp::*;
 pub use search::*;
 pub use sqlite::*;
 pub use theme::*;
-pub use tokens::*;
 pub use watcher::*;
 pub use window::*;

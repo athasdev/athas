@@ -58,10 +58,12 @@
     "react-dom": "^19.1.0",
     "react-scan": "^0.4.3",
     "tailwind-merge": "^3.3.1",
+    "tree-sitter-wasms": "^0.1.13",
     "use-debounce": "^10.0.5",
     "use-sync-external-store": "^1.5.0",
     "usehooks-ts": "^3.1.1",
     "vscode-languageserver-protocol": "^3.17.5",
+    "web-tree-sitter": "^0.25.10",
     "zustand": "^5.0.6"
   },
   "devDependencies": {

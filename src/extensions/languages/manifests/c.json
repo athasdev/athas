@@ -1,0 +1,17 @@
+{
+  "id": "language.c",
+  "name": "C",
+  "version": "1.0.0",
+  "description": "C language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "c",
+      "extensions": ["c", "h"],
+      "aliases": ["c"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-c.wasm",
+      "highlightQuery": "/tree-sitter/queries/c/highlights.scm"
+    }
+  }
+}

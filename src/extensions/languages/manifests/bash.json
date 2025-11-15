@@ -1,0 +1,17 @@
+{
+  "id": "language.bash",
+  "name": "Bash",
+  "version": "1.0.0",
+  "description": "Bash language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "bash",
+      "extensions": ["bash"],
+      "aliases": ["bash"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-bash.wasm",
+      "highlightQuery": "/tree-sitter/queries/bash/highlights.scm"
+    }
+  }
+}

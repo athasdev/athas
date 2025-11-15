@@ -1,0 +1,17 @@
+{
+  "id": "language.java",
+  "name": "Java",
+  "version": "1.0.0",
+  "description": "Java language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "java",
+      "extensions": ["java"],
+      "aliases": ["java"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-java.wasm",
+      "highlightQuery": "/tree-sitter/queries/java/highlights.scm"
+    }
+  }
+}

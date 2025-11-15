@@ -2,7 +2,7 @@ import type { RefObject } from "react";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import type { Position, Range } from "@/features/editor/types/editor";
+import type { Cursor, MultiCursorState, Position, Range } from "@/features/editor/types/editor";
 import { getLineHeight } from "@/features/editor/utils/position";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { useBufferStore } from "./buffer-store";
@@ -83,6 +83,9 @@ interface EditorState {
   desiredColumn?: number;
   cursorVisible: boolean;
 
+  // Multi-cursor state
+  multiCursorState: MultiCursorState | null;
+
   // Layout state
   scrollTop: number;
   scrollLeft: number;
@@ -110,6 +113,14 @@ interface EditorStateActions {
   clearPositionCache: (bufferId?: string) => void;
   restorePositionForFile: (bufferId: string) => boolean;
 
+  // Multi-cursor actions
+  enableMultiCursor: () => void;
+  disableMultiCursor: () => void;
+  addCursor: (position: Position, selection?: Range) => void;
+  removeCursor: (cursorId: string) => void;
+  updateCursor: (cursorId: string, position: Position, selection?: Range) => void;
+  clearSecondaryCursors: () => void;
+
   // Layout actions
   setScroll: (scrollTop: number, scrollLeft: number) => void;
   setViewportHeight: (height: number) => void;
@@ -130,6 +141,9 @@ export const useEditorStateStore = createSelectors(
       cursorVisible: false,
       selection: undefined,
       desiredColumn: undefined,
+
+      // Multi-cursor state
+      multiCursorState: null,
 
       // Layout state
       scrollTop: 0,
@@ -168,6 +182,110 @@ export const useEditorStateStore = createSelectors(
           }
           return false;
         },
+
+        // Multi-cursor actions
+        enableMultiCursor: () =>
+          set((state) => {
+            if (state.multiCursorState) return state;
+
+            const primaryCursorId = `cursor-${Date.now()}-0`;
+            return {
+              multiCursorState: {
+                cursors: [
+                  {
+                    id: primaryCursorId,
+                    position: state.cursorPosition,
+                    selection: state.selection,
+                  },
+                ],
+                primaryCursorId,
+              },
+            };
+          }),
+
+        disableMultiCursor: () => set({ multiCursorState: null }),
+
+        addCursor: (position, selection) =>
+          set((state) => {
+            if (!state.multiCursorState) return state;
+
+            const newCursorId = `cursor-${Date.now()}-${state.multiCursorState.cursors.length}`;
+            const newCursor: Cursor = {
+              id: newCursorId,
+              position,
+              selection,
+            };
+
+            return {
+              multiCursorState: {
+                ...state.multiCursorState,
+                cursors: [...state.multiCursorState.cursors, newCursor],
+              },
+            };
+          }),
+
+        removeCursor: (cursorId) =>
+          set((state) => {
+            if (!state.multiCursorState) return state;
+
+            const cursors = state.multiCursorState.cursors.filter((c) => c.id !== cursorId);
+
+            if (cursors.length === 0) {
+              return { multiCursorState: null };
+            }
+
+            let primaryCursorId = state.multiCursorState.primaryCursorId;
+            if (cursorId === primaryCursorId && cursors.length > 0) {
+              primaryCursorId = cursors[0].id;
+            }
+
+            return {
+              multiCursorState: {
+                cursors,
+                primaryCursorId,
+              },
+            };
+          }),
+
+        updateCursor: (cursorId, position, selection) =>
+          set((state) => {
+            if (!state.multiCursorState) return state;
+
+            const cursors = state.multiCursorState.cursors.map((cursor) =>
+              cursor.id === cursorId
+                ? { ...cursor, position, selection: selection ?? cursor.selection }
+                : cursor,
+            );
+
+            return {
+              multiCursorState: {
+                ...state.multiCursorState,
+                cursors,
+              },
+            };
+          }),
+
+        clearSecondaryCursors: () =>
+          set((state) => {
+            if (!state.multiCursorState) return state;
+
+            const primaryCursor = state.multiCursorState.cursors.find(
+              (c) => c.id === state.multiCursorState!.primaryCursorId,
+            );
+
+            if (!primaryCursor) {
+              return { multiCursorState: null };
+            }
+
+            return {
+              multiCursorState: {
+                cursors: [primaryCursor],
+                primaryCursorId: primaryCursor.id,
+              },
+              cursorPosition: primaryCursor.position,
+              selection: primaryCursor.selection,
+            };
+          }),
 
         // Layout actions
         setScroll: (scrollTop, scrollLeft) => set({ scrollTop, scrollLeft }),

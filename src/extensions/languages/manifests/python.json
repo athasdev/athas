@@ -1,0 +1,17 @@
+{
+  "id": "language.python",
+  "name": "Python",
+  "version": "1.0.0",
+  "description": "Python language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "python",
+      "extensions": ["py", "pyw"],
+      "aliases": ["py", "python"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-python.wasm",
+      "highlightQuery": "/tree-sitter/queries/python/highlights.scm"
+    }
+  }
+}

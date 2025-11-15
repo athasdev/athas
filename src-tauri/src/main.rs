@@ -346,10 +346,6 @@ fn main() {
          get_system_fonts,
          get_monospace_fonts,
          validate_font,
-         // Token commands
-         get_tokens,
-         get_tokens_range,
-         get_tokens_by_line,
          // SQLite commands
          get_sqlite_tables,
          query_sqlite,

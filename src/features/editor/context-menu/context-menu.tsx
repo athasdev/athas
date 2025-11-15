@@ -21,7 +21,8 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { logger } from "@/features/editor/utils/logger";
 import KeybindingBadge from "@/ui/keybinding-badge";
-import { useOverlayManager } from "../components/overlays/overlay-manager";
+
+// import { useOverlayManager } from "../components/overlays/overlay-manager";
 
 interface EditorContextMenuProps {
   isOpen: boolean;
@@ -69,16 +70,16 @@ const EditorContextMenu = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const selection = useEditorStateStore.use.selection?.() ?? undefined;
   const hasSelection = selection && selection.start.offset !== selection.end.offset;
-  const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
+  // const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
 
   // Register/unregister with overlay manager
-  useEffect(() => {
-    if (isOpen) {
-      showOverlay("context-menu");
-    } else {
-      hideOverlay("context-menu");
-    }
-  }, [isOpen, showOverlay, hideOverlay]);
+  // useEffect(() => {
+  //   if (isOpen) {
+  //     showOverlay("context-menu");
+  //   } else {
+  //     hideOverlay("context-menu");
+  //   }
+  // }, [isOpen, showOverlay, hideOverlay]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -95,7 +96,7 @@ const EditorContextMenu = ({
       }
     };
 
-    // Adjust menu position to ensure it's visible
+    // Adjust menu position to ensure it's visible (only if needed)
     if (menuRef.current) {
       const rect = menuRef.current.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
@@ -104,30 +105,37 @@ const EditorContextMenu = ({
       // Start with the provided position
       let adjustedX = position.x;
       let adjustedY = position.y;
+      let needsAdjustment = false;
 
       // Prevent menu from going off the right edge
-      if (adjustedX + rect.width > viewportWidth) {
+      if (position.x + rect.width > viewportWidth) {
         adjustedX = viewportWidth - rect.width - EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN;
+        needsAdjustment = true;
       }
 
       // Prevent menu from going off the bottom edge
-      if (adjustedY + rect.height > viewportHeight) {
+      if (position.y + rect.height > viewportHeight) {
         adjustedY = viewportHeight - rect.height - EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN;
+        needsAdjustment = true;
       }
 
       // Prevent menu from going off the left edge
-      if (adjustedX < 0) {
+      if (position.x < EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN) {
         adjustedX = EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN;
+        needsAdjustment = true;
       }
 
       // Prevent menu from going off the top edge
-      if (adjustedY < 0) {
+      if (position.y < EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN) {
         adjustedY = EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN;
+        needsAdjustment = true;
       }
 
-      // Apply the adjusted position directly
-      menuRef.current.style.left = `${adjustedX}px`;
-      menuRef.current.style.top = `${adjustedY}px`;
+      // Only apply adjustment if needed
+      if (needsAdjustment) {
+        menuRef.current.style.left = `${adjustedX}px`;
+        menuRef.current.style.top = `${adjustedY}px`;
+      }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -139,9 +147,9 @@ const EditorContextMenu = ({
     };
   }, [isOpen, onClose, position]);
 
-  const shouldShow = shouldShowOverlay("context-menu");
+  // const shouldShow = shouldShowOverlay("context-menu");
 
-  if (!isOpen || !shouldShow) return null;
+  if (!isOpen) return null;
 
   const handleCopy = async () => {
     if (onCopy) {

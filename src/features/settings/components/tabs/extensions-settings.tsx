@@ -1,7 +1,6 @@
 import { Download, Languages, Package, Palette, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
-import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { extensionManager } from "@/features/editor/extensions/manager";
@@ -121,42 +120,11 @@ export const ExtensionsSettings = () => {
       }
     }
 
-    // Load language extensions from Extension Registry (skip if already loaded)
-    const bundledExtensions = extensionRegistry.getAllExtensions();
-    bundledExtensions.forEach((ext) => {
-      if (seenIds.has(ext.manifest.id)) return; // Skip duplicates
+    // Skip bundled extensions from extension registry for languages tab
+    // They are shown from the new extension store above
 
-      if (ext.manifest.languages && ext.manifest.languages.length > 0) {
-        const lang = ext.manifest.languages[0];
-        allExtensions.push({
-          id: ext.manifest.id,
-          name: ext.manifest.displayName,
-          description: ext.manifest.description,
-          category: "language",
-          isInstalled: ext.state === "activated" || ext.state === "installed",
-          version: ext.manifest.version,
-          extensions: lang.extensions.map((e) => e.replace(".", "")),
-        });
-        seenIds.add(ext.manifest.id);
-      }
-    });
-
-    // Also load from Extension Manager (skip if already loaded)
-    const languageExtensions = extensionManager.getAllLanguageExtensions();
-    languageExtensions.forEach((ext) => {
-      if (seenIds.has(ext.id)) return; // Skip duplicates
-
-      allExtensions.push({
-        id: ext.id,
-        name: ext.displayName,
-        description: ext.description || `${ext.displayName} syntax highlighting`,
-        category: "language",
-        isInstalled: true,
-        version: ext.version,
-        extensions: ext.extensions,
-      });
-      seenIds.add(ext.id);
-    });
+    // Note: Language extensions are lazy-loaded on demand, not pre-installed
+    // They are shown from the extension store above if installed
 
     // Load themes
     const themes = themeRegistry.getAllThemes();
@@ -199,7 +167,7 @@ export const ExtensionsSettings = () => {
 
   useEffect(() => {
     loadAllExtensions();
-  }, [settings.theme, settings.iconTheme]);
+  }, [settings.theme, settings.iconTheme, availableExtensions]);
 
   const handleToggle = async (extension: UnifiedExtension) => {
     if (extension.isMarketplace) {

@@ -16,6 +16,17 @@ export interface Range {
   end: Position;
 }
 
+export interface Cursor {
+  position: Position;
+  selection?: Range;
+  id: string; // Unique identifier for each cursor
+}
+
+export interface MultiCursorState {
+  cursors: Cursor[];
+  primaryCursorId: string; // ID of the primary cursor (synced with textarea)
+}
+
 export interface LineToken {
   startColumn: number;
   endColumn: number;

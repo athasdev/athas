@@ -1,0 +1,17 @@
+{
+  "id": "language.cpp",
+  "name": "C++",
+  "version": "1.0.0",
+  "description": "C++ language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "cpp",
+      "extensions": ["cpp", "hpp", "cc", "cxx", "hh"],
+      "aliases": ["cpp"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-cpp.wasm",
+      "highlightQuery": "/tree-sitter/queries/cpp/highlights.scm"
+    }
+  }
+}

@@ -5,7 +5,9 @@
  */
 
 import "../styles/overlay-editor.css";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import EditorContextMenu from "../context-menu/context-menu";
 import { useTokenizer } from "../hooks/use-tokenizer";
 import { useViewportLines } from "../hooks/use-viewport-lines";
 import { useLspStore } from "../lsp/lsp-store";
@@ -13,10 +15,12 @@ import { useBufferStore } from "../stores/buffer-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
+import { applyMultiCursorBackspace, applyMultiCursorEdit } from "../utils/multi-cursor";
 import { calculateCursorPosition } from "../utils/position";
 import { Gutter } from "./gutter";
 import { HighlightLayer } from "./highlight-layer";
 import { InputLayer } from "./input-layer";
+import { MultiCursorLayer } from "./multi-cursor-layer";
 
 interface EditorOverlayProps {
   className?: string;
@@ -30,8 +34,16 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
   const bufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
   const { updateBufferContent } = useBufferStore.use.actions();
-  const { setCursorPosition } = useEditorStateStore.use.actions();
+  const {
+    setCursorPosition,
+    setSelection,
+    enableMultiCursor,
+    addCursor,
+    clearSecondaryCursors,
+    updateCursor,
+  } = useEditorStateStore.use.actions();
   const cursorPosition = useEditorStateStore.use.cursorPosition();
+  const multiCursorState = useEditorStateStore.use.multiCursorState();
 
   const fontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
@@ -41,6 +53,12 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
   const buffer = buffers.find((b) => b.id === bufferId);
   const content = buffer?.content || "";
   const filePath = buffer?.path;
+
+  // Context menu state
+  const [contextMenuState, setContextMenuState] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+  }>({ isOpen: false, position: { x: 0, y: 0 } });
 
   // Memoize expensive calculations
   const lines = useMemo(() => content.split("\n"), [content]);
@@ -83,10 +101,135 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
     if (!bufferId || !inputRef.current) return;
 
     const selectionStart = inputRef.current.selectionStart;
+    const selectionEnd = inputRef.current.selectionEnd;
     const lines = content.split("\n");
+
+    // Update cursor position
     const position = calculateCursorPosition(selectionStart, lines);
     setCursorPosition(position);
-  }, [bufferId, content, setCursorPosition]);
+
+    // Track selection if text is selected
+    if (selectionStart !== selectionEnd) {
+      const startPos = calculateCursorPosition(selectionStart, lines);
+      const endPos = calculateCursorPosition(selectionEnd, lines);
+      setSelection({ start: startPos, end: endPos });
+    } else {
+      // Clear selection when no text is selected
+      setSelection(undefined);
+    }
+  }, [bufferId, content, setCursorPosition, setSelection]);
+
+  // Handle click events for multi-cursor support
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLTextAreaElement>) => {
+      if (!bufferId || !inputRef.current) return;
+
+      // Cmd (Mac) or Ctrl (Windows/Linux) + Click adds a new cursor
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+
+        const selectionStart = inputRef.current.selectionStart;
+        const selectionEnd = inputRef.current.selectionEnd;
+        const lines = content.split("\n");
+
+        const position = calculateCursorPosition(selectionStart, lines);
+
+        // Enable multi-cursor if not already enabled
+        if (!multiCursorState) {
+          enableMultiCursor();
+        }
+
+        // Add new cursor at clicked position
+        const selection =
+          selectionStart !== selectionEnd
+            ? {
+                start: calculateCursorPosition(selectionStart, lines),
+                end: calculateCursorPosition(selectionEnd, lines),
+              }
+            : undefined;
+
+        addCursor(position, selection);
+        return;
+      }
+
+      // Regular click: clear secondary cursors if in multi-cursor mode
+      if (multiCursorState && multiCursorState.cursors.length > 1) {
+        clearSecondaryCursors();
+      }
+      // Selection/cursor tracking is handled by onSelect event
+    },
+    [bufferId, content, multiCursorState, enableMultiCursor, addCursor, clearSecondaryCursors],
+  );
+
+  // Handle context menu
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setContextMenuState({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+    });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenuState({ isOpen: false, position: { x: 0, y: 0 } });
+  }, []);
+
+  // Context menu action handlers
+  const handleCopy = useCallback(() => {
+    if (!inputRef.current) return;
+    document.execCommand("copy");
+  }, []);
+
+  const handleCut = useCallback(() => {
+    if (!inputRef.current) return;
+    document.execCommand("cut");
+  }, []);
+
+  const handlePaste = useCallback(async () => {
+    if (!inputRef.current) return;
+    try {
+      const text = await navigator.clipboard.readText();
+      const textarea = inputRef.current;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newContent = content.substring(0, start) + text + content.substring(end);
+
+      if (bufferId) {
+        updateBufferContent(bufferId, newContent);
+      }
+
+      textarea.value = newContent;
+      const newPosition = start + text.length;
+      textarea.selectionStart = textarea.selectionEnd = newPosition;
+
+      handleInput(newContent);
+    } catch (error) {
+      console.error("Failed to paste:", error);
+    }
+  }, [content, bufferId, updateBufferContent, handleInput]);
+
+  const handleSelectAll = useCallback(() => {
+    if (!inputRef.current) return;
+    inputRef.current.select();
+  }, []);
+
+  const handleDelete = useCallback(() => {
+    if (!inputRef.current) return;
+    const textarea = inputRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    if (start !== end) {
+      const newContent = content.substring(0, start) + content.substring(end);
+      if (bufferId) {
+        updateBufferContent(bufferId, newContent);
+      }
+      textarea.value = newContent;
+      textarea.selectionStart = textarea.selectionEnd = start;
+      handleInput(newContent);
+    }
+  }, [content, bufferId, updateBufferContent, handleInput]);
 
   // Get completion state
   const isLspCompletionVisible = useEditorUIStore.use.isLspCompletionVisible();
@@ -98,6 +241,86 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
   // Handle keyboard navigation for completions and Tab key
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Handle multi-cursor editing (typing, backspace, delete, enter)
+      if (multiCursorState && multiCursorState.cursors.length > 1) {
+        // Handle backspace
+        if (e.key === "Backspace") {
+          e.preventDefault();
+
+          const { newContent, newCursors } = applyMultiCursorBackspace(
+            content,
+            multiCursorState.cursors,
+          );
+
+          // Update buffer content
+          if (bufferId) {
+            updateBufferContent(bufferId, newContent);
+          }
+
+          // Update textarea value
+          if (inputRef.current) {
+            inputRef.current.value = newContent;
+          }
+
+          // Update all cursor positions
+          for (const cursor of newCursors) {
+            updateCursor(cursor.id, cursor.position, cursor.selection);
+          }
+
+          // Update primary cursor in textarea
+          const primaryCursor = newCursors.find((c) => c.id === multiCursorState.primaryCursorId);
+          if (primaryCursor && inputRef.current) {
+            inputRef.current.selectionStart = primaryCursor.position.offset;
+            inputRef.current.selectionEnd = primaryCursor.position.offset;
+          }
+
+          // Tokenize
+          tokenize(newContent);
+          return;
+        }
+
+        // Handle regular character input and Enter
+        if (
+          e.key.length === 1 || // Printable character
+          e.key === "Enter"
+        ) {
+          e.preventDefault();
+
+          const text = e.key === "Enter" ? "\n" : e.key;
+          const { newContent, newCursors } = applyMultiCursorEdit(
+            content,
+            multiCursorState.cursors,
+            text,
+          );
+
+          // Update buffer content
+          if (bufferId) {
+            updateBufferContent(bufferId, newContent);
+          }
+
+          // Update textarea value
+          if (inputRef.current) {
+            inputRef.current.value = newContent;
+          }
+
+          // Update all cursor positions
+          for (const cursor of newCursors) {
+            updateCursor(cursor.id, cursor.position, cursor.selection);
+          }
+
+          // Update primary cursor in textarea
+          const primaryCursor = newCursors.find((c) => c.id === multiCursorState.primaryCursorId);
+          if (primaryCursor && inputRef.current) {
+            inputRef.current.selectionStart = primaryCursor.position.offset;
+            inputRef.current.selectionEnd = primaryCursor.position.offset;
+          }
+
+          // Tokenize
+          tokenize(newContent);
+          return;
+        }
+      }
+
       // Handle completion dropdown navigation
       if (isLspCompletionVisible && filteredCompletions.length > 0) {
         if (e.key === "ArrowDown") {
@@ -147,6 +370,13 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
         }
       }
 
+      // Handle Escape to clear secondary cursors (when completion is not visible)
+      if (e.key === "Escape" && multiCursorState && multiCursorState.cursors.length > 1) {
+        e.preventDefault();
+        clearSecondaryCursors();
+        return;
+      }
+
       // Handle Tab key for indentation (when completion is not visible)
       if (e.key === "Tab") {
         // Don't handle Tab if Ctrl or Cmd is held (for tab switching)
@@ -184,6 +414,13 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
       setSelectedLspIndex,
       setIsLspCompletionVisible,
       lspActions,
+      multiCursorState,
+      clearSecondaryCursors,
+      content,
+      bufferId,
+      updateBufferContent,
+      updateCursor,
+      tokenize,
     ],
   );
 
@@ -221,12 +458,12 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bufferId, buffer?.path]); // Deliberately exclude content to prevent double tokenization
 
-  // Restore cursor position when switching buffers
+  // Restore cursor position when switching buffers ONLY (not on cursor movement)
   useEffect(() => {
-    if (inputRef.current && bufferId && cursorPosition) {
+    if (inputRef.current && bufferId) {
       // Small delay to ensure content is loaded
       setTimeout(() => {
-        if (inputRef.current) {
+        if (inputRef.current && bufferId) {
           const offset = cursorPosition.offset || 0;
           // Ensure offset is within bounds
           const maxOffset = inputRef.current.value.length;
@@ -238,7 +475,9 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
         }
       }, 0);
     }
-  }, [bufferId, cursorPosition]);
+    // Only run when buffer changes, NOT when cursor position changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bufferId]);
 
   if (!buffer) return null;
 
@@ -264,15 +503,39 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
           onKeyDown={handleKeyDown}
           onScroll={handleScroll}
           onSelect={handleCursorChange}
-          onKeyUp={handleCursorChange}
-          onClick={handleCursorChange}
+          onClick={handleClick}
+          onContextMenu={handleContextMenu}
           fontSize={fontSize}
           fontFamily={fontFamily}
           lineHeight={lineHeight}
           tabSize={tabSize}
           bufferId={bufferId || undefined}
         />
+        {multiCursorState && (
+          <MultiCursorLayer
+            cursors={multiCursorState.cursors}
+            primaryCursorId={multiCursorState.primaryCursorId}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            lineHeight={lineHeight}
+            content={content}
+          />
+        )}
       </div>
+      {contextMenuState.isOpen &&
+        createPortal(
+          <EditorContextMenu
+            isOpen={contextMenuState.isOpen}
+            position={contextMenuState.position}
+            onClose={closeContextMenu}
+            onCopy={handleCopy}
+            onCut={handleCut}
+            onPaste={handlePaste}
+            onSelectAll={handleSelectAll}
+            onDelete={handleDelete}
+          />,
+          document.body,
+        )}
     </div>
   );
 }

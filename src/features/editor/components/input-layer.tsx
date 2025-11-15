@@ -12,7 +12,9 @@ interface InputLayerProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onKeyUp?: () => void;
   onSelect?: () => void;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
+  onMouseUp?: () => void;
+  onContextMenu?: (e: React.MouseEvent<HTMLTextAreaElement>) => void;
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
@@ -30,6 +32,8 @@ const InputLayerComponent = forwardRef<HTMLTextAreaElement, InputLayerProps>(
       onKeyUp,
       onSelect,
       onClick,
+      onMouseUp,
+      onContextMenu,
       fontSize,
       fontFamily,
       lineHeight,
@@ -65,6 +69,8 @@ const InputLayerComponent = forwardRef<HTMLTextAreaElement, InputLayerProps>(
         onKeyUp={onKeyUp}
         onSelect={onSelect}
         onClick={onClick}
+        onMouseUp={onMouseUp}
+        onContextMenu={onContextMenu}
         onScroll={onScroll}
         className="input-layer editor-textarea"
         style={{
@@ -101,6 +107,8 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.onScroll === next.onScroll &&
     prev.onSelect === next.onSelect &&
     prev.onKeyUp === next.onKeyUp &&
-    prev.onClick === next.onClick
+    prev.onClick === next.onClick &&
+    prev.onMouseUp === next.onMouseUp &&
+    prev.onContextMenu === next.onContextMenu
   );
 });

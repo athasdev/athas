@@ -1,0 +1,17 @@
+{
+  "id": "language.toml",
+  "name": "TOML",
+  "version": "1.0.0",
+  "description": "TOML language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "toml",
+      "extensions": ["toml"],
+      "aliases": ["toml"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-toml.wasm",
+      "highlightQuery": "/tree-sitter/queries/toml/highlights.scm"
+    }
+  }
+}

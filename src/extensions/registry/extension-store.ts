@@ -3,6 +3,12 @@ import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { extensionInstaller } from "../installer/extension-installer";
+import {
+  getHighlightQueryUrl,
+  getPackagedLanguageExtensions,
+  getWasmUrlForLanguage,
+} from "../languages/language-packager";
 import type { ExtensionManifest } from "../types/extension-manifest";
 
 export interface ExtensionInstallationMetadata {
@@ -70,62 +76,8 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         });
 
         try {
-          // For now, we'll define available extensions inline
-          // In production, this would fetch from a remote registry
-          const extensions: ExtensionManifest[] = [
-            {
-              id: "athas.typescript",
-              name: "TypeScript",
-              displayName: "TypeScript",
-              description: "TypeScript and JavaScript language support",
-              version: "1.0.0",
-              publisher: "Athas",
-              categories: ["Language"],
-              languages: [
-                {
-                  id: "typescript",
-                  extensions: [".ts", ".tsx", ".mts", ".cts"],
-                  aliases: ["TypeScript", "ts"],
-                },
-                {
-                  id: "javascript",
-                  extensions: [".js", ".jsx", ".mjs", ".cjs"],
-                  aliases: ["JavaScript", "js"],
-                },
-              ],
-              installation: {
-                downloadUrl:
-                  "https://extensions.athas.dev/typescript/v1.0.0/typescript-extension.tar.gz",
-                size: 52428800,
-                checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                minEditorVersion: "0.1.0",
-              },
-              activationEvents: ["onLanguage:typescript", "onLanguage:javascript"],
-            },
-            {
-              id: "athas.rust",
-              name: "Rust",
-              displayName: "Rust",
-              description: "Rust language support",
-              version: "1.0.0",
-              publisher: "Athas",
-              categories: ["Language"],
-              languages: [
-                {
-                  id: "rust",
-                  extensions: [".rs"],
-                  aliases: ["Rust", "rs"],
-                },
-              ],
-              installation: {
-                downloadUrl: "https://extensions.athas.dev/rust/v1.0.0/rust-extension.tar.gz",
-                size: 45678901,
-                checksum: "a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890",
-                minEditorVersion: "0.1.0",
-              },
-              activationEvents: ["onLanguage:rust"],
-            },
-          ];
+          // Load language extensions from packager
+          const extensions: ExtensionManifest[] = getPackagedLanguageExtensions();
 
           // Check which extensions are installed
           const installed = get().installedExtensions;
@@ -221,26 +173,60 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         });
 
         try {
-          const { downloadUrl, checksum, size } = extension.manifest.installation;
+          const { downloadUrl, checksum } = extension.manifest.installation;
 
-          await invoke("install_extension_from_url", {
-            extensionId,
-            url: downloadUrl,
-            checksum,
-            size,
-          });
+          // Check if this is a language extension
+          if (extension.manifest.languages && extension.manifest.languages.length > 0) {
+            const languageId = extension.manifest.languages[0].id;
 
-          // Reload installed extensions
-          await get().actions.loadInstalledExtensions();
+            // Use the download URL from the manifest, or generate it if not provided
+            const wasmUrl = downloadUrl || getWasmUrlForLanguage(languageId);
+            const highlightQueryUrl = getHighlightQueryUrl(languageId);
 
-          set((state) => {
-            const ext = state.availableExtensions.get(extensionId);
-            if (ext) {
-              ext.isInstalling = false;
-              ext.isInstalled = true;
-              ext.installProgress = 100;
-            }
-          });
+            // Install using extension installer
+            await extensionInstaller.installLanguage(languageId, wasmUrl, highlightQueryUrl, {
+              version: extension.manifest.version,
+              checksum: checksum || "",
+              onProgress: (progress) => {
+                set((state) => {
+                  const ext = state.availableExtensions.get(extensionId);
+                  if (ext) {
+                    ext.installProgress = progress.percentage;
+                  }
+                });
+              },
+            });
+
+            // Mark as installed
+            set((state) => {
+              const ext = state.availableExtensions.get(extensionId);
+              if (ext) {
+                ext.isInstalling = false;
+                ext.isInstalled = true;
+                ext.installProgress = 100;
+              }
+            });
+          } else {
+            // Non-language extension - use old download method
+            await invoke("install_extension_from_url", {
+              extensionId,
+              url: downloadUrl,
+              checksum,
+              size: extension.manifest.installation.size,
+            });
+
+            // Reload installed extensions
+            await get().actions.loadInstalledExtensions();
+
+            set((state) => {
+              const ext = state.availableExtensions.get(extensionId);
+              if (ext) {
+                ext.isInstalling = false;
+                ext.isInstalled = true;
+                ext.installProgress = 100;
+              }
+            });
+          }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
 
@@ -257,18 +243,48 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
       },
 
       uninstallExtension: async (extensionId: string) => {
+        const extension = get().availableExtensions.get(extensionId);
+        if (!extension) {
+          throw new Error(`Extension ${extensionId} not found`);
+        }
+
         try {
-          await invoke("uninstall_extension_new", { extensionId });
+          // Check if this is a language extension
+          if (extension.manifest.languages && extension.manifest.languages.length > 0) {
+            const languageId = extension.manifest.languages[0].id;
 
-          // Reload installed extensions
-          await get().actions.loadInstalledExtensions();
+            // Uninstall using extension installer (removes from IndexedDB)
+            await extensionInstaller.uninstallLanguage(languageId);
 
-          set((state) => {
-            const ext = state.availableExtensions.get(extensionId);
-            if (ext) {
-              ext.isInstalled = false;
+            // Also unload from extension manager if loaded
+            const { extensionManager } = await import("@/features/editor/extensions/manager");
+            try {
+              await extensionManager.unloadLanguageExtension(extensionId);
+            } catch (error) {
+              console.warn(`Failed to unload language extension ${extensionId}:`, error);
             }
-          });
+
+            // Mark as not installed
+            set((state) => {
+              const ext = state.availableExtensions.get(extensionId);
+              if (ext) {
+                ext.isInstalled = false;
+              }
+            });
+          } else {
+            // Non-language extension - use backend uninstall
+            await invoke("uninstall_extension_new", { extensionId });
+
+            // Reload installed extensions
+            await get().actions.loadInstalledExtensions();
+
+            set((state) => {
+              const ext = state.availableExtensions.get(extensionId);
+              if (ext) {
+                ext.isInstalled = false;
+              }
+            });
+          }
         } catch (error) {
           console.error(`Failed to uninstall extension ${extensionId}:`, error);
           throw error;

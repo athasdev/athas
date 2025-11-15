@@ -1,0 +1,17 @@
+{
+  "id": "language.ruby",
+  "name": "Ruby",
+  "version": "1.0.0",
+  "description": "Ruby language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "ruby",
+      "extensions": ["ruby"],
+      "aliases": ["ruby"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-ruby.wasm",
+      "highlightQuery": "/tree-sitter/queries/ruby/highlights.scm"
+    }
+  }
+}

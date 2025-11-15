@@ -563,7 +563,7 @@ const FileTree = ({
       >
         {file.isEditing || file.isRenaming ? (
           <div
-            className={cn("flex min-h-[22px] w-full items-center", "gap-1.5 px-1.5 py-1")}
+            className={cn("flex min-h-[20px] w-full items-center", "gap-1.5 px-1.5 py-0.5")}
             style={{ paddingLeft: `${14 + depth * 20}px`, paddingRight: "8px" }}
           >
             <FileIcon
@@ -646,10 +646,10 @@ const FileTree = ({
             onClick={(e) => handleFileClick(e, file.path, file.isDir)}
             onContextMenu={(e) => handleContextMenu(e, file.path, file.isDir)}
             className={cn(
-              "flex min-h-[22px] w-full min-w-max cursor-pointer",
+              "flex min-h-[20px] w-full min-w-max cursor-pointer",
               "select-none items-center gap-1.5",
               "whitespace-nowrap border-none bg-transparent",
-              "ui-font px-1.5 py-1 text-left text-text text-xs",
+              "ui-font px-1.5 py-0.5 text-left text-text text-xs",
               "shadow-none outline-none transition-colors duration-150",
               "hover:bg-hover focus:outline-none",
               activePath === file.path && "bg-selected",

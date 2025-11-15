@@ -32,6 +32,10 @@ import { useExtensionInstallPrompt } from "./extensions/hooks/use-extension-inst
 // Initialize extension system
 import { extensionLoader } from "./extensions/loader/extension-loader";
 import { initializeExtensionStore } from "./extensions/registry/extension-store";
+import { initializeWasmTokenizer } from "./features/editor/lib/wasm-parser";
+
+// Initialize WASM tokenizer (required for parser infrastructure)
+initializeWasmTokenizer().catch(console.error);
 
 extensionLoader.initialize().catch(console.error);
 
