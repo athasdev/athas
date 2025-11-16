@@ -218,10 +218,10 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
         (prev.tokens[0]?.start === next.tokens[0]?.start &&
           prev.tokens[prev.tokens.length - 1]?.end === next.tokens[prev.tokens.length - 1]?.end)));
 
-  // CRITICAL: During typing, content changes but tokens are stale
-  // Only re-render when tokens actually update, ignore content changes
-  // Content will be reflected once new tokens arrive after debounce
+  // Always re-render when content changes to show text immediately
+  // Tokens can be stale temporarily - that's fine, text must be visible
   const shouldSkipRender =
+    prev.content === next.content &&
     tokensUnchanged &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
