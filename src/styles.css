@@ -17,8 +17,8 @@
    ============================================ */
 
 @theme {
-  --font-sans: "JetBrains Mono", monospace;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 /* Define layer order */

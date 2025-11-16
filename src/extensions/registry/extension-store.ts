@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { extensionInstaller } from "../installer/extension-installer";
 import {
@@ -109,12 +110,43 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         });
 
         try {
-          const installed = await invoke<ExtensionInstallationMetadata[]>(
-            "list_installed_extensions_new",
-          );
+          // Load from backend (non-language extensions)
+          let backendInstalled: ExtensionInstallationMetadata[] = [];
+          try {
+            backendInstalled = await invoke<ExtensionInstallationMetadata[]>(
+              "list_installed_extensions_new",
+            );
+          } catch {
+            // Backend command may not exist yet, continue with IndexedDB check
+          }
+
+          // Also check IndexedDB for installed language parsers
+          const indexedDBInstalled = await extensionInstaller.listInstalled();
 
           set((state) => {
-            state.installedExtensions = new Map(installed.map((ext) => [ext.id, ext]));
+            // Start with backend installed extensions
+            state.installedExtensions = new Map(backendInstalled.map((ext) => [ext.id, ext]));
+
+            // Add language extensions from IndexedDB
+            for (const installed of indexedDBInstalled) {
+              // Map languageId to extension ID (e.g., "css" -> "language.css")
+              const extensionId = `language.${installed.languageId}`;
+
+              if (!state.installedExtensions.has(extensionId)) {
+                // Check if we have manifest info for this extension
+                const ext = state.availableExtensions.get(extensionId);
+                if (ext) {
+                  state.installedExtensions.set(extensionId, {
+                    id: extensionId,
+                    name: ext.manifest.displayName,
+                    version: installed.version,
+                    installed_at: new Date().toISOString(),
+                    enabled: true,
+                  });
+                }
+              }
+            }
+
             state.isLoadingInstalled = false;
 
             // Update available extensions with installation status
@@ -204,7 +236,18 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
                 ext.isInstalling = false;
                 ext.isInstalled = true;
                 ext.installProgress = 100;
+
+                // Also add to installedExtensions map for consistency
+                state.installedExtensions.set(extensionId, {
+                  id: extensionId,
+                  name: ext.manifest.displayName,
+                  version: ext.manifest.version,
+                  installed_at: new Date().toISOString(),
+                  enabled: true,
+                });
               }
+              // Create new Map reference to trigger React re-render
+              state.availableExtensions = new Map(state.availableExtensions);
             });
           } else {
             // Non-language extension - use old download method
@@ -270,6 +313,10 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               if (ext) {
                 ext.isInstalled = false;
               }
+              // Also remove from installedExtensions map for consistency
+              state.installedExtensions.delete(extensionId);
+              // Create new Map reference to trigger React re-render
+              state.availableExtensions = new Map(state.availableExtensions);
             });
           } else {
             // Non-language extension - use backend uninstall
@@ -333,9 +380,18 @@ export const initializeExtensionStore = async () => {
     progressListenerInitialized = true;
   }
 
-  // Load available and installed extensions
+  // Initialize Tree-sitter WASM (needed for syntax highlighting)
+  try {
+    await wasmParserLoader.initialize();
+  } catch (error) {
+    console.error("Failed to initialize WASM parser loader:", error);
+  }
+
+  // Load available extensions first, then installed extensions
+  // (installed extensions check needs available extensions to be loaded first)
   const { loadAvailableExtensions, loadInstalledExtensions } =
     useExtensionStoreBase.getState().actions;
 
-  await Promise.all([loadAvailableExtensions(), loadInstalledExtensions()]);
+  await loadAvailableExtensions();
+  await loadInstalledExtensions();
 };

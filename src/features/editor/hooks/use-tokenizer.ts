@@ -1,11 +1,14 @@
 /**
  * Syntax tokenization hook with support for incremental tokenization
+ * Uses WASM Tree-sitter parsers loaded from IndexedDB
  */
 
-import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
+import { indexedDBParserCache } from "../lib/wasm-parser/cache-indexeddb";
+import { tokenizeCode, tokenizeRange as wasmTokenizeRange } from "../lib/wasm-parser/tokenizer";
+import type { HighlightToken } from "../lib/wasm-parser/types";
 import { buildLineOffsetMap, type Token } from "../utils/html";
 import type { ViewportRange } from "./use-viewport-lines";
 
@@ -20,9 +23,80 @@ interface TokenCache {
   lastFullTokenizeTime: number;
 }
 
+/**
+ * Map file extensions to Tree-sitter language IDs
+ */
+const EXTENSION_TO_LANGUAGE: Record<string, string> = {
+  js: "javascript",
+  jsx: "javascript",
+  mjs: "javascript",
+  cjs: "javascript",
+  ts: "typescript",
+  tsx: "tsx",
+  mts: "typescript",
+  cts: "typescript",
+  py: "python",
+  rs: "rust",
+  go: "go",
+  java: "java",
+  c: "c",
+  h: "c",
+  cpp: "cpp",
+  cc: "cpp",
+  cxx: "cpp",
+  hpp: "cpp",
+  hxx: "cpp",
+  cs: "c_sharp",
+  rb: "ruby",
+  php: "php",
+  html: "html",
+  htm: "html",
+  css: "css",
+  scss: "css",
+  json: "json",
+  yaml: "yaml",
+  yml: "yaml",
+  toml: "toml",
+  md: "markdown",
+  markdown: "markdown",
+  sh: "bash",
+  bash: "bash",
+  zsh: "bash",
+  swift: "swift",
+  kt: "kotlin",
+  kts: "kotlin",
+  scala: "scala",
+  lua: "lua",
+  dart: "dart",
+  ex: "elixir",
+  exs: "elixir",
+  ml: "ocaml",
+  mli: "ocaml",
+  sol: "solidity",
+  zig: "zig",
+  vue: "vue",
+  erb: "embedded_template",
+};
+
 function getExtension(path: string): string {
   const parts = path.split(".");
-  return parts.length > 1 ? parts[parts.length - 1] : "";
+  return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
+}
+
+function getLanguageId(filePath: string): string | null {
+  const ext = getExtension(filePath);
+  return EXTENSION_TO_LANGUAGE[ext] || null;
+}
+
+/**
+ * Convert WASM HighlightToken to Token format used by the editor
+ */
+function convertToToken(highlightToken: HighlightToken): Token {
+  return {
+    start: highlightToken.startIndex,
+    end: highlightToken.endIndex,
+    class_name: highlightToken.type,
+  };
 }
 
 const FULL_TOKENIZE_INTERVAL = 5000; // Re-tokenize full document every 5 seconds
@@ -31,24 +105,58 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(false);
   const cacheRef = useRef<TokenCache>({ fullTokens: [], lastFullTokenizeTime: 0 });
-  const lastViewportRangeRef = useRef<ViewportRange | null>(null);
 
   /**
-   * Tokenize the full document
+   * Check if parser is available for the language
+   */
+  const isParserAvailable = useCallback(async (languageId: string): Promise<boolean> => {
+    try {
+      return await indexedDBParserCache.has(languageId);
+    } catch {
+      return false;
+    }
+  }, []);
+
+  /**
+   * Tokenize the full document using WASM parser
    */
   const tokenizeFull = useCallback(
     async (text: string) => {
       if (!enabled || !filePath) return;
 
-      const ext = getExtension(filePath);
-      if (!ext) return;
+      const languageId = getLanguageId(filePath);
+      if (!languageId) {
+        logger.warn("Editor", `[Tokenizer] No language mapping for ${filePath}`);
+        setTokens([]);
+        return;
+      }
+
+      // Check if parser is available in IndexedDB
+      const available = await isParserAvailable(languageId);
+      if (!available) {
+        logger.warn("Editor", `[Tokenizer] Parser for ${languageId} not installed`);
+        setTokens([]);
+        return;
+      }
 
       setLoading(true);
       try {
-        const result = await invoke<Token[]>("get_tokens", {
-          content: text,
-          fileExtension: ext,
+        // Get parser config from IndexedDB cache
+        const cached = await indexedDBParserCache.get(languageId);
+        if (!cached) {
+          throw new Error(`Parser ${languageId} not found in cache`);
+        }
+
+        // Load and tokenize using WASM
+        const highlightTokens = await tokenizeCode(text, languageId, {
+          languageId,
+          wasmPath: cached.sourceUrl || "",
+          highlightQuery: cached.highlightQuery,
         });
+
+        // Convert to Token format
+        const result = highlightTokens.map(convertToToken);
+
         setTokens(result);
         cacheRef.current = {
           fullTokens: result,
@@ -61,18 +169,18 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
         setLoading(false);
       }
     },
-    [enabled, filePath],
+    [enabled, filePath, isParserAvailable],
   );
 
   /**
    * Tokenize only a specific line range (incremental)
    */
-  const tokenizeRange = useCallback(
+  const tokenizeRangeInternal = useCallback(
     async (text: string, viewportRange: ViewportRange) => {
       if (!enabled || !filePath) return;
 
-      const ext = getExtension(filePath);
-      if (!ext) return;
+      const languageId = getLanguageId(filePath);
+      if (!languageId) return;
 
       const lineCount = text.split("\n").length;
 
@@ -87,15 +195,36 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
         return tokenizeFull(text);
       }
 
+      // Check if parser is available
+      const available = await isParserAvailable(languageId);
+      if (!available) {
+        logger.warn("Editor", `[Tokenizer] Parser for ${languageId} not installed`);
+        setTokens([]);
+        return;
+      }
+
       setLoading(true);
       try {
+        // Get parser config from IndexedDB cache
+        const cached = await indexedDBParserCache.get(languageId);
+        if (!cached) {
+          throw new Error(`Parser ${languageId} not found in cache`);
+        }
+
         // Tokenize the viewport range
-        const rangeTokens = await invoke<Token[]>("get_tokens_range", {
-          content: text,
-          fileExtension: ext,
-          startLine: viewportRange.startLine,
-          endLine: viewportRange.endLine,
-        });
+        const highlightTokens = await wasmTokenizeRange(
+          text,
+          languageId,
+          viewportRange.startLine,
+          viewportRange.endLine,
+          {
+            languageId,
+            wasmPath: cached.sourceUrl || "",
+            highlightQuery: cached.highlightQuery,
+          },
+        );
+
+        const rangeTokens = highlightTokens.map(convertToToken);
 
         // Merge with cached tokens from outside the viewport
         const { fullTokens } = cacheRef.current;
@@ -119,9 +248,6 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
 
         // Update cache with merged tokens
         cacheRef.current.fullTokens = mergedTokens;
-
-        // Check if viewport changed significantly
-        lastViewportRangeRef.current = viewportRange;
       } catch (error) {
         logger.warn(
           "Editor",
@@ -133,7 +259,7 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
         setLoading(false);
       }
     },
-    [enabled, filePath, tokenizeFull],
+    [enabled, filePath, tokenizeFull, isParserAvailable],
   );
 
   /**
@@ -145,9 +271,9 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
         return tokenizeFull(text);
       }
 
-      return tokenizeRange(text, viewportRange);
+      return tokenizeRangeInternal(text, viewportRange);
     },
-    [incremental, tokenizeFull, tokenizeRange],
+    [incremental, tokenizeFull, tokenizeRangeInternal],
   );
 
   /**

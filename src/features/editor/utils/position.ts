@@ -68,7 +68,7 @@ export const getLineHeight = (fontSize: number): number => {
  */
 export const getCharWidth = (
   fontSize: number,
-  fontFamily: string = "JetBrains Mono, monospace",
+  fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
 ): number => {
   // Create a temporary element to measure character width
   const measureElement = document.createElement("span");
@@ -147,7 +147,7 @@ const prewarmCharCache = (fontSize: number, fontFamily: string) => {
 export const getCharWidthCached = (
   char: string,
   fontSize: number,
-  fontFamily: string = "JetBrains Mono, monospace",
+  fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
 ): number => {
   const cacheKey = `${char}-${fontSize}-${fontFamily}`;
 
@@ -182,7 +182,7 @@ export const getAccurateCursorX = (
   line: string,
   column: number,
   fontSize: number,
-  fontFamily: string = "JetBrains Mono, monospace",
+  fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   tabSize: number = 2,
 ): number => {
   let x = 0;

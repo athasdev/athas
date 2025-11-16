@@ -1,5 +1,5 @@
 import { Download, Languages, Package, Palette, RefreshCw, Search, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
@@ -97,9 +97,8 @@ export const ExtensionsSettings = () => {
   const availableExtensions = useExtensionStore.use.availableExtensions();
   const { installExtension, uninstallExtension } = useExtensionStore.use.actions();
 
-  const loadAllExtensions = async () => {
+  const loadAllExtensions = useCallback(() => {
     const allExtensions: UnifiedExtension[] = [];
-    const seenIds = new Set<string>();
 
     // Load from new extension store (primary source)
     for (const [, ext] of availableExtensions) {
@@ -116,7 +115,6 @@ export const ExtensionsSettings = () => {
           publisher: ext.manifest.publisher,
           isMarketplace: true, // From new store, can be uninstalled
         });
-        seenIds.add(ext.manifest.id);
       }
     }
 
@@ -163,11 +161,11 @@ export const ExtensionsSettings = () => {
     });
 
     setExtensions(allExtensions);
-  };
+  }, [availableExtensions]);
 
   useEffect(() => {
     loadAllExtensions();
-  }, [settings.theme, settings.iconTheme, availableExtensions]);
+  }, [settings.theme, settings.iconTheme, loadAllExtensions]);
 
   const handleToggle = async (extension: UnifiedExtension) => {
     if (extension.isMarketplace) {
@@ -175,7 +173,7 @@ export const ExtensionsSettings = () => {
       if (extension.isInstalled) {
         try {
           await uninstallExtension(extension.id);
-          loadAllExtensions();
+          // UI will update automatically via useEffect when availableExtensions changes
           showToast({
             message: `${extension.name} uninstalled successfully`,
             type: "success",
@@ -192,7 +190,7 @@ export const ExtensionsSettings = () => {
       } else {
         try {
           await installExtension(extension.id);
-          loadAllExtensions();
+          // UI will update automatically via useEffect when availableExtensions changes
           showToast({
             message: `${extension.name} installed successfully`,
             type: "success",

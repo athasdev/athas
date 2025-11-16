@@ -427,7 +427,7 @@ export function MarkdownPreview() {
           background-color: var(--color-hover, rgba(255, 255, 255, 0.1));
           padding: 0.2em 0.4em;
           border-radius: 4px;
-          font-family: 'JetBrains Mono', monospace;
+          font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
           font-size: 0.9em;
           color: var(--color-syntax-string, #c3e88d);
         }
