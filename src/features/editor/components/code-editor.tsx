@@ -1,6 +1,5 @@
 import type React from "react";
 import { useEffect, useRef } from "react";
-import FindBar from "@/features/editor/components/find-bar";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -13,10 +12,12 @@ import { useGitGutter } from "@/features/version-control/git/controllers/use-git
 import { useAppStore } from "@/stores/app-store";
 import { useZoomStore } from "@/stores/zoom-store";
 import { HoverTooltip } from "../lsp/hover-tooltip";
-import Breadcrumb from "./breadcrumb";
-import { EditorOverlay } from "./editor-overlay";
-import { MarkdownPreview } from "./markdown-preview";
+import { MarkdownPreview } from "../markdown/markdown-preview";
+import { isMarkdownFile } from "../utils/lines";
+import { Editor } from "./editor";
 import { EditorStylesheet } from "./stylesheet";
+import Breadcrumb from "./toolbar/breadcrumb";
+import FindBar from "./toolbar/find-bar";
 
 interface CodeEditorProps {
   // All props are now optional as we get most data from stores
@@ -60,14 +61,8 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const filePath = activeBuffer?.path || "";
   const onChange = activeBuffer ? handleContentChange : () => {};
 
-  // Check if the current file is markdown
-  const isMarkdownFile = () => {
-    if (!activeBuffer) return false;
-    const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
-    return extension === "md" || extension === "markdown";
-  };
-
-  const showMarkdownPreview = isMarkdownFile() && isMarkdownPreview;
+  const showMarkdownPreview =
+    activeBuffer && isMarkdownFile(activeBuffer.path) && isMarkdownPreview;
 
   // Initialize refs in store
   useEffect(() => {
@@ -237,7 +232,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
             {/* Editor content area */}
             <div className="editor-wrapper relative flex-1 overflow-hidden">
               <div className="relative h-full flex-1 bg-primary-bg">
-                {showMarkdownPreview ? <MarkdownPreview /> : <EditorOverlay />}
+                {showMarkdownPreview ? <MarkdownPreview /> : <Editor />}
               </div>
             </div>
           </div>

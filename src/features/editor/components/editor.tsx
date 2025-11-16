@@ -1,35 +1,39 @@
-/**
- * Editor Overlay - Two-layer editor architecture
- * Combines transparent input layer with syntax-highlighted background
- * Fully immediate updates - zero lag, instant syntax highlighting
- */
-
 import "../styles/overlay-editor.css";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useGitGutter } from "@/features/version-control/git/controllers/use-git-gutter";
 import EditorContextMenu from "../context-menu/context-menu";
-import { useTokenizer } from "../hooks/use-tokenizer";
+import { useContextMenu } from "../hooks/use-context-menu";
+import { useEditorOperations } from "../hooks/use-editor-operations";
+import { useFoldTransform } from "../hooks/use-fold-transform";
+import { useInlineDiff } from "../hooks/use-inline-diff";
+import { getLanguageId, useTokenizer } from "../hooks/use-tokenizer";
 import { useViewportLines } from "../hooks/use-viewport-lines";
 import { useLspStore } from "../lsp/lsp-store";
 import { useBufferStore } from "../stores/buffer-store";
+import { useEditorDecorationsStore } from "../stores/decorations-store";
+import { useFoldStore } from "../stores/fold-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
+import type { Decoration } from "../types/editor";
+import { applyVirtualEdit, calculateActualOffset } from "../utils/fold-transformer";
+import { calculateLineHeight, calculateLineOffset, splitLines } from "../utils/lines";
 import { applyMultiCursorBackspace, applyMultiCursorEdit } from "../utils/multi-cursor";
 import { calculateCursorPosition } from "../utils/position";
-import { Gutter } from "./gutter";
-import { HighlightLayer } from "./highlight-layer";
-import { InputLayer } from "./input-layer";
-import { MultiCursorLayer } from "./multi-cursor-layer";
+import { InlineDiff } from "./diff/inline-diff";
+import { Gutter } from "./gutter/gutter";
+import { HighlightLayer } from "./layers/highlight-layer";
+import { InputLayer } from "./layers/input-layer";
+import { MultiCursorLayer } from "./layers/multi-cursor-layer";
 
-interface EditorOverlayProps {
+interface EditorProps {
   className?: string;
 }
 
-export function EditorOverlay({ className }: EditorOverlayProps) {
+export function Editor({ className }: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
-  const gutterRef = useRef<HTMLDivElement>(null);
 
   const bufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
@@ -54,97 +58,172 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
   const content = buffer?.content || "";
   const filePath = buffer?.path;
 
-  // Context menu state
-  const [contextMenuState, setContextMenuState] = useState<{
-    isOpen: boolean;
-    position: { x: number; y: number };
-  }>({ isOpen: false, position: { x: 0, y: 0 } });
+  useGitGutter({
+    filePath: filePath || "",
+    content,
+    enabled: !!filePath,
+  });
 
-  // Memoize expensive calculations
-  const lines = useMemo(() => content.split("\n"), [content]);
-  const lineHeight = useMemo(() => fontSize * 1.4, [fontSize]);
+  const foldActions = useFoldStore.use.actions();
 
-  // Viewport tracking for future incremental tokenization
+  useEffect(() => {
+    if (filePath && content) {
+      foldActions.computeFoldRegions(filePath, content);
+    }
+  }, [filePath, content, foldActions]);
+
+  const foldTransform = useFoldTransform(filePath, content);
+
+  const hasSyntaxHighlighting = useMemo(() => {
+    if (!filePath) return false;
+    return getLanguageId(filePath) !== null;
+  }, [filePath]);
+
+  const contextMenu = useContextMenu();
+  const inlineDiff = useInlineDiff(filePath, content);
+
+  const actualLines = useMemo(() => splitLines(content), [content]);
+  const lines = foldTransform.hasActiveFolds ? foldTransform.virtualLines : actualLines;
+  const displayContent = foldTransform.hasActiveFolds ? foldTransform.virtualContent : content;
+  const lineHeight = useMemo(() => calculateLineHeight(fontSize), [fontSize]);
+
   const { handleScroll: handleViewportScroll, initializeViewport } = useViewportLines({
     lineHeight,
   });
 
-  // Tokenization with incremental support - NO debouncing for instant syntax highlighting
   const { tokens, tokenize } = useTokenizer({
     filePath,
     incremental: true,
+    enabled: hasSyntaxHighlighting,
   });
 
-  // Handle input changes with EVERYTHING immediate - no delays!
   const handleInput = useCallback(
-    (newContent: string) => {
+    (newVirtualContent: string) => {
       if (!bufferId || !inputRef.current) return;
 
-      // 1. Update buffer content IMMEDIATELY
-      updateBufferContent(bufferId, newContent);
+      let newActualContent: string;
+      if (foldTransform.hasActiveFolds) {
+        newActualContent = applyVirtualEdit(content, newVirtualContent, foldTransform.mapping);
+      } else {
+        newActualContent = newVirtualContent;
+      }
 
-      // 2. Update cursor position IMMEDIATELY
+      updateBufferContent(bufferId, newActualContent);
+
       const selectionStart = inputRef.current.selectionStart;
-      const lines = newContent.split("\n");
-      const position = calculateCursorPosition(selectionStart, lines);
-      setCursorPosition(position);
+      const virtualLines = splitLines(newVirtualContent);
+      const position = calculateCursorPosition(selectionStart, virtualLines);
 
-      // 3. Tokenize IMMEDIATELY for instant syntax highlighting
-      // Tree-sitter is fast enough to handle this on every keystroke
-      tokenize(newContent);
+      if (foldTransform.hasActiveFolds) {
+        const actualLine =
+          foldTransform.mapping.virtualToActual.get(position.line) ?? position.line;
+        const actualOffset = calculateActualOffset(
+          splitLines(newActualContent),
+          actualLine,
+          position.column,
+        );
+        setCursorPosition({
+          line: actualLine,
+          column: position.column,
+          offset: actualOffset,
+        });
+      } else {
+        setCursorPosition(position);
+      }
+
+      if (hasSyntaxHighlighting) {
+        tokenize(newActualContent);
+      }
     },
-    [bufferId, updateBufferContent, setCursorPosition, tokenize],
+    [
+      bufferId,
+      updateBufferContent,
+      setCursorPosition,
+      tokenize,
+      hasSyntaxHighlighting,
+      content,
+      foldTransform,
+    ],
   );
 
-  // Track cursor position changes even when content doesn't change (arrow keys, mouse clicks, etc.)
+  const editorOps = useEditorOperations({
+    inputRef,
+    content,
+    bufferId,
+    updateBufferContent,
+    handleInput,
+  });
+
   const handleCursorChange = useCallback(() => {
     if (!bufferId || !inputRef.current) return;
 
     const selectionStart = inputRef.current.selectionStart;
     const selectionEnd = inputRef.current.selectionEnd;
-    const lines = content.split("\n");
 
-    // Update cursor position
     const position = calculateCursorPosition(selectionStart, lines);
-    setCursorPosition(position);
 
-    // Track selection if text is selected
+    if (foldTransform.hasActiveFolds) {
+      const actualLine = foldTransform.mapping.virtualToActual.get(position.line) ?? position.line;
+      const actualOffset = calculateActualOffset(actualLines, actualLine, position.column);
+      setCursorPosition({
+        line: actualLine,
+        column: position.column,
+        offset: actualOffset,
+      });
+    } else {
+      setCursorPosition(position);
+    }
+
     if (selectionStart !== selectionEnd) {
       const startPos = calculateCursorPosition(selectionStart, lines);
       const endPos = calculateCursorPosition(selectionEnd, lines);
-      setSelection({ start: startPos, end: endPos });
+
+      if (foldTransform.hasActiveFolds) {
+        const actualStartLine =
+          foldTransform.mapping.virtualToActual.get(startPos.line) ?? startPos.line;
+        const actualEndLine = foldTransform.mapping.virtualToActual.get(endPos.line) ?? endPos.line;
+        setSelection({
+          start: {
+            line: actualStartLine,
+            column: startPos.column,
+            offset: calculateActualOffset(actualLines, actualStartLine, startPos.column),
+          },
+          end: {
+            line: actualEndLine,
+            column: endPos.column,
+            offset: calculateActualOffset(actualLines, actualEndLine, endPos.column),
+          },
+        });
+      } else {
+        setSelection({ start: startPos, end: endPos });
+      }
     } else {
-      // Clear selection when no text is selected
       setSelection(undefined);
     }
-  }, [bufferId, content, setCursorPosition, setSelection]);
+  }, [bufferId, lines, actualLines, setCursorPosition, setSelection, foldTransform]);
 
-  // Handle click events for multi-cursor support
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLTextAreaElement>) => {
       if (!bufferId || !inputRef.current) return;
 
-      // Cmd (Mac) or Ctrl (Windows/Linux) + Click adds a new cursor
       if (e.metaKey || e.ctrlKey) {
         e.preventDefault();
 
         const selectionStart = inputRef.current.selectionStart;
         const selectionEnd = inputRef.current.selectionEnd;
-        const lines = content.split("\n");
+        const contentLines = splitLines(content);
 
-        const position = calculateCursorPosition(selectionStart, lines);
+        const position = calculateCursorPosition(selectionStart, contentLines);
 
-        // Enable multi-cursor if not already enabled
         if (!multiCursorState) {
           enableMultiCursor();
         }
 
-        // Add new cursor at clicked position
         const selection =
           selectionStart !== selectionEnd
             ? {
-                start: calculateCursorPosition(selectionStart, lines),
-                end: calculateCursorPosition(selectionEnd, lines),
+                start: calculateCursorPosition(selectionStart, contentLines),
+                end: calculateCursorPosition(selectionEnd, contentLines),
               }
             : undefined;
 
@@ -152,98 +231,66 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
         return;
       }
 
-      // Regular click: clear secondary cursors if in multi-cursor mode
       if (multiCursorState && multiCursorState.cursors.length > 1) {
         clearSecondaryCursors();
       }
-      // Selection/cursor tracking is handled by onSelect event
     },
     [bufferId, content, multiCursorState, enableMultiCursor, addCursor, clearSecondaryCursors],
   );
 
-  // Handle context menu
-  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    setContextMenuState({
-      isOpen: true,
-      position: { x: e.clientX, y: e.clientY },
-    });
-  }, []);
-
-  const closeContextMenu = useCallback(() => {
-    setContextMenuState({ isOpen: false, position: { x: 0, y: 0 } });
-  }, []);
-
-  // Context menu action handlers
-  const handleCopy = useCallback(() => {
-    if (!inputRef.current) return;
-    document.execCommand("copy");
-  }, []);
-
-  const handleCut = useCallback(() => {
-    if (!inputRef.current) return;
-    document.execCommand("cut");
-  }, []);
-
-  const handlePaste = useCallback(async () => {
-    if (!inputRef.current) return;
-    try {
-      const text = await navigator.clipboard.readText();
-      const textarea = inputRef.current;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const newContent = content.substring(0, start) + text + content.substring(end);
-
-      if (bufferId) {
-        updateBufferContent(bufferId, newContent);
-      }
-
-      textarea.value = newContent;
-      const newPosition = start + text.length;
-      textarea.selectionStart = textarea.selectionEnd = newPosition;
-
-      handleInput(newContent);
-    } catch (error) {
-      console.error("Failed to paste:", error);
-    }
-  }, [content, bufferId, updateBufferContent, handleInput]);
-
-  const handleSelectAll = useCallback(() => {
-    if (!inputRef.current) return;
-    inputRef.current.select();
-  }, []);
-
-  const handleDelete = useCallback(() => {
-    if (!inputRef.current) return;
-    const textarea = inputRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    if (start !== end) {
-      const newContent = content.substring(0, start) + content.substring(end);
-      if (bufferId) {
-        updateBufferContent(bufferId, newContent);
-      }
-      textarea.value = newContent;
-      textarea.selectionStart = textarea.selectionEnd = start;
-      handleInput(newContent);
-    }
-  }, [content, bufferId, updateBufferContent, handleInput]);
-
-  // Get completion state
   const isLspCompletionVisible = useEditorUIStore.use.isLspCompletionVisible();
   const filteredCompletions = useEditorUIStore.use.filteredCompletions();
   const selectedLspIndex = useEditorUIStore.use.selectedLspIndex();
   const { setSelectedLspIndex, setIsLspCompletionVisible } = useEditorUIStore.use.actions();
   const lspActions = useLspStore.use.actions();
 
-  // Handle keyboard navigation for completions and Tab key
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // Handle multi-cursor editing (typing, backspace, delete, enter)
+      if (e.altKey && (e.key === "[" || e.key === "]")) {
+        e.preventDefault();
+        const decorations = useEditorDecorationsStore.getState().decorations;
+        const changedLines: number[] = [];
+
+        decorations.forEach((dec: Decoration & { id: string }) => {
+          if (dec.type === "gutter" && dec.className?.includes("git-gutter")) {
+            changedLines.push(dec.range.start.line);
+          }
+        });
+
+        if (changedLines.length === 0) return;
+
+        changedLines.sort((a, b) => a - b);
+
+        const currentLine = cursorPosition.line;
+
+        if (e.key === "]") {
+          const nextChange = changedLines.find((line) => line > currentLine);
+          if (nextChange !== undefined) {
+            const lineStart = calculateLineOffset(lines, nextChange);
+            if (inputRef.current) {
+              inputRef.current.selectionStart = lineStart;
+              inputRef.current.selectionEnd = lineStart;
+              inputRef.current.focus();
+            }
+            setCursorPosition(calculateCursorPosition(lineStart, lines));
+          }
+        } else {
+          const prevChanges = changedLines.filter((line) => line < currentLine);
+          if (prevChanges.length > 0) {
+            const prevChange = prevChanges[prevChanges.length - 1];
+            const lineStart = calculateLineOffset(lines, prevChange);
+            if (inputRef.current) {
+              inputRef.current.selectionStart = lineStart;
+              inputRef.current.selectionEnd = lineStart;
+              inputRef.current.focus();
+            }
+            setCursorPosition(calculateCursorPosition(lineStart, lines));
+          }
+        }
+        return;
+      }
+
       if (multiCursorState && multiCursorState.cursors.length > 1) {
-        // Handle backspace
         if (e.key === "Backspace") {
           e.preventDefault();
 
@@ -252,38 +299,29 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
             multiCursorState.cursors,
           );
 
-          // Update buffer content
           if (bufferId) {
             updateBufferContent(bufferId, newContent);
           }
 
-          // Update textarea value
           if (inputRef.current) {
             inputRef.current.value = newContent;
           }
 
-          // Update all cursor positions
           for (const cursor of newCursors) {
             updateCursor(cursor.id, cursor.position, cursor.selection);
           }
 
-          // Update primary cursor in textarea
           const primaryCursor = newCursors.find((c) => c.id === multiCursorState.primaryCursorId);
           if (primaryCursor && inputRef.current) {
             inputRef.current.selectionStart = primaryCursor.position.offset;
             inputRef.current.selectionEnd = primaryCursor.position.offset;
           }
 
-          // Tokenize
           tokenize(newContent);
           return;
         }
 
-        // Handle regular character input and Enter
-        if (
-          e.key.length === 1 || // Printable character
-          e.key === "Enter"
-        ) {
+        if (e.key.length === 1 || e.key === "Enter") {
           e.preventDefault();
 
           const text = e.key === "Enter" ? "\n" : e.key;
@@ -293,35 +331,29 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
             text,
           );
 
-          // Update buffer content
           if (bufferId) {
             updateBufferContent(bufferId, newContent);
           }
 
-          // Update textarea value
           if (inputRef.current) {
             inputRef.current.value = newContent;
           }
 
-          // Update all cursor positions
           for (const cursor of newCursors) {
             updateCursor(cursor.id, cursor.position, cursor.selection);
           }
 
-          // Update primary cursor in textarea
           const primaryCursor = newCursors.find((c) => c.id === multiCursorState.primaryCursorId);
           if (primaryCursor && inputRef.current) {
             inputRef.current.selectionStart = primaryCursor.position.offset;
             inputRef.current.selectionEnd = primaryCursor.position.offset;
           }
 
-          // Tokenize
           tokenize(newContent);
           return;
         }
       }
 
-      // Handle completion dropdown navigation
       if (isLspCompletionVisible && filteredCompletions.length > 0) {
         if (e.key === "ArrowDown") {
           e.preventDefault();
@@ -353,11 +385,9 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
               cursorPos,
             });
 
-            // Update textarea
             textarea.value = result.newValue;
             textarea.selectionStart = textarea.selectionEnd = result.newCursorPos;
 
-            // Trigger buffer update
             handleInput(result.newValue);
           }
           return;
@@ -370,18 +400,15 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
         }
       }
 
-      // Handle Escape to clear secondary cursors (when completion is not visible)
       if (e.key === "Escape" && multiCursorState && multiCursorState.cursors.length > 1) {
         e.preventDefault();
         clearSecondaryCursors();
         return;
       }
 
-      // Handle Tab key for indentation (when completion is not visible)
       if (e.key === "Tab") {
-        // Don't handle Tab if Ctrl or Cmd is held (for tab switching)
         if (e.ctrlKey || e.metaKey) {
-          return; // Let it bubble up to global keyboard handler
+          return;
         }
 
         e.preventDefault();
@@ -391,17 +418,13 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
         const spaces = " ".repeat(tabSize);
         const currentContent = textarea.value;
 
-        // Insert spaces at cursor position
         const newContent =
           currentContent.substring(0, start) + spaces + currentContent.substring(end);
 
-        // Update textarea value directly (uncontrolled)
         textarea.value = newContent;
 
-        // Move cursor after inserted spaces
         textarea.selectionStart = textarea.selectionEnd = start + spaces.length;
 
-        // Trigger buffer update (debounced via handleInput)
         handleInput(newContent);
       }
     },
@@ -421,95 +444,132 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
       updateBufferContent,
       updateCursor,
       tokenize,
+      cursorPosition.line,
+      setCursorPosition,
+      lines,
     ],
   );
 
-  // Sync scroll between input and highlight layers + track viewport
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLTextAreaElement>) => {
-      if (highlightRef.current && gutterRef.current) {
-        const scrollTop = e.currentTarget.scrollTop;
-        const scrollLeft = e.currentTarget.scrollLeft;
+      const scrollTop = e.currentTarget.scrollTop;
+      const scrollLeft = e.currentTarget.scrollLeft;
+
+      if (highlightRef.current) {
         highlightRef.current.scrollTop = scrollTop;
         highlightRef.current.scrollLeft = scrollLeft;
-        gutterRef.current.scrollTop = scrollTop;
-
-        // Update viewport tracking for incremental tokenization
-        handleViewportScroll(e, lines.length);
       }
+
+      handleViewportScroll(e, lines.length);
     },
     [handleViewportScroll, lines.length],
   );
 
-  // Initialize viewport on mount
   useEffect(() => {
     if (inputRef.current) {
       initializeViewport(inputRef.current, lines.length);
     }
-  }, [initializeViewport]);
+  }, [initializeViewport, lines.length]);
 
-  // Tokenize only on buffer change or when file loads (not on every keystroke)
   useEffect(() => {
     if (buffer?.content && buffer?.path) {
-      // Initial tokenization when buffer loads
-      // handleInput handles tokenization during typing
       tokenize(buffer.content);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bufferId, buffer?.path]); // Deliberately exclude content to prevent double tokenization
+  }, [bufferId, buffer?.path, buffer?.content, tokenize]);
 
-  // Restore cursor position when switching buffers ONLY (not on cursor movement)
   useEffect(() => {
     if (inputRef.current && bufferId) {
-      // Small delay to ensure content is loaded
       setTimeout(() => {
         if (inputRef.current && bufferId) {
           const offset = cursorPosition.offset || 0;
-          // Ensure offset is within bounds
           const maxOffset = inputRef.current.value.length;
           const safeOffset = Math.min(offset, maxOffset);
           inputRef.current.selectionStart = safeOffset;
           inputRef.current.selectionEnd = safeOffset;
-          // Focus the textarea
           inputRef.current.focus();
         }
       }, 0);
     }
-    // Only run when buffer changes, NOT when cursor position changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bufferId]);
+  }, [bufferId, cursorPosition.offset]);
+
+  const handleLineClick = useCallback(
+    (lineIndex: number) => {
+      if (!inputRef.current) return;
+
+      const lineStart = calculateLineOffset(lines, lineIndex);
+      const lineEnd = lineStart + lines[lineIndex].length;
+
+      inputRef.current.selectionStart = lineStart;
+      inputRef.current.selectionEnd = lineEnd;
+      inputRef.current.focus();
+
+      const startPos = calculateCursorPosition(lineStart, lines);
+      const endPos = calculateCursorPosition(lineEnd, lines);
+      setCursorPosition(startPos);
+      setSelection({ start: startPos, end: endPos });
+    },
+    [lines, setCursorPosition, setSelection],
+  );
+
+  const handleRevertChange = useCallback(
+    (lineIndex: number, originalContent: string) => {
+      if (!bufferId) return;
+      const newLines = [...lines];
+      newLines[lineIndex] = originalContent;
+      const newContent = newLines.join("\n");
+      updateBufferContent(bufferId, newContent);
+      if (inputRef.current) {
+        inputRef.current.value = newContent;
+      }
+      tokenize(newContent);
+    },
+    [lines, bufferId, updateBufferContent, tokenize],
+  );
 
   if (!buffer) return null;
 
   return (
     <div className="relative flex size-full">
       {showLineNumbers && (
-        <Gutter ref={gutterRef} lines={lines} fontSize={fontSize} fontFamily={fontFamily} />
-      )}
-
-      <div className={`overlay-editor-container flex-1 bg-primary-bg ${className || ""}`}>
-        <HighlightLayer
-          ref={highlightRef}
-          content={content}
-          tokens={tokens}
+        <Gutter
+          totalLines={lines.length}
           fontSize={fontSize}
           fontFamily={fontFamily}
           lineHeight={lineHeight}
+          textareaRef={inputRef}
+          filePath={filePath}
+          onLineClick={handleLineClick}
+          onGitIndicatorClick={inlineDiff.toggle}
+          foldMapping={foldTransform.hasActiveFolds ? foldTransform.mapping : undefined}
         />
+      )}
+
+      <div className={`overlay-editor-container flex-1 bg-primary-bg ${className || ""}`}>
+        {hasSyntaxHighlighting && (
+          <HighlightLayer
+            ref={highlightRef}
+            content={displayContent}
+            tokens={tokens}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            lineHeight={lineHeight}
+          />
+        )}
         <InputLayer
           ref={inputRef}
-          content={content}
+          content={displayContent}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
           onScroll={handleScroll}
           onSelect={handleCursorChange}
           onClick={handleClick}
-          onContextMenu={handleContextMenu}
+          onContextMenu={contextMenu.open}
           fontSize={fontSize}
           fontFamily={fontFamily}
           lineHeight={lineHeight}
           tabSize={tabSize}
           bufferId={bufferId || undefined}
+          showText={!hasSyntaxHighlighting}
         />
         {multiCursorState && (
           <MultiCursorLayer
@@ -521,18 +581,31 @@ export function EditorOverlay({ className }: EditorOverlayProps) {
             content={content}
           />
         )}
+
+        {inlineDiff.state.isOpen && (
+          <InlineDiff
+            lineNumber={inlineDiff.state.lineNumber}
+            type={inlineDiff.state.type}
+            diffLines={inlineDiff.state.diffLines}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            lineHeight={lineHeight}
+            onClose={inlineDiff.close}
+            onRevert={handleRevertChange}
+          />
+        )}
       </div>
-      {contextMenuState.isOpen &&
+      {contextMenu.state.isOpen &&
         createPortal(
           <EditorContextMenu
-            isOpen={contextMenuState.isOpen}
-            position={contextMenuState.position}
-            onClose={closeContextMenu}
-            onCopy={handleCopy}
-            onCut={handleCut}
-            onPaste={handlePaste}
-            onSelectAll={handleSelectAll}
-            onDelete={handleDelete}
+            isOpen={contextMenu.state.isOpen}
+            position={contextMenu.state.position}
+            onClose={contextMenu.close}
+            onCopy={editorOps.copy}
+            onCut={editorOps.cut}
+            onPaste={editorOps.paste}
+            onSelectAll={editorOps.selectAll}
+            onDelete={editorOps.deleteSelection}
           />,
           document.body,
         )}

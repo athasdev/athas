@@ -734,35 +734,13 @@ button {
 .tab-bar-scrollable {
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(128, 128, 128, 0.3) transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   overscroll-behavior-x: contain;
 }
 
 .tab-bar-scrollable::-webkit-scrollbar {
-  height: 4px;
-}
-
-.tab-bar-scrollable::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.tab-bar-scrollable::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.3);
-  border-radius: 2px;
-  transition: background-color 0.2s ease;
-}
-
-.tab-bar-scrollable:hover::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-}
-
-.tab-bar-scrollable::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-lighter);
-}
-
-.tab-bar-scrollable::-webkit-scrollbar-corner {
-  background: transparent;
+  display: none;
 }
 
 /* Prevent bounce scrolling only where needed */

@@ -8,7 +8,7 @@ import type {
 import {
   convertLSPDiagnostic,
   useDiagnosticsStore,
-} from "@/features/diagnostics/diagnostics-store";
+} from "@/features/diagnostics/stores/diagnostics-store";
 import { logger } from "../utils/logger";
 
 export interface LspError {

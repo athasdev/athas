@@ -7,7 +7,6 @@ const DEFAULT_ZOOM = 1.0;
 type ZoomType = "window" | "editor" | "terminal";
 
 interface ZoomState {
-  // zoomLevel: number;
   windowZoomLevel: number;
   editorZoomLevel: number;
   terminalZoomLevel: number;

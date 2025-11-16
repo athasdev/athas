@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from "react";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import SQLiteViewer from "@/features/database/providers/sqlite/sqlite-viewer";
 import type { Diagnostic } from "@/features/diagnostics/diagnostics-pane";
-import { useDiagnosticsStore } from "@/features/diagnostics/diagnostics-store";
+import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";

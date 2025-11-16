@@ -53,7 +53,7 @@ export function useViewportLines(options: UseViewportLinesOptions) {
 
   /**
    * Update viewport range based on scroll position
-   * Throttled to avoid excessive calculations
+   * Uses requestAnimationFrame for smooth updates without lag
    */
   const updateViewportRange = useCallback(
     (scrollTop: number, totalLines: number) => {
@@ -61,7 +61,8 @@ export function useViewportLines(options: UseViewportLinesOptions) {
         return; // Skip update if already scheduled
       }
 
-      updateThrottleTimer.current = setTimeout(() => {
+      // Use requestAnimationFrame for immediate but batched updates
+      updateThrottleTimer.current = requestAnimationFrame(() => {
         const newRange = calculateViewportRange(scrollTop, containerHeightRef.current, totalLines);
 
         // Only update if range has changed significantly
@@ -81,7 +82,7 @@ export function useViewportLines(options: UseViewportLinesOptions) {
         });
 
         updateThrottleTimer.current = null;
-      }, EDITOR_CONSTANTS.SCROLL_UPDATE_THROTTLE);
+      }) as unknown as NodeJS.Timeout;
     },
     [calculateViewportRange],
   );

@@ -345,3 +345,136 @@ See [EXTENSION_PUBLISHING.md](./EXTENSION_PUBLISHING.md) for detailed publishing
 ## Schema Validation
 
 The TypeScript types in `src/extensions/types/extension-manifest.ts` serve as the source of truth for the manifest format. Use a JSON schema validator to check your manifests before publishing.
+
+# Extension System Guide
+
+This guide explains the extension system in Athas.
+
+## Overview
+
+Athas uses a lightweight, on-demand extension system. Language support extensions are NOT bundled with the app. Instead, users install extensions as needed when they open files.
+
+## How It Works
+
+1. **Open a file** (e.g., `app.ts`)
+2. **Extension detection** - Athas detects you need the TypeScript extension
+3. **Installation prompt** - If not installed, you'll see: "TypeScript extension not installed. Install it to enable language support?"
+4. **One-click install** - Click "Install" and the extension downloads automatically
+5. **Ready to use** - LSP, formatter, linter, and snippets are now available
+
+## For Users
+
+### Installing Extensions
+
+Extensions are installed automatically when you:
+- Open a file that requires an extension
+- Click "Install" on the prompt
+
+You can also browse and install extensions from:
+- **Settings → Extensions** - View all available extensions
+- Search, filter by category, and manage installed extensions
+
+### Managing Extensions
+
+- **View installed**: Settings → Extensions → "All" tab
+- **Uninstall**: Click the "Uninstall" button on any installed extension
+- **Reinstall**: Click "Install" again if something goes wrong
+
+## For Developers
+
+### Extension Architecture
+
+Extensions are self-contained packages that include:
+- **LSP server** - Language intelligence (completions, diagnostics, hover)
+- **Formatter** - Code formatting (Prettier, rustfmt, etc.)
+- **Linter** - Code linting (ESLint, clippy, etc.)
+- **Snippets** - Code snippets with placeholders
+- **Syntax highlighting** - TextMate grammars or Tree-sitter
+
+
+## Adding a New Language Extension
+
+### Example: Adding Python Support
+
+1. **Create extension directory:**
+
+```bash
+mkdir -p src/extensions/bundled/python/lsp
+touch src/extensions/bundled/python/lsp/.gitkeep
+```
+
+2. **Create extension manifest:**
+
+`src/extensions/bundled/python/extension.json`:
+```json
+{
+  "id": "athas.python",
+  "name": "Python",
+  "displayName": "Python Language Support",
+  "description": "Python language support with Pyright",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "python",
+      "extensions": [".py", ".pyw"],
+      "aliases": ["Python", "py"]
+    }
+  ],
+  "lsp": {
+    "server": {
+      "darwin": "./lsp/pyright-darwin",
+      "linux": "./lsp/pyright-linux",
+      "win32": "./lsp/pyright.exe"
+    },
+    "args": ["--stdio"],
+    "fileExtensions": [".py", ".pyw"],
+    "languageIds": ["python"]
+  },
+  "commands": [
+    {
+      "command": "python.restart",
+      "title": "Restart Python Server",
+      "category": "Python"
+    }
+  ],
+  "activationEvents": ["onLanguage:python"]
+}
+```
+
+3. **Import in registry:**
+
+Edit `src/extensions/registry/extension-registry.ts`:
+
+```typescript
+import pythonManifest from "../bundled/python/extension.json";
+
+// Add to bundledManifests array:
+const bundledManifests: ExtensionManifest[] = [
+  typescriptManifest as ExtensionManifest,
+  rustManifest as ExtensionManifest,
+  pythonManifest as ExtensionManifest, // Add this
+];
+```
+
+4. **Update setup script:**
+
+Edit `scripts/setup-lsp-servers.sh` to add Python LSP installation:
+
+```bash
+# Python Language Server (Pyright)
+echo "📦 Setting up Pyright..."
+PYTHON_LSP_DIR="$EXTENSIONS_DIR/python/lsp"
+
+if command -v pyright-langserver &> /dev/null; then
+  # Copy binary logic...
+fi
+```
+
+5. **Test:**
+
+```bash
+./scripts/setup-lsp-servers.sh
+bun tauri dev
+```

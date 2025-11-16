@@ -139,7 +139,7 @@ function main {
     Install-Bun
     Install-ProjectDeps
 
-    Write-Success "🎉 Setup complete!"
+    Write-Success "Setup complete!"
     Write-Status "To start development:"
     Write-Host "  bun run tauri dev" -ForegroundColor Green
     echo ""

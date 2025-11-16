@@ -83,7 +83,7 @@ function getExtension(path: string): string {
   return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
 }
 
-function getLanguageId(filePath: string): string | null {
+export function getLanguageId(filePath: string): string | null {
   const ext = getExtension(filePath);
   return EXTENSION_TO_LANGUAGE[ext] || null;
 }

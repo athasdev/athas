@@ -1,11 +1,5 @@
-/**
- * Highlight Layer - Syntax-highlighted background
- * Read-only, updated via React (no innerHTML manipulation)
- * Optimized with per-line memoization for better performance
- */
-
 import { forwardRef, memo, type ReactNode, useMemo } from "react";
-import { buildLineOffsetMap, type Token } from "../utils/html";
+import { buildLineOffsetMap, type Token } from "../../utils/html";
 
 interface HighlightLayerProps {
   content: string;
@@ -22,10 +16,6 @@ interface LineProps {
   lineIndex: number;
 }
 
-/**
- * Render a single line with syntax highlighting as React elements
- * Memoized to avoid re-rendering unchanged lines
- */
 const Line = memo<LineProps>(
   ({ lineContent, tokens, lineStart, lineIndex }) => {
     const spans = useMemo((): ReactNode[] => {
@@ -97,12 +87,8 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
   ({ content, tokens, fontSize, fontFamily, lineHeight }, ref) => {
     const lines = useMemo(() => content.split("\n"), [content]);
 
-    // Pre-sort tokens once
     const sortedTokens = useMemo(() => [...tokens].sort((a, b) => a.start - b.start), [tokens]);
 
-    // Build a map of line index to line-specific tokens
-    // This avoids passing all tokens to every line
-    // Use cached line offset map for O(1) lookups
     const lineTokensMap = useMemo(() => {
       const lineOffsets = buildLineOffsetMap(content);
       const map = new Map<number, Token[]>();
@@ -123,9 +109,7 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
           tokenIndex++;
         }
 
-        // Reset tokenIndex for next line if we went past
         if (lineTokens.length > 0) {
-          // Find where to start for next line
           while (tokenIndex > 0 && sortedTokens[tokenIndex - 1].end > lineEnd) {
             tokenIndex--;
           }
@@ -137,8 +121,6 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       return map;
     }, [lines, sortedTokens, content]);
 
-    // Render lines with their specific tokens
-    // Use cached line offset map for O(1) lookups
     const renderedLines = useMemo(() => {
       const lineOffsets = buildLineOffsetMap(content);
       return lines.map((line, i) => {
@@ -176,31 +158,12 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
 
 HighlightLayerComponent.displayName = "HighlightLayer";
 
-// Wrap with memo to prevent unnecessary re-renders during typing
 export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
-  // Return true to SKIP re-render when props haven't changed meaningfully
-
-  // Always re-render if content changed significantly (different number of lines)
-  // This ensures proper sync when switching buffers or opening new files
-  const prevLineCount = prev.content.split("\n").length;
-  const nextLineCount = next.content.split("\n").length;
-  if (prevLineCount !== nextLineCount) {
-    return false; // Force re-render
+  if (prev.content !== next.content) {
+    return false;
   }
 
-  // Always re-render if content length changed significantly (>10% difference)
-  // This catches major edits like paste, cut, or buffer switches
-  const prevLength = prev.content.length;
-  const nextLength = next.content.length;
-  const lengthDiff = Math.abs(nextLength - prevLength);
-  const lengthChangePercent = prevLength > 0 ? lengthDiff / prevLength : lengthDiff > 0 ? 1 : 0;
-  if (lengthChangePercent > 0.1) {
-    return false; // Force re-render
-  }
-
-  // Check if tokens actually changed (with safe null/undefined handling)
   if (!prev.tokens || !next.tokens) {
-    // If either is null/undefined, only skip if both are
     return (
       !prev.tokens &&
       !next.tokens &&
@@ -210,18 +173,14 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
     );
   }
 
-  // Both tokens arrays exist
   const tokensUnchanged =
-    prev.tokens === next.tokens || // Same reference (fast path)
+    prev.tokens === next.tokens ||
     (prev.tokens.length === next.tokens.length &&
-      (prev.tokens.length === 0 || // Both empty
+      (prev.tokens.length === 0 ||
         (prev.tokens[0]?.start === next.tokens[0]?.start &&
           prev.tokens[prev.tokens.length - 1]?.end === next.tokens[prev.tokens.length - 1]?.end)));
 
-  // Always re-render when content changes to show text immediately
-  // Tokens can be stale temporarily - that's fine, text must be visible
   const shouldSkipRender =
-    prev.content === next.content &&
     tokensUnchanged &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&

@@ -153,7 +153,7 @@ main() {
     install_project_deps
     verify_basic
 
-    print_success "🎉 Setup complete!"
+    print_success "Setup complete!"
     print_status "To start development:"
     echo -e "  ${GREEN}source ~/.zshrc${NC}     - Reload shell environment"
     echo -e "  ${GREEN}bun run tauri dev${NC}   - Start development server"

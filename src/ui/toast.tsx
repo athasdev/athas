@@ -1,6 +1,5 @@
 import { CircleAlert, CircleCheck, CircleQuestionMark, CircleX, X } from "lucide-react";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { cn } from "@/utils/cn";
 
 export const ToastContainer = () => {
   const { toasts, dismissToast } = useToast();
@@ -10,11 +9,7 @@ export const ToastContainer = () => {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={cn(
-            "relative flex min-w-[280px] max-w-[380px] flex-col gap-2",
-            toast.isExiting ? "animate-slide-out-right" : "animate-slide-in-right",
-            "rounded border border-border bg-primary-bg/95 px-3 py-2 shadow-lg backdrop-blur-sm",
-          )}
+          className="relative flex min-w-[280px] max-w-[380px] flex-col gap-2 rounded border border-border bg-primary-bg/95 px-3 py-2 shadow-lg backdrop-blur-sm"
         >
           <div className="flex items-start gap-2">
             {toast.type === "error" && (

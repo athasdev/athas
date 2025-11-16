@@ -1,36 +1,3 @@
-// Language mapping for Prism.js
-export const mapLanguage = (lang: string): string => {
-  const langMap: { [key: string]: string } = {
-    js: "javascript",
-    ts: "typescript",
-    py: "python",
-    rb: "ruby",
-    sh: "bash",
-    shell: "bash",
-    cs: "csharp",
-    kt: "kotlin",
-    rs: "rust",
-    cpp: "cpp",
-    cc: "cpp",
-    "c++": "cpp",
-    cxx: "cpp",
-    hpp: "cpp",
-    h: "c",
-    yml: "yaml",
-    dockerfile: "docker",
-    tf: "hcl",
-    hcl: "hcl",
-    vue: "markup",
-    svelte: "markup",
-    html: "markup",
-    xml: "markup",
-    jsx: "jsx",
-    tsx: "tsx",
-  };
-
-  return langMap[lang.toLowerCase()] || lang.toLowerCase();
-};
-
 // Get relative time string
 export const getRelativeTime = (date: Date): string => {
   if (!date || !(date instanceof Date) || Number.isNaN(date.getTime())) {

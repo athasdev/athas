@@ -1,7 +1,7 @@
 import type { Diagnostic as LSPDiagnostic } from "vscode-languageserver-protocol";
 import { create } from "zustand";
 import { createSelectors } from "@/utils/zustand-selectors";
-import type { Diagnostic } from "./diagnostics-pane";
+import type { Diagnostic } from "../diagnostics-pane";
 
 interface DiagnosticsState {
   // Map of file path to diagnostics

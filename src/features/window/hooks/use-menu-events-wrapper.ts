@@ -112,7 +112,7 @@ export function useMenuEventsWrapper() {
     },
     onToggleVim: () => {
       // For now, we'll show a notification about vim mode
-      console.log("Toggle Vim mode - would enable/disable vim keybindings");
+      console.log("Toggle Vim keybindings");
       alert(
         "Vim mode is coming soon!\n\nThis will enable vim-style keybindings in the editor for power users.",
       );

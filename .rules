@@ -3,6 +3,9 @@
 - Commits should have the first character uppercased
 - Do not prefix unused variables with an underscore, delete them instead
 - Do not use emojis in commit messages, logs, or documentation
+- Comments should explain "why", not "what" - code should be self-documenting
+- Never reference other editors or companies in comments
+- Avoid file header comments unless they provide essential context
 
 ## Zustand
 
@@ -28,18 +31,9 @@ This project uses a standardized styling approach with clear guidelines on when 
 ### Primary Approach: Tailwind Utilities
 
 - Tailwind CSS is the **primary styling method** for 90% of components
-- Use utility classes directly in component JSX
-- Use the `cn()` utility (from `src/utils/cn.ts`) for conditional classes
+- Use utility classes directly in component TSX
 - **Never use `@apply`** directive
 - Use `size-*` instead of `w-* h-*` where possible (e.g. `size-6` instead of `w-6 h-6`)
-
-Example:
-```tsx
-<div className={cn("flex items-center gap-2", isActive && "bg-selected")}>
-  <Icon className="size-4" />
-  <span className="text-sm text-light">Label</span>
-</div>
-```
 
 ### CSS Variables for Theming
 

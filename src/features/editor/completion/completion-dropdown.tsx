@@ -10,7 +10,7 @@ import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { getAccurateCursorX } from "@/features/editor/utils/position";
 import { cn } from "@/utils/cn";
 import { highlightMatches } from "@/utils/fuzzy-matcher";
-import { useOverlayManager } from "../components/overlays/overlay-manager";
+import { useOverlayManager } from "../hooks/use-overlay-manager";
 
 interface CompletionDropdownProps {
   onApplyCompletion?: (completion: CompletionItem) => void;

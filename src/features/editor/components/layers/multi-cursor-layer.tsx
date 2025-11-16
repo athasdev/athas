@@ -5,7 +5,7 @@
  */
 
 import { memo, useMemo } from "react";
-import type { Cursor } from "../types/editor";
+import type { Cursor } from "../../types/editor";
 
 interface MultiCursorLayerProps {
   cursors: Cursor[];

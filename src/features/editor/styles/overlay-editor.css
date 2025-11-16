@@ -55,7 +55,6 @@
   tab-size: inherit;
 
   /* Performance optimizations */
-  will-change: contents;
   contain: layout style paint;
   transform: translateZ(0);
 }

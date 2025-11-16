@@ -235,7 +235,9 @@ export default function Breadcrumb() {
           {isMarkdownFile() && (
             <button
               onClick={handlePreviewClick}
-              className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              className={`flex h-5 w-5 items-center justify-center rounded transition-colors hover:bg-hover hover:text-text ${
+                isMarkdownPreview ? "bg-hover text-accent" : "text-text-lighter"
+              }`}
               title="Toggle markdown preview"
             >
               <Eye size={12} />

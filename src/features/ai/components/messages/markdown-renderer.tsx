@@ -1,34 +1,9 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
-import Prism from "prismjs";
 import type React from "react";
 import { useState } from "react";
-import { mapLanguage } from "@/features/ai/lib/formatting";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat";
-import { cn } from "@/utils/cn";
-
-// Import common language components
-import "prismjs/components/prism-bash";
-import "prismjs/components/prism-c";
-import "prismjs/components/prism-cpp";
-import "prismjs/components/prism-csharp";
-import "prismjs/components/prism-css";
-import "prismjs/components/prism-go";
-import "prismjs/components/prism-java";
-import "prismjs/components/prism-javascript";
-import "prismjs/components/prism-json";
-import "prismjs/components/prism-jsx";
-import "prismjs/components/prism-markdown";
-import "prismjs/components/prism-php";
-import "prismjs/components/prism-python";
-import "prismjs/components/prism-ruby";
-import "prismjs/components/prism-rust";
-import "prismjs/components/prism-scss";
-import "prismjs/components/prism-shell-session";
-import "prismjs/components/prism-sql";
-import "prismjs/components/prism-toml";
-import "prismjs/components/prism-tsx";
-import "prismjs/components/prism-typescript";
-import "prismjs/components/prism-yaml";
+import { normalizeLanguage } from "@/features/editor/markdown/language-map";
+import { highlightCode } from "@/features/editor/markdown/prism-languages";
 
 // Error Block Component
 function ErrorBlock({ errorData }: { errorData: string }) {
@@ -115,18 +90,10 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
         const code = lines.slice(1, -1).join("\n");
 
         // Get the mapped language for Prism
-        const prismLanguage = mapLanguage(language);
+        const prismLanguage = normalizeLanguage(language);
 
         // Highlight the code if the language is supported
-        let highlightedCode = code;
-        if (language && Prism.languages[prismLanguage]) {
-          try {
-            highlightedCode = Prism.highlight(code, Prism.languages[prismLanguage], prismLanguage);
-          } catch {
-            // Fallback to plain text if highlighting fails
-            highlightedCode = code;
-          }
-        }
+        const highlightedCode = language ? highlightCode(code, prismLanguage) : code;
 
         return (
           <div key={index} className="group relative my-2">
@@ -136,11 +103,7 @@ export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRende
                 {onApplyCode && code.trim() && (
                   <button
                     onClick={() => onApplyCode(code)}
-                    className={cn(
-                      "whitespace-nowrap rounded border border-border bg-primary-bg",
-                      "ui-font px-2 py-1 text-text text-xs",
-                      "opacity-0 transition-colors hover:bg-hover group-hover:opacity-100",
-                    )}
+                    className="ui-font whitespace-nowrap rounded border border-border bg-primary-bg px-2 py-1 text-text text-xs opacity-0 transition-colors hover:bg-hover group-hover:opacity-100"
                     title="Apply this code to current buffer"
                   >
                     Apply

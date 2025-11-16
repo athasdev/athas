@@ -117,7 +117,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     },
     {
       id: "toggle-vim-mode",
-      label: settings.vimMode ? "Vim: Disable Vim Mode" : "Vim: Enable Vim Mode",
+      label: settings.vimMode ? "Vim: Disable Vim Mode" : "Vim: Enable Vim keybindings",
       description: settings.vimMode ? "Switch to normal editing mode" : "Enable Vim keybindings",
       icon: <Terminal size={14} />,
       category: "Vim",

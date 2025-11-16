@@ -1,9 +1,7 @@
 import { useZoomStore } from "../../../stores/zoom-store";
-import { cn } from "../../../utils/cn";
 
 export function ZoomIndicator() {
   const showZoomIndicator = useZoomStore.use.showZoomIndicator();
-  //const { getZoomPercentage } = useZoomStore.use.actions();
   const windowZoomLevel = useZoomStore.use.windowZoomLevel();
   const terminalZoomLevel = useZoomStore.use.terminalZoomLevel();
 
@@ -11,29 +9,12 @@ export function ZoomIndicator() {
     return `${Math.round(zoomLevel * 100)}%`;
   }
 
-  // const zoomPercentage = useMemo(() => {
-  //   return `${Math.round(zoomLevel * 100)}%`;
-  // }, [zoomLevel]);
-
   if (!showZoomIndicator) {
     return null;
   }
 
   return (
-    <div
-      className={cn(
-        "fixed top-4 right-4 z-50",
-        "bg-black/80 text-white",
-        "rounded px-2 py-1",
-        "ui-font text-xs",
-        "backdrop-blur-sm",
-        "fade-in-0 animate-in duration-200",
-        "fade-out-0 animate-out",
-      )}
-      style={{
-        animationFillMode: "forwards",
-      }}
-    >
+    <div className="fade-in-0 fade-out-0 fixed top-4 right-4 z-50 animate-in animate-out rounded bg-black/80 px-2 py-1 text-white text-xs backdrop-blur-sm duration-200">
       Window: {getZoomPercentage(windowZoomLevel)}% Terminal: {getZoomPercentage(terminalZoomLevel)}
       %
     </div>

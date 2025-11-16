@@ -21,6 +21,7 @@ interface InputLayerProps {
   tabSize: number;
   onScroll?: (e: React.UIEvent<HTMLTextAreaElement>) => void;
   bufferId?: string;
+  showText?: boolean; // Show visible text (for plain text mode without syntax highlighting)
 }
 
 const InputLayerComponent = forwardRef<HTMLTextAreaElement, InputLayerProps>(
@@ -40,6 +41,7 @@ const InputLayerComponent = forwardRef<HTMLTextAreaElement, InputLayerProps>(
       tabSize,
       onScroll,
       bufferId,
+      showText = false,
     },
     ref,
   ) => {
@@ -78,6 +80,8 @@ const InputLayerComponent = forwardRef<HTMLTextAreaElement, InputLayerProps>(
           fontFamily,
           lineHeight: `${lineHeight}px`,
           tabSize,
+          // Show visible text for plain text mode (no syntax highlighting)
+          ...(showText && { color: "var(--text, #d4d4d4)" }),
         }}
         spellCheck={false}
         autoCapitalize="off"
@@ -102,6 +106,7 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
     prev.tabSize === next.tabSize &&
+    prev.showText === next.showText &&
     prev.onInput === next.onInput &&
     prev.onKeyDown === next.onKeyDown &&
     prev.onScroll === next.onScroll &&
