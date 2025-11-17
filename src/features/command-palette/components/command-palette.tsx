@@ -79,7 +79,7 @@ const CommandPalette = () => {
   const { showToast } = useToast();
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+  const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const {
     closeBuffer,
     setActiveBuffer,
