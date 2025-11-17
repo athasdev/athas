@@ -12,7 +12,7 @@ import type { GitDiff } from "@/features/version-control/git/types/git";
 import { useSessionStore } from "@/stores/session-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
-interface Buffer {
+export interface Buffer {
   id: string;
   path: string;
   name: string;
@@ -23,10 +23,13 @@ interface Buffer {
   isImage: boolean;
   isSQLite: boolean;
   isDiff: boolean;
+  isMarkdownPreview: boolean;
   isActive: boolean;
   language?: string; // File language for syntax highlighting and formatting
   // For diff buffers, store the parsed diff data (single or multi-file)
   diffData?: GitDiff | MultiFileDiff;
+  // For markdown preview buffers, store the source file path
+  sourceFilePath?: string;
   // Cached syntax highlighting tokens
   tokens: {
     start: number;
@@ -67,6 +70,8 @@ interface BufferActions {
     isDiff?: boolean,
     isVirtual?: boolean,
     diffData?: GitDiff | MultiFileDiff,
+    isMarkdownPreview?: boolean,
+    sourceFilePath?: string,
   ) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
@@ -119,9 +124,9 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
 
     if (!rootFolderPath) return;
 
-    // Only save real files, not virtual/diff/image/sqlite buffers
+    // Only save real files, not virtual/diff/image/sqlite/markdown preview buffers
     const persistableBuffers = buffers
-      .filter((b) => !b.isVirtual && !b.isDiff && !b.isImage && !b.isSQLite)
+      .filter((b) => !b.isVirtual && !b.isDiff && !b.isImage && !b.isSQLite && !b.isMarkdownPreview)
       .map((b) => ({
         path: b.path,
         name: b.name,
@@ -135,7 +140,8 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
       !activeBuffer.isVirtual &&
       !activeBuffer.isDiff &&
       !activeBuffer.isImage &&
-      !activeBuffer.isSQLite
+      !activeBuffer.isSQLite &&
+      !activeBuffer.isMarkdownPreview
         ? activeBuffer.path
         : null;
 
@@ -161,6 +167,8 @@ export const useBufferStore = createSelectors(
           isDiff = false,
           isVirtual = false,
           diffData?: GitDiff | MultiFileDiff,
+          isMarkdownPreview = false,
+          sourceFilePath?: string,
         ) => {
           const { buffers, maxOpenTabs } = get();
 
@@ -196,9 +204,11 @@ export const useBufferStore = createSelectors(
             isImage,
             isSQLite,
             isDiff,
+            isMarkdownPreview,
             isActive: true,
             language: detectLanguageFromFileName(name),
             diffData,
+            sourceFilePath,
             tokens: [],
           };
 
@@ -207,8 +217,8 @@ export const useBufferStore = createSelectors(
             state.activeBufferId = newBuffer.id;
           });
 
-          // Track in recent files (only for real files, not virtual/diff buffers)
-          if (!isVirtual && !isDiff && !isImage && !isSQLite) {
+          // Track in recent files (only for real files, not virtual/diff/markdown preview buffers)
+          if (!isVirtual && !isDiff && !isImage && !isSQLite && !isMarkdownPreview) {
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
 
             // Check if extension is available and start LSP or prompt installation
@@ -308,12 +318,13 @@ export const useBufferStore = createSelectors(
 
           const closedBuffer = buffers[bufferIndex];
 
-          // Stop LSP for this file (only for real files, not virtual/diff/image/sqlite)
+          // Stop LSP for this file (only for real files, not virtual/diff/image/sqlite/markdown preview)
           if (
             !closedBuffer.isVirtual &&
             !closedBuffer.isDiff &&
             !closedBuffer.isImage &&
-            !closedBuffer.isSQLite
+            !closedBuffer.isSQLite &&
+            !closedBuffer.isMarkdownPreview
           ) {
             // Stop LSP for this file in background (don't block buffer closing)
             import("@/features/editor/lsp/lsp-client")
@@ -611,7 +622,13 @@ export const useBufferStore = createSelectors(
 
         reloadBufferFromDisk: async (bufferId: string): Promise<void> => {
           const buffer = get().buffers.find((b) => b.id === bufferId);
-          if (!buffer || buffer.isVirtual || buffer.isImage || buffer.isSQLite) {
+          if (
+            !buffer ||
+            buffer.isVirtual ||
+            buffer.isImage ||
+            buffer.isSQLite ||
+            buffer.isMarkdownPreview
+          ) {
             return;
           }
 

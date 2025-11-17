@@ -13,7 +13,6 @@ import { useAppStore } from "@/stores/app-store";
 import { useZoomStore } from "@/stores/zoom-store";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import { MarkdownPreview } from "../markdown/markdown-preview";
-import { isMarkdownFile } from "../utils/lines";
 import { Editor } from "./editor";
 import { EditorStylesheet } from "./stylesheet";
 import Breadcrumb from "./toolbar/breadcrumb";
@@ -41,7 +40,6 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const { setRefs, setContent, setFileInfo } = useEditorStateStore.use.actions();
   // No longer need to sync content - editor-view-store computes from buffer
   const { setDisabled } = useEditorSettingsStore.use.actions();
-  const isMarkdownPreview = useEditorSettingsStore.use.isMarkdownPreview();
 
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
@@ -61,8 +59,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const filePath = activeBuffer?.path || "";
   const onChange = activeBuffer ? handleContentChange : () => {};
 
-  const showMarkdownPreview =
-    activeBuffer && isMarkdownFile(activeBuffer.path) && isMarkdownPreview;
+  const showMarkdownPreview = activeBuffer?.isMarkdownPreview || false;
 
   // Initialize refs in store
   useEffect(() => {

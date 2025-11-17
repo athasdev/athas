@@ -1,10 +1,9 @@
-import { ArrowLeft, ChevronRight, Eye, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronRight, Search, Sparkles } from "lucide-react";
 import { type RefObject, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { logger } from "@/features/editor/utils/logger";
 import FileIcon from "@/features/file-explorer/views/file.icon";
@@ -28,8 +27,6 @@ export default function Breadcrumb() {
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { rootFolderPath, handleFileSelect } = useFileSystemStore();
   const { isFindVisible, setIsFindVisible } = useUIState();
-  const isMarkdownPreview = useEditorSettingsStore.use.isMarkdownPreview();
-  const { setIsMarkdownPreview } = useEditorSettingsStore.use.actions();
   const { toggle: toggleInlineEditToolbar } = useInlineEditToolbarStore.use.actions();
   const selection = useEditorStateStore.use.selection?.();
 
@@ -45,21 +42,11 @@ export default function Breadcrumb() {
     setIsFindVisible(!isFindVisible);
   };
 
-  const handlePreviewClick = () => {
-    setIsMarkdownPreview(!isMarkdownPreview);
-  };
-
   const handleInlineEditClick = () => {
     toggleInlineEditToolbar();
   };
 
   const hasSelection = selection && selection.start.offset !== selection.end.offset;
-
-  const isMarkdownFile = () => {
-    if (!activeBuffer) return false;
-    const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
-    return extension === "md" || extension === "markdown";
-  };
 
   const filePath = activeBuffer?.path || "";
   const rootPath = rootFolderPath;
@@ -232,17 +219,6 @@ export default function Breadcrumb() {
           ))}
         </div>
         <div className="flex items-center gap-1">
-          {isMarkdownFile() && (
-            <button
-              onClick={handlePreviewClick}
-              className={`flex h-5 w-5 items-center justify-center rounded transition-colors hover:bg-hover hover:text-text ${
-                isMarkdownPreview ? "bg-hover text-accent" : "text-text-lighter"
-              }`}
-              title="Toggle markdown preview"
-            >
-              <Eye size={12} />
-            </button>
-          )}
           <button
             onClick={handleInlineEditClick}
             disabled={!hasSelection}
