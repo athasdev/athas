@@ -47,6 +47,9 @@ interface Settings {
   formatter: string;
   autoCompletion: boolean;
   parameterHints: boolean;
+  // External Editor
+  externalEditor: "none" | "nvim" | "helix" | "vim" | "nano" | "emacs" | "custom";
+  customEditorCommand: string;
   // Features
   coreFeatures: CoreFeaturesState;
   // Advanced
@@ -103,6 +106,9 @@ const defaultSettings: Settings = {
   formatter: "prettier",
   autoCompletion: true,
   parameterHints: true,
+  // External Editor
+  externalEditor: "none",
+  customEditorCommand: "",
   // Features
   coreFeatures: {
     git: true,

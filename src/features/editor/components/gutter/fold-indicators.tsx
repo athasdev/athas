@@ -27,18 +27,6 @@ function FoldIndicatorsComponent({
   const foldsByFile = useFoldStore((state) => state.foldsByFile);
   const foldActions = useFoldStore.use.actions();
 
-  const foldState = useMemo(() => {
-    if (!filePath) return { foldable: new Set<number>(), collapsed: new Set<number>() };
-
-    const fileState = foldsByFile.get(filePath);
-    if (!fileState) return { foldable: new Set<number>(), collapsed: new Set<number>() };
-
-    const foldable = new Set<number>();
-    fileState.regions.forEach((r) => foldable.add(r.startLine));
-
-    return { foldable, collapsed: fileState.collapsedLines };
-  }, [filePath, foldsByFile]);
-
   const handleFoldClick = useCallback(
     (lineNumber: number) => {
       if (!filePath) return;
@@ -48,20 +36,30 @@ function FoldIndicatorsComponent({
   );
 
   const indicators = useMemo(() => {
-    const result = [];
-    for (let i = startLine; i < endLine; i++) {
-      const actualLineNumber = foldMapping?.virtualToActual.get(i) ?? i;
-      const isFoldable = foldState.foldable.has(actualLineNumber);
-      const isCollapsed = foldState.collapsed.has(actualLineNumber);
+    if (!filePath) return [];
 
-      if (isFoldable) {
+    const fileState = foldsByFile.get(filePath);
+    if (!fileState) return [];
+
+    const result = [];
+
+    for (const region of fileState.regions) {
+      let virtualLine = region.startLine;
+      if (foldMapping) {
+        const mapped = foldMapping.virtualToActual.get(region.startLine);
+        if (mapped !== undefined) virtualLine = mapped;
+      }
+
+      if (virtualLine >= startLine && virtualLine < endLine) {
+        const isCollapsed = fileState.collapsedLines.has(region.startLine);
+
         result.push(
           <button
-            key={i}
+            key={region.startLine}
             type="button"
             style={{
               position: "absolute",
-              top: `${i * lineHeight + GUTTER_PADDING}px`,
+              top: `${virtualLine * lineHeight + GUTTER_PADDING}px`,
               left: 0,
               right: 0,
               height: `${lineHeight}px`,
@@ -78,7 +76,7 @@ function FoldIndicatorsComponent({
               border: "none",
               padding: 0,
             }}
-            onClick={() => handleFoldClick(actualLineNumber)}
+            onClick={() => handleFoldClick(region.startLine)}
             aria-label={isCollapsed ? "Expand fold" : "Collapse fold"}
             aria-expanded={!isCollapsed}
           >
@@ -87,8 +85,18 @@ function FoldIndicatorsComponent({
         );
       }
     }
+
     return result;
-  }, [startLine, endLine, foldState, lineHeight, fontSize, handleFoldClick, foldMapping]);
+  }, [
+    filePath,
+    foldsByFile,
+    startLine,
+    endLine,
+    lineHeight,
+    fontSize,
+    handleFoldClick,
+    foldMapping,
+  ]);
 
   return (
     <div

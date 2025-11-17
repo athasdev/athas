@@ -15,75 +15,52 @@ const GUTTER_PADDING = 8;
 function DiagnosticIndicatorsComponent({
   filePath,
   lineHeight,
-  fontSize,
-  fontFamily,
   startLine,
   endLine,
 }: DiagnosticIndicatorsProps) {
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
 
-  const fileDiagnostics = useMemo(() => {
-    if (!filePath) return { errors: new Set<number>(), warnings: new Set<number>() };
+  const indicators = useMemo(() => {
+    if (!filePath) return [];
 
     const diagnostics = diagnosticsByFile.get(filePath) || [];
-    const errors = new Set<number>();
-    const warnings = new Set<number>();
-
-    diagnostics.forEach((diag) => {
-      if (diag.severity === "error") {
-        errors.add(diag.line);
-      } else if (diag.severity === "warning") {
-        warnings.add(diag.line);
-      }
-    });
-
-    return { errors, warnings };
-  }, [filePath, diagnosticsByFile]);
-
-  const indicators = useMemo(() => {
     const result = [];
 
-    for (let i = startLine; i < endLine; i++) {
-      const isError = fileDiagnostics.errors.has(i);
-      const isWarning = fileDiagnostics.warnings.has(i);
+    for (const diag of diagnostics) {
+      if (diag.line >= startLine && diag.line < endLine) {
+        const isError = diag.severity === "error";
+        const icon = isError ? "●" : "▲";
+        const color = isError ? "var(--error, #f85149)" : "var(--warning, #d29922)";
 
-      const icon = isError ? "●" : isWarning ? "▲" : " ";
-      const color = isError
-        ? "var(--error, #f85149)"
-        : isWarning
-          ? "var(--warning, #d29922)"
-          : "transparent";
-
-      result.push(
-        <div
-          key={i}
-          style={{
-            position: "absolute",
-            top: `${i * lineHeight + GUTTER_PADDING}px`,
-            left: 0,
-            right: 0,
-            height: `${lineHeight}px`,
-            lineHeight: `${lineHeight}px`,
-            color,
-            textAlign: "center",
-            userSelect: "none",
-          }}
-        >
-          {icon}
-        </div>,
-      );
+        result.push(
+          <div
+            key={`${diag.line}-${diag.message}`}
+            style={{
+              position: "absolute",
+              top: `${diag.line * lineHeight + GUTTER_PADDING}px`,
+              left: 0,
+              right: 0,
+              height: `${lineHeight}px`,
+              lineHeight: `${lineHeight}px`,
+              color,
+              textAlign: "center",
+              userSelect: "none",
+            }}
+          >
+            {icon}
+          </div>,
+        );
+      }
     }
 
     return result;
-  }, [startLine, endLine, fileDiagnostics, lineHeight]);
+  }, [filePath, diagnosticsByFile, startLine, endLine, lineHeight]);
 
   return (
     <div
       style={{
         position: "relative",
         width: "16px",
-        fontSize: `${fontSize}px`,
-        fontFamily,
       }}
     >
       {indicators}

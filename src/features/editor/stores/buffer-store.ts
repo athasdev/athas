@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
@@ -23,10 +24,13 @@ interface Buffer {
   isImage: boolean;
   isSQLite: boolean;
   isDiff: boolean;
+  isExternalEditor: boolean;
   isActive: boolean;
   language?: string; // File language for syntax highlighting and formatting
   // For diff buffers, store the parsed diff data (single or multi-file)
   diffData?: GitDiff | MultiFileDiff;
+  // For external editor buffers, store the terminal connection ID
+  terminalConnectionId?: string;
   // Cached syntax highlighting tokens
   tokens: {
     start: number;
@@ -68,6 +72,7 @@ interface BufferActions {
     isVirtual?: boolean,
     diffData?: GitDiff | MultiFileDiff,
   ) => string;
+  openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
   closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
@@ -119,9 +124,9 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
 
     if (!rootFolderPath) return;
 
-    // Only save real files, not virtual/diff/image/sqlite buffers
+    // Only save real files, not virtual/diff/image/sqlite/external editor buffers
     const persistableBuffers = buffers
-      .filter((b) => !b.isVirtual && !b.isDiff && !b.isImage && !b.isSQLite)
+      .filter((b) => !b.isVirtual && !b.isDiff && !b.isImage && !b.isSQLite && !b.isExternalEditor)
       .map((b) => ({
         path: b.path,
         name: b.name,
@@ -135,7 +140,8 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
       !activeBuffer.isVirtual &&
       !activeBuffer.isDiff &&
       !activeBuffer.isImage &&
-      !activeBuffer.isSQLite
+      !activeBuffer.isSQLite &&
+      !activeBuffer.isExternalEditor
         ? activeBuffer.path
         : null;
 
@@ -196,6 +202,7 @@ export const useBufferStore = createSelectors(
             isImage,
             isSQLite,
             isDiff,
+            isExternalEditor: false,
             isActive: true,
             language: detectLanguageFromFileName(name),
             diffData,
@@ -280,6 +287,70 @@ export const useBufferStore = createSelectors(
           return newBuffer.id;
         },
 
+        openExternalEditorBuffer: (
+          path: string,
+          name: string,
+          terminalConnectionId: string,
+        ): string => {
+          const { buffers } = get();
+
+          // Check if already open
+          const existing = buffers.find((b) => b.path === path);
+          if (existing) {
+            set((state) => {
+              state.activeBufferId = existing.id;
+              state.buffers = state.buffers.map((b) => ({
+                ...b,
+                isActive: b.id === existing.id,
+              }));
+            });
+            return existing.id;
+          }
+
+          // Close any existing external editor buffer (single instance only)
+          const existingExternalEditor = buffers.find((b) => b.isExternalEditor);
+          let newBuffers = [...buffers];
+          if (existingExternalEditor) {
+            // Close the old terminal connection
+            if (existingExternalEditor.terminalConnectionId) {
+              invoke("close_terminal", { id: existingExternalEditor.terminalConnectionId }).catch(
+                (e) => {
+                  logger.error("BufferStore", "Failed to close old external editor terminal:", e);
+                },
+              );
+            }
+            newBuffers = newBuffers.filter((b) => b.id !== existingExternalEditor.id);
+          }
+
+          const newBuffer: Buffer = {
+            id: generateBufferId(path),
+            path,
+            name,
+            content: "", // External editor buffers don't have content
+            isDirty: false,
+            isVirtual: false,
+            isPinned: false,
+            isImage: false,
+            isSQLite: false,
+            isDiff: false,
+            isExternalEditor: true,
+            isActive: true,
+            language: detectLanguageFromFileName(name),
+            terminalConnectionId,
+            tokens: [],
+          };
+
+          set((state) => {
+            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+            state.activeBufferId = newBuffer.id;
+          });
+
+          // Save session
+          saveSessionToStore(get().buffers, get().activeBufferId);
+
+          return newBuffer.id;
+        },
+
         closeBuffer: (bufferId: string) => {
           const buffer = get().buffers.find((b) => b.id === bufferId);
 
@@ -308,12 +379,20 @@ export const useBufferStore = createSelectors(
 
           const closedBuffer = buffers[bufferIndex];
 
-          // Stop LSP for this file (only for real files, not virtual/diff/image/sqlite)
+          // Close terminal connection for external editor buffers
+          if (closedBuffer.isExternalEditor && closedBuffer.terminalConnectionId) {
+            invoke("close_terminal", { id: closedBuffer.terminalConnectionId }).catch((e) => {
+              logger.error("BufferStore", "Failed to close external editor terminal:", e);
+            });
+          }
+
+          // Stop LSP for this file (only for real files, not virtual/diff/image/sqlite/external editor)
           if (
             !closedBuffer.isVirtual &&
             !closedBuffer.isDiff &&
             !closedBuffer.isImage &&
-            !closedBuffer.isSQLite
+            !closedBuffer.isSQLite &&
+            !closedBuffer.isExternalEditor
           ) {
             // Stop LSP for this file in background (don't block buffer closing)
             import("@/features/editor/lsp/lsp-client")

@@ -14,114 +14,145 @@ const GUTTER_PADDING = 8;
 
 function GitIndicatorsComponent({
   lineHeight,
-  fontSize,
-  fontFamily,
   onIndicatorClick,
   startLine,
   endLine,
 }: GitIndicatorsProps) {
-  const decorationsArray = useEditorDecorationsStore((state) =>
-    Array.from(state.decorations.values()),
-  );
+  const decorations = useEditorDecorationsStore((state) => state.decorations);
 
   const gitDecorations = useMemo(() => {
-    const added = new Set<number>();
-    const modified = new Set<number>();
-    const deleted = new Set<number>();
+    const added = new Map<number, true>();
+    const modified = new Map<number, true>();
+    const deleted = new Map<number, true>();
 
-    decorationsArray.forEach((decoration) => {
+    decorations.forEach((decoration) => {
       if (decoration.type === "gutter") {
         const lineNum = decoration.range.start.line;
-        if (decoration.className?.includes("added")) {
-          added.add(lineNum);
-        } else if (decoration.className?.includes("modified")) {
-          modified.add(lineNum);
-        } else if (decoration.className?.includes("deleted")) {
-          deleted.add(lineNum);
+        if (lineNum >= startLine && lineNum < endLine) {
+          if (decoration.className?.includes("added")) {
+            added.set(lineNum, true);
+          } else if (decoration.className?.includes("modified")) {
+            modified.set(lineNum, true);
+          } else if (decoration.className?.includes("deleted")) {
+            deleted.set(lineNum, true);
+          }
         }
       }
     });
 
     return { added, modified, deleted };
-  }, [decorationsArray]);
+  }, [decorations, startLine, endLine]);
 
   const indicators = useMemo(() => {
-    const result = [];
-    for (let i = startLine; i < endLine; i++) {
-      const isAdded = gitDecorations.added.has(i);
-      const isModified = gitDecorations.modified.has(i);
-      const isDeleted = gitDecorations.deleted.has(i);
-      const hasChange = isAdded || isModified || isDeleted;
+    const result: React.ReactNode[] = [];
 
-      const getColor = () => {
-        if (isAdded) return "var(--git-added, #2ea043)";
-        if (isModified) return "var(--git-modified, #0078d4)";
-        if (isDeleted) return "var(--git-deleted, #f85149)";
-        return "transparent";
-      };
+    const getColor = (type: "added" | "modified" | "deleted") => {
+      if (type === "added") return "var(--git-added, #2ea043)";
+      if (type === "modified") return "var(--git-modified, #0078d4)";
+      return "var(--git-deleted, #f85149)";
+    };
 
-      const getType = (): "added" | "modified" | "deleted" | null => {
-        if (isAdded) return "added";
-        if (isModified) return "modified";
-        if (isDeleted) return "deleted";
-        return null;
-      };
-
+    gitDecorations.added.forEach((_, lineNum) => {
       result.push(
         <div
-          key={i}
+          key={`a${lineNum}`}
           style={{
             position: "absolute",
-            top: `${i * lineHeight + GUTTER_PADDING}px`,
+            top: `${lineNum * lineHeight + GUTTER_PADDING}px`,
             left: 0,
             right: 0,
             height: `${lineHeight}px`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            cursor: hasChange ? "pointer" : "default",
+            cursor: "pointer",
             userSelect: "none",
-            transition: "opacity 0.15s",
           }}
-          onClick={() => {
-            const type = getType();
-            if (type && onIndicatorClick) {
-              onIndicatorClick(i, type);
-            }
-          }}
-          onMouseEnter={(e) => {
-            if (hasChange) {
-              e.currentTarget.style.opacity = "0.8";
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = "1";
-          }}
-          title={hasChange ? `Click to see ${getType()} changes` : undefined}
+          onClick={() => onIndicatorClick?.(lineNum, "added")}
+          title="Click to see added changes"
         >
-          {hasChange && (
-            <div
-              style={{
-                width: "3px",
-                height: "100%",
-                backgroundColor: getColor(),
-                borderRadius: "1px",
-              }}
-            />
-          )}
+          <div
+            style={{
+              width: "3px",
+              height: "100%",
+              backgroundColor: getColor("added"),
+              borderRadius: "1px",
+            }}
+          />
         </div>,
       );
-    }
+    });
+
+    gitDecorations.modified.forEach((_, lineNum) => {
+      result.push(
+        <div
+          key={`m${lineNum}`}
+          style={{
+            position: "absolute",
+            top: `${lineNum * lineHeight + GUTTER_PADDING}px`,
+            left: 0,
+            right: 0,
+            height: `${lineHeight}px`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            userSelect: "none",
+          }}
+          onClick={() => onIndicatorClick?.(lineNum, "modified")}
+          title="Click to see modified changes"
+        >
+          <div
+            style={{
+              width: "3px",
+              height: "100%",
+              backgroundColor: getColor("modified"),
+              borderRadius: "1px",
+            }}
+          />
+        </div>,
+      );
+    });
+
+    gitDecorations.deleted.forEach((_, lineNum) => {
+      result.push(
+        <div
+          key={`d${lineNum}`}
+          style={{
+            position: "absolute",
+            top: `${lineNum * lineHeight + GUTTER_PADDING}px`,
+            left: 0,
+            right: 0,
+            height: `${lineHeight}px`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            userSelect: "none",
+          }}
+          onClick={() => onIndicatorClick?.(lineNum, "deleted")}
+          title="Click to see deleted changes"
+        >
+          <div
+            style={{
+              width: "3px",
+              height: "100%",
+              backgroundColor: getColor("deleted"),
+              borderRadius: "1px",
+            }}
+          />
+        </div>,
+      );
+    });
+
     return result;
-  }, [startLine, endLine, gitDecorations, lineHeight, onIndicatorClick]);
+  }, [gitDecorations, lineHeight, onIndicatorClick]);
 
   return (
     <div
       style={{
         position: "relative",
         width: "12px",
-        fontSize: `${fontSize}px`,
-        fontFamily,
       }}
     >
       {indicators}

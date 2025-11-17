@@ -25,6 +25,7 @@ interface GutterProps {
 
 const BUFFER_LINES = 20;
 const GUTTER_PADDING = 8;
+const VIEWPORT_UPDATE_THRESHOLD = 10;
 
 function GutterComponent({
   totalLines,
@@ -38,7 +39,9 @@ function GutterComponent({
   foldMapping,
 }: GutterProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scrollTop, setScrollTop] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const scrollTopRef = useRef(0);
+  const [viewportRange, setViewportRange] = useState({ startLine: 0, endLine: 50 });
   const [containerHeight, setContainerHeight] = useState(0);
 
   const totalWidth = calculateTotalGutterWidth(totalLines);
@@ -47,10 +50,38 @@ function GutterComponent({
   useEffect(() => {
     const textarea = textareaRef.current;
     const container = containerRef.current;
-    if (!textarea || !container) return;
+    const content = contentRef.current;
+    if (!textarea || !container || !content) return;
+
+    let rafId: number | null = null;
+
+    const updateViewport = (scrollTop: number) => {
+      const startLine = Math.max(0, Math.floor(scrollTop / lineHeight) - BUFFER_LINES);
+      const visibleLines = Math.ceil(containerHeight / lineHeight);
+      const endLine = Math.min(
+        totalLines,
+        Math.floor(scrollTop / lineHeight) + visibleLines + BUFFER_LINES,
+      );
+
+      const startDiff = Math.abs(startLine - viewportRange.startLine);
+      const endDiff = Math.abs(endLine - viewportRange.endLine);
+
+      if (startDiff > VIEWPORT_UPDATE_THRESHOLD || endDiff > VIEWPORT_UPDATE_THRESHOLD) {
+        setViewportRange({ startLine, endLine });
+      }
+    };
 
     const syncScroll = () => {
-      setScrollTop(textarea.scrollTop);
+      const scrollTop = textarea.scrollTop;
+      scrollTopRef.current = scrollTop;
+      content.style.transform = `translateY(-${scrollTop}px)`;
+
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          updateViewport(scrollTopRef.current);
+          rafId = null;
+        });
+      }
     };
 
     const updateHeight = () => {
@@ -59,26 +90,37 @@ function GutterComponent({
 
     syncScroll();
     updateHeight();
+    updateViewport(textarea.scrollTop);
 
-    textarea.addEventListener("scroll", syncScroll);
+    textarea.addEventListener("scroll", syncScroll, { passive: true });
     const resizeObserver = new ResizeObserver(updateHeight);
     resizeObserver.observe(container);
 
     return () => {
       textarea.removeEventListener("scroll", syncScroll);
       resizeObserver.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [textareaRef, totalLines]);
+  }, [
+    textareaRef,
+    totalLines,
+    lineHeight,
+    containerHeight,
+    viewportRange.startLine,
+    viewportRange.endLine,
+  ]);
 
-  const viewportRange = useMemo(() => {
-    const startLine = Math.max(0, Math.floor(scrollTop / lineHeight) - BUFFER_LINES);
+  const computedViewport = useMemo(() => {
     const visibleLines = Math.ceil(containerHeight / lineHeight);
     const endLine = Math.min(
       totalLines,
-      Math.floor(scrollTop / lineHeight) + visibleLines + BUFFER_LINES,
+      Math.floor(scrollTopRef.current / lineHeight) + visibleLines + BUFFER_LINES,
     );
-    return { startLine, endLine };
-  }, [scrollTop, containerHeight, lineHeight, totalLines]);
+    return {
+      startLine: viewportRange.startLine,
+      endLine: Math.max(viewportRange.endLine, endLine),
+    };
+  }, [viewportRange, containerHeight, lineHeight, totalLines]);
 
   return (
     <div
@@ -93,10 +135,10 @@ function GutterComponent({
       }}
     >
       <div
+        ref={contentRef}
         className="relative flex"
         style={{
           height: `${totalContentHeight}px`,
-          transform: `translateY(-${scrollTop}px)`,
           willChange: "transform",
         }}
       >
@@ -105,8 +147,8 @@ function GutterComponent({
           fontSize={fontSize}
           fontFamily={fontFamily}
           onIndicatorClick={onGitIndicatorClick}
-          startLine={viewportRange.startLine}
-          endLine={viewportRange.endLine}
+          startLine={computedViewport.startLine}
+          endLine={computedViewport.endLine}
         />
 
         <DiagnosticIndicators
@@ -114,8 +156,8 @@ function GutterComponent({
           lineHeight={lineHeight}
           fontSize={fontSize}
           fontFamily={fontFamily}
-          startLine={viewportRange.startLine}
-          endLine={viewportRange.endLine}
+          startLine={computedViewport.startLine}
+          endLine={computedViewport.endLine}
         />
 
         <LineNumbers
@@ -125,8 +167,8 @@ function GutterComponent({
           fontFamily={fontFamily}
           onLineClick={onLineClick}
           foldMapping={foldMapping}
-          startLine={viewportRange.startLine}
-          endLine={viewportRange.endLine}
+          startLine={computedViewport.startLine}
+          endLine={computedViewport.endLine}
         />
 
         <FoldIndicators
@@ -134,8 +176,8 @@ function GutterComponent({
           lineHeight={lineHeight}
           fontSize={fontSize}
           foldMapping={foldMapping}
-          startLine={viewportRange.startLine}
-          endLine={viewportRange.endLine}
+          startLine={computedViewport.startLine}
+          endLine={computedViewport.endLine}
         />
       </div>
     </div>
