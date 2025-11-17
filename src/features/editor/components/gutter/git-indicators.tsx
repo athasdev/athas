@@ -2,19 +2,23 @@ import { memo, useMemo } from "react";
 import { useEditorDecorationsStore } from "../../stores/decorations-store";
 
 interface GitIndicatorsProps {
-  totalLines: number;
   lineHeight: number;
   fontSize: number;
   fontFamily: string;
   onIndicatorClick?: (lineNumber: number, type: "added" | "modified" | "deleted") => void;
+  startLine: number;
+  endLine: number;
 }
 
+const GUTTER_PADDING = 8;
+
 function GitIndicatorsComponent({
-  totalLines,
   lineHeight,
   fontSize,
   fontFamily,
   onIndicatorClick,
+  startLine,
+  endLine,
 }: GitIndicatorsProps) {
   const decorationsArray = useEditorDecorationsStore((state) =>
     Array.from(state.decorations.values()),
@@ -43,7 +47,7 @@ function GitIndicatorsComponent({
 
   const indicators = useMemo(() => {
     const result = [];
-    for (let i = 0; i < totalLines; i++) {
+    for (let i = startLine; i < endLine; i++) {
       const isAdded = gitDecorations.added.has(i);
       const isModified = gitDecorations.modified.has(i);
       const isDeleted = gitDecorations.deleted.has(i);
@@ -54,13 +58,6 @@ function GitIndicatorsComponent({
         if (isModified) return "var(--git-modified, #0078d4)";
         if (isDeleted) return "var(--git-deleted, #f85149)";
         return "transparent";
-      };
-
-      const getChar = () => {
-        if (isAdded) return "█";
-        if (isModified) return "█";
-        if (isDeleted) return "▼";
-        return " ";
       };
 
       const getType = (): "added" | "modified" | "deleted" | null => {
@@ -74,12 +71,16 @@ function GitIndicatorsComponent({
         <div
           key={i}
           style={{
+            position: "absolute",
+            top: `${i * lineHeight + GUTTER_PADDING}px`,
+            left: 0,
+            right: 0,
             height: `${lineHeight}px`,
-            lineHeight: `${lineHeight}px`,
-            color: getColor(),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             cursor: hasChange ? "pointer" : "default",
             userSelect: "none",
-            textAlign: "center",
             transition: "opacity 0.15s",
           }}
           onClick={() => {
@@ -98,25 +99,29 @@ function GitIndicatorsComponent({
           }}
           title={hasChange ? `Click to see ${getType()} changes` : undefined}
         >
-          {getChar()}
+          {hasChange && (
+            <div
+              style={{
+                width: "3px",
+                height: "100%",
+                backgroundColor: getColor(),
+                borderRadius: "1px",
+              }}
+            />
+          )}
         </div>,
       );
     }
     return result;
-  }, [totalLines, gitDecorations, lineHeight, onIndicatorClick]);
+  }, [startLine, endLine, gitDecorations, lineHeight, onIndicatorClick]);
 
   return (
     <div
       style={{
+        position: "relative",
         width: "12px",
-        height: "100%",
-        overflowY: "hidden",
-        overflowX: "hidden",
         fontSize: `${fontSize}px`,
         fontFamily,
-        lineHeight: `${lineHeight}px`,
-        padding: "0.5rem 0",
-        whiteSpace: "pre",
       }}
     >
       {indicators}

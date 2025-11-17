@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { calculateTotalGutterWidth } from "../../utils/gutter";
 import { DiagnosticIndicators } from "./diagnostic-indicators";
 import { FoldIndicators } from "./fold-indicators";
@@ -23,6 +23,9 @@ interface GutterProps {
   foldMapping?: LineMapping;
 }
 
+const BUFFER_LINES = 20;
+const GUTTER_PADDING = 8;
+
 function GutterComponent({
   totalLines,
   fontSize,
@@ -35,23 +38,47 @@ function GutterComponent({
   foldMapping,
 }: GutterProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [scrollOffset, setScrollOffset] = useState(0);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
 
   const totalWidth = calculateTotalGutterWidth(totalLines);
+  const totalContentHeight = totalLines * lineHeight + GUTTER_PADDING * 2;
 
   useEffect(() => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    const container = containerRef.current;
+    if (!textarea || !container) return;
 
     const syncScroll = () => {
-      setScrollOffset(textarea.scrollTop);
+      setScrollTop(textarea.scrollTop);
+    };
+
+    const updateHeight = () => {
+      setContainerHeight(container.clientHeight);
     };
 
     syncScroll();
+    updateHeight();
+
     textarea.addEventListener("scroll", syncScroll);
-    return () => textarea.removeEventListener("scroll", syncScroll);
-  }, [textareaRef]);
+    const resizeObserver = new ResizeObserver(updateHeight);
+    resizeObserver.observe(container);
+
+    return () => {
+      textarea.removeEventListener("scroll", syncScroll);
+      resizeObserver.disconnect();
+    };
+  }, [textareaRef, totalLines]);
+
+  const viewportRange = useMemo(() => {
+    const startLine = Math.max(0, Math.floor(scrollTop / lineHeight) - BUFFER_LINES);
+    const visibleLines = Math.ceil(containerHeight / lineHeight);
+    const endLine = Math.min(
+      totalLines,
+      Math.floor(scrollTop / lineHeight) + visibleLines + BUFFER_LINES,
+    );
+    return { startLine, endLine };
+  }, [scrollTop, containerHeight, lineHeight, totalLines]);
 
   return (
     <div
@@ -66,27 +93,29 @@ function GutterComponent({
       }}
     >
       <div
-        ref={contentRef}
-        className="flex"
+        className="relative flex"
         style={{
-          transform: `translateY(-${scrollOffset}px)`,
+          height: `${totalContentHeight}px`,
+          transform: `translateY(-${scrollTop}px)`,
           willChange: "transform",
         }}
       >
         <GitIndicators
-          totalLines={totalLines}
           lineHeight={lineHeight}
           fontSize={fontSize}
           fontFamily={fontFamily}
           onIndicatorClick={onGitIndicatorClick}
+          startLine={viewportRange.startLine}
+          endLine={viewportRange.endLine}
         />
 
         <DiagnosticIndicators
           filePath={filePath}
-          totalLines={totalLines}
           lineHeight={lineHeight}
           fontSize={fontSize}
           fontFamily={fontFamily}
+          startLine={viewportRange.startLine}
+          endLine={viewportRange.endLine}
         />
 
         <LineNumbers
@@ -96,14 +125,17 @@ function GutterComponent({
           fontFamily={fontFamily}
           onLineClick={onLineClick}
           foldMapping={foldMapping}
+          startLine={viewportRange.startLine}
+          endLine={viewportRange.endLine}
         />
 
         <FoldIndicators
           filePath={filePath}
-          totalLines={totalLines}
           lineHeight={lineHeight}
           fontSize={fontSize}
           foldMapping={foldMapping}
+          startLine={viewportRange.startLine}
+          endLine={viewportRange.endLine}
         />
       </div>
     </div>
@@ -117,7 +149,6 @@ export const Gutter = memo(GutterComponent, (prev, next) => {
     prev.totalLines === next.totalLines &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
-    prev.lineHeight === next.lineHeight &&
-    prev.textareaRef === next.textareaRef
+    prev.lineHeight === next.lineHeight
   );
 });

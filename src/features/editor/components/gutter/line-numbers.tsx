@@ -13,7 +13,11 @@ interface LineNumbersProps {
   fontFamily: string;
   onLineClick?: (lineNumber: number) => void;
   foldMapping?: LineMapping;
+  startLine: number;
+  endLine: number;
 }
+
+const GUTTER_PADDING = 8;
 
 function LineNumbersComponent({
   totalLines,
@@ -22,13 +26,15 @@ function LineNumbersComponent({
   fontFamily,
   onLineClick,
   foldMapping,
+  startLine,
+  endLine,
 }: LineNumbersProps) {
   const activeLine = useEditorStateStore.use.cursorPosition().line;
   const lineNumberWidth = calculateLineNumberWidth(totalLines);
 
   const lineNumbers = useMemo(() => {
     const result = [];
-    for (let i = 0; i < totalLines; i++) {
+    for (let i = startLine; i < endLine; i++) {
       const actualLineNumber = foldMapping?.virtualToActual.get(i) ?? i;
       const isActive = actualLineNumber === activeLine;
 
@@ -36,6 +42,10 @@ function LineNumbersComponent({
         <div
           key={i}
           style={{
+            position: "absolute",
+            top: `${i * lineHeight + GUTTER_PADDING}px`,
+            left: 0,
+            right: 0,
             height: `${lineHeight}px`,
             lineHeight: `${lineHeight}px`,
             textAlign: "right",
@@ -56,19 +66,15 @@ function LineNumbersComponent({
       );
     }
     return result;
-  }, [totalLines, activeLine, lineHeight, onLineClick, foldMapping]);
+  }, [startLine, endLine, activeLine, lineHeight, onLineClick, foldMapping]);
 
   return (
     <div
       style={{
+        position: "relative",
         width: `${lineNumberWidth}px`,
-        height: "100%",
-        overflowY: "hidden",
-        overflowX: "hidden",
         fontSize: `${fontSize}px`,
         fontFamily,
-        lineHeight: `${lineHeight}px`,
-        padding: "0.5rem 0",
       }}
     >
       {lineNumbers}

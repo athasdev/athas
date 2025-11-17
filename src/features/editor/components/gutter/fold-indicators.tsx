@@ -7,18 +7,22 @@ interface LineMapping {
 
 interface FoldIndicatorsProps {
   filePath?: string;
-  totalLines: number;
   lineHeight: number;
   fontSize: number;
   foldMapping?: LineMapping;
+  startLine: number;
+  endLine: number;
 }
+
+const GUTTER_PADDING = 8;
 
 function FoldIndicatorsComponent({
   filePath,
-  totalLines,
   lineHeight,
   fontSize,
   foldMapping,
+  startLine,
+  endLine,
 }: FoldIndicatorsProps) {
   const foldsByFile = useFoldStore((state) => state.foldsByFile);
   const foldActions = useFoldStore.use.actions();
@@ -45,7 +49,7 @@ function FoldIndicatorsComponent({
 
   const indicators = useMemo(() => {
     const result = [];
-    for (let i = 0; i < totalLines; i++) {
+    for (let i = startLine; i < endLine; i++) {
       const actualLineNumber = foldMapping?.virtualToActual.get(i) ?? i;
       const isFoldable = foldState.foldable.has(actualLineNumber);
       const isCollapsed = foldState.collapsed.has(actualLineNumber);
@@ -56,9 +60,12 @@ function FoldIndicatorsComponent({
             key={i}
             type="button"
             style={{
+              position: "absolute",
+              top: `${i * lineHeight + GUTTER_PADDING}px`,
+              left: 0,
+              right: 0,
               height: `${lineHeight}px`,
               lineHeight: `${lineHeight}px`,
-              width: "100%",
               textAlign: "center",
               cursor: "pointer",
               color: isCollapsed
@@ -70,7 +77,6 @@ function FoldIndicatorsComponent({
               background: "none",
               border: "none",
               padding: 0,
-              display: "block",
             }}
             onClick={() => handleFoldClick(actualLineNumber)}
             aria-label={isCollapsed ? "Expand fold" : "Collapse fold"}
@@ -79,36 +85,16 @@ function FoldIndicatorsComponent({
             {isCollapsed ? "›" : "⌄"}
           </button>,
         );
-      } else {
-        result.push(
-          <div
-            key={i}
-            style={{
-              height: `${lineHeight}px`,
-              lineHeight: `${lineHeight}px`,
-              textAlign: "center",
-              color: "transparent",
-              opacity: 0,
-              fontSize: `${fontSize * 0.7}px`,
-              userSelect: "none",
-            }}
-          >
-            {" "}
-          </div>,
-        );
       }
     }
     return result;
-  }, [totalLines, foldState, lineHeight, fontSize, handleFoldClick, foldMapping]);
+  }, [startLine, endLine, foldState, lineHeight, fontSize, handleFoldClick, foldMapping]);
 
   return (
     <div
       style={{
+        position: "relative",
         width: "16px",
-        height: "100%",
-        overflowY: "hidden",
-        overflowX: "hidden",
-        padding: "0.5rem 0",
       }}
     >
       {indicators}
