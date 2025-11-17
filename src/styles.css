@@ -96,6 +96,7 @@
   --color-border: var(--border);
   --color-hover: var(--hover);
   --color-selected: var(--selected);
+  --color-selection-bg: var(--selection-bg);
 
   /* Accent color */
   --color-accent: var(--accent);
@@ -252,6 +253,7 @@ button {
     --border: #e0e0e0;
     --hover: #f0f0f0;
     --selected: #e8e8e8;
+    --selection-bg: rgba(173, 214, 255, 0.4);
 
     /* Accent color */
     --accent: #3b82f6;
@@ -316,6 +318,7 @@ button {
       --border: #404040;
       --hover: #333333;
       --selected: #404040;
+      --selection-bg: rgba(38, 79, 120, 0.6);
 
       /* Accent color - Dark */
       --accent: #60a5fa;

@@ -136,6 +136,7 @@ To add a new theme, create a JSON file in `src/extensions/themes/builtin/`:
 
 **Editor:**
 - `--cursor`, `--cursor-vim-normal`, `--cursor-vim-insert`
+- `--selection-bg`
 
 **Semantic Colors:**
 - `--error`, `--warning`, `--success`, `--info`

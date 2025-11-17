@@ -58,7 +58,7 @@ const MultiCursorLayerComponent = ({
             {/* Render selection if exists */}
             {cursor.selection && (
               <div
-                className="absolute bg-selected/50"
+                className="absolute bg-selection-bg"
                 style={{
                   top: `${cursor.selection.start.line * lineHeight}px`,
                   left: `${getCursorPosition(cursor.selection.start.line, cursor.selection.start.column).left}px`,

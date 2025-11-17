@@ -484,8 +484,10 @@ export function Editor({ className }: EditorProps) {
           const offset = cursorPosition.offset || 0;
           const maxOffset = inputRef.current.value.length;
           const safeOffset = Math.min(offset, maxOffset);
-          inputRef.current.selectionStart = safeOffset;
-          inputRef.current.selectionEnd = safeOffset;
+          if (inputRef.current.selectionStart === inputRef.current.selectionEnd) {
+            inputRef.current.selectionStart = safeOffset;
+            inputRef.current.selectionEnd = safeOffset;
+          }
           inputRef.current.focus();
         }
       }, 0);

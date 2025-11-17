@@ -73,12 +73,12 @@
 
 /* Selection styling for the input layer */
 .input-layer::selection {
-  background: var(--selected, rgba(255, 255, 255, 0.2));
+  background: var(--selection-bg, rgba(38, 79, 120, 0.6));
   color: var(--text, #d4d4d4);
 }
 
 .input-layer::-moz-selection {
-  background: var(--selected, rgba(255, 255, 255, 0.2));
+  background: var(--selection-bg, rgba(38, 79, 120, 0.6));
   color: var(--text, #d4d4d4);
 }
 
