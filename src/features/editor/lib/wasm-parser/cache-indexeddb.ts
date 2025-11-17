@@ -11,7 +11,8 @@ const STORE_NAME = "parsers";
 
 export interface ParserCacheEntry {
   languageId: string; // Primary key
-  wasmBlob: Blob; // Raw WASM bytes
+  wasmBlob: Blob; // Legacy: Raw WASM bytes as Blob (deprecated, use wasmData)
+  wasmData?: ArrayBuffer; // Raw WASM bytes as ArrayBuffer (preferred)
   highlightQuery: string; // Highlight query text
   version: string; // Parser version
   checksum: string; // SHA-256 hash

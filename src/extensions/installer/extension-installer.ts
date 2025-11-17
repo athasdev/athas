@@ -210,7 +210,8 @@ export class ExtensionInstaller {
       // Store in IndexedDB cache
       const cacheEntry: ParserCacheEntry = {
         languageId,
-        wasmBlob: new Blob([wasmData]),
+        wasmBlob: new Blob([wasmData]), // Legacy compatibility
+        wasmData: wasmData, // Preferred: ArrayBuffer avoids WebKit blob issues
         highlightQuery,
         version,
         checksum: checksum || (await this.calculateChecksum(wasmData)),

@@ -249,6 +249,25 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               // Create new Map reference to trigger React re-render
               state.availableExtensions = new Map(state.availableExtensions);
             });
+
+            // Trigger re-highlighting for open files that match this language
+            const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
+            const bufferState = useBufferStore.getState();
+            const activeBuffer = bufferState.buffers.find((b) => b.isActive);
+
+            if (activeBuffer && extension.manifest.languages) {
+              const fileExt = `.${activeBuffer.path.split(".").pop()?.toLowerCase()}`;
+              const matchesLanguage = extension.manifest.languages.some((lang) =>
+                lang.extensions.includes(fileExt),
+              );
+
+              if (matchesLanguage) {
+                const { setSyntaxHighlightingFilePath } = await import(
+                  "@/features/editor/extensions/builtin/syntax-highlighting"
+                );
+                setSyntaxHighlightingFilePath(activeBuffer.path);
+              }
+            }
           } else {
             // Non-language extension - use old download method
             await invoke("install_extension_from_url", {

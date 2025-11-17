@@ -58,6 +58,16 @@
   color: var(--syntax-punctuation, var(--text));
 }
 
+/* Tags (HTML/XML) */
+.token-tag {
+  color: var(--syntax-tag, #f07178);
+}
+
+/* Attributes */
+.token-attribute {
+  color: var(--syntax-attribute, #c792ea);
+}
+
 /* Default text */
 .token-text {
   color: var(--text);
