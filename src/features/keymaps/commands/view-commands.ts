@@ -3,6 +3,7 @@
  */
 
 import type { Command } from "../types";
+import { commandContext } from "./command-context";
 
 export const viewCommands: Command[] = [
   {
@@ -11,7 +12,10 @@ export const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+b",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const setIsSidebarVisible = commandContext.get("setIsSidebarVisible");
+      if (setIsSidebarVisible) {
+        setIsSidebarVisible((prev) => !prev);
+      }
     },
   },
   {
@@ -20,7 +24,19 @@ export const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+`",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const setIsBottomPaneVisible = commandContext.get("setIsBottomPaneVisible");
+      const setBottomPaneActiveTab = commandContext.get("setBottomPaneActiveTab");
+      const isBottomPaneVisible = commandContext.get("isBottomPaneVisible");
+      const bottomPaneActiveTab = commandContext.get("bottomPaneActiveTab");
+
+      if (setIsBottomPaneVisible && setBottomPaneActiveTab) {
+        if (isBottomPaneVisible && bottomPaneActiveTab === "terminal") {
+          setIsBottomPaneVisible(false);
+        } else {
+          setBottomPaneActiveTab("terminal");
+          setIsBottomPaneVisible(true);
+        }
+      }
     },
   },
   {
@@ -29,7 +45,19 @@ export const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+j",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const setIsBottomPaneVisible = commandContext.get("setIsBottomPaneVisible");
+      const setBottomPaneActiveTab = commandContext.get("setBottomPaneActiveTab");
+      const isBottomPaneVisible = commandContext.get("isBottomPaneVisible");
+      const bottomPaneActiveTab = commandContext.get("bottomPaneActiveTab");
+
+      if (setIsBottomPaneVisible && setBottomPaneActiveTab) {
+        if (isBottomPaneVisible && bottomPaneActiveTab === "diagnostics") {
+          setIsBottomPaneVisible(false);
+        } else {
+          setBottomPaneActiveTab("diagnostics");
+          setIsBottomPaneVisible(true);
+        }
+      }
     },
   },
   {
@@ -38,7 +66,10 @@ export const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+p",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const setIsCommandPaletteVisible = commandContext.get("setIsCommandPaletteVisible");
+      if (setIsCommandPaletteVisible) {
+        setIsCommandPaletteVisible((prev) => !prev);
+      }
     },
   },
   {
@@ -47,7 +78,10 @@ export const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+f",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const setIsFindVisible = commandContext.get("setIsFindVisible");
+      if (setIsFindVisible) {
+        setIsFindVisible((prev) => !prev);
+      }
     },
   },
   {
@@ -56,7 +90,10 @@ export const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+f",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const setIsGlobalSearchVisible = commandContext.get("setIsGlobalSearchVisible");
+      if (setIsGlobalSearchVisible) {
+        setIsGlobalSearchVisible((prev) => !prev);
+      }
     },
   },
   {
@@ -65,7 +102,17 @@ export const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+h",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const setIsSidebarVisible = commandContext.get("setIsSidebarVisible");
+      const setIsSearchViewActive = commandContext.get("setIsSearchViewActive");
+      const focusSearchInput = commandContext.get("focusSearchInput");
+
+      if (setIsSidebarVisible && setIsSearchViewActive && focusSearchInput) {
+        setIsSidebarVisible(true);
+        setIsSearchViewActive(true);
+        setTimeout(() => {
+          if (focusSearchInput) focusSearchInput();
+        }, 100);
+      }
     },
   },
   {
@@ -74,7 +121,10 @@ export const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+b",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const onToggleSidebarPosition = commandContext.get("onToggleSidebarPosition");
+      if (onToggleSidebarPosition) {
+        onToggleSidebarPosition();
+      }
     },
   },
   {
@@ -83,7 +133,10 @@ export const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+k cmd+t",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const setIsThemeSelectorVisible = commandContext.get("setIsThemeSelectorVisible");
+      if (setIsThemeSelectorVisible) {
+        setIsThemeSelectorVisible(true);
+      }
     },
   },
   {
@@ -92,7 +145,10 @@ export const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+=",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const zoomIn = commandContext.get("zoomIn");
+      if (zoomIn) {
+        zoomIn();
+      }
     },
   },
   {
@@ -101,7 +157,10 @@ export const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+-",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const zoomOut = commandContext.get("zoomOut");
+      if (zoomOut) {
+        zoomOut();
+      }
     },
   },
   {
@@ -110,7 +169,21 @@ export const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+0",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const resetZoom = commandContext.get("resetZoom");
+      if (resetZoom) {
+        resetZoom();
+      }
+    },
+  },
+  {
+    id: "workbench.openKeyboardShortcuts",
+    title: "Open Keyboard Shortcuts",
+    category: "View",
+    keybinding: "cmd+k cmd+s",
+    execute: async () => {
+      const { useUIState } = await import("@/stores/ui-state-store");
+      const { openSettingsDialog } = useUIState.getState();
+      openSettingsDialog("keyboard");
     },
   },
 ];

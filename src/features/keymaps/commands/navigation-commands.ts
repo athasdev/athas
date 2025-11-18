@@ -3,6 +3,7 @@
  */
 
 import type { Command } from "../types";
+import { commandContext } from "./command-context";
 
 export const navigationCommands: Command[] = [
   {
@@ -20,7 +21,10 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "ctrl+tab",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const switchToNextBuffer = commandContext.get("switchToNextBuffer");
+      if (switchToNextBuffer) {
+        switchToNextBuffer();
+      }
     },
   },
   {
@@ -29,7 +33,10 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "ctrl+shift+tab",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const switchToPreviousBuffer = commandContext.get("switchToPreviousBuffer");
+      if (switchToPreviousBuffer) {
+        switchToPreviousBuffer();
+      }
     },
   },
   {
@@ -38,7 +45,10 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "ctrl+pagedown",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const switchToNextBuffer = commandContext.get("switchToNextBuffer");
+      if (switchToNextBuffer) {
+        switchToNextBuffer();
+      }
     },
   },
   {
@@ -47,7 +57,10 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "ctrl+pageup",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const switchToPreviousBuffer = commandContext.get("switchToPreviousBuffer");
+      if (switchToPreviousBuffer) {
+        switchToPreviousBuffer();
+      }
     },
   },
   {
@@ -56,7 +69,11 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+1",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const buffers = commandContext.get("buffers");
+      const setActiveBuffer = commandContext.get("setActiveBuffer");
+      if (buffers && setActiveBuffer && buffers[0]) {
+        setActiveBuffer(buffers[0].id);
+      }
     },
   },
   {
@@ -65,7 +82,11 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+2",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const buffers = commandContext.get("buffers");
+      const setActiveBuffer = commandContext.get("setActiveBuffer");
+      if (buffers && setActiveBuffer && buffers[1]) {
+        setActiveBuffer(buffers[1].id);
+      }
     },
   },
   {
@@ -74,7 +95,11 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+3",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const buffers = commandContext.get("buffers");
+      const setActiveBuffer = commandContext.get("setActiveBuffer");
+      if (buffers && setActiveBuffer && buffers[2]) {
+        setActiveBuffer(buffers[2].id);
+      }
     },
   },
   {
@@ -83,7 +108,11 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+4",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const buffers = commandContext.get("buffers");
+      const setActiveBuffer = commandContext.get("setActiveBuffer");
+      if (buffers && setActiveBuffer && buffers[3]) {
+        setActiveBuffer(buffers[3].id);
+      }
     },
   },
   {
@@ -92,7 +121,11 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+5",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const buffers = commandContext.get("buffers");
+      const setActiveBuffer = commandContext.get("setActiveBuffer");
+      if (buffers && setActiveBuffer && buffers[4]) {
+        setActiveBuffer(buffers[4].id);
+      }
     },
   },
   {
@@ -101,7 +134,11 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+6",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const buffers = commandContext.get("buffers");
+      const setActiveBuffer = commandContext.get("setActiveBuffer");
+      if (buffers && setActiveBuffer && buffers[5]) {
+        setActiveBuffer(buffers[5].id);
+      }
     },
   },
   {
@@ -110,7 +147,11 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+7",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const buffers = commandContext.get("buffers");
+      const setActiveBuffer = commandContext.get("setActiveBuffer");
+      if (buffers && setActiveBuffer && buffers[6]) {
+        setActiveBuffer(buffers[6].id);
+      }
     },
   },
   {
@@ -119,7 +160,11 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+8",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const buffers = commandContext.get("buffers");
+      const setActiveBuffer = commandContext.get("setActiveBuffer");
+      if (buffers && setActiveBuffer && buffers[7]) {
+        setActiveBuffer(buffers[7].id);
+      }
     },
   },
   {
@@ -128,23 +173,111 @@ export const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: "cmd+9",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const buffers = commandContext.get("buffers");
+      const setActiveBuffer = commandContext.get("setActiveBuffer");
+      if (buffers && setActiveBuffer && buffers[8]) {
+        setActiveBuffer(buffers[8].id);
+      }
     },
   },
   {
     id: "editor.goToDefinition",
     title: "Go to Definition",
     category: "Navigation",
-    execute: () => {
-      // To be implemented with LSP
+    keybinding: "F12",
+    execute: async () => {
+      const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+      const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
+      const { useEditorStateStore } = await import("@/features/editor/stores/state-store");
+      const { readFileContent } = await import(
+        "@/features/file-system/controllers/file-operations"
+      );
+      const { editorAPI } = await import("@/features/editor/extensions/api");
+
+      const lspClient = LspClient.getInstance();
+      const bufferStore = useBufferStore.getState();
+      const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+      const cursorPosition = useEditorStateStore.getState().cursorPosition;
+
+      if (!activeBuffer?.path) {
+        console.warn("No active file to get definition");
+        return;
+      }
+
+      const definition = await lspClient.getDefinition(
+        activeBuffer.path,
+        cursorPosition.line,
+        cursorPosition.column,
+      );
+
+      if (definition && definition.length > 0) {
+        const target = definition[0];
+        const filePath = target.uri.replace("file://", "");
+
+        const existingBuffer = bufferStore.buffers.find((b) => b.path === filePath);
+
+        if (existingBuffer) {
+          bufferStore.actions.setActiveBuffer(existingBuffer.id);
+        } else {
+          try {
+            const content = await readFileContent(filePath);
+            const fileName = filePath.split("/").pop() || "untitled";
+            const bufferId = bufferStore.actions.openBuffer(filePath, fileName, content);
+            bufferStore.actions.setActiveBuffer(bufferId);
+          } catch (error) {
+            console.error("Failed to open file:", error);
+            return;
+          }
+        }
+
+        setTimeout(() => {
+          const lines = editorAPI.getLines();
+          let offset = 0;
+          for (let i = 0; i < target.range.start.line; i++) {
+            offset += lines[i].length + 1;
+          }
+          offset += target.range.start.character;
+
+          editorAPI.setCursorPosition({
+            line: target.range.start.line,
+            column: target.range.start.character,
+            offset,
+          });
+        }, 100);
+      }
     },
   },
   {
     id: "editor.goToReferences",
     title: "Go to References",
     category: "Navigation",
-    execute: () => {
-      // To be implemented with LSP
+    keybinding: "shift+F12",
+    execute: async () => {
+      const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+      const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
+      const { useEditorStateStore } = await import("@/features/editor/stores/state-store");
+
+      const lspClient = LspClient.getInstance();
+      const bufferStore = useBufferStore.getState();
+      const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+      const cursorPosition = useEditorStateStore.getState().cursorPosition;
+
+      if (!activeBuffer?.path) {
+        console.warn("No active file to get references");
+        return;
+      }
+
+      const references = await lspClient.getReferences(
+        activeBuffer.path,
+        cursorPosition.line,
+        cursorPosition.column,
+      );
+
+      if (references && references.length > 0) {
+        console.log(`Found ${references.length} references:`, references);
+      } else {
+        console.log("No references found");
+      }
     },
   },
 ];

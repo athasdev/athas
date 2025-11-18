@@ -52,7 +52,10 @@ export function matchKeybinding(
   const eventKey = eventToKey(event);
 
   if (!parsed.isChord) {
-    // Simple single-key binding
+    // Simple single-key binding - only match if not in chord mode
+    if (chordState && chordState.length > 0) {
+      return { matched: false };
+    }
     return { matched: keysMatch(eventKey, parsed.parts[0]) };
   }
 

@@ -3,6 +3,7 @@
  */
 
 import type { Command } from "../types";
+import { commandContext } from "./command-context";
 
 export const fileCommands: Command[] = [
   {
@@ -29,7 +30,11 @@ export const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+w",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const closeBuffer = commandContext.get("closeBuffer");
+      const activeBuffer = commandContext.get("activeBuffer");
+      if (closeBuffer && activeBuffer) {
+        closeBuffer(activeBuffer.id);
+      }
     },
   },
   {
@@ -45,8 +50,11 @@ export const fileCommands: Command[] = [
     title: "Reopen Closed Tab",
     category: "File",
     keybinding: "cmd+shift+t",
-    execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+    execute: async () => {
+      const reopenClosedTab = commandContext.get("reopenClosedTab");
+      if (reopenClosedTab) {
+        await reopenClosedTab();
+      }
     },
   },
   {
@@ -73,7 +81,10 @@ export const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+p",
     execute: () => {
-      // Handled by keyboard shortcuts hook - will migrate
+      const setIsCommandPaletteVisible = commandContext.get("setIsCommandPaletteVisible");
+      if (setIsCommandPaletteVisible) {
+        setIsCommandPaletteVisible(true);
+      }
     },
   },
 ];

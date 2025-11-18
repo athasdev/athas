@@ -223,6 +223,219 @@ class EditorAPIImpl implements EditorAPI {
     return this.getLines().length;
   }
 
+  duplicateLine(): void {
+    if (!this.textareaRef) return;
+
+    const content = this.getContent();
+    const selection = useEditorStateStore.getState().selection;
+    const selectionStart = this.textareaRef.selectionStart;
+
+    if (!selection || selection.start.offset === selection.end.offset) {
+      const lineStart = content.lastIndexOf("\n", selectionStart - 1) + 1;
+      const lineEnd = content.indexOf("\n", selectionStart);
+      const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
+      const lineContent = content.slice(lineStart, actualLineEnd);
+
+      const newContent = `${content.slice(0, actualLineEnd)}\n${lineContent}${content.slice(actualLineEnd)}`;
+      const newOffset = selectionStart + lineContent.length + 1;
+
+      this.textareaRef.value = newContent;
+      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
+
+      const inputEvent = new Event("input", { bubbles: true });
+      this.textareaRef.dispatchEvent(inputEvent);
+    }
+  }
+
+  deleteLine(): void {
+    if (!this.textareaRef) return;
+
+    const content = this.getContent();
+    const selection = useEditorStateStore.getState().selection;
+    const selectionStart = this.textareaRef.selectionStart;
+
+    if (!selection || selection.start.offset === selection.end.offset) {
+      const lineStart = content.lastIndexOf("\n", selectionStart - 1) + 1;
+      const lineEnd = content.indexOf("\n", selectionStart);
+      const actualLineEnd = lineEnd === -1 ? content.length : lineEnd + 1;
+
+      const newContent = content.slice(0, lineStart) + content.slice(actualLineEnd);
+
+      this.textareaRef.value = newContent;
+      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = lineStart;
+
+      const inputEvent = new Event("input", { bubbles: true });
+      this.textareaRef.dispatchEvent(inputEvent);
+    }
+  }
+
+  toggleComment(): void {
+    if (!this.textareaRef) return;
+
+    const content = this.getContent();
+    const selection = useEditorStateStore.getState().selection;
+    const selectionStart = this.textareaRef.selectionStart;
+
+    if (!selection || selection.start.offset === selection.end.offset) {
+      const lineStart = content.lastIndexOf("\n", selectionStart - 1) + 1;
+      const lineEnd = content.indexOf("\n", selectionStart);
+      const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
+      const lineContent = content.slice(lineStart, actualLineEnd);
+
+      const isCommented = lineContent.trim().startsWith("//");
+      const newLineContent = isCommented
+        ? lineContent.replace(/^\s*\/\/\s?/, (match) => match.slice(0, -2).slice(0, -1) || "")
+        : lineContent.replace(/^(\s*)/, "$1// ");
+
+      const newContent =
+        content.slice(0, lineStart) + newLineContent + content.slice(actualLineEnd);
+
+      this.textareaRef.value = newContent;
+      const inputEvent = new Event("input", { bubbles: true });
+      this.textareaRef.dispatchEvent(inputEvent);
+    }
+  }
+
+  moveLineUp(): void {
+    if (!this.textareaRef) return;
+
+    const lines = this.getLines();
+    const selection = useEditorStateStore.getState().selection;
+    const currentPosition = useEditorStateStore.getState().cursorPosition;
+
+    if (!selection || selection.start.offset === selection.end.offset) {
+      const currentLine = currentPosition.line;
+      const targetLine = currentLine - 1;
+
+      if (targetLine < 0) return;
+
+      const currentLineContent = lines[currentLine];
+      const targetLineContent = lines[targetLine];
+
+      const newLines = [...lines];
+      newLines[currentLine] = targetLineContent;
+      newLines[targetLine] = currentLineContent;
+
+      const newContent = newLines.join("\n");
+      const newCursorPosition = { ...currentPosition, line: targetLine };
+
+      let newOffset = 0;
+      for (let i = 0; i < newCursorPosition.line; i++) {
+        newOffset += newLines[i].length + 1;
+      }
+      newOffset += newCursorPosition.column;
+
+      this.textareaRef.value = newContent;
+      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
+
+      const inputEvent = new Event("input", { bubbles: true });
+      this.textareaRef.dispatchEvent(inputEvent);
+    }
+  }
+
+  moveLineDown(): void {
+    if (!this.textareaRef) return;
+
+    const lines = this.getLines();
+    const selection = useEditorStateStore.getState().selection;
+    const currentPosition = useEditorStateStore.getState().cursorPosition;
+
+    if (!selection || selection.start.offset === selection.end.offset) {
+      const currentLine = currentPosition.line;
+      const targetLine = currentLine + 1;
+
+      if (targetLine >= lines.length) return;
+
+      const currentLineContent = lines[currentLine];
+      const targetLineContent = lines[targetLine];
+
+      const newLines = [...lines];
+      newLines[currentLine] = targetLineContent;
+      newLines[targetLine] = currentLineContent;
+
+      const newContent = newLines.join("\n");
+      const newCursorPosition = { ...currentPosition, line: targetLine };
+
+      let newOffset = 0;
+      for (let i = 0; i < newCursorPosition.line; i++) {
+        newOffset += newLines[i].length + 1;
+      }
+      newOffset += newCursorPosition.column;
+
+      this.textareaRef.value = newContent;
+      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
+
+      const inputEvent = new Event("input", { bubbles: true });
+      this.textareaRef.dispatchEvent(inputEvent);
+    }
+  }
+
+  copyLineUp(): void {
+    if (!this.textareaRef) return;
+
+    const content = this.getContent();
+    const selection = useEditorStateStore.getState().selection;
+    const currentPosition = useEditorStateStore.getState().cursorPosition;
+    const selectionStart = this.textareaRef.selectionStart;
+
+    if (!selection || selection.start.offset === selection.end.offset) {
+      const currentLine = currentPosition.line;
+      const lineStart = content.lastIndexOf("\n", selectionStart - 1) + 1;
+      const lineEnd = content.indexOf("\n", selectionStart);
+      const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
+      const lineContent = content.slice(lineStart, actualLineEnd);
+
+      const newContent = `${content.slice(0, lineStart)}${lineContent}\n${lineContent}${content.slice(actualLineEnd)}`;
+      const newCursorLine = currentLine;
+
+      let newOffset = 0;
+      for (let i = 0; i < newCursorLine; i++) {
+        const lines = newContent.split("\n");
+        newOffset += lines[i].length + 1;
+      }
+      newOffset += currentPosition.column;
+
+      this.textareaRef.value = newContent;
+      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
+
+      const inputEvent = new Event("input", { bubbles: true });
+      this.textareaRef.dispatchEvent(inputEvent);
+    }
+  }
+
+  copyLineDown(): void {
+    if (!this.textareaRef) return;
+
+    const content = this.getContent();
+    const selection = useEditorStateStore.getState().selection;
+    const currentPosition = useEditorStateStore.getState().cursorPosition;
+    const selectionStart = this.textareaRef.selectionStart;
+
+    if (!selection || selection.start.offset === selection.end.offset) {
+      const currentLine = currentPosition.line;
+      const lineStart = content.lastIndexOf("\n", selectionStart - 1) + 1;
+      const lineEnd = content.indexOf("\n", selectionStart);
+      const actualLineEnd = lineEnd === -1 ? content.length : lineEnd;
+      const lineContent = content.slice(lineStart, actualLineEnd);
+
+      const newContent = `${content.slice(0, actualLineEnd)}\n${lineContent}${content.slice(actualLineEnd)}`;
+      const newCursorLine = currentLine + 1;
+
+      let newOffset = 0;
+      for (let i = 0; i < newCursorLine; i++) {
+        const lines = newContent.split("\n");
+        newOffset += lines[i].length + 1;
+      }
+      newOffset += currentPosition.column;
+
+      this.textareaRef.value = newContent;
+      this.textareaRef.selectionStart = this.textareaRef.selectionEnd = newOffset;
+
+      const inputEvent = new Event("input", { bubbles: true });
+      this.textareaRef.dispatchEvent(inputEvent);
+    }
+  }
+
   // History operations
   undo(): void {
     const bufferStore = useBufferStore.getState();

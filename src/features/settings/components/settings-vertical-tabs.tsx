@@ -60,7 +60,7 @@ const tabs: TabItem[] = [
   },
   {
     id: "keyboard",
-    label: "Keyboard",
+    label: "Keybindings",
     icon: Keyboard,
   },
   {

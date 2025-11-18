@@ -5,11 +5,8 @@ import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
 import Dropdown from "@/ui/dropdown";
-import KeybindingBadge from "@/ui/keybinding-badge";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
-
-const isMac = typeof navigator !== "undefined" && navigator.platform.includes("Mac");
 
 export const GeneralSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
@@ -109,28 +106,6 @@ export const GeneralSettings = () => {
             onChange={(checked) => updateSetting("mouseWheelZoom", checked)}
             size="sm"
           />
-        </SettingRow>
-      </Section>
-
-      <Section title="Quick Access">
-        <SettingRow label="Open Settings" description="Keyboard shortcut to open settings">
-          <KeybindingBadge keys={isMac ? ["⌘", ","] : ["Ctrl", ","]} />
-        </SettingRow>
-
-        <SettingRow label="Toggle Sidebar" description="Show or hide the sidebar">
-          <KeybindingBadge keys={isMac ? ["⌘", "B"] : ["Ctrl", "B"]} />
-        </SettingRow>
-
-        <SettingRow label="Zoom In" description="Increase zoom level">
-          <KeybindingBadge keys={isMac ? ["⌘", "+"] : ["Ctrl", "+"]} />
-        </SettingRow>
-
-        <SettingRow label="Zoom Out" description="Decrease zoom level">
-          <KeybindingBadge keys={isMac ? ["⌘", "-"] : ["Ctrl", "-"]} />
-        </SettingRow>
-
-        <SettingRow label="Reset Zoom" description="Reset zoom to 100%">
-          <KeybindingBadge keys={isMac ? ["⌘", "0"] : ["Ctrl", "0"]} />
         </SettingRow>
       </Section>
 

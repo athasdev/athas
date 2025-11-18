@@ -3,6 +3,8 @@ import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { enableMapSet } from "immer";
 import { useEffect } from "react";
+import { useKeymapContext } from "@/features/keymaps/hooks/use-keymap-context";
+import { useKeymaps } from "@/features/keymaps/hooks/use-keymaps";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
 import { useScroll } from "@/features/window/hooks/use-scroll";
 import { initializeIconThemes } from "./extensions/icon-themes/icon-theme-initializer";
@@ -33,6 +35,7 @@ import { useExtensionInstallPrompt } from "./extensions/hooks/use-extension-inst
 import { extensionLoader } from "./extensions/loader/extension-loader";
 import { initializeExtensionStore } from "./extensions/registry/extension-store";
 import { initializeWasmTokenizer } from "./features/editor/lib/wasm-parser";
+import { initializeKeymaps } from "./features/keymaps/init";
 
 // Initialize WASM tokenizer (required for parser infrastructure)
 initializeWasmTokenizer().catch(console.error);
@@ -41,6 +44,9 @@ extensionLoader.initialize().catch(console.error);
 
 // Initialize extension store (load available and installed extensions)
 initializeExtensionStore().catch(console.error);
+
+// Initialize keymaps system
+initializeKeymaps();
 
 function App() {
   enableMapSet();
@@ -74,6 +80,12 @@ function App() {
 
   // Extension installation prompts
   useExtensionInstallPrompt();
+
+  // Track keymap contexts (editor focus, vim mode, etc.)
+  useKeymapContext();
+
+  // Unified keyboard handler
+  useKeymaps();
 
   // Initialize file watcher
   useEffect(() => {

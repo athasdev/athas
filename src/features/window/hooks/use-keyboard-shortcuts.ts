@@ -2,6 +2,7 @@ import { exit } from "@tauri-apps/plugin-process";
 import React, { useEffect } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { isMac } from "@/features/file-system/controllers/platform";
+import { commandContext } from "@/features/keymaps/commands/command-context";
 import { useSettingsStore } from "@/features/settings/store";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import type { Buffer } from "@/features/tabs/types/buffer";
@@ -73,6 +74,57 @@ export const useKeyboardShortcuts = ({
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
 
   // const activeElement = useActiveElement();
+
+  // Wire up command context with callbacks
+  useEffect(() => {
+    commandContext.setCallbacks({
+      closeBuffer,
+      reopenClosedTab,
+      activeBuffer,
+      switchToNextBuffer,
+      switchToPreviousBuffer,
+      setActiveBuffer,
+      buffers,
+      setIsBottomPaneVisible,
+      setBottomPaneActiveTab,
+      setIsFindVisible,
+      setIsSidebarVisible,
+      setIsCommandPaletteVisible,
+      setIsGlobalSearchVisible,
+      setIsThemeSelectorVisible,
+      setIsSearchViewActive,
+      focusSearchInput,
+      onToggleSidebarPosition,
+      isBottomPaneVisible,
+      bottomPaneActiveTab,
+      zoomIn: () => zoomIn("window"),
+      zoomOut: () => zoomOut("window"),
+      resetZoom: () => resetZoom("window"),
+    });
+  }, [
+    closeBuffer,
+    reopenClosedTab,
+    activeBuffer,
+    switchToNextBuffer,
+    switchToPreviousBuffer,
+    setActiveBuffer,
+    buffers,
+    setIsBottomPaneVisible,
+    setBottomPaneActiveTab,
+    setIsFindVisible,
+    setIsSidebarVisible,
+    setIsCommandPaletteVisible,
+    setIsGlobalSearchVisible,
+    setIsThemeSelectorVisible,
+    setIsSearchViewActive,
+    focusSearchInput,
+    onToggleSidebarPosition,
+    isBottomPaneVisible,
+    bottomPaneActiveTab,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+  ]);
 
   // Track Cmd+K chord
   const [isAwaitingChord, setIsAwaitingChord] = React.useState(false);

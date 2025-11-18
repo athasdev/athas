@@ -81,7 +81,7 @@ export const editCommands: Command[] = [
     category: "Edit",
     keybinding: "cmd+d",
     execute: () => {
-      // Handled by keyboard-bindings.ts - will migrate
+      editorAPI.duplicateLine();
     },
   },
   {
@@ -90,7 +90,7 @@ export const editCommands: Command[] = [
     category: "Edit",
     keybinding: "cmd+shift+k",
     execute: () => {
-      // Handled by keyboard-bindings.ts - will migrate
+      editorAPI.deleteLine();
     },
   },
   {
@@ -99,7 +99,7 @@ export const editCommands: Command[] = [
     category: "Edit",
     keybinding: "cmd+/",
     execute: () => {
-      // Handled by keyboard-bindings.ts - will migrate
+      editorAPI.toggleComment();
     },
   },
   {
@@ -108,7 +108,7 @@ export const editCommands: Command[] = [
     category: "Edit",
     keybinding: "alt+up",
     execute: () => {
-      // Handled by keyboard-bindings.ts - will migrate
+      editorAPI.moveLineUp();
     },
   },
   {
@@ -117,7 +117,7 @@ export const editCommands: Command[] = [
     category: "Edit",
     keybinding: "alt+down",
     execute: () => {
-      // Handled by keyboard-bindings.ts - will migrate
+      editorAPI.moveLineDown();
     },
   },
   {
@@ -126,7 +126,7 @@ export const editCommands: Command[] = [
     category: "Edit",
     keybinding: "alt+shift+up",
     execute: () => {
-      // Handled by keyboard-bindings.ts - will migrate
+      editorAPI.copyLineUp();
     },
   },
   {
@@ -135,7 +135,7 @@ export const editCommands: Command[] = [
     category: "Edit",
     keybinding: "alt+shift+down",
     execute: () => {
-      // Handled by keyboard-bindings.ts - will migrate
+      editorAPI.copyLineDown();
     },
   },
   {
