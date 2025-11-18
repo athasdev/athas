@@ -326,6 +326,13 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
+      // Select All (Ctrl+A / Cmd+A)
+      if ((e.metaKey || e.ctrlKey) && e.key === "a" && !e.shiftKey) {
+        e.preventDefault();
+        editorAPI.selectAll();
+        return;
+      }
+
       // Close Tab (Ctrl+W / Cmd+W)
       if ((e.metaKey || e.ctrlKey) && e.key === "w" && !e.shiftKey) {
         e.preventDefault();

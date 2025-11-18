@@ -1,9 +1,13 @@
+import { EDITOR_CONSTANTS } from "../config/constants";
+
 export function splitLines(content: string): string[] {
   return content.split("\n");
 }
 
 export function calculateLineHeight(fontSize: number): number {
-  return Math.round(fontSize * 1.4);
+  // Use Math.ceil to match getLineHeight() in position.ts
+  // Fractional line-height causes subpixel misalignment between layers
+  return Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
 }
 
 export function calculateLineOffset(lines: string[], lineIndex: number): number {

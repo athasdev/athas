@@ -16,6 +16,10 @@ interface MultiCursorLayerProps {
   content: string;
 }
 
+// Padding must match textarea/highlight-layer CSS padding: 0.5rem 1rem
+const EDITOR_PADDING_TOP = 8; // 0.5rem in px
+const EDITOR_PADDING_LEFT = 16; // 1rem in px
+
 const MultiCursorLayerComponent = ({
   cursors,
   primaryCursorId,
@@ -27,8 +31,9 @@ const MultiCursorLayerComponent = ({
   const lines = useMemo(() => content.split("\n"), [content]);
 
   // Calculate pixel position for a cursor based on line/column
+  // Adds padding offset to match textarea/highlight layer positioning
   const getCursorPosition = (line: number, column: number): { top: number; left: number } => {
-    const top = line * lineHeight;
+    const top = line * lineHeight + EDITOR_PADDING_TOP;
 
     const lineText = lines[line] || "";
     const textBeforeCursor = lineText.substring(0, column);
@@ -38,10 +43,10 @@ const MultiCursorLayerComponent = ({
     if (context) {
       context.font = `${fontSize}px ${fontFamily}`;
       const width = context.measureText(textBeforeCursor).width;
-      return { top, left: width };
+      return { top, left: width + EDITOR_PADDING_LEFT };
     }
 
-    return { top, left: column * fontSize * 0.6 };
+    return { top, left: column * fontSize * 0.6 + EDITOR_PADDING_LEFT };
   };
 
   const secondaryCursors = cursors.filter((cursor) => cursor.id !== primaryCursorId);
@@ -60,7 +65,7 @@ const MultiCursorLayerComponent = ({
               <div
                 className="absolute bg-selection-bg"
                 style={{
-                  top: `${cursor.selection.start.line * lineHeight}px`,
+                  top: `${cursor.selection.start.line * lineHeight + EDITOR_PADDING_TOP}px`,
                   left: `${getCursorPosition(cursor.selection.start.line, cursor.selection.start.column).left}px`,
                   height: `${(cursor.selection.end.line - cursor.selection.start.line + 1) * lineHeight}px`,
                   width: `${getCursorPosition(cursor.selection.end.line, cursor.selection.end.column).left - getCursorPosition(cursor.selection.start.line, cursor.selection.start.column).left}px`,

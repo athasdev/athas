@@ -1,5 +1,5 @@
 import { forwardRef, memo, type ReactNode, useMemo } from "react";
-import { buildLineOffsetMap, type Token } from "../../utils/html";
+import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../../utils/html";
 
 interface HighlightLayerProps {
   content: string;
@@ -7,6 +7,7 @@ interface HighlightLayerProps {
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
+  tabSize?: number;
 }
 
 interface LineProps {
@@ -84,13 +85,16 @@ const Line = memo<LineProps>(
 Line.displayName = "HighlightLayerLine";
 
 const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
-  ({ content, tokens, fontSize, fontFamily, lineHeight }, ref) => {
-    const lines = useMemo(() => content.split("\n"), [content]);
+  ({ content, tokens, fontSize, fontFamily, lineHeight, tabSize = 2 }, ref) => {
+    // Normalize line endings first to ensure consistent rendering with textarea
+    const normalizedContent = useMemo(() => normalizeLineEndings(content), [content]);
+
+    const lines = useMemo(() => normalizedContent.split("\n"), [normalizedContent]);
 
     const sortedTokens = useMemo(() => [...tokens].sort((a, b) => a.start - b.start), [tokens]);
 
     const lineTokensMap = useMemo(() => {
-      const lineOffsets = buildLineOffsetMap(content);
+      const lineOffsets = buildLineOffsetMap(normalizedContent);
       const map = new Map<number, Token[]>();
       let tokenIndex = 0;
 
@@ -119,10 +123,10 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       }
 
       return map;
-    }, [lines, sortedTokens, content]);
+    }, [lines, sortedTokens, normalizedContent]);
 
     const renderedLines = useMemo(() => {
-      const lineOffsets = buildLineOffsetMap(content);
+      const lineOffsets = buildLineOffsetMap(normalizedContent);
       return lines.map((line, i) => {
         const lineTokens = lineTokensMap.get(i) || [];
         const lineStart = lineOffsets[i];
@@ -137,20 +141,22 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
           />
         );
       });
-    }, [lines, lineTokensMap, content]);
+    }, [lines, lineTokensMap, normalizedContent]);
 
     return (
       <div
-        ref={ref}
         className="highlight-layer"
         style={{
           fontSize: `${fontSize}px`,
           fontFamily,
           lineHeight: `${lineHeight}px`,
+          tabSize: tabSize,
         }}
         aria-hidden="true"
       >
-        {renderedLines}
+        <div ref={ref} className="highlight-layer-content">
+          {renderedLines}
+        </div>
       </div>
     );
   },
@@ -169,7 +175,8 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
       !next.tokens &&
       prev.fontSize === next.fontSize &&
       prev.fontFamily === next.fontFamily &&
-      prev.lineHeight === next.lineHeight
+      prev.lineHeight === next.lineHeight &&
+      prev.tabSize === next.tabSize
     );
   }
 
@@ -184,7 +191,8 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
     tokensUnchanged &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
-    prev.lineHeight === next.lineHeight;
+    prev.lineHeight === next.lineHeight &&
+    prev.tabSize === next.tabSize;
 
   return shouldSkipRender;
 });

@@ -84,6 +84,13 @@ function GutterComponent({
       }
     };
 
+    // Forward wheel events from gutter to textarea for consistent scrolling
+    const forwardWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      textarea.scrollTop += e.deltaY;
+      textarea.scrollLeft += e.deltaX;
+    };
+
     const updateHeight = () => {
       setContainerHeight(container.clientHeight);
     };
@@ -93,11 +100,13 @@ function GutterComponent({
     updateViewport(textarea.scrollTop);
 
     textarea.addEventListener("scroll", syncScroll, { passive: true });
+    container.addEventListener("wheel", forwardWheel, { passive: false });
     const resizeObserver = new ResizeObserver(updateHeight);
     resizeObserver.observe(container);
 
     return () => {
       textarea.removeEventListener("scroll", syncScroll);
+      container.removeEventListener("wheel", forwardWheel);
       resizeObserver.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };

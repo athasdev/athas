@@ -154,6 +154,14 @@ class EditorAPIImpl implements EditorAPI {
     }
   }
 
+  selectAll(): void {
+    if (!this.textareaRef) {
+      logger.warn("Editor", "Cannot select all: no textarea reference");
+      return;
+    }
+    this.textareaRef.select();
+  }
+
   // Internal method to update cursor and selection from external changes
   updateCursorAndSelection(cursor: Position, selection: Range | null): void {
     const cursorChanged =

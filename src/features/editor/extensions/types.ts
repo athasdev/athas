@@ -13,6 +13,7 @@ export interface EditorAPI {
   setSelection: (range: Range) => void;
   getCursorPosition: () => Position;
   setCursorPosition: (position: Position) => void;
+  selectAll: () => void;
 
   // Decoration operations
   addDecoration: (decoration: Decoration) => string;
