@@ -68,7 +68,7 @@ export default function Input({
     <div className={cn("relative", containerClassName)}>
       {LeftIcon && (
         <LeftIcon
-          className={cn("absolute top-1/2 -translate-y-1/2 text-text-lighter", iconPositions[size])}
+          className={cn("-translate-y-1/2 absolute top-1/2 text-text-lighter", iconPositions[size])}
           size={iconSizes[size]}
         />
       )}
@@ -88,7 +88,7 @@ export default function Input({
       {RightIcon && (
         <RightIcon
           className={cn(
-            "absolute top-1/2 -translate-y-1/2 text-text-lighter",
+            "-translate-y-1/2 absolute top-1/2 text-text-lighter",
             iconPositionsRight[size],
           )}
           size={iconSizes[size]}

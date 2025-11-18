@@ -65,7 +65,7 @@ export function KeybindingInput({
       {keys.length > 0 ? (
         <KeybindingBadge keys={keys} />
       ) : (
-        <span className="text-xs text-text-lighter">
+        <span className="text-text-lighter text-xs">
           {isRecording ? "Press keys..." : value || "Not assigned"}
         </span>
       )}
@@ -76,7 +76,7 @@ export function KeybindingInput({
             e.stopPropagation();
             handleCancel();
           }}
-          className="text-xs text-text-lighter hover:text-text"
+          className="text-text-lighter text-xs hover:text-text"
           aria-label="Cancel recording"
         >
           Esc to cancel

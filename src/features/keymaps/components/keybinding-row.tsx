@@ -69,14 +69,14 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
   return (
     <div
       className={cn(
-        "grid grid-cols-[2fr_200px_2fr_80px_100px] gap-4 border-b border-border p-2 hover:bg-hover",
+        "grid grid-cols-[2fr_200px_2fr_80px_100px] gap-4 border-border border-b p-2 hover:bg-hover",
         hasConflict && "bg-error/5",
       )}
     >
       {/* Command info */}
       <div className="flex flex-col">
-        <div className="text-xs text-text truncate">{command.title}</div>
-        <div className="text-[10px] text-text-lighter truncate">
+        <div className="truncate text-text text-xs">{command.title}</div>
+        <div className="truncate text-[10px] text-text-lighter">
           {command.category} • {command.id}
         </div>
       </div>
@@ -106,7 +106,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       </div>
 
       {/* When clause */}
-      <div className="flex items-center text-[10px] text-text-lighter truncate">
+      <div className="flex items-center truncate text-[10px] text-text-lighter">
         {keybinding?.when || command.keybinding ? keybinding?.when || "-" : "-"}
       </div>
 
@@ -114,7 +114,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       <div className="flex items-center">
         <span
           className={cn(
-            "px-2 py-0.5 rounded text-[10px]",
+            "rounded px-2 py-0.5 text-[10px]",
             isUserOverride ? "bg-accent/10 text-accent" : "text-text-lighter",
           )}
         >

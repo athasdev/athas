@@ -223,13 +223,10 @@ export const ExternalEditorTerminal = ({
         console.log("setupListeners: setting up listener for", outputEventName);
 
         const unlisten = await listen<{ data: string }>(outputEventName, (event) => {
-          console.log("pty-output event received, writing to terminal");
           terminal.write(event.payload.data);
         });
-        console.log("setupListeners: pty-output listener set up");
 
         const closedUnlisten = await listen(closedEventName, () => {
-          console.log("External editor terminal closed");
           if (onEditorExit) {
             onEditorExit();
           }

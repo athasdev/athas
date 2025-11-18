@@ -23,7 +23,7 @@ export const SidebarPaneSelector = ({
   const isFilesActive = !isGitViewActive && !isSearchViewActive && !isRemoteViewActive;
 
   return (
-    <div className="flex gap-0.5 border-border border-b bg-secondary-bg p-1.5">
+    <div className="flex gap-0.5 border-border border-b bg-secondary-bg px-1.5 py-0.5">
       <Tooltip content="File Explorer" side="right">
         <Button
           onClick={() => onViewChange("files")}

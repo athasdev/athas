@@ -8,7 +8,6 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
 import Input from "@/ui/input";
-import { cn } from "@/utils/cn";
 
 interface UnifiedExtension {
   id: string;

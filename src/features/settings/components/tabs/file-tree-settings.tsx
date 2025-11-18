@@ -58,7 +58,7 @@ export const FileTreeSettings = () => {
             placeholder="e.g., *.log, *.tmp, **/*.bak"
             size="sm"
           />
-          <p className="text-xs text-text-lighter">
+          <p className="text-text-lighter text-xs">
             Files matching these glob patterns will be hidden from the file tree.
           </p>
         </div>
@@ -75,7 +75,7 @@ export const FileTreeSettings = () => {
             placeholder="e.g., node_modules, .git, build/"
             size="sm"
           />
-          <p className="text-xs text-text-lighter">
+          <p className="text-text-lighter text-xs">
             Directories matching these glob patterns will be hidden from the file tree.
           </p>
         </div>

@@ -20,7 +20,7 @@ export function TableHeader({ children, gridCols, className }: TableHeaderProps)
   return (
     <div
       className={cn(
-        "sticky top-0 z-10 grid gap-4 border-b border-border bg-primary-bg px-2 py-2",
+        "sticky top-0 z-10 grid gap-4 border-border border-b bg-primary-bg px-2 py-2",
         className,
       )}
       style={{ gridTemplateColumns: gridCols }}
@@ -41,7 +41,7 @@ export function TableRow({ children, gridCols, className, onClick }: TableRowPro
   return (
     <div
       className={cn(
-        "grid gap-4 border-b border-border px-2 py-2",
+        "grid gap-4 border-border border-b px-2 py-2",
         onClick && "cursor-pointer hover:bg-hover",
         className,
       )}
@@ -68,5 +68,5 @@ interface TableHeadCellProps {
 }
 
 export function TableHeadCell({ children, className }: TableHeadCellProps) {
-  return <div className={cn("text-xs font-medium text-text-lighter", className)}>{children}</div>;
+  return <div className={cn("font-medium text-text-lighter text-xs", className)}>{children}</div>;
 }

@@ -4,7 +4,8 @@
 
 @font-face {
   font-family: "JetBrains Mono";
-  src: url("/fonts/jetbrains-mono/JetBrainsMono-VariableFont.woff2") format("woff2");
+  src: url("/fonts/jetbrains-mono/JetBrainsMono-VariableFont.woff2")
+    format("woff2");
   font-weight: 100 800;
   font-display: swap;
   font-style: normal;
@@ -17,8 +18,12 @@
    ============================================ */
 
 @theme {
-  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-sans:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
 }
 
 /* Define layer order */
@@ -26,60 +31,59 @@
 
 /* Utils like animations - inlined from utils.css */
 @keyframes slide-in-left {
-    from {
-        transform: translateX(-100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @utility animate-slide-in-left {
-    animation: slide-in-left 0.5s ease-out;
+  animation: slide-in-left 0.5s ease-out;
 }
 
 @keyframes slide-in-right {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @utility animate-slide-in-right {
-    animation: slide-in-right 0.3s ease-out;
+  animation: slide-in-right 0.3s ease-out;
 }
 
 @keyframes slide-out-right {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(100%);
-        opacity: 0;
-    }
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
 
 @utility animate-slide-out-right {
-    animation: slide-out-right 0.3s ease-in;
+  animation: slide-out-right 0.3s ease-in;
 }
 
-
 @keyframes fadeInUp {
-    0% {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Import token theme from editor feature */
@@ -733,19 +737,6 @@ button {
   flex-shrink: 0;
 }
 
-/* Tab bar thin scrollbar - similar to editor viewport */
-.tab-bar-scrollable {
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  overscroll-behavior-x: contain;
-}
-
-.tab-bar-scrollable::-webkit-scrollbar {
-  display: none;
-}
-
 /* Prevent bounce scrolling only where needed */
 .scroll-isolated {
   overscroll-behavior: contain;
@@ -1033,12 +1024,6 @@ textarea::-webkit-scrollbar-thumb:hover {
   color: #3498db;
   border-radius: 2px;
   padding: 0 2px;
-}
-
-.tab-bar-item {
-  transition:
-    transform 0.2s ease,
-    opacity 0.2s ease;
 }
 
 .tab-drag-preview {

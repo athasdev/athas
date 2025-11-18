@@ -3,6 +3,7 @@
 - Commits should have the first character uppercased
 - Do not prefix unused variables with an underscore, delete them instead
 - Do not use emojis in commit messages, logs, or documentation
+- Never change the .rules file unless the user specifically asks for it
 
 ## Zustand
 
@@ -20,26 +21,6 @@ This project uses Zustand for state management with specific patterns:
 - Prefer accessing dependent store state inside actions rather than passing parameters
 - Group all actions in an `actions` object within the store
 - Always use `createSelectors` wrapper for stores
-
-## Styling
-
-This project uses a standardized styling approach with clear guidelines on when to use each technique.
-
-### Primary Approach: Tailwind Utilities
-
-- Tailwind CSS is the **primary styling method** for 90% of components
-- Use utility classes directly in component JSX
-- Use the `cn()` utility (from `src/utils/cn.ts`) for conditional classes
-- **Never use `@apply`** directive
-- Use `size-*` instead of `w-* h-*` where possible (e.g. `size-6` instead of `w-6 h-6`)
-
-Example:
-```tsx
-<div className={cn("flex items-center gap-2", isActive && "bg-selected")}>
-  <Icon className="size-4" />
-  <span className="text-sm text-light">Label</span>
-</div>
-```
 
 ### CSS Variables for Theming
 

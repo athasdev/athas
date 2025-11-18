@@ -27,7 +27,7 @@ export const KeyboardSettings = () => {
         !query ||
         command.title.toLowerCase().includes(query) ||
         command.id.toLowerCase().includes(query) ||
-        (command.category && command.category.toLowerCase().includes(query));
+        command.category?.toLowerCase().includes(query);
 
       if (!matchesSearch) return false;
 
@@ -162,8 +162,8 @@ export const KeyboardSettings = () => {
       </div>
 
       {/* Footer Actions */}
-      <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-        <div className="text-xs text-text-lighter">
+      <div className="mt-4 flex items-center justify-between border-border border-t pt-4">
+        <div className="text-text-lighter text-xs">
           {filteredCommands.length} of {commands.length} keybindings
         </div>
         <div className="flex gap-2">
