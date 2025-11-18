@@ -1,3 +1,4 @@
+import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { KeybindingRow } from "@/features/keymaps/components/keybinding-row";
 import { useKeymapStore } from "@/features/keymaps/stores/store";
@@ -5,6 +6,7 @@ import type { Keybinding } from "@/features/keymaps/types";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import Button from "@/ui/button";
 import Input from "@/ui/input";
+import { TableHeadCell, TableHeader } from "@/ui/table";
 
 type FilterType = "all" | "user" | "default" | "extension";
 
@@ -96,34 +98,38 @@ export const KeyboardSettings = () => {
           placeholder="Search keybindings..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full"
-          aria-label="Search keybindings"
+          leftIcon={Search}
+          containerClassName="w-full"
         />
         <div className="flex gap-2">
           <Button
-            variant={filterType === "all" ? "default" : "ghost"}
+            variant="ghost"
             size="xs"
+            active={filterType === "all"}
             onClick={() => setFilterType("all")}
           >
             All
           </Button>
           <Button
-            variant={filterType === "user" ? "default" : "ghost"}
+            variant="ghost"
             size="xs"
+            active={filterType === "user"}
             onClick={() => setFilterType("user")}
           >
             User
           </Button>
           <Button
-            variant={filterType === "default" ? "default" : "ghost"}
+            variant="ghost"
             size="xs"
+            active={filterType === "default"}
             onClick={() => setFilterType("default")}
           >
             Default
           </Button>
           <Button
-            variant={filterType === "extension" ? "default" : "ghost"}
+            variant="ghost"
             size="xs"
+            active={filterType === "extension"}
             onClick={() => setFilterType("extension")}
           >
             Extension
@@ -134,13 +140,13 @@ export const KeyboardSettings = () => {
       {/* Keybindings Table */}
       <div className="flex-1 overflow-y-auto">
         {/* Table Header */}
-        <div className="sticky top-0 z-10 grid grid-cols-[2fr_200px_2fr_80px_100px] gap-4 border-b border-border bg-primary-bg px-2 py-2">
-          <div className="text-xs font-medium text-text-lighter">Command</div>
-          <div className="text-xs font-medium text-text-lighter">Keybinding</div>
-          <div className="text-xs font-medium text-text-lighter">When</div>
-          <div className="text-xs font-medium text-text-lighter">Source</div>
-          <div className="text-xs font-medium text-text-lighter">Actions</div>
-        </div>
+        <TableHeader gridCols="2fr 200px 2fr 80px 100px">
+          <TableHeadCell>Command</TableHeadCell>
+          <TableHeadCell>Keybinding</TableHeadCell>
+          <TableHeadCell>When</TableHeadCell>
+          <TableHeadCell>Source</TableHeadCell>
+          <TableHeadCell>Actions</TableHeadCell>
+        </TableHeader>
 
         {/* Rows */}
         {filteredCommands.length === 0 ? (

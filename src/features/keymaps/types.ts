@@ -16,6 +16,8 @@ export interface Command {
   title: string;
   category?: string;
   keybinding?: string;
+  description?: string;
+  icon?: React.ReactNode;
   execute: (args?: unknown) => void | Promise<void>;
 }
 

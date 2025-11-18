@@ -1,6 +1,7 @@
-import type React from "react";
 import { useEffect, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
+import Section from "@/ui/section";
+import Textarea from "@/ui/textarea";
 
 export const FileTreeSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
@@ -45,47 +46,40 @@ export const FileTreeSettings = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <h3 className="font-medium text-lg text-text">File Tree Settings</h3>
+    <div className="space-y-4">
+      <Section title="Hidden File Patterns" description="Comma-separated glob patterns">
+        <div className="flex flex-col gap-2">
+          <Textarea
+            id="hiddenFilePatterns"
+            rows={4}
+            value={filePatternsInput}
+            onChange={handleFilePatternsChange}
+            onBlur={handleFilePatternsBlur}
+            placeholder="e.g., *.log, *.tmp, **/*.bak"
+            size="sm"
+          />
+          <p className="text-xs text-text-lighter">
+            Files matching these glob patterns will be hidden from the file tree.
+          </p>
+        </div>
+      </Section>
 
-      <div>
-        <label htmlFor="hiddenFilePatterns" className="mb-1 block font-medium text-sm text-text">
-          Hidden File Patterns (comma-separated glob patterns)
-        </label>
-        <textarea
-          id="hiddenFilePatterns"
-          rows={4}
-          className="w-full rounded border border-border bg-input-bg p-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={filePatternsInput}
-          onChange={handleFilePatternsChange}
-          onBlur={handleFilePatternsBlur}
-          placeholder="e.g., *.log, *.tmp, **/*.bak"
-        />
-        <p className="mt-1 text-text-lighter text-xs">
-          Files matching these glob patterns will be hidden from the file tree.
-        </p>
-      </div>
-
-      <div>
-        <label
-          htmlFor="hiddenDirectoryPatterns"
-          className="mb-1 block font-medium text-sm text-text"
-        >
-          Hidden Directory Patterns (comma-separated glob patterns)
-        </label>
-        <textarea
-          id="hiddenDirectoryPatterns"
-          rows={4}
-          className="w-full rounded border border-border bg-input-bg p-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={directoryPatternsInput}
-          onChange={handleDirectoryPatternsChange}
-          onBlur={handleDirectoryPatternsBlur}
-          placeholder="e.g., node_modules, .git, build/"
-        />
-        <p className="mt-1 text-text-lighter text-xs">
-          Directories matching these glob patterns will be hidden from the file tree.
-        </p>
-      </div>
+      <Section title="Hidden Directory Patterns" description="Comma-separated glob patterns">
+        <div className="flex flex-col gap-2">
+          <Textarea
+            id="hiddenDirectoryPatterns"
+            rows={4}
+            value={directoryPatternsInput}
+            onChange={handleDirectoryPatternsChange}
+            onBlur={handleDirectoryPatternsBlur}
+            placeholder="e.g., node_modules, .git, build/"
+            size="sm"
+          />
+          <p className="text-xs text-text-lighter">
+            Directories matching these glob patterns will be hidden from the file tree.
+          </p>
+        </div>
+      </Section>
     </div>
   );
 };
