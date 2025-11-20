@@ -38,10 +38,10 @@ install_system_deps() {
 
     case $DISTRO in
         "ubuntu")
-            sudo apt update
-            sudo apt install -y build-essential curl wget file libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev pkg-config
+            sudo apt-get update
+            sudo apt-get install -y build-essential curl wget file libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev pkg-config
             # Deps for git2 and ssh2
-            sudo apt install -y openssl-devel pkgconf perl-FindBin perl-IPC-Cmd perl
+            sudo apt-get install -y libssl-dev pkgconf perl
             ;;
         "fedora")
             sudo dnf install -y gcc gcc-c++ make curl wget file openssl-devel gtk3-devel webkit2gtk4.1-devel libsoup3-devel libayatana-appindicator-gtk3-devel librsvg2-devel pkgconf-pkg-config
