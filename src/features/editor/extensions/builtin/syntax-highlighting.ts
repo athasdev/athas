@@ -99,6 +99,8 @@ class SyntaxHighlighter {
   }
 
   private async fetchAndCacheTokens(affectedLines?: Set<number>) {
+    logger.debug("SyntaxHighlighter", "fetchAndCacheTokens called for", this.filePath);
+
     // Check if WASM is initialized (graceful degradation)
     if (!wasmParserLoader.isInitialized()) {
       logger.debug("SyntaxHighlighter", "WASM not initialized yet, scheduling retry");
@@ -152,6 +154,7 @@ class SyntaxHighlighter {
         }
       };
       const extension = normalizeExt(rawExt);
+      logger.debug("SyntaxHighlighter", "Tokenizing file with extension:", extension);
 
       // Check if aborted before proceeding
       if (signal.aborted) return;
@@ -262,6 +265,21 @@ class SyntaxHighlighter {
 let highlighter: SyntaxHighlighter | null = null;
 let lastKnownFilePath: string | null = null;
 
+// Ensure the highlighter is initialized
+async function ensureHighlighterInitialized(): Promise<void> {
+  if (highlighter) return;
+
+  // Dynamically import the editor API to avoid circular dependencies
+  const { editorAPI } = await import("../api");
+  highlighter = new SyntaxHighlighter(editorAPI);
+  logger.info("SyntaxHighlighter", "Highlighter auto-initialized");
+
+  // If a file path was set before initialization, use it now
+  if (lastKnownFilePath) {
+    highlighter.setFilePath(lastKnownFilePath);
+  }
+}
+
 export const syntaxHighlightingExtension: EditorExtension = {
   name: "Syntax Highlighting",
   version: "1.0.0",
@@ -301,10 +319,17 @@ export const syntaxHighlightingExtension: EditorExtension = {
 };
 
 // Export function to set file path (temporary until editor instance provides it)
-export function setSyntaxHighlightingFilePath(filePath: string) {
+export async function setSyntaxHighlightingFilePath(filePath: string) {
+  logger.info("SyntaxHighlighter", "setSyntaxHighlightingFilePath called for", filePath);
   lastKnownFilePath = filePath;
+
+  // Auto-initialize if not yet initialized
+  await ensureHighlighterInitialized();
+
   if (highlighter) {
     highlighter.setFilePath(filePath);
     highlighter.updateHighlighting(true);
+  } else {
+    logger.warn("SyntaxHighlighter", "Highlighter not initialized yet");
   }
 }

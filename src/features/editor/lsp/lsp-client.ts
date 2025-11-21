@@ -240,6 +240,86 @@ export class LspClient {
     }
   }
 
+  async getDefinition(
+    filePath: string,
+    line: number,
+    character: number,
+  ): Promise<
+    | {
+        uri: string;
+        range: {
+          start: { line: number; character: number };
+          end: { line: number; character: number };
+        };
+      }[]
+    | null
+  > {
+    try {
+      logger.debug("LSPClient", `Getting definition for ${filePath}:${line}:${character}`);
+      const definition = await invoke<
+        | {
+            uri: string;
+            range: {
+              start: { line: number; character: number };
+              end: { line: number; character: number };
+            };
+          }[]
+        | null
+      >("lsp_get_definition", {
+        filePath,
+        line,
+        character,
+      });
+      if (definition) {
+        logger.debug("LSPClient", `Got definition: ${JSON.stringify(definition)}`);
+      }
+      return definition;
+    } catch (error) {
+      logger.error("LSPClient", "LSP definition error:", error);
+      return null;
+    }
+  }
+
+  async getReferences(
+    filePath: string,
+    line: number,
+    character: number,
+  ): Promise<
+    | {
+        uri: string;
+        range: {
+          start: { line: number; character: number };
+          end: { line: number; character: number };
+        };
+      }[]
+    | null
+  > {
+    try {
+      logger.debug("LSPClient", `Getting references for ${filePath}:${line}:${character}`);
+      const references = await invoke<
+        | {
+            uri: string;
+            range: {
+              start: { line: number; character: number };
+              end: { line: number; character: number };
+            };
+          }[]
+        | null
+      >("lsp_get_references", {
+        filePath,
+        line,
+        character,
+      });
+      if (references) {
+        logger.debug("LSPClient", `Got ${references.length} references`);
+      }
+      return references;
+    } catch (error) {
+      logger.error("LSPClient", "LSP references error:", error);
+      return null;
+    }
+  }
+
   async notifyDocumentOpen(filePath: string, content: string): Promise<void> {
     try {
       logger.debug("LSPClient", `Opening document: ${filePath}`);

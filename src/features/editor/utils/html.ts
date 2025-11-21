@@ -19,18 +19,29 @@ interface LineOffsetCache {
 let lineOffsetCache: LineOffsetCache | null = null;
 
 /**
+ * Normalize line endings to Unix style (\n)
+ * This ensures consistent offset calculations across platforms
+ */
+export function normalizeLineEndings(content: string): string {
+  return content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
+/**
  * Build a map of line numbers to their starting character offsets
  * This avoids repeated offset calculations during rendering
  * Exported for use in tokenizer and other utilities
  */
 export function buildLineOffsetMap(content: string): number[] {
+  // Normalize line endings first to ensure consistent offsets
+  const normalizedContent = normalizeLineEndings(content);
+
   // Check cache first
-  const contentHash = `${content.length}-${content.substring(0, 100)}`;
+  const contentHash = `${normalizedContent.length}-${normalizedContent.substring(0, 100)}`;
   if (lineOffsetCache && lineOffsetCache.contentHash === contentHash) {
     return lineOffsetCache.offsets;
   }
 
-  const lines = content.split("\n");
+  const lines = normalizedContent.split("\n");
   const offsets: number[] = new Array(lines.length);
   let offset = 0;
 
@@ -102,11 +113,13 @@ function renderLineWithTokens(lineContent: string, tokens: Token[], lineStart: n
  * Render content with syntax highlighting tokens as line-based divs for contenteditable
  */
 export function renderWithTokens(content: string, tokens: Token[]): string {
-  const lines = content.split("\n");
+  // Normalize line endings for consistent rendering
+  const normalizedContent = normalizeLineEndings(content);
+  const lines = normalizedContent.split("\n");
   const sorted = [...tokens].sort((a, b) => a.start - b.start);
 
   // Use cached line offset map for O(1) lookups instead of O(n) calculations
-  const lineOffsets = buildLineOffsetMap(content);
+  const lineOffsets = buildLineOffsetMap(normalizedContent);
 
   let html = "";
 

@@ -13,6 +13,7 @@ export interface EditorAPI {
   setSelection: (range: Range) => void;
   getCursorPosition: () => Position;
   setCursorPosition: (position: Position) => void;
+  selectAll: () => void;
 
   // Decoration operations
   addDecoration: (decoration: Decoration) => string;
@@ -24,6 +25,13 @@ export interface EditorAPI {
   getLines: () => string[];
   getLine: (lineNumber: number) => string | undefined;
   getLineCount: () => number;
+  duplicateLine: () => void;
+  deleteLine: () => void;
+  toggleComment: () => void;
+  moveLineUp: () => void;
+  moveLineDown: () => void;
+  copyLineUp: () => void;
+  copyLineDown: () => void;
 
   // History operations
   undo: () => void;

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useGitGutter } from "@/features/version-control/git/controllers/use-git-gutter";
 import EditorContextMenu from "../context-menu/context-menu";
+import { editorAPI } from "../extensions/api";
 import { useContextMenu } from "../hooks/use-context-menu";
 import { useEditorOperations } from "../hooks/use-editor-operations";
 import { useFoldTransform } from "../hooks/use-fold-transform";
@@ -132,7 +133,11 @@ export function Editor({ className }: EditorProps) {
       }
 
       if (hasSyntaxHighlighting) {
-        tokenize(newActualContent);
+        // Tokenize the content that will be displayed
+        const contentToTokenize = foldTransform.hasActiveFolds
+          ? newVirtualContent
+          : newActualContent;
+        tokenize(contentToTokenize);
       }
     },
     [
@@ -455,9 +460,9 @@ export function Editor({ className }: EditorProps) {
       const scrollTop = e.currentTarget.scrollTop;
       const scrollLeft = e.currentTarget.scrollLeft;
 
+      // Use transform for smoother sync (no independent scrolling)
       if (highlightRef.current) {
-        highlightRef.current.scrollTop = scrollTop;
-        highlightRef.current.scrollLeft = scrollLeft;
+        highlightRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
       }
 
       handleViewportScroll(e, lines.length);
@@ -471,11 +476,28 @@ export function Editor({ className }: EditorProps) {
     }
   }, [initializeViewport, lines.length]);
 
+  // Set textarea ref in editorAPI for operations like selectAll
+  useEffect(() => {
+    editorAPI.setTextareaRef(inputRef.current);
+    return () => {
+      editorAPI.setTextareaRef(null);
+    };
+  }, [inputRef]);
+
   useEffect(() => {
     if (buffer?.content && buffer?.path) {
-      tokenize(buffer.content);
+      // Tokenize the content that's actually being displayed
+      const contentToTokenize = foldTransform.hasActiveFolds ? displayContent : buffer.content;
+      tokenize(contentToTokenize);
     }
-  }, [bufferId, buffer?.path, buffer?.content, tokenize]);
+  }, [
+    bufferId,
+    buffer?.path,
+    buffer?.content,
+    tokenize,
+    foldTransform.hasActiveFolds,
+    displayContent,
+  ]);
 
   useEffect(() => {
     if (inputRef.current && bufferId) {
@@ -555,6 +577,7 @@ export function Editor({ className }: EditorProps) {
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
+            tabSize={tabSize}
           />
         )}
         <InputLayer
@@ -580,7 +603,7 @@ export function Editor({ className }: EditorProps) {
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
-            content={content}
+            content={displayContent}
           />
         )}
 

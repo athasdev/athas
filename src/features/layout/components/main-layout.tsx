@@ -28,6 +28,7 @@ import CommandPalette from "@/features/command-palette/components/command-palett
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
 import CodeEditor from "@/features/editor/components/code-editor";
+import { ExternalEditorTerminal } from "@/features/editor/components/external-editor-terminal";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { ImageViewer } from "@/features/image-viewer/components/image-viewer";
 import TabBar from "@/features/tabs/components/tab-bar";
@@ -76,6 +77,8 @@ export function MainLayout() {
   const diagnostics = useMemo(() => getAllDiagnostics(), [getAllDiagnostics]);
   const sidebarPosition = settings.sidebarPosition;
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
+
+  const { closeBufferForce } = useBufferStore.use.actions();
 
   useEffect(() => {
     if (settings.vimRelativeLineNumbers !== relativeLineNumbers) {
@@ -141,6 +144,13 @@ export function MainLayout() {
       }),
     );
   }, []);
+
+  // Handle external editor exit - close the buffer when editor exits
+  const handleExternalEditorExit = useCallback(() => {
+    if (activeBuffer?.isExternalEditor) {
+      closeBufferForce(activeBuffer.id);
+    }
+  }, [activeBuffer, closeBufferForce]);
 
   // Initialize event listeners
   useMenuEventsWrapper();
@@ -247,6 +257,15 @@ export function MainLayout() {
                 );
               } else if (activeBuffer.isSQLite) {
                 return <SQLiteViewer databasePath={activeBuffer.path} />;
+              } else if (activeBuffer.isExternalEditor && activeBuffer.terminalConnectionId) {
+                return (
+                  <ExternalEditorTerminal
+                    filePath={activeBuffer.path}
+                    fileName={activeBuffer.name}
+                    terminalConnectionId={activeBuffer.terminalConnectionId}
+                    onEditorExit={handleExternalEditorExit}
+                  />
+                );
               } else {
                 return <CodeEditor />;
               }

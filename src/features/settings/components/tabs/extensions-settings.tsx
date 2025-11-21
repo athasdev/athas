@@ -7,7 +7,7 @@ import { extensionManager } from "@/features/editor/extensions/manager";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
-import { cn } from "@/utils/cn";
+import Input from "@/ui/input";
 
 interface UnifiedExtension {
   id: string;
@@ -248,23 +248,15 @@ export const ExtensionsSettings = () => {
   return (
     <div className="flex h-full flex-col">
       <div className="mb-1.5 flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search
-            className="-translate-y-1/2 absolute top-1/2 left-2 transform text-text-lighter"
-            size={12}
-          />
-          <input
-            type="text"
-            placeholder="Search extensions..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={cn(
-              "w-full rounded border border-border bg-secondary-bg",
-              "py-1 pr-2 pl-7 text-[11px] text-text placeholder-text-lighter",
-              "focus:border-accent focus:outline-none",
-            )}
-          />
-        </div>
+        <Input
+          placeholder="Search extensions..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          leftIcon={Search}
+          size="xs"
+          containerClassName="flex-1"
+          className="text-[11px]"
+        />
       </div>
 
       <div className="mb-1.5 flex flex-wrap gap-1">
@@ -272,13 +264,8 @@ export const ExtensionsSettings = () => {
           onClick={() => updateSetting("extensionsActiveTab", "all")}
           variant="ghost"
           size="xs"
-          data-active={settings.extensionsActiveTab === "all"}
-          className={cn(
-            "h-6 px-2 text-[11px]",
-            settings.extensionsActiveTab === "all"
-              ? "bg-selected text-text"
-              : "bg-transparent text-text-lighter hover:bg-hover",
-          )}
+          active={settings.extensionsActiveTab === "all"}
+          className="h-6 px-2 text-[11px]"
         >
           All
         </Button>
@@ -286,13 +273,8 @@ export const ExtensionsSettings = () => {
           onClick={() => updateSetting("extensionsActiveTab", "language")}
           variant="ghost"
           size="xs"
-          data-active={settings.extensionsActiveTab === "language"}
-          className={cn(
-            "flex h-6 items-center gap-1 px-2 text-[11px]",
-            settings.extensionsActiveTab === "language"
-              ? "bg-selected text-text"
-              : "bg-transparent text-text-lighter hover:bg-hover",
-          )}
+          active={settings.extensionsActiveTab === "language"}
+          className="flex h-6 items-center gap-1 px-2 text-[11px]"
         >
           <Languages size={11} />
           Languages
@@ -301,13 +283,8 @@ export const ExtensionsSettings = () => {
           onClick={() => updateSetting("extensionsActiveTab", "theme")}
           variant="ghost"
           size="xs"
-          data-active={settings.extensionsActiveTab === "theme"}
-          className={cn(
-            "flex h-6 items-center gap-1 px-2 text-[11px]",
-            settings.extensionsActiveTab === "theme"
-              ? "bg-selected text-text"
-              : "bg-transparent text-text-lighter hover:bg-hover",
-          )}
+          active={settings.extensionsActiveTab === "theme"}
+          className="flex h-6 items-center gap-1 px-2 text-[11px]"
         >
           <Palette size={11} />
           Themes
@@ -316,13 +293,8 @@ export const ExtensionsSettings = () => {
           onClick={() => updateSetting("extensionsActiveTab", "icon-theme")}
           variant="ghost"
           size="xs"
-          data-active={settings.extensionsActiveTab === "icon-theme"}
-          className={cn(
-            "flex h-6 items-center gap-1 px-2 text-[11px]",
-            settings.extensionsActiveTab === "icon-theme"
-              ? "bg-selected text-text"
-              : "bg-transparent text-text-lighter hover:bg-hover",
-          )}
+          active={settings.extensionsActiveTab === "icon-theme"}
+          className="flex h-6 items-center gap-1 px-2 text-[11px]"
         >
           <Package size={11} />
           Icon Themes
@@ -331,13 +303,8 @@ export const ExtensionsSettings = () => {
           onClick={() => updateSetting("extensionsActiveTab", "database")}
           variant="ghost"
           size="xs"
-          data-active={settings.extensionsActiveTab === "database"}
-          className={cn(
-            "flex h-6 items-center gap-1 px-2 text-[11px]",
-            settings.extensionsActiveTab === "database"
-              ? "bg-selected text-text"
-              : "bg-transparent text-text-lighter hover:bg-hover",
-          )}
+          active={settings.extensionsActiveTab === "database"}
+          className="flex h-6 items-center gap-1 px-2 text-[11px]"
         >
           <Package size={11} />
           Databases

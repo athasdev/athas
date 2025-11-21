@@ -4,12 +4,14 @@ import { cn } from "@/utils/cn";
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "default" | "ghost" | "outline" | "vim";
   size?: "xs" | "sm" | "md" | "lg";
+  active?: boolean;
   children: React.ReactNode;
 }
 
 export default function Button({
   variant = "default",
   size = "md",
+  active,
   className,
   children,
   ...props
@@ -19,7 +21,8 @@ export default function Button({
 
   const variants = {
     default: "bg-hover text-text hover:bg-selected",
-    ghost: "bg-transparent text-text hover:bg-hover",
+    ghost:
+      "bg-transparent text-text hover:bg-hover data-[active=true]:bg-hover data-[active=true]:text-text",
     outline: "bg-transparent text-text hover:bg-hover",
     vim: "bg-transparent text-text hover:bg-hover data-[active=true]:bg-blue-500/20 data-[active=true]:text-blue-600 data-[active=true]:border-blue-500/30",
   };
@@ -32,7 +35,11 @@ export default function Button({
   };
 
   return (
-    <button className={cn(baseClasses, variants[variant], sizes[size], className)} {...props}>
+    <button
+      className={cn(baseClasses, variants[variant], sizes[size], className)}
+      data-active={active}
+      {...props}
+    >
       {children}
     </button>
   );

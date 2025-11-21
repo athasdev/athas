@@ -17,7 +17,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
   pointer-events: none;
   z-index: 1;
   padding: 0.5rem 1rem;
@@ -28,7 +28,12 @@
 
   /* Performance optimizations */
   contain: layout style paint;
-  content-visibility: auto;
+}
+
+/* Inner content that gets transformed for scroll sync */
+.highlight-layer-content {
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 /* Foreground layer - transparent text, visible caret */

@@ -1,9 +1,13 @@
-import { invoke } from "@tauri-apps/api/core";
-import { emit, listen } from "@tauri-apps/api/event";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { enableMapSet } from "immer";
 import { useEffect } from "react";
+import { useKeymapContext } from "@/features/keymaps/hooks/use-keymap-context";
+import { useKeymaps } from "@/features/keymaps/hooks/use-keymaps";
+import { useRemoteConnection } from "@/features/remote/hooks/use-remote-connection";
+import { useRemoteWindowClose } from "@/features/remote/hooks/use-remote-window-close";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
+import { useContextMenuPrevention } from "@/features/window/hooks/use-context-menu-prevention";
+import { useFontLoading } from "@/features/window/hooks/use-font-loading";
+import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
 import { useScroll } from "@/features/window/hooks/use-scroll";
 import { initializeIconThemes } from "./extensions/icon-themes/icon-theme-initializer";
 import { initializeThemeSystem } from "./extensions/themes/theme-initializer";
@@ -11,12 +15,8 @@ import {
   cleanupFileWatcherListener,
   initializeFileWatcherListener,
 } from "./features/file-system/controllers/file-watcher-store";
-import { isMac } from "./features/file-system/controllers/platform";
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/layout/components/zoom-indicator";
-import { useAppStore } from "./stores/app-store";
-import { useFontStore } from "./stores/font-store";
-import { useSidebarStore } from "./stores/sidebar-store";
 import { useZoomStore } from "./stores/zoom-store";
 import { ToastContainer } from "./ui/toast";
 import { cn } from "./utils/cn";
@@ -33,140 +33,35 @@ import { useExtensionInstallPrompt } from "./extensions/hooks/use-extension-inst
 import { extensionLoader } from "./extensions/loader/extension-loader";
 import { initializeExtensionStore } from "./extensions/registry/extension-store";
 import { initializeWasmTokenizer } from "./features/editor/lib/wasm-parser";
+import { initializeKeymaps } from "./features/keymaps/init";
 
-// Initialize WASM tokenizer (required for parser infrastructure)
 initializeWasmTokenizer().catch(console.error);
-
 extensionLoader.initialize().catch(console.error);
-
-// Initialize extension store (load available and installed extensions)
 initializeExtensionStore().catch(console.error);
+initializeKeymaps();
 
 function App() {
   enableMapSet();
 
-  const { cleanup } = useAppStore.use.actions();
-  const { loadAvailableFonts } = useFontStore.use.actions();
-  const setRemoteWindow = useSidebarStore.use.setRemoteWindow();
   const zoomLevel = useZoomStore.use.windowZoomLevel();
 
-  // Platform-specific setup
-  useEffect(() => {
-    if (isMac()) {
-      document.documentElement.classList.add("platform-macos");
-    } else {
-      document.documentElement.classList.add("platform-other");
-    }
-
-    return () => {
-      document.documentElement.classList.remove("platform-macos", "platform-other");
-      cleanup(); // Cleanup autosave timeouts
-    };
-  }, [cleanup]);
-
-  // Initialize fonts on app start (will use cache if available)
-  useEffect(() => {
-    loadAvailableFonts();
-  }, [loadAvailableFonts]);
-
-  // Mouse wheel zoom functionality
+  // App initialization and setup hooks
+  usePlatformSetup();
+  useFontLoading();
   useScroll();
-
-  // Extension installation prompts
   useExtensionInstallPrompt();
+  useKeymapContext();
+  useKeymaps();
+  useRemoteConnection();
+  useRemoteWindowClose();
+  useContextMenuPrevention();
 
-  // Initialize file watcher
+  // File watcher setup
   useEffect(() => {
     initializeFileWatcherListener();
     return () => {
       cleanupFileWatcherListener();
     };
-  }, []);
-
-  // Listen for remote connection info and handle remote window setup
-  useEffect(() => {
-    // Check if this is a remote window from URL parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const remoteParam = urlParams.get("remote");
-    if (remoteParam) {
-      setRemoteWindow(true, undefined, remoteParam);
-    }
-
-    // Set up event listener for remote connection info from Tauri
-    let unlistenRemoteInfo: (() => void) | null = null;
-
-    const setupRemoteListener = async () => {
-      try {
-        unlistenRemoteInfo = await listen<{
-          connectionId: string;
-          connectionName: string;
-          isRemoteWindow: boolean;
-        }>("remote-connection-info", (event) => {
-          const { isRemoteWindow, connectionName, connectionId } = event.payload;
-          setRemoteWindow(isRemoteWindow, connectionName, connectionId);
-        });
-      } catch (error) {
-        console.error("Failed to set up remote connection listener:", error);
-      }
-    };
-
-    setupRemoteListener();
-
-    return () => {
-      if (unlistenRemoteInfo) {
-        unlistenRemoteInfo();
-      }
-    };
-  }, [setRemoteWindow]);
-
-  // Handle window close request for remote connections
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const remoteParam = urlParams.get("remote");
-
-    if (!remoteParam) return;
-
-    let unlistenCloseRequested: (() => void) | null = null;
-
-    const setupCloseListener = async () => {
-      try {
-        const currentWindow = getCurrentWebviewWindow();
-
-        unlistenCloseRequested = await currentWindow.onCloseRequested(async (event) => {
-          event.preventDefault();
-
-          try {
-            await invoke("ssh_disconnect_only", { connectionId: remoteParam });
-            await emit("remote-connection-disconnected", { connectionId: remoteParam });
-            await currentWindow.destroy();
-          } catch (error) {
-            console.error("Failed to cleanup on window close:", error);
-            await currentWindow.destroy();
-          }
-        });
-      } catch (error) {
-        console.error("Failed to set up window close listener:", error);
-      }
-    };
-
-    setupCloseListener();
-
-    return () => {
-      unlistenCloseRequested?.();
-    };
-  }, []);
-
-  // Hide native context menu
-  useEffect(() => {
-    if (import.meta.env.MODE === "production") {
-      const handleContextMenu = (event: MouseEvent) => {
-        event.preventDefault();
-      };
-      document.addEventListener("contextmenu", handleContextMenu);
-      return () => {
-        document.removeEventListener("contextmenu", handleContextMenu);
-      };
-    }
   }, []);
 
   return (

@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { basename, dirname, extname, join } from "@tauri-apps/api/path";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { copyFile } from "@tauri-apps/plugin-fs";
@@ -13,6 +14,7 @@ import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useFileTreeStore } from "@/features/file-explorer/controllers/file-tree-store";
+import { useSettingsStore } from "@/features/settings/store";
 import { getGitStatus } from "@/features/version-control/git/controllers/git";
 import { gitDiffCache } from "@/features/version-control/git/controllers/git-diff-cache";
 import {
@@ -263,6 +265,31 @@ export const useFileSystemStore = createSelectors(
         } else if (isImageFile(path)) {
           openBuffer(path, fileName, "", true, false, false, false);
         } else {
+          // Check if external editor is enabled for text files
+          const { settings } = useSettingsStore.getState();
+          const { openExternalEditorBuffer } = useBufferStore.getState().actions;
+
+          if (settings.externalEditor !== "none") {
+            try {
+              const { rootFolderPath } = get();
+
+              // Create terminal connection for external editor
+              const connectionId = await invoke<string>("create_terminal", {
+                config: {
+                  working_directory: rootFolderPath || undefined,
+                  rows: 24,
+                  cols: 80,
+                },
+              });
+
+              // Open external editor buffer
+              openExternalEditorBuffer(path, fileName, connectionId);
+              return;
+            } catch (error) {
+              console.error("Failed to create external editor terminal:", error);
+            }
+          }
+
           const content = await readFileContent(path);
 
           // Check if this is a diff file

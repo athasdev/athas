@@ -124,6 +124,11 @@ export const AI_PROVIDERS: ModelProvider[] = [
     models: [
       // Top Weekly Models (Updated January 2025)
       {
+        id: "google/gemini-3-pro-preview",
+        name: "Gemini 3 Pro Preview",
+        maxTokens: 1048576,
+      },
+      {
         id: "openai/gpt-4o-mini",
         name: "GPT-4o Mini",
         maxTokens: 128000,
@@ -201,6 +206,11 @@ export const AI_PROVIDERS: ModelProvider[] = [
     apiUrl: "https://generativelanguage.googleapis.com/v1beta/models",
     requiresApiKey: true,
     models: [
+      {
+        id: "gemini-3-pro-preview",
+        name: "Gemini 3 Pro Preview",
+        maxTokens: 1048576,
+      },
       {
         id: "gemini-2.5-pro",
         name: "Gemini 2.5 Pro",

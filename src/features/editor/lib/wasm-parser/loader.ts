@@ -101,13 +101,40 @@ class WasmParserLoader {
       if (cached) {
         logger.info("WasmParser", `Loading ${languageId} from IndexedDB cache`);
 
-        // Convert blob to ArrayBuffer
-        const arrayBuffer = await cached.wasmBlob.arrayBuffer();
-        wasmBytes = new Uint8Array(arrayBuffer);
+        // Prefer ArrayBuffer over Blob (ArrayBuffer avoids WebKit blob issues)
+        if (cached.wasmData) {
+          wasmBytes = new Uint8Array(cached.wasmData);
+          logger.debug("WasmParser", `Using cached ArrayBuffer for ${languageId}`);
+        } else if (cached.wasmBlob) {
+          // Fallback to Blob for legacy entries
+          try {
+            const arrayBuffer = await cached.wasmBlob.arrayBuffer();
+            wasmBytes = new Uint8Array(arrayBuffer);
+            logger.debug("WasmParser", `Using cached Blob for ${languageId}`);
+          } catch (blobError) {
+            logger.error(
+              "WasmParser",
+              `Failed to read cached Blob for ${languageId}, will re-download`,
+              blobError,
+            );
+            // Delete corrupted cache entry and re-download
+            await indexedDBParserCache.delete(languageId);
+            throw new Error(`Cached parser corrupted, please reinstall ${languageId}`);
+          }
+        } else {
+          throw new Error(`Cache entry for ${languageId} has no WASM data`);
+        }
 
-        // Use cached highlight query if available
-        if (cached.highlightQuery && !highlightQuery) {
+        // Use cached highlight query if available and not empty
+        // Prefer cached query over passed parameter if cached is non-empty
+        if (cached.highlightQuery && cached.highlightQuery.trim().length > 0) {
           queryText = cached.highlightQuery;
+          logger.debug("WasmParser", `Using cached highlight query for ${languageId}`);
+        } else if (!queryText) {
+          logger.warn(
+            "WasmParser",
+            `No highlight query available for ${languageId} - syntax highlighting will be disabled`,
+          );
         }
       } else {
         logger.info("WasmParser", `Loading parser for ${languageId} from ${wasmPath}`);
@@ -131,7 +158,8 @@ class WasmParserLoader {
           try {
             await indexedDBParserCache.set({
               languageId,
-              wasmBlob: new Blob([wasmBytes]),
+              wasmBlob: new Blob([wasmBytes]), // Legacy compatibility
+              wasmData: wasmBytes.buffer as ArrayBuffer, // Preferred: ArrayBuffer
               highlightQuery: queryText || "",
               version: "1.0.0", // TODO: Get version from manifest
               checksum: "", // TODO: Calculate checksum

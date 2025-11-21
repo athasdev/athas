@@ -5,7 +5,6 @@
 - **Frontend**: React 19, TypeScript, Tailwind CSS, Zustand, Vite
 - **Backend**: Tauri 2, Rust
 - **Tools**: Biome, Bun
-- **Editor**: LSP, Prism.js
 - **Terminal**: xterm.js
 
 ## Project Structure

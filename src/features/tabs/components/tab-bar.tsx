@@ -575,10 +575,10 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   return (
     <>
-      <div className="relative flex-shrink-0">
+      <div className="relative flex-shrink-0 border-border border-b">
         <div
           ref={tabBarRef}
-          className="tab-bar-scrollable flex overflow-x-auto bg-secondary-bg"
+          className="flex overflow-x-auto overflow-y-hidden bg-secondary-bg [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}

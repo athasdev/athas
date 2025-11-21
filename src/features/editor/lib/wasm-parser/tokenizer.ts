@@ -12,92 +12,92 @@ import type { HighlightToken, LoadedParser, ParserConfig } from "./types";
  */
 const CAPTURE_TO_CLASS: Record<string, string> = {
   // Keywords
-  keyword: "syntax-keyword",
-  "keyword.control": "syntax-keyword",
-  "keyword.function": "syntax-keyword",
-  "keyword.operator": "syntax-keyword",
-  "keyword.return": "syntax-keyword",
-  "keyword.import": "syntax-keyword",
+  keyword: "token-keyword",
+  "keyword.control": "token-keyword",
+  "keyword.function": "token-keyword",
+  "keyword.operator": "token-keyword",
+  "keyword.return": "token-keyword",
+  "keyword.import": "token-keyword",
 
   // Functions
-  function: "syntax-function",
-  "function.call": "syntax-function",
-  "function.method": "syntax-function",
-  "function.builtin": "syntax-function",
-  method: "syntax-function",
-  "method.call": "syntax-function",
+  function: "token-function",
+  "function.call": "token-function",
+  "function.method": "token-function",
+  "function.builtin": "token-function",
+  method: "token-function",
+  "method.call": "token-function",
 
   // Variables
-  variable: "syntax-variable",
-  "variable.builtin": "syntax-variable",
-  "variable.parameter": "syntax-variable",
-  parameter: "syntax-variable",
+  variable: "token-variable",
+  "variable.builtin": "token-variable",
+  "variable.parameter": "token-variable",
+  parameter: "token-variable",
 
   // Constants
-  constant: "syntax-constant",
-  "constant.builtin": "syntax-constant",
-  "constant.numeric": "syntax-number",
-  number: "syntax-number",
-  float: "syntax-number",
-  boolean: "syntax-constant",
+  constant: "token-constant",
+  "constant.builtin": "token-constant",
+  "constant.numeric": "token-number",
+  number: "token-number",
+  float: "token-number",
+  boolean: "token-constant",
 
   // Strings
-  string: "syntax-string",
-  "string.special": "syntax-string",
-  "string.escape": "syntax-string",
-  character: "syntax-string",
+  string: "token-string",
+  "string.special": "token-string",
+  "string.escape": "token-string",
+  character: "token-string",
 
   // Comments
-  comment: "syntax-comment",
-  "comment.line": "syntax-comment",
-  "comment.block": "syntax-comment",
-  "comment.documentation": "syntax-comment",
+  comment: "token-comment",
+  "comment.line": "token-comment",
+  "comment.block": "token-comment",
+  "comment.documentation": "token-comment",
 
   // Types
-  type: "syntax-type",
-  "type.builtin": "syntax-type",
-  "type.definition": "syntax-type",
-  class: "syntax-type",
-  interface: "syntax-type",
-  enum: "syntax-type",
-  struct: "syntax-type",
+  type: "token-type",
+  "type.builtin": "token-type",
+  "type.definition": "token-type",
+  class: "token-type",
+  interface: "token-type",
+  enum: "token-type",
+  struct: "token-type",
 
   // Properties
-  property: "syntax-property",
-  "property.definition": "syntax-property",
-  attribute: "syntax-attribute",
-  field: "syntax-property",
+  property: "token-property",
+  "property.definition": "token-property",
+  attribute: "token-attribute",
+  field: "token-property",
 
   // Tags (HTML/XML)
-  tag: "syntax-tag",
-  "tag.attribute": "syntax-attribute",
-  "tag.delimiter": "syntax-punctuation",
+  tag: "token-tag",
+  "tag.attribute": "token-attribute",
+  "tag.delimiter": "token-punctuation",
 
   // Operators
-  operator: "syntax-keyword",
-  "operator.arithmetic": "syntax-keyword",
-  "operator.logical": "syntax-keyword",
+  operator: "token-operator",
+  "operator.arithmetic": "token-operator",
+  "operator.logical": "token-operator",
 
   // Punctuation
-  punctuation: "syntax-punctuation",
-  "punctuation.delimiter": "syntax-punctuation",
-  "punctuation.bracket": "syntax-punctuation",
-  "punctuation.special": "syntax-punctuation",
+  punctuation: "token-punctuation",
+  "punctuation.delimiter": "token-punctuation",
+  "punctuation.bracket": "token-punctuation",
+  "punctuation.special": "token-punctuation",
 
   // Misc
-  label: "syntax-constant",
-  namespace: "syntax-type",
-  module: "syntax-type",
-  decorator: "syntax-attribute",
-  annotation: "syntax-attribute",
-  macro: "syntax-function",
+  label: "token-constant",
+  namespace: "token-type",
+  module: "token-type",
+  decorator: "token-attribute",
+  annotation: "token-attribute",
+  macro: "token-function",
 };
 
 /**
  * Get CSS class name for a Tree-sitter capture name
  */
 function mapCaptureToClass(captureName: string): string {
-  return CAPTURE_TO_CLASS[captureName] || "syntax-text";
+  return CAPTURE_TO_CLASS[captureName] || "token-text";
 }
 
 /**
@@ -134,7 +134,11 @@ export async function tokenizeCode(
 
     // If no highlight query, return empty tokens
     if (!highlightQuery) {
-      logger.warn("WasmTokenizer", `No highlight query for ${languageId}`);
+      logger.warn(
+        "WasmTokenizer",
+        `No highlight query for ${languageId} - syntax highlighting disabled. ` +
+          `Ensure the highlight query was downloaded with the extension.`,
+      );
       return [];
     }
 

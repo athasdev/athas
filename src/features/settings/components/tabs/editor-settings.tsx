@@ -1,5 +1,7 @@
 import { useSettingsStore } from "@/features/settings/store";
+import Dropdown from "@/ui/dropdown";
 import { FontSelector } from "@/ui/font-selector";
+import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
@@ -92,6 +94,50 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
+      </Section>
+
+      <Section title="External Editor">
+        <SettingRow
+          label="Default Editor"
+          description="Open files in an external terminal editor instead of the built-in editor"
+        >
+          <Dropdown
+            value={settings.externalEditor}
+            options={[
+              { value: "none", label: "None (Use Built-in)" },
+              { value: "nvim", label: "Neovim" },
+              { value: "helix", label: "Helix" },
+              { value: "vim", label: "Vim" },
+              { value: "nano", label: "Nano" },
+              { value: "emacs", label: "Emacs" },
+              { value: "custom", label: "Custom Command" },
+            ]}
+            onChange={(value) =>
+              updateSetting(
+                "externalEditor",
+                value as "none" | "nvim" | "helix" | "vim" | "nano" | "emacs" | "custom",
+              )
+            }
+            className="w-48"
+            size="sm"
+          />
+        </SettingRow>
+
+        {settings.externalEditor === "custom" && (
+          <SettingRow
+            label="Custom Command"
+            description="Command to run (use $FILE for the file path, e.g., 'micro $FILE')"
+          >
+            <Input
+              type="text"
+              value={settings.customEditorCommand}
+              onChange={(e) => updateSetting("customEditorCommand", e.target.value)}
+              placeholder="micro $FILE"
+              className="w-48"
+              size="sm"
+            />
+          </SettingRow>
+        )}
       </Section>
     </div>
   );

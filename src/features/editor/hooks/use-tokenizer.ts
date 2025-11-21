@@ -9,7 +9,7 @@ import { logger } from "@/features/editor/utils/logger";
 import { indexedDBParserCache } from "../lib/wasm-parser/cache-indexeddb";
 import { tokenizeCode, tokenizeRange as wasmTokenizeRange } from "../lib/wasm-parser/tokenizer";
 import type { HighlightToken } from "../lib/wasm-parser/types";
-import { buildLineOffsetMap, type Token } from "../utils/html";
+import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/html";
 import type { ViewportRange } from "./use-viewport-lines";
 
 interface TokenizerOptions {
@@ -147,8 +147,11 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
           throw new Error(`Parser ${languageId} not found in cache`);
         }
 
+        // Normalize line endings before tokenizing to match HighlightLayer normalization
+        const normalizedText = normalizeLineEndings(text);
+
         // Load and tokenize using WASM
-        const highlightTokens = await tokenizeCode(text, languageId, {
+        const highlightTokens = await tokenizeCode(normalizedText, languageId, {
           languageId,
           wasmPath: cached.sourceUrl || "",
           highlightQuery: cached.highlightQuery,
