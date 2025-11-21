@@ -20,11 +20,16 @@ export function MarkdownPreview() {
   const [html, setHtml] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Get the source buffer if this is a preview buffer
+  const sourceBuffer = activeBuffer?.sourceFilePath
+    ? buffers.find((b) => b.path === activeBuffer.sourceFilePath)
+    : activeBuffer;
+
   useEffect(() => {
-    if (!activeBuffer) return;
-    const parsedHtml = parseMarkdown(activeBuffer.content);
+    if (!sourceBuffer) return;
+    const parsedHtml = parseMarkdown(sourceBuffer.content);
     setHtml(parsedHtml);
-  }, [activeBuffer?.content, activeBuffer]);
+  }, [sourceBuffer?.content, sourceBuffer]);
 
   const resolvePath = useCallback(
     (href: string, currentFilePath: string): string => {
@@ -98,9 +103,9 @@ export function MarkdownPreview() {
         return;
       }
 
-      if (!activeBuffer) return;
+      if (!sourceBuffer) return;
 
-      const targetPath = resolvePath(href, activeBuffer.path);
+      const targetPath = resolvePath(href, sourceBuffer.path);
 
       try {
         const fileExists = await exists(targetPath);
@@ -121,7 +126,7 @@ export function MarkdownPreview() {
         logger.error("MarkdownPreview", "Failed to handle link:", error);
       }
     },
-    [activeBuffer, handleFileSelect, resolvePath],
+    [sourceBuffer, handleFileSelect, resolvePath],
   );
 
   return (
