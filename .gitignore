@@ -63,3 +63,6 @@ TODO.md
 src-tauri/gen/
 apps/desktop/src-tauri/gen/
 **/src-tauri/gen/
+
+# storybook for UI prototyping / testing
+storybook-static/

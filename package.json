@@ -19,6 +19,8 @@
     "setup": "bun setup.ts",
     "dev": "WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev",
     "dev:scan": "WEBKIT_DISABLE_DMABUF_RENDERER=1 VITE_REACT_SCAN=true tauri dev",
+    "dev:frontend": "storybook dev -p 6006",
+    "build-frontend": "storybook build",
     "release": "bun scripts/release.ts",
     "release:patch": "bun scripts/release.ts patch",
     "release:minor": "bun scripts/release.ts minor",
@@ -69,6 +71,8 @@
   "devDependencies": {
     "@biomejs/biome": "2.1.2",
     "@commitlint/cli": "^19.8.1",
+    "@storybook/addon-docs": "^10.0.8",
+    "@storybook/react-vite": "^10.0.8",
     "@tailwindcss/vite": "^4.1.11",
     "@tauri-apps/cli": "^2",
     "@types/bun": "^1.2.21",
@@ -80,6 +84,7 @@
     "concurrently": "^9.2.0",
     "lint-staged": "^16.1.5",
     "simple-git-hooks": "^2.13.0",
+    "storybook": "^10.0.8",
     "typescript": "^5.8.3",
     "typescript-language-server": "^4.3.4",
     "vite": "^7.0.5"
