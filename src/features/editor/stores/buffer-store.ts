@@ -131,7 +131,15 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
 
     // Only save real files, not virtual/diff/image/sqlite/external editor buffers
     const persistableBuffers = buffers
-      .filter((b) => !b.isVirtual && !b.isDiff && !b.isImage && !b.isSQLite && !b.isMarkdownPreview && !b.isExternalEditor)
+      .filter(
+        (b) =>
+          !b.isVirtual &&
+          !b.isDiff &&
+          !b.isImage &&
+          !b.isSQLite &&
+          !b.isMarkdownPreview &&
+          !b.isExternalEditor,
+      )
       .map((b) => ({
         path: b.path,
         name: b.name,
@@ -343,6 +351,7 @@ export const useBufferStore = createSelectors(
             isImage: false,
             isSQLite: false,
             isDiff: false,
+            isMarkdownPreview: false,
             isExternalEditor: true,
             isActive: true,
             language: detectLanguageFromFileName(name),
