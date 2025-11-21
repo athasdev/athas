@@ -31,6 +31,7 @@ import KeybindingBadge from "@/ui/keybinding-badge";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createFileActions } from "../constants/file-actions";
 import { createGitActions } from "../constants/git-actions";
+import { createMarkdownActions } from "../constants/markdown-actions";
 import { createNavigationActions } from "../constants/navigation-actions";
 import { createSettingsActions } from "../constants/settings-actions";
 import { createViewActions } from "../constants/view-actions";
@@ -78,6 +79,7 @@ const CommandPalette = () => {
   const { showToast } = useToast();
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
+  const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const {
     closeBuffer,
     setActiveBuffer,
@@ -86,9 +88,23 @@ const CommandPalette = () => {
     reopenClosedTab,
   } = useBufferStore.use.actions();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
+  const { openBuffer } = useBufferStore.use.actions();
+
+  // Helper function to check if the active buffer is a markdown file
+  const isMarkdownFile = () => {
+    if (!activeBuffer) return false;
+    const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
+    return extension === "md" || extension === "markdown";
+  };
 
   // Create all actions using factory functions
   const allActions: Action[] = [
+    ...createMarkdownActions({
+      isMarkdownFile: isMarkdownFile(),
+      activeBuffer,
+      openBuffer,
+      onClose,
+    }),
     ...createViewActions({
       isSidebarVisible,
       setIsSidebarVisible,
