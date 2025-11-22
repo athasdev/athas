@@ -26,6 +26,9 @@ export const SidebarPaneSelector = ({
     <div className="flex gap-0.5 border-border border-b bg-secondary-bg px-1.5 py-0.5">
       <Tooltip content="File Explorer" side="right">
         <Button
+          aria-role="tab"
+          aria-selected={isFilesActive}
+          aria-label="File Explorer"
           onClick={() => onViewChange("files")}
           variant="ghost"
           size="sm"
@@ -43,6 +46,9 @@ export const SidebarPaneSelector = ({
       {coreFeatures.search && (
         <Tooltip content="Search" side="right">
           <Button
+            aria-role="tab"
+            aria-selected={isSearchViewActive}
+            aria-label="Search"
             onClick={() => onViewChange("search")}
             variant="ghost"
             size="sm"
@@ -61,6 +67,9 @@ export const SidebarPaneSelector = ({
       {coreFeatures.git && (
         <Tooltip content="Source Control" side="right">
           <Button
+            aria-role="tab"
+            aria-selected={isGitViewActive}
+            aria-label="Git Source Control"
             onClick={() => onViewChange("git")}
             variant="ghost"
             size="sm"
@@ -79,6 +88,9 @@ export const SidebarPaneSelector = ({
       {coreFeatures.remote && !isRemoteWindow && (
         <Tooltip content="Remote Connections" side="right">
           <Button
+            aria-role="tab"
+            aria-selected={isRemoteViewActive}
+            aria-label="Remote Connections"
             onClick={() => onViewChange("remote")}
             variant="ghost"
             size="sm"
