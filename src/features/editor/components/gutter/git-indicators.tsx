@@ -1,5 +1,6 @@
 import { memo, useMemo } from "react";
 import { useEditorDecorationsStore } from "../../stores/decorations-store";
+import type { Decoration } from "../../types/editor";
 
 interface GitIndicatorsProps {
   lineHeight: number;
@@ -20,29 +21,32 @@ function GitIndicatorsComponent({
 }: GitIndicatorsProps) {
   const decorations = useEditorDecorationsStore((state) => state.decorations);
 
-  const gitDecorations = useMemo(() => {
-    const added = new Map<number, true>();
-    const modified = new Map<number, true>();
-    const deleted = new Map<number, true>();
+  // Memoize the extraction of git decorations separately from viewport filtering
+  // This ensures we don't iterate all decorations when scrolling
+  const allGitDecorations = useMemo(() => {
+    const added = new Set<number>();
+    const modified = new Set<number>();
+    const deleted = new Set<number>();
 
-    decorations.forEach((decoration) => {
-      if (decoration.type === "gutter") {
-        const lineNum = decoration.range.start.line;
-        if (lineNum >= startLine && lineNum < endLine) {
-          if (decoration.className?.includes("added")) {
-            added.set(lineNum, true);
-          } else if (decoration.className?.includes("modified")) {
-            modified.set(lineNum, true);
-          } else if (decoration.className?.includes("deleted")) {
-            deleted.set(lineNum, true);
-          }
+    if (!decorations) return { added, modified, deleted };
+
+    decorations.forEach((decoration: Decoration & { id: string }) => {
+      if (decoration.type === "gutter" && decoration.className) {
+        // Check for specific git classes used in useGitGutter
+        if (decoration.className.includes("git-gutter-added")) {
+          added.add(decoration.range.start.line);
+        } else if (decoration.className.includes("git-gutter-modified")) {
+          modified.add(decoration.range.start.line);
+        } else if (decoration.className.includes("git-gutter-deleted")) {
+          deleted.add(decoration.range.start.line);
         }
       }
     });
 
     return { added, modified, deleted };
-  }, [decorations, startLine, endLine]);
+  }, [decorations]);
 
+  // Filter decorations for the current viewport
   const indicators = useMemo(() => {
     const result: React.ReactNode[] = [];
 
@@ -52,107 +56,56 @@ function GitIndicatorsComponent({
       return "var(--git-deleted, #f85149)";
     };
 
-    gitDecorations.added.forEach((_, lineNum) => {
-      result.push(
+    const renderIndicator = (lineNum: number, type: "added" | "modified" | "deleted") => (
+      <div
+        key={`${type[0]}${lineNum}`}
+        style={{
+          position: "absolute",
+          top: `${lineNum * lineHeight + GUTTER_PADDING}px`,
+          left: 0,
+          right: 0,
+          height: `${lineHeight}px`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          userSelect: "none",
+        }}
+        onClick={() => onIndicatorClick?.(lineNum, type)}
+        title={`Click to see ${type} changes`}
+      >
         <div
-          key={`a${lineNum}`}
           style={{
-            position: "absolute",
-            top: `${lineNum * lineHeight + GUTTER_PADDING}px`,
-            left: 0,
-            right: 0,
-            height: `${lineHeight}px`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            userSelect: "none",
+            width: "3px",
+            height: "100%",
+            backgroundColor: getColor(type),
+            borderRadius: "1px",
           }}
-          onClick={() => onIndicatorClick?.(lineNum, "added")}
-          title="Click to see added changes"
-        >
-          <div
-            style={{
-              width: "3px",
-              height: "100%",
-              backgroundColor: getColor("added"),
-              borderRadius: "1px",
-            }}
-          />
-        </div>,
-      );
-    });
+        />
+      </div>
+    );
 
-    gitDecorations.modified.forEach((_, lineNum) => {
-      result.push(
-        <div
-          key={`m${lineNum}`}
-          style={{
-            position: "absolute",
-            top: `${lineNum * lineHeight + GUTTER_PADDING}px`,
-            left: 0,
-            right: 0,
-            height: `${lineHeight}px`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            userSelect: "none",
-          }}
-          onClick={() => onIndicatorClick?.(lineNum, "modified")}
-          title="Click to see modified changes"
-        >
-          <div
-            style={{
-              width: "3px",
-              height: "100%",
-              backgroundColor: getColor("modified"),
-              borderRadius: "1px",
-            }}
-          />
-        </div>,
-      );
-    });
-
-    gitDecorations.deleted.forEach((_, lineNum) => {
-      result.push(
-        <div
-          key={`d${lineNum}`}
-          style={{
-            position: "absolute",
-            top: `${lineNum * lineHeight + GUTTER_PADDING}px`,
-            left: 0,
-            right: 0,
-            height: `${lineHeight}px`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            userSelect: "none",
-          }}
-          onClick={() => onIndicatorClick?.(lineNum, "deleted")}
-          title="Click to see deleted changes"
-        >
-          <div
-            style={{
-              width: "3px",
-              height: "100%",
-              backgroundColor: getColor("deleted"),
-              borderRadius: "1px",
-            }}
-          />
-        </div>,
-      );
-    });
+    // Iterate only the viewport lines, checking against the Sets
+    // This is O(ViewportLines) which is much faster than O(TotalDecorations) during scroll
+    for (let lineNum = startLine; lineNum < endLine; lineNum++) {
+      if (allGitDecorations.added.has(lineNum)) {
+        result.push(renderIndicator(lineNum, "added"));
+      } else if (allGitDecorations.modified.has(lineNum)) {
+        result.push(renderIndicator(lineNum, "modified"));
+      } else if (allGitDecorations.deleted.has(lineNum)) {
+        result.push(renderIndicator(lineNum, "deleted"));
+      }
+    }
 
     return result;
-  }, [gitDecorations, lineHeight, onIndicatorClick]);
+  }, [allGitDecorations, lineHeight, startLine, endLine, onIndicatorClick]);
 
   return (
     <div
       style={{
         position: "relative",
         width: "12px",
+        zIndex: 2,
       }}
     >
       {indicators}
