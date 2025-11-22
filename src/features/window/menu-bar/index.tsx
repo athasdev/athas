@@ -43,7 +43,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
   const menus = useMemo(
     () => ({
       File: (
-        <Menu>
+        <Menu aria-label="File">
           <MenuItem shortcut="Ctrl+N" onClick={() => handleClickEmit("menu_new_file")}>
             New File
           </MenuItem>
@@ -69,7 +69,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
         </Menu>
       ),
       Edit: (
-        <Menu>
+        <Menu aria-label="Edit">
           <MenuItem shortcut="Ctrl+Z" onClick={() => handleClickEmit("menu_undo")}>
             Undo
           </MenuItem>
@@ -95,7 +95,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
         </Menu>
       ),
       View: (
-        <Menu>
+        <Menu aria-label="View">
           <MenuItem shortcut="Ctrl+B" onClick={() => handleClickEmit("menu_toggle_sidebar")}>
             Toggle Sidebar
           </MenuItem>
@@ -128,7 +128,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
         </Menu>
       ),
       Go: (
-        <Menu>
+        <Menu aria-label="Go">
           <MenuItem shortcut="Ctrl+P" onClick={() => handleClickEmit("menu_go_to_file")}>
             Go to File
           </MenuItem>
@@ -145,7 +145,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
         </Menu>
       ),
       Window: (
-        <Menu>
+        <Menu aria-label="Window">
           <MenuItem
             shortcut="Alt+F9"
             onClick={async () => {
@@ -183,7 +183,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
         </Menu>
       ),
       Help: (
-        <Menu>
+        <Menu aria-label="Help">
           <MenuItem onClick={() => handleClickEmit("menu_help")}>Help</MenuItem>
           <MenuItem separator />
           <MenuItem onClick={() => handleClickEmit("menu_about_athas")}>About Athas</MenuItem>
