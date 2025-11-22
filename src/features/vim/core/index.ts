@@ -105,13 +105,7 @@
  */
 
 // Actions
-export {
-  getAction,
-  getActionKeys,
-  isAction,
-  pasteAction,
-  pasteBeforeAction,
-} from "./actions";
+export { getAction, getActionKeys, isAction, pasteAction, pasteBeforeAction } from "./actions";
 // Command execution
 export {
   canExecuteCommand,
@@ -125,6 +119,54 @@ export {
   isCommandComplete,
   parseVimCommand,
 } from "./core/command-parser";
+export type {
+  Action as GrammarAction,
+  Command,
+  Count,
+  ModeChangeAction,
+  Motion as GrammarMotion,
+  OperatorKey,
+  ParseIncomplete,
+  ParseInvalid,
+  ParseNeedsChar,
+  ParseOk,
+  ParseResult,
+  RegisterRef,
+  SingleCharOperation,
+  Target,
+} from "./core/grammar/ast";
+export {
+  executeVimCommandCompat,
+  expectsMoreKeys as expectsMoreKeysCompat,
+  getCommandParseStatusCompat,
+  isCommandComplete as isCommandCompleteCompat,
+  isCommandInvalid,
+  isNewParserEnabled,
+  parseVimCommandCompat,
+  setUseNewParser,
+} from "./core/grammar/compat";
+export { executeAST } from "./core/grammar/executor";
+export {
+  getMotionInfo,
+  isMotionInclusive,
+  type MotionInclusivity,
+  type MotionInfo,
+  type MotionKind,
+  resolveMotionKind,
+} from "./core/grammar/motion-kind";
+export { effectiveCount, getRegisterName, isRepeatable, normalize } from "./core/grammar/normalize";
+// New Grammar-Based Parser System
+export { getCommandParseStatus as getGrammarParseStatus, parse } from "./core/grammar/parser";
+export {
+  actions as actionTokens,
+  expectsCharArg,
+  forcedKinds as forcedKindTokens,
+  isTextObjectKey,
+  motions as motionTokens,
+  operators as operatorTokens,
+  supportsDoubling,
+} from "./core/grammar/tokens";
+export { TokenTrie, type TokKind, type TokSpec, type TrieMatch } from "./core/grammar/trie";
 // Registries
 export { getMotion, getMotionKeys, isMotion } from "./core/motion-registry";
 export { getTextObject } from "./core/text-objects";
@@ -139,11 +181,11 @@ export type {
   VimCommand,
   VimRange,
 } from "./core/types";
+
 export * from "./motions/character-motions";
 export * from "./motions/file-motions";
 export * from "./motions/line-motions";
 export * from "./motions/viewport-motions";
-
 // Motions (for external use if needed)
 export * from "./motions/word-motions";
 // Operators
