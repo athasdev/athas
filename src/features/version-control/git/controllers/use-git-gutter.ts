@@ -22,6 +22,9 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
   const lastContentHashRef = useRef<string>("");
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Track the latest content for which we've scheduled or started a diff
+  const latestRequestedContentRef = useRef<string>(content);
+
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
 
   // Memoized content hash for efficient change detection
@@ -113,38 +116,51 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
     const decorationsStore = useEditorDecorationsStore.getState();
 
     // Clear existing decorations
-    gitDecorationIdsRef.current.forEach((id) => decorationsStore.removeDecoration(id));
-    gitDecorationIdsRef.current = [];
+    if (gitDecorationIdsRef.current.length > 0) {
+      decorationsStore.removeDecorations(gitDecorationIdsRef.current);
+      gitDecorationIdsRef.current = [];
+    }
 
-    const addMarker = (lineNumber: number, className: string, content: string = " ") => {
-      const id = decorationsStore.addDecoration({
-        type: "gutter",
-        className,
-        content,
-        range: {
-          start: { line: lineNumber, column: 0, offset: 0 },
-          end: { line: lineNumber, column: 0, offset: 0 },
-        },
-      });
-      gitDecorationIdsRef.current.push(id);
-    };
+    const newDecorations: any[] = [];
 
-    // Apply markers
-    addedLines.forEach((ln) => addMarker(ln, "git-gutter-added"));
-    modifiedLines.forEach((ln) => addMarker(ln, "git-gutter-modified"));
-    deletedLines.forEach((count, ln) => {
-      addMarker(ln, "git-gutter-deleted", `−${count > 1 ? count : ""}`);
+    const createDecoration = (lineNumber: number, className: string, content: string = " ") => ({
+      type: "gutter" as const,
+      className,
+      content,
+      range: {
+        start: { line: lineNumber, column: 0, offset: 0 },
+        end: { line: lineNumber, column: 0, offset: 0 },
+      },
     });
+
+    // Prepare decorations
+    addedLines.forEach((ln) => {
+      newDecorations.push(createDecoration(ln, "git-gutter-added"));
+    });
+    modifiedLines.forEach((ln) => {
+      newDecorations.push(createDecoration(ln, "git-gutter-modified"));
+    });
+    deletedLines.forEach((count, ln) => {
+      newDecorations.push(createDecoration(ln, "git-gutter-deleted", `−${count > 1 ? count : ""}`));
+    });
+
+    // Batch add
+    if (newDecorations.length > 0) {
+      gitDecorationIdsRef.current = decorationsStore.addDecorations(newDecorations);
+    }
   }, []);
 
   // Update git gutter decorations
+  // This needs to be robust against stale closures
   const updateGitGutter = useCallback(
-    async (useContentDiff: boolean = false) => {
+    async (useContentDiff: boolean = false, specificContent?: string) => {
+      const targetContent = specificContent ?? content;
+
       console.log(`[GitGutter] updateGitGutter called for ${filePath}`, {
         enabled,
         filePath,
         rootFolderPath,
-        contentLength: content?.length || 0,
+        contentLength: targetContent?.length || 0,
         useContentDiff,
       });
 
@@ -169,8 +185,16 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
 
         // Use content-based diff for live typing, regular diff for file system events
         const diff = useContentDiff
-          ? await getFileDiffAgainstContent(rootFolderPath, relativePath, content, "head")
-          : await getFileDiff(rootFolderPath, relativePath, false, content);
+          ? await getFileDiffAgainstContent(rootFolderPath, relativePath, targetContent, "head")
+          : await getFileDiff(rootFolderPath, relativePath, false, targetContent);
+
+        // Race condition check:
+        // If we are using content diff, ensure the content we used is still the latest one
+        if (useContentDiff && targetContent !== latestRequestedContentRef.current) {
+          console.log(`[GitGutter] Skipping result - stale content`);
+          return;
+        }
+
         console.log(`[GitGutter] Got diff result:`, {
           hasDiff: !!diff,
           lineCount: diff?.lines?.length || 0,
@@ -182,8 +206,10 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
           // Clear decorations for binary/image files
           console.log(`[GitGutter] Clearing decorations - no diff or binary/image file`);
           const decorationsStore = useEditorDecorationsStore.getState();
-          gitDecorationIdsRef.current.forEach((id) => decorationsStore.removeDecoration(id));
-          gitDecorationIdsRef.current = [];
+          if (gitDecorationIdsRef.current.length > 0) {
+            decorationsStore.removeDecorations(gitDecorationIdsRef.current);
+            gitDecorationIdsRef.current = [];
+          }
           return;
         }
 
@@ -202,8 +228,10 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
         console.error(`[GitGutter] Error updating git gutter:`, error);
         // Clear decorations on error
         const decorationsStore = useEditorDecorationsStore.getState();
-        gitDecorationIdsRef.current.forEach((id) => decorationsStore.removeDecoration(id));
-        gitDecorationIdsRef.current = [];
+        if (gitDecorationIdsRef.current.length > 0) {
+          decorationsStore.removeDecorations(gitDecorationIdsRef.current);
+          gitDecorationIdsRef.current = [];
+        }
       }
     },
     [enabled, filePath, rootFolderPath, processGitDiff, applyGitDecorations, content],
@@ -215,22 +243,29 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
       clearTimeout(debounceTimerRef.current);
     }
 
+    // Capture the current content at the time of scheduling
+    const currentContent = content;
+    latestRequestedContentRef.current = currentContent;
+
     debounceTimerRef.current = setTimeout(() => {
-      updateGitGutter(true); // Use content-based diff for live typing
+      updateGitGutter(true, currentContent); // Use content-based diff for live typing
     }, 500) as NodeJS.Timeout; // 500ms debounce for content changes
-  }, [updateGitGutter]);
+  }, [updateGitGutter, content]);
 
   // Initial update when file path changes
   useEffect(() => {
     if (filePath && rootFolderPath) {
+      latestRequestedContentRef.current = content;
       updateGitGutter(false); // Use regular diff for initial load
     }
 
     return () => {
       // Clear decorations when component unmounts or file changes
       const decorationsStore = useEditorDecorationsStore.getState();
-      gitDecorationIdsRef.current.forEach((id) => decorationsStore.removeDecoration(id));
-      gitDecorationIdsRef.current = [];
+      if (gitDecorationIdsRef.current.length > 0) {
+        decorationsStore.removeDecorations(gitDecorationIdsRef.current);
+        gitDecorationIdsRef.current = [];
+      }
     };
   }, [filePath, rootFolderPath]);
 
@@ -295,8 +330,10 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
     updateGitGutter: useCallback(() => updateGitGutter(false), [updateGitGutter]),
     clearGitGutter: useCallback(() => {
       const decorationsStore = useEditorDecorationsStore.getState();
-      gitDecorationIdsRef.current.forEach((id) => decorationsStore.removeDecoration(id));
-      gitDecorationIdsRef.current = [];
+      if (gitDecorationIdsRef.current.length > 0) {
+        decorationsStore.removeDecorations(gitDecorationIdsRef.current);
+        gitDecorationIdsRef.current = [];
+      }
     }, []),
   };
 }
