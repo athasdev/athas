@@ -338,6 +338,7 @@ const ProjectTabs = () => {
                 <div className="absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
               )}
               <button
+                role="tab"
                 ref={(el) => {
                   tabRefs.current[index] = el;
                 }}
