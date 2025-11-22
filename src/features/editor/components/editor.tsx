@@ -24,6 +24,7 @@ import { applyMultiCursorBackspace, applyMultiCursorEdit } from "../utils/multi-
 import { calculateCursorPosition } from "../utils/position";
 import { InlineDiff } from "./diff/inline-diff";
 import { Gutter } from "./gutter/gutter";
+import { GitBlameLayer } from "./layers/git-blame-layer";
 import { HighlightLayer } from "./layers/highlight-layer";
 import { InputLayer } from "./layers/input-layer";
 import { MultiCursorLayer } from "./layers/multi-cursor-layer";
@@ -97,6 +98,13 @@ export function Editor({ className }: EditorProps) {
     incremental: true,
     enabled: hasSyntaxHighlighting,
   });
+
+  const visualCursorLine = useMemo(() => {
+    if (foldTransform.hasActiveFolds) {
+      return foldTransform.mapping.actualToVirtual.get(cursorPosition.line) ?? cursorPosition.line;
+    }
+    return cursorPosition.line;
+  }, [cursorPosition.line, foldTransform]);
 
   const handleInput = useCallback(
     (newVirtualContent: string) => {
@@ -604,6 +612,18 @@ export function Editor({ className }: EditorProps) {
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             content={displayContent}
+          />
+        )}
+
+        {filePath && (
+          <GitBlameLayer
+            filePath={filePath}
+            cursorLine={cursorPosition.line}
+            visualCursorLine={visualCursorLine}
+            visualContent={displayContent}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            lineHeight={lineHeight}
           />
         )}
 

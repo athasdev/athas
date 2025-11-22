@@ -8,7 +8,6 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
-import { useGitGutter } from "@/features/version-control/git/controllers/use-git-gutter";
 import { useAppStore } from "@/stores/app-store";
 import { useZoomStore } from "@/stores/zoom-store";
 import { HoverTooltip } from "../lsp/hover-tooltip";
@@ -51,7 +50,6 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
   const { setSearchMatches, setCurrentMatchIndex } = useEditorUIStore.use.actions();
   const isFileTreeLoading = useFileSystemStore((state) => state.isFileTreeLoading);
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const { settings } = useSettingsStore();
 
   // Extract values from active buffer or use defaults
@@ -122,13 +120,6 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
 
   // Scroll management
   useEditorScroll(editorRef, null);
-
-  // Git gutter integration with optimized updates
-  useGitGutter({
-    filePath,
-    content: value,
-    enabled: !!filePath && !!rootFolderPath,
-  });
 
   // Search functionality with debouncing to prevent lag on large files
   useEffect(() => {
