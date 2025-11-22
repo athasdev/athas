@@ -74,7 +74,7 @@ const InputLayerComponent = forwardRef<HTMLTextAreaElement, InputLayerProps>(
         onMouseUp={onMouseUp}
         onContextMenu={onContextMenu}
         onScroll={onScroll}
-        className="input-layer editor-textarea"
+        className="input-layer editor-textarea editor-viewport"
         style={{
           fontSize: `${fontSize}px`,
           fontFamily,

@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { forwardRef, memo, useMemo } from "react";
 import { splitLines } from "@/features/editor/utils/lines";
 import { InlineGitBlame } from "@/features/version-control/git/components/inline-git-blame";
 import { useGitBlame } from "@/features/version-control/git/controllers/use-git-blame";
@@ -13,16 +13,11 @@ interface GitBlameLayerProps {
   lineHeight: number;
 }
 
-export const GitBlameLayer = memo(
-  ({
-    filePath,
-    cursorLine,
-    visualCursorLine,
-    visualContent,
-    fontSize,
-    fontFamily,
-    lineHeight,
-  }: GitBlameLayerProps) => {
+const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
+  (
+    { filePath, cursorLine, visualCursorLine, visualContent, fontSize, fontFamily, lineHeight },
+    ref,
+  ) => {
     const { getBlameForLine } = useGitBlame(filePath);
     const blameLine = getBlameForLine(cursorLine);
 
@@ -41,20 +36,30 @@ export const GitBlameLayer = memo(
         }}
       >
         <div
-          className="pointer-events-auto absolute flex items-center"
+          ref={ref}
           style={{
-            top: `${visualCursorLine * lineHeight + lineHeight / 3}px`,
-            left: `${currentLineContent.length}ch`,
-            height: `${lineHeight}px`,
-            paddingLeft: "2rem",
-            transform: "translateY(1px)",
+            willChange: "transform",
+            transform: "translateZ(0)",
           }}
         >
-          <InlineGitBlame blameLine={blameLine} />
+          <div
+            className="pointer-events-auto absolute flex items-center"
+            style={{
+              top: `${visualCursorLine * lineHeight + lineHeight / 3}px`,
+              left: `${currentLineContent.length}ch`,
+              height: `${lineHeight}px`,
+              paddingLeft: "2rem",
+              transform: "translateY(1px)",
+            }}
+          >
+            <InlineGitBlame blameLine={blameLine} />
+          </div>
         </div>
       </div>
     );
   },
 );
 
-GitBlameLayer.displayName = "GitBlameLayer";
+GitBlameLayerComponent.displayName = "GitBlameLayer";
+
+export const GitBlameLayer = memo(GitBlameLayerComponent);

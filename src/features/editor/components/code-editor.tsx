@@ -12,6 +12,7 @@ import { useAppStore } from "@/stores/app-store";
 import { useZoomStore } from "@/stores/zoom-store";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import { MarkdownPreview } from "../markdown/markdown-preview";
+import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { Editor } from "./editor";
 import { EditorStylesheet } from "./stylesheet";
 import Breadcrumb from "./toolbar/breadcrumb";
@@ -226,6 +227,9 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
           </div>
         </div>
       </div>
+
+      {/* Debug overlay for scroll monitoring */}
+      <ScrollDebugOverlay />
     </>
   );
 };

@@ -22,6 +22,7 @@ import { applyVirtualEdit, calculateActualOffset } from "../utils/fold-transform
 import { calculateLineHeight, calculateLineOffset, splitLines } from "../utils/lines";
 import { applyMultiCursorBackspace, applyMultiCursorEdit } from "../utils/multi-cursor";
 import { calculateCursorPosition } from "../utils/position";
+import { scrollLogger } from "../utils/scroll-logger";
 import { InlineDiff } from "./diff/inline-diff";
 import { Gutter } from "./gutter/gutter";
 import { GitBlameLayer } from "./layers/git-blame-layer";
@@ -36,6 +37,7 @@ interface EditorProps {
 export function Editor({ className }: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
+  const gitBlameRef = useRef<HTMLDivElement>(null);
 
   const bufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
@@ -463,16 +465,47 @@ export function Editor({ className }: EditorProps) {
     ],
   );
 
+  const scrollRafRef = useRef<number | null>(null);
+  const lastScrollRef = useRef({ top: 0, left: 0 });
+
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLTextAreaElement>) => {
       const scrollTop = e.currentTarget.scrollTop;
       const scrollLeft = e.currentTarget.scrollLeft;
 
-      // Use transform for smoother sync (no independent scrolling)
-      if (highlightRef.current) {
-        highlightRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+      // Skip if scroll hasn't changed
+      if (lastScrollRef.current.top === scrollTop && lastScrollRef.current.left === scrollLeft) {
+        return;
       }
 
+      lastScrollRef.current = { top: scrollTop, left: scrollLeft };
+
+      // Log scroll event for debugging
+      scrollLogger.log(scrollTop, scrollLeft, "editor-scroll");
+
+      // Batch transform updates with RAF for smoother rendering
+      if (scrollRafRef.current === null) {
+        scrollRafRef.current = requestAnimationFrame(() => {
+          const { top, left } = lastScrollRef.current;
+
+          // Update highlight layer transform for visual sync
+          if (highlightRef.current) {
+            highlightRef.current.style.transform = `translate(-${left}px, -${top}px)`;
+          }
+
+          // Update git blame layer transform for visual sync
+          if (gitBlameRef.current) {
+            gitBlameRef.current.style.transform = `translate(-${left}px, -${top}px)`;
+          }
+
+          // Update state store for Vim motions and cursor visibility
+          useEditorStateStore.getState().actions.setScroll(top, left);
+
+          scrollRafRef.current = null;
+        });
+      }
+
+      // Update viewport tracking (already uses RAF internally)
       handleViewportScroll(e, lines.length);
     },
     [handleViewportScroll, lines.length],
@@ -491,6 +524,37 @@ export function Editor({ className }: EditorProps) {
       editorAPI.setTextareaRef(null);
     };
   }, [inputRef]);
+
+  // Cleanup scroll RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
+  }, []);
+
+  // Track viewport height for cursor visibility calculations
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    const updateViewportHeight = () => {
+      const height = textarea.clientHeight;
+      if (height > 0) {
+        useEditorStateStore.getState().actions.setViewportHeight(height);
+      }
+    };
+
+    updateViewportHeight();
+
+    const resizeObserver = new ResizeObserver(updateViewportHeight);
+    resizeObserver.observe(textarea);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     if (buffer?.content && buffer?.path) {
@@ -617,6 +681,7 @@ export function Editor({ className }: EditorProps) {
 
         {filePath && (
           <GitBlameLayer
+            ref={gitBlameRef}
             filePath={filePath}
             cursorLine={cursorPosition.line}
             visualCursorLine={visualCursorLine}
