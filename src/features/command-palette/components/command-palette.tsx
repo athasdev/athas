@@ -303,6 +303,7 @@ const CommandPalette = () => {
               key={action.id}
               onClick={() => {
                 action.action();
+                pushAction(action.id);
               }}
               isSelected={index === selectedIndex}
               className="px-3 py-1.5"
