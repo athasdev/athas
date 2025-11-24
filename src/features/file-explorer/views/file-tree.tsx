@@ -808,9 +808,18 @@ const FileTree = ({
         updateActivePath?.("");
       }}
     >
-      <div className="w-max min-w-full" style={{ minWidth: "100%", width: "max-content" }}>
-        {renderFileTree(filteredFiles)}
-      </div>
+      {filteredFiles.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center p-4">
+          <div className="ui-font text-center text-text-lighter text-xs">
+            <div className="mb-1">No project is opened</div>
+            <div className="text-[10px] opacity-75">Open a project folder</div>
+          </div>
+        </div>
+      ) : (
+        <div className="w-max min-w-full" style={{ minWidth: "100%", width: "max-content" }}>
+          {renderFileTree(filteredFiles)}
+        </div>
+      )}
 
       {contextMenu &&
         createPortal(
