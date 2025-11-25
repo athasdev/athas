@@ -24,18 +24,19 @@ import { createPortal } from "react-dom";
 // Performance optimizations
 const GIT_STATUS_DEBOUNCE_MS = 500;
 
+import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { moveFile, readDirectory, readFile } from "@/features/file-system/controllers/platform";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { ContextMenuState, FileEntry } from "@/features/file-system/types/app";
+import { useSettingsStore } from "@/features/settings/store";
 import { getGitStatus } from "@/features/version-control/git/controllers/git";
 import type { GitFile, GitStatus } from "@/features/version-control/git/types/git";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
-import FileIcon from "./file.icon";
 import { useCustomDragDrop } from "./file-tree-custom-dnd";
 import "./file-tree.css";
-import { useEventListener, useOnClickOutside } from "usehooks-ts";
-import { useSettingsStore } from "@/features/settings/store";
+import FileIcon from "./file.icon";
 
 interface FileTreeProps {
   files: FileEntry[];
@@ -88,6 +89,7 @@ const FileTree = ({
   const [deepestStickyFolder, setDeepestStickyFolder] = useState<string | null>(null);
 
   const { settings } = useSettingsStore();
+  const { handleOpenFolder } = useFileSystemStore();
 
   const userIgnore = useMemo(() => {
     const ig = ignore();
@@ -812,7 +814,9 @@ const FileTree = ({
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="ui-font text-center text-text-lighter text-xs">
             <div className="mb-1">No project is opened</div>
-            <div className="text-[10px] opacity-75">Open a project folder</div>
+            <button onClick={handleOpenFolder} className="text-[10px] opacity-75">
+              <div className="mx-auto">Open a project folder</div>
+            </button>
           </div>
         </div>
       ) : (
