@@ -1,4 +1,5 @@
 import {
+  Brain,
   Bug,
   GitBranch,
   MessageSquare,
@@ -58,5 +59,12 @@ export const createCoreFeaturesList = (coreFeatures: any): CoreFeature[] => [
     description: "File path navigation breadcrumbs in editor",
     icon: Navigation,
     enabled: coreFeatures.breadcrumbs,
+  },
+  {
+    id: "persistentCommands",
+    name: "Persistent Commands",
+    description: "The last used commands appear at the top of the command palette",
+    icon: Brain,
+    enabled: coreFeatures.persistentCommands,
   },
 ];
