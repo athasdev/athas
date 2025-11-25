@@ -89,7 +89,7 @@ const FileTree = ({
   const [deepestStickyFolder, setDeepestStickyFolder] = useState<string | null>(null);
 
   const { settings } = useSettingsStore();
-  const { handleOpenFolder } = useFileSystemStore();
+  const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
 
   const userIgnore = useMemo(() => {
     const ig = ignore();
