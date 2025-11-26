@@ -6,6 +6,14 @@ import { createSelectors } from "@/utils/zustand-selectors";
 
 export type VimMode = "normal" | "insert" | "visual" | "command";
 
+/**
+ * Register content
+ */
+export interface RegisterContent {
+  content: string;
+  type: "line" | "char";
+}
+
 interface VimState {
   mode: VimMode;
   relativeLineNumbers: boolean;
@@ -18,16 +26,20 @@ interface VimState {
     start: { line: number; column: number } | null;
     end: { line: number; column: number } | null;
   };
-  visualMode: "char" | "line" | null; // Track visual mode type
+  visualMode: "char" | "line" | "block" | null; // Track visual mode type
   register: {
     text: string;
     isLineWise: boolean;
   };
+  // New multi-register system
+  registers: Record<string, RegisterContent>; // Named registers (a-z, 0-9, ", +, *, _, /)
+  activeRegister: string | null; // Currently selected register via " prefix
   lastOperation: {
     type: "command" | "action" | null;
     keys: string[];
     count?: number;
-  } | null; // For repeat (.) functionality
+  } | null; // Legacy - for old parser
+  lastRepeatableCommand: any | null; // Store the last Command AST for repeat (.) functionality
 }
 
 const defaultVimState: VimState = {
@@ -47,7 +59,19 @@ const defaultVimState: VimState = {
     text: "",
     isLineWise: false,
   },
+  // Initialize multi-register system
+  registers: {
+    '"': { content: "", type: "char" }, // Unnamed register (default)
+    "0": { content: "", type: "char" }, // Yank register
+    "-": { content: "", type: "char" }, // Small delete register
+    _: { content: "", type: "char" }, // Black hole register
+    "/": { content: "", type: "char" }, // Last search pattern
+    "+": { content: "", type: "char" }, // System clipboard
+    "*": { content: "", type: "char" }, // Selection clipboard
+  },
+  activeRegister: null,
   lastOperation: null,
+  lastRepeatableCommand: null,
 };
 
 const useVimStoreBase = create(
@@ -165,7 +189,7 @@ const useVimStoreBase = create(
           return get().keyBuffer;
         },
 
-        setVisualMode: (mode: "char" | "line" | null) => {
+        setVisualMode: (mode: "char" | "line" | "block" | null) => {
           set((state) => {
             state.visualMode = mode;
           });
@@ -214,6 +238,74 @@ const useVimStoreBase = create(
         clearLastOperation: () => {
           set((state) => {
             state.lastOperation = null;
+          });
+        },
+
+        // Last command management for new grammar-based repeat
+        setLastRepeatableCommand: (command: any) => {
+          set((state) => {
+            state.lastRepeatableCommand = command;
+          });
+        },
+
+        getLastRepeatableCommand: (): any => {
+          return get().lastRepeatableCommand;
+        },
+
+        clearLastRepeatableCommand: () => {
+          set((state) => {
+            state.lastRepeatableCommand = null;
+          });
+        },
+
+        // Register management
+        setRegisterContent: (
+          name: string,
+          content: string,
+          type: "line" | "char",
+          options?: { source?: "yank" | "delete" },
+        ) => {
+          set((state) => {
+            state.registers[name] = { content, type };
+
+            // Also update unnamed register for most operations
+            if (name !== '"' && name !== "_") {
+              state.registers['"'] = { content, type };
+            }
+
+            // Update yank register (0) only for yank operations
+            // This prevents delete operations from polluting the yank register
+            if (options?.source === "yank") {
+              state.registers["0"] = { content, type };
+            }
+
+            // Sync with legacy register for backward compatibility
+            if (name === '"' || !name) {
+              state.register.text = content;
+              state.register.isLineWise = type === "line";
+            }
+          });
+        },
+
+        getRegisterContent: (name: string): RegisterContent => {
+          const state = get();
+          return state.registers[name] || { content: "", type: "char" };
+        },
+
+        setActiveRegisterName: (name: string | null) => {
+          set((state) => {
+            state.activeRegister = name;
+          });
+        },
+
+        getActiveRegisterName: (): string => {
+          const state = get();
+          return state.activeRegister || '"';
+        },
+
+        clearActiveRegister: () => {
+          set((state) => {
+            state.activeRegister = null;
           });
         },
       },
