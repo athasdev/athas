@@ -386,7 +386,14 @@ export const useKeyboardShortcuts = ({
       }
 
       // Close Tab (Ctrl+W / Cmd+W)
+      // Skip if terminal is focused - terminal has its own handler
       if ((e.metaKey || e.ctrlKey) && e.key === "w" && !e.shiftKey) {
+        const terminalContainer = document.querySelector('[data-terminal-container="active"]');
+        if (terminalContainer?.contains(document.activeElement)) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          return;
+        }
         e.preventDefault();
         if (activeBuffer) {
           closeBuffer(activeBuffer.id);

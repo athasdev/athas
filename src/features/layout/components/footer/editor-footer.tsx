@@ -157,7 +157,7 @@ const EditorFooter = () => {
   const cursorPosition = useEditorStateStore.use.cursorPosition();
 
   return (
-    <div className="flex min-h-[32px] items-center justify-between border-border border-t bg-secondary-bg px-2 py-1 ">
+    <div className="relative z-20 flex min-h-[32px] flex-shrink-0 items-center justify-between border-border border-t bg-secondary-bg px-2 py-1">
       <div className="ui-font flex items-center gap-0.5 text-text-lighter text-xs">
         {/* Git branch manager */}
         {rootFolderPath && gitStatus?.branch && (

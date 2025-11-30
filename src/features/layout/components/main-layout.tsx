@@ -27,7 +27,6 @@ import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useKeyboardShortcutsWrapper } from "@/features/window/hooks/use-keyboard-shortcuts-wrapper";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useFolderDrop } from "@/hooks/use-folder-drop";
-import { useTerminalStore } from "@/stores/terminal-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
@@ -73,7 +72,6 @@ export function MainLayout() {
   const { getAllDiagnostics } = useDiagnosticsStore.use.actions();
   const diagnostics = useMemo(() => getAllDiagnostics(), [getAllDiagnostics]);
   const sidebarPosition = settings.sidebarPosition;
-  const terminalWidthMode = useTerminalStore((state) => state.widthMode);
 
   const { closeBufferForce } = useBufferStore.use.actions();
 
@@ -226,39 +224,42 @@ export function MainLayout() {
           )}
 
           {/* Main content area */}
-          <div className="flex h-full flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col">
             <TabBar />
-            {(() => {
-              if (!activeBuffer) {
-                return <div className="flex flex-1 items-center justify-center"></div>;
-              }
-              if (activeBuffer.isDiff) {
-                return (
-                  <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />
-                );
-              } else if (activeBuffer.isImage) {
-                return (
-                  <ImageViewer
-                    filePath={activeBuffer.path}
-                    fileName={activeBuffer.name}
-                    bufferId={activeBuffer.id}
-                  />
-                );
-              } else if (activeBuffer.isSQLite) {
-                return <SQLiteViewer databasePath={activeBuffer.path} />;
-              } else if (activeBuffer.isExternalEditor && activeBuffer.terminalConnectionId) {
-                return (
-                  <ExternalEditorTerminal
-                    filePath={activeBuffer.path}
-                    fileName={activeBuffer.name}
-                    terminalConnectionId={activeBuffer.terminalConnectionId}
-                    onEditorExit={handleExternalEditorExit}
-                  />
-                );
-              } else {
-                return <CodeEditor />;
-              }
-            })()}
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {(() => {
+                if (!activeBuffer) {
+                  return <div className="flex h-full items-center justify-center"></div>;
+                }
+                if (activeBuffer.isDiff) {
+                  return (
+                    <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />
+                  );
+                } else if (activeBuffer.isImage) {
+                  return (
+                    <ImageViewer
+                      filePath={activeBuffer.path}
+                      fileName={activeBuffer.name}
+                      bufferId={activeBuffer.id}
+                    />
+                  );
+                } else if (activeBuffer.isSQLite) {
+                  return <SQLiteViewer databasePath={activeBuffer.path} />;
+                } else if (activeBuffer.isExternalEditor && activeBuffer.terminalConnectionId) {
+                  return (
+                    <ExternalEditorTerminal
+                      filePath={activeBuffer.path}
+                      fileName={activeBuffer.name}
+                      terminalConnectionId={activeBuffer.terminalConnectionId}
+                      onEditorExit={handleExternalEditorExit}
+                    />
+                  );
+                } else {
+                  return <CodeEditor />;
+                }
+              })()}
+            </div>
+            <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
           </div>
 
           {/* Right sidebar or AI chat based on settings */}
@@ -274,17 +275,7 @@ export function MainLayout() {
             </ResizableRightPane>
           )}
         </div>
-
-        {/* BottomPane in editor width mode - only covers middle section */}
-        {terminalWidthMode === "editor" && (
-          <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
-        )}
       </div>
-
-      {/* BottomPane in full width mode - covers entire window including sidebars */}
-      {terminalWidthMode === "full" && (
-        <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
-      )}
 
       <EditorFooter />
 

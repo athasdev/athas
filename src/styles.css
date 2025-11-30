@@ -810,7 +810,7 @@ textarea::-webkit-scrollbar-thumb:hover {
   background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
+  transition: box-shadow 0.2s ease;
 }
 
 .buffer-container:hover {
@@ -888,7 +888,6 @@ textarea::-webkit-scrollbar-thumb:hover {
   border-radius: 6px;
   position: relative;
   z-index: 5;
-  transition: all 0.2s ease;
 }
 
 .pane-header {
@@ -951,12 +950,6 @@ textarea::-webkit-scrollbar-thumb:hover {
   transform: translateY(-2px);
 }
 
-/* Subtle transitions */
-* {
-  transition:
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
-}
 
 .token.erb-output,
 .token.erb-comment,
