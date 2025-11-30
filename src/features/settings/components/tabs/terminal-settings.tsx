@@ -1,3 +1,4 @@
+import { Info } from "lucide-react";
 import { useEffect } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useFontStore } from "@/stores/font-store";
@@ -5,6 +6,7 @@ import Dropdown from "@/ui/dropdown";
 import NumberInput from "@/ui/number-input";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
+import Tooltip from "@/ui/tooltip";
 
 const NERD_FONTS = [
   "MesloLGS NF",
@@ -26,8 +28,13 @@ export const TerminalSettings = () => {
   }, [loadMonospaceFonts]);
 
   // Combine Nerd Fonts with system monospace fonts
+  // Only include Nerd Fonts if they are actually installed on the system
+  const installedNerdFonts = NERD_FONTS.filter((nerdFont) =>
+    monospaceFonts.some((sysFont) => sysFont.family === nerdFont),
+  );
+
   const fontOptions = [
-    ...NERD_FONTS.map((font) => ({ value: font, label: `${font} (Nerd Font)` })),
+    ...installedNerdFonts.map((font) => ({ value: font, label: `${font} (Nerd Font)` })),
     ...monospaceFonts
       .filter((f) => !NERD_FONTS.includes(f.family))
       .map((f) => ({ value: f.family, label: f.family })),
@@ -51,15 +58,21 @@ export const TerminalSettings = () => {
           label="Font Family"
           description="Font family for the integrated terminal. Select a Nerd Font for best icon support."
         >
-          <Dropdown
-            value={settings.terminalFontFamily}
-            options={fontOptions}
-            onChange={(val) => updateSetting("terminalFontFamily", val)}
-            className="w-64"
-            size="sm"
-          />
+          <div className="flex items-center gap-2">
+            <Dropdown
+              value={settings.terminalFontFamily}
+              options={fontOptions}
+              onChange={(val) => updateSetting("terminalFontFamily", val)}
+              className="w-64"
+              size="sm"
+              searchable
+              placeholder="Select font..."
+            />
+            <Tooltip content={FONT_HELP_TEXT} side="left">
+              <Info className="h-4 w-4 cursor-help text-text-lighter transition-colors hover:text-text" />
+            </Tooltip>
+          </div>
         </SettingRow>
-        <p className="ml-1 mt-1 text-text-lighter text-xs">{FONT_HELP_TEXT}</p>
 
         <SettingRow label="Font Size" description="Terminal font size in pixels">
           <NumberInput
