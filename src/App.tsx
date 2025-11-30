@@ -34,6 +34,7 @@ import { extensionLoader } from "./extensions/loader/extension-loader";
 import { initializeExtensionStore } from "./extensions/registry/extension-store";
 import { initializeWasmTokenizer } from "./features/editor/lib/wasm-parser";
 import { initializeKeymaps } from "./features/keymaps/init";
+import { useDeepLink } from "./hooks/use-deep-link";
 
 initializeWasmTokenizer().catch(console.error);
 extensionLoader.initialize().catch(console.error);
@@ -49,6 +50,7 @@ function App() {
   usePlatformSetup();
   useFontLoading();
   useScroll();
+  useDeepLink();
   useExtensionInstallPrompt();
   useKeymapContext();
   useKeymaps();
