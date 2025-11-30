@@ -1,15 +1,27 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import AIChat from "@/features/ai/components/chat/ai-chat";
+import GitHubCopilotSettings from "@/features/ai/components/github-copilot-settings";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
+import CommandBar from "@/features/command-bar/components/command-bar";
+import CommandPalette from "@/features/command-palette/components/command-palette";
+import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
+import ThemeSelector from "@/features/command-palette/components/theme-selector";
 import SQLiteViewer from "@/features/database/providers/sqlite/sqlite-viewer";
 import type { Diagnostic } from "@/features/diagnostics/diagnostics-pane";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
+import CodeEditor from "@/features/editor/components/code-editor";
+import { ExternalEditorTerminal } from "@/features/editor/components/external-editor-terminal";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
+import { ImageViewer } from "@/features/image-viewer/components/image-viewer";
 import { useSettingsStore } from "@/features/settings/store";
+import TabBar from "@/features/tabs/components/tab-bar";
 import DiffViewer from "@/features/version-control/diff-viewer/components/diff-viewer";
 import { stageHunk, unstageHunk } from "@/features/version-control/git/controllers/git";
 import type { GitHunk } from "@/features/version-control/git/types/git";
+import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useKeyboardShortcutsWrapper } from "@/features/window/hooks/use-keyboard-shortcuts-wrapper";
@@ -18,21 +30,6 @@ import { useFolderDrop } from "@/hooks/use-folder-drop";
 import { useTerminalStore } from "@/stores/terminal-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
-
-// Lazy load AI Chat for better performance
-const AIChat = lazy(() => import("@/features/ai/components/chat/ai-chat"));
-
-import GitHubCopilotSettings from "@/features/ai/components/github-copilot-settings";
-import CommandBar from "@/features/command-bar/components/command-bar";
-import CommandPalette from "@/features/command-palette/components/command-palette";
-import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
-import ThemeSelector from "@/features/command-palette/components/theme-selector";
-import CodeEditor from "@/features/editor/components/code-editor";
-import { ExternalEditorTerminal } from "@/features/editor/components/external-editor-terminal";
-import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
-import { ImageViewer } from "@/features/image-viewer/components/image-viewer";
-import TabBar from "@/features/tabs/components/tab-bar";
-import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
@@ -218,15 +215,7 @@ export function MainLayout() {
           {/* Left sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
             <ResizableRightPane position="left" isVisible={settings.isAIChatVisible}>
-              <Suspense
-                fallback={
-                  <div className="flex h-full items-center justify-center text-text-lighter text-xs">
-                    Loading...
-                  </div>
-                }
-              >
-                <AIChat mode="chat" />
-              </Suspense>
+              <AIChat mode="chat" />
             </ResizableRightPane>
           ) : (
             isSidebarVisible && (
@@ -281,15 +270,7 @@ export function MainLayout() {
             )
           ) : (
             <ResizableRightPane position="right" isVisible={settings.isAIChatVisible}>
-              <Suspense
-                fallback={
-                  <div className="flex h-full items-center justify-center text-text-lighter text-xs">
-                    Loading AI Chat...
-                  </div>
-                }
-              >
-                <AIChat mode="chat" />
-              </Suspense>
+              <AIChat mode="chat" />
             </ResizableRightPane>
           )}
         </div>
