@@ -20,6 +20,7 @@ import { yamlLanguage } from "./yaml-extension";
 
 export const allLanguages: LanguageExtension[] = [
   // Existing languages (18 total)
+  // Note: markdown tree-sitter WASM parser needs to be added to public/tree-sitter/parsers/
   javascriptLanguage,
   typescriptLanguage,
   pythonLanguage,

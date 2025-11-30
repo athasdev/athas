@@ -18,16 +18,26 @@
       "aliases": ["JavaScript", "js"]
     }
   ],
+  "grammar": {
+    "wasmPath": "./grammars/tree-sitter-tsx.wasm",
+    "scopeName": "source.tsx",
+    "languageId": "tsx"
+  },
   "lsp": {
     "server": {
       "default": "typescript-language-server",
-      "darwin": "./lsp/typescript-language-server-darwin",
-      "linux": "./lsp/typescript-language-server-linux",
-      "win32": "./lsp/typescript-language-server.exe"
+      "darwin": "typescript-language-server",
+      "linux": "typescript-language-server",
+      "win32": "typescript-language-server.cmd"
     },
     "args": ["--stdio"],
     "fileExtensions": [".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs"],
     "languageIds": ["typescript", "javascript", "typescriptreact", "javascriptreact"]
+  },
+  "formatter": {
+    "command": "prettier",
+    "languages": ["typescript", "javascript"],
+    "formatOnSave": true
   },
   "commands": [
     {

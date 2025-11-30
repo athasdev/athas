@@ -301,6 +301,7 @@ class ExtensionRegistry {
   getFormatterForFile(filePath: string): {
     command: string;
     args: string[];
+    env?: Record<string, string>;
     inputMethod?: "stdin" | "file";
     outputMethod?: "stdout" | "file";
   } | null {
@@ -330,6 +331,7 @@ class ExtensionRegistry {
     return {
       command: resolvedCommand,
       args: formatterConfig.args || [],
+      env: formatterConfig.env,
       inputMethod: formatterConfig.inputMethod,
       outputMethod: formatterConfig.outputMethod,
     };
@@ -341,6 +343,7 @@ class ExtensionRegistry {
   getFormatterForLanguage(languageId: string): {
     command: string;
     args: string[];
+    env?: Record<string, string>;
     inputMethod?: "stdin" | "file";
     outputMethod?: "stdout" | "file";
   } | null {
@@ -367,6 +370,7 @@ class ExtensionRegistry {
     return {
       command: resolvedCommand,
       args: formatterConfig.args || [],
+      env: formatterConfig.env,
       inputMethod: formatterConfig.inputMethod,
       outputMethod: formatterConfig.outputMethod,
     };
@@ -378,6 +382,7 @@ class ExtensionRegistry {
   getLinterForFile(filePath: string): {
     command: string;
     args: string[];
+    env?: Record<string, string>;
     inputMethod?: "stdin" | "file";
     diagnosticFormat?: "lsp" | "regex";
     diagnosticPattern?: string;
@@ -405,6 +410,7 @@ class ExtensionRegistry {
     return {
       command: resolvedCommand,
       args: linterConfig.args || [],
+      env: linterConfig.env,
       inputMethod: linterConfig.inputMethod,
       diagnosticFormat: linterConfig.diagnosticFormat,
       diagnosticPattern: linterConfig.diagnosticPattern,
@@ -417,6 +423,7 @@ class ExtensionRegistry {
   getLinterForLanguage(languageId: string): {
     command: string;
     args: string[];
+    env?: Record<string, string>;
     inputMethod?: "stdin" | "file";
     diagnosticFormat?: "lsp" | "regex";
     diagnosticPattern?: string;
@@ -443,6 +450,7 @@ class ExtensionRegistry {
     return {
       command: resolvedCommand,
       args: linterConfig.args || [],
+      env: linterConfig.env,
       inputMethod: linterConfig.inputMethod,
       diagnosticFormat: linterConfig.diagnosticFormat,
       diagnosticPattern: linterConfig.diagnosticPattern,

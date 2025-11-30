@@ -27,6 +27,22 @@ class GenericLspExtension {
     const manifest = this.extension.manifest;
     logger.info("ExtensionLoader", `Activating ${manifest.displayName} extension`);
 
+    // Register languages
+    if (manifest.languages) {
+      for (const lang of manifest.languages) {
+        context.registerLanguage({
+          id: lang.id,
+          extensions: lang.extensions,
+          aliases: lang.aliases,
+        });
+      }
+    }
+
+    // Load tree-sitter grammar if present
+    if (manifest.grammar) {
+      await this.loadGrammar(manifest.grammar);
+    }
+
     // Register commands from manifest
     if (manifest.commands) {
       for (const cmd of manifest.commands) {
@@ -45,6 +61,54 @@ class GenericLspExtension {
 
     this.isActivated = true;
     logger.info("ExtensionLoader", `${manifest.displayName} extension activated`);
+  }
+
+  private async loadGrammar(grammar: any): Promise<void> {
+    try {
+      const basePath = this.extension.path;
+      const wasmPath = grammar.wasmPath.startsWith("./")
+        ? `${basePath}/${grammar.wasmPath.substring(2)}`
+        : grammar.wasmPath;
+
+      logger.info("ExtensionLoader", `Loading grammar from ${wasmPath}`);
+
+      // Fetch highlight query if path is provided
+      let highlightQuery: string | undefined;
+      if (grammar.highlightQueryPath) {
+        try {
+          const queryPath = grammar.highlightQueryPath.startsWith("./")
+            ? `${basePath}/${grammar.highlightQueryPath.substring(2)}`
+            : grammar.highlightQueryPath;
+
+          logger.info("ExtensionLoader", `Fetching highlight query from ${queryPath}`);
+
+          const response = await fetch(queryPath);
+          if (response.ok) {
+            highlightQuery = await response.text();
+            logger.info("ExtensionLoader", `Highlight query loaded for ${grammar.languageId}`);
+          } else {
+            logger.warn(
+              "ExtensionLoader",
+              `Failed to fetch highlight query from ${queryPath}: ${response.status}`,
+            );
+          }
+        } catch (error) {
+          logger.warn("ExtensionLoader", `Failed to load highlight query:`, error);
+        }
+      }
+
+      // Load the tree-sitter parser
+      const { wasmParserLoader } = await import("@/features/editor/lib/wasm-parser");
+      await wasmParserLoader.loadParser({
+        languageId: grammar.languageId,
+        wasmPath,
+        highlightQuery,
+      });
+
+      logger.info("ExtensionLoader", `Grammar loaded for ${grammar.languageId}`);
+    } catch (error) {
+      logger.error("ExtensionLoader", `Failed to load grammar:`, error);
+    }
   }
 
   async deactivate(): Promise<void> {
