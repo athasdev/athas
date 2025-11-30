@@ -57,11 +57,9 @@ export const TerminalSettings = () => {
             onChange={(val) => updateSetting("terminalFontFamily", val)}
             className="w-64"
             size="sm"
-            searchable
-            placeholder="Select font..."
           />
-          <p className="mt-2 text-text-lighter text-xs">{FONT_HELP_TEXT}</p>
         </SettingRow>
+        <p className="ml-1 mt-1 text-text-lighter text-xs">{FONT_HELP_TEXT}</p>
 
         <SettingRow label="Font Size" description="Terminal font size in pixels">
           <NumberInput
