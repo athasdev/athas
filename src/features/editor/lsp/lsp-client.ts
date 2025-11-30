@@ -84,6 +84,12 @@ export class LspClient {
         }
       }
 
+      // If no LSP server is configured, return early
+      if (!serverPath) {
+        logger.debug("LSPClient", `No LSP server configured for workspace ${workspacePath}`);
+        return;
+      }
+
       logger.info("LSPClient", `Invoking lsp_start with:`, {
         workspacePath,
         serverPath,
@@ -139,6 +145,12 @@ export class LspClient {
       const serverPath = extensionRegistry.getLspServerPath(filePath) || undefined;
       const serverArgs = extensionRegistry.getLspServerArgs(filePath);
       const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
+
+      // If no LSP server is configured for this file type, return early
+      if (!serverPath) {
+        logger.debug("LSPClient", `No LSP server configured for ${filePath}`);
+        return;
+      }
 
       logger.info("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
 

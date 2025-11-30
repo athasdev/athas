@@ -5,6 +5,7 @@
 
 import type { RefObject } from "react";
 import { useEffect, useMemo, useRef } from "react";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useSnippetCompletion } from "@/features/editor/hooks/use-snippet-completion";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
@@ -27,8 +28,8 @@ interface UseLspIntegrationOptions {
  */
 const isFileSupported = (filePath: string | undefined): boolean => {
   if (!filePath) return false;
-  const ext = filePath.split(".").pop()?.toLowerCase();
-  return ext === "ts" || ext === "tsx" || ext === "js" || ext === "jsx";
+  // Use extension registry to check if LSP is supported for this file
+  return extensionRegistry.isLspSupported(filePath);
 };
 
 /**
