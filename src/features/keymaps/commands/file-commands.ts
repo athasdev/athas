@@ -81,9 +81,9 @@ export const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+p",
     execute: () => {
-      const setIsCommandPaletteVisible = commandContext.get("setIsCommandPaletteVisible");
-      if (setIsCommandPaletteVisible) {
-        setIsCommandPaletteVisible(true);
+      const setIsCommandBarVisible = commandContext.get("setIsCommandBarVisible");
+      if (setIsCommandBarVisible) {
+        setIsCommandBarVisible(true);
       }
     },
   },

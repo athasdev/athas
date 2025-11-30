@@ -20,6 +20,7 @@ interface CommandCallbacks {
   setBottomPaneActiveTab?: (tab: "terminal" | "diagnostics") => void;
   setIsFindVisible?: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsSidebarVisible?: (value: boolean | ((prev: boolean) => boolean)) => void;
+  setIsCommandBarVisible?: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsCommandPaletteVisible?: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsGlobalSearchVisible?: (value: boolean | ((prev: boolean) => boolean)) => void;
   setIsThemeSelectorVisible?: (value: boolean | ((prev: boolean) => boolean)) => void;

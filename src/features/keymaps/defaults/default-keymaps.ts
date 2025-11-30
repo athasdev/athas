@@ -13,7 +13,7 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "cmd+shift+t", command: "file.reopenClosed", source: "default" },
   { key: "cmd+n", command: "file.new", source: "default" },
   { key: "cmd+o", command: "file.open", source: "default" },
-  { key: "cmd+p", command: "file.quickOpen", source: "default" },
+  // Note: cmd+p is handled by the global keyboard shortcuts to avoid race conditions with command context
 
   // Edit Operations
   { key: "cmd+a", command: "editor.selectAll", source: "default", when: "editorFocus" },
@@ -51,7 +51,7 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "cmd+b", command: "workbench.toggleSidebar", source: "default" },
   { key: "cmd+`", command: "workbench.toggleTerminal", source: "default" },
   { key: "cmd+shift+j", command: "workbench.toggleDiagnostics", source: "default" },
-  { key: "cmd+shift+p", command: "workbench.commandPalette", source: "default" },
+  // Note: cmd+shift+p is handled by the global keyboard shortcuts to avoid race conditions with command context
   { key: "cmd+f", command: "workbench.showFind", source: "default", when: "editorFocus" },
   { key: "cmd+shift+f", command: "workbench.showGlobalSearch", source: "default" },
   { key: "cmd+shift+h", command: "workbench.showProjectSearch", source: "default" },
