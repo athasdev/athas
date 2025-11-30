@@ -99,7 +99,7 @@ function convertToToken(highlightToken: HighlightToken): Token {
   };
 }
 
-const FULL_TOKENIZE_INTERVAL = 5000; // Re-tokenize full document every 5 seconds
+const FULL_TOKENIZE_INTERVAL = 30000; // Re-tokenize full document every 30 seconds
 
 export function useTokenizer({ filePath, enabled = true, incremental = true }: TokenizerOptions) {
   const [tokens, setTokens] = useState<Token[]>([]);

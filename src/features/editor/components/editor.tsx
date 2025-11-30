@@ -91,7 +91,11 @@ export function Editor({ className }: EditorProps) {
   const displayContent = foldTransform.hasActiveFolds ? foldTransform.virtualContent : content;
   const lineHeight = useMemo(() => calculateLineHeight(fontSize), [fontSize]);
 
-  const { handleScroll: handleViewportScroll, initializeViewport } = useViewportLines({
+  const {
+    viewportRange,
+    handleScroll: handleViewportScroll,
+    initializeViewport,
+  } = useViewportLines({
     lineHeight,
   });
 
@@ -143,7 +147,7 @@ export function Editor({ className }: EditorProps) {
       }
 
       if (hasSyntaxHighlighting) {
-        // Tokenize the content that will be displayed
+        // Tokenize the content that will be displayed (full tokenize on input for accuracy)
         const contentToTokenize = foldTransform.hasActiveFolds
           ? newVirtualContent
           : newActualContent;
@@ -467,6 +471,8 @@ export function Editor({ className }: EditorProps) {
 
   const scrollRafRef = useRef<number | null>(null);
   const lastScrollRef = useRef({ top: 0, left: 0 });
+  const isScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLTextAreaElement>) => {
@@ -479,11 +485,17 @@ export function Editor({ className }: EditorProps) {
       }
 
       lastScrollRef.current = { top: scrollTop, left: scrollLeft };
+      isScrollingRef.current = true;
+
+      // Clear existing scroll timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
 
       // Log scroll event for debugging
       scrollLogger.log(scrollTop, scrollLeft, "editor-scroll");
 
-      // Batch transform updates with RAF for smoother rendering
+      // Single RAF for both transform updates and viewport tracking
       if (scrollRafRef.current === null) {
         scrollRafRef.current = requestAnimationFrame(() => {
           const { top, left } = lastScrollRef.current;
@@ -501,12 +513,17 @@ export function Editor({ className }: EditorProps) {
           // Update state store for Vim motions and cursor visibility
           useEditorStateStore.getState().actions.setScroll(top, left);
 
+          // Update viewport tracking in the same RAF
+          handleViewportScroll(top, lines.length);
+
           scrollRafRef.current = null;
         });
       }
 
-      // Update viewport tracking (already uses RAF internally)
-      handleViewportScroll(e, lines.length);
+      // Mark scrolling as finished after 150ms of no scroll events
+      scrollTimeoutRef.current = setTimeout(() => {
+        isScrollingRef.current = false;
+      }, 150);
     },
     [handleViewportScroll, lines.length],
   );
@@ -525,11 +542,14 @@ export function Editor({ className }: EditorProps) {
     };
   }, [inputRef]);
 
-  // Cleanup scroll RAF on unmount
+  // Cleanup scroll RAF and timeout on unmount
   useEffect(() => {
     return () => {
       if (scrollRafRef.current !== null) {
         cancelAnimationFrame(scrollRafRef.current);
+      }
+      if (scrollTimeoutRef.current !== null) {
+        clearTimeout(scrollTimeoutRef.current);
       }
     };
   }, []);
@@ -556,12 +576,34 @@ export function Editor({ className }: EditorProps) {
     };
   }, []);
 
+  // Debounced tokenization to avoid blocking during scroll
+  const tokenizeTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
-    if (buffer?.content && buffer?.path) {
-      // Tokenize the content that's actually being displayed
-      const contentToTokenize = foldTransform.hasActiveFolds ? displayContent : buffer.content;
-      tokenize(contentToTokenize);
+    if (!buffer?.content || !buffer?.path) return;
+
+    // Clear any pending tokenization
+    if (tokenizeTimerRef.current) {
+      clearTimeout(tokenizeTimerRef.current);
     }
+
+    const contentToTokenize = foldTransform.hasActiveFolds ? displayContent : buffer.content;
+
+    // If actively scrolling, debounce the tokenization
+    if (isScrollingRef.current) {
+      tokenizeTimerRef.current = setTimeout(() => {
+        tokenize(contentToTokenize, viewportRange);
+      }, 200);
+    } else {
+      // Not scrolling, tokenize immediately
+      tokenize(contentToTokenize, viewportRange);
+    }
+
+    return () => {
+      if (tokenizeTimerRef.current) {
+        clearTimeout(tokenizeTimerRef.current);
+      }
+    };
   }, [
     bufferId,
     buffer?.path,
@@ -569,6 +611,7 @@ export function Editor({ className }: EditorProps) {
     tokenize,
     foldTransform.hasActiveFolds,
     displayContent,
+    viewportRange,
   ]);
 
   useEffect(() => {
@@ -650,6 +693,7 @@ export function Editor({ className }: EditorProps) {
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             tabSize={tabSize}
+            viewportRange={viewportRange}
           />
         )}
         <InputLayer

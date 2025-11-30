@@ -3,6 +3,13 @@
  * Two-layer architecture: transparent input + syntax-highlighted background
  */
 
+:root {
+  --editor-padding-top: 8px;
+  --editor-padding-left: 16px;
+  --editor-padding-bottom: 8px;
+  --editor-padding-right: 16px;
+}
+
 .overlay-editor-container {
   position: relative;
   width: 100%;
@@ -20,7 +27,8 @@
   overflow: hidden;
   pointer-events: none;
   z-index: 1;
-  padding: 0.5rem 1rem;
+  padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
+    var(--editor-padding-left);
   white-space: pre;
   word-wrap: break-word;
   user-select: none;
@@ -45,7 +53,8 @@
   height: 100%;
   overflow: auto;
   z-index: 2;
-  padding: 0.5rem 1rem;
+  padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
+    var(--editor-padding-left);
   background: transparent;
   border: none;
   outline: none;
@@ -62,6 +71,7 @@
   /* Performance optimizations */
   contain: layout style paint;
   transform: translateZ(0);
+  scroll-behavior: auto;
 }
 
 /* Ensure both layers have matching scroll behavior */
@@ -91,11 +101,14 @@
 .highlight-layer-line {
   display: block;
   min-height: 1em;
+  line-height: inherit;
+  box-sizing: border-box;
 }
 
 /* Multi-cursor layer */
 .multi-cursor-layer {
-  padding: 0.5rem 1rem;
+  padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
+    var(--editor-padding-left);
 }
 
 /* Cursor blink animation */

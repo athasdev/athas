@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useEditorStateStore } from "../../stores/state-store";
 import { calculateLineNumberWidth } from "../../utils/gutter";
 
@@ -16,8 +17,6 @@ interface LineNumbersProps {
   startLine: number;
   endLine: number;
 }
-
-const GUTTER_PADDING = 8;
 
 function LineNumbersComponent({
   totalLines,
@@ -43,7 +42,7 @@ function LineNumbersComponent({
           key={i}
           style={{
             position: "absolute",
-            top: `${i * lineHeight + GUTTER_PADDING}px`,
+            top: `${i * lineHeight + EDITOR_CONSTANTS.GUTTER_PADDING}px`,
             left: 0,
             right: 0,
             height: `${lineHeight}px`,

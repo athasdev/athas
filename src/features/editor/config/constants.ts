@@ -16,10 +16,16 @@ export const EDITOR_CONSTANTS = {
   SIGNIFICANT_LINE_DIFF: 10, // Lines - threshold for significant range change
   VIEWPORT_OVERLAP_THRESHOLD: 50, // Percentage - consider significant if overlap is more than 50%
 
+  // Editor padding (must match CSS variables in overlay-editor.css)
+  EDITOR_PADDING_TOP: 8,
+  EDITOR_PADDING_LEFT: 16,
+  EDITOR_PADDING_BOTTOM: 8,
+  EDITOR_PADDING_RIGHT: 16,
+
   // Gutter
   MIN_GUTTER_WIDTH: 40,
   GUTTER_CHAR_WIDTH: 8,
-  GUTTER_PADDING: 24, // Increased to account for git indicators (8px left + 8px right + 8px spacing)
+  GUTTER_PADDING: 8, // Vertical padding for gutter elements (matches EDITOR_PADDING_TOP)
   GIT_INDICATOR_WIDTH: 8, // Space reserved for git gutter indicators on the left
   GUTTER_MARGIN: 8, // mr-2 in Tailwind (0.5rem = 8px) - margin between gutter and content
   FIXED_GUTTER_DIGITS: 4, // Reserve space for up to 4-digit line numbers (1-9999)

@@ -74,10 +74,11 @@ function GutterComponent({
     const syncScroll = () => {
       const scrollTop = textarea.scrollTop;
       scrollTopRef.current = scrollTop;
-      content.style.transform = `translateY(-${scrollTop}px)`;
 
       if (rafId === null) {
         rafId = requestAnimationFrame(() => {
+          // Apply transform in RAF to sync with main editor layers
+          content.style.transform = `translateY(-${scrollTopRef.current}px)`;
           updateViewport(scrollTopRef.current);
           rafId = null;
         });
