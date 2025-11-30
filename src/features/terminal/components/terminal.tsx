@@ -58,6 +58,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     terminalFontFamily,
     terminalFontSize,
     terminalLineHeight,
+    terminalLetterSpacing,
     terminalCursorStyle,
     terminalCursorBlink,
   } = useSettingsStore((state) => state.settings);
@@ -80,6 +81,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         fontFamily: terminalFontFamily,
         fontSize: terminalFontSize,
         lineHeight: terminalLineHeight,
+        letterSpacing: terminalLetterSpacing,
         cursorBlink: terminalCursorBlink,
         cursorStyle: terminalCursorStyle,
         cursorWidth: 2,
@@ -223,6 +225,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     terminalFontFamily,
     terminalFontSize,
     terminalLineHeight,
+    terminalLetterSpacing,
     terminalCursorStyle,
     terminalCursorBlink,
     rootFolderPath,
@@ -287,6 +290,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     xtermRef.current.options.fontFamily = terminalFontFamily;
     xtermRef.current.options.fontSize = terminalFontSize;
     xtermRef.current.options.lineHeight = terminalLineHeight;
+    xtermRef.current.options.letterSpacing = terminalLetterSpacing;
     xtermRef.current.options.cursorBlink = terminalCursorBlink;
     xtermRef.current.options.cursorStyle = terminalCursorStyle;
     addonsRef.current?.fitAddon.fit();
@@ -294,6 +298,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     terminalFontFamily,
     terminalFontSize,
     terminalLineHeight,
+    terminalLetterSpacing,
     terminalCursorBlink,
     terminalCursorStyle,
   ]);

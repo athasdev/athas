@@ -13,6 +13,9 @@ const NERD_FONTS = [
   "JetBrainsMono Nerd Font",
 ];
 
+const FONT_HELP_TEXT =
+  "Note: Selected font must be installed on your system to work correctly. If icons are missing, try installing a Nerd Font.";
+
 export const TerminalSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
   const monospaceFonts = useFontStore.use.monospaceFonts();
@@ -57,6 +60,7 @@ export const TerminalSettings = () => {
             searchable
             placeholder="Select font..."
           />
+          <p className="mt-2 text-text-lighter text-xs">{FONT_HELP_TEXT}</p>
         </SettingRow>
 
         <SettingRow label="Font Size" description="Terminal font size in pixels">
@@ -77,6 +81,18 @@ export const TerminalSettings = () => {
             step={0.1}
             value={settings.terminalLineHeight}
             onChange={(val) => updateSetting("terminalLineHeight", val)}
+            className="w-20"
+            size="xs"
+          />
+        </SettingRow>
+
+        <SettingRow label="Letter Spacing" description="Additional spacing between characters">
+          <NumberInput
+            min="-5"
+            max="5"
+            step={0.1}
+            value={settings.terminalLetterSpacing}
+            onChange={(val) => updateSetting("terminalLetterSpacing", val)}
             className="w-20"
             size="xs"
           />

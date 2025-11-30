@@ -22,6 +22,7 @@ interface Settings {
   terminalFontFamily: string;
   terminalFontSize: number;
   terminalLineHeight: number;
+  terminalLetterSpacing: number;
   terminalCursorStyle: "block" | "underline" | "bar";
   terminalCursorBlink: boolean;
   tabSize: number;
@@ -88,6 +89,7 @@ const defaultSettings: Settings = {
     '"MesloLGS NF", "MesloLGS Nerd Font", "FiraCode Nerd Font", "JetBrainsMono Nerd Font", "JetBrains Mono", "Fira Code", Consolas, monospace',
   terminalFontSize: 14,
   terminalLineHeight: 1.2,
+  terminalLetterSpacing: 0,
   terminalCursorStyle: "block",
   terminalCursorBlink: true,
   tabSize: 2,
