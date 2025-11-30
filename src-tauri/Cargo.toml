@@ -32,6 +32,7 @@ lsp-types = { version = "0.95", features = ["proposed"] }
 notify = "8.1.0"
 notify-debouncer-mini = "0.6.0"
 portable-pty = "0.8"
+regex = "1.10"
 reqwest = "0.12"
 rusqlite = { version = "0.29.0", features = ["bundled"] }
 sha256 = "1.5"
@@ -66,6 +67,7 @@ nucleo = "0.5.0"
 nucleo-matcher = "0.3.1"
 toml = "0.8"
 tauri-plugin-clipboard-manager = "2"
+tauri-plugin-deep-link = "2"
 
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
