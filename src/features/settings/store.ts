@@ -45,6 +45,7 @@ interface Settings {
   autoDetectLanguage: boolean;
   formatOnSave: boolean;
   formatter: string;
+  lintOnSave: boolean;
   autoCompletion: boolean;
   parameterHints: boolean;
   // External Editor
@@ -104,6 +105,7 @@ const defaultSettings: Settings = {
   autoDetectLanguage: true,
   formatOnSave: false,
   formatter: "prettier",
+  lintOnSave: false,
   autoCompletion: true,
   parameterHints: true,
   // External Editor
