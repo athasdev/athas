@@ -8,7 +8,8 @@ export type SettingsTab =
   | "language"
   | "features"
   | "advanced"
-  | "fileTree";
+  | "fileTree"
+  | "terminal";
 
 export type BottomPaneTab = "terminal" | "diagnostics";
 
