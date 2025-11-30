@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/logo.svg" alt="Athas" width="120">
+  <img src="public/icon.png" alt="Athas" width="120">
   <h1>Athas</h1>
   <p>A lightweight, cross-platform code editor, built with <a href="https://tauri.app/" title="Tauri">Tauri</a> (Rust and React) with Git support, AI agents, vim keybindings.</p>
   <img src="public/screenshot.webp" alt="Athas Screenshot" width="800">
