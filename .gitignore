@@ -70,3 +70,6 @@ storybook-static/
 # tree-sitter parsers and queries (downloaded from CDN)
 public/tree-sitter/parsers/*.wasm
 public/tree-sitter/queries/
+
+# Bundled tree-sitter grammars
+src/extensions/bundled/*/grammars/*.wasm
