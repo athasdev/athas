@@ -6,12 +6,14 @@ import { SearchAddon } from "@xterm/addon-search";
 import { SerializeAddon } from "@xterm/addon-serialize";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { WebglAddon } from "@xterm/addon-webgl";
 import type { Terminal } from "@xterm/xterm";
 
 export interface TerminalAddons {
   fitAddon: FitAddon;
   searchAddon: SearchAddon;
   serializeAddon: SerializeAddon;
+  webglAddon: WebglAddon;
 }
 
 export function createTerminalAddons(terminal: Terminal): TerminalAddons {
@@ -20,14 +22,20 @@ export function createTerminalAddons(terminal: Terminal): TerminalAddons {
   const serializeAddon = new SerializeAddon();
   const unicode11Addon = new Unicode11Addon();
   const clipboardAddon = new ClipboardAddon();
+  const webglAddon = new WebglAddon();
+
+  webglAddon.onContextLoss(() => {
+    webglAddon.dispose();
+  });
 
   terminal.loadAddon(fitAddon);
   terminal.loadAddon(searchAddon);
   terminal.loadAddon(serializeAddon);
   terminal.loadAddon(unicode11Addon);
   terminal.loadAddon(clipboardAddon);
+  terminal.loadAddon(webglAddon);
 
-  return { fitAddon, searchAddon, serializeAddon };
+  return { fitAddon, searchAddon, serializeAddon, webglAddon };
 }
 
 export function loadWebLinksAddon(terminal: Terminal): void {
