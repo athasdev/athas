@@ -114,6 +114,7 @@
         }
       ]
     },
-    "store:default"
+    "store:default",
+    "deep-link:default"
   ]
 }

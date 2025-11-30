@@ -39,6 +39,7 @@ fn main() {
       .plugin(tauri_plugin_os::init())
       .plugin(tauri_plugin_http::init())
       .plugin(tauri_plugin_process::init())
+      .plugin(tauri_plugin_deep_link::init())
       .setup(|app| {
          let store = app.store("settings.json")?;
 
@@ -259,6 +260,7 @@ fn main() {
          // File system commands
          move_file,
          rename_file,
+         get_symlink_info,
          // Git commands
          git_status,
          git_add,
@@ -381,6 +383,8 @@ fn main() {
          search_files_content,
          // Format commands
          format_code,
+         // Lint commands
+         lint_code,
          // CLI commands
          check_cli_installed,
          install_cli_command,
