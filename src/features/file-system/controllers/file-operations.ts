@@ -1,11 +1,13 @@
 import type { FileEntry } from "../types/app";
 import {
+  getSymlinkInfo,
   createDirectory as platformCreateDirectory,
   deletePath as platformDeletePath,
   readDirectory as platformReadDirectory,
   readFile as platformReadFile,
   writeFile as platformWriteFile,
 } from "./platform";
+import { useFileSystemStore } from "./store";
 import { shouldIgnore } from "./utils";
 
 export async function readFileContent(path: string): Promise<string> {
@@ -58,20 +60,44 @@ export async function deleteFileOrDirectory(path: string): Promise<void> {
 export async function readDirectoryContents(path: string): Promise<FileEntry[]> {
   try {
     const entries = await platformReadDirectory(path);
+    const workspaceRoot = useFileSystemStore.getState().rootFolderPath;
 
-    return (entries as any[])
-      .filter((entry: any) => {
-        const name = entry.name || "Unknown";
-        const isDir = entry.is_dir || false;
-        return !shouldIgnore(name, isDir);
-      })
-      .map((entry: any) => ({
-        name: entry.name || "Unknown",
-        path: entry.path || `${path}/${entry.name}`,
-        isDir: entry.is_dir || false,
-        expanded: false,
-        children: undefined,
-      }));
+    const filteredEntries = (entries as any[]).filter((entry: any) => {
+      const name = entry.name || "Unknown";
+      const isDir = entry.is_dir || false;
+      return !shouldIgnore(name, isDir);
+    });
+
+    const entriesWithSymlinkInfo = await Promise.all(
+      filteredEntries.map(async (entry: any) => {
+        const entryPath = entry.path || `${path}/${entry.name}`;
+
+        try {
+          const symlinkInfo = await getSymlinkInfo(entryPath, workspaceRoot);
+
+          return {
+            name: entry.name || "Unknown",
+            path: entryPath,
+            isDir: symlinkInfo.is_symlink ? false : entry.is_dir || false,
+            expanded: false,
+            children: undefined,
+            isSymlink: symlinkInfo.is_symlink,
+            symlinkTarget: symlinkInfo.target,
+          };
+        } catch (error) {
+          console.error(`Failed to get symlink info for ${entryPath}:`, error);
+          return {
+            name: entry.name || "Unknown",
+            path: entryPath,
+            isDir: entry.is_dir || false,
+            expanded: false,
+            children: undefined,
+          };
+        }
+      }),
+    );
+
+    return entriesWithSymlinkInfo;
   } catch (error) {
     throw new Error(`Failed to read directory ${path}: ${error}`);
   }

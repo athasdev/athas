@@ -46,7 +46,7 @@ import {
 } from "./file-tree-utils";
 import { getFilenameFromPath, isImageFile, isSQLiteFile } from "./file-utils";
 import { useFileWatcherStore } from "./file-watcher-store";
-import { openFolder, readDirectory, renameFile } from "./platform";
+import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 
@@ -236,6 +236,33 @@ export const useFileSystemStore = createSelectors(
           return;
         }
 
+        let resolvedPath = path;
+
+        try {
+          const workspaceRoot = get().rootFolderPath;
+          const symlinkInfo = await getSymlinkInfo(path, workspaceRoot);
+
+          if (symlinkInfo.is_symlink && symlinkInfo.target) {
+            const pathSeparator = path.includes("\\") ? "\\" : "/";
+            const pathParts = path.split(pathSeparator);
+            pathParts.pop();
+            const parentDir = pathParts.join(pathSeparator);
+
+            if (
+              symlinkInfo.target.startsWith(pathSeparator) ||
+              symlinkInfo.target.match(/^[a-zA-Z]:/)
+            ) {
+              resolvedPath = symlinkInfo.target;
+            } else {
+              resolvedPath = workspaceRoot
+                ? `${workspaceRoot}${pathSeparator}${symlinkInfo.target}`
+                : `${parentDir}${pathSeparator}${symlinkInfo.target}`;
+            }
+          }
+        } catch (error) {
+          console.error("Failed to resolve symlink:", error);
+        }
+
         updateActivePath(path);
         const fileName = getFilenameFromPath(path);
         const { openBuffer } = useBufferStore.getState().actions;
@@ -260,9 +287,9 @@ export const useFileSystemStore = createSelectors(
         }
 
         // Handle special file types
-        if (isSQLiteFile(path)) {
+        if (isSQLiteFile(resolvedPath)) {
           openBuffer(path, fileName, "", false, true, false, false);
-        } else if (isImageFile(path)) {
+        } else if (isImageFile(resolvedPath)) {
           openBuffer(path, fileName, "", true, false, false, false);
         } else {
           // Check if external editor is enabled for text files
@@ -283,14 +310,14 @@ export const useFileSystemStore = createSelectors(
               });
 
               // Open external editor buffer
-              openExternalEditorBuffer(path, fileName, connectionId);
+              openExternalEditorBuffer(resolvedPath, fileName, connectionId);
               return;
             } catch (error) {
               console.error("Failed to create external editor terminal:", error);
             }
           }
 
-          const content = await readFileContent(path);
+          const content = await readFileContent(resolvedPath);
 
           // Check if this is a diff file
           if (isDiffFile(path, content)) {

@@ -8,6 +8,8 @@ export interface FileEntry {
   isNewItem?: boolean;
   ignored?: boolean;
   isRenaming?: boolean;
+  isSymlink?: boolean;
+  symlinkTarget?: string;
 }
 
 export interface ContextMenuState {

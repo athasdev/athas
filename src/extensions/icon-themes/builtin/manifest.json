@@ -1,0 +1,39 @@
+{
+  "iconThemes": [
+    {
+      "id": "none",
+      "name": "None",
+      "description": "No file type icons, just basic file and folder icons"
+    },
+    {
+      "id": "minimal",
+      "name": "Minimal Icons",
+      "description": "Simple monochrome file icons"
+    },
+    {
+      "id": "compact",
+      "name": "Compact",
+      "description": "Smaller, space-efficient icons"
+    },
+    {
+      "id": "classic",
+      "name": "Classic",
+      "description": "Traditional file manager style icons"
+    },
+    {
+      "id": "material",
+      "name": "Material Icons",
+      "description": "Material Design file icons"
+    },
+    {
+      "id": "colorful-material",
+      "name": "Material Icons (Colorful)",
+      "description": "Material Design file icons with original colors"
+    },
+    {
+      "id": "seti",
+      "name": "Seti",
+      "description": "Simple colored dots inspired by Seti UI"
+    }
+  ]
+}

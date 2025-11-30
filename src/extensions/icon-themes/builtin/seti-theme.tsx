@@ -6,7 +6,7 @@ export const setiIconTheme: IconThemeDefinition = {
   id: "seti",
   name: "Seti",
   description: "Simple colored dots inspired by Seti UI",
-  getFileIcon: (fileName: string, isDir: boolean, isExpanded = false) => {
+  getFileIcon: (fileName: string, isDir: boolean, isExpanded = false, _isSymlink = false) => {
     if (isDir) {
       const Icon = isExpanded ? FolderOpen : Folder;
       return {

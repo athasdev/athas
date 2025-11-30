@@ -613,6 +613,9 @@ const FileTree = ({
             type="button"
             data-file-path={file.path}
             data-is-dir={file.isDir}
+            title={
+              file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
+            }
             onMouseDown={(e) => {
               // Track initial mouse position for drag threshold
               if (e.button === 0) {
@@ -676,6 +679,7 @@ const FileTree = ({
               fileName={file.name}
               isDir={file.isDir}
               isExpanded={file.expanded}
+              isSymlink={file.isSymlink}
               className="flex-shrink-0 text-text-lighter"
             />
             <span
