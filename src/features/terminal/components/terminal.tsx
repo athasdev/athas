@@ -78,7 +78,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
     try {
       const terminal = new Terminal({
-        fontFamily: terminalFontFamily,
+        fontFamily: `"${terminalFontFamily}", monospace`,
         fontSize: terminalFontSize,
         lineHeight: terminalLineHeight,
         letterSpacing: terminalLetterSpacing,
@@ -287,12 +287,15 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   // Handle font changes
   useEffect(() => {
     if (!xtermRef.current) return;
-    xtermRef.current.options.fontFamily = terminalFontFamily;
+    xtermRef.current.options.fontFamily = `"${terminalFontFamily}", monospace`;
     xtermRef.current.options.fontSize = terminalFontSize;
     xtermRef.current.options.lineHeight = terminalLineHeight;
     xtermRef.current.options.letterSpacing = terminalLetterSpacing;
     xtermRef.current.options.cursorBlink = terminalCursorBlink;
     xtermRef.current.options.cursorStyle = terminalCursorStyle;
+
+    // Refresh WebGL addon to ensure new font glyphs are loaded
+    addonsRef.current?.webglAddon?.clearTextureAtlas();
     addonsRef.current?.fitAddon.fit();
   }, [
     terminalFontFamily,
