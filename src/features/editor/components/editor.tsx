@@ -52,6 +52,7 @@ export function Editor({ className }: EditorProps) {
   } = useEditorStateStore.use.actions();
   const cursorPosition = useEditorStateStore.use.cursorPosition();
   const multiCursorState = useEditorStateStore.use.multiCursorState();
+  const onChange = useEditorStateStore.use.onChange();
 
   const fontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
@@ -139,6 +140,7 @@ export function Editor({ className }: EditorProps) {
       }
 
       updateBufferContent(bufferId, newActualContent);
+      onChange(newActualContent);
 
       const selectionStart = inputRef.current.selectionStart;
       const virtualLines = splitLines(newVirtualContent);
