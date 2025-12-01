@@ -22,7 +22,9 @@ import {
   parseRawDiffContent,
 } from "@/features/version-control/git/controllers/git-diff-parser";
 import { useGitStore } from "@/features/version-control/git/controllers/git-store";
+import { useGitBlameStore } from "@/stores/git-blame-store";
 import { useProjectStore } from "@/stores/project-store";
+import { useSearchResultsStore } from "@/stores/search-results-store";
 import { useSessionStore } from "@/stores/session-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
@@ -172,6 +174,13 @@ export const useFileSystemStore = createSelectors(
 
         // Clear git diff cache
         gitDiffCache.clear();
+
+        // Clear search results
+        useSearchResultsStore.getState().clearSearchResults();
+        useSearchResultsStore.getState().clearActivePathSearchResults();
+
+        // Clear git blame data
+        useGitBlameStore.getState().clearAllBlame();
       },
 
       restoreSession: async (projectPath: string) => {
@@ -197,10 +206,10 @@ export const useFileSystemStore = createSelectors(
 
           // Restore active buffer
           if (session.activeBufferPath) {
-            const newBuffers = useBufferStore.getState().buffers;
-            const activeBuffer = newBuffers.find((b) => b.path === session.activeBufferPath);
+            const { buffers } = useBufferStore.getState();
+            const activeBuffer = buffers.find((b) => b.path === session.activeBufferPath);
             if (activeBuffer) {
-              bufferActions.setActiveBuffer(activeBuffer.id);
+              useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
             }
           }
 
