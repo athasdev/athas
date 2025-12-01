@@ -1,6 +1,7 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Copy, Folder, FolderOpen, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useContextMenu } from "@/hooks/use-context-menu";
 import type { ProjectTab } from "@/stores/workspace-tabs-store";
@@ -387,12 +388,15 @@ const ProjectTabs = () => {
         </button>
       </div>
 
-      <ContextMenu
-        isOpen={contextMenu.isOpen}
-        position={contextMenu.position}
-        items={getContextMenuItems(contextMenu.data)}
-        onClose={contextMenu.close}
-      />
+      {createPortal(
+        <ContextMenu
+          isOpen={contextMenu.isOpen}
+          position={contextMenu.position}
+          items={getContextMenuItems(contextMenu.data)}
+          onClose={contextMenu.close}
+        />,
+        document.body,
+      )}
     </>
   );
 };
