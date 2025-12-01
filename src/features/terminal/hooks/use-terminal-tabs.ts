@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useReducer } from "react";
-import type { Terminal, TerminalAction, TerminalState } from "@/features/terminal/types/terminal";
-
-interface PersistedTerminal {
-  id: string;
-  name: string;
-  currentDirectory: string;
-  isPinned: boolean;
-  shell?: string;
-  title?: string;
-}
+import type {
+  PersistedTerminal,
+  Terminal,
+  TerminalAction,
+  TerminalState,
+} from "@/features/terminal/types/terminal";
 
 const PERSISTENCE_KEY = "terminal-sessions";
 const PERSISTENCE_ENABLED_KEY = "terminal-persistence-enabled";
@@ -220,6 +216,36 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
       };
     }
 
+    case "RESET_TERMINALS": {
+      return {
+        terminals: [],
+        activeTerminalId: null,
+      };
+    }
+
+    case "RESTORE_TERMINALS": {
+      const { terminals } = action.payload;
+      const newTerminals: Terminal[] = terminals.map((pt) => ({
+        id: pt.id,
+        name: pt.name,
+        currentDirectory: pt.currentDirectory,
+        isActive: false,
+        isPinned: pt.isPinned,
+        shell: pt.shell,
+        createdAt: new Date(),
+        lastActivity: new Date(),
+      }));
+
+      if (newTerminals.length > 0) {
+        newTerminals[0].isActive = true;
+      }
+
+      return {
+        terminals: newTerminals,
+        activeTerminalId: newTerminals.length > 0 ? newTerminals[0].id : null,
+      };
+    }
+
     default:
       return state;
   }
@@ -235,6 +261,27 @@ export const useTerminalTabs = () => {
   useEffect(() => {
     saveTerminalsToStorage(state.terminals);
   }, [state.terminals]);
+
+  // Listen for global workspace reset event
+  useEffect(() => {
+    const handleResetWorkspace = () => {
+      dispatch({ type: "RESET_TERMINALS", payload: {} });
+    };
+
+    window.addEventListener("reset-workspace", handleResetWorkspace);
+
+    const handleRestoreTerminals = (event: Event) => {
+      const customEvent = event as CustomEvent<{ terminals: PersistedTerminal[] }>;
+      dispatch({ type: "RESTORE_TERMINALS", payload: { terminals: customEvent.detail.terminals } });
+    };
+
+    window.addEventListener("restore-terminals", handleRestoreTerminals);
+
+    return () => {
+      window.removeEventListener("reset-workspace", handleResetWorkspace);
+      window.removeEventListener("restore-terminals", handleRestoreTerminals);
+    };
+  }, []);
 
   const createTerminal = useCallback(
     (name: string, currentDirectory: string, shell?: string): string => {

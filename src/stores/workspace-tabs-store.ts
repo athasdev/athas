@@ -60,10 +60,10 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
         const tabs = get().projectTabs;
 
         // Can't close the last tab
-        if (tabs.length <= 1) {
-          console.warn("Cannot close the last project tab");
-          return;
-        }
+        // if (tabs.length <= 1) {
+        //   console.warn("Cannot close the last project tab");
+        //   return;
+        // }
 
         const tabIndex = tabs.findIndex((tab) => tab.id === projectId);
         if (tabIndex === -1) return;

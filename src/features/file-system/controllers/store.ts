@@ -141,12 +141,14 @@ export const useFileSystemStore = createSelectors(
         return true;
       },
 
-      closeFolder: async () => {
+      resetWorkspace: async () => {
         // Reset all project-related state to return to welcome screen
         set((state) => {
           state.files = [];
           state.isFileTreeLoading = false;
           state.filesVersion++;
+          state.rootFolderPath = undefined;
+          state.projectFilesCache = undefined;
         });
 
         // Clear tree UI state
@@ -157,19 +159,74 @@ export const useFileSystemStore = createSelectors(
         setRootFolderPath("");
         setProjectName("");
 
-        // Close all buffers (close them individually since closeAllBuffers doesn't exist)
+        // Close all buffers
         const { buffers, actions: bufferActions } = useBufferStore.getState();
         buffers.forEach((buffer) => bufferActions.closeBuffer(buffer.id));
 
         // Stop file watching
         await useFileWatcherStore.getState().setProjectRoot("");
 
-        // Reset git store
+        // Reset git store completely
         const { actions: gitActions } = useGitStore.getState();
-        gitActions.resetCommits();
+        gitActions.resetGitState();
 
         // Clear git diff cache
         gitDiffCache.clear();
+      },
+
+      restoreSession: async (projectPath: string) => {
+        const session = useSessionStore.getState().getSession(projectPath);
+        if (session) {
+          const { actions: bufferActions } = useBufferStore.getState();
+
+          // Restore buffers
+          for (const buffer of session.buffers) {
+            // Use handleFileSelect to open the file (it handles reading content)
+            await get().handleFileSelect(buffer.path, false);
+
+            // If it was pinned, we might need to handle that, but handleFileSelect doesn't support pinning arg.
+            // We can pin it after opening if needed.
+            if (buffer.isPinned) {
+              const newBuffers = useBufferStore.getState().buffers;
+              const openedBuffer = newBuffers.find((b) => b.path === buffer.path);
+              if (openedBuffer) {
+                bufferActions.handleTabPin(openedBuffer.id);
+              }
+            }
+          }
+
+          // Restore active buffer
+          if (session.activeBufferPath) {
+            const newBuffers = useBufferStore.getState().buffers;
+            const activeBuffer = newBuffers.find((b) => b.path === session.activeBufferPath);
+            if (activeBuffer) {
+              bufferActions.setActiveBuffer(activeBuffer.id);
+            }
+          }
+
+          // Restore terminals
+          if (session.terminals && session.terminals.length > 0) {
+            window.dispatchEvent(
+              new CustomEvent("restore-terminals", {
+                detail: { terminals: session.terminals },
+              }),
+            );
+          }
+        }
+      },
+
+      closeFolder: async () => {
+        // Find the active project tab
+        const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+
+        if (activeTab) {
+          // If we have an active tab, close it properly via closeProject
+          // This will handle removing the tab and if it's the last one, it will clear the file system
+          return await get().closeProject(activeTab.id);
+        }
+
+        // Fallback: Reset all project-related state to return to welcome screen
+        await get().resetWorkspace();
 
         return true;
       },
@@ -952,51 +1009,6 @@ export const useFileSystemStore = createSelectors(
         });
       },
 
-      restoreSession: async (projectPath: string) => {
-        // Get the saved session for this project
-        const session = useSessionStore.getState().getSession(projectPath);
-
-        if (!session || session.buffers.length === 0) {
-          return;
-        }
-
-        const { openBuffer } = useBufferStore.getState().actions;
-
-        // Open all saved buffers
-        for (const buffer of session.buffers) {
-          try {
-            // Check if file still exists and read its content
-            const content = await readFileContent(buffer.path);
-            const bufferId = openBuffer(
-              buffer.path,
-              buffer.name,
-              content,
-              false,
-              false,
-              false,
-              false,
-            );
-
-            // Restore pinned state
-            if (buffer.isPinned) {
-              useBufferStore.getState().actions.handleTabPin(bufferId);
-            }
-          } catch (error) {
-            console.warn(`Failed to restore buffer: ${buffer.path}`, error);
-            // Continue with other buffers even if one fails
-          }
-        }
-
-        // Restore active buffer
-        if (session.activeBufferPath) {
-          const { buffers } = useBufferStore.getState();
-          const activeBuffer = buffers.find((b) => b.path === session.activeBufferPath);
-          if (activeBuffer) {
-            useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
-          }
-        }
-      },
-
       switchToProject: async (projectId: string) => {
         const tab = useWorkspaceTabsStore
           .getState()
@@ -1087,10 +1099,10 @@ export const useFileSystemStore = createSelectors(
         const tabs = useWorkspaceTabsStore.getState().projectTabs;
 
         // Can't close the last tab
-        if (tabs.length <= 1) {
-          console.warn("Cannot close the last project tab");
-          return false;
-        }
+        // if (tabs.length <= 1) {
+        //   console.warn("Cannot close the last project tab");
+        //   return false;
+        // }
 
         const tab = tabs.find((t: { id: string }) => t.id === projectId);
         if (!tab) {
@@ -1104,6 +1116,18 @@ export const useFileSystemStore = createSelectors(
         if (wasActive) {
           const { buffers, activeBufferId } = useBufferStore.getState();
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+
+          // Get current terminals from local storage (temporary persistence)
+          let terminals: any[] = [];
+          try {
+            const storedTerminals = localStorage.getItem("terminal-sessions");
+            if (storedTerminals) {
+              terminals = JSON.parse(storedTerminals);
+            }
+          } catch (e) {
+            console.error("Failed to read terminal sessions", e);
+          }
+
           useSessionStore.getState().saveSession(
             tab.path,
             buffers.map((b) => ({
@@ -1113,6 +1137,7 @@ export const useFileSystemStore = createSelectors(
               isPinned: b.isPinned,
             })),
             activeBuffer?.path || null,
+            terminals,
           );
         }
 
@@ -1124,6 +1149,9 @@ export const useFileSystemStore = createSelectors(
           const newActiveTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
           if (newActiveTab) {
             await get().switchToProject(newActiveTab.id);
+          } else {
+            // If no active tab (we closed the last one), clear the workspace
+            await get().resetWorkspace();
           }
         }
 
