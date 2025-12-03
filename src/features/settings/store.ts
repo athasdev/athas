@@ -138,9 +138,7 @@ let storeInstance: Store;
 
 const getStore = async () => {
   if (!storeInstance) {
-    storeInstance = await load("settings.json", {
-      autoSave: true,
-    });
+    storeInstance = await load("settings.json", { autoSave: true } as Parameters<typeof load>[1]);
 
     // Initialize defaults if not present
     for (const [key, value] of Object.entries(defaultSettings)) {

@@ -158,7 +158,7 @@ class WasmParserLoader {
           try {
             await indexedDBParserCache.set({
               languageId,
-              wasmBlob: new Blob([wasmBytes]), // Legacy compatibility
+              wasmBlob: new Blob([wasmBytes as BlobPart]), // Legacy compatibility
               wasmData: wasmBytes.buffer as ArrayBuffer, // Preferred: ArrayBuffer
               highlightQuery: queryText || "",
               version: "1.0.0", // TODO: Get version from manifest
