@@ -135,10 +135,9 @@ function GutterComponent({
   return (
     <div
       ref={containerRef}
-      className="flex select-none bg-primary-bg"
+      className="flex select-none self-stretch bg-primary-bg"
       style={{
         width: `${totalWidth}px`,
-        height: "100%",
         borderRight: "1px solid var(--border, rgba(255, 255, 255, 0.06))",
         flexShrink: 0,
         overflow: "hidden",

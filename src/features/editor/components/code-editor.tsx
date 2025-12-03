@@ -194,7 +194,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   return (
     <>
       <EditorStylesheet />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="absolute inset-0 flex flex-col overflow-hidden">
         {/* Breadcrumbs */}
         {settings.coreFeatures.breadcrumbs && <Breadcrumb />}
 
@@ -203,27 +203,24 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
 
         <div
           ref={editorRef}
-          className={`editor-container relative flex-1 overflow-hidden ${className || ""}`}
+          className={`editor-container relative min-h-0 flex-1 overflow-hidden ${className || ""}`}
           style={{
             scrollbarWidth: "none",
             msOverflowStyle: "none",
-            transform: `scale(${zoomLevel})`,
-            transformOrigin: "top left",
-            width: `${100 / zoomLevel}%`,
-            height: `${100 / zoomLevel}%`,
+            ...(zoomLevel !== 1 && {
+              transform: `scale(${zoomLevel})`,
+              transformOrigin: "top left",
+              width: `${100 / zoomLevel}%`,
+              height: `${100 / zoomLevel}%`,
+            }),
           }}
         >
           {/* Hover Tooltip */}
           <HoverTooltip />
 
-          {/* Main editor layout */}
-          <div className="flex h-full">
-            {/* Editor content area */}
-            <div className="editor-wrapper relative flex-1 overflow-hidden">
-              <div className="relative h-full flex-1 bg-primary-bg">
-                {showMarkdownPreview ? <MarkdownPreview /> : <Editor />}
-              </div>
-            </div>
+          {/* Main editor - absolute positioned to fill container */}
+          <div className="absolute inset-0 bg-primary-bg">
+            {showMarkdownPreview ? <MarkdownPreview /> : <Editor />}
           </div>
         </div>
       </div>

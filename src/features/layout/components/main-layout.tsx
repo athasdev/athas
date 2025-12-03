@@ -226,7 +226,7 @@ export function MainLayout() {
           {/* Main content area */}
           <div className="flex min-h-0 flex-1 flex-col">
             <TabBar />
-            <div className="min-h-0 flex-1 overflow-hidden">
+            <div className="relative min-h-0 flex-1 overflow-hidden">
               {(() => {
                 if (!activeBuffer) {
                   return <div className="flex h-full items-center justify-center"></div>;
