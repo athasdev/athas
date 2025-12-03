@@ -17,6 +17,7 @@ export const GeneralSettings = () => {
     installing,
     error,
     updateInfo,
+    downloadProgress,
     checkForUpdates,
     downloadAndInstall,
   } = useUpdater(false);
@@ -113,11 +114,15 @@ export const GeneralSettings = () => {
         <SettingRow
           label="Check for Updates"
           description={
-            available
-              ? `Version ${updateInfo?.version} available`
-              : error
-                ? "Failed to check for updates"
-                : "App is up to date"
+            downloading
+              ? `Downloading ${downloadProgress?.percentage ?? 0}%`
+              : installing
+                ? "Installing update..."
+                : available
+                  ? `Version ${updateInfo?.version} available`
+                  : error
+                    ? "Failed to check for updates"
+                    : "App is up to date"
           }
         >
           <div className="flex gap-2">
@@ -143,7 +148,20 @@ export const GeneralSettings = () => {
             )}
           </div>
         </SettingRow>
-        {error && <div className="mt-2 text-red-500 text-xs">{error}</div>}
+
+        {/* Download progress bar */}
+        {downloading && downloadProgress && (
+          <div className="mt-2 px-3">
+            <div className="h-1 w-full overflow-hidden rounded-full bg-secondary-bg">
+              <div
+                className="h-full bg-accent transition-all duration-300"
+                style={{ width: `${downloadProgress.percentage}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {error && <div className="mt-2 px-3 text-error text-xs">{error}</div>}
       </Section>
 
       <Section title="CLI Command">
