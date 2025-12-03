@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Athas",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "identifier": "com.code.athas",
   "build": {
     "beforeDevCommand": "bun vite",
