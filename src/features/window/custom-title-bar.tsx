@@ -179,7 +179,7 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
       )}
 
       {/* Left side */}
-      <div className="flex flex-1 items-center px-2">
+      <div data-tauri-drag-region className="flex flex-1 items-center px-2">
         {/* Menu bar button */}
         {!settings.nativeMenuBar && settings.compactMenuBar && (
           <Tooltip content="Menu" side="bottom">
