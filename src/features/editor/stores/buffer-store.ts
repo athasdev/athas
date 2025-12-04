@@ -18,6 +18,7 @@ export interface Buffer {
   path: string;
   name: string;
   content: string;
+  savedContent: string;
   isDirty: boolean;
   isVirtual: boolean;
   isPinned: boolean;
@@ -212,6 +213,7 @@ export const useBufferStore = createSelectors(
             path,
             name,
             content,
+            savedContent: content,
             isDirty: false,
             isVirtual,
             isPinned: false,
@@ -345,6 +347,7 @@ export const useBufferStore = createSelectors(
             path,
             name,
             content: "", // External editor buffers don't have content
+            savedContent: "",
             isDirty: false,
             isVirtual: false,
             isPinned: false,
@@ -521,7 +524,12 @@ export const useBufferStore = createSelectors(
                 buffer.diffData = diffData;
               }
               if (!buffer.isVirtual) {
-                buffer.isDirty = markDirty;
+                if (!markDirty) {
+                  buffer.savedContent = content;
+                  buffer.isDirty = false;
+                } else {
+                  buffer.isDirty = content !== buffer.savedContent;
+                }
               }
               // Keep tokens - syntax highlighter will update them automatically
               // The 16ms debounce ensures smooth updates without glitches
@@ -543,6 +551,9 @@ export const useBufferStore = createSelectors(
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer) {
               buffer.isDirty = isDirty;
+              if (!isDirty) {
+                buffer.savedContent = buffer.content;
+              }
             }
           });
         },
