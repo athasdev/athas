@@ -1,12 +1,16 @@
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
-interface Props {
+interface Props extends ComponentPropsWithoutRef<"div"> {
   children: ReactNode;
 }
 
-const Menu = ({ children }: Props) => {
+const Menu = ({ children, ...props }: Props) => {
   return (
-    <div className="w-max min-w-48 rounded-md border border-border bg-primary-bg py-1 shadow-lg">
+    <div
+      role="menu"
+      className="w-max min-w-48 rounded-md border border-border bg-primary-bg shadow-lg"
+      {...props}
+    >
       {children}
     </div>
   );
