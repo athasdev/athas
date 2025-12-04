@@ -8,9 +8,6 @@ import { immer } from "zustand/middleware/immer";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { editorAPI } from "@/features/editor/extensions/api";
-// Store imports - Note: Direct store communication via getState() is used here.
-// This is an acceptable Zustand pattern, though it creates coupling between stores.
-// See: https://github.com/pmndrs/zustand/discussions/1319
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useFileTreeStore } from "@/features/file-explorer/controllers/file-tree-store";
@@ -1086,12 +1083,6 @@ export const useFileSystemStore = createSelectors(
       closeProject: async (projectId: string) => {
         const tabs = useWorkspaceTabsStore.getState().projectTabs;
 
-        // Can't close the last tab
-        if (tabs.length <= 1) {
-          console.warn("Cannot close the last project tab");
-          return false;
-        }
-
         const tab = tabs.find((t: { id: string }) => t.id === projectId);
         if (!tab) {
           console.warn(`Project tab not found: ${projectId}`);
@@ -1099,6 +1090,7 @@ export const useFileSystemStore = createSelectors(
         }
 
         const wasActive = tab.isActive;
+        const isLastTab = tabs.length <= 1;
 
         // Save session before closing if it's the active project
         if (wasActive) {
@@ -1118,6 +1110,36 @@ export const useFileSystemStore = createSelectors(
 
         // Remove project tab
         useWorkspaceTabsStore.getState().removeProjectTab(projectId);
+
+        // If this was the last tab, reset to empty state
+        if (isLastTab) {
+          // Stop file watching
+          useFileWatcherStore.getState().reset();
+
+          // Clear all buffers
+          const { buffers } = useBufferStore.getState();
+          const allBufferIds = buffers.map((b) => b.id);
+          useBufferStore.getState().actions.closeBuffersBatch(allBufferIds, true);
+
+          // Clear git state
+          const gitActions = useGitStore.getState().actions;
+          gitActions.setGitStatus(null);
+          gitActions.resetCommits();
+
+          // Clear project store
+          const { setRootFolderPath, setProjectName } = useProjectStore.getState();
+          setRootFolderPath(undefined);
+          setProjectName("Explorer");
+
+          // Reset file system state
+          set((state) => {
+            state.files = [];
+            state.rootFolderPath = undefined;
+            state.filesVersion = 0;
+          });
+
+          return true;
+        }
 
         // If we closed the active project, switch to the newly active one
         if (wasActive) {

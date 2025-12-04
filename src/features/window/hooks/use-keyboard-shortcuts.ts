@@ -2,6 +2,7 @@ import { exit } from "@tauri-apps/plugin-process";
 import React, { useEffect } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { isMac } from "@/features/file-system/controllers/platform";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { commandContext } from "@/features/keymaps/commands/command-context";
 import { useSettingsStore } from "@/features/settings/store";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
@@ -257,6 +258,13 @@ export const useKeyboardShortcuts = ({
         if (onSave) {
           onSave();
         }
+        return;
+      }
+
+      // Open folder (Cmd+O / Ctrl+O)
+      if ((e.metaKey || e.ctrlKey) && e.key === "o" && !e.shiftKey) {
+        e.preventDefault();
+        useFileSystemStore.getState().handleOpenFolder();
         return;
       }
 
