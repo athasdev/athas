@@ -120,6 +120,7 @@ const defaultSettings: Settings = {
     diagnostics: true,
     aiChat: true,
     breadcrumbs: true,
+    persistentCommands: true,
   },
   // Advanced
   //  > nothing here, yet
