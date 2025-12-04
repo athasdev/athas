@@ -171,6 +171,21 @@ export const useGitStore = create(
 
       resetCommits: () => set({ commits: [], hasMoreCommits: true }),
 
+      resetGitState: () => {
+        set({
+          gitStatus: null,
+          commits: [],
+          branches: [],
+          currentRepoPath: null,
+          hasMoreCommits: true,
+          isLoadingGitData: false,
+          isRefreshing: false,
+        });
+        window.dispatchEvent(
+          new CustomEvent("git-status-updated", { detail: { gitStatus: null } }),
+        );
+      },
+
       loadMoreCommits: async (repoPath: string) => {
         const state = get();
 

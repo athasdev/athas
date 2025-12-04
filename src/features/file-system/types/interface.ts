@@ -26,6 +26,7 @@ export interface FsActions {
   handleOpenFolder: () => Promise<boolean>;
   handleOpenFolderByPath: (path: string) => Promise<boolean>;
   closeFolder: () => Promise<boolean>;
+  resetWorkspace: () => Promise<void>;
   switchToProject: (projectId: string) => Promise<boolean>;
   closeProject: (projectId: string) => Promise<boolean>;
   // File operations
