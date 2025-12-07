@@ -16,7 +16,7 @@
     "clean": "concurrently --names \"node,rust\" --prefix-colors \"cyan,yellow\" \"rimraf dist build node_modules bun.lockb && bun install\" \"cargo clean && cargo build\"",
     "prepare": "simple-git-hooks",
     "commitlint": "commitlint",
-    "setup": "bun setup.ts",
+    "setup": "bun scripts/setup.ts",
     "dev": "WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev",
     "dev:scan": "WEBKIT_DISABLE_DMABUF_RENDERER=1 VITE_REACT_SCAN=true tauri dev",
     "release": "bun scripts/release.ts",
