@@ -11,14 +11,12 @@ interface ResizableRightPaneProps {
   children: React.ReactNode;
   className?: string;
   position?: "left" | "right";
-  isVisible?: boolean;
 }
 
 const ResizableRightPane = ({
   children,
   className,
   position = "right",
-  isVisible = true,
 }: ResizableRightPaneProps) => {
   const { settings, updateSetting } = useSettingsStore();
   const [isResizing, setIsResizing] = useState(false);
@@ -86,10 +84,6 @@ const ResizableRightPane = ({
     },
     [settings.aiChatWidth, position, throttledUpdateSetting, updateSetting],
   );
-
-  if (!isVisible) {
-    return null;
-  }
 
   return (
     <div

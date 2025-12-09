@@ -209,17 +209,17 @@ export function MainLayout() {
       <div className="z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
           {/* Left sidebar or AI chat based on settings */}
-          {sidebarPosition === "right" ? (
-            <ResizableRightPane position="left" isVisible={settings.isAIChatVisible}>
-              <AIChat mode="chat" />
-            </ResizableRightPane>
-          ) : (
-            isSidebarVisible && (
-              <ResizableSidebar>
-                <MainSidebar />
-              </ResizableSidebar>
-            )
-          )}
+          {sidebarPosition === "right"
+            ? settings.isAIChatVisible && (
+                <ResizableRightPane position="left">
+                  <AIChat mode="chat" />
+                </ResizableRightPane>
+              )
+            : isSidebarVisible && (
+                <ResizableSidebar>
+                  <MainSidebar />
+                </ResizableSidebar>
+              )}
 
           {/* Main content area */}
           <div className="flex min-h-0 flex-1 flex-col">
@@ -261,17 +261,17 @@ export function MainLayout() {
           </div>
 
           {/* Right sidebar or AI chat based on settings */}
-          {sidebarPosition === "right" ? (
-            isSidebarVisible && (
-              <ResizableRightPane position="right">
-                <MainSidebar />
-              </ResizableRightPane>
-            )
-          ) : (
-            <ResizableRightPane position="right" isVisible={settings.isAIChatVisible}>
-              <AIChat mode="chat" />
-            </ResizableRightPane>
-          )}
+          {sidebarPosition === "right"
+            ? isSidebarVisible && (
+                <ResizableRightPane position="right">
+                  <MainSidebar />
+                </ResizableRightPane>
+              )
+            : settings.isAIChatVisible && (
+                <ResizableRightPane position="right">
+                  <AIChat mode="chat" />
+                </ResizableRightPane>
+              )}
         </div>
       </div>
 
