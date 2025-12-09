@@ -185,7 +185,7 @@ pub fn get_bundled_extensions_path(app_handle: AppHandle) -> Result<String, Stri
          .resource_dir()
          .map_err(|e| format!("Failed to get resource dir: {}", e))?;
 
-      resource_path.join("extensions").join("bundled")
+      resource_path.join("bundled")
    };
 
    log::info!("Bundled extensions path: {:?}", extensions_path);

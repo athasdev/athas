@@ -3,8 +3,7 @@ use anyhow::{Result, anyhow};
 use portable_pty::{CommandBuilder, PtyPair, PtySize};
 use std::{
    collections::HashMap,
-   io::{BufRead, BufReader, Read, Write},
-   process::Command,
+   io::{Read, Write},
    sync::{Arc, Mutex},
    thread,
 };
@@ -45,6 +44,11 @@ impl TerminalConnection {
    /// the user's shell environment when launched from Finder/Launchpad.
    #[cfg(not(target_os = "windows"))]
    fn get_user_environment() -> HashMap<String, String> {
+      use std::{
+         io::{BufRead, BufReader},
+         process::Command,
+      };
+
       let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
 
       // Run the shell as an interactive login shell to source user's profile,
