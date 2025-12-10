@@ -24,6 +24,7 @@ import type { GitHunk } from "@/features/version-control/git/types/git";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
+import { WebViewer } from "@/features/web-viewer/components/web-viewer";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useFolderDrop } from "@/hooks/use-folder-drop";
 import { useUIState } from "@/stores/ui-state-store";
@@ -252,6 +253,8 @@ export function MainLayout() {
                       onEditorExit={handleExternalEditorExit}
                     />
                   );
+                } else if (activeBuffer.isWebViewer && activeBuffer.webViewerUrl) {
+                  return <WebViewer url={activeBuffer.webViewerUrl} bufferId={activeBuffer.id} />;
                 } else {
                   return <CodeEditor />;
                 }

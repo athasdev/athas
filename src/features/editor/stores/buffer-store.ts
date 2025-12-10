@@ -26,6 +26,7 @@ export interface Buffer {
   isDiff: boolean;
   isMarkdownPreview: boolean;
   isExternalEditor: boolean;
+  isWebViewer: boolean;
   isActive: boolean;
   language?: string; // File language for syntax highlighting and formatting
   // For diff buffers, store the parsed diff data (single or multi-file)
@@ -34,6 +35,8 @@ export interface Buffer {
   sourceFilePath?: string;
   // For external editor buffers, store the terminal connection ID
   terminalConnectionId?: string;
+  // For web viewer buffers, store the URL
+  webViewerUrl?: string;
   // Cached syntax highlighting tokens
   tokens: {
     start: number;
@@ -78,6 +81,7 @@ interface BufferActions {
     sourceFilePath?: string,
   ) => string;
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
+  openWebViewerBuffer: (url: string) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
   closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
@@ -129,7 +133,7 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
 
     if (!rootFolderPath) return;
 
-    // Only save real files, not virtual/diff/image/sqlite/external editor buffers
+    // Only save real files, not virtual/diff/image/sqlite/external editor/web viewer buffers
     const persistableBuffers = buffers
       .filter(
         (b) =>
@@ -138,7 +142,8 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
           !b.isImage &&
           !b.isSQLite &&
           !b.isMarkdownPreview &&
-          !b.isExternalEditor,
+          !b.isExternalEditor &&
+          !b.isWebViewer,
       )
       .map((b) => ({
         path: b.path,
@@ -155,7 +160,8 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
       !activeBuffer.isImage &&
       !activeBuffer.isSQLite &&
       !activeBuffer.isMarkdownPreview &&
-      !activeBuffer.isExternalEditor
+      !activeBuffer.isExternalEditor &&
+      !activeBuffer.isWebViewer
         ? activeBuffer.path
         : null;
 
@@ -220,6 +226,7 @@ export const useBufferStore = createSelectors(
             isDiff,
             isMarkdownPreview,
             isExternalEditor: false,
+            isWebViewer: false,
             isActive: true,
             language: detectLanguageFromFileName(name),
             diffData,
@@ -353,6 +360,7 @@ export const useBufferStore = createSelectors(
             isDiff: false,
             isMarkdownPreview: false,
             isExternalEditor: true,
+            isWebViewer: false,
             isActive: true,
             language: detectLanguageFromFileName(name),
             terminalConnectionId,
@@ -366,6 +374,71 @@ export const useBufferStore = createSelectors(
 
           // Save session
           saveSessionToStore(get().buffers, get().activeBufferId);
+
+          return newBuffer.id;
+        },
+
+        openWebViewerBuffer: (url: string): string => {
+          const { buffers, maxOpenTabs } = get();
+
+          // Extract hostname for display name
+          let displayName = "Web Viewer";
+          if (url && url !== "about:blank") {
+            try {
+              const urlObj = new URL(url);
+              if (urlObj.hostname) {
+                displayName = `Web: ${urlObj.hostname}`;
+              }
+            } catch {
+              // Invalid URL, use default
+            }
+          }
+          const path = `web-viewer://${url}`;
+
+          // Check if already open with the same URL
+          const existing = buffers.find((b) => b.isWebViewer && b.webViewerUrl === url);
+          if (existing) {
+            set((state) => {
+              state.activeBufferId = existing.id;
+              state.buffers = state.buffers.map((b) => ({
+                ...b,
+                isActive: b.id === existing.id,
+              }));
+            });
+            return existing.id;
+          }
+
+          // Handle max tabs limit
+          let newBuffers = [...buffers];
+          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+            const lruBuffer = unpinnedBuffers[0];
+            newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+          }
+
+          const newBuffer: Buffer = {
+            id: generateBufferId(path),
+            path,
+            name: displayName,
+            content: "",
+            isDirty: false,
+            isVirtual: true,
+            isPinned: false,
+            isImage: false,
+            isSQLite: false,
+            isDiff: false,
+            isMarkdownPreview: false,
+            isExternalEditor: false,
+            isWebViewer: true,
+            isActive: true,
+            webViewerUrl: url,
+            tokens: [],
+          };
+
+          set((state) => {
+            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+            state.activeBufferId = newBuffer.id;
+          });
 
           return newBuffer.id;
         },
@@ -405,14 +478,15 @@ export const useBufferStore = createSelectors(
             });
           }
 
-          // Stop LSP for this file (only for real files, not virtual/diff/image/sqlite/external editor)
+          // Stop LSP for this file (only for real files, not virtual/diff/image/sqlite/external editor/web viewer)
           if (
             !closedBuffer.isVirtual &&
             !closedBuffer.isDiff &&
             !closedBuffer.isImage &&
             !closedBuffer.isSQLite &&
             !closedBuffer.isMarkdownPreview &&
-            !closedBuffer.isExternalEditor
+            !closedBuffer.isExternalEditor &&
+            !closedBuffer.isWebViewer
           ) {
             // Stop LSP for this file in background (don't block buffer closing)
             import("@/features/editor/lsp/lsp-client")
@@ -715,7 +789,8 @@ export const useBufferStore = createSelectors(
             buffer.isVirtual ||
             buffer.isImage ||
             buffer.isSQLite ||
-            buffer.isMarkdownPreview
+            buffer.isMarkdownPreview ||
+            buffer.isWebViewer
           ) {
             return;
           }

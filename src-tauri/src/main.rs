@@ -315,6 +315,11 @@ fn main() {
          get_chat_stats,
          // Window commands
          create_remote_window,
+         create_embedded_webview,
+         close_embedded_webview,
+         navigate_embedded_webview,
+         resize_embedded_webview,
+         set_webview_visible,
          // File watcher commands
          start_watching,
          stop_watching,
