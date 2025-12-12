@@ -10,6 +10,7 @@ import {
   getPackagedLanguageExtensions,
   getWasmUrlForLanguage,
 } from "../languages/language-packager";
+import { extensionRegistry } from "../registry/extension-registry";
 import type { ExtensionManifest } from "../types/extension-manifest";
 
 export interface ExtensionInstallationMetadata {
@@ -76,24 +77,66 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           state.isLoadingRegistry = true;
         });
 
+        // Built-in language IDs that are always available (syntax highlighting only, no LSP)
+        const BUILTIN_LANGUAGE_IDS = new Set(["html", "css", "markdown"]);
+
         try {
-          // Load language extensions from packager
+          // Load language extensions from packager (installable)
           const extensions: ExtensionManifest[] = getPackagedLanguageExtensions();
+
+          // Also load bundled extensions from extension registry
+          const bundledExtensions = extensionRegistry.getAllExtensions();
 
           // Check which extensions are installed
           const installed = get().installedExtensions;
 
           set((state) => {
-            state.availableExtensions = new Map(
-              extensions.map((manifest) => [
-                manifest.id,
-                {
+            // Add installable extensions
+            for (const manifest of extensions) {
+              // Check if this is a built-in language (by checking its language IDs)
+              const isBuiltIn = manifest.languages?.some((lang) =>
+                BUILTIN_LANGUAGE_IDS.has(lang.id),
+              );
+
+              if (isBuiltIn) {
+                // Built-in languages: remove installation metadata and mark as installed
+                const builtInManifest = { ...manifest };
+                delete builtInManifest.installation;
+                state.availableExtensions.set(manifest.id, {
+                  manifest: builtInManifest,
+                  isInstalled: true,
+                  isInstalling: false,
+                });
+              } else {
+                // Marketplace extensions: keep installation metadata
+                state.availableExtensions.set(manifest.id, {
                   manifest,
                   isInstalled: installed.has(manifest.id),
                   isInstalling: false,
-                },
-              ]),
-            );
+                });
+              }
+            }
+
+            // Add bundled extensions (always installed)
+            for (const bundled of bundledExtensions) {
+              state.availableExtensions.set(bundled.manifest.id, {
+                manifest: bundled.manifest,
+                isInstalled: true, // Bundled extensions are always installed
+                isInstalling: false,
+              });
+
+              // Also add to installed map if not present
+              if (!state.installedExtensions.has(bundled.manifest.id)) {
+                state.installedExtensions.set(bundled.manifest.id, {
+                  id: bundled.manifest.id,
+                  name: bundled.manifest.displayName,
+                  version: bundled.manifest.version,
+                  installed_at: new Date().toISOString(),
+                  enabled: true,
+                });
+              }
+            }
+
             state.isLoadingRegistry = false;
           });
         } catch (error) {
@@ -172,11 +215,29 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
         const fileExt = `.${ext}`;
 
+        // First check availableExtensions (loaded extensions)
         for (const [, extension] of get().availableExtensions) {
           if (extension.manifest.languages) {
             for (const lang of extension.manifest.languages) {
               if (lang.extensions.includes(fileExt)) {
                 return extension;
+              }
+            }
+          }
+        }
+
+        // Fallback: check bundled extensions directly if store not loaded yet
+        const bundledExtensions = extensionRegistry.getAllExtensions();
+        for (const bundled of bundledExtensions) {
+          if (bundled.manifest.languages) {
+            for (const lang of bundled.manifest.languages) {
+              if (lang.extensions.includes(fileExt)) {
+                // Return as AvailableExtension with isInstalled: true
+                return {
+                  manifest: bundled.manifest,
+                  isInstalled: true,
+                  isInstalling: false,
+                };
               }
             }
           }

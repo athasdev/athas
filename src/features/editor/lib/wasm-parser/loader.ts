@@ -56,11 +56,45 @@ class WasmParserLoader {
    * Returns cached parser if already loaded
    */
   async loadParser(config: ParserConfig): Promise<LoadedParser> {
-    const { languageId } = config;
+    const { languageId, highlightQuery } = config;
 
-    // Return cached parser if exists
+    // Check if parser is already cached
     if (this.parsers.has(languageId)) {
-      return this.parsers.get(languageId)!;
+      const cached = this.parsers.get(languageId)!;
+
+      // If cached parser has no highlight query but new config provides one, update it
+      if (!cached.highlightQuery && highlightQuery) {
+        logger.info("WasmParser", `Updating cached parser ${languageId} with highlight query`);
+
+        // Create highlight query from text
+        try {
+          const query = cached.language.query(highlightQuery);
+          const updatedParser: LoadedParser = {
+            ...cached,
+            highlightQuery: query,
+          };
+          this.parsers.set(languageId, updatedParser);
+
+          // Also update IndexedDB cache with the highlight query
+          indexedDBParserCache
+            .get(languageId)
+            .then((cachedEntry) => {
+              if (cachedEntry && !cachedEntry.highlightQuery) {
+                indexedDBParserCache.set({
+                  ...cachedEntry,
+                  highlightQuery,
+                });
+              }
+            })
+            .catch(() => {});
+
+          return updatedParser;
+        } catch (error) {
+          logger.error("WasmParser", `Failed to create highlight query for ${languageId}:`, error);
+        }
+      }
+
+      return cached;
     }
 
     // Return ongoing loading promise if exists

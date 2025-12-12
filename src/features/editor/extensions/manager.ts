@@ -211,8 +211,36 @@ class ExtensionManager {
         this.registeredCommands.set(id, handler);
       },
       registerLanguage: (language) => {
-        // Language registration would be implemented here
-        logger.debug("Editor", "Registering language:", language);
+        // Register a language provider that uses the WASM parser
+        const provider: LanguageProvider = {
+          id: language.id,
+          extensions: language.extensions,
+          aliases: language.aliases,
+          getTokens: async (content: string) => {
+            // Use tokenizeCode without config - parser is already loaded by bundled extension
+            const { tokenizeCode, convertToEditorTokens } = await import("../lib/wasm-parser");
+            const highlightTokens = await tokenizeCode(content, language.id);
+            return convertToEditorTokens(highlightTokens);
+          },
+        };
+
+        // Register provider by language ID
+        this.languageProviders.set(language.id, provider);
+
+        // Also map file extensions to this provider
+        for (const ext of language.extensions) {
+          const normalizedExt = ext.startsWith(".") ? ext.substring(1) : ext;
+          this.languageProviders.set(normalizedExt, provider);
+        }
+
+        // Map aliases too
+        if (language.aliases) {
+          for (const alias of language.aliases) {
+            this.languageProviders.set(alias, provider);
+          }
+        }
+
+        logger.info("Editor", `Registered language provider: ${language.id}`);
       },
     };
 
@@ -381,12 +409,10 @@ class ExtensionManager {
       return existing;
     }
 
-    // Try to load the language extension on-demand
+    // Try to load from allLanguages FIRST (these have proper ParserConfig for syntax highlighting)
     try {
-      // Import the language registry to find the matching language
       const { allLanguages } = await import("@/extensions/languages/language-registry");
 
-      // Find language extension that supports this file extension or language ID
       const languageExt = allLanguages.find((lang) => {
         return (
           lang.languageId === fileExtOrLanguageId ||
@@ -396,33 +422,42 @@ class ExtensionManager {
         );
       });
 
-      if (!languageExt) {
-        logger.debug("ExtensionManager", `No language extension found for: ${fileExtOrLanguageId}`);
-        return undefined;
+      if (languageExt) {
+        if (!this.languageExtensions.has(languageExt.id)) {
+          logger.info(
+            "ExtensionManager",
+            `Lazy loading language extension: ${languageExt.displayName}`,
+          );
+          await this.loadLanguageExtension(languageExt);
+        }
+        const provider = this.languageProviders.get(fileExtOrLanguageId);
+        if (provider) {
+          return provider;
+        }
       }
-
-      // Check if already loaded (might have been loaded between the check and import)
-      if (this.languageExtensions.has(languageExt.id)) {
-        return this.languageProviders.get(fileExtOrLanguageId);
-      }
-
-      // Load the language extension
-      logger.info(
-        "ExtensionManager",
-        `Lazy loading language extension: ${languageExt.displayName}`,
-      );
-      await this.loadLanguageExtension(languageExt);
-
-      // Return the now-loaded provider
-      return this.languageProviders.get(fileExtOrLanguageId);
     } catch (error) {
       logger.error(
         "ExtensionManager",
-        `Failed to lazy load language provider for ${fileExtOrLanguageId}:`,
+        `Failed to load from allLanguages for ${fileExtOrLanguageId}:`,
         error,
       );
-      return undefined;
     }
+
+    // Fallback: wait for bundled extensions to finish loading
+    try {
+      const { extensionLoader } = await import("@/extensions/loader/extension-loader");
+      await extensionLoader.waitForInitialization();
+
+      const afterBundled = this.languageProviders.get(fileExtOrLanguageId);
+      if (afterBundled) {
+        return afterBundled;
+      }
+    } catch (error) {
+      logger.debug("ExtensionManager", "Failed to wait for bundled extensions:", error);
+    }
+
+    logger.debug("ExtensionManager", `No language provider found for: ${fileExtOrLanguageId}`);
+    return undefined;
   }
 
   getAllLanguageExtensions(): LanguageExtension[] {

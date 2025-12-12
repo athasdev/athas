@@ -10,6 +10,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAppStore } from "@/stores/app-store";
 import { useZoomStore } from "@/stores/zoom-store";
+import { CompletionDropdown } from "../completion/completion-dropdown";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
@@ -19,7 +20,6 @@ import Breadcrumb from "./toolbar/breadcrumb";
 import FindBar from "./toolbar/find-bar";
 
 interface CodeEditorProps {
-  // All props are now optional as we get most data from stores
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   onCursorPositionChange?: (position: number) => void;
   placeholder?: string;
@@ -38,7 +38,6 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { setRefs, setContent, setFileInfo } = useEditorStateStore.use.actions();
-  // No longer need to sync content - editor-view-store computes from buffer
   const { setDisabled } = useEditorSettingsStore.use.actions();
 
   const buffers = useBufferStore.use.buffers();
@@ -171,22 +170,17 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
     if (searchMatches.length > 0 && currentMatchIndex >= 0) {
       const match = searchMatches[currentMatchIndex];
       if (match) {
-        // Scroll to position
         if (editorRef.current) {
           const editor = editorRef.current;
           const textarea = editor.querySelector('[contenteditable="true"]') as HTMLDivElement;
           if (textarea) {
             textarea.focus();
-            // Implement scroll to cursor position
           }
         }
       }
     }
   }, [currentMatchIndex, searchMatches]);
 
-  // Cleanup effect removed - mountedRef was not being used
-
-  // Early return if no active buffer or file tree is loading - must be after all hooks
   if (!activeBuffer || isFileTreeLoading) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;
   }
@@ -217,6 +211,9 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
         >
           {/* Hover Tooltip */}
           <HoverTooltip />
+
+          {/* Completion Dropdown */}
+          <CompletionDropdown />
 
           {/* Main editor - absolute positioned to fill container */}
           <div className="absolute inset-0 bg-primary-bg">

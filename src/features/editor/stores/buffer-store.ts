@@ -244,22 +244,26 @@ export const useBufferStore = createSelectors(
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
 
             // Check if extension is available and start LSP or prompt installation
-            import("@/extensions/registry/extension-store")
+            // First wait for bundled extensions to finish loading
+            import("@/extensions/loader/extension-loader")
+              .then(({ extensionLoader }) => extensionLoader.waitForInitialization())
+              .then(() => import("@/extensions/registry/extension-store"))
               .then(({ useExtensionStore }) => {
-                const { getExtensionForFile, isExtensionInstalled } =
-                  useExtensionStore.getState().actions;
+                const { getExtensionForFile } = useExtensionStore.getState().actions;
 
                 const extension = getExtensionForFile(path);
 
                 if (extension) {
-                  const installed = isExtensionInstalled(extension.manifest.id);
+                  // Bundled extensions don't have installation metadata - they're always available
+                  const isBundled = !extension.manifest.installation;
+                  const installed = extension.isInstalled || isBundled;
                   logger.info(
                     "BufferStore",
-                    `Extension ${extension.manifest.name} for ${path}: installed=${installed}`,
+                    `Extension ${extension.manifest.name} for ${path}: installed=${installed}, bundled=${isBundled}`,
                   );
 
                   if (installed) {
-                    // Extension installed, start LSP
+                    // Extension installed or bundled, start LSP
                     logger.info("BufferStore", `Starting LSP for ${path}`);
                     import("@/features/editor/lsp/lsp-client")
                       .then(({ LspClient }) => {
@@ -280,7 +284,7 @@ export const useBufferStore = createSelectors(
                         logger.error("BufferStore", "Failed to start LSP:", error);
                       });
                   } else {
-                    // Extension not installed, emit event for UI to handle
+                    // Marketplace extension not installed, emit event for UI to handle
                     logger.info(
                       "BufferStore",
                       `Extension ${extension.manifest.name} not installed for ${path}`,
