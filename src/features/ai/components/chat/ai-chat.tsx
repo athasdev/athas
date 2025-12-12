@@ -33,9 +33,15 @@ const AIChat = memo(function AIChat({
 
   // Subscribe to Copilot auth state to re-check API keys when it changes
   const copilotIsAuthenticated = useCopilotAuthStore((state) => state.isAuthenticated);
+  const checkCopilotAuthStatus = useCopilotAuthStore((state) => state.checkAuthStatus);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Check Copilot auth status on mount to load models if already authenticated
+  useEffect(() => {
+    checkCopilotAuthStatus();
+  }, [checkCopilotAuthStatus]);
 
   useEffect(() => {
     if (activeBuffer) {

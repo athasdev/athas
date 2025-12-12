@@ -130,12 +130,9 @@ pub async fn copilot_get_copilot_token(
       .get(COPILOT_TOKEN_URL)
       .header("Authorization", format!("token {github_token}"))
       .header("Accept", "application/json")
-      .header("Editor-Version", "Athas/1.0.0")
-      .header("Editor-Plugin-Version", "copilot-athas/1.0.0")
-      .header(
-         "User-Agent",
-         "Athas/1.0.0 (https://github.com/athasdev/athas)",
-      )
+      .header("Editor-Version", "vscode/1.96.0")
+      .header("Editor-Plugin-Version", "copilot-chat/0.24.0")
+      .header("User-Agent", "GitHubCopilotChat/0.24.0")
       .send()
       .await
       .map_err(|e| format!("Failed to get Copilot token: {e}"))?;
@@ -323,12 +320,10 @@ pub async fn copilot_list_models(app: tauri::AppHandle) -> Result<Vec<CopilotMod
       .get(COPILOT_MODELS_URL)
       .header("Authorization", format!("Bearer {token}"))
       .header("Accept", "application/json")
-      .header("Editor-Version", "Athas/1.0.0")
-      .header("Editor-Plugin-Version", "copilot-athas/1.0.0")
-      .header(
-         "User-Agent",
-         "Athas/1.0.0 (https://github.com/athasdev/athas)",
-      )
+      .header("Editor-Version", "vscode/1.96.0")
+      .header("Editor-Plugin-Version", "copilot-chat/0.24.0")
+      .header("Copilot-Integration-Id", "vscode-chat")
+      .header("User-Agent", "GitHubCopilotChat/0.24.0")
       .send()
       .await
       .map_err(|e| format!("Failed to list models: {e}"))?;

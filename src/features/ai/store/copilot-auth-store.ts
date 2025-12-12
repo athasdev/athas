@@ -12,6 +12,7 @@ import type {
   OAuthTokenResponse,
   StoredCopilotTokens,
 } from "@/features/ai/types/copilot";
+import { clearCopilotModels, setCopilotModels } from "@/features/ai/types/providers";
 
 const initialState: CopilotAuthState = {
   stage: "idle",
@@ -154,6 +155,9 @@ export const useCopilotAuthStore = create<CopilotAuthState & CopilotAuthActions>
             console.error("Failed to sign out:", error);
           }
 
+          // Clear dynamic models when signing out
+          clearCopilotModels();
+
           set((state) => {
             Object.assign(state, initialState);
           });
@@ -195,6 +199,9 @@ export const useCopilotAuthStore = create<CopilotAuthState & CopilotAuthActions>
         fetchAvailableModels: async () => {
           try {
             const models = await invoke<CopilotModel[]>("copilot_list_models");
+
+            // Update provider models list with what user has access to
+            setCopilotModels(models);
 
             set((state) => {
               state.availableModels = models;

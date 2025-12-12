@@ -13,6 +13,47 @@ interface Model {
   maxTokens: number;
 }
 
+// Metadata for Copilot models (maxTokens lookup)
+const COPILOT_MODEL_METADATA: Record<string, { maxTokens: number }> = {
+  "gpt-4.1": { maxTokens: 128000 },
+  "gpt-5": { maxTokens: 128000 },
+  "gpt-5-mini": { maxTokens: 128000 },
+  "gpt-5-codex": { maxTokens: 128000 },
+  "gpt-5.1": { maxTokens: 128000 },
+  "gpt-5.1-codex": { maxTokens: 128000 },
+  "gpt-5.1-codex-mini": { maxTokens: 128000 },
+  "gpt-5.1-codex-max": { maxTokens: 128000 },
+  "gpt-5.2": { maxTokens: 128000 },
+  "claude-haiku-4.5": { maxTokens: 128000 },
+  "claude-opus-4.1": { maxTokens: 128000 },
+  "claude-opus-4.5": { maxTokens: 128000 },
+  "claude-sonnet-4": { maxTokens: 128000 },
+  "claude-sonnet-4.5": { maxTokens: 128000 },
+  "gemini-2.5-pro": { maxTokens: 108801 },
+  "gemini-3-pro": { maxTokens: 108801 },
+  "grok-code-fast-1": { maxTokens: 128000 },
+  "raptor-mini": { maxTokens: 128000 },
+};
+
+// Dynamic Copilot models (populated from API based on user's plan)
+let dynamicCopilotModels: Model[] | null = null;
+
+export const setCopilotModels = (models: Array<{ id: string; name: string }>) => {
+  // Filter to only include models Copilot supports right now
+  // This removes old/irrelevant models
+  dynamicCopilotModels = models
+    .filter((m) => m.id in COPILOT_MODEL_METADATA)
+    .map((m) => ({
+      id: m.id,
+      name: m.name,
+      maxTokens: COPILOT_MODEL_METADATA[m.id]?.maxTokens ?? 128000,
+    }));
+};
+
+export const clearCopilotModels = () => {
+  dynamicCopilotModels = null;
+};
+
 export const AI_PROVIDERS: ModelProvider[] = [
   {
     id: "claude-code",
@@ -345,98 +386,7 @@ export const AI_PROVIDERS: ModelProvider[] = [
     apiUrl: "https://api.githubcopilot.com/chat/completions",
     requiresApiKey: false,
     requiresAuth: true,
-    models: [
-      // OpenAI models
-      {
-        id: "gpt-4.1",
-        name: "GPT-4.1 (Copilot)",
-        maxTokens: 128000,
-      },
-      {
-        id: "gpt-5",
-        name: "GPT-5 (Copilot)",
-        maxTokens: 128000,
-      },
-      {
-        id: "gpt-5-mini",
-        name: "GPT-5 Mini (Copilot)",
-        maxTokens: 128000,
-      },
-      {
-        id: "gpt-5-codex",
-        name: "GPT-5-Codex (Copilot)",
-        maxTokens: 128000,
-      },
-      {
-        id: "gpt-5.1",
-        name: "GPT-5.1 (Copilot)",
-        maxTokens: 264000,
-      },
-      {
-        id: "gpt-5.1-codex",
-        name: "GPT-5.1-Codex (Copilot)",
-        maxTokens: 128000,
-      },
-      {
-        id: "gpt-5.1-codex-mini",
-        name: "GPT-5.1-Codex-Mini (Copilot)",
-        maxTokens: 128000,
-      },
-      {
-        id: "gpt-5.1-codex-max",
-        name: "GPT-5.1-Codex-Max (Copilot)",
-        maxTokens: 128000,
-      },
-      {
-        id: "gpt-5.2",
-        name: "GPT-5.2 (Copilot)",
-        maxTokens: 128000,
-      },
-      // Anthropic models
-      {
-        id: "claude-haiku-4.5",
-        name: "Claude Haiku 4.5 (Copilot)",
-        maxTokens: 128000,
-      },
-      {
-        id: "claude-opus-4.5",
-        name: "Claude Opus 4.5 (Copilot)",
-        maxTokens: 128000,
-      },
-      {
-        id: "claude-sonnet-4",
-        name: "Claude Sonnet 4 (Copilot)",
-        maxTokens: 128000,
-      },
-      {
-        id: "claude-sonnet-4.5",
-        name: "Claude Sonnet 4.5 (Copilot)",
-        maxTokens: 128000,
-      },
-      // Google models
-      {
-        id: "gemini-2.5-pro",
-        name: "Gemini 2.5 Pro (Copilot)",
-        maxTokens: 108801,
-      },
-      {
-        id: "gemini-3-pro",
-        name: "Gemini 3 Pro (Copilot)",
-        maxTokens: 108801,
-      },
-      // xAI models
-      {
-        id: "grok-code-fast-1",
-        name: "Grok Code Fast 1 (Copilot)",
-        maxTokens: 128000,
-      },
-      // Other models
-      {
-        id: "raptor-mini",
-        name: "Raptor Mini (Copilot)",
-        maxTokens: 128000,
-      },
-    ],
+    models: [], // Populated dynamically from API based on user's plan
   },
 ];
 
@@ -448,15 +398,22 @@ export const setClaudeCodeAvailability = (available: boolean) => {
 };
 
 export const getAvailableProviders = (): ModelProvider[] => {
-  if (claudeCodeAvailable) {
-    return AI_PROVIDERS;
+  let providers = claudeCodeAvailable
+    ? AI_PROVIDERS
+    : AI_PROVIDERS.filter((provider) => provider.id !== "claude-code");
+
+  // Inject dynamic Copilot models if available
+  if (dynamicCopilotModels && dynamicCopilotModels.length > 0) {
+    providers = providers.map((provider) =>
+      provider.id === "copilot" ? { ...provider, models: dynamicCopilotModels! } : provider,
+    );
   }
-  // Filter out Claude Code if not available
-  return AI_PROVIDERS.filter((provider) => provider.id !== "claude-code");
+
+  return providers;
 };
 
 export const getProviderById = (id: string): ModelProvider | undefined => {
-  return AI_PROVIDERS.find((provider) => provider.id === id);
+  return getAvailableProviders().find((provider) => provider.id === id);
 };
 
 export const getModelById = (providerId: string, modelId: string): Model | undefined => {
