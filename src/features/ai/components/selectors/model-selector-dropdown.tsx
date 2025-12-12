@@ -161,8 +161,8 @@ export function ModelSelectorDropdown({
             ref={dropdownRef}
             onKeyDown={handleKeyDown}
             className={cn(
-              "absolute right-0 bottom-full z-[9999] mb-1",
-              "max-h-[400px] w-[280px] overflow-hidden",
+              "absolute bottom-full left-0 z-[9999] mb-1",
+              "max-h-[400px] min-w-[280px] overflow-hidden",
               "rounded-lg border border-border bg-primary-bg shadow-xl",
             )}
           >

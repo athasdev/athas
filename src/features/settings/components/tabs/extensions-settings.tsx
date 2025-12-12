@@ -50,7 +50,7 @@ const ExtensionRow = ({
     <div className="flex items-center justify-between gap-4 border-border/50 border-b px-1 py-3 last:border-b-0">
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-2">
-          <span className="font-medium text-text text-sm">{extension.name}</span>
+          <span className="font-medium text-sm text-text">{extension.name}</span>
           <span className="rounded bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
             {getCategoryLabel(extension.category)}
           </span>
@@ -58,7 +58,7 @@ const ExtensionRow = ({
             <span className="text-[10px] text-text-lighter">v{extension.version}</span>
           )}
         </div>
-        <div className="flex items-center gap-2 text-xs text-text-lighter">
+        <div className="flex items-center gap-2 text-text-lighter text-xs">
           {extension.publisher && <span>by {extension.publisher}</span>}
           {extension.publisher && extension.extensions && extension.extensions.length > 0 && (
             <span>·</span>
@@ -75,7 +75,7 @@ const ExtensionRow = ({
         </div>
       </div>
       {extension.isBundled ? (
-        <span className="flex-shrink-0 text-xs text-accent">Built-in</span>
+        <span className="flex-shrink-0 text-accent text-xs">Built-in</span>
       ) : isInstalling ? (
         <div className="flex flex-shrink-0 items-center gap-1.5 text-accent">
           <RefreshCw size={12} className="animate-spin" />
@@ -84,7 +84,7 @@ const ExtensionRow = ({
       ) : extension.isInstalled ? (
         <button
           onClick={onToggle}
-          className="flex-shrink-0 text-xs text-text-lighter transition-colors hover:text-red-500"
+          className="flex-shrink-0 text-text-lighter text-xs transition-colors hover:text-red-500"
           title="Uninstall"
         >
           Uninstall
@@ -92,7 +92,7 @@ const ExtensionRow = ({
       ) : (
         <button
           onClick={onToggle}
-          className="flex-shrink-0 text-xs text-text-lighter transition-colors hover:text-accent"
+          className="flex-shrink-0 text-text-lighter text-xs transition-colors hover:text-accent"
           title="Install"
         >
           Install

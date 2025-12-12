@@ -346,65 +346,95 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: false,
     requiresAuth: true,
     models: [
+      // OpenAI models
       {
         id: "gpt-4.1",
         name: "GPT-4.1 (Copilot)",
-        maxTokens: 1048576,
+        maxTokens: 128000,
       },
       {
-        id: "claude-opus-4",
-        name: "Claude Opus 4 (Copilot)",
-        maxTokens: 200000,
+        id: "gpt-5",
+        name: "GPT-5 (Copilot)",
+        maxTokens: 128000,
+      },
+      {
+        id: "gpt-5-mini",
+        name: "GPT-5 Mini (Copilot)",
+        maxTokens: 128000,
+      },
+      {
+        id: "gpt-5-codex",
+        name: "GPT-5-Codex (Copilot)",
+        maxTokens: 128000,
+      },
+      {
+        id: "gpt-5.1",
+        name: "GPT-5.1 (Copilot)",
+        maxTokens: 264000,
+      },
+      {
+        id: "gpt-5.1-codex",
+        name: "GPT-5.1-Codex (Copilot)",
+        maxTokens: 128000,
+      },
+      {
+        id: "gpt-5.1-codex-mini",
+        name: "GPT-5.1-Codex-Mini (Copilot)",
+        maxTokens: 128000,
+      },
+      {
+        id: "gpt-5.1-codex-max",
+        name: "GPT-5.1-Codex-Max (Copilot)",
+        maxTokens: 128000,
+      },
+      {
+        id: "gpt-5.2",
+        name: "GPT-5.2 (Copilot)",
+        maxTokens: 128000,
+      },
+      // Anthropic models
+      {
+        id: "claude-haiku-4.5",
+        name: "Claude Haiku 4.5 (Copilot)",
+        maxTokens: 128000,
+      },
+      {
+        id: "claude-opus-4.5",
+        name: "Claude Opus 4.5 (Copilot)",
+        maxTokens: 128000,
       },
       {
         id: "claude-sonnet-4",
         name: "Claude Sonnet 4 (Copilot)",
-        maxTokens: 200000,
-      },
-      {
-        id: "o3",
-        name: "o3 (Copilot)",
-        maxTokens: 200000,
-      },
-      {
-        id: "o4-mini",
-        name: "o4 Mini (Copilot)",
-        maxTokens: 200000,
-      },
-      {
-        id: "o3-mini",
-        name: "o3 Mini (Copilot)",
-        maxTokens: 200000,
-      },
-      {
-        id: "gpt-4o",
-        name: "GPT-4o (Copilot)",
         maxTokens: 128000,
       },
       {
-        id: "claude-3.7-sonnet",
-        name: "Claude 3.7 Sonnet (Copilot)",
-        maxTokens: 200000,
+        id: "claude-sonnet-4.5",
+        name: "Claude Sonnet 4.5 (Copilot)",
+        maxTokens: 128000,
       },
-      {
-        id: "claude-3.7-sonnet-thinking",
-        name: "Claude 3.7 Sonnet Thinking (Copilot)",
-        maxTokens: 200000,
-      },
-      {
-        id: "claude-3.5-sonnet",
-        name: "Claude 3.5 Sonnet (Copilot)",
-        maxTokens: 200000,
-      },
+      // Google models
       {
         id: "gemini-2.5-pro",
         name: "Gemini 2.5 Pro (Copilot)",
-        maxTokens: 1048576,
+        maxTokens: 108801,
       },
       {
-        id: "gemini-2.0-flash",
-        name: "Gemini 2.0 Flash (Copilot)",
-        maxTokens: 1000000,
+        id: "gemini-3-pro",
+        name: "Gemini 3 Pro (Copilot)",
+        maxTokens: 108801,
+      },
+      // xAI models
+      {
+        id: "grok-code-fast-1",
+        name: "Grok Code Fast 1 (Copilot)",
+        maxTokens: 128000,
+      },
+      // Other models
+      {
+        id: "raptor-mini",
+        name: "Raptor Mini (Copilot)",
+        maxTokens: 128000,
       },
     ],
   },
