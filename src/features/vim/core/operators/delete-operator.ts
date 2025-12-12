@@ -3,6 +3,7 @@
  */
 
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
+import { useVimStore } from "../../stores/vim-store";
 import type { EditorContext, Operator, VimRange } from "../core/types";
 import { setVimClipboard } from "./yank-operator";
 
@@ -30,6 +31,13 @@ export const deleteOperator: Operator = {
         linewise: true,
       });
 
+      // Also store in vim store's register system
+      const vimStore = useVimStore.getState();
+      const registerName = vimStore.activeRegister || '"';
+      vimStore.actions.setRegisterContent(registerName, deletedContent, "line", {
+        source: "delete",
+      });
+
       const newLines = lines.filter((_, index) => {
         return index < startLine || index > endLine;
       });
@@ -43,11 +51,19 @@ export const deleteOperator: Operator = {
       const newOffset =
         newLines.length > 0 ? calculateOffsetFromPosition(newLine, newColumn, newLines) : 0;
 
-      setCursorPosition({
+      const finalPosition = {
         line: Math.max(0, newLine),
         column: newColumn,
         offset: newOffset,
-      });
+      };
+
+      setCursorPosition(finalPosition);
+
+      // Sync textarea cursor to prevent viewport jumping
+      const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.selectionStart = textarea.selectionEnd = newOffset;
+      }
 
       return;
     }
@@ -65,6 +81,11 @@ export const deleteOperator: Operator = {
       content: deletedContent,
       linewise: false,
     });
+
+    // Also store in vim store's register system
+    const vimStore = useVimStore.getState();
+    const registerName = vimStore.activeRegister || '"';
+    vimStore.actions.setRegisterContent(registerName, deletedContent, "char", { source: "delete" });
 
     const newContent = content.slice(0, startOffset) + content.slice(actualEndOffset);
 
@@ -86,10 +107,18 @@ export const deleteOperator: Operator = {
 
     const column = startOffset - offset;
 
-    setCursorPosition({
+    const finalPosition = {
       line,
       column: Math.max(0, column),
       offset: startOffset,
-    });
+    };
+
+    setCursorPosition(finalPosition);
+
+    // Sync textarea cursor to prevent viewport jumping
+    const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+    if (textarea) {
+      textarea.selectionStart = textarea.selectionEnd = startOffset;
+    }
   },
 };
