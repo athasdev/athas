@@ -125,12 +125,12 @@ src/extensions/bundled/python/
 
 ## Benefits
 
-- ✅ **Zero Setup**: Users don't install language servers manually
-- ✅ **Consistent**: Same LSP version for all users
-- ✅ **Cross-Platform**: Automatic platform detection
-- ✅ **Isolated**: Each extension has its own LSP server
-- ✅ **Extensible**: Easy to add new languages
-- ✅ **Reliable**: No dependency on global installations
+- **Zero Setup**: Users don't install language servers manually
+- **Consistent**: Same LSP version for all users
+- **Cross-Platform**: Automatic platform detection
+- **Isolated**: Each extension has its own LSP server
+- **Extensible**: Easy to add new languages
+- **Reliable**: No dependency on global installations
 
 ## Future Enhancements
 

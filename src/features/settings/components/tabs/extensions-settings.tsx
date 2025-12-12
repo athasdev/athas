@@ -1,4 +1,4 @@
-import { Download, Languages, Package, Palette, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Languages, Package, Palette, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -19,9 +19,25 @@ interface UnifiedExtension {
   extensions?: string[];
   publisher?: string;
   isMarketplace?: boolean;
+  isBundled?: boolean;
 }
 
-const ExtensionCard = ({
+const getCategoryLabel = (category: UnifiedExtension["category"]) => {
+  switch (category) {
+    case "language":
+      return "Language";
+    case "theme":
+      return "Theme";
+    case "icon-theme":
+      return "Icon Theme";
+    case "database":
+      return "Database";
+    default:
+      return category;
+  }
+};
+
+const ExtensionRow = ({
   extension,
   onToggle,
   isInstalling,
@@ -31,57 +47,56 @@ const ExtensionCard = ({
   isInstalling?: boolean;
 }) => {
   return (
-    <div className="flex flex-col gap-1 rounded border border-border bg-secondary-bg p-2">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <h3 className="mb-0.5 font-medium text-text text-xs">{extension.name}</h3>
-          <p className="text-[11px] text-text-lighter leading-tight">{extension.description}</p>
-          {extension.publisher && (
-            <p className="mt-0.5 text-[10px] text-text-lighter">by {extension.publisher}</p>
+    <div className="flex items-center justify-between gap-4 border-border/50 border-b px-1 py-3 last:border-b-0">
+      <div className="min-w-0 flex-1">
+        <div className="mb-1 flex items-center gap-2">
+          <span className="font-medium text-text text-sm">{extension.name}</span>
+          <span className="rounded bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
+            {getCategoryLabel(extension.category)}
+          </span>
+          {extension.version && (
+            <span className="text-[10px] text-text-lighter">v{extension.version}</span>
           )}
         </div>
-        {isInstalling ? (
-          <div className="flex flex-shrink-0 items-center gap-1 rounded border border-accent bg-accent/5 px-1.5 py-0.5 text-accent">
-            <RefreshCw size={10} className="animate-spin" />
-            <span className="text-[10px]">Installing</span>
-          </div>
-        ) : extension.isInstalled ? (
-          <button
-            onClick={onToggle}
-            disabled={!extension.isMarketplace}
-            className="flex flex-shrink-0 items-center gap-0.5 rounded border border-border bg-transparent px-1.5 py-0.5 text-text-lighter transition-colors hover:border-red-500/50 hover:bg-red-500/5 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-            title={!extension.isMarketplace ? "Cannot uninstall bundled extensions" : "Uninstall"}
-          >
-            <Trash2 size={10} />
-            <span className="text-[10px]">Uninstall</span>
-          </button>
-        ) : (
-          <button
-            onClick={onToggle}
-            className="flex flex-shrink-0 items-center gap-0.5 rounded border border-border bg-transparent px-1.5 py-0.5 text-text-lighter transition-colors hover:border-accent hover:bg-accent/5 hover:text-accent"
-            title="Install"
-          >
-            <Download size={10} />
-            <span className="text-[10px]">Install</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2 text-xs text-text-lighter">
+          {extension.publisher && <span>by {extension.publisher}</span>}
+          {extension.publisher && extension.extensions && extension.extensions.length > 0 && (
+            <span>·</span>
+          )}
+          {extension.extensions && extension.extensions.length > 0 && (
+            <span>
+              {extension.extensions
+                .slice(0, 5)
+                .map((ext) => `.${ext}`)
+                .join(" ")}
+              {extension.extensions.length > 5 && ` +${extension.extensions.length - 5}`}
+            </span>
+          )}
+        </div>
       </div>
-      {extension.extensions && extension.extensions.length > 0 && (
-        <div className="flex flex-wrap gap-0.5">
-          {extension.extensions.slice(0, 5).map((ext) => (
-            <span
-              key={ext}
-              className="rounded-sm bg-hover px-1 py-0.5 text-[10px] text-text-lighter"
-            >
-              .{ext}
-            </span>
-          ))}
-          {extension.extensions.length > 5 && (
-            <span className="rounded-sm bg-hover px-1 py-0.5 text-[10px] text-text-lighter">
-              +{extension.extensions.length - 5}
-            </span>
-          )}
+      {extension.isBundled ? (
+        <span className="flex-shrink-0 text-xs text-accent">Built-in</span>
+      ) : isInstalling ? (
+        <div className="flex flex-shrink-0 items-center gap-1.5 text-accent">
+          <RefreshCw size={12} className="animate-spin" />
+          <span className="text-xs">Installing</span>
         </div>
+      ) : extension.isInstalled ? (
+        <button
+          onClick={onToggle}
+          className="flex-shrink-0 text-xs text-text-lighter transition-colors hover:text-red-500"
+          title="Uninstall"
+        >
+          Uninstall
+        </button>
+      ) : (
+        <button
+          onClick={onToggle}
+          className="flex-shrink-0 text-xs text-text-lighter transition-colors hover:text-accent"
+          title="Install"
+        >
+          Install
+        </button>
       )}
     </div>
   );
@@ -104,6 +119,8 @@ export const ExtensionsSettings = () => {
     for (const [, ext] of availableExtensions) {
       if (ext.manifest.languages && ext.manifest.languages.length > 0) {
         const lang = ext.manifest.languages[0];
+        // Bundled extensions don't have installation metadata (downloadUrl, checksum)
+        const isBundled = !ext.manifest.installation;
         allExtensions.push({
           id: ext.manifest.id,
           name: ext.manifest.displayName,
@@ -113,7 +130,8 @@ export const ExtensionsSettings = () => {
           version: ext.manifest.version,
           extensions: lang.extensions.map((e: string) => e.replace(".", "")),
           publisher: ext.manifest.publisher,
-          isMarketplace: true, // From new store, can be uninstalled
+          isMarketplace: !isBundled, // Only marketplace extensions can be uninstalled
+          isBundled,
         });
       }
     }
@@ -318,14 +336,13 @@ export const ExtensionsSettings = () => {
             <p className="text-[11px]">No extensions found matching your search.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-2">
+          <div>
             {filteredExtensions.map((extension) => {
-              // Check if extension is currently installing from the new store
               const extensionFromStore = availableExtensions.get(extension.id);
               const isInstalling = extensionFromStore?.isInstalling || false;
 
               return (
-                <ExtensionCard
+                <ExtensionRow
                   key={extension.id}
                   extension={extension}
                   onToggle={() => handleToggle(extension)}

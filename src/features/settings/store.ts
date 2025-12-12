@@ -37,6 +37,8 @@ interface Settings {
   aiChatWidth: number;
   isAIChatVisible: boolean;
   aiCompletion: boolean;
+  // Layout
+  sidebarWidth: number;
   // Keyboard
   vimMode: boolean;
   vimRelativeLineNumbers: boolean;
@@ -97,6 +99,8 @@ const defaultSettings: Settings = {
   aiChatWidth: 400,
   isAIChatVisible: false,
   aiCompletion: true,
+  // Layout
+  sidebarWidth: 220,
   // Keyboard
   vimMode: false,
   vimRelativeLineNumbers: false,

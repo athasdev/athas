@@ -16,7 +16,6 @@ const rebuildNativeMenu = async () => {
     }));
 
     await invoke("rebuild_menu_themes", { themes: themeData });
-    console.log("Native menu rebuilt with themes:", themeData.length);
   } catch (error) {
     console.error("Failed to rebuild native menu:", error);
   }

@@ -1,3 +1,4 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
@@ -26,6 +27,7 @@ export const GeneralSettings = () => {
   const [cliInstalled, setCliInstalled] = useState<boolean>(false);
   const [cliChecking, setCliChecking] = useState(true);
   const [cliInstalling, setCliInstalling] = useState(false);
+  const [appVersion, setAppVersion] = useState<string>("");
 
   const sidebarOptions = [
     { value: "left", label: "Left" },
@@ -45,6 +47,10 @@ export const GeneralSettings = () => {
     };
 
     checkCliStatus();
+  }, []);
+
+  useEffect(() => {
+    getVersion().then(setAppVersion);
   }, []);
 
   const handleInstallCli = async () => {
@@ -76,6 +82,13 @@ export const GeneralSettings = () => {
     }
   };
 
+  const handleCheckForUpdates = async () => {
+    const hasUpdate = await checkForUpdates();
+    if (!hasUpdate) {
+      showToast({ message: "You're on the latest version", type: "success" });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Section title="File Management">
@@ -100,16 +113,6 @@ export const GeneralSettings = () => {
         </SettingRow>
       </Section>
 
-      <Section title="Zoom">
-        <SettingRow label="Mouse Wheel Zoom" description="Use mouse wheel to zoom in/out">
-          <Switch
-            checked={settings.mouseWheelZoom}
-            onChange={(checked) => updateSetting("mouseWheelZoom", checked)}
-            size="sm"
-          />
-        </SettingRow>
-      </Section>
-
       <Section title="Updates">
         <SettingRow
           label="Check for Updates"
@@ -127,7 +130,7 @@ export const GeneralSettings = () => {
         >
           <div className="flex gap-2">
             <Button
-              onClick={checkForUpdates}
+              onClick={handleCheckForUpdates}
               disabled={checking || downloading || installing}
               variant="ghost"
               size="xs"
@@ -198,6 +201,12 @@ export const GeneralSettings = () => {
               </Button>
             )}
           </div>
+        </SettingRow>
+      </Section>
+
+      <Section title="About">
+        <SettingRow label="Version" description="Current application version">
+          <span className="text-text-lighter text-xs">{appVersion || "..."}</span>
         </SettingRow>
       </Section>
     </div>
