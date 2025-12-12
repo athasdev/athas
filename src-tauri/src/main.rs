@@ -305,6 +305,17 @@ fn main() {
          store_ai_provider_token,
          get_ai_provider_token,
          remove_ai_provider_token,
+         // Copilot auth commands
+         copilot_start_device_flow,
+         copilot_poll_device_auth,
+         copilot_get_copilot_token,
+         copilot_get_stored_tokens,
+         copilot_refresh_token,
+         copilot_check_auth_status,
+         copilot_sign_out,
+         copilot_list_models,
+         copilot_set_enterprise_uri,
+         copilot_get_enterprise_uri,
          // Chat history commands
          init_chat_database,
          save_chat,

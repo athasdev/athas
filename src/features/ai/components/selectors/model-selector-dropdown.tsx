@@ -1,6 +1,8 @@
-import { Check, ChevronDown, Key, Search } from "lucide-react";
+import { Check, ChevronDown, Key, LogIn, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCopilotAuthStore } from "@/features/ai/store/copilot-auth-store";
 import { getAvailableProviders } from "@/features/ai/types/providers";
+import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 
 interface ModelSelectorDropdownProps {
@@ -28,6 +30,18 @@ export function ModelSelectorDropdown({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const providers = getAvailableProviders();
+  const copilotAuth = useCopilotAuthStore();
+  const { setIsGitHubCopilotSettingsVisible } = useUIState();
+
+  const isProviderReady = useCallback(
+    (providerId: string, requiresApiKey: boolean, requiresAuth?: boolean) => {
+      if (requiresAuth && providerId === "copilot") {
+        return copilotAuth.isAuthenticated;
+      }
+      return !requiresApiKey || hasApiKey(providerId);
+    },
+    [hasApiKey, copilotAuth.isAuthenticated],
+  );
 
   const filteredItems = useMemo(() => {
     const items: Array<{
@@ -37,14 +51,19 @@ export function ModelSelectorDropdown({
       modelId?: string;
       modelName?: string;
       requiresApiKey?: boolean;
-      hasKey?: boolean;
+      requiresAuth?: boolean;
+      isReady?: boolean;
     }> = [];
 
     const searchLower = search.toLowerCase();
 
     for (const provider of providers) {
       const providerMatches = provider.name.toLowerCase().includes(searchLower);
-      const providerHasKey = !provider.requiresApiKey || hasApiKey(provider.id);
+      const providerIsReady = isProviderReady(
+        provider.id,
+        provider.requiresApiKey,
+        provider.requiresAuth,
+      );
       const matchingModels = provider.models.filter(
         (model) =>
           providerMatches ||
@@ -58,11 +77,11 @@ export function ModelSelectorDropdown({
           providerId: provider.id,
           providerName: provider.name,
           requiresApiKey: provider.requiresApiKey,
-          hasKey: providerHasKey,
+          requiresAuth: provider.requiresAuth,
+          isReady: providerIsReady,
         });
 
-        // Only show models if provider has API key or doesn't require one
-        if (providerHasKey) {
+        if (providerIsReady) {
           const modelsToShow = search ? matchingModels : provider.models;
           for (const model of modelsToShow) {
             items.push({
@@ -78,7 +97,7 @@ export function ModelSelectorDropdown({
     }
 
     return items;
-  }, [providers, search, hasApiKey]);
+  }, [providers, search, isProviderReady]);
 
   const selectableItems = useMemo(
     () => filteredItems.filter((item) => item.type === "model"),
@@ -132,12 +151,6 @@ export function ModelSelectorDropdown({
     [isOpen, selectableItems, selectedIndex, onSelect],
   );
 
-  const handleApiKeyClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onOpenSettings();
-    setIsOpen(false);
-  };
-
   let selectableIndex = -1;
 
   return (
@@ -187,6 +200,16 @@ export function ModelSelectorDropdown({
               ) : (
                 filteredItems.map((item) => {
                   if (item.type === "provider") {
+                    const handleProviderAction = (e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      if (item.requiresAuth && item.providerId === "copilot") {
+                        setIsGitHubCopilotSettingsVisible(true);
+                      } else {
+                        onOpenSettings();
+                      }
+                      setIsOpen(false);
+                    };
+
                     return (
                       <div
                         key={`provider-${item.providerId}`}
@@ -195,9 +218,18 @@ export function ModelSelectorDropdown({
                         <span className="font-medium text-text-lighter text-xs">
                           {item.providerName}
                         </span>
-                        {item.requiresApiKey && !item.hasKey && (
+                        {!item.isReady && item.requiresAuth && (
                           <button
-                            onClick={handleApiKeyClick}
+                            onClick={handleProviderAction}
+                            className="flex items-center gap-1 rounded bg-blue-500/20 px-1.5 py-0.5 text-[10px] text-blue-400 transition-colors hover:bg-blue-500/30"
+                          >
+                            <LogIn size={8} />
+                            Sign In
+                          </button>
+                        )}
+                        {!item.isReady && item.requiresApiKey && !item.requiresAuth && (
+                          <button
+                            onClick={handleProviderAction}
                             className="flex items-center gap-1 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] text-red-400 transition-colors hover:bg-red-500/30"
                           >
                             <Key size={8} />
