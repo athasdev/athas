@@ -91,6 +91,40 @@ class WasmParserLoader {
           return updatedParser;
         } catch (error) {
           logger.error("WasmParser", `Failed to create highlight query for ${languageId}:`, error);
+          // Try to fetch local highlight query as fallback
+          const localQuery = await this.fetchLocalHighlightQuery(languageId);
+          if (localQuery) {
+            try {
+              const query = cached.language.query(localQuery);
+              const updatedParser: LoadedParser = {
+                ...cached,
+                highlightQuery: query,
+              };
+              this.parsers.set(languageId, updatedParser);
+
+              // Update IndexedDB cache with the correct local query
+              indexedDBParserCache
+                .get(languageId)
+                .then((cachedEntry) => {
+                  if (cachedEntry) {
+                    indexedDBParserCache.set({
+                      ...cachedEntry,
+                      highlightQuery: localQuery,
+                    });
+                  }
+                })
+                .catch(() => {});
+
+              logger.info("WasmParser", `Using local highlight query for ${languageId}`);
+              return updatedParser;
+            } catch (localError) {
+              logger.error(
+                "WasmParser",
+                `Local highlight query also failed for ${languageId}:`,
+                localError,
+              );
+            }
+          }
         }
       }
 
@@ -115,6 +149,22 @@ class WasmParserLoader {
       this.loadingParsers.delete(languageId);
       throw error;
     }
+  }
+
+  /**
+   * Fetch highlight query from local public directory
+   */
+  private async fetchLocalHighlightQuery(languageId: string): Promise<string | null> {
+    const localPath = `/tree-sitter/queries/${languageId}/highlights.scm`;
+    try {
+      const response = await fetch(localPath);
+      if (response.ok) {
+        return await response.text();
+      }
+    } catch {
+      logger.debug("WasmParser", `No local highlight query found at ${localPath}`);
+    }
+    return null;
   }
 
   private async _loadParserInternal(config: ParserConfig): Promise<LoadedParser> {
@@ -235,6 +285,32 @@ class WasmParserLoader {
           query = language.query(queryText);
         } catch (error) {
           logger.warn("WasmParser", `Failed to compile highlight query for ${languageId}`, error);
+          // Try to fetch local highlight query as fallback
+          const localQuery = await this.fetchLocalHighlightQuery(languageId);
+          if (localQuery && localQuery !== queryText) {
+            try {
+              query = language.query(localQuery);
+              logger.info("WasmParser", `Using local highlight query fallback for ${languageId}`);
+              // Update IndexedDB cache with the correct local query
+              indexedDBParserCache
+                .get(languageId)
+                .then((cachedEntry) => {
+                  if (cachedEntry) {
+                    indexedDBParserCache.set({
+                      ...cachedEntry,
+                      highlightQuery: localQuery,
+                    });
+                  }
+                })
+                .catch(() => {});
+            } catch (localError) {
+              logger.error(
+                "WasmParser",
+                `Local highlight query also failed for ${languageId}:`,
+                localError,
+              );
+            }
+          }
         }
       }
 
