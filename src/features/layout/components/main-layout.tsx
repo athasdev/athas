@@ -33,9 +33,8 @@ import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
 import EditorFooter from "./footer/editor-footer";
-import ResizableRightPane from "./right-pane/resizable-right-pane";
+import { ResizablePane } from "./resizable-pane";
 import { MainSidebar } from "./sidebar/main-sidebar";
-import ResizableSidebar from "./sidebar/resizable-sidebar";
 
 export function MainLayout() {
   // Initialize AI chat storage (SQLite database + migration)
@@ -69,8 +68,14 @@ export function MainLayout() {
     }
   });
 
-  const { getAllDiagnostics } = useDiagnosticsStore.use.actions();
-  const diagnostics = useMemo(() => getAllDiagnostics(), [getAllDiagnostics]);
+  const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
+  const diagnostics = useMemo(() => {
+    const allDiagnostics: Diagnostic[] = [];
+    diagnosticsByFile.forEach((fileDiagnostics) => {
+      allDiagnostics.push(...fileDiagnostics);
+    });
+    return allDiagnostics;
+  }, [diagnosticsByFile]);
   const sidebarPosition = settings.sidebarPosition;
 
   const { closeBufferForce } = useBufferStore.use.actions();
@@ -212,14 +217,14 @@ export function MainLayout() {
           {/* Left sidebar or AI chat based on settings */}
           {sidebarPosition === "right"
             ? settings.isAIChatVisible && (
-                <ResizableRightPane position="left">
+                <ResizablePane position="left" widthKey="aiChatWidth">
                   <AIChat mode="chat" />
-                </ResizableRightPane>
+                </ResizablePane>
               )
             : isSidebarVisible && (
-                <ResizableSidebar>
+                <ResizablePane position="left" widthKey="sidebarWidth">
                   <MainSidebar />
-                </ResizableSidebar>
+                </ResizablePane>
               )}
 
           {/* Main content area */}
@@ -266,14 +271,14 @@ export function MainLayout() {
           {/* Right sidebar or AI chat based on settings */}
           {sidebarPosition === "right"
             ? isSidebarVisible && (
-                <ResizableRightPane position="right">
+                <ResizablePane position="right" widthKey="sidebarWidth">
                   <MainSidebar />
-                </ResizableRightPane>
+                </ResizablePane>
               )
             : settings.isAIChatVisible && (
-                <ResizableRightPane position="right">
+                <ResizablePane position="right" widthKey="aiChatWidth">
                   <AIChat mode="chat" />
-                </ResizableRightPane>
+                </ResizablePane>
               )}
         </div>
       </div>
