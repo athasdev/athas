@@ -53,6 +53,18 @@
       "allow": [
         {
           "url": "https://generativelanguage.googleapis.com/**"
+        },
+        {
+          "url": "https://api.github.com/**"
+        },
+        {
+          "url": "https://github.com/**"
+        },
+        {
+          "url": "https://api.githubcopilot.com/**"
+        },
+        {
+          "url": "https://copilot-proxy.githubusercontent.com/**"
         }
       ]
     },
