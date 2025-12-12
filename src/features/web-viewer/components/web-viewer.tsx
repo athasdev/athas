@@ -111,9 +111,12 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
 
       let normalizedUrl = url.trim();
 
-      // Add protocol if missing
+      // Add protocol if missing (HTTP for localhost, HTTPS for external)
       if (normalizedUrl && !normalizedUrl.match(/^https?:\/\//)) {
-        normalizedUrl = `https://${normalizedUrl}`;
+        const isLocalhost =
+          normalizedUrl.toLowerCase().startsWith("localhost") ||
+          normalizedUrl.toLowerCase().startsWith("127.0.0.1");
+        normalizedUrl = isLocalhost ? `http://${normalizedUrl}` : `https://${normalizedUrl}`;
       }
 
       if (!normalizedUrl) return;
