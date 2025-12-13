@@ -5,11 +5,13 @@ import { immer } from "zustand/middleware/immer";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { extensionInstaller } from "../installer/extension-installer";
+import { getDownloadInfoForPlatform, getFullExtensions } from "../languages/full-extensions";
 import {
   getHighlightQueryUrl,
   getPackagedLanguageExtensions,
   getWasmUrlForLanguage,
 } from "../languages/language-packager";
+import { extensionRegistry } from "../registry/extension-registry";
 import type { ExtensionManifest } from "../types/extension-manifest";
 
 export interface ExtensionInstallationMetadata {
@@ -76,24 +78,78 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           state.isLoadingRegistry = true;
         });
 
+        // Built-in language IDs that are always available (syntax highlighting only, no LSP)
+        const BUILTIN_LANGUAGE_IDS = new Set(["html", "css", "markdown"]);
+
         try {
-          // Load language extensions from packager
+          // Load language extensions from packager (installable)
           const extensions: ExtensionManifest[] = getPackagedLanguageExtensions();
+
+          // Also load bundled extensions from extension registry
+          const bundledExtensions = extensionRegistry.getAllExtensions();
 
           // Check which extensions are installed
           const installed = get().installedExtensions;
 
           set((state) => {
-            state.availableExtensions = new Map(
-              extensions.map((manifest) => [
-                manifest.id,
-                {
+            // Add installable extensions
+            for (const manifest of extensions) {
+              // Check if this is a built-in language (by checking its language IDs)
+              const isBuiltIn = manifest.languages?.some((lang) =>
+                BUILTIN_LANGUAGE_IDS.has(lang.id),
+              );
+
+              if (isBuiltIn) {
+                // Built-in languages: remove installation metadata and mark as installed
+                const builtInManifest = { ...manifest };
+                delete builtInManifest.installation;
+                state.availableExtensions.set(manifest.id, {
+                  manifest: builtInManifest,
+                  isInstalled: true,
+                  isInstalling: false,
+                });
+              } else {
+                // Marketplace extensions: keep installation metadata
+                state.availableExtensions.set(manifest.id, {
                   manifest,
                   isInstalled: installed.has(manifest.id),
                   isInstalling: false,
-                },
-              ]),
-            );
+                });
+              }
+            }
+
+            // Add bundled extensions (always installed)
+            for (const bundled of bundledExtensions) {
+              state.availableExtensions.set(bundled.manifest.id, {
+                manifest: bundled.manifest,
+                isInstalled: true, // Bundled extensions are always installed
+                isInstalling: false,
+              });
+
+              // Also add to installed map if not present
+              if (!state.installedExtensions.has(bundled.manifest.id)) {
+                state.installedExtensions.set(bundled.manifest.id, {
+                  id: bundled.manifest.id,
+                  name: bundled.manifest.displayName,
+                  version: bundled.manifest.version,
+                  installed_at: new Date().toISOString(),
+                  enabled: true,
+                });
+              }
+            }
+
+            // Add full extensions (with LSP, formatters, etc.)
+            const fullExts = getFullExtensions();
+            for (const manifest of fullExts) {
+              // Skip if this extension ID was already added as a simple language extension
+              // Full extensions take precedence
+              state.availableExtensions.set(manifest.id, {
+                manifest,
+                isInstalled: installed.has(manifest.id),
+                isInstalling: false,
+              });
+            }
+
             state.isLoadingRegistry = false;
           });
         } catch (error) {
@@ -172,11 +228,29 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
         const fileExt = `.${ext}`;
 
+        // First check availableExtensions (loaded extensions)
         for (const [, extension] of get().availableExtensions) {
           if (extension.manifest.languages) {
             for (const lang of extension.manifest.languages) {
               if (lang.extensions.includes(fileExt)) {
                 return extension;
+              }
+            }
+          }
+        }
+
+        // Fallback: check bundled extensions directly if store not loaded yet
+        const bundledExtensions = extensionRegistry.getAllExtensions();
+        for (const bundled of bundledExtensions) {
+          if (bundled.manifest.languages) {
+            for (const lang of bundled.manifest.languages) {
+              if (lang.extensions.includes(fileExt)) {
+                // Return as AvailableExtension with isInstalled: true
+                return {
+                  manifest: bundled.manifest,
+                  isInstalled: true,
+                  isInstalling: false,
+                };
               }
             }
           }
@@ -205,20 +279,80 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         });
 
         try {
-          const { downloadUrl, checksum } = extension.manifest.installation;
+          // Check if this is a full extension with LSP (needs filesystem installation)
+          const hasLsp = extension.manifest.lsp !== undefined;
 
-          // Check if this is a language extension
-          if (extension.manifest.languages && extension.manifest.languages.length > 0) {
+          if (hasLsp) {
+            // Full extension with LSP - use Tauri backend for filesystem extraction
+            // Get platform-specific download info
+            const downloadInfo = getDownloadInfoForPlatform(extension.manifest);
+            if (!downloadInfo) {
+              throw new Error(
+                `No download available for extension ${extensionId} on this platform`,
+              );
+            }
+
+            await invoke("install_extension_from_url", {
+              extensionId,
+              url: downloadInfo.downloadUrl,
+              checksum: downloadInfo.checksum,
+              size: downloadInfo.size,
+            });
+
+            // Reload installed extensions
+            await get().actions.loadInstalledExtensions();
+
+            set((state) => {
+              const ext = state.availableExtensions.get(extensionId);
+              if (ext) {
+                ext.isInstalling = false;
+                ext.isInstalled = true;
+                ext.installProgress = 100;
+
+                state.installedExtensions.set(extensionId, {
+                  id: extensionId,
+                  name: ext.manifest.displayName,
+                  version: ext.manifest.version,
+                  installed_at: new Date().toISOString(),
+                  enabled: true,
+                });
+              }
+              state.availableExtensions = new Map(state.availableExtensions);
+            });
+
+            // Trigger re-highlighting for open files that match this language
+            if (extension.manifest.languages) {
+              const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
+              const bufferState = useBufferStore.getState();
+              const activeBuffer = bufferState.buffers.find((b) => b.isActive);
+
+              if (activeBuffer) {
+                const fileExt = `.${activeBuffer.path.split(".").pop()?.toLowerCase()}`;
+                const matchesLanguage = extension.manifest.languages.some((lang) =>
+                  lang.extensions.includes(fileExt),
+                );
+
+                if (matchesLanguage) {
+                  const { setSyntaxHighlightingFilePath } = await import(
+                    "@/features/editor/extensions/builtin/syntax-highlighting"
+                  );
+                  setSyntaxHighlightingFilePath(activeBuffer.path);
+                }
+              }
+            }
+          } else if (extension.manifest.languages && extension.manifest.languages.length > 0) {
+            // Simple language extension (WASM + queries only) - use IndexedDB
             const languageId = extension.manifest.languages[0].id;
 
             // Use the download URL from the manifest, or generate it if not provided
-            const wasmUrl = downloadUrl || getWasmUrlForLanguage(languageId);
+            const wasmUrl =
+              extension.manifest.installation.downloadUrl || getWasmUrlForLanguage(languageId);
             const highlightQueryUrl = getHighlightQueryUrl(languageId);
 
             // Install using extension installer
             await extensionInstaller.installLanguage(languageId, wasmUrl, highlightQueryUrl, {
               version: extension.manifest.version,
-              checksum: checksum || "",
+              checksum: extension.manifest.installation.checksum || "",
               onProgress: (progress) => {
                 set((state) => {
                   const ext = state.availableExtensions.get(extensionId);
@@ -269,11 +403,11 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               }
             }
           } else {
-            // Non-language extension - use old download method
+            // Non-language extension without LSP - use backend download
             await invoke("install_extension_from_url", {
               extensionId,
-              url: downloadUrl,
-              checksum,
+              url: extension.manifest.installation.downloadUrl,
+              checksum: extension.manifest.installation.checksum,
               size: extension.manifest.installation.size,
             });
 

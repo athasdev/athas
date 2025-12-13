@@ -114,6 +114,8 @@
         }
       ]
     },
-    "store:default"
+    "store:default",
+    "deep-link:default",
+    "updater:default"
   ]
 }

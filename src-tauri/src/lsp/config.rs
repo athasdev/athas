@@ -29,29 +29,12 @@ pub struct LspRegistry {
 
 impl LspRegistry {
    pub fn new() -> Self {
-      let mut registry = Self {
+      // No longer register hardcoded servers.
+      // LSP servers are now dynamically determined by the frontend extension registry.
+      // The backend accepts server_path and server_args from the frontend.
+      Self {
          servers: Vec::new(),
-      };
-
-      // Register TypeScript server
-      registry.register_typescript();
-
-      registry
-   }
-
-   fn register_typescript(&mut self) {
-      self.servers.push(LspServerConfig {
-         name: "typescript".to_string(),
-         language_id: "typescript".to_string(),
-         command: PathBuf::from("typescript-language-server"),
-         args: vec!["--stdio".to_string()],
-         file_extensions: vec![
-            "ts".to_string(),
-            "tsx".to_string(),
-            "js".to_string(),
-            "jsx".to_string(),
-         ],
-      });
+      }
    }
 
    pub fn find_server_for_file(&self, file_path: &Path) -> Option<&LspServerConfig> {

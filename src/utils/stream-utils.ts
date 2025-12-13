@@ -83,7 +83,6 @@ class SSEStreamParser {
         // OpenAI/OpenRouter format
         if (data.choices?.[0]) {
           const choice = data.choices[0];
-          console.log("🔍 Choice data:", choice);
           if (choice.delta?.content) {
             content = choice.delta.content;
             console.log("🔍 Delta content found:", content);
@@ -99,7 +98,6 @@ class SSEStreamParser {
         }
 
         if (content) {
-          console.log("Sending chunk to callback:", content);
           this.handlers.onChunk(content);
         }
       } catch (parseError) {

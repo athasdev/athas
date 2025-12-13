@@ -1,6 +1,70 @@
+use serde::Serialize;
 use std::{fs, path::Path};
 use tauri::command;
 use walkdir::WalkDir;
+
+#[derive(Serialize)]
+pub struct SymlinkInfo {
+   is_symlink: bool,
+   target: Option<String>,
+   is_dir: bool,
+}
+
+#[command]
+pub fn get_symlink_info(
+   path: String,
+   workspace_root: Option<String>,
+) -> Result<SymlinkInfo, String> {
+   let file_path = Path::new(&path);
+
+   // Use symlink_metadata to get info without following the symlink
+   let metadata =
+      fs::symlink_metadata(file_path).map_err(|e| format!("Failed to get metadata: {}", e))?;
+
+   let is_symlink = metadata.file_type().is_symlink();
+   let is_dir = metadata.is_dir();
+
+   let target = if is_symlink {
+      // Read the symlink target
+      match fs::read_link(file_path) {
+         Ok(target_path) => {
+            // Convert to workspace-relative path if possible
+            let target_str = if let Some(root) = workspace_root {
+               let root_path = Path::new(&root);
+               let absolute_target = if target_path.is_absolute() {
+                  target_path
+               } else {
+                  // Resolve relative symlink target
+                  if let Some(parent) = file_path.parent() {
+                     parent.join(&target_path)
+                  } else {
+                     target_path
+                  }
+               };
+
+               // Try to make it relative to workspace root
+               absolute_target
+                  .strip_prefix(root_path)
+                  .unwrap_or(&absolute_target)
+                  .to_string_lossy()
+                  .to_string()
+            } else {
+               target_path.to_string_lossy().to_string()
+            };
+            Some(target_str)
+         }
+         Err(_) => None, // Broken symlink
+      }
+   } else {
+      None
+   };
+
+   Ok(SymlinkInfo {
+      is_symlink,
+      target,
+      is_dir,
+   })
+}
 
 #[command]
 pub fn rename_file(source_path: String, target_path: String) -> Result<(), String> {

@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::process::Command;
+use std::{
+   collections::HashMap,
+   io::Write,
+   process::{Command, Stdio},
+};
 use tauri::command;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -7,6 +11,18 @@ pub struct FormatRequest {
    pub content: String,
    pub language: String,
    pub formatter: String,
+   pub formatter_config: Option<FormatterConfig>,
+   pub file_path: Option<String>,
+   pub workspace_folder: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FormatterConfig {
+   pub command: String,
+   pub args: Option<Vec<String>>,
+   pub env: Option<HashMap<String, String>>,
+   pub input_method: Option<String>,
+   pub output_method: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -19,19 +35,174 @@ pub struct FormatResponse {
 /// Format code content using the specified formatter
 #[command]
 pub async fn format_code(request: FormatRequest) -> Result<FormatResponse, String> {
-   let FormatRequest {
-      content,
-      language,
-      formatter,
-   } = request;
-
-   match formatter.as_str() {
-      "prettier" => format_with_prettier(&content, &language).await,
-      "rustfmt" => format_with_rustfmt(&content).await,
-      "gofmt" => format_with_gofmt(&content).await,
-      "eslint" => format_with_eslint(&content).await,
-      _ => Err(format!("Unsupported formatter: {}", formatter)),
+   // If formatter config is provided, use generic formatter
+   if let Some(config) = &request.formatter_config {
+      return format_with_generic(
+         &request.content,
+         config,
+         request.file_path.as_deref(),
+         request.workspace_folder.as_deref(),
+      )
+      .await;
    }
+
+   // Otherwise, fall back to hardcoded formatters
+   match request.formatter.as_str() {
+      "prettier" => format_with_prettier(&request.content, &request.language).await,
+      "rustfmt" => format_with_rustfmt(&request.content).await,
+      "gofmt" => format_with_gofmt(&request.content).await,
+      "eslint" => format_with_eslint(&request.content).await,
+      _ => Err(format!("Unsupported formatter: {}", request.formatter)),
+   }
+}
+
+/// Format code using generic formatter configuration from extension
+async fn format_with_generic(
+   content: &str,
+   config: &FormatterConfig,
+   file_path: Option<&str>,
+   workspace_folder: Option<&str>,
+) -> Result<FormatResponse, String> {
+   // Substitute template variables in command and args
+   let command = substitute_variables(&config.command, file_path, workspace_folder);
+
+   let args: Vec<String> = if let Some(arg_list) = &config.args {
+      arg_list
+         .iter()
+         .map(|arg| substitute_variables(arg, file_path, workspace_folder))
+         .collect()
+   } else {
+      vec![]
+   };
+
+   // Determine input/output methods (default to stdin/stdout)
+   let input_method = config.input_method.as_deref().unwrap_or("stdin");
+   let output_method = config.output_method.as_deref().unwrap_or("stdout");
+
+   // Build command
+   let mut cmd = Command::new(&command);
+   cmd.args(&args);
+
+   // Add environment variables if specified
+   if let Some(env) = &config.env {
+      for (key, value) in env {
+         let value = substitute_variables(value, file_path, workspace_folder);
+         cmd.env(key, value);
+      }
+   }
+
+   // Configure stdin/stdout
+   if input_method == "stdin" {
+      cmd.stdin(Stdio::piped());
+   }
+   if output_method == "stdout" {
+      cmd.stdout(Stdio::piped());
+   }
+   cmd.stderr(Stdio::piped());
+
+   // Spawn the formatter process
+   match cmd.spawn() {
+      Ok(mut child) => {
+         // Write content to stdin if using stdin input
+         if input_method == "stdin" {
+            if let Some(mut stdin) = child.stdin.take() {
+               if let Err(e) = stdin.write_all(content.as_bytes()) {
+                  return Ok(FormatResponse {
+                     formatted_content: content.to_string(),
+                     success: false,
+                     error: Some(format!("Failed to write to formatter stdin: {}", e)),
+                  });
+               }
+            }
+         }
+
+         // Wait for the process to complete
+         match child.wait_with_output() {
+            Ok(output) => {
+               if output.status.success() {
+                  let formatted = if output_method == "stdout" {
+                     String::from_utf8_lossy(&output.stdout).to_string()
+                  } else {
+                     // For file output, read the file (TODO: implement file-based formatting)
+                     content.to_string()
+                  };
+
+                  Ok(FormatResponse {
+                     formatted_content: formatted,
+                     success: true,
+                     error: None,
+                  })
+               } else {
+                  let error_msg = String::from_utf8_lossy(&output.stderr);
+                  Ok(FormatResponse {
+                     formatted_content: content.to_string(),
+                     success: false,
+                     error: Some(format!("Formatter error: {}", error_msg)),
+                  })
+               }
+            }
+            Err(e) => Ok(FormatResponse {
+               formatted_content: content.to_string(),
+               success: false,
+               error: Some(format!("Failed to run formatter: {}", e)),
+            }),
+         }
+      }
+      Err(e) => Ok(FormatResponse {
+         formatted_content: content.to_string(),
+         success: false,
+         error: Some(format!("Formatter not available: {} - {}", command, e)),
+      }),
+   }
+}
+
+/// Substitute template variables in a string
+fn substitute_variables(
+   template: &str,
+   file_path: Option<&str>,
+   workspace_folder: Option<&str>,
+) -> String {
+   let mut result = template.to_string();
+
+   if let Some(path) = file_path {
+      result = result.replace("${file}", path);
+      result = result.replace(
+         "${fileBasename}",
+         std::path::Path::new(path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(path),
+      );
+      result = result.replace(
+         "${fileBasenameNoExtension}",
+         std::path::Path::new(path)
+            .file_stem()
+            .and_then(|n| n.to_str())
+            .unwrap_or(path),
+      );
+      result = result.replace(
+         "${fileDirname}",
+         std::path::Path::new(path)
+            .parent()
+            .and_then(|p| p.to_str())
+            .unwrap_or(""),
+      );
+      result = result.replace(
+         "${fileExtname}",
+         std::path::Path::new(path)
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| format!(".{}", e))
+            .unwrap_or_default()
+            .as_str(),
+      );
+   }
+
+   if let Some(workspace) = workspace_folder {
+      result = result.replace("${workspaceFolder}", workspace);
+   }
+
+   result
 }
 
 /// Format code using Prettier

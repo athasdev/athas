@@ -1,12 +1,18 @@
 import { relaunch } from "@tauri-apps/plugin-process";
-import { check } from "@tauri-apps/plugin-updater";
-import { useEffect, useState } from "react";
+import { check, type Update } from "@tauri-apps/plugin-updater";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface UpdateInfo {
   version: string;
   currentVersion: string;
   body?: string;
   date?: string;
+}
+
+export interface DownloadProgress {
+  contentLength: number;
+  downloaded: number;
+  percentage: number;
 }
 
 export interface UpdateState {
@@ -16,6 +22,7 @@ export interface UpdateState {
   installing: boolean;
   error: string | null;
   updateInfo: UpdateInfo | null;
+  downloadProgress: DownloadProgress | null;
 }
 
 export const useUpdater = (checkOnMount = true) => {
@@ -26,13 +33,17 @@ export const useUpdater = (checkOnMount = true) => {
     installing: false,
     error: null,
     updateInfo: null,
+    downloadProgress: null,
   });
 
-  const checkForUpdates = async () => {
+  const updateRef = useRef<Update | null>(null);
+
+  const checkForUpdates = useCallback(async () => {
     try {
       setState((prev) => ({ ...prev, checking: true, error: null }));
 
       const update = await check();
+      updateRef.current = update;
 
       if (update?.available) {
         setState((prev) => ({
@@ -46,39 +57,76 @@ export const useUpdater = (checkOnMount = true) => {
             date: update.date,
           },
         }));
-      } else {
-        setState((prev) => ({
-          ...prev,
-          available: false,
-          checking: false,
-          updateInfo: null,
-        }));
+        return true;
       }
+
+      setState((prev) => ({
+        ...prev,
+        available: false,
+        checking: false,
+        updateInfo: null,
+      }));
+      return false;
     } catch (error) {
       setState((prev) => ({
         ...prev,
         checking: false,
         error: error instanceof Error ? error.message : "Failed to check for updates",
       }));
+      return false;
     }
-  };
+  }, []);
 
-  const downloadAndInstall = async () => {
-    if (!state.updateInfo) return;
-
+  const downloadAndInstall = useCallback(async () => {
     try {
-      setState((prev) => ({ ...prev, downloading: true, error: null }));
-
-      const update = await check();
-      if (!update?.available) {
-        throw new Error("No update available");
+      // Re-check if we don't have a cached update
+      if (!updateRef.current?.available) {
+        const newUpdate = await check();
+        if (!newUpdate?.available) {
+          throw new Error("No update available");
+        }
+        updateRef.current = newUpdate;
       }
 
-      setState((prev) => ({ ...prev, downloading: false, installing: true }));
+      setState((prev) => ({
+        ...prev,
+        downloading: true,
+        error: null,
+        downloadProgress: { contentLength: 0, downloaded: 0, percentage: 0 },
+      }));
 
-      await update.downloadAndInstall();
+      let contentLength = 0;
+      let downloaded = 0;
 
-      setState((prev) => ({ ...prev, installing: false }));
+      await updateRef.current.downloadAndInstall((event) => {
+        switch (event.event) {
+          case "Started":
+            contentLength = event.data.contentLength ?? 0;
+            setState((prev) => ({
+              ...prev,
+              downloadProgress: { contentLength, downloaded: 0, percentage: 0 },
+            }));
+            break;
+          case "Progress": {
+            downloaded += event.data.chunkLength;
+            const percentage =
+              contentLength > 0 ? Math.round((downloaded / contentLength) * 100) : 0;
+            setState((prev) => ({
+              ...prev,
+              downloadProgress: { contentLength, downloaded, percentage },
+            }));
+            break;
+          }
+          case "Finished":
+            setState((prev) => ({
+              ...prev,
+              downloading: false,
+              installing: true,
+              downloadProgress: { contentLength, downloaded: contentLength, percentage: 100 },
+            }));
+            break;
+        }
+      });
 
       // Relaunch the app to apply the update
       await relaunch();
@@ -87,26 +135,29 @@ export const useUpdater = (checkOnMount = true) => {
         ...prev,
         downloading: false,
         installing: false,
+        downloadProgress: null,
         error: error instanceof Error ? error.message : "Failed to install update",
       }));
     }
-  };
+  }, []);
 
-  const dismissUpdate = () => {
+  const dismissUpdate = useCallback(() => {
     setState((prev) => ({
       ...prev,
       available: false,
       updateInfo: null,
       error: null,
+      downloadProgress: null,
     }));
-  };
+    updateRef.current = null;
+  }, []);
 
   // Check for updates on mount if enabled
   useEffect(() => {
     if (checkOnMount) {
       checkForUpdates();
     }
-  }, [checkOnMount]);
+  }, [checkOnMount, checkForUpdates]);
 
   return {
     ...state,

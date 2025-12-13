@@ -39,6 +39,8 @@ fn main() {
       .plugin(tauri_plugin_os::init())
       .plugin(tauri_plugin_http::init())
       .plugin(tauri_plugin_process::init())
+      .plugin(tauri_plugin_deep_link::init())
+      .plugin(tauri_plugin_updater::Builder::new().build())
       .setup(|app| {
          let store = app.store("settings.json")?;
 
@@ -238,10 +240,7 @@ fn main() {
                      }
                   }
                   // Theme menu items - handle theme IDs from registry
-                  // Theme IDs are either "auto" or contain hyphens (e.g., "catppuccin-mocha")
-                  "auto" => {
-                     let _ = window.emit("menu_theme_change", "auto");
-                  }
+                  // Theme IDs contain hyphens (e.g., "catppuccin-mocha", "one-dark")
                   theme_id if theme_id.contains('-') => {
                      // Theme IDs from registry use hyphens (e.g., "catppuccin-mocha",
                      // "tokyo-night")
@@ -259,6 +258,7 @@ fn main() {
          // File system commands
          move_file,
          rename_file,
+         get_symlink_info,
          // Git commands
          git_status,
          git_add,
@@ -312,6 +312,11 @@ fn main() {
          get_chat_stats,
          // Window commands
          create_remote_window,
+         create_embedded_webview,
+         close_embedded_webview,
+         navigate_embedded_webview,
+         resize_embedded_webview,
+         set_webview_visible,
          // File watcher commands
          start_watching,
          stop_watching,
@@ -381,6 +386,8 @@ fn main() {
          search_files_content,
          // Format commands
          format_code,
+         // Lint commands
+         lint_code,
          // CLI commands
          check_cli_installed,
          install_cli_command,

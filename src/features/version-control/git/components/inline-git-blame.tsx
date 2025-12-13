@@ -45,7 +45,7 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
     clearHideTimeout();
     hideTimeoutRef.current = setTimeout(() => {
       setShowCard(false);
-    }, 0);
+    }, 150);
   }, [clearHideTimeout]);
 
   const updatePosition = useCallback(() => {

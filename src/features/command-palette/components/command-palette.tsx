@@ -89,6 +89,7 @@ const CommandPalette = () => {
     switchToNextBuffer,
     switchToPreviousBuffer,
     reopenClosedTab,
+    openWebViewerBuffer,
   } = useBufferStore.use.actions();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
   const { openBuffer } = useBufferStore.use.actions();
@@ -130,6 +131,7 @@ const CommandPalette = () => {
       zoomIn,
       zoomOut,
       resetZoom,
+      openWebViewerBuffer,
       onClose,
     }),
     ...createSettingsActions({

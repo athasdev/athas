@@ -1,52 +1,46 @@
 import { useCallback, useEffect, useState } from "react";
+import { useKeymapStore } from "../stores/store";
 import { normalizeKey } from "../utils/platform";
 
 interface RecorderState {
-  isRecording: boolean;
   keys: string[];
   keybindingString: string;
 }
 
-export function useKeybindingRecorder() {
+export function useKeybindingRecorder(commandId: string) {
   const [state, setState] = useState<RecorderState>({
-    isRecording: false,
     keys: [],
     keybindingString: "",
   });
 
+  const recordingCommandId = useKeymapStore.use.recordingCommandId();
+  const { startRecording: storeStartRecording, stopRecording: storeStopRecording } =
+    useKeymapStore.use.actions();
+
+  const isRecording = recordingCommandId === commandId;
+
   const startRecording = useCallback(() => {
-    setState({
-      isRecording: true,
-      keys: [],
-      keybindingString: "",
-    });
-  }, []);
+    storeStartRecording(commandId);
+    setState({ keys: [], keybindingString: "" });
+  }, [commandId, storeStartRecording]);
 
   const stopRecording = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      isRecording: false,
-    }));
-  }, []);
+    storeStopRecording();
+  }, [storeStopRecording]);
 
   const reset = useCallback(() => {
-    setState({
-      isRecording: false,
-      keys: [],
-      keybindingString: "",
-    });
-  }, []);
+    storeStopRecording();
+    setState({ keys: [], keybindingString: "" });
+  }, [storeStopRecording]);
 
   useEffect(() => {
-    if (!state.isRecording) return;
+    if (!isRecording) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore bare modifier keys
       if (["Meta", "Control", "Alt", "Shift"].includes(e.key)) {
         return;
       }
 
-      // Escape cancels recording
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
@@ -54,7 +48,6 @@ export function useKeybindingRecorder() {
         return;
       }
 
-      // Enter confirms recording
       if (e.key === "Enter") {
         e.preventDefault();
         e.stopPropagation();
@@ -72,15 +65,13 @@ export function useKeybindingRecorder() {
       if (e.shiftKey) modifiers.push("shift");
 
       const key = e.key.toLowerCase();
-
       const combination = [...modifiers, key].join("+");
       const normalized = normalizeKey(combination);
 
-      setState((prev) => ({
-        ...prev,
+      setState({
         keys: [...modifiers.map((m) => m.charAt(0).toUpperCase() + m.slice(1)), key.toUpperCase()],
         keybindingString: normalized,
-      }));
+      });
     };
 
     window.addEventListener("keydown", handleKeyDown, true);
@@ -88,10 +79,10 @@ export function useKeybindingRecorder() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, [state.isRecording, stopRecording]);
+  }, [isRecording, stopRecording]);
 
   return {
-    isRecording: state.isRecording,
+    isRecording,
     keys: state.keys,
     keybindingString: state.keybindingString,
     startRecording,

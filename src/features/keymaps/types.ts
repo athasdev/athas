@@ -31,6 +31,7 @@ export interface KeymapContext {
   sidebarFocus: boolean;
   findWidgetVisible: boolean;
   hasSelection: boolean;
+  isRecordingKeybinding: boolean;
   [key: string]: boolean;
 }
 

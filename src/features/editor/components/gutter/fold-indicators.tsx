@@ -1,4 +1,5 @@
 import { memo, useCallback, useMemo } from "react";
+import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useFoldStore } from "../../stores/fold-store";
 
 interface LineMapping {
@@ -13,8 +14,6 @@ interface FoldIndicatorsProps {
   startLine: number;
   endLine: number;
 }
-
-const GUTTER_PADDING = 8;
 
 function FoldIndicatorsComponent({
   filePath,
@@ -59,7 +58,7 @@ function FoldIndicatorsComponent({
             type="button"
             style={{
               position: "absolute",
-              top: `${virtualLine * lineHeight + GUTTER_PADDING}px`,
+              top: `${virtualLine * lineHeight + EDITOR_CONSTANTS.GUTTER_PADDING}px`,
               left: 0,
               right: 0,
               height: `${lineHeight}px`,

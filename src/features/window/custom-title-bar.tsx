@@ -127,7 +127,7 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
         )}
 
         {/* macOS traffic light space holder */}
-        <div className="flex items-center space-x-2 pl-4" />
+        <div className="flex items-center space-x-2 pl-3" />
 
         {/* Center - Project tabs for macOS */}
         <div className="-translate-x-1/2 pointer-events-auto absolute left-1/2 flex transform items-center">
@@ -179,7 +179,7 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
       )}
 
       {/* Left side */}
-      <div className="flex flex-1 items-center px-2">
+      <div data-tauri-drag-region className="flex flex-1 items-center px-2">
         {/* Menu bar button */}
         {!settings.nativeMenuBar && settings.compactMenuBar && (
           <Tooltip content="Menu" side="bottom">

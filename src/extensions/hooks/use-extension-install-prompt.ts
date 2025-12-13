@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useExtensionStore } from "../registry/extension-store";
 
@@ -8,18 +9,27 @@ export interface ExtensionInstallNeededEvent {
   filePath: string;
 }
 
+// Track active prompts at module level to persist across re-renders
+const activePrompts = new Map<string, string>();
+
 export const useExtensionInstallPrompt = () => {
-  const { showToast, dismissToast, updateToast } = useToast();
+  const { showToast, dismissToast, updateToast, hasToast } = useToast();
   const { installExtension } = useExtensionStore.use.actions();
-  const activeToasts = useRef<Map<string, string>>(new Map());
+  const dismissedExtensions = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const handleInstallNeeded = (event: Event) => {
       const customEvent = event as CustomEvent<ExtensionInstallNeededEvent>;
-      const { extensionId, extensionName } = customEvent.detail;
+      const { extensionId, extensionName, filePath } = customEvent.detail;
+
+      // Don't show if user already dismissed this extension prompt in this session
+      if (dismissedExtensions.current.has(extensionId)) {
+        return;
+      }
 
       // Don't show multiple toasts for the same extension
-      if (activeToasts.current.has(extensionId)) {
+      const existingToastId = activePrompts.get(extensionId);
+      if (existingToastId && hasToast(existingToastId)) {
         return;
       }
 
@@ -46,10 +56,22 @@ export const useExtensionInstallPrompt = () => {
                 type: "success",
               });
 
+              // Re-trigger tokenization for the current file
+              const { activeBufferId, buffers } = useBufferStore.getState();
+              const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+              if (activeBuffer && activeBuffer.path === filePath) {
+                // Dispatch event to re-tokenize the file
+                window.dispatchEvent(
+                  new CustomEvent("extension-installed", {
+                    detail: { extensionId, filePath },
+                  }),
+                );
+              }
+
               // Auto-dismiss success message after 3 seconds
               setTimeout(() => {
                 dismissToast(toastId);
-                activeToasts.current.delete(extensionId);
+                activePrompts.delete(extensionId);
               }, 3000);
             } catch (error) {
               // Show error
@@ -62,9 +84,9 @@ export const useExtensionInstallPrompt = () => {
                 action: {
                   label: "Retry",
                   onClick: () => {
-                    // Retry installation (recursively call the same handler)
+                    // Retry installation
                     dismissToast(toastId);
-                    activeToasts.current.delete(extensionId);
+                    activePrompts.delete(extensionId);
                     window.dispatchEvent(
                       new CustomEvent("extension-install-needed", {
                         detail: customEvent.detail,
@@ -73,28 +95,35 @@ export const useExtensionInstallPrompt = () => {
                   },
                 },
               });
-
-              activeToasts.current.delete(extensionId);
             }
           },
         },
       });
 
-      activeToasts.current.set(extensionId, toastId);
+      activePrompts.set(extensionId, toastId);
+    };
 
-      // Clean up if user dismisses without action
-      const checkDismissed = setInterval(() => {
-        if (!document.querySelector(`[data-toast-id="${toastId}"]`)) {
-          clearInterval(checkDismissed);
-          activeToasts.current.delete(extensionId);
+    const handleToastDismiss = (event: Event) => {
+      const customEvent = event as CustomEvent<{ toastId: string }>;
+      const { toastId } = customEvent.detail;
+
+      // Find and remove the extension from activePrompts if its toast was dismissed
+      for (const [extId, tId] of activePrompts.entries()) {
+        if (tId === toastId) {
+          activePrompts.delete(extId);
+          // Mark as dismissed so we don't show again this session
+          dismissedExtensions.current.add(extId);
+          break;
         }
-      }, 1000);
+      }
     };
 
     window.addEventListener("extension-install-needed", handleInstallNeeded);
+    window.addEventListener("toast-dismissed", handleToastDismiss);
 
     return () => {
       window.removeEventListener("extension-install-needed", handleInstallNeeded);
+      window.removeEventListener("toast-dismissed", handleToastDismiss);
     };
-  }, [showToast, dismissToast, updateToast, installExtension]);
+  }, [showToast, dismissToast, updateToast, installExtension, hasToast]);
 };

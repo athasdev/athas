@@ -6,7 +6,7 @@ export const colorfulMaterialIconTheme: IconThemeDefinition = {
   id: "colorful-material",
   name: "Material Icons (Colorful)",
   description: "Material Design file icons with original colors",
-  getFileIcon: (fileName: string, isDir: boolean, isExpanded = false) => {
+  getFileIcon: (fileName: string, isDir: boolean, isExpanded = false, _isSymlink = false) => {
     if (isDir) {
       const Icon = isExpanded ? FolderOpen : Folder;
       return {

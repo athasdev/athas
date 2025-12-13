@@ -1,5 +1,6 @@
 import { memo, useMemo } from "react";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
+import { EDITOR_CONSTANTS } from "../../config/constants";
 
 interface DiagnosticIndicatorsProps {
   filePath?: string;
@@ -9,8 +10,6 @@ interface DiagnosticIndicatorsProps {
   startLine: number;
   endLine: number;
 }
-
-const GUTTER_PADDING = 8;
 
 function DiagnosticIndicatorsComponent({
   filePath,
@@ -37,7 +36,7 @@ function DiagnosticIndicatorsComponent({
             key={`${diag.line}-${diag.message}`}
             style={{
               position: "absolute",
-              top: `${diag.line * lineHeight + GUTTER_PADDING}px`,
+              top: `${diag.line * lineHeight + EDITOR_CONSTANTS.GUTTER_PADDING}px`,
               left: 0,
               right: 0,
               height: `${lineHeight}px`,

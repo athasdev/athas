@@ -10,7 +10,6 @@ import TerminalTabBar from "./terminal-tab-bar";
 interface TerminalContainerProps {
   currentDirectory?: string;
   className?: string;
-  onClosePanel?: () => void;
   onFullScreen?: () => void;
   isFullScreen?: boolean;
 }
@@ -18,7 +17,6 @@ interface TerminalContainerProps {
 const TerminalContainer = ({
   currentDirectory = "/",
   className = "",
-  onClosePanel,
   onFullScreen,
   isFullScreen = false,
 }: TerminalContainerProps) => {
@@ -54,9 +52,16 @@ const TerminalContainer = ({
   const [renamingTerminalId, setRenamingTerminalId] = useState<string | null>(null);
   const [newTerminalName, setNewTerminalName] = useState("");
   const hasInitializedRef = useRef(false);
+  const wasVisibleRef = useRef(false);
   const terminalSessionRefs = useRef<Map<string, { focus: () => void }>>(new Map());
   const tabFocusTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  const { registerTerminalFocus, clearTerminalFocus } = useUIState();
+  const {
+    registerTerminalFocus,
+    clearTerminalFocus,
+    setIsBottomPaneVisible,
+    isBottomPaneVisible,
+    bottomPaneActiveTab,
+  } = useUIState();
 
   const handleNewTerminal = useCallback(() => {
     const dirName = currentDirectory.split("/").pop() || "terminal";
@@ -120,6 +125,13 @@ const TerminalContainer = ({
     };
   }, []);
 
+  // Auto-close bottom pane when all terminals are closed
+  useEffect(() => {
+    if (terminals.length === 0 && hasInitializedRef.current) {
+      setIsBottomPaneVisible(false);
+    }
+  }, [terminals.length, setIsBottomPaneVisible]);
+
   const handleTabClick = useCallback(
     (terminalId: string) => {
       setActiveTerminal(terminalId);
@@ -142,8 +154,8 @@ const TerminalContainer = ({
   );
 
   const handleTabClose = useCallback(
-    (terminalId: string, event: React.MouseEvent) => {
-      event.stopPropagation();
+    (terminalId: string, event?: React.MouseEvent) => {
+      event?.stopPropagation();
       closeTerminal(terminalId);
     },
     [closeTerminal],
@@ -439,41 +451,23 @@ const TerminalContainer = ({
     restoreTerminalsFromPersisted,
   ]);
 
-  // Create first terminal if none exist (fallback UI)
-  if (terminals.length === 0) {
-    return (
-      <div className={`flex h-full flex-col ${className}`} data-terminal-container="active">
-        <TerminalTabBar
-          terminals={[]}
-          activeTerminalId={null}
-          onTabClick={handleTabClick}
-          onTabClose={handleTabClose}
-          onTabReorder={reorderTerminals}
-          onTabPin={handleTabPin}
-          onTabRename={handleTabRename}
-          onNewTerminal={handleNewTerminal}
-          onTabCreate={handleTabCreate}
-          onCloseOtherTabs={handleCloseOtherTabs}
-          onCloseAllTabs={handleCloseAllTabs}
-          onCloseTabsToRight={handleCloseTabsToRight}
-        />
-        <div className="flex flex-1 items-center justify-center text-text-lighter">
-          <div className="text-center">
-            <p className="mb-4 text-xs">No terminal sessions</p>
-            <button
-              onClick={handleNewTerminal}
-              className="rounded bg-selected px-2 py-1 text-text text-xs transition-colors hover:bg-hover"
-            >
-              Create Terminal
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Create terminal when pane becomes visible with no terminals
+  useEffect(() => {
+    const isTerminalVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
+    const justBecameVisible = isTerminalVisible && !wasVisibleRef.current;
+
+    if (justBecameVisible && terminals.length === 0 && hasInitializedRef.current) {
+      handleNewTerminal();
+    }
+
+    wasVisibleRef.current = isTerminalVisible;
+  }, [isBottomPaneVisible, bottomPaneActiveTab, terminals.length, handleNewTerminal]);
 
   return (
-    <div className={`flex h-full flex-col ${className}`} data-terminal-container="active">
+    <div
+      className={`flex h-full flex-col overflow-hidden ${className}`}
+      data-terminal-container="active"
+    >
       {/* Terminal Tab Bar */}
       <TerminalTabBar
         terminals={terminals}
@@ -491,19 +485,16 @@ const TerminalContainer = ({
         onSplitView={handleSplitView}
         onFullScreen={onFullScreen}
         isFullScreen={isFullScreen}
-        onClosePanel={onClosePanel}
         isSplitView={terminals.find((t) => t.id === activeTerminalId)?.splitMode || false}
       />
 
       {/* Terminal Sessions */}
       <div
-        className="relative bg-primary-bg"
+        className="relative min-h-0 flex-1 overflow-hidden bg-primary-bg"
         style={{
-          //height: "calc(100% - 28px)",
           transform: `scale(${zoomLevel})`,
           transformOrigin: "top left",
           width: `${100 / zoomLevel}%`,
-          height: `${100 / zoomLevel}%`,
         }}
       >
         {(() => {

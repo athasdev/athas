@@ -38,6 +38,15 @@ export interface TerminalState {
   activeTerminalId: string | null;
 }
 
+export interface PersistedTerminal {
+  id: string;
+  name: string;
+  currentDirectory: string;
+  isPinned: boolean;
+  shell?: string;
+  title?: string;
+}
+
 export type TerminalAction =
   | {
       type: "CREATE_TERMINAL";
@@ -64,4 +73,6 @@ export type TerminalAction =
   | {
       type: "SET_TERMINAL_SPLIT_MODE";
       payload: { id: string; splitMode: boolean; splitWithId?: string };
-    };
+    }
+  | { type: "RESET_TERMINALS"; payload: Record<string, never> }
+  | { type: "RESTORE_TERMINALS"; payload: { terminals: PersistedTerminal[] } };

@@ -19,7 +19,6 @@ import { typescriptLanguage } from "./typescript-extension";
 import { yamlLanguage } from "./yaml-extension";
 
 export const allLanguages: LanguageExtension[] = [
-  // Existing languages (18 total)
   javascriptLanguage,
   typescriptLanguage,
   pythonLanguage,

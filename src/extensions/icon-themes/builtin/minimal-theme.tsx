@@ -5,7 +5,7 @@ export const minimalIconTheme: IconThemeDefinition = {
   id: "minimal",
   name: "Minimal Icons",
   description: "Simple monochrome file icons",
-  getFileIcon: (_fileName: string, isDir: boolean, isExpanded = false) => {
+  getFileIcon: (_fileName: string, isDir: boolean, isExpanded = false, _isSymlink = false) => {
     if (isDir) {
       const Icon = isExpanded ? FolderOpen : Folder;
       return {

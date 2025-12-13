@@ -5,9 +5,9 @@ export class PhpLanguageExtension extends BaseLanguageProvider {
     super({
       id: "php",
       displayName: "PHP",
-      extensions: ["php"],
-      aliases: ["php"],
-      description: "PHP language support",
+      extensions: ["php", "phtml", "php3", "php4", "php5", "php7", "php8", "phar", "phps"],
+      aliases: ["php", "PHP"],
+      description: "PHP language support with syntax highlighting and IntelliSense",
     });
   }
 }

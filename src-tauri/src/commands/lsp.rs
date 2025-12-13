@@ -135,13 +135,9 @@ pub fn lsp_document_close(lsp_manager: State<'_, LspManager>, file_path: String)
 }
 
 #[tauri::command]
-pub fn lsp_is_language_supported(file_path: String) -> bool {
-   let path = PathBuf::from(file_path);
-   let extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
-
-   // Support TypeScript, JavaScript, and related files
-   matches!(
-      extension,
-      "ts" | "tsx" | "js" | "jsx" | "mjs" | "cjs" | "json"
-   )
+pub fn lsp_is_language_supported(_file_path: String) -> bool {
+   // Note: LSP support is now determined dynamically by the frontend extension registry.
+   // This command is deprecated but kept for backwards compatibility.
+   // Always return true and let the frontend do the actual checking.
+   true
 }

@@ -13,7 +13,7 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "cmd+shift+t", command: "file.reopenClosed", source: "default" },
   { key: "cmd+n", command: "file.new", source: "default" },
   { key: "cmd+o", command: "file.open", source: "default" },
-  { key: "cmd+p", command: "file.quickOpen", source: "default" },
+  // Note: cmd+p is handled by the global keyboard shortcuts to avoid race conditions with command context
 
   // Edit Operations
   { key: "cmd+a", command: "editor.selectAll", source: "default", when: "editorFocus" },
@@ -51,7 +51,7 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "cmd+b", command: "workbench.toggleSidebar", source: "default" },
   { key: "cmd+`", command: "workbench.toggleTerminal", source: "default" },
   { key: "cmd+shift+j", command: "workbench.toggleDiagnostics", source: "default" },
-  { key: "cmd+shift+p", command: "workbench.commandPalette", source: "default" },
+  // Note: cmd+shift+p is handled by the global keyboard shortcuts to avoid race conditions with command context
   { key: "cmd+f", command: "workbench.showFind", source: "default", when: "editorFocus" },
   { key: "cmd+shift+f", command: "workbench.showGlobalSearch", source: "default" },
   { key: "cmd+shift+h", command: "workbench.showProjectSearch", source: "default" },
@@ -76,4 +76,21 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "cmd+7", command: "workbench.switchToTab7", source: "default" },
   { key: "cmd+8", command: "workbench.switchToTab8", source: "default" },
   { key: "cmd+9", command: "workbench.switchToTab9", source: "default" },
+  { key: "F12", command: "editor.goToDefinition", source: "default", when: "editorFocus" },
+  { key: "shift+F12", command: "editor.goToReferences", source: "default", when: "editorFocus" },
+
+  // Additional view commands
+  { key: "cmd+p", command: "file.quickOpen", source: "default" },
+  { key: "cmd+shift+p", command: "workbench.commandPalette", source: "default" },
+  { key: "cmd+r", command: "workbench.toggleAIChat", source: "default" },
+  { key: "cmd+k cmd+s", command: "workbench.openKeyboardShortcuts", source: "default" },
+
+  // Window Operations
+  { key: "F11", command: "window.toggleFullscreen", source: "default" },
+  { key: "cmd+ctrl+f", command: "window.toggleFullscreenMac", source: "default" },
+  { key: "cmd+m", command: "window.minimize.mac", source: "default" },
+  { key: "alt+F9", command: "window.minimize.alt", source: "default" },
+  { key: "alt+F10", command: "window.maximize", source: "default" },
+  { key: "cmd+q", command: "window.quit", source: "default" },
+  { key: "alt+m", command: "window.toggleMenuBar", source: "default" },
 ];
