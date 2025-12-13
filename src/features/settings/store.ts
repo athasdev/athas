@@ -22,6 +22,13 @@ interface Settings {
   tabSize: number;
   wordWrap: boolean;
   lineNumbers: boolean;
+  // Terminal
+  terminalFontFamily: string;
+  terminalFontSize: number;
+  terminalLineHeight: number;
+  terminalLetterSpacing: number;
+  terminalCursorStyle: "block" | "underline" | "bar";
+  terminalCursorBlink: boolean;
   // UI
   uiFontFamily: string;
   // Theme
@@ -79,13 +86,20 @@ const defaultSettings: Settings = {
   mouseWheelZoom: false,
   commandBarPreview: true,
   // Editor
-  fontFamily: "JetBrains Mono",
+  fontFamily: "Menlo, Consolas, Liberation Mono, monospace",
   fontSize: 14,
   tabSize: 2,
   wordWrap: true,
   lineNumbers: true,
+  // Terminal
+  terminalFontFamily: "Menlo, Consolas, Liberation Mono, monospace",
+  terminalFontSize: 14,
+  terminalLineHeight: 1.2,
+  terminalLetterSpacing: 0,
+  terminalCursorStyle: "block",
+  terminalCursorBlink: true,
   // UI
-  uiFontFamily: "JetBrains Mono",
+  uiFontFamily: "Menlo, Consolas, Liberation Mono, monospace",
   // Theme
   theme: "one-dark", // Changed from "auto" since we don't support continuous monitoring
   iconTheme: "colorful-material",

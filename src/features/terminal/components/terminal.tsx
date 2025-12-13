@@ -3,7 +3,8 @@ import { listen } from "@tauri-apps/api/event";
 import { Terminal } from "@xterm/xterm";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+
+import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
 import { useThemeStore } from "@/stores/theme-store";
 import {
@@ -52,10 +53,17 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
   const { updateSession, getSession } = useTerminalStore();
   const { currentTheme } = useThemeStore();
-  const { fontSize: editorFontSize, fontFamily: editorFontFamily } = useEditorSettingsStore();
+
+  const {
+    terminalFontFamily,
+    terminalFontSize,
+    terminalLineHeight,
+    terminalLetterSpacing,
+    terminalCursorStyle,
+    terminalCursorBlink,
+  } = useSettingsStore((state) => state.settings);
   const { rootFolderPath } = useProjectStore();
   const { getTerminalTheme } = useTerminalTheme();
-  const [fontSize, setFontSize] = useState(editorFontSize);
 
   const initializeTerminal = useCallback(async () => {
     if (!terminalRef.current || isInitialized || isInitializingRef.current) return;
@@ -70,10 +78,12 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
     try {
       const terminal = new Terminal({
-        fontFamily: `${editorFontFamily}, "JetBrains Mono", "Fira Code", Consolas, monospace`,
-        fontSize,
-        cursorBlink: true,
-        cursorStyle: "bar",
+        fontFamily: `"${terminalFontFamily}", monospace`,
+        fontSize: terminalFontSize,
+        lineHeight: terminalLineHeight,
+        letterSpacing: terminalLetterSpacing,
+        cursorBlink: terminalCursorBlink,
+        cursorStyle: terminalCursorStyle,
         cursorWidth: 2,
         allowProposedApi: true,
         theme: getTerminalTheme(),
@@ -209,9 +219,15 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     getTerminalTheme,
     updateSession,
     onReady,
-    fontSize,
+
     getSession,
-    editorFontFamily,
+    getSession,
+    terminalFontFamily,
+    terminalFontSize,
+    terminalLineHeight,
+    terminalLetterSpacing,
+    terminalCursorStyle,
+    terminalCursorBlink,
     rootFolderPath,
     onTerminalRef,
   ]);
@@ -271,10 +287,24 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   // Handle font changes
   useEffect(() => {
     if (!xtermRef.current) return;
-    xtermRef.current.options.fontFamily = `${editorFontFamily}, "Fira Code", Consolas, monospace`;
-    xtermRef.current.options.fontSize = fontSize;
+    xtermRef.current.options.fontFamily = `"${terminalFontFamily}", monospace`;
+    xtermRef.current.options.fontSize = terminalFontSize;
+    xtermRef.current.options.lineHeight = terminalLineHeight;
+    xtermRef.current.options.letterSpacing = terminalLetterSpacing;
+    xtermRef.current.options.cursorBlink = terminalCursorBlink;
+    xtermRef.current.options.cursorStyle = terminalCursorStyle;
+
+    // Refresh WebGL addon to ensure new font glyphs are loaded
+    addonsRef.current?.webglAddon?.clearTextureAtlas();
     addonsRef.current?.fitAddon.fit();
-  }, [editorFontFamily, fontSize]);
+  }, [
+    terminalFontFamily,
+    terminalFontSize,
+    terminalLineHeight,
+    terminalLetterSpacing,
+    terminalCursorBlink,
+    terminalCursorStyle,
+  ]);
 
   // Initialize terminal
   useEffect(() => {
@@ -343,23 +373,23 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   // Zoom handlers
   const handleZoom = useCallback(
     (delta: number) => {
-      const newSize = Math.min(Math.max(fontSize + delta, 8), 32);
-      setFontSize(newSize);
+      const newSize = Math.min(Math.max(terminalFontSize + delta, 8), 32);
+      useSettingsStore.getState().updateSetting("terminalFontSize", newSize);
       if (xtermRef.current) {
         xtermRef.current.options.fontSize = newSize;
         addonsRef.current?.fitAddon.fit();
       }
     },
-    [fontSize],
+    [terminalFontSize],
   );
 
   const handleZoomReset = useCallback(() => {
-    setFontSize(editorFontSize);
+    useSettingsStore.getState().updateSetting("terminalFontSize", 14);
     if (xtermRef.current) {
-      xtermRef.current.options.fontSize = editorFontSize;
+      xtermRef.current.options.fontSize = 14;
       addonsRef.current?.fitAddon.fit();
     }
-  }, [editorFontSize]);
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
