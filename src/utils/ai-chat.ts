@@ -1,10 +1,12 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { useCopilotAuthStore } from "@/features/ai/store/copilot-auth-store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { getModelById, getProviderById } from "@/features/ai/types/providers";
 import { ClaudeCodeStreamHandler } from "./claude-code-handler";
 import { buildContextPrompt, buildSystemPrompt } from "./context-builder";
 import { getProvider } from "./providers";
+import type { CopilotProvider } from "./providers/copilot-provider";
 import { processStreamingResponse } from "./stream-utils";
 import { getProviderApiToken } from "./token-manager";
 import type { ContextInfo } from "./types";
@@ -52,6 +54,80 @@ export const getChatCompletionStream = async (
         onToolComplete,
       });
       await handler.start(userMessage, context);
+      return;
+    }
+
+    // Handle GitHub Copilot provider
+    if (providerId === "copilot") {
+      const copilotAuth = useCopilotAuthStore.getState();
+
+      if (!copilotAuth.isAuthenticated) {
+        throw new Error("Please sign in to GitHub Copilot first");
+      }
+
+      const accessToken = await copilotAuth.getAccessToken();
+      if (!accessToken) {
+        throw new Error("Failed to get Copilot access token. Please sign in again.");
+      }
+
+      const contextPrompt = buildContextPrompt(context);
+      const systemPrompt = buildSystemPrompt(contextPrompt, mode, outputStyle);
+
+      const messages: AIMessage[] = [{ role: "system" as const, content: systemPrompt }];
+
+      if (conversationHistory && conversationHistory.length > 0) {
+        messages.push(...conversationHistory);
+      }
+
+      messages.push({ role: "user" as const, content: userMessage });
+
+      const providerImpl = getProvider(providerId) as CopilotProvider;
+      if (!providerImpl) {
+        throw new Error("Copilot provider not initialized");
+      }
+
+      if (copilotAuth.enterpriseUri) {
+        providerImpl.setEnterpriseUri(copilotAuth.enterpriseUri);
+      }
+
+      const streamRequest = {
+        modelId,
+        messages,
+        maxTokens: Math.min(4096, Math.floor(model.maxTokens * 0.25)),
+        temperature: 0.7,
+      };
+
+      const headers = providerImpl.buildHeaders(accessToken);
+      const payload = providerImpl.buildPayload(streamRequest);
+      const url = providerImpl.buildUrl();
+
+      console.log(`Making Copilot streaming chat request with model ${model.name}...`);
+
+      const response = await tauriFetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+
+        if (response.status === 401) {
+          useCopilotAuthStore.getState().reset();
+          onError("Copilot session expired. Please sign in again.");
+          return;
+        }
+
+        if (response.status === 403) {
+          onError("Access denied. Please check your Copilot subscription.");
+          return;
+        }
+
+        onError(`Copilot API error: ${response.status}|||${errorText}`);
+        return;
+      }
+
+      await processStreamingResponse(response, onChunk, onComplete, onError);
       return;
     }
 

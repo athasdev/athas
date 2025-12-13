@@ -1,10 +1,23 @@
 import { invoke } from "@tauri-apps/api/core";
-import { AlertCircle, Check, CheckCircle, Eye, EyeOff, Key, Trash2, X } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  CheckCircle,
+  Eye,
+  EyeOff,
+  Key,
+  LogIn,
+  LogOut,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
+import { useCopilotAuthStore } from "@/features/ai/store/copilot-auth-store";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ClaudeStatus } from "@/features/ai/types/claude";
 import { getAvailableProviders, setClaudeCodeAvailability } from "@/features/ai/types/providers";
 import { useSettingsStore } from "@/features/settings/store";
+import { useUIState } from "@/stores/ui-state-store";
 import Button from "@/ui/button";
 import Dropdown from "@/ui/dropdown";
 import Section, { SettingRow } from "@/ui/section";
@@ -294,18 +307,76 @@ export const AISettings = () => {
       {providersNeedingAuth.length > 0 && (
         <Section title="Authentication">
           {providersNeedingAuth.map((provider) => (
-            <SettingRow
+            <AuthProviderRow
               key={provider.id}
-              label={provider.name}
-              description="Requires OAuth authentication"
-            >
-              <div className="flex items-center gap-2 rounded border border-border bg-secondary-bg px-3 py-1.5">
-                <span className="text-text-lighter text-xs">Coming Soon</span>
-              </div>
-            </SettingRow>
+              providerId={provider.id}
+              providerName={provider.name}
+            />
           ))}
         </Section>
       )}
     </div>
+  );
+};
+
+const AuthProviderRow = ({
+  providerId,
+  providerName,
+}: {
+  providerId: string;
+  providerName: string;
+}) => {
+  const { setIsGitHubCopilotSettingsVisible } = useUIState();
+  const copilotAuth = useCopilotAuthStore();
+
+  if (providerId === "copilot") {
+    const handleClick = () => {
+      setIsGitHubCopilotSettingsVisible(true);
+    };
+
+    if (copilotAuth.isAuthenticated) {
+      const description = copilotAuth.githubUsername
+        ? `Signed in as @${copilotAuth.githubUsername}`
+        : "Connected to GitHub";
+
+      return (
+        <SettingRow label={providerName} description={description}>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 text-green-500 text-xs">
+              <Check size={12} />
+              <span>Connected</span>
+            </div>
+            <Button variant="ghost" size="xs" onClick={handleClick}>
+              Manage
+            </Button>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={() => copilotAuth.signOut()}
+              className="text-red-500 hover:bg-red-500/10"
+            >
+              <LogOut size={12} />
+            </Button>
+          </div>
+        </SettingRow>
+      );
+    }
+
+    return (
+      <SettingRow label={providerName} description="Requires OAuth authentication">
+        <Button variant="outline" size="xs" onClick={handleClick} className="gap-1.5">
+          <LogIn size={12} />
+          Sign in with GitHub
+        </Button>
+      </SettingRow>
+    );
+  }
+
+  return (
+    <SettingRow label={providerName} description="Requires OAuth authentication">
+      <div className="flex items-center gap-2 rounded border border-border bg-secondary-bg px-3 py-1.5">
+        <span className="text-text-lighter text-xs">Coming Soon</span>
+      </div>
+    </SettingRow>
   );
 };

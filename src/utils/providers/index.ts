@@ -1,3 +1,4 @@
+import { CopilotProvider } from "./copilot-provider";
 import { GeminiProvider } from "./gemini-provider";
 import { GrokProvider } from "./grok-provider";
 import { OpenAIProvider } from "./openai-provider";
@@ -43,6 +44,15 @@ function initializeProviders(): void {
     maxTokens: 131072,
   };
   providers.set("grok", new GrokProvider(grokConfig));
+
+  const copilotConfig: ProviderConfig = {
+    id: "copilot",
+    name: "GitHub Copilot",
+    apiUrl: "https://api.githubcopilot.com/chat/completions",
+    requiresApiKey: false,
+    maxTokens: 128000,
+  };
+  providers.set("copilot", new CopilotProvider(copilotConfig));
 }
 
 export function getProvider(providerId: string): AIProvider | undefined {

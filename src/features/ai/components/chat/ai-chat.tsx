@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { memo, useCallback, useEffect, useRef } from "react";
 import ApiKeyModal from "@/features/ai/components/api-key-modal";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
+import { useCopilotAuthStore } from "@/features/ai/store/copilot-auth-store";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import type { ClaudeStatus } from "@/features/ai/types/claude";
 import { getAvailableProviders, setClaudeCodeAvailability } from "@/features/ai/types/providers";
@@ -30,8 +31,17 @@ const AIChat = memo(function AIChat({
   const chatState = useChatState();
   const chatActions = useChatActions();
 
+  // Subscribe to Copilot auth state to re-check API keys when it changes
+  const copilotIsAuthenticated = useCopilotAuthStore((state) => state.isAuthenticated);
+  const checkCopilotAuthStatus = useCopilotAuthStore((state) => state.checkAuthStatus);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Check Copilot auth status on mount to load models if already authenticated
+  useEffect(() => {
+    checkCopilotAuthStatus();
+  }, [checkCopilotAuthStatus]);
 
   useEffect(() => {
     if (activeBuffer) {
@@ -42,7 +52,12 @@ const AIChat = memo(function AIChat({
   useEffect(() => {
     chatActions.checkApiKey(settings.aiProviderId);
     chatActions.checkAllProviderApiKeys();
-  }, [settings.aiProviderId, chatActions.checkApiKey, chatActions.checkAllProviderApiKeys]);
+  }, [
+    settings.aiProviderId,
+    copilotIsAuthenticated,
+    chatActions.checkApiKey,
+    chatActions.checkAllProviderApiKeys,
+  ]);
 
   useEffect(() => {
     const checkClaudeCodeStatus = async () => {
@@ -404,7 +419,9 @@ details: ${errorDetails || mainError}
 
   return (
     <div
-      className={`ui-font flex h-full flex-col bg-secondary-bg text-text text-xs ${className || ""}`}
+      className={`ui-font flex h-full flex-col bg-secondary-bg text-text text-xs ${
+        className || ""
+      }`}
     >
       <ChatHeader />
 

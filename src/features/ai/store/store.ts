@@ -18,6 +18,7 @@ import {
   loadChatFromDb,
   saveChatToDb,
 } from "@/utils/chat-history-db";
+import { useCopilotAuthStore } from "./copilot-auth-store";
 import type { AIChatActions, AIChatState } from "./types";
 
 export const useAIChatStore = create<AIChatState & AIChatActions>()(
@@ -321,6 +322,15 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               return;
             }
 
+            // Copilot uses OAuth, not API keys
+            if (providerId === "copilot") {
+              const copilotAuth = useCopilotAuthStore.getState();
+              set((state) => {
+                state.hasApiKey = copilotAuth.isAuthenticated;
+              });
+              return;
+            }
+
             const token = await getProviderApiToken(providerId);
             set((state) => {
               state.hasApiKey = !!token;
@@ -335,12 +345,19 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         checkAllProviderApiKeys: async () => {
           const newApiKeyMap = new Map<string, boolean>();
+          const copilotAuth = useCopilotAuthStore.getState();
 
           for (const provider of AI_PROVIDERS) {
             try {
               // Claude Code doesn't require an API key in the frontend
               if (provider.id === "claude-code") {
                 newApiKeyMap.set(provider.id, true);
+                continue;
+              }
+
+              // Copilot uses OAuth, not API keys
+              if (provider.id === "copilot") {
+                newApiKeyMap.set(provider.id, copilotAuth.isAuthenticated);
                 continue;
               }
 
@@ -440,6 +457,10 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         },
 
         hasProviderApiKey: (providerId) => {
+          // Copilot uses OAuth, check auth store directly
+          if (providerId === "copilot") {
+            return useCopilotAuthStore.getState().isAuthenticated;
+          }
           return get().providerApiKeys.get(providerId) || false;
         },
 

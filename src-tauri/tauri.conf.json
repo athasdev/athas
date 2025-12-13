@@ -33,15 +33,11 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost; connect-src 'self' https://athas.dev https://*.athas.dev https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://*.githubusercontent.com; img-src 'self' asset: http://asset.localhost data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "capabilities": [
-        "main-capability"
-      ],
+      "csp": "default-src 'self' ipc: http://ipc.localhost; connect-src 'self' https://athas.dev https://*.athas.dev https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://*.githubusercontent.com https://api.github.com https://api.githubcopilot.com https://copilot-proxy.githubusercontent.com; img-src 'self' asset: http://asset.localhost data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "capabilities": ["main-capability"],
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**"
-        ]
+        "scope": ["**"]
       }
     },
     "macOSPrivateApi": true
@@ -57,9 +53,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [
-      "../src/extensions/bundled"
-    ],
+    "resources": ["../src/extensions/bundled"],
     "macOS": {
       "frameworks": [],
       "minimumSystemVersion": "10.15",
@@ -72,9 +66,7 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": [
-          "athas"
-        ]
+        "schemes": ["athas"]
       }
     },
     "fs": {
