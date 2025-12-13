@@ -252,18 +252,16 @@ const ProjectTabs = () => {
         },
       });
 
-      // Only show Close All if there's more than one tab
-      if (projectTabs.length > 1) {
-        items.push({
-          id: "close-all",
-          label: "Close All Projects",
-          onClick: () => {
-            for (let i = projectTabs.length - 1; i >= 1; i--) {
-              closeProject(projectTabs[i].id);
-            }
-          },
-        });
-      }
+      items.push({
+        id: "close-all",
+        label: "Close All Projects",
+        onClick: () => {
+          // Close all tabs one by one
+          // We copy the array to avoid issues while iterating and modifying
+          const tabsToClose = [...projectTabs];
+          tabsToClose.forEach((t) => closeProject(t.id));
+        },
+      });
 
       return items;
     },
