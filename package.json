@@ -14,6 +14,7 @@
     "check:all": "bun typecheck && bun lint",
     "check:fix": "biome check --write --unsafe",
     "clean": "concurrently --names \"node,rust\" --prefix-colors \"cyan,yellow\" \"rimraf dist build node_modules bun.lockb && bun install\" \"cargo clean && cargo build\"",
+    "postinstall": "bun scripts/install-bundled-lsp.ts",
     "prepare": "simple-git-hooks",
     "commitlint": "commitlint",
     "setup": "bun scripts/setup.ts",

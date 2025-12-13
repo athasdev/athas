@@ -72,7 +72,7 @@ export const initializeThemeSystem = async () => {
         tabSize: 2,
         lineNumbers: true,
         wordWrap: false,
-        theme: "athas-dark",
+        theme: "one-dark",
       }),
       updateSettings: () => {},
       on: () => () => {},

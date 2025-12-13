@@ -240,10 +240,7 @@ fn main() {
                      }
                   }
                   // Theme menu items - handle theme IDs from registry
-                  // Theme IDs are either "auto" or contain hyphens (e.g., "catppuccin-mocha")
-                  "auto" => {
-                     let _ = window.emit("menu_theme_change", "auto");
-                  }
+                  // Theme IDs contain hyphens (e.g., "catppuccin-mocha", "one-dark")
                   theme_id if theme_id.contains('-') => {
                      // Theme IDs from registry use hyphens (e.g., "catppuccin-mocha",
                      // "tokyo-night")

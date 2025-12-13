@@ -1,41 +1,62 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Upload } from "lucide-react";
 import { useEffect, useState } from "react";
+import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
+import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
 import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
 import Dropdown from "@/ui/dropdown";
+import { FontSelector } from "@/ui/font-selector";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
 
-export const ThemeSettings = () => {
+export const AppearanceSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
   const [themeOptions, setThemeOptions] = useState<{ value: string; label: string }[]>([]);
+  const [iconThemeOptions, setIconThemeOptions] = useState<{ value: string; label: string }[]>([]);
+
+  const sidebarOptions = [
+    { value: "left", label: "Left" },
+    { value: "right", label: "Right" },
+  ];
 
   // Load themes from theme registry
   useEffect(() => {
     const loadThemes = () => {
       const registryThemes = themeRegistry.getAllThemes();
-      const options = [
-        { value: "auto", label: "Auto (System)" },
-        ...registryThemes.map((theme: ThemeDefinition) => ({
-          value: theme.id,
-          label: theme.name,
-        })),
-      ];
+      const options = registryThemes.map((theme: ThemeDefinition) => ({
+        value: theme.id,
+        label: theme.name,
+      }));
       setThemeOptions(options);
     };
 
     loadThemes();
 
-    // Listen for theme registry changes
     const unsubscribe = themeRegistry.onRegistryChange(loadThemes);
     return unsubscribe;
   }, []);
 
+  // Load icon themes from icon theme registry
+  useEffect(() => {
+    const loadIconThemes = () => {
+      const registryThemes = iconThemeRegistry.getAllThemes();
+      const options = registryThemes.map((theme: IconThemeDefinition) => ({
+        value: theme.id,
+        label: theme.name,
+      }));
+      setIconThemeOptions(options);
+    };
+
+    loadIconThemes();
+
+    const unsubscribe = iconThemeRegistry.onRegistryChange(loadIconThemes);
+    return unsubscribe;
+  }, []);
+
   const handleUploadTheme = async () => {
-    // Create file input element
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".json";
@@ -54,18 +75,19 @@ export const ThemeSettings = () => {
     input.click();
   };
 
+  const handleIconThemeChange = (themeId: string) => {
+    updateSetting("iconTheme", themeId);
+  };
+
   const getThemeDescription = () => {
-    if (settings.theme === "auto") {
-      return "Automatically switches between light and dark themes based on system preference";
-    }
     const currentTheme = themeRegistry.getTheme(settings.theme);
     return currentTheme?.description || "Choose your preferred color theme";
   };
 
   return (
     <div className="space-y-4">
-      <Section title="Appearance">
-        <SettingRow label="Theme" description={getThemeDescription()}>
+      <Section title="Theme">
+        <SettingRow label="Color Theme" description={getThemeDescription()}>
           <div className="flex items-center gap-2">
             <Dropdown
               value={settings.theme}
@@ -79,6 +101,42 @@ export const ThemeSettings = () => {
               Upload
             </Button>
           </div>
+        </SettingRow>
+
+        <SettingRow label="Icon Theme" description="Icons displayed in the file tree and tabs">
+          <Dropdown
+            value={settings.iconTheme}
+            options={iconThemeOptions}
+            onChange={handleIconThemeChange}
+            className="w-40"
+            size="xs"
+          />
+        </SettingRow>
+      </Section>
+
+      <Section title="Typography">
+        <SettingRow
+          label="UI Font Family"
+          description="Font family for UI elements (file tree, markdown, etc.)"
+        >
+          <FontSelector
+            value={settings.uiFontFamily}
+            onChange={(fontFamily) => updateSetting("uiFontFamily", fontFamily)}
+            className="w-48"
+            monospaceOnly={false}
+          />
+        </SettingRow>
+      </Section>
+
+      <Section title="Layout">
+        <SettingRow label="Sidebar Position" description="Choose where to position the sidebar">
+          <Dropdown
+            value={settings.sidebarPosition}
+            options={sidebarOptions}
+            onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
+            className="w-20"
+            size="xs"
+          />
         </SettingRow>
 
         <SettingRow

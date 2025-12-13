@@ -49,7 +49,7 @@ function createDummyEditorAPI(): EditorAPI {
       tabSize: 2,
       lineNumbers: true,
       wordWrap: false,
-      theme: "athas-dark",
+      theme: "one-dark",
     }),
     updateSettings: () => {},
     on: () => () => {},

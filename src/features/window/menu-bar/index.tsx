@@ -116,8 +116,6 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
           </MenuItem>
           <MenuItem separator />
           <Submenu title="Theme">
-            <MenuItem onClick={() => handleClickEmit("menu_theme_change", "auto")}>Auto</MenuItem>
-            {themes.length > 0 && <MenuItem separator />}
             {themes.map((theme) => (
               <MenuItem
                 key={theme.id}

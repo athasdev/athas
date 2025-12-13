@@ -5,6 +5,7 @@ import { immer } from "zustand/middleware/immer";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { extensionInstaller } from "../installer/extension-installer";
+import { getDownloadInfoForPlatform, getFullExtensions } from "../languages/full-extensions";
 import {
   getHighlightQueryUrl,
   getPackagedLanguageExtensions,
@@ -137,6 +138,18 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               }
             }
 
+            // Add full extensions (with LSP, formatters, etc.)
+            const fullExts = getFullExtensions();
+            for (const manifest of fullExts) {
+              // Skip if this extension ID was already added as a simple language extension
+              // Full extensions take precedence
+              state.availableExtensions.set(manifest.id, {
+                manifest,
+                isInstalled: installed.has(manifest.id),
+                isInstalling: false,
+              });
+            }
+
             state.isLoadingRegistry = false;
           });
         } catch (error) {
@@ -266,20 +279,80 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         });
 
         try {
-          const { downloadUrl, checksum } = extension.manifest.installation;
+          // Check if this is a full extension with LSP (needs filesystem installation)
+          const hasLsp = extension.manifest.lsp !== undefined;
 
-          // Check if this is a language extension
-          if (extension.manifest.languages && extension.manifest.languages.length > 0) {
+          if (hasLsp) {
+            // Full extension with LSP - use Tauri backend for filesystem extraction
+            // Get platform-specific download info
+            const downloadInfo = getDownloadInfoForPlatform(extension.manifest);
+            if (!downloadInfo) {
+              throw new Error(
+                `No download available for extension ${extensionId} on this platform`,
+              );
+            }
+
+            await invoke("install_extension_from_url", {
+              extensionId,
+              url: downloadInfo.downloadUrl,
+              checksum: downloadInfo.checksum,
+              size: downloadInfo.size,
+            });
+
+            // Reload installed extensions
+            await get().actions.loadInstalledExtensions();
+
+            set((state) => {
+              const ext = state.availableExtensions.get(extensionId);
+              if (ext) {
+                ext.isInstalling = false;
+                ext.isInstalled = true;
+                ext.installProgress = 100;
+
+                state.installedExtensions.set(extensionId, {
+                  id: extensionId,
+                  name: ext.manifest.displayName,
+                  version: ext.manifest.version,
+                  installed_at: new Date().toISOString(),
+                  enabled: true,
+                });
+              }
+              state.availableExtensions = new Map(state.availableExtensions);
+            });
+
+            // Trigger re-highlighting for open files that match this language
+            if (extension.manifest.languages) {
+              const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
+              const bufferState = useBufferStore.getState();
+              const activeBuffer = bufferState.buffers.find((b) => b.isActive);
+
+              if (activeBuffer) {
+                const fileExt = `.${activeBuffer.path.split(".").pop()?.toLowerCase()}`;
+                const matchesLanguage = extension.manifest.languages.some((lang) =>
+                  lang.extensions.includes(fileExt),
+                );
+
+                if (matchesLanguage) {
+                  const { setSyntaxHighlightingFilePath } = await import(
+                    "@/features/editor/extensions/builtin/syntax-highlighting"
+                  );
+                  setSyntaxHighlightingFilePath(activeBuffer.path);
+                }
+              }
+            }
+          } else if (extension.manifest.languages && extension.manifest.languages.length > 0) {
+            // Simple language extension (WASM + queries only) - use IndexedDB
             const languageId = extension.manifest.languages[0].id;
 
             // Use the download URL from the manifest, or generate it if not provided
-            const wasmUrl = downloadUrl || getWasmUrlForLanguage(languageId);
+            const wasmUrl =
+              extension.manifest.installation.downloadUrl || getWasmUrlForLanguage(languageId);
             const highlightQueryUrl = getHighlightQueryUrl(languageId);
 
             // Install using extension installer
             await extensionInstaller.installLanguage(languageId, wasmUrl, highlightQueryUrl, {
               version: extension.manifest.version,
-              checksum: checksum || "",
+              checksum: extension.manifest.installation.checksum || "",
               onProgress: (progress) => {
                 set((state) => {
                   const ext = state.availableExtensions.get(extensionId);
@@ -330,11 +403,11 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               }
             }
           } else {
-            // Non-language extension - use old download method
+            // Non-language extension without LSP - use backend download
             await invoke("install_extension_from_url", {
               extensionId,
-              url: downloadUrl,
-              checksum,
+              url: extension.manifest.installation.downloadUrl,
+              checksum: extension.manifest.installation.checksum,
               size: extension.manifest.installation.size,
             });
 

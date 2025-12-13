@@ -12,9 +12,7 @@ interface ThemeActions {
 
 export const useThemeStore = createSelectors(
   create<ThemeState>()((set) => ({
-    currentTheme: document.documentElement.classList.contains("force-athas-light")
-      ? "light"
-      : "dark",
+    currentTheme: document.documentElement.classList.contains("force-one-light") ? "light" : "dark",
     actions: {
       setTheme: (theme: "light" | "dark") => {
         set({ currentTheme: theme });

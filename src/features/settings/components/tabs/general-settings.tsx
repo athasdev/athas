@@ -5,7 +5,6 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
-import Dropdown from "@/ui/dropdown";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
 
@@ -28,11 +27,6 @@ export const GeneralSettings = () => {
   const [cliChecking, setCliChecking] = useState(true);
   const [cliInstalling, setCliInstalling] = useState(false);
   const [appVersion, setAppVersion] = useState<string>("");
-
-  const sidebarOptions = [
-    { value: "left", label: "Left" },
-    { value: "right", label: "Right" },
-  ];
 
   useEffect(() => {
     const checkCliStatus = async () => {
@@ -97,18 +91,6 @@ export const GeneralSettings = () => {
             checked={settings.autoSave}
             onChange={(checked) => updateSetting("autoSave", checked)}
             size="sm"
-          />
-        </SettingRow>
-      </Section>
-
-      <Section title="Layout">
-        <SettingRow label="Sidebar Position" description="Choose where to position the sidebar">
-          <Dropdown
-            value={settings.sidebarPosition}
-            options={sidebarOptions}
-            onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
-            className="w-20"
-            size="xs"
           />
         </SettingRow>
       </Section>
