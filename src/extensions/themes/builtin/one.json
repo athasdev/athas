@@ -1,0 +1,112 @@
+{
+  "name": "One",
+  "author": "Atom",
+  "description": "Atom's iconic One theme with light and dark variants",
+  "themes": [
+    {
+      "id": "one-light",
+      "name": "One Light",
+      "description": "Clean light theme with balanced colors",
+      "appearance": "light",
+      "colors": {
+        "primary-bg": "#fafafa",
+        "secondary-bg": "#f0f0f0",
+        "text": "#383a42",
+        "text-light": "#696c77",
+        "text-lighter": "#a0a1a7",
+        "border": "#e5e5e6",
+        "hover": "#e5e5e6",
+        "selected": "#e5e5e6",
+        "accent": "#4078f2"
+      },
+      "syntax": {
+        "keyword": "#a626a4",
+        "string": "#50a14f",
+        "number": "#986801",
+        "comment": "#a0a1a7",
+        "variable": "#e45649",
+        "function": "#4078f2",
+        "constant": "#986801",
+        "property": "#e45649",
+        "type": "#c18401",
+        "operator": "#0184bc",
+        "punctuation": "#383a42",
+        "boolean": "#986801",
+        "null": "#986801",
+        "regex": "#50a14f",
+        "tag": "#e45649",
+        "attribute": "#986801"
+      }
+    },
+    {
+      "id": "one-dark",
+      "name": "One Dark",
+      "description": "Original One Dark theme with balanced colors",
+      "appearance": "dark",
+      "colors": {
+        "primary-bg": "#282c34",
+        "secondary-bg": "#21252b",
+        "text": "#abb2bf",
+        "text-light": "#9da5b4",
+        "text-lighter": "#5c6370",
+        "border": "#3e4451",
+        "hover": "#2c313c",
+        "selected": "#3e4451",
+        "accent": "#61afef"
+      },
+      "syntax": {
+        "keyword": "#c678dd",
+        "string": "#98c379",
+        "number": "#d19a66",
+        "comment": "#5c6370",
+        "variable": "#e06c75",
+        "function": "#61afef",
+        "constant": "#d19a66",
+        "property": "#e06c75",
+        "type": "#e5c07b",
+        "operator": "#56b6c2",
+        "punctuation": "#abb2bf",
+        "boolean": "#d19a66",
+        "null": "#d19a66",
+        "regex": "#98c379",
+        "tag": "#e06c75",
+        "attribute": "#d19a66"
+      }
+    },
+    {
+      "id": "one-dark-pro",
+      "name": "One Dark Pro",
+      "description": "Enhanced variant with improved contrast",
+      "appearance": "dark",
+      "colors": {
+        "primary-bg": "#1e2127",
+        "secondary-bg": "#282c34",
+        "text": "#abb2bf",
+        "text-light": "#9da5b4",
+        "text-lighter": "#5c6370",
+        "border": "#3e4451",
+        "hover": "#2c313c",
+        "selected": "#3e4451",
+        "accent": "#61afef"
+      },
+      "syntax": {
+        "keyword": "#c678dd",
+        "string": "#98c379",
+        "number": "#d19a66",
+        "comment": "#5c6370",
+        "variable": "#e06c75",
+        "function": "#61afef",
+        "constant": "#d19a66",
+        "property": "#e06c75",
+        "type": "#e5c07b",
+        "operator": "#56b6c2",
+        "punctuation": "#abb2bf",
+        "boolean": "#d19a66",
+        "null": "#d19a66",
+        "regex": "#98c379",
+        "tag": "#e06c75",
+        "attribute": "#d19a66"
+      }
+    }
+  ]
+}

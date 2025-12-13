@@ -9,6 +9,9 @@ export interface ContextInfo {
     isDirty: boolean;
     isSQLite: boolean;
     isActive: boolean;
+    isWebViewer?: boolean;
+    webViewerUrl?: string;
+    webViewerContent?: string; // Fetched web page content
   };
   openBuffers?: Array<{
     id: string;
@@ -18,6 +21,8 @@ export interface ContextInfo {
     isDirty: boolean;
     isSQLite: boolean;
     isActive: boolean;
+    isWebViewer?: boolean;
+    webViewerUrl?: string;
   }>;
   selectedFiles?: string[];
   selectedProjectFiles?: string[];

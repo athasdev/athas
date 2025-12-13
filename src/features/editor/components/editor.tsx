@@ -37,7 +37,7 @@ interface EditorProps {
 export function Editor({ className }: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
-  const gitBlameRef = useRef<HTMLDivElement>(null);
+  const multiCursorRef = useRef<HTMLDivElement>(null);
 
   const bufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
@@ -52,6 +52,7 @@ export function Editor({ className }: EditorProps) {
   } = useEditorStateStore.use.actions();
   const cursorPosition = useEditorStateStore.use.cursorPosition();
   const multiCursorState = useEditorStateStore.use.multiCursorState();
+  const onChange = useEditorStateStore.use.onChange();
 
   const fontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
@@ -99,11 +100,26 @@ export function Editor({ className }: EditorProps) {
     lineHeight,
   });
 
-  const { tokens, tokenize } = useTokenizer({
+  const { tokens, tokenize, forceFullTokenize } = useTokenizer({
     filePath,
     incremental: true,
     enabled: hasSyntaxHighlighting,
   });
+
+  // Listen for extension installation to re-trigger tokenization
+  useEffect(() => {
+    const handleExtensionInstalled = (event: Event) => {
+      const customEvent = event as CustomEvent<{ extensionId: string; filePath: string }>;
+      if (customEvent.detail.filePath === filePath && content) {
+        forceFullTokenize(content);
+      }
+    };
+
+    window.addEventListener("extension-installed", handleExtensionInstalled);
+    return () => {
+      window.removeEventListener("extension-installed", handleExtensionInstalled);
+    };
+  }, [filePath, content, forceFullTokenize]);
 
   const visualCursorLine = useMemo(() => {
     if (foldTransform.hasActiveFolds) {
@@ -124,6 +140,7 @@ export function Editor({ className }: EditorProps) {
       }
 
       updateBufferContent(bufferId, newActualContent);
+      onChange(newActualContent);
 
       const selectionStart = inputRef.current.selectionStart;
       const virtualLines = splitLines(newVirtualContent);
@@ -505,9 +522,9 @@ export function Editor({ className }: EditorProps) {
             highlightRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
-          // Update git blame layer transform for visual sync
-          if (gitBlameRef.current) {
-            gitBlameRef.current.style.transform = `translate(-${left}px, -${top}px)`;
+          // Update multi-cursor layer transform for visual sync
+          if (multiCursorRef.current) {
+            multiCursorRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
           // Update state store for Vim motions and cursor visibility
@@ -552,6 +569,22 @@ export function Editor({ className }: EditorProps) {
         clearTimeout(scrollTimeoutRef.current);
       }
     };
+  }, []);
+
+  // Native wheel handler for textarea - required for Tauri/WebView
+  // React's onWheel doesn't support passive: false which is needed for proper scroll control
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      textarea.scrollTop += e.deltaY;
+      textarea.scrollLeft += e.deltaX;
+    };
+
+    textarea.addEventListener("wheel", handleWheel, { passive: false });
+    return () => textarea.removeEventListener("wheel", handleWheel);
   }, []);
 
   // Track viewport height for cursor visibility calculations
@@ -668,7 +701,7 @@ export function Editor({ className }: EditorProps) {
   if (!buffer) return null;
 
   return (
-    <div className="relative flex size-full">
+    <div className="absolute inset-0 flex">
       {showLineNumbers && (
         <Gutter
           totalLines={lines.length}
@@ -683,7 +716,9 @@ export function Editor({ className }: EditorProps) {
         />
       )}
 
-      <div className={`overlay-editor-container flex-1 bg-primary-bg ${className || ""}`}>
+      <div
+        className={`overlay-editor-container relative min-h-0 min-w-0 flex-1 bg-primary-bg ${className || ""}`}
+      >
         {hasSyntaxHighlighting && (
           <HighlightLayer
             ref={highlightRef}
@@ -697,7 +732,7 @@ export function Editor({ className }: EditorProps) {
           />
         )}
         <InputLayer
-          ref={inputRef}
+          textareaRef={inputRef}
           content={displayContent}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
@@ -714,6 +749,7 @@ export function Editor({ className }: EditorProps) {
         />
         {multiCursorState && (
           <MultiCursorLayer
+            ref={multiCursorRef}
             cursors={multiCursorState.cursors}
             primaryCursorId={multiCursorState.primaryCursorId}
             fontSize={fontSize}
@@ -725,7 +761,6 @@ export function Editor({ className }: EditorProps) {
 
         {filePath && (
           <GitBlameLayer
-            ref={gitBlameRef}
             filePath={filePath}
             cursorLine={cursorPosition.line}
             visualCursorLine={visualCursorLine}
@@ -733,6 +768,7 @@ export function Editor({ className }: EditorProps) {
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
+            tabSize={tabSize}
           />
         )}
 

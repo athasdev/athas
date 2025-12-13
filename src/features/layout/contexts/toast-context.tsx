@@ -18,6 +18,7 @@ interface ToastContextType {
   showToast: (toast: Omit<Toast, "id">) => string; // Return toast ID
   updateToast: (id: string, updates: Partial<Omit<Toast, "id">>) => void;
   dismissToast: (id: string) => void;
+  hasToast: (id: string) => boolean;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
@@ -29,6 +30,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setToasts((prev) =>
       prev.map((toast) => (toast.id === id ? { ...toast, isExiting: true } : toast)),
     );
+
+    // Dispatch event for external listeners
+    window.dispatchEvent(new CustomEvent("toast-dismissed", { detail: { toastId: id } }));
 
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -57,8 +61,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [dismissToast],
   );
 
+  const hasToast = useCallback((id: string) => toasts.some((t) => t.id === id), [toasts]);
+
   return (
-    <ToastContext.Provider value={{ toasts, showToast, updateToast, dismissToast }}>
+    <ToastContext.Provider value={{ toasts, showToast, updateToast, dismissToast, hasToast }}>
       {children}
     </ToastContext.Provider>
   );

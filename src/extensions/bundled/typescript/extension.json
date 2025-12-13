@@ -1,8 +1,8 @@
 {
   "id": "athas.typescript",
   "name": "TypeScript",
-  "displayName": "TypeScript Language Support",
-  "description": "TypeScript and JavaScript language support with IntelliSense, diagnostics, and more",
+  "displayName": "TypeScript",
+  "description": "TypeScript and JavaScript language support with syntax highlighting, IntelliSense, and diagnostics",
   "version": "1.0.0",
   "publisher": "Athas",
   "categories": ["Language"],
@@ -16,19 +16,25 @@
       "id": "javascript",
       "extensions": [".js", ".jsx", ".mjs", ".cjs"],
       "aliases": ["JavaScript", "js"]
+    },
+    {
+      "id": "json",
+      "extensions": [".json", ".jsonc"],
+      "aliases": ["JSON", "json"]
     }
   ],
   "grammar": {
-    "wasmPath": "./grammars/tree-sitter-tsx.wasm",
+    "wasmPath": "/tree-sitter/parsers/tree-sitter-tsx.wasm",
+    "highlightQueryPath": "/tree-sitter/queries/tsx/highlights.scm",
     "scopeName": "source.tsx",
-    "languageId": "tsx"
+    "languageId": "typescript"
   },
   "lsp": {
     "server": {
-      "default": "typescript-language-server",
-      "darwin": "typescript-language-server",
-      "linux": "typescript-language-server",
-      "win32": "typescript-language-server.cmd"
+      "default": "./lsp/node_modules/.bin/typescript-language-server",
+      "darwin": "./lsp/node_modules/.bin/typescript-language-server",
+      "linux": "./lsp/node_modules/.bin/typescript-language-server",
+      "win32": "./lsp/node_modules/.bin/typescript-language-server.cmd"
     },
     "args": ["--stdio"],
     "fileExtensions": [".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs"],

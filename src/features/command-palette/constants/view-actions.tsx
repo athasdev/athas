@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   ArrowLeftRight,
+  Globe,
   Menu,
   MessageSquare,
   PanelBottom,
@@ -32,6 +33,7 @@ interface ViewActionsParams {
   zoomIn: (target: "window" | "terminal") => void;
   zoomOut: (target: "window" | "terminal") => void;
   resetZoom: (target: "window" | "terminal") => void;
+  openWebViewerBuffer: (url: string) => void;
   onClose: () => void;
 }
 
@@ -50,6 +52,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
     zoomIn,
     zoomOut,
     resetZoom,
+    openWebViewerBuffer,
     onClose,
   } = params;
 
@@ -255,6 +258,31 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       category: "Terminal",
       action: () => {
         resetZoom("terminal");
+        onClose();
+      },
+    },
+    {
+      id: "open-web-viewer",
+      label: "View: Open Web Viewer",
+      description: "Open a new web viewer tab",
+      icon: <Globe size={14} />,
+      category: "View",
+      action: () => {
+        openWebViewerBuffer("about:blank");
+        onClose();
+      },
+    },
+    {
+      id: "open-url",
+      label: "View: Open URL...",
+      description: "Open a URL in web viewer",
+      icon: <Globe size={14} />,
+      category: "View",
+      action: async () => {
+        const url = prompt("Enter URL:", "https://");
+        if (url?.trim()) {
+          openWebViewerBuffer(url.trim());
+        }
         onClose();
       },
     },

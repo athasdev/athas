@@ -14,10 +14,17 @@ export const KeyboardSettings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
 
-  const keybindings = useKeymapStore.use.keybindings();
+  const userKeybindings = useKeymapStore.use.keybindings();
   const { resetToDefaults } = useKeymapStore.use.actions();
 
   const commands = useMemo(() => keymapRegistry.getAllCommands(), []);
+  const registryKeybindings = useMemo(() => keymapRegistry.getAllKeybindings(), []);
+
+  const getKeybindingForCommand = (commandId: string): Keybinding | undefined => {
+    const userBinding = userKeybindings.find((kb) => kb.command === commandId);
+    if (userBinding) return userBinding;
+    return registryKeybindings.find((kb) => kb.command === commandId);
+  };
 
   const filteredCommands = useMemo(() => {
     const query = searchQuery.toLowerCase();
@@ -31,7 +38,7 @@ export const KeyboardSettings = () => {
 
       if (!matchesSearch) return false;
 
-      const binding = keybindings.find((kb) => kb.command === command.id);
+      const binding = getKeybindingForCommand(command.id);
 
       if (filterType === "all") return true;
       if (filterType === "user") return binding?.source === "user";
@@ -40,7 +47,7 @@ export const KeyboardSettings = () => {
 
       return true;
     });
-  }, [commands, searchQuery, filterType, keybindings]);
+  }, [commands, searchQuery, filterType, userKeybindings, registryKeybindings]);
 
   const handleResetAll = () => {
     if (confirm("Are you sure you want to reset all keybindings to defaults?")) {
@@ -49,7 +56,7 @@ export const KeyboardSettings = () => {
   };
 
   const handleExport = () => {
-    const userBindings = keybindings.filter((kb) => kb.source === "user");
+    const userBindings = userKeybindings.filter((kb) => kb.source === "user");
     const json = JSON.stringify(userBindings, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -155,7 +162,7 @@ export const KeyboardSettings = () => {
           </div>
         ) : (
           filteredCommands.map((command) => {
-            const binding = keybindings.find((kb) => kb.command === command.id);
+            const binding = getKeybindingForCommand(command.id);
             return <KeybindingRow key={command.id} command={command} keybinding={binding} />;
           })
         )}

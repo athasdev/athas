@@ -4,7 +4,7 @@
  * This layer renders additional cursors when in multi-cursor mode
  */
 
-import { memo, useMemo } from "react";
+import { forwardRef, memo, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import type { Cursor } from "../../types/editor";
 
@@ -17,75 +17,76 @@ interface MultiCursorLayerProps {
   content: string;
 }
 
-const MultiCursorLayerComponent = ({
-  cursors,
-  primaryCursorId,
-  fontSize,
-  fontFamily,
-  lineHeight,
-  content,
-}: MultiCursorLayerProps) => {
-  const lines = useMemo(() => content.split("\n"), [content]);
+const MultiCursorLayerComponent = forwardRef<HTMLDivElement, MultiCursorLayerProps>(
+  ({ cursors, primaryCursorId, fontSize, fontFamily, lineHeight, content }, ref) => {
+    const lines = useMemo(() => content.split("\n"), [content]);
 
-  // Calculate pixel position for a cursor based on line/column
-  // Adds padding offset to match textarea/highlight layer positioning
-  const getCursorPosition = (line: number, column: number): { top: number; left: number } => {
-    const top = line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+    // Calculate pixel position for a cursor based on line/column
+    // Adds padding offset to match textarea/highlight layer positioning
+    const getCursorPosition = (line: number, column: number): { top: number; left: number } => {
+      const top = line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
 
-    const lineText = lines[line] || "";
-    const textBeforeCursor = lineText.substring(0, column);
+      const lineText = lines[line] || "";
+      const textBeforeCursor = lineText.substring(0, column);
 
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    if (context) {
-      context.font = `${fontSize}px ${fontFamily}`;
-      const width = context.measureText(textBeforeCursor).width;
-      return { top, left: width + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT };
-    }
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (context) {
+        context.font = `${fontSize}px ${fontFamily}`;
+        const width = context.measureText(textBeforeCursor).width;
+        return { top, left: width + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT };
+      }
 
-    return { top, left: column * fontSize * 0.6 + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT };
-  };
+      return { top, left: column * fontSize * 0.6 + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT };
+    };
 
-  const secondaryCursors = cursors.filter((cursor) => cursor.id !== primaryCursorId);
+    const secondaryCursors = cursors.filter((cursor) => cursor.id !== primaryCursorId);
 
-  if (secondaryCursors.length === 0) return null;
+    if (secondaryCursors.length === 0) return null;
 
-  return (
-    <div className="multi-cursor-layer pointer-events-none absolute inset-0 z-10">
-      {secondaryCursors.map((cursor) => {
-        const { top, left } = getCursorPosition(cursor.position.line, cursor.position.column);
+    return (
+      <div
+        ref={ref}
+        className="multi-cursor-layer pointer-events-none absolute inset-0 z-10"
+        style={{ willChange: "transform" }}
+      >
+        {secondaryCursors.map((cursor) => {
+          const { top, left } = getCursorPosition(cursor.position.line, cursor.position.column);
 
-        return (
-          <div key={cursor.id}>
-            {/* Render selection if exists */}
-            {cursor.selection && (
+          return (
+            <div key={cursor.id}>
+              {/* Render selection if exists */}
+              {cursor.selection && (
+                <div
+                  className="absolute bg-selection-bg"
+                  style={{
+                    top: `${cursor.selection.start.line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP}px`,
+                    left: `${getCursorPosition(cursor.selection.start.line, cursor.selection.start.column).left}px`,
+                    height: `${(cursor.selection.end.line - cursor.selection.start.line + 1) * lineHeight}px`,
+                    width: `${getCursorPosition(cursor.selection.end.line, cursor.selection.end.column).left - getCursorPosition(cursor.selection.start.line, cursor.selection.start.column).left}px`,
+                  }}
+                />
+              )}
+
+              {/* Render cursor */}
               <div
-                className="absolute bg-selection-bg"
+                className="absolute w-0.5 animate-blink"
                 style={{
-                  top: `${cursor.selection.start.line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP}px`,
-                  left: `${getCursorPosition(cursor.selection.start.line, cursor.selection.start.column).left}px`,
-                  height: `${(cursor.selection.end.line - cursor.selection.start.line + 1) * lineHeight}px`,
-                  width: `${getCursorPosition(cursor.selection.end.line, cursor.selection.end.column).left - getCursorPosition(cursor.selection.start.line, cursor.selection.start.column).left}px`,
+                  top: `${top}px`,
+                  left: `${left}px`,
+                  height: `${lineHeight}px`,
+                  backgroundColor: "var(--cursor, #d4d4d4)",
                 }}
               />
-            )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  },
+);
 
-            {/* Render cursor */}
-            <div
-              className="absolute w-0.5 animate-blink"
-              style={{
-                top: `${top}px`,
-                left: `${left}px`,
-                height: `${lineHeight}px`,
-                backgroundColor: "var(--cursor, #d4d4d4)",
-              }}
-            />
-          </div>
-        );
-      })}
-    </div>
-  );
-};
+MultiCursorLayerComponent.displayName = "MultiCursorLayer";
 
 export const MultiCursorLayer = memo(MultiCursorLayerComponent, (prev, next) => {
   return (

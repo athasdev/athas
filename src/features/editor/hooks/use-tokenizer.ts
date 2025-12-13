@@ -32,7 +32,7 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   mjs: "javascript",
   cjs: "javascript",
   ts: "typescript",
-  tsx: "tsx",
+  tsx: "typescript",
   mts: "typescript",
   cts: "typescript",
   py: "python",

@@ -121,4 +121,5 @@ jobs:
             Full changelog: https://github.com/athasdev/athas/compare/v__PREVIOUS_VERSION__...v__VERSION__
           releaseDraft: false
           prerelease: false
+          includeUpdaterJson: true
           args: ${{ matrix.args }}
