@@ -30,7 +30,6 @@ export const useActionsStore = createSelectors(
         },
 
         clearStack: () => {
-          console.log("clearing stack");
           set(() => ({ lastEnteredActionsStack: [] }));
         },
       }),

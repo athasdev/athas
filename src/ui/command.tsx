@@ -41,9 +41,14 @@ Command.displayName = "Command";
 interface CommandHeaderProps {
   children: React.ReactNode;
   onClose: () => void;
+  showClearButton?: boolean;
 }
 
-export const CommandHeader = ({ children, onClose }: CommandHeaderProps) => {
+export const CommandHeader = ({
+  children,
+  onClose,
+  showClearButton = false,
+}: CommandHeaderProps) => {
   const clearActionsStack = useActionsStore.use.clearStack();
 
   return (
@@ -57,13 +62,15 @@ export const CommandHeader = ({ children, onClose }: CommandHeaderProps) => {
         >
           <X size={12} className="text-text-lighter" />
         </button>
-        <button
-          aria-label="Clear persisted actions"
-          onClick={clearActionsStack}
-          className="rounded p-0.5 transition-colors hover:bg-hover"
-        >
-          <RefreshCwIcon size={10} className="text-text-lighter" />
-        </button>
+        {showClearButton && (
+          <button
+            aria-label="Clear persisted actions"
+            onClick={clearActionsStack}
+            className="rounded p-0.5 transition-colors hover:bg-hover"
+          >
+            <RefreshCwIcon size={10} className="text-text-lighter" />
+          </button>
+        )}
       </div>
     </div>
   );

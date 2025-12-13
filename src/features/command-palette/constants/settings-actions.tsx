@@ -395,7 +395,13 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         : "Enable persistent commands",
       icon: <Cloud size={14} />,
       category: "Features",
-      action: () => {},
+      action: () => {
+        updateSetting("coreFeatures", {
+          ...settings.coreFeatures,
+          persistentCommands: !settings.coreFeatures.persistentCommands,
+        });
+        onClose();
+      },
     },
   ];
 };

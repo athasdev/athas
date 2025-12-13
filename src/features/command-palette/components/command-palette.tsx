@@ -1,4 +1,5 @@
 import { appDataDir } from "@tauri-apps/api/path";
+import { History } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -221,7 +222,7 @@ const CommandPalette = () => {
       .filter((a): a is Action => !!a); // Filter out undefined and assure it is of type Action
 
     return [...prioritized, ...remaining];
-  }, [filteredActions, lastEnteredActions]);
+  }, [filteredActions, lastEnteredActions, settings.coreFeatures.persistentCommands]);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -287,7 +288,7 @@ const CommandPalette = () => {
 
   return (
     <Command isVisible={isVisible} onClose={onClose}>
-      <CommandHeader onClose={onClose}>
+      <CommandHeader onClose={onClose} showClearButton={settings.coreFeatures.persistentCommands}>
         <CommandInput
           ref={inputRef}
           value={query}
@@ -300,26 +301,31 @@ const CommandPalette = () => {
         {filteredActions.length === 0 ? (
           <CommandEmpty>No commands found</CommandEmpty>
         ) : (
-          prioritizedActions.map((action, index) => (
-            <CommandItem
-              key={action.id}
-              onClick={() => {
-                action.action();
-                pushAction(action.id);
-              }}
-              isSelected={index === selectedIndex}
-              className="px-3 py-1.5"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-xs">{action.label}</div>
-              </div>
-              {action.keybinding && (
-                <div className="flex-shrink-0">
-                  <KeybindingBadge keys={action.keybinding} />
+          prioritizedActions.map((action, index) => {
+            const isRecent =
+              settings.coreFeatures.persistentCommands && lastEnteredActions.includes(action.id);
+            return (
+              <CommandItem
+                key={action.id}
+                onClick={() => {
+                  action.action();
+                  pushAction(action.id);
+                }}
+                isSelected={index === selectedIndex}
+                className="px-3 py-1.5"
+              >
+                {isRecent && <History size={12} className="flex-shrink-0 text-text-lighter" />}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-xs">{action.label}</div>
                 </div>
-              )}
-            </CommandItem>
-          ))
+                {action.keybinding && (
+                  <div className="flex-shrink-0">
+                    <KeybindingBadge keys={action.keybinding} />
+                  </div>
+                )}
+              </CommandItem>
+            );
+          })
         )}
       </CommandList>
     </Command>
