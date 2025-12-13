@@ -20,6 +20,7 @@ import {
 import type React from "react";
 import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useIsMac } from "@/hooks/use-platform";
 
 // Performance optimizations
 const GIT_STATUS_DEBOUNCE_MS = 500;
@@ -90,6 +91,7 @@ const FileTree = ({
 
   const { settings } = useSettingsStore();
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
+  const isMac = useIsMac();
 
   const userIgnore = useMemo(() => {
     const ig = ignore();
@@ -778,7 +780,7 @@ const FileTree = ({
   return (
     <div
       className={cn(
-        "file-tree-container flex flex-1 select-none",
+        "file-tree-container relative flex flex-1 select-none",
         "min-w-full flex-col gap-0 overflow-auto",
         dragState.dragOverPath === "__ROOT__" &&
           "!bg-accent !bg-opacity-10 !border-2 !border-accent !border-dashed",
@@ -815,13 +817,18 @@ const FileTree = ({
       }}
     >
       {filteredFiles.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center p-4">
-          <div className="ui-font text-center text-text-lighter text-xs">
-            <div className="mb-1">No project is opened</div>
-            <button onClick={handleOpenFolder} className="text-[10px] opacity-75">
-              <div className="mx-auto">Open a project folder</div>
-            </button>
-          </div>
+        <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
+          <button
+            onClick={handleOpenFolder}
+            style={{ width: "fit-content", minWidth: "fit-content" }}
+            className="ui-font flex items-center justify-center gap-2 rounded border border-border bg-hover px-3 py-1.5 text-text text-xs transition-colors hover:border-accent hover:text-accent"
+          >
+            <FolderOpen size={14} />
+            <span>Open Folder</span>
+            <kbd className="ml-1 rounded bg-secondary-bg px-1.5 py-0.5 font-mono text-[10px] text-text-lighter">
+              {isMac ? "⌘O" : "Ctrl+O"}
+            </kbd>
+          </button>
         </div>
       ) : (
         <div className="w-max min-w-full" style={{ minWidth: "100%", width: "max-content" }}>

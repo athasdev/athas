@@ -11,4 +11,6 @@ export interface Buffer {
   isActive: boolean;
   isPinned?: boolean; // Whether the tab is pinned
   language?: string; // File language for syntax highlighting and formatting
+  isWebViewer?: boolean; // Web viewer tab
+  webViewerUrl?: string; // URL for web viewer
 }

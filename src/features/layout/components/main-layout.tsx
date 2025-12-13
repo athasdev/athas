@@ -24,7 +24,7 @@ import type { GitHunk } from "@/features/version-control/git/types/git";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
-import { useKeyboardShortcutsWrapper } from "@/features/window/hooks/use-keyboard-shortcuts-wrapper";
+import { WebViewer } from "@/features/web-viewer/components/web-viewer";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useFolderDrop } from "@/hooks/use-folder-drop";
 import { useUIState } from "@/stores/ui-state-store";
@@ -33,9 +33,8 @@ import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
 import EditorFooter from "./footer/editor-footer";
-import ResizableRightPane from "./right-pane/resizable-right-pane";
+import { ResizablePane } from "./resizable-pane";
 import { MainSidebar } from "./sidebar/main-sidebar";
-import ResizableSidebar from "./sidebar/resizable-sidebar";
 
 export function MainLayout() {
   // Initialize AI chat storage (SQLite database + migration)
@@ -69,8 +68,14 @@ export function MainLayout() {
     }
   });
 
-  const { getAllDiagnostics } = useDiagnosticsStore.use.actions();
-  const diagnostics = useMemo(() => getAllDiagnostics(), [getAllDiagnostics]);
+  const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
+  const diagnostics = useMemo(() => {
+    const allDiagnostics: Diagnostic[] = [];
+    diagnosticsByFile.forEach((fileDiagnostics) => {
+      allDiagnostics.push(...fileDiagnostics);
+    });
+    return allDiagnostics;
+  }, [diagnosticsByFile]);
   const sidebarPosition = settings.sidebarPosition;
 
   const { closeBufferForce } = useBufferStore.use.actions();
@@ -149,7 +154,6 @@ export function MainLayout() {
 
   // Initialize event listeners
   useMenuEventsWrapper();
-  useKeyboardShortcutsWrapper();
 
   // Initialize vim mode handling
   useVimKeyboard({
@@ -211,22 +215,22 @@ export function MainLayout() {
       <div className="z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
           {/* Left sidebar or AI chat based on settings */}
-          {sidebarPosition === "right" ? (
-            <ResizableRightPane position="left" isVisible={settings.isAIChatVisible}>
-              <AIChat mode="chat" />
-            </ResizableRightPane>
-          ) : (
-            isSidebarVisible && (
-              <ResizableSidebar>
-                <MainSidebar />
-              </ResizableSidebar>
-            )
-          )}
+          {sidebarPosition === "right"
+            ? settings.isAIChatVisible && (
+                <ResizablePane position="left" widthKey="aiChatWidth">
+                  <AIChat mode="chat" />
+                </ResizablePane>
+              )
+            : isSidebarVisible && (
+                <ResizablePane position="left" widthKey="sidebarWidth">
+                  <MainSidebar />
+                </ResizablePane>
+              )}
 
           {/* Main content area */}
           <div className="flex min-h-0 flex-1 flex-col">
             <TabBar />
-            <div className="min-h-0 flex-1 overflow-hidden">
+            <div className="relative min-h-0 flex-1 overflow-hidden">
               {(() => {
                 if (!activeBuffer) {
                   return <div className="flex h-full items-center justify-center"></div>;
@@ -254,6 +258,8 @@ export function MainLayout() {
                       onEditorExit={handleExternalEditorExit}
                     />
                   );
+                } else if (activeBuffer.isWebViewer && activeBuffer.webViewerUrl) {
+                  return <WebViewer url={activeBuffer.webViewerUrl} bufferId={activeBuffer.id} />;
                 } else {
                   return <CodeEditor />;
                 }
@@ -263,17 +269,17 @@ export function MainLayout() {
           </div>
 
           {/* Right sidebar or AI chat based on settings */}
-          {sidebarPosition === "right" ? (
-            isSidebarVisible && (
-              <ResizableRightPane position="right">
-                <MainSidebar />
-              </ResizableRightPane>
-            )
-          ) : (
-            <ResizableRightPane position="right" isVisible={settings.isAIChatVisible}>
-              <AIChat mode="chat" />
-            </ResizableRightPane>
-          )}
+          {sidebarPosition === "right"
+            ? isSidebarVisible && (
+                <ResizablePane position="right" widthKey="sidebarWidth">
+                  <MainSidebar />
+                </ResizablePane>
+              )
+            : settings.isAIChatVisible && (
+                <ResizablePane position="right" widthKey="aiChatWidth">
+                  <AIChat mode="chat" />
+                </ResizablePane>
+              )}
         </div>
       </div>
 

@@ -1,6 +1,9 @@
+use std::sync::atomic::{AtomicU32, Ordering};
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
-use tauri::{Emitter, Manager, UserAttentionType, WebviewUrl, WebviewWindowBuilder, command};
+use tauri::{
+   Emitter, Manager, UserAttentionType, WebviewBuilder, WebviewUrl, WebviewWindowBuilder, command,
+};
 
 #[command]
 pub async fn create_remote_window(
@@ -81,5 +84,203 @@ pub async fn create_remote_window(
       );
    });
 
+   Ok(())
+}
+
+// Counter for generating unique web viewer labels
+static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
+
+/// React Grab script loader for localhost development URLs
+/// Includes both the main react-grab script and the Claude Code client
+const REACT_GRAB_SCRIPT: &str = r#"
+(function() {
+  if (window.__REACT_GRAB_LOADED__) return;
+  window.__REACT_GRAB_LOADED__ = true;
+
+  function loadScripts() {
+    var script1 = document.createElement('script');
+    script1.src = 'https://unpkg.com/react-grab/dist/index.global.js';
+    script1.crossOrigin = 'anonymous';
+
+    var script2 = document.createElement('script');
+    script2.src = 'https://unpkg.com/@react-grab/claude-code/dist/client.global.js';
+    script2.crossOrigin = 'anonymous';
+
+    // Load Claude Code client after main script loads
+    script1.onload = function() {
+      document.head.appendChild(script2);
+    };
+
+    document.head.appendChild(script1);
+  }
+
+  // Inject as early as possible
+  if (document.head) {
+    loadScripts();
+  } else {
+    // Wait for head to be available
+    var observer = new MutationObserver(function(mutations, obs) {
+      if (document.head) {
+        obs.disconnect();
+        loadScripts();
+      }
+    });
+    observer.observe(document.documentElement || document, { childList: true, subtree: true });
+  }
+})();
+"#;
+
+#[command]
+pub async fn create_embedded_webview(
+   app: tauri::AppHandle,
+   url: String,
+   x: f64,
+   y: f64,
+   width: f64,
+   height: f64,
+) -> Result<String, String> {
+   let counter = WEB_VIEWER_COUNTER.fetch_add(1, Ordering::SeqCst);
+   let webview_label = format!("web-viewer-{counter}");
+
+   // Parse and validate URL with localhost-aware protocol handling
+   let parsed_url = if url.starts_with("http://") || url.starts_with("https://") {
+      url.clone()
+   } else if url == "about:blank" {
+      "about:blank".to_string()
+   } else {
+      // Default to HTTP for localhost, HTTPS for everything else
+      let normalized = url.to_lowercase();
+      if normalized.starts_with("localhost") || normalized.starts_with("127.0.0.1") {
+         format!("http://{url}")
+      } else {
+         format!("https://{url}")
+      }
+   };
+
+   // Get the main window
+   let main_webview_window = app
+      .get_webview_window("main")
+      .ok_or("Main window not found")?;
+
+   // Get the underlying Window to use add_child
+   let main_window = main_webview_window.as_ref().window();
+
+   // Build webview with conditional react-grab injection for localhost
+   let mut webview_builder = WebviewBuilder::new(
+      &webview_label,
+      WebviewUrl::External(
+         parsed_url
+            .parse()
+            .map_err(|e| format!("Invalid URL: {e}"))?,
+      ),
+   );
+
+   // Always inject react-grab script for web viewer
+   webview_builder = webview_builder.initialization_script(REACT_GRAB_SCRIPT);
+
+   // Create embedded webview within the main window
+   let webview = main_window
+      .add_child(
+         webview_builder,
+         tauri::LogicalPosition::new(x, y),
+         tauri::LogicalSize::new(width, height),
+      )
+      .map_err(|e| format!("Failed to create embedded webview: {e}"))?;
+
+   // Set auto resize to follow parent window
+   webview
+      .set_auto_resize(false)
+      .map_err(|e| format!("Failed to set auto resize: {e}"))?;
+
+   Ok(webview_label)
+}
+
+#[command]
+pub async fn close_embedded_webview(
+   app: tauri::AppHandle,
+   webview_label: String,
+) -> Result<(), String> {
+   if let Some(webview) = app.get_webview(&webview_label) {
+      webview
+         .close()
+         .map_err(|e| format!("Failed to close webview: {e}"))?;
+   }
+   Ok(())
+}
+
+#[command]
+pub async fn navigate_embedded_webview(
+   app: tauri::AppHandle,
+   webview_label: String,
+   url: String,
+) -> Result<(), String> {
+   if let Some(webview) = app.get_webview(&webview_label) {
+      // Parse URL with localhost-aware protocol handling
+      let parsed_url = if url.starts_with("http://") || url.starts_with("https://") {
+         url
+      } else {
+         // Default to HTTP for localhost, HTTPS for everything else
+         let normalized = url.to_lowercase();
+         if normalized.starts_with("localhost") || normalized.starts_with("127.0.0.1") {
+            format!("http://{url}")
+         } else {
+            format!("https://{url}")
+         }
+      };
+
+      webview
+         .navigate(
+            parsed_url
+               .parse()
+               .map_err(|e| format!("Invalid URL: {e}"))?,
+         )
+         .map_err(|e| format!("Failed to navigate: {e}"))?;
+   } else {
+      return Err(format!("Webview not found: {webview_label}"));
+   }
+   Ok(())
+}
+
+#[command]
+pub async fn resize_embedded_webview(
+   app: tauri::AppHandle,
+   webview_label: String,
+   x: f64,
+   y: f64,
+   width: f64,
+   height: f64,
+) -> Result<(), String> {
+   if let Some(webview) = app.get_webview(&webview_label) {
+      webview
+         .set_position(tauri::LogicalPosition::new(x, y))
+         .map_err(|e| format!("Failed to set position: {e}"))?;
+      webview
+         .set_size(tauri::LogicalSize::new(width, height))
+         .map_err(|e| format!("Failed to set size: {e}"))?;
+   } else {
+      return Err(format!("Webview not found: {webview_label}"));
+   }
+   Ok(())
+}
+
+#[command]
+pub async fn set_webview_visible(
+   app: tauri::AppHandle,
+   webview_label: String,
+   visible: bool,
+) -> Result<(), String> {
+   if let Some(webview) = app.get_webview(&webview_label) {
+      if visible {
+         webview
+            .show()
+            .map_err(|e| format!("Failed to show webview: {e}"))?;
+      } else {
+         webview
+            .hide()
+            .map_err(|e| format!("Failed to hide webview: {e}"))?;
+      }
+   } else {
+      return Err(format!("Webview not found: {webview_label}"));
+   }
    Ok(())
 }

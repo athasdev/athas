@@ -4,7 +4,7 @@
  * Uses uncontrolled input for optimal typing performance
  */
 
-import { forwardRef, memo, useCallback, useEffect } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 
 interface InputLayerProps {
   content: string;
@@ -21,85 +21,83 @@ interface InputLayerProps {
   tabSize: number;
   onScroll?: (e: React.UIEvent<HTMLTextAreaElement>) => void;
   bufferId?: string;
-  showText?: boolean; // Show visible text (for plain text mode without syntax highlighting)
+  showText?: boolean;
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 
-const InputLayerComponent = forwardRef<HTMLTextAreaElement, InputLayerProps>(
-  (
-    {
-      content,
-      onInput,
-      onKeyDown,
-      onKeyUp,
-      onSelect,
-      onClick,
-      onMouseUp,
-      onContextMenu,
-      fontSize,
-      fontFamily,
-      lineHeight,
-      tabSize,
-      onScroll,
-      bufferId,
-      showText = false,
+const InputLayerComponent = ({
+  content,
+  onInput,
+  onKeyDown,
+  onKeyUp,
+  onSelect,
+  onClick,
+  onMouseUp,
+  onContextMenu,
+  fontSize,
+  fontFamily,
+  lineHeight,
+  tabSize,
+  onScroll,
+  bufferId,
+  showText = false,
+  textareaRef,
+}: InputLayerProps) => {
+  const localRef = useRef<HTMLTextAreaElement>(null);
+  const ref = textareaRef || localRef;
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      onInput(e.target.value);
     },
-    ref,
-  ) => {
-    const handleChange = useCallback(
-      (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        onInput(e.target.value);
-      },
-      [onInput],
-    );
+    [onInput],
+  );
 
-    // Sync textarea value ONLY when buffer switches (not during typing)
-    // This keeps the textarea fully uncontrolled during typing for zero-lag input
-    useEffect(() => {
-      if (ref && typeof ref !== "function" && ref.current) {
-        if (ref.current.value !== content) {
-          ref.current.value = content;
-        }
-      }
-    }, [bufferId, ref]); // Only sync on buffer switch, NOT on content changes
+  // Sync textarea value ONLY when buffer switches
+  useEffect(() => {
+    if (ref.current && ref.current.value !== content) {
+      ref.current.value = content;
+    }
+  }, [bufferId, content, ref]);
 
-    return (
-      <textarea
-        ref={ref}
-        defaultValue={content}
-        onChange={handleChange}
-        onKeyDown={onKeyDown}
-        onKeyUp={onKeyUp}
-        onSelect={onSelect}
-        onClick={onClick}
-        onMouseUp={onMouseUp}
-        onContextMenu={onContextMenu}
-        onScroll={onScroll}
-        className="input-layer editor-textarea editor-viewport"
-        style={{
-          fontSize: `${fontSize}px`,
-          fontFamily,
-          lineHeight: `${lineHeight}px`,
-          tabSize,
-          // Show visible text for plain text mode (no syntax highlighting)
-          ...(showText && { color: "var(--text, #d4d4d4)" }),
-        }}
-        spellCheck={false}
-        autoCapitalize="off"
-        autoComplete="off"
-        autoCorrect="off"
-        aria-label="Code editor input"
-      />
-    );
-  },
-);
+  return (
+    <textarea
+      ref={ref as React.RefObject<HTMLTextAreaElement>}
+      defaultValue={content}
+      onChange={handleChange}
+      onKeyDown={onKeyDown}
+      onKeyUp={onKeyUp}
+      onSelect={onSelect}
+      onClick={onClick}
+      onMouseUp={onMouseUp}
+      onContextMenu={onContextMenu}
+      onScroll={onScroll}
+      className="input-layer editor-textarea editor-viewport"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: "auto",
+        fontSize: `${fontSize}px`,
+        fontFamily,
+        lineHeight: `${lineHeight}px`,
+        tabSize,
+        ...(showText && { color: "var(--text, #d4d4d4)" }),
+      }}
+      spellCheck={false}
+      autoCapitalize="off"
+      autoComplete="off"
+      autoCorrect="off"
+      aria-label="Code editor input"
+    />
+  );
+};
 
 InputLayerComponent.displayName = "InputLayer";
 
-// Wrap with memo to prevent re-renders during typing
-// Only re-render when buffer changes or styling changes
 export const InputLayer = memo(InputLayerComponent, (prev, next) => {
-  // Skip re-render if only content changed (textarea is uncontrolled during typing)
-  // Re-render when buffer switches or styling changes
   return (
     prev.bufferId === next.bufferId &&
     prev.fontSize === next.fontSize &&
@@ -107,6 +105,7 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.lineHeight === next.lineHeight &&
     prev.tabSize === next.tabSize &&
     prev.showText === next.showText &&
+    prev.textareaRef === next.textareaRef &&
     prev.onInput === next.onInput &&
     prev.onKeyDown === next.onKeyDown &&
     prev.onScroll === next.onScroll &&

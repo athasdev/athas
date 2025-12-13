@@ -6,6 +6,7 @@ import { SettingsVerticalTabs } from "./settings-vertical-tabs";
 
 import { AdvancedSettings } from "./tabs/advanced-settings";
 import { AISettings } from "./tabs/ai-settings";
+import { AppearanceSettings } from "./tabs/appearance-settings";
 import { EditorSettings } from "./tabs/editor-settings";
 import { ExtensionsSettings } from "./tabs/extensions-settings";
 import { FeaturesSettings } from "./tabs/features-settings";
@@ -14,7 +15,6 @@ import { GeneralSettings } from "./tabs/general-settings";
 import { KeyboardSettings } from "./tabs/keyboard-settings";
 import { LanguageSettings } from "./tabs/language-settings";
 import { TerminalSettings } from "./tabs/terminal-settings";
-import { ThemeSettings } from "./tabs/theme-settings";
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -47,8 +47,8 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         return <GeneralSettings />;
       case "editor":
         return <EditorSettings />;
-      case "theme":
-        return <ThemeSettings />;
+      case "appearance":
+        return <AppearanceSettings />;
       case "extensions":
         return <ExtensionsSettings />;
       case "ai":

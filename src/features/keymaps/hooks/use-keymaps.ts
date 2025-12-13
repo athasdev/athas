@@ -1,10 +1,14 @@
 /**
  * Unified keyboard handler hook
  * Handles all keyboard shortcuts through the keymaps system
+ *
+ * This is the SINGLE source of truth for all keyboard handling.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { logger } from "@/features/editor/utils/logger";
+import { useSettingsStore } from "@/features/settings/store";
+import { useUIState } from "@/stores/ui-state-store";
 import { useKeymapStore } from "../stores/store";
 import { evaluateWhenClause } from "../utils/context";
 import { eventToKey, matchKeybinding } from "../utils/matcher";
@@ -20,6 +24,30 @@ export function useKeymaps() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip all keybinding handling when recording a new keybinding
+      if (contexts.isRecordingKeybinding) {
+        return;
+      }
+
+      // Escape key - global modal closing
+      if (e.key === "Escape") {
+        const { hasOpenModal, closeTopModal } = useUIState.getState();
+        if (hasOpenModal()) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeTopModal();
+          return;
+        }
+      }
+
+      // Vim mode bypass - let vim handle keys without modifiers
+      const { settings } = useSettingsStore.getState();
+      const hasModifiers = e.metaKey || e.ctrlKey || e.altKey;
+
+      if (settings.vimMode && !hasModifiers && !e.shiftKey) {
+        return;
+      }
+
       // Skip if target is an input (except our editor textarea)
       const target = e.target as HTMLElement;
       if (

@@ -4,6 +4,13 @@
  */
 
 export type Platform = "darwin" | "linux" | "win32";
+export type Architecture = "arm64" | "x64";
+export type PlatformArch =
+  | "darwin-arm64"
+  | "darwin-x64"
+  | "linux-x64"
+  | "linux-arm64"
+  | "win32-x64";
 
 export interface ExtensionManifest {
   // Core metadata
@@ -104,6 +111,35 @@ export interface LspConfiguration {
 
   // Server capabilities override
   capabilities?: Record<string, any>;
+}
+
+// Extended LSP configuration with platform+arch support for downloadable extensions
+export interface LspConfigurationWithArch {
+  // Server executable paths per platform+arch (relative paths within extension)
+  server: PlatformArchExecutable;
+
+  // Server arguments
+  args?: string[];
+
+  // Environment variables
+  env?: Record<string, string>;
+
+  // Initialization options
+  initializationOptions?: Record<string, unknown>;
+
+  // File extensions this LSP supports
+  fileExtensions: string[];
+
+  // Language IDs this LSP supports
+  languageIds: string[];
+}
+
+export interface PlatformArchExecutable {
+  "darwin-arm64"?: string;
+  "darwin-x64"?: string;
+  "linux-x64"?: string;
+  "linux-arm64"?: string;
+  "win32-x64"?: string;
 }
 
 export interface PlatformExecutable {
@@ -259,7 +295,7 @@ export interface Snippet {
 }
 
 export interface InstallationMetadata {
-  // Download URL for the extension package
+  // Download URL for the extension package (used when no platform-specific packages)
   downloadUrl: string;
 
   // Package size in bytes
@@ -274,12 +310,15 @@ export interface InstallationMetadata {
   // Maximum editor version supported
   maxEditorVersion?: string;
 
-  // Platform-specific packages
+  // Platform-specific packages (legacy, platform-only)
   platforms?: {
     darwin?: PlatformPackage;
     linux?: PlatformPackage;
     win32?: PlatformPackage;
   };
+
+  // Platform+arch specific packages (for extensions with native binaries)
+  platformArch?: Partial<Record<PlatformArch, PlatformPackage>>;
 }
 
 export interface PlatformPackage {

@@ -168,7 +168,12 @@ export const getCharWidthCached = (
 
   // Prewarm cache on first use for this font configuration
   if (charWidthCache.size < 100) {
-    requestIdleCallback(() => prewarmCharCache(fontSize, fontFamily));
+    // Use requestIdleCallback if available, otherwise setTimeout
+    const scheduleIdle =
+      typeof requestIdleCallback === "function"
+        ? requestIdleCallback
+        : (fn: () => void) => setTimeout(fn, 1);
+    scheduleIdle(() => prewarmCharCache(fontSize, fontFamily));
   }
 
   return roundedWidth;

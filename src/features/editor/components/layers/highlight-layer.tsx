@@ -39,14 +39,19 @@ const Line = memo<LineProps>(
           continue;
         }
 
+        // Skip tokens that are entirely within already-rendered text (overlapping tokens)
+        if (tokenEndInLine <= lastIndex) {
+          continue;
+        }
+
         // Add text before token
         if (tokenStartInLine > lastIndex) {
           const text = lineContent.substring(lastIndex, Math.max(lastIndex, tokenStartInLine));
           result.push(<span key={`${lineIndex}-${spanKey++}`}>{text}</span>);
         }
 
-        // Add token
-        const start = Math.max(0, tokenStartInLine);
+        // Add token (start from lastIndex if token overlaps with previous)
+        const start = Math.max(lastIndex, Math.max(0, tokenStartInLine));
         const end = Math.min(lineContent.length, tokenEndInLine);
         const tokenText = lineContent.substring(start, end);
         result.push(

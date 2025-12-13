@@ -3,12 +3,12 @@
  * Call this once at app startup
  */
 
-import { registerBuiltinCommands } from "./commands/register-commands";
+import { registerCommands } from "./commands/command-registry";
 import { registerDefaultKeymaps } from "./defaults/register-defaults";
 
 export function initializeKeymaps(): void {
-  // Register all built-in commands
-  registerBuiltinCommands();
+  // Register all commands from the unified registry
+  registerCommands();
 
   // Register default keybindings
   registerDefaultKeymaps();

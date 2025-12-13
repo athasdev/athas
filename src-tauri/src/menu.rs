@@ -67,22 +67,18 @@ fn build_theme_submenu<R: tauri::Runtime>(
    app: &tauri::AppHandle<R>,
    themes: Option<Vec<ThemeData>>,
 ) -> Result<Submenu<R>, tauri::Error> {
-   let mut theme_builder = SubmenuBuilder::new(app, "Theme").text("auto", "Auto");
+   let mut theme_builder = SubmenuBuilder::new(app, "Theme");
 
    if let Some(theme_list) = themes {
-      // Add separator and all themes without grouping
-      if !theme_list.is_empty() {
-         theme_builder = theme_builder.separator();
-         for theme in &theme_list {
-            theme_builder = theme_builder.text(&theme.id, &theme.name);
-         }
+      // Add all themes without grouping
+      for theme in &theme_list {
+         theme_builder = theme_builder.text(&theme.id, &theme.name);
       }
    } else {
       // Fallback to hardcoded themes if none provided
       theme_builder = theme_builder
-         .separator()
-         .text("athas-light", "Athas Light")
-         .text("athas-dark", "Athas Dark")
+         .text("one-light", "One Light")
+         .text("one-dark", "One Dark")
    }
 
    theme_builder.build()

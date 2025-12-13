@@ -31,7 +31,7 @@ export interface Chat {
 }
 
 export interface ContextInfo {
-  activeBuffer?: Buffer;
+  activeBuffer?: Buffer & { webViewerContent?: string };
   openBuffers?: Buffer[];
   selectedFiles?: string[];
   projectRoot?: string;
