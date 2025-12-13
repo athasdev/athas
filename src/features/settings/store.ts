@@ -37,6 +37,8 @@ interface Settings {
   aiChatWidth: number;
   isAIChatVisible: boolean;
   aiCompletion: boolean;
+  // Layout
+  sidebarWidth: number;
   // Keyboard
   vimMode: boolean;
   vimRelativeLineNumbers: boolean;
@@ -85,10 +87,10 @@ const defaultSettings: Settings = {
   // UI
   uiFontFamily: "JetBrains Mono",
   // Theme
-  theme: "athas-dark", // Changed from "auto" since we don't support continuous monitoring
+  theme: "one-dark", // Changed from "auto" since we don't support continuous monitoring
   iconTheme: "colorful-material",
-  autoThemeLight: "athas-light",
-  autoThemeDark: "athas-dark",
+  autoThemeLight: "one-light",
+  autoThemeDark: "one-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
   // AI
@@ -97,6 +99,8 @@ const defaultSettings: Settings = {
   aiChatWidth: 400,
   isAIChatVisible: false,
   aiCompletion: true,
+  // Layout
+  sidebarWidth: 220,
   // Keyboard
   vimMode: false,
   vimRelativeLineNumbers: false,
@@ -120,6 +124,7 @@ const defaultSettings: Settings = {
     diagnostics: true,
     aiChat: true,
     breadcrumbs: true,
+    persistentCommands: true,
   },
   // Advanced
   //  > nothing here, yet
@@ -132,21 +137,23 @@ const defaultSettings: Settings = {
 };
 
 // Theme class constants
-const ALL_THEME_CLASSES = ["force-athas-light", "force-athas-dark"];
+const ALL_THEME_CLASSES = ["force-one-light", "force-one-dark"];
 
 let storeInstance: Store;
 
 const getStore = async () => {
   if (!storeInstance) {
-    storeInstance = await load("settings.json", {
-      autoSave: true,
-    });
+    storeInstance = await load("settings.json", { autoSave: true } as Parameters<typeof load>[1]);
 
-    // Initialize defaults if not present
+    // Initialize defaults if not present, merge nested objects
     for (const [key, value] of Object.entries(defaultSettings)) {
       const current = await storeInstance.get(key);
       if (current === null || current === undefined) {
         await storeInstance.set(key, value);
+      } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+        // Merge nested objects to add new keys from defaults
+        const merged = { ...value, ...current };
+        await storeInstance.set(key, merged);
       }
     }
     await storeInstance.save();
@@ -173,18 +180,7 @@ const saveSettingsToStore = async (settings: Partial<Settings>) => {
 const applyTheme = async (theme: Theme) => {
   if (typeof window === "undefined") return;
 
-  // Handle auto theme by detecting system preference
-  if (theme === "auto") {
-    const systemTheme = getSystemThemePreference();
-    // For auto theme, use the default light/dark behavior
-    ALL_THEME_CLASSES.forEach((cls) => document.documentElement.classList.remove(cls));
-    document.documentElement.classList.add(
-      systemTheme === "dark" ? "force-athas-dark" : "force-athas-light",
-    );
-    return;
-  }
-
-  // For TOML themes, use the theme registry
+  // Use the theme registry
   try {
     const { themeRegistry } = await import("@/extensions/themes/theme-registry");
     console.log(`Settings store: Attempting to apply theme "${theme}"`);
@@ -243,11 +239,11 @@ const initializeSettings = async () => {
 
     // Detect theme if none exists
     if (!loadedSettings.theme) {
-      let detectedTheme = getSystemThemePreference() === "dark" ? "athas-dark" : "athas-light";
+      let detectedTheme = getSystemThemePreference() === "dark" ? "one-dark" : "one-light";
 
       try {
         const tauriDetectedTheme = await invoke<string>("get_system_theme");
-        detectedTheme = tauriDetectedTheme === "dark" ? "athas-dark" : "athas-light";
+        detectedTheme = tauriDetectedTheme === "dark" ? "one-dark" : "one-light";
       } catch {
         console.log("Tauri theme detection not available, using browser detection");
       }

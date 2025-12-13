@@ -1,10 +1,10 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
-import Dropdown from "@/ui/dropdown";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
 
@@ -17,6 +17,7 @@ export const GeneralSettings = () => {
     installing,
     error,
     updateInfo,
+    downloadProgress,
     checkForUpdates,
     downloadAndInstall,
   } = useUpdater(false);
@@ -25,11 +26,7 @@ export const GeneralSettings = () => {
   const [cliInstalled, setCliInstalled] = useState<boolean>(false);
   const [cliChecking, setCliChecking] = useState(true);
   const [cliInstalling, setCliInstalling] = useState(false);
-
-  const sidebarOptions = [
-    { value: "left", label: "Left" },
-    { value: "right", label: "Right" },
-  ];
+  const [appVersion, setAppVersion] = useState<string>("");
 
   useEffect(() => {
     const checkCliStatus = async () => {
@@ -44,6 +41,10 @@ export const GeneralSettings = () => {
     };
 
     checkCliStatus();
+  }, []);
+
+  useEffect(() => {
+    getVersion().then(setAppVersion);
   }, []);
 
   const handleInstallCli = async () => {
@@ -75,6 +76,13 @@ export const GeneralSettings = () => {
     }
   };
 
+  const handleCheckForUpdates = async () => {
+    const hasUpdate = await checkForUpdates();
+    if (!hasUpdate) {
+      showToast({ message: "You're on the latest version", type: "success" });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Section title="File Management">
@@ -87,42 +95,24 @@ export const GeneralSettings = () => {
         </SettingRow>
       </Section>
 
-      <Section title="Layout">
-        <SettingRow label="Sidebar Position" description="Choose where to position the sidebar">
-          <Dropdown
-            value={settings.sidebarPosition}
-            options={sidebarOptions}
-            onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
-            className="w-20"
-            size="xs"
-          />
-        </SettingRow>
-      </Section>
-
-      <Section title="Zoom">
-        <SettingRow label="Mouse Wheel Zoom" description="Use mouse wheel to zoom in/out">
-          <Switch
-            checked={settings.mouseWheelZoom}
-            onChange={(checked) => updateSetting("mouseWheelZoom", checked)}
-            size="sm"
-          />
-        </SettingRow>
-      </Section>
-
       <Section title="Updates">
         <SettingRow
           label="Check for Updates"
           description={
-            available
-              ? `Version ${updateInfo?.version} available`
-              : error
-                ? "Failed to check for updates"
-                : "App is up to date"
+            downloading
+              ? `Downloading ${downloadProgress?.percentage ?? 0}%`
+              : installing
+                ? "Installing update..."
+                : available
+                  ? `Version ${updateInfo?.version} available`
+                  : error
+                    ? "Failed to check for updates"
+                    : "App is up to date"
           }
         >
           <div className="flex gap-2">
             <Button
-              onClick={checkForUpdates}
+              onClick={handleCheckForUpdates}
               disabled={checking || downloading || installing}
               variant="ghost"
               size="xs"
@@ -143,7 +133,20 @@ export const GeneralSettings = () => {
             )}
           </div>
         </SettingRow>
-        {error && <div className="mt-2 text-red-500 text-xs">{error}</div>}
+
+        {/* Download progress bar */}
+        {downloading && downloadProgress && (
+          <div className="mt-2 px-3">
+            <div className="h-1 w-full overflow-hidden rounded-full bg-secondary-bg">
+              <div
+                className="h-full bg-accent transition-all duration-300"
+                style={{ width: `${downloadProgress.percentage}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {error && <div className="mt-2 px-3 text-error text-xs">{error}</div>}
       </Section>
 
       <Section title="CLI Command">
@@ -180,6 +183,12 @@ export const GeneralSettings = () => {
               </Button>
             )}
           </div>
+        </SettingRow>
+      </Section>
+
+      <Section title="About">
+        <SettingRow label="Version" description="Current application version">
+          <span className="text-text-lighter text-xs">{appVersion || "..."}</span>
         </SettingRow>
       </Section>
     </div>

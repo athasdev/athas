@@ -1,18 +1,65 @@
 import { themeRegistry } from "../extensions/themes/theme-registry";
 import type { ThemeDefinition } from "../extensions/themes/types";
 
-interface JsonTheme {
+/**
+ * New theme format (recommended)
+ */
+interface NewJsonTheme {
   id: string;
   name: string;
-  description: string;
-  category: "System" | "Light" | "Dark";
-  isDark?: boolean;
-  cssVariables: Record<string, string>;
-  syntaxTokens?: Record<string, string>;
+  description?: string;
+  appearance: "dark" | "light";
+  colors: Record<string, string>;
+  syntax: Record<string, string>;
 }
 
-interface ThemeFile {
-  themes: JsonTheme[];
+interface NewThemeFile {
+  name: string;
+  author?: string;
+  description?: string;
+  themes: NewJsonTheme[];
+}
+
+/**
+ * Check if theme file is in the new format
+ */
+function isNewFormat(themeFile: unknown): themeFile is NewThemeFile {
+  if (!themeFile || typeof themeFile !== "object") return false;
+  const file = themeFile as Record<string, unknown>;
+  if (!file.themes || !Array.isArray(file.themes)) return false;
+  if (file.themes.length === 0) return false;
+  const firstTheme = file.themes[0] as Record<string, unknown>;
+  return "appearance" in firstTheme && "colors" in firstTheme && "syntax" in firstTheme;
+}
+
+/**
+ * Convert new format theme to internal ThemeDefinition
+ */
+function convertNewFormatTheme(jsonTheme: NewJsonTheme): ThemeDefinition {
+  // Convert colors to CSS variables with -- prefix
+  const cssVariables: Record<string, string> = {};
+  for (const [key, value] of Object.entries(jsonTheme.colors)) {
+    cssVariables[`--${key}`] = value;
+  }
+
+  // Convert syntax to syntaxTokens with --syntax- prefix
+  const syntaxTokens: Record<string, string> = {};
+  for (const [key, value] of Object.entries(jsonTheme.syntax)) {
+    syntaxTokens[`--syntax-${key}`] = value;
+  }
+
+  const isDark = jsonTheme.appearance === "dark";
+
+  return {
+    id: jsonTheme.id,
+    name: jsonTheme.name,
+    description: jsonTheme.description || "",
+    category: isDark ? "Dark" : "Light",
+    cssVariables,
+    syntaxTokens,
+    isDark,
+    icon: undefined,
+  };
 }
 
 export const uploadTheme = async (
@@ -26,7 +73,7 @@ export const uploadTheme = async (
 
     // Read and parse JSON file
     const content = await file.text();
-    let themeFile: ThemeFile;
+    let themeFile: unknown;
 
     try {
       themeFile = JSON.parse(content);
@@ -37,50 +84,64 @@ export const uploadTheme = async (
       };
     }
 
-    // Validate structure
-    if (!themeFile.themes || !Array.isArray(themeFile.themes)) {
+    // Check if it has a themes array
+    if (
+      !themeFile ||
+      typeof themeFile !== "object" ||
+      !("themes" in themeFile) ||
+      !Array.isArray((themeFile as Record<string, unknown>).themes)
+    ) {
       return {
         success: false,
         error: 'Theme file must have a "themes" array property',
       };
     }
 
-    if (themeFile.themes.length === 0) {
+    const themesArray = (themeFile as Record<string, unknown[]>).themes;
+    if (themesArray.length === 0) {
       return { success: false, error: "No themes found in file" };
     }
 
-    if (themeFile.themes.length > 1) {
+    if (themesArray.length > 1) {
       return { success: false, error: "Multiple themes in one file not supported yet" };
     }
 
-    const jsonTheme = themeFile.themes[0];
+    let themeDefinition: ThemeDefinition;
 
-    // Validate required fields
-    if (!jsonTheme.id || !jsonTheme.name || !jsonTheme.category) {
+    if (isNewFormat(themeFile)) {
+      // New format: colors, syntax, appearance
+      const jsonTheme = themeFile.themes[0];
+
+      // Validate required fields
+      if (!jsonTheme.id || !jsonTheme.name || !jsonTheme.appearance) {
+        return {
+          success: false,
+          error: "Theme must have id, name, and appearance properties",
+        };
+      }
+
+      if (!jsonTheme.colors || typeof jsonTheme.colors !== "object") {
+        return {
+          success: false,
+          error: "Theme must have colors object",
+        };
+      }
+
+      if (!jsonTheme.syntax || typeof jsonTheme.syntax !== "object") {
+        return {
+          success: false,
+          error: "Theme must have syntax object",
+        };
+      }
+
+      themeDefinition = convertNewFormatTheme(jsonTheme);
+    } else {
       return {
         success: false,
-        error: "Theme must have id, name, and category properties",
+        error:
+          "Invalid theme format. Theme must have: id, name, appearance (dark/light), colors, and syntax objects",
       };
     }
-
-    if (!jsonTheme.cssVariables || typeof jsonTheme.cssVariables !== "object") {
-      return {
-        success: false,
-        error: "Theme must have cssVariables object",
-      };
-    }
-
-    // Convert to ThemeDefinition
-    const themeDefinition: ThemeDefinition = {
-      id: jsonTheme.id,
-      name: jsonTheme.name,
-      description: jsonTheme.description,
-      category: jsonTheme.category,
-      cssVariables: jsonTheme.cssVariables,
-      syntaxTokens: jsonTheme.syntaxTokens,
-      isDark: jsonTheme.isDark,
-      icon: undefined,
-    };
 
     // Register the theme
     themeRegistry.registerTheme(themeDefinition);

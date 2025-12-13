@@ -2,7 +2,6 @@
 .editor-viewport {
   font-family: var(--editor-font-family);
   background-color: var(--color-background);
-  color: var(--color-text);
 }
 
 .editor-line-wrapper {

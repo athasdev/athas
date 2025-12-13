@@ -1,5 +1,6 @@
 import { appDataDir } from "@tauri-apps/api/path";
-import { useEffect, useRef, useState } from "react";
+import { History } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -37,6 +38,7 @@ import { createSettingsActions } from "../constants/settings-actions";
 import { createViewActions } from "../constants/view-actions";
 import { createWindowActions } from "../constants/window-actions";
 import type { Action } from "../models/action.types";
+import { useActionsStore } from "../store";
 
 const CommandPalette = () => {
   // Get data from stores
@@ -70,6 +72,8 @@ const CommandPalette = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
+  const lastEnteredActions = useActionsStore.use.lastEnteredActionsStack();
+  const pushAction = useActionsStore.use.pushAction();
   const { settings } = useSettingsStore();
   const { setMode } = useVimStore.use.actions();
   const lspStatus = useLspStore.use.lspStatus();
@@ -86,6 +90,7 @@ const CommandPalette = () => {
     switchToNextBuffer,
     switchToPreviousBuffer,
     reopenClosedTab,
+    openWebViewerBuffer,
   } = useBufferStore.use.actions();
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
   const { openBuffer } = useBufferStore.use.actions();
@@ -127,6 +132,7 @@ const CommandPalette = () => {
       zoomIn,
       zoomOut,
       resetZoom,
+      openWebViewerBuffer,
       onClose,
     }),
     ...createSettingsActions({
@@ -205,6 +211,19 @@ const CommandPalette = () => {
       action.category.toLowerCase().includes(query.toLowerCase()),
   );
 
+  const prioritizedActions = useMemo(() => {
+    if (!settings.coreFeatures.persistentCommands) return filteredActions;
+    if (!filteredActions) return [];
+
+    const remaining = filteredActions.filter((action) => !lastEnteredActions.includes(action.id));
+
+    const prioritized = lastEnteredActions
+      .map((id) => filteredActions.find((a) => a.id === id))
+      .filter((a): a is Action => !!a); // Filter out undefined and assure it is of type Action
+
+    return [...prioritized, ...remaining];
+  }, [filteredActions, lastEnteredActions, settings.coreFeatures.persistentCommands]);
+
   // Handle keyboard navigation
   useEffect(() => {
     if (!isVisible) return;
@@ -213,7 +232,7 @@ const CommandPalette = () => {
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
-          setSelectedIndex((prev) => (prev < filteredActions.length - 1 ? prev + 1 : prev));
+          setSelectedIndex((prev) => (prev < prioritizedActions.length - 1 ? prev + 1 : prev));
           break;
         case "ArrowUp":
           e.preventDefault();
@@ -221,8 +240,9 @@ const CommandPalette = () => {
           break;
         case "Enter":
           e.preventDefault();
-          if (filteredActions[selectedIndex]) {
-            filteredActions[selectedIndex].action();
+          if (prioritizedActions[selectedIndex]) {
+            prioritizedActions[selectedIndex].action();
+            pushAction(prioritizedActions[selectedIndex].id);
           }
           break;
         // Escape is now handled globally in use-keyboard-shortcuts
@@ -231,7 +251,7 @@ const CommandPalette = () => {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isVisible, filteredActions, selectedIndex]);
+  }, [isVisible, filteredActions, selectedIndex, prioritizedActions]);
 
   // Reset state when visibility changes
   useEffect(() => {
@@ -268,7 +288,7 @@ const CommandPalette = () => {
 
   return (
     <Command isVisible={isVisible} onClose={onClose}>
-      <CommandHeader onClose={onClose}>
+      <CommandHeader onClose={onClose} showClearButton={settings.coreFeatures.persistentCommands}>
         <CommandInput
           ref={inputRef}
           value={query}
@@ -281,25 +301,31 @@ const CommandPalette = () => {
         {filteredActions.length === 0 ? (
           <CommandEmpty>No commands found</CommandEmpty>
         ) : (
-          filteredActions.map((action, index) => (
-            <CommandItem
-              key={action.id}
-              onClick={() => {
-                action.action();
-              }}
-              isSelected={index === selectedIndex}
-              className="px-3 py-1.5"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-xs">{action.label}</div>
-              </div>
-              {action.keybinding && (
-                <div className="flex-shrink-0">
-                  <KeybindingBadge keys={action.keybinding} />
+          prioritizedActions.map((action, index) => {
+            const isRecent =
+              settings.coreFeatures.persistentCommands && lastEnteredActions.includes(action.id);
+            return (
+              <CommandItem
+                key={action.id}
+                onClick={() => {
+                  action.action();
+                  pushAction(action.id);
+                }}
+                isSelected={index === selectedIndex}
+                className="px-3 py-1.5"
+              >
+                {isRecent && <History size={12} className="flex-shrink-0 text-text-lighter" />}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-xs">{action.label}</div>
                 </div>
-              )}
-            </CommandItem>
-          ))
+                {action.keybinding && (
+                  <div className="flex-shrink-0">
+                    <KeybindingBadge keys={action.keybinding} />
+                  </div>
+                )}
+              </CommandItem>
+            );
+          })
         )}
       </CommandList>
     </Command>

@@ -1,8 +1,8 @@
 import {
+  Brush,
   Folder,
   Keyboard,
   Languages,
-  Monitor,
   Package,
   PenTool,
   Search,
@@ -44,9 +44,9 @@ const tabs: TabItem[] = [
     icon: Folder,
   },
   {
-    id: "theme",
-    label: "Theme",
-    icon: Monitor,
+    id: "appearance",
+    label: "Appearance",
+    icon: Brush,
   },
   {
     id: "extensions",
@@ -115,10 +115,7 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
             placeholder="Search settings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={cn(
-              "ui-font w-full rounded border bg-primary-bg py-1 pr-6 pl-7 text-text text-xs",
-              "border-border placeholder:text-text-lighter",
-            )}
+            className="ui-font w-full rounded border border-border bg-primary-bg py-1 pr-6 pl-7 text-text text-xs placeholder:text-text-lighter"
           />
         </div>
       </div>

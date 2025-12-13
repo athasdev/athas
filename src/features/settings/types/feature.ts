@@ -16,4 +16,5 @@ export interface CoreFeaturesState {
   diagnostics: boolean;
   aiChat: boolean;
   breadcrumbs: boolean;
+  persistentCommands: boolean;
 }

@@ -85,6 +85,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       <div className="flex items-center">
         {isEditing ? (
           <KeybindingInput
+            commandId={command.id}
             value={keybinding?.key}
             onSave={handleSave}
             onCancel={() => setIsEditing(false)}

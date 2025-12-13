@@ -1,175 +1,212 @@
 # Extension Development
 
-This guide explains how to add language extensions to Athas.
+This guide explains how the extension system works and how to add new extensions.
 
 ## Overview
 
-Extensions provide language support including:
-- LSP server configuration
-- Formatter configuration
-- Linter configuration
-- Code snippets
-- File extension mappings
+Athas supports multiple extension categories:
 
-## Adding a New Language Extension
+| Category | Examples | Current State |
+|----------|----------|---------------|
+| **Languages** | TypeScript, PHP, Python | Bundled + downloadable |
+| **Themes** | Ayu, Nord, Dracula | Bundled (JSON files) |
+| **Icon Themes** | Material, Seti, Minimal | Bundled (TSX components) |
 
-### 1. Create Extension Directory
+### Language Extensions (Three-Tier System)
 
-```bash
-mkdir -p src/extensions/bundled/<language>/lsp
-touch src/extensions/bundled/<language>/lsp/.gitkeep
+| Tier | Example | What It Provides | Storage |
+|------|---------|------------------|---------|
+| **Bundled** | TypeScript | Full LSP + syntax | Ships with app |
+| **Packaged** | Python, Go, Rust | Syntax highlighting only | IndexedDB |
+| **Full** | PHP | Full LSP + syntax + snippets | Filesystem |
+
+**Current state:**
+- TypeScript is bundled with LSP
+- 30+ languages have syntax highlighting via tree-sitter
+- PHP is the first downloadable full extension with LSP
+
+## Architecture
+
+```
+src/extensions/
+├── bundled/                    # Bundled language extensions
+│   └── typescript/
+├── languages/
+│   ├── manifests/              # Syntax-only definitions (30+ langs)
+│   ├── full-extensions.ts      # Downloadable extensions with LSP
+│   └── language-packager.ts    # Manifest converter
+├── themes/
+│   ├── builtin/                # Color themes (JSON)
+│   ├── theme-registry.ts       # Theme management
+│   └── types.ts                # Theme types
+├── icon-themes/
+│   ├── builtin/                # Icon themes (TSX)
+│   ├── icon-theme-registry.ts  # Icon theme management
+│   └── types.ts                # Icon theme types
+├── registry/
+│   ├── extension-registry.ts   # Bundled extension loader
+│   └── extension-store.ts      # Zustand store
+├── installer/
+│   └── extension-installer.ts  # Download logic
+└── types/
+    └── extension-manifest.ts   # TypeScript types
 ```
 
-### 2. Create Extension Manifest
+---
 
-`src/extensions/bundled/<language>/extension.json`:
+## Adding a Language Extension
+
+### Option 1: Syntax Only (Simple)
+
+Add a manifest to `src/extensions/languages/manifests/`:
 
 ```json
 {
-  "id": "athas.<language>",
-  "name": "<Language>",
-  "displayName": "<Language> Language Support",
-  "description": "<Language> language support",
+  "id": "language.python",
+  "name": "Python",
   "version": "1.0.0",
-  "publisher": "Athas",
-  "categories": ["Language"],
-  "languages": [
-    {
-      "id": "<language>",
-      "extensions": [".ext"],
-      "aliases": ["<Language>"]
+  "description": "Python syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "python",
+      "extensions": ["py", "pyw"],
+      "aliases": ["python"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-python.wasm",
+      "highlightQuery": "/tree-sitter/queries/python/highlights.scm"
     }
-  ],
-  "lsp": {
-    "server": {
-      "darwin": "./lsp/<server-name>",
-      "linux": "./lsp/<server-name>",
-      "win32": "./lsp/<server-name>.exe"
-    },
-    "args": ["--stdio"],
-    "fileExtensions": [".ext"],
-    "languageIds": ["<language>"]
   }
 }
 ```
 
-### 3. Register Extension
+WASM and queries are downloaded from CDN on first use.
 
-Edit `src/extensions/registry/extension-registry.ts`:
+### Option 2: Full Extension with LSP
+
+**1. Add to `full-extensions.ts`:**
 
 ```typescript
-import languageManifest from "../bundled/<language>/extension.json";
-
-const bundledManifests: ExtensionManifest[] = [
-  // ... existing extensions
-  languageManifest as ExtensionManifest,
-];
-```
-
-### 4. Update Setup Script
-
-Add LSP installation to `scripts/setup-lsp-servers.sh`:
-
-```bash
-echo "Setting up <Language> LSP..."
-LSP_DIR="$EXTENSIONS_DIR/<language>/lsp"
-# Add installation logic
-```
-
-### 5. Test
-
-```bash
-./scripts/setup-lsp-servers.sh
-bun tauri dev
-```
-
-## Manifest Structure
-
-### Core Metadata (Required)
-- `id` - Unique identifier (`publisher.name`)
-- `name` - Short name
-- `displayName` - Human-readable name
-- `description` - Brief description
-- `version` - Semantic version
-- `publisher` - Publisher name
-- `categories` - Array: `Language`, `Formatter`, `Linter`, `Theme`, `Snippets`, `Other`
-
-### Language Support
-```json
-"languages": [{
-  "id": "typescript",
-  "extensions": [".ts", ".tsx"],
-  "aliases": ["TypeScript", "ts"]
-}]
-```
-
-### LSP Configuration
-```json
-"lsp": {
-  "server": {
-    "darwin": "./lsp/server",
-    "linux": "./lsp/server",
-    "win32": "./lsp/server.exe"
+{
+  id: "athas.php",
+  name: "PHP",
+  displayName: "PHP Language Support",
+  lsp: {
+    server: {
+      darwin: "lsp/intelephense-darwin-arm64",
+      linux: "lsp/intelephense-linux-x64",
+      win32: "lsp/intelephense-win32-x64.exe",
+    },
+    args: ["--stdio"],
+    fileExtensions: [".php"],
+    languageIds: ["php"],
   },
-  "args": ["--stdio"],
-  "fileExtensions": [".ts"],
-  "languageIds": ["typescript"],
-  "initializationOptions": {}
+  installation: {
+    platformArch: {
+      "darwin-arm64": {
+        downloadUrl: "https://athas.dev/extensions/packages/php/php-darwin-arm64.tar.gz",
+        size: 54525952,
+        checksum: "...",
+      },
+      // ... other platforms
+    },
+  },
 }
 ```
 
-### Formatter Configuration
+**2. Create package** in `www/public/extensions/packages/php/`:
+
+```
+php/
+├── extension.json
+├── snippets.json
+├── queries/highlights.scm
+├── parsers/tree-sitter-php.wasm
+├── lsp/
+│   ├── intelephense-darwin-arm64
+│   ├── intelephense-darwin-x64
+│   ├── intelephense-linux-x64
+│   └── intelephense-win32-x64.exe
+└── build.sh
+```
+
+**3. Build platform packages** and upload to CDN.
+
+---
+
+## Adding a Theme
+
+Add a JSON file to `src/extensions/themes/builtin/`:
+
 ```json
-"formatter": {
-  "command": {
-    "darwin": "./formatters/prettier",
-    "linux": "./formatters/prettier",
-    "win32": "./formatters/prettier.exe"
-  },
-  "args": ["--stdin-filepath", "${file}"],
-  "languages": ["typescript"],
-  "formatOnSave": true,
-  "inputMethod": "stdin",
-  "outputMethod": "stdout"
+{
+  "name": "my-theme",
+  "displayName": "My Theme",
+  "description": "A custom theme",
+  "author": "Your Name",
+  "version": "1.0.0",
+  "category": "dark",
+  "colors": {
+    "primary-bg": "#1e1e1e",
+    "secondary-bg": "#252526",
+    "text": "#d4d4d4",
+    "accent": "#007acc",
+    "syntax-keyword": "#569cd6",
+    "syntax-string": "#ce9178"
+  }
 }
 ```
 
-### Linter Configuration
-```json
-"linter": {
-  "command": {
-    "darwin": "./linters/eslint",
-    "linux": "./linters/eslint",
-    "win32": "./linters/eslint.exe"
+Register in `src/extensions/themes/theme-initializer.ts`.
+
+---
+
+## Adding an Icon Theme
+
+Icon themes are TSX components in `src/extensions/icon-themes/builtin/`:
+
+```typescript
+export const myIconTheme: IconThemeDefinition = {
+  id: "my-icons",
+  name: "My Icons",
+  description: "Custom icon theme",
+  getFileIcon: (fileName, isDir, isExpanded, isSymlink) => {
+    // Return icon based on file type
+    if (isDir) return { icon: <FolderIcon /> };
+    if (fileName.endsWith(".ts")) return { icon: <TypeScriptIcon /> };
+    return { icon: <FileIcon /> };
   },
-  "args": ["--format", "json", "--stdin"],
-  "languages": ["typescript"],
-  "lintOnSave": true,
-  "inputMethod": "stdin",
-  "diagnosticFormat": "lsp"
-}
+};
 ```
 
-### Snippets
-```json
-"snippets": [{
-  "language": "typescript",
-  "snippets": [{
-    "prefix": "log",
-    "body": "console.log('${1:message}:', ${2:variable});",
-    "description": "Log to console"
-  }]
-}]
-```
+Register in `src/extensions/icon-themes/icon-theme-initializer.ts`.
 
-## Platform Identifiers
+---
 
-- `darwin` - macOS
-- `linux` - Linux
-- `win32` - Windows
+## How Installation Works
 
-## File Structure
+When a user opens a file needing an uninstalled extension:
 
-Complete extension example in `src/extensions/bundled/typescript/extension.complete-example.json`.
+1. Store checks if extension is installed
+2. Dispatches `extension-install-needed` event
+3. Toast shows: "Install PHP?"
+4. On install:
+   - **Syntax-only**: WASM → IndexedDB
+   - **Full**: tar.gz → Filesystem (via Tauri)
+5. Syntax highlighting triggers
 
-TypeScript types in `src/extensions/types/extension-manifest.ts`.
+## Platform Support
+
+Full extensions support:
+- `darwin-arm64` / `darwin-x64`
+- `linux-x64` / `linux-arm64`
+- `win32-x64`
+
+---
+
+## What's Next
+
+- **Auto-updates**: CDN registry with version checking
+- **Multi-LSP choice**: Pick between LSP servers per language
+- **Community marketplace**: GitHub-based extension registry
+- **Downloadable themes**: Themes as installable extensions

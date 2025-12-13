@@ -9,14 +9,18 @@ class ConnectionStore {
 
   private async getConnectionsStore() {
     if (!this.connectionsStore) {
-      this.connectionsStore = await load(CONNECTIONS_STORE, { autoSave: true });
+      this.connectionsStore = await load(CONNECTIONS_STORE, {
+        autoSave: true,
+      } as Parameters<typeof load>[1]);
     }
     return this.connectionsStore;
   }
 
   private async getCredentialsStore() {
     if (!this.credentialsStore) {
-      this.credentialsStore = await load(CREDENTIALS_STORE, { autoSave: true });
+      this.credentialsStore = await load(CREDENTIALS_STORE, {
+        autoSave: true,
+      } as Parameters<typeof load>[1]);
     }
     return this.credentialsStore;
   }

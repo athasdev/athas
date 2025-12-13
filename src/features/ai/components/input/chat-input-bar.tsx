@@ -1,4 +1,4 @@
-import { ChevronDown, Send, Square } from "lucide-react";
+import { Send, Square } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
@@ -10,6 +10,7 @@ import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { ContextSelector } from "../selectors/context-selector";
+import { ModelSelectorDropdown } from "../selectors/model-selector-dropdown";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -27,7 +28,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [hasInputText, setHasInputText] = useState(false);
 
   // Get state from stores with optimized selectors
-  const { settings } = useSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
   const { openSettingsDialog } = useUIState();
   const { fontSize, fontFamily } = useEditorSettingsStore();
 
@@ -523,18 +524,20 @@ const AIChatInputBar = memo(function AIChatInputBar({
             )}
           </div>
           <div className="flex select-none items-center gap-1">
-            {/* Model selector button */}
-            <button
-              onClick={() => openSettingsDialog("ai")}
-              className="ui-font flex items-center gap-1 rounded bg-transparent px-2 py-1 text-xs transition-colors hover:bg-hover"
-              title="Open AI settings to change model"
-            >
-              <div className="truncate text-text-lighter text-xs">
-                {getModelById(settings.aiProviderId, settings.aiModelId)?.name ||
-                  "Claude Code Local"}
-              </div>
-              <ChevronDown size={12} className="text-text-lighter" />
-            </button>
+            {/* Model selector dropdown */}
+            <ModelSelectorDropdown
+              currentProviderId={settings.aiProviderId}
+              currentModelId={settings.aiModelId}
+              currentModelName={
+                getModelById(settings.aiProviderId, settings.aiModelId)?.name || "Select Model"
+              }
+              onSelect={(providerId, modelId) => {
+                updateSetting("aiProviderId", providerId);
+                updateSetting("aiModelId", modelId);
+              }}
+              onOpenSettings={() => openSettingsDialog("ai")}
+              hasApiKey={(providerId) => useAIChatStore.getState().hasProviderApiKey(providerId)}
+            />
             <Button
               type="submit"
               disabled={!hasInputText || !hasApiKey}

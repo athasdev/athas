@@ -162,18 +162,31 @@ fn get_extensions_dir() -> Result<PathBuf, String> {
 }
 
 #[command]
-pub fn get_bundled_extensions_path() -> Result<String, String> {
-   // Get current working directory
-   let mut cwd =
-      env::current_dir().map_err(|e| format!("Failed to get current directory: {}", e))?;
+pub fn get_bundled_extensions_path(app_handle: AppHandle) -> Result<String, String> {
+   // In production, use Tauri's resource directory API
+   // In development, fall back to the source path
+   let extensions_path = if cfg!(debug_assertions) {
+      // Development mode: use source path
+      let mut cwd =
+         env::current_dir().map_err(|e| format!("Failed to get current directory: {}", e))?;
 
-   // If we're in src-tauri directory, go up one level to project root
-   if cwd.ends_with("src-tauri") {
-      cwd.pop();
-   }
+      // If we're in src-tauri directory, go up one level to project root
+      if cwd.ends_with("src-tauri") {
+         cwd.pop();
+      }
 
-   // Build path to bundled extensions
-   let extensions_path = cwd.join("src").join("extensions").join("bundled");
+      cwd.join("src").join("extensions").join("bundled")
+   } else {
+      // Production mode: use Tauri's resource directory
+      use tauri::Manager;
+
+      let resource_path = app_handle
+         .path()
+         .resource_dir()
+         .map_err(|e| format!("Failed to get resource dir: {}", e))?;
+
+      resource_path.join("bundled")
+   };
 
    log::info!("Bundled extensions path: {:?}", extensions_path);
 
