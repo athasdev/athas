@@ -124,6 +124,7 @@ const defaultSettings: Settings = {
     diagnostics: true,
     aiChat: true,
     breadcrumbs: true,
+    persistentCommands: true,
   },
   // Advanced
   //  > nothing here, yet
@@ -144,11 +145,15 @@ const getStore = async () => {
   if (!storeInstance) {
     storeInstance = await load("settings.json", { autoSave: true } as Parameters<typeof load>[1]);
 
-    // Initialize defaults if not present
+    // Initialize defaults if not present, merge nested objects
     for (const [key, value] of Object.entries(defaultSettings)) {
       const current = await storeInstance.get(key);
       if (current === null || current === undefined) {
         await storeInstance.set(key, value);
+      } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+        // Merge nested objects to add new keys from defaults
+        const merged = { ...value, ...current };
+        await storeInstance.set(key, merged);
       }
     }
     await storeInstance.save();
