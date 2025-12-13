@@ -7,7 +7,7 @@ const GITHUB_USER_URL: &str = "https://api.github.com/user";
 const COPILOT_TOKEN_URL: &str = "https://api.github.com/copilot_internal/v2/token";
 const COPILOT_MODELS_URL: &str = "https://api.githubcopilot.com/models";
 
-const GITHUB_CLIENT_ID: &str = "Iv1.b507a08c87ecfe98";
+const GITHUB_CLIENT_ID: &str = "Ov23liyskE1hUrlbL9M4";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeviceFlowResponse {
