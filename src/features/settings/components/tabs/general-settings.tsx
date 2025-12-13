@@ -156,7 +156,7 @@ export const GeneralSettings = () => {
             cliChecking
               ? "Checking..."
               : cliInstalled
-                ? "CLI command is installed at /usr/local/bin/athas"
+                ? "CLI command is installed at $HOME/.local/bin/athas"
                 : "Install 'athas' command to launch app from terminal"
           }
         >
