@@ -1,4 +1,4 @@
-use crate::file_watcher::FileWatcher;
+use crate::features::file_watcher::FileWatcher;
 use std::sync::Arc;
 use tauri::command;
 
