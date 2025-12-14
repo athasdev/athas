@@ -122,7 +122,12 @@ interface LspActions {
   };
 
   // LSP Status actions
-  updateLspStatus: (status: LspStatus, workspaces?: string[], error?: string) => void;
+  updateLspStatus: (
+    status: LspStatus,
+    workspaces?: string[],
+    error?: string,
+    languages?: string[],
+  ) => void;
   setLspError: (error: string) => void;
   clearLspError: () => void;
 }
@@ -454,13 +459,14 @@ export const useLspStore = createSelectors(
       },
 
       // LSP Status actions
-      updateLspStatus: (status, workspaces, error) => {
+      updateLspStatus: (status, workspaces, error, languages) => {
         set((state) => ({
           lspStatus: {
             ...state.lspStatus,
             status,
             activeWorkspaces: workspaces || state.lspStatus.activeWorkspaces,
             lastError: error || (status === "error" ? state.lspStatus.lastError : undefined),
+            supportedLanguages: languages || state.lspStatus.supportedLanguages,
           },
         }));
       },

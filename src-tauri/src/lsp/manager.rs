@@ -135,7 +135,8 @@ impl LspManager {
          server_args,
          root_uri.clone(),
          Some(self.app_handle.clone()),
-      )?;
+      )
+      .await?;
 
       // Initialize the client
       client.initialize(root_uri).await?;
@@ -233,7 +234,8 @@ impl LspManager {
          server_args,
          root_uri.clone(),
          Some(self.app_handle.clone()),
-      )?;
+      )
+      .await?;
 
       // Initialize the client
       client.initialize(root_uri).await?;

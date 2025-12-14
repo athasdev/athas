@@ -109,7 +109,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const cursorPosition = useEditorStateStore.use.cursorPosition();
 
   // Consolidated LSP integration (document lifecycle, completions, hover)
-  useLspIntegration({
+  const { hoverHandlers } = useLspIntegration({
     filePath,
     value,
     cursorPosition,
@@ -217,7 +217,15 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
 
           {/* Main editor - absolute positioned to fill container */}
           <div className="absolute inset-0 bg-primary-bg">
-            {showMarkdownPreview ? <MarkdownPreview /> : <Editor />}
+            {showMarkdownPreview ? (
+              <MarkdownPreview />
+            ) : (
+              <Editor
+                onMouseMove={hoverHandlers.handleHover}
+                onMouseLeave={hoverHandlers.handleMouseLeave}
+                onMouseEnter={hoverHandlers.handleMouseEnter}
+              />
+            )}
           </div>
         </div>
       </div>

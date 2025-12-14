@@ -32,9 +32,12 @@ import { MultiCursorLayer } from "./layers/multi-cursor-layer";
 
 interface EditorProps {
   className?: string;
+  onMouseMove?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onMouseLeave?: () => void;
+  onMouseEnter?: () => void;
 }
 
-export function Editor({ className }: EditorProps) {
+export function Editor({ className, onMouseMove, onMouseLeave, onMouseEnter }: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const multiCursorRef = useRef<HTMLDivElement>(null);
@@ -718,6 +721,9 @@ export function Editor({ className }: EditorProps) {
 
       <div
         className={`overlay-editor-container relative min-h-0 min-w-0 flex-1 bg-primary-bg ${className || ""}`}
+        onMouseMove={onMouseMove}
+        onMouseLeave={onMouseLeave}
+        onMouseEnter={onMouseEnter}
       >
         {hasSyntaxHighlighting && (
           <HighlightLayer

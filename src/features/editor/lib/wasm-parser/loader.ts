@@ -155,7 +155,10 @@ class WasmParserLoader {
    * Fetch highlight query from local public directory
    */
   private async fetchLocalHighlightQuery(languageId: string): Promise<string | null> {
-    const localPath = `/tree-sitter/queries/${languageId}/highlights.scm`;
+    // TypeScript and JavaScript both use tsx queries
+    const queryFolder =
+      languageId === "typescript" || languageId === "javascript" ? "tsx" : languageId;
+    const localPath = `/tree-sitter/queries/${queryFolder}/highlights.scm`;
     try {
       const response = await fetch(localPath);
       if (response.ok) {
@@ -258,7 +261,7 @@ class WasmParserLoader {
             // Continue even if caching fails
           }
         } else {
-          // Load from local path (backward compatibility)
+          // Load from local path
           logger.info("WasmParser", `Loading ${languageId} from local path: ${wasmPath}`);
 
           const response = await fetch(wasmPath);
@@ -268,6 +271,34 @@ class WasmParserLoader {
 
           const arrayBuffer = await response.arrayBuffer();
           wasmBytes = new Uint8Array(arrayBuffer);
+
+          // Also fetch highlight query from local path if not provided
+          if (!queryText) {
+            const localQuery = await this.fetchLocalHighlightQuery(languageId);
+            if (localQuery) {
+              queryText = localQuery;
+              logger.info("WasmParser", `Loaded local highlight query for ${languageId}`);
+            }
+          }
+
+          // Cache local parsers to IndexedDB for future use
+          try {
+            await indexedDBParserCache.set({
+              languageId,
+              wasmBlob: new Blob([wasmBytes as BlobPart]),
+              wasmData: wasmBytes.buffer as ArrayBuffer,
+              highlightQuery: queryText || "",
+              version: "1.0.0",
+              checksum: "",
+              downloadedAt: Date.now(),
+              lastUsedAt: Date.now(),
+              size: wasmBytes.byteLength,
+              sourceUrl: wasmPath,
+            });
+            logger.info("WasmParser", `Cached ${languageId} to IndexedDB (from local path)`);
+          } catch (cacheError) {
+            logger.warn("WasmParser", `Failed to cache ${languageId}:`, cacheError);
+          }
         }
       }
 

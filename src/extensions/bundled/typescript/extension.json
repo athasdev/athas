@@ -31,10 +31,10 @@
   },
   "lsp": {
     "server": {
-      "default": "./lsp/node_modules/.bin/typescript-language-server",
-      "darwin": "./lsp/node_modules/.bin/typescript-language-server",
-      "linux": "./lsp/node_modules/.bin/typescript-language-server",
-      "win32": "./lsp/node_modules/.bin/typescript-language-server.cmd"
+      "default": "./lsp/node_modules/typescript-language-server/lib/cli.mjs",
+      "darwin": "./lsp/node_modules/typescript-language-server/lib/cli.mjs",
+      "linux": "./lsp/node_modules/typescript-language-server/lib/cli.mjs",
+      "win32": "./lsp/node_modules/typescript-language-server/lib/cli.mjs"
     },
     "args": ["--stdio"],
     "fileExtensions": [".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs"],

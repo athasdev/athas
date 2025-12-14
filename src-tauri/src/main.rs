@@ -390,6 +390,10 @@ fn main() {
          check_cli_installed,
          install_cli_command,
          uninstall_cli_command,
+         // Runtime commands
+         ensure_runtime,
+         get_runtime_status,
+         get_runtime_version,
          // Menu commands
          menu::toggle_menu_bar,
          menu::rebuild_menu_themes,

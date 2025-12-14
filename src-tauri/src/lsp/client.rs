@@ -1,9 +1,11 @@
+use crate::features::runtime::NodeRuntime;
 use anyhow::{Context, Result};
 use crossbeam_channel::{Sender, bounded};
 use lsp_types::*;
 use serde_json::{Value, json};
 use std::{
    collections::HashMap,
+   ffi::OsStr,
    io::{BufRead, BufReader, Read, Write},
    path::PathBuf,
    process::{Child, Command, Stdio},
@@ -27,15 +29,54 @@ pub struct LspClient {
 }
 
 impl LspClient {
-   pub fn start(
+   pub async fn start(
       server_path: PathBuf,
       args: Vec<String>,
       _root_uri: Url,
       app_handle: Option<AppHandle>,
    ) -> Result<(Self, Child)> {
-      log::info!("Starting language server: {:?} {:?}", server_path, args);
-      let mut child = Command::new(server_path)
-         .args(args)
+      // Check if this is a JavaScript-based language server
+      let is_js_server = server_path
+         .extension()
+         .map(|ext| ext == OsStr::new("js") || ext == OsStr::new("mjs") || ext == OsStr::new("cjs"))
+         .unwrap_or(false);
+
+      let (command_path, final_args) = if is_js_server {
+         // JS-based server requires Node.js runtime
+         let node_path = if let Some(ref handle) = app_handle {
+            // Get Node.js runtime asynchronously
+            let runtime = NodeRuntime::get_or_install(handle)
+               .await
+               .context("Failed to get Node.js runtime for JS-based language server")?;
+            runtime.binary_path().clone()
+         } else {
+            // Fallback: try to find node on system PATH
+            which::which("node").context(
+               "No AppHandle provided and Node.js not found on PATH for JS-based language server",
+            )?
+         };
+
+         // Build args: node <server_path> <original_args>
+         let mut node_args = vec![server_path.to_string_lossy().to_string()];
+         node_args.extend(args);
+
+         log::info!(
+            "Starting JS-based language server with Node.js: {:?} {:?}",
+            node_path,
+            node_args
+         );
+         (node_path, node_args)
+      } else {
+         log::info!(
+            "Starting native language server: {:?} {:?}",
+            server_path,
+            args
+         );
+         (server_path, args)
+      };
+
+      let mut child = Command::new(&command_path)
+         .args(&final_args)
          .stdin(Stdio::piped())
          .stdout(Stdio::piped())
          .stderr(Stdio::piped())
