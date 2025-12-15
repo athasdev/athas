@@ -28,12 +28,12 @@ export const useEditorSettingsStore = createSelectors(
   create<EditorSettingsState>()(
     subscribeWithSelector((set) => ({
       fontSize: 14,
-      fontFamily: "JetBrains Mono",
+      fontFamily: "Menlo, Consolas, Liberation Mono, monospace",
       tabSize: 2,
       wordWrap: true,
       lineNumbers: true,
       disabled: false,
-      theme: "auto",
+      theme: "one-dark",
       actions: {
         setFontSize: (size) => set({ fontSize: size }),
         setFontFamily: (family) => set({ fontFamily: family }),

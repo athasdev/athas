@@ -135,7 +135,8 @@ impl LspManager {
          server_args,
          root_uri.clone(),
          Some(self.app_handle.clone()),
-      )?;
+      )
+      .await?;
 
       // Initialize the client
       client.initialize(root_uri).await?;
@@ -233,7 +234,8 @@ impl LspManager {
          server_args,
          root_uri.clone(),
          Some(self.app_handle.clone()),
-      )?;
+      )
+      .await?;
 
       // Initialize the client
       client.initialize(root_uri).await?;
@@ -304,12 +306,26 @@ impl LspManager {
       let path = PathBuf::from(file_path);
       let clients = self.workspace_clients.lock().unwrap();
 
-      // Find the right language server for this file
-      let server_config = self.registry.find_server_for_file(&path)?;
+      // Find workspace that contains this file (match any server in that workspace)
+      // Since servers are now managed by frontend extension registry, we just need
+      // to find a client whose workspace contains this file
+      for ((workspace_path, _server_name), instance) in clients.iter() {
+         if path.starts_with(workspace_path) {
+            // Check if this server handles this file type
+            if instance
+               .files
+               .iter()
+               .any(|f| f.extension() == path.extension())
+               || instance.files.is_empty()
+            {
+               return Some(instance.client.clone());
+            }
+         }
+      }
 
-      // Find workspace that contains this file
-      for ((workspace_path, server_name), instance) in clients.iter() {
-         if path.starts_with(workspace_path) && server_name == &server_config.name {
+      // Fallback: try to find any server in a workspace containing this file
+      for ((workspace_path, _), instance) in clients.iter() {
+         if path.starts_with(workspace_path) {
             return Some(instance.client.clone());
          }
       }

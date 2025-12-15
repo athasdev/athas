@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronRight, Eye, Search, Sparkles } from "lucide-react";
 import { type RefObject, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
@@ -47,6 +47,33 @@ export default function Breadcrumb() {
   };
 
   const hasSelection = selection && selection.start.offset !== selection.end.offset;
+
+  const isMarkdownFile = () => {
+    if (!activeBuffer) return false;
+    const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
+    return extension === "md" || extension === "markdown";
+  };
+
+  const handlePreviewClick = () => {
+    if (!activeBuffer || activeBuffer.isMarkdownPreview) return;
+
+    const { openBuffer } = useBufferStore.getState().actions;
+    const previewPath = `${activeBuffer.path}:preview`;
+    const previewName = `${activeBuffer.name} (Preview)`;
+
+    openBuffer(
+      previewPath,
+      previewName,
+      activeBuffer.content,
+      false, // isImage
+      false, // isSQLite
+      false, // isDiff
+      true, // isVirtual
+      undefined, // diffData
+      true, // isMarkdownPreview
+      activeBuffer.path, // sourceFilePath
+    );
+  };
 
   const filePath = activeBuffer?.path || "";
   const rootPath = rootFolderPath;
@@ -219,6 +246,16 @@ export default function Breadcrumb() {
           ))}
         </div>
         <div className="flex items-center gap-1">
+          {isMarkdownFile() && !activeBuffer?.isMarkdownPreview && (
+            <button
+              onClick={handlePreviewClick}
+              className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              title="Preview markdown"
+              aria-label="Preview markdown"
+            >
+              <Eye size={12} />
+            </button>
+          )}
           <button
             onClick={handleInlineEditClick}
             disabled={!hasSelection}

@@ -1,9 +1,8 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use claude_bridge::ClaudeCodeBridge;
 use commands::*;
-use file_watcher::FileWatcher;
+use features::{ClaudeCodeBridge, FileWatcher};
 use log::{debug, info};
 use lsp::LspManager;
 use ssh::{ssh_connect, ssh_disconnect, ssh_disconnect_only, ssh_write_file};
@@ -16,10 +15,9 @@ use terminal::{
 };
 use tokio::sync::Mutex;
 
-mod claude_bridge;
 mod commands;
 mod extensions;
-mod file_watcher;
+mod features;
 mod logger;
 mod lsp;
 mod menu;
@@ -40,6 +38,7 @@ fn main() {
       .plugin(tauri_plugin_http::init())
       .plugin(tauri_plugin_process::init())
       .plugin(tauri_plugin_deep_link::init())
+      .plugin(tauri_plugin_updater::Builder::new().build())
       .setup(|app| {
          let store = app.store("settings.json")?;
 
@@ -71,7 +70,7 @@ fn main() {
          app.manage(LspManager::new(app.handle().clone()));
 
          // Set up theme cache
-         app.manage(theme::ThemeCache::new(std::collections::HashMap::new()));
+         app.manage(ThemeCache::new(std::collections::HashMap::new()));
 
          // Auto-start interceptor on app launch
          {
@@ -239,10 +238,7 @@ fn main() {
                      }
                   }
                   // Theme menu items - handle theme IDs from registry
-                  // Theme IDs are either "auto" or contain hyphens (e.g., "catppuccin-mocha")
-                  "auto" => {
-                     let _ = window.emit("menu_theme_change", "auto");
-                  }
+                  // Theme IDs contain hyphens (e.g., "catppuccin-mocha", "one-dark")
                   theme_id if theme_id.contains('-') => {
                      // Theme IDs from registry use hyphens (e.g., "catppuccin-mocha",
                      // "tokyo-night")
@@ -314,6 +310,11 @@ fn main() {
          get_chat_stats,
          // Window commands
          create_remote_window,
+         create_embedded_webview,
+         close_embedded_webview,
+         navigate_embedded_webview,
+         resize_embedded_webview,
+         set_webview_visible,
          // File watcher commands
          start_watching,
          stop_watching,
@@ -389,6 +390,10 @@ fn main() {
          check_cli_installed,
          install_cli_command,
          uninstall_cli_command,
+         // Runtime commands
+         ensure_runtime,
+         get_runtime_status,
+         get_runtime_version,
          // Menu commands
          menu::toggle_menu_bar,
          menu::rebuild_menu_themes,

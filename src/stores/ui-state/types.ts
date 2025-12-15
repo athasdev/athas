@@ -1,14 +1,15 @@
 export type SettingsTab =
   | "general"
   | "editor"
-  | "theme"
+  | "appearance"
   | "extensions"
   | "ai"
   | "keyboard"
   | "language"
   | "features"
   | "advanced"
-  | "fileTree";
+  | "fileTree"
+  | "terminal";
 
 export type BottomPaneTab = "terminal" | "diagnostics";
 

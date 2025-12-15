@@ -41,6 +41,7 @@ interface SettingsActionsParams {
       terminal: boolean;
       aiChat: boolean;
       remote: boolean;
+      persistentCommands: boolean;
     };
   };
   setIsSettingsDialogVisible: (v: boolean) => void;
@@ -380,6 +381,24 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         updateSetting("coreFeatures", {
           ...settings.coreFeatures,
           remote: !settings.coreFeatures.remote,
+        });
+        onClose();
+      },
+    },
+    {
+      id: "toggle-commands-persistence",
+      label: settings.coreFeatures.persistentCommands
+        ? "Features: Disable Persistent Commands"
+        : "Features: Enable Persistent Commands",
+      description: settings.coreFeatures.persistentCommands
+        ? "Disable persistent commands"
+        : "Enable persistent commands",
+      icon: <Cloud size={14} />,
+      category: "Features",
+      action: () => {
+        updateSetting("coreFeatures", {
+          ...settings.coreFeatures,
+          persistentCommands: !settings.coreFeatures.persistentCommands,
         });
         onClose();
       },

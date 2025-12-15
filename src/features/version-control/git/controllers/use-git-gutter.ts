@@ -195,13 +195,6 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
           return;
         }
 
-        console.log(`[GitGutter] Got diff result:`, {
-          hasDiff: !!diff,
-          lineCount: diff?.lines?.length || 0,
-          isBinary: diff?.is_binary,
-          isImage: diff?.is_image,
-        });
-
         if (!diff || diff.is_binary || diff.is_image) {
           // Clear decorations for binary/image files
           console.log(`[GitGutter] Clearing decorations - no diff or binary/image file`);

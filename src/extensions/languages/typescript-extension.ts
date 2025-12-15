@@ -5,9 +5,11 @@ export class TypeScriptLanguageExtension extends BaseLanguageProvider {
     super({
       id: "typescript",
       displayName: "TypeScript",
-      extensions: ["ts", "tsx"],
+      extensions: ["ts", "tsx", "mts", "cts"],
       aliases: ["ts", "tsx"],
       description: "TypeScript language support with TSX",
+      wasmPath: "/tree-sitter/parsers/tree-sitter-tsx.wasm",
+      highlightQueryPath: "/tree-sitter/queries/tsx/highlights.scm",
     });
   }
 }

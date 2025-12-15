@@ -38,7 +38,7 @@
 }
 
 /* Ensure file tree content wrapper stretches to full scrollable area */
-.file-tree-container > div {
+.file-tree-container > div:not(.file-tree-empty-state) {
   width: max-content !important;
   min-width: 100% !important;
 }
@@ -50,7 +50,7 @@
 }
 
 /* All file tree items have same background behavior - ensure full width coverage */
-.file-tree-container button {
+.file-tree-container .file-tree-item button {
   background-color: transparent !important;
   width: 100% !important;
   min-width: 100% !important;
@@ -58,11 +58,11 @@
   justify-content: flex-start !important;
 }
 
-.file-tree-container button:hover {
+.file-tree-container .file-tree-item button:hover {
   background-color: var(--color-hover) !important;
 }
 
-.file-tree-container button.bg-selected {
+.file-tree-container .file-tree-item button.bg-selected {
   background-color: var(--color-selected) !important;
 }
 

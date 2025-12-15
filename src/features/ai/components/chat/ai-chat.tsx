@@ -82,10 +82,24 @@ const AIChat = memo(function AIChat({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const buildContext = (): ContextInfo => {
+  const buildContext = async (): Promise<ContextInfo> => {
     const selectedBuffers = buffers.filter((buffer) => chatState.selectedBufferIds.has(buffer.id));
+
+    // Build active buffer context, including web viewer content if applicable
+    let activeBufferContext: (typeof activeBuffer & { webViewerContent?: string }) | undefined =
+      activeBuffer || undefined;
+    if (activeBuffer?.isWebViewer && activeBuffer.webViewerUrl) {
+      // Fetch web page content for context
+      const { fetchWebPageContent } = await import("@/utils/web-fetcher");
+      const webContent = await fetchWebPageContent(activeBuffer.webViewerUrl);
+      activeBufferContext = {
+        ...activeBuffer,
+        webViewerContent: webContent,
+      };
+    }
+
     const context: ContextInfo = {
-      activeBuffer: activeBuffer || undefined,
+      activeBuffer: activeBufferContext,
       openBuffers: selectedBuffers,
       selectedFiles,
       selectedProjectFiles: Array.from(chatState.selectedFilesPaths),
@@ -93,7 +107,7 @@ const AIChat = memo(function AIChat({
       providerId: settings.aiProviderId,
     };
 
-    if (activeBuffer) {
+    if (activeBuffer && !activeBuffer.isWebViewer) {
       const extension = activeBuffer.path.split(".").pop()?.toLowerCase() || "";
       const languageMap: Record<string, string> = {
         js: "JavaScript",
@@ -160,7 +174,7 @@ const AIChat = memo(function AIChat({
       allProjectFiles,
     );
 
-    const context = buildContext();
+    const context = await buildContext();
     const userMessage: Message = {
       id: Date.now().toString(),
       content: messageContent.trim(),

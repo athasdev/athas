@@ -5,6 +5,8 @@ import { useKeymaps } from "@/features/keymaps/hooks/use-keymaps";
 import { useRemoteConnection } from "@/features/remote/hooks/use-remote-connection";
 import { useRemoteWindowClose } from "@/features/remote/hooks/use-remote-window-close";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
+import UpdateDialog from "@/features/settings/components/update-dialog";
+import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { useContextMenuPrevention } from "@/features/window/hooks/use-context-menu-prevention";
 import { useFontLoading } from "@/features/window/hooks/use-font-loading";
 import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
@@ -46,6 +48,18 @@ function App() {
 
   const zoomLevel = useZoomStore.use.windowZoomLevel();
 
+  // Auto-update check
+  const {
+    showDialog: showUpdateDialog,
+    updateInfo,
+    downloadProgress,
+    downloading,
+    installing,
+    error: updateError,
+    onDismiss: dismissUpdate,
+    onDownload: downloadUpdate,
+  } = useAutoUpdate();
+
   // App initialization and setup hooks
   usePlatformSetup();
   useFontLoading();
@@ -79,6 +93,19 @@ function App() {
       </div>
       <ZoomIndicator />
       <ToastContainer />
+
+      {/* Update Dialog */}
+      {showUpdateDialog && updateInfo && (
+        <UpdateDialog
+          updateInfo={updateInfo}
+          downloadProgress={downloadProgress}
+          downloading={downloading}
+          installing={installing}
+          error={updateError}
+          onDownload={downloadUpdate}
+          onDismiss={dismissUpdate}
+        />
+      )}
     </div>
   );
 }

@@ -91,6 +91,15 @@ const CAPTURE_TO_CLASS: Record<string, string> = {
   decorator: "token-attribute",
   annotation: "token-attribute",
   macro: "token-function",
+
+  // Markdown
+  "text.title": "token-keyword",
+  "text.literal": "token-string",
+  "text.emphasis": "token-variable",
+  "text.strong": "token-constant",
+  "text.uri": "token-string",
+  "text.reference": "token-function",
+  none: "token-text",
 };
 
 /**

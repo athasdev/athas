@@ -75,10 +75,12 @@ export class TypeScriptLSPExtension implements Extension {
 
       // Get current workspace path
       const workspacePath = await this.getCurrentWorkspacePath();
+      // TypeScript language server supports these languages
+      const supportedLanguages = ["TypeScript", "JavaScript"];
       if (workspacePath && this.isEnabled) {
         await this.lspClient.start(workspacePath);
-        // Update status to connected with active workspace
-        lspActions.updateLspStatus("connected", [workspacePath]);
+        // Update status to connected with active workspace and supported languages
+        lspActions.updateLspStatus("connected", [workspacePath], undefined, supportedLanguages);
       } else {
         // No workspace or disabled - set as disconnected
         lspActions.updateLspStatus("disconnected");
@@ -128,6 +130,7 @@ export class TypeScriptLSPExtension implements Extension {
 
     try {
       const lspActions = useLspStore.getState().actions;
+      const supportedLanguages = ["TypeScript", "JavaScript"];
       lspActions.updateLspStatus("connecting");
 
       if (this.lspClient) {
@@ -136,7 +139,7 @@ export class TypeScriptLSPExtension implements Extension {
         const workspacePath = await this.getCurrentWorkspacePath();
         if (workspacePath && this.isEnabled) {
           await this.lspClient.start(workspacePath);
-          lspActions.updateLspStatus("connected", [workspacePath]);
+          lspActions.updateLspStatus("connected", [workspacePath], undefined, supportedLanguages);
         } else {
           lspActions.updateLspStatus("disconnected");
         }
@@ -155,13 +158,14 @@ export class TypeScriptLSPExtension implements Extension {
 
     try {
       const lspActions = useLspStore.getState().actions;
+      const supportedLanguages = ["TypeScript", "JavaScript"];
 
       if (this.isEnabled) {
         lspActions.updateLspStatus("connecting");
         const workspacePath = await this.getCurrentWorkspacePath();
         if (workspacePath && this.lspClient) {
           await this.lspClient.start(workspacePath);
-          lspActions.updateLspStatus("connected", [workspacePath]);
+          lspActions.updateLspStatus("connected", [workspacePath], undefined, supportedLanguages);
         } else {
           lspActions.updateLspStatus("disconnected");
         }

@@ -27,6 +27,7 @@ export interface Buffer {
   isDiff: boolean;
   isMarkdownPreview: boolean;
   isExternalEditor: boolean;
+  isWebViewer: boolean;
   isActive: boolean;
   language?: string; // File language for syntax highlighting and formatting
   // For diff buffers, store the parsed diff data (single or multi-file)
@@ -35,6 +36,8 @@ export interface Buffer {
   sourceFilePath?: string;
   // For external editor buffers, store the terminal connection ID
   terminalConnectionId?: string;
+  // For web viewer buffers, store the URL
+  webViewerUrl?: string;
   // Cached syntax highlighting tokens
   tokens: {
     start: number;
@@ -79,6 +82,7 @@ interface BufferActions {
     sourceFilePath?: string,
   ) => string;
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
+  openWebViewerBuffer: (url: string) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
   closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
@@ -130,7 +134,7 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
 
     if (!rootFolderPath) return;
 
-    // Only save real files, not virtual/diff/image/sqlite/external editor buffers
+    // Only save real files, not virtual/diff/image/sqlite/external editor/web viewer buffers
     const persistableBuffers = buffers
       .filter(
         (b) =>
@@ -139,7 +143,8 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
           !b.isImage &&
           !b.isSQLite &&
           !b.isMarkdownPreview &&
-          !b.isExternalEditor,
+          !b.isExternalEditor &&
+          !b.isWebViewer,
       )
       .map((b) => ({
         path: b.path,
@@ -156,7 +161,8 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
       !activeBuffer.isImage &&
       !activeBuffer.isSQLite &&
       !activeBuffer.isMarkdownPreview &&
-      !activeBuffer.isExternalEditor
+      !activeBuffer.isExternalEditor &&
+      !activeBuffer.isWebViewer
         ? activeBuffer.path
         : null;
 
@@ -222,6 +228,7 @@ export const useBufferStore = createSelectors(
             isDiff,
             isMarkdownPreview,
             isExternalEditor: false,
+            isWebViewer: false,
             isActive: true,
             language: detectLanguageFromFileName(name),
             diffData,
@@ -239,26 +246,42 @@ export const useBufferStore = createSelectors(
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
 
             // Check if extension is available and start LSP or prompt installation
-            import("@/extensions/registry/extension-store")
+            // First wait for bundled extensions to finish loading
+            logger.info("BufferStore", `Checking extension support for ${path}`);
+            import("@/extensions/loader/extension-loader")
+              .then(({ extensionLoader }) => {
+                logger.debug("BufferStore", "Waiting for extension loader initialization...");
+                return extensionLoader.waitForInitialization();
+              })
+              .then(() => {
+                logger.debug("BufferStore", "Extension loader initialized, importing store...");
+                return import("@/extensions/registry/extension-store");
+              })
               .then(({ useExtensionStore }) => {
-                const { getExtensionForFile, isExtensionInstalled } =
-                  useExtensionStore.getState().actions;
+                const { getExtensionForFile } = useExtensionStore.getState().actions;
 
                 const extension = getExtensionForFile(path);
+                logger.debug(
+                  "BufferStore",
+                  `getExtensionForFile(${path}) returned:`,
+                  extension?.manifest?.name || "undefined",
+                );
 
                 if (extension) {
-                  const installed = isExtensionInstalled(extension.manifest.id);
+                  // Bundled extensions don't have installation metadata - they're always available
+                  const isBundled = !extension.manifest.installation;
+                  const installed = extension.isInstalled || isBundled;
                   logger.info(
                     "BufferStore",
-                    `Extension ${extension.manifest.name} for ${path}: installed=${installed}`,
+                    `Extension ${extension.manifest.name} for ${path}: installed=${installed}, bundled=${isBundled}`,
                   );
 
                   if (installed) {
-                    // Extension installed, start LSP
+                    // Extension installed or bundled, start LSP
                     logger.info("BufferStore", `Starting LSP for ${path}`);
                     import("@/features/editor/lsp/lsp-client")
                       .then(({ LspClient }) => {
-                        import("@/features/file-system/controllers/store").then(
+                        return import("@/features/file-system/controllers/store").then(
                           ({ useFileSystemStore }) => {
                             const lspClient = LspClient.getInstance();
                             const workspacePath =
@@ -271,11 +294,14 @@ export const useBufferStore = createSelectors(
                           },
                         );
                       })
+                      .then(() => {
+                        logger.info("BufferStore", `LSP started successfully for ${path}`);
+                      })
                       .catch((error) => {
                         logger.error("BufferStore", "Failed to start LSP:", error);
                       });
                   } else {
-                    // Extension not installed, emit event for UI to handle
+                    // Marketplace extension not installed, emit event for UI to handle
                     logger.info(
                       "BufferStore",
                       `Extension ${extension.manifest.name} not installed for ${path}`,
@@ -356,6 +382,7 @@ export const useBufferStore = createSelectors(
             isDiff: false,
             isMarkdownPreview: false,
             isExternalEditor: true,
+            isWebViewer: false,
             isActive: true,
             language: detectLanguageFromFileName(name),
             terminalConnectionId,
@@ -369,6 +396,72 @@ export const useBufferStore = createSelectors(
 
           // Save session
           saveSessionToStore(get().buffers, get().activeBufferId);
+
+          return newBuffer.id;
+        },
+
+        openWebViewerBuffer: (url: string): string => {
+          const { buffers, maxOpenTabs } = get();
+
+          // Extract hostname for display name
+          let displayName = "Web Viewer";
+          if (url && url !== "about:blank") {
+            try {
+              const urlObj = new URL(url);
+              if (urlObj.hostname) {
+                displayName = `Web: ${urlObj.hostname}`;
+              }
+            } catch {
+              // Invalid URL, use default
+            }
+          }
+          const path = `web-viewer://${url}`;
+
+          // Check if already open with the same URL
+          const existing = buffers.find((b) => b.isWebViewer && b.webViewerUrl === url);
+          if (existing) {
+            set((state) => {
+              state.activeBufferId = existing.id;
+              state.buffers = state.buffers.map((b) => ({
+                ...b,
+                isActive: b.id === existing.id,
+              }));
+            });
+            return existing.id;
+          }
+
+          // Handle max tabs limit
+          let newBuffers = [...buffers];
+          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+            const lruBuffer = unpinnedBuffers[0];
+            newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+          }
+
+          const newBuffer: Buffer = {
+            id: generateBufferId(path),
+            path,
+            name: displayName,
+            content: "",
+            savedContent: "",
+            isDirty: false,
+            isVirtual: true,
+            isPinned: false,
+            isImage: false,
+            isSQLite: false,
+            isDiff: false,
+            isMarkdownPreview: false,
+            isExternalEditor: false,
+            isWebViewer: true,
+            isActive: true,
+            webViewerUrl: url,
+            tokens: [],
+          };
+
+          set((state) => {
+            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+            state.activeBufferId = newBuffer.id;
+          });
 
           return newBuffer.id;
         },
@@ -408,14 +501,15 @@ export const useBufferStore = createSelectors(
             });
           }
 
-          // Stop LSP for this file (only for real files, not virtual/diff/image/sqlite/external editor)
+          // Stop LSP for this file (only for real files, not virtual/diff/image/sqlite/external editor/web viewer)
           if (
             !closedBuffer.isVirtual &&
             !closedBuffer.isDiff &&
             !closedBuffer.isImage &&
             !closedBuffer.isSQLite &&
             !closedBuffer.isMarkdownPreview &&
-            !closedBuffer.isExternalEditor
+            !closedBuffer.isExternalEditor &&
+            !closedBuffer.isWebViewer
           ) {
             // Stop LSP for this file in background (don't block buffer closing)
             import("@/features/editor/lsp/lsp-client")
@@ -726,7 +820,8 @@ export const useBufferStore = createSelectors(
             buffer.isVirtual ||
             buffer.isImage ||
             buffer.isSQLite ||
-            buffer.isMarkdownPreview
+            buffer.isMarkdownPreview ||
+            buffer.isWebViewer
           ) {
             return;
           }

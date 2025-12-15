@@ -25,34 +25,103 @@ export interface TerminalTheme {
   brightWhite: string;
 }
 
+// Default dark theme colors - guaranteed to work
+const DEFAULT_THEME: TerminalTheme = {
+  background: "#1a1a1a",
+  foreground: "#e5e5e5",
+  cursor: "#3b82f6",
+  cursorAccent: "#1a1a1a",
+  selectionBackground: "#3b82f640",
+  selectionForeground: "#e5e5e5",
+  black: "#1a1a1a",
+  red: "#ff7b72",
+  green: "#7ee787",
+  yellow: "#ffa657",
+  blue: "#79c0ff",
+  magenta: "#d2a8ff",
+  cyan: "#a5d6ff",
+  white: "#b3b3b3",
+  brightBlack: "#8b949e",
+  brightRed: "#f87171",
+  brightGreen: "#86efac",
+  brightYellow: "#fbbf24",
+  brightBlue: "#60a5fa",
+  brightMagenta: "#c084fc",
+  brightCyan: "#67e8f9",
+  brightWhite: "#e5e5e5",
+};
+
+// Check if a value is a valid hex color
+function isValidColor(value: string): boolean {
+  return /^#[0-9A-Fa-f]{3,8}$/.test(value);
+}
+
 export function useTerminalTheme() {
   const getTerminalTheme = useCallback((): TerminalTheme => {
     const computedStyle = getComputedStyle(document.documentElement);
-    const getColor = (varName: string) => computedStyle.getPropertyValue(varName).trim();
+
+    // Helper to get a valid color from CSS variables or use default
+    const getColor = (varNames: string[], defaultValue: string): string => {
+      for (const varName of varNames) {
+        const value = computedStyle.getPropertyValue(varName).trim();
+        if (value && isValidColor(value)) {
+          return value;
+        }
+      }
+      return defaultValue;
+    };
+
+    const bg = getColor(["--primary-bg", "--color-primary-bg"], DEFAULT_THEME.background);
+    const fg = getColor(["--text", "--color-text"], DEFAULT_THEME.foreground);
+    const accent = getColor(["--accent", "--color-accent"], DEFAULT_THEME.cursor);
 
     return {
-      background: getColor("--color-primary-bg"),
-      foreground: getColor("--color-text"),
-      cursor: getColor("--color-accent"),
-      cursorAccent: getColor("--color-background"),
-      selectionBackground: `${getColor("--color-accent")}40`,
-      selectionForeground: getColor("--color-text"),
-      black: getColor("--color-terminal-black") || "#000000",
-      red: getColor("--color-terminal-red") || "#CD3131",
-      green: getColor("--color-terminal-green") || "#0DBC79",
-      yellow: getColor("--color-terminal-yellow") || "#E5E510",
-      blue: getColor("--color-terminal-blue") || "#2472C8",
-      magenta: getColor("--color-terminal-magenta") || "#BC3FBC",
-      cyan: getColor("--color-terminal-cyan") || "#11A8CD",
-      white: getColor("--color-terminal-white") || "#E5E5E5",
-      brightBlack: getColor("--color-terminal-bright-black") || "#666666",
-      brightRed: getColor("--color-terminal-bright-red") || "#F14C4C",
-      brightGreen: getColor("--color-terminal-bright-green") || "#23D18B",
-      brightYellow: getColor("--color-terminal-bright-yellow") || "#F5F543",
-      brightBlue: getColor("--color-terminal-bright-blue") || "#3B8EEA",
-      brightMagenta: getColor("--color-terminal-bright-magenta") || "#D670D6",
-      brightCyan: getColor("--color-terminal-bright-cyan") || "#29B8DB",
-      brightWhite: getColor("--color-terminal-bright-white") || "#FFFFFF",
+      background: bg,
+      foreground: fg,
+      cursor: accent,
+      cursorAccent: bg,
+      selectionBackground: `${accent}40`,
+      selectionForeground: fg,
+      black: getColor(["--terminal-black", "--color-terminal-black"], DEFAULT_THEME.black),
+      red: getColor(["--terminal-red", "--color-terminal-red"], DEFAULT_THEME.red),
+      green: getColor(["--terminal-green", "--color-terminal-green"], DEFAULT_THEME.green),
+      yellow: getColor(["--terminal-yellow", "--color-terminal-yellow"], DEFAULT_THEME.yellow),
+      blue: getColor(["--terminal-blue", "--color-terminal-blue"], DEFAULT_THEME.blue),
+      magenta: getColor(["--terminal-magenta", "--color-terminal-magenta"], DEFAULT_THEME.magenta),
+      cyan: getColor(["--terminal-cyan", "--color-terminal-cyan"], DEFAULT_THEME.cyan),
+      white: getColor(["--terminal-white", "--color-terminal-white"], DEFAULT_THEME.white),
+      brightBlack: getColor(
+        ["--terminal-bright-black", "--color-terminal-bright-black"],
+        DEFAULT_THEME.brightBlack,
+      ),
+      brightRed: getColor(
+        ["--terminal-bright-red", "--color-terminal-bright-red"],
+        DEFAULT_THEME.brightRed,
+      ),
+      brightGreen: getColor(
+        ["--terminal-bright-green", "--color-terminal-bright-green"],
+        DEFAULT_THEME.brightGreen,
+      ),
+      brightYellow: getColor(
+        ["--terminal-bright-yellow", "--color-terminal-bright-yellow"],
+        DEFAULT_THEME.brightYellow,
+      ),
+      brightBlue: getColor(
+        ["--terminal-bright-blue", "--color-terminal-bright-blue"],
+        DEFAULT_THEME.brightBlue,
+      ),
+      brightMagenta: getColor(
+        ["--terminal-bright-magenta", "--color-terminal-bright-magenta"],
+        DEFAULT_THEME.brightMagenta,
+      ),
+      brightCyan: getColor(
+        ["--terminal-bright-cyan", "--color-terminal-bright-cyan"],
+        DEFAULT_THEME.brightCyan,
+      ),
+      brightWhite: getColor(
+        ["--terminal-bright-white", "--color-terminal-bright-white"],
+        DEFAULT_THEME.brightWhite,
+      ),
     };
   }, []);
 
