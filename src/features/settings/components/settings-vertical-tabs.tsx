@@ -9,6 +9,7 @@ import {
   Settings,
   Settings2,
   Sparkles,
+  Terminal,
   Wrench,
 } from "lucide-react";
 import * as React from "react";
@@ -42,6 +43,11 @@ const tabs: TabItem[] = [
     id: "fileTree",
     label: "File Tree",
     icon: Folder,
+  },
+  {
+    id: "terminal",
+    label: "Terminal",
+    icon: Terminal,
   },
   {
     id: "appearance",

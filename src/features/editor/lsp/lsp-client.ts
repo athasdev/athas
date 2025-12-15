@@ -10,6 +10,7 @@ import {
   useDiagnosticsStore,
 } from "@/features/diagnostics/stores/diagnostics-store";
 import { logger } from "../utils/logger";
+import { useLspStore } from "./lsp-store";
 
 export interface LspError {
   message: string;
@@ -18,9 +19,25 @@ export interface LspError {
 export class LspClient {
   private static instance: LspClient | null = null;
   private activeLanguageServers = new Set<string>(); // workspace:language format
+  private activeLanguages = new Set<string>(); // Track active language IDs for status
 
   private constructor() {
     this.setupDiagnosticsListener();
+  }
+
+  /**
+   * Update the LSP status store with current state
+   */
+  private updateLspStatus() {
+    const { actions } = useLspStore.getState();
+    const workspaces = this.getActiveWorkspaces();
+    const languages = Array.from(this.activeLanguages);
+
+    if (this.activeLanguageServers.size > 0) {
+      actions.updateLspStatus("connected", workspaces, undefined, languages);
+    } else {
+      actions.updateLspStatus("disconnected", [], undefined, []);
+    }
   }
 
   static getInstance(): LspClient {
@@ -126,7 +143,16 @@ export class LspClient {
       );
       for (const server of serversToRemove) {
         this.activeLanguageServers.delete(server);
+        // Extract language from server key and remove from active languages
+        const language = server.split(":")[1];
+        if (language) {
+          const displayName = this.getLanguageDisplayName(language);
+          this.activeLanguages.delete(displayName);
+        }
       }
+
+      // Update status store
+      this.updateLspStatus();
 
       logger.debug("LSPClient", "LSP stopped successfully for workspace:", workspacePath);
     } catch (error) {
@@ -181,13 +207,48 @@ export class LspClient {
       if (languageId) {
         const serverKey = `${workspacePath}:${languageId}`;
         this.activeLanguageServers.add(serverKey);
+        // Track language with proper display name
+        const displayName = this.getLanguageDisplayName(languageId);
+        this.activeLanguages.add(displayName);
+        // Update status store
+        this.updateLspStatus();
       }
 
       logger.debug("LSPClient", "LSP started successfully for file:", filePath);
     } catch (error) {
       logger.error("LSPClient", "Failed to start LSP for file:", error);
+      // Update status to error
+      const { actions } = useLspStore.getState();
+      actions.setLspError(`Failed to start LSP: ${error}`);
       throw error;
     }
+  }
+
+  /**
+   * Get display name for a language ID
+   */
+  private getLanguageDisplayName(languageId: string): string {
+    const displayNames: Record<string, string> = {
+      typescript: "TypeScript",
+      javascript: "JavaScript",
+      rust: "Rust",
+      python: "Python",
+      go: "Go",
+      java: "Java",
+      c: "C",
+      cpp: "C++",
+      csharp: "C#",
+      ruby: "Ruby",
+      php: "PHP",
+      html: "HTML",
+      css: "CSS",
+      json: "JSON",
+      yaml: "YAML",
+      toml: "TOML",
+      markdown: "Markdown",
+      bash: "Bash",
+    };
+    return displayNames[languageId] || languageId;
   }
 
   async stopForFile(filePath: string): Promise<void> {

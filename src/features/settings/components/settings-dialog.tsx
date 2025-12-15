@@ -14,6 +14,7 @@ import { FileTreeSettings } from "./tabs/file-tree-settings";
 import { GeneralSettings } from "./tabs/general-settings";
 import { KeyboardSettings } from "./tabs/keyboard-settings";
 import { LanguageSettings } from "./tabs/language-settings";
+import { TerminalSettings } from "./tabs/terminal-settings";
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -62,6 +63,8 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         return <AdvancedSettings />;
       case "fileTree":
         return <FileTreeSettings />;
+      case "terminal":
+        return <TerminalSettings />;
       default:
         return <GeneralSettings />;
     }

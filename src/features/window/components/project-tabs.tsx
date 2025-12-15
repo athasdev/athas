@@ -1,6 +1,7 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Copy, Folder, FolderOpen, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useContextMenu } from "@/hooks/use-context-menu";
 import type { ProjectTab } from "@/stores/workspace-tabs-store";
@@ -252,18 +253,16 @@ const ProjectTabs = () => {
         },
       });
 
-      // Only show Close All if there's more than one tab
-      if (projectTabs.length > 1) {
-        items.push({
-          id: "close-all",
-          label: "Close All Projects",
-          onClick: () => {
-            for (let i = projectTabs.length - 1; i >= 1; i--) {
-              closeProject(projectTabs[i].id);
-            }
-          },
-        });
-      }
+      items.push({
+        id: "close-all",
+        label: "Close All Projects",
+        onClick: () => {
+          // Close all tabs one by one
+          // We copy the array to avoid issues while iterating and modifying
+          const tabsToClose = [...projectTabs];
+          tabsToClose.forEach((t) => closeProject(t.id));
+        },
+      });
 
       return items;
     },
@@ -335,6 +334,7 @@ const ProjectTabs = () => {
                 <div className="absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
               )}
               <button
+                role="tab"
                 ref={(el) => {
                   tabRefs.current[index] = el;
                 }}
@@ -382,12 +382,15 @@ const ProjectTabs = () => {
         </button>
       </div>
 
-      <ContextMenu
-        isOpen={contextMenu.isOpen}
-        position={contextMenu.position}
-        items={getContextMenuItems(contextMenu.data)}
-        onClose={contextMenu.close}
-      />
+      {createPortal(
+        <ContextMenu
+          isOpen={contextMenu.isOpen}
+          position={contextMenu.position}
+          items={getContextMenuItems(contextMenu.data)}
+          onClose={contextMenu.close}
+        />,
+        document.body,
+      )}
     </>
   );
 };

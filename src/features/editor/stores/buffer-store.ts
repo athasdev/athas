@@ -247,13 +247,25 @@ export const useBufferStore = createSelectors(
 
             // Check if extension is available and start LSP or prompt installation
             // First wait for bundled extensions to finish loading
+            logger.info("BufferStore", `Checking extension support for ${path}`);
             import("@/extensions/loader/extension-loader")
-              .then(({ extensionLoader }) => extensionLoader.waitForInitialization())
-              .then(() => import("@/extensions/registry/extension-store"))
+              .then(({ extensionLoader }) => {
+                logger.debug("BufferStore", "Waiting for extension loader initialization...");
+                return extensionLoader.waitForInitialization();
+              })
+              .then(() => {
+                logger.debug("BufferStore", "Extension loader initialized, importing store...");
+                return import("@/extensions/registry/extension-store");
+              })
               .then(({ useExtensionStore }) => {
                 const { getExtensionForFile } = useExtensionStore.getState().actions;
 
                 const extension = getExtensionForFile(path);
+                logger.debug(
+                  "BufferStore",
+                  `getExtensionForFile(${path}) returned:`,
+                  extension?.manifest?.name || "undefined",
+                );
 
                 if (extension) {
                   // Bundled extensions don't have installation metadata - they're always available
@@ -269,7 +281,7 @@ export const useBufferStore = createSelectors(
                     logger.info("BufferStore", `Starting LSP for ${path}`);
                     import("@/features/editor/lsp/lsp-client")
                       .then(({ LspClient }) => {
-                        import("@/features/file-system/controllers/store").then(
+                        return import("@/features/file-system/controllers/store").then(
                           ({ useFileSystemStore }) => {
                             const lspClient = LspClient.getInstance();
                             const workspacePath =
@@ -281,6 +293,9 @@ export const useBufferStore = createSelectors(
                             return lspClient.startForFile(path, workspacePath);
                           },
                         );
+                      })
+                      .then(() => {
+                        logger.info("BufferStore", `LSP started successfully for ${path}`);
                       })
                       .catch((error) => {
                         logger.error("BufferStore", "Failed to start LSP:", error);

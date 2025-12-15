@@ -1,9 +1,8 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use claude_bridge::ClaudeCodeBridge;
 use commands::*;
-use file_watcher::FileWatcher;
+use features::{ClaudeCodeBridge, FileWatcher};
 use log::{debug, info};
 use lsp::LspManager;
 use ssh::{ssh_connect, ssh_disconnect, ssh_disconnect_only, ssh_write_file};
@@ -16,10 +15,9 @@ use terminal::{
 };
 use tokio::sync::Mutex;
 
-mod claude_bridge;
 mod commands;
 mod extensions;
-mod file_watcher;
+mod features;
 mod logger;
 mod lsp;
 mod menu;
@@ -72,7 +70,7 @@ fn main() {
          app.manage(LspManager::new(app.handle().clone()));
 
          // Set up theme cache
-         app.manage(theme::ThemeCache::new(std::collections::HashMap::new()));
+         app.manage(ThemeCache::new(std::collections::HashMap::new()));
 
          // Auto-start interceptor on app launch
          {
@@ -392,6 +390,10 @@ fn main() {
          check_cli_installed,
          install_cli_command,
          uninstall_cli_command,
+         // Runtime commands
+         ensure_runtime,
+         get_runtime_status,
+         get_runtime_version,
          // Menu commands
          menu::toggle_menu_bar,
          menu::rebuild_menu_themes,

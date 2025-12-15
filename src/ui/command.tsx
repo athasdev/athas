@@ -1,5 +1,6 @@
-import { X } from "lucide-react";
+import { RefreshCwIcon, X } from "lucide-react";
 import type React from "react";
+import { useActionsStore } from "@/features/command-palette/store";
 import { cn } from "@/utils/cn";
 
 interface CommandProps {
@@ -40,18 +41,40 @@ Command.displayName = "Command";
 interface CommandHeaderProps {
   children: React.ReactNode;
   onClose: () => void;
+  showClearButton?: boolean;
 }
 
-export const CommandHeader = ({ children, onClose }: CommandHeaderProps) => (
-  <div className="border-border border-b">
-    <div className="flex items-center gap-3 px-4 py-3">
-      {children}
-      <button onClick={onClose} className="rounded p-0.5 transition-colors hover:bg-hover">
-        <X size={12} className="text-text-lighter" />
-      </button>
+export const CommandHeader = ({
+  children,
+  onClose,
+  showClearButton = false,
+}: CommandHeaderProps) => {
+  const clearActionsStack = useActionsStore.use.clearStack();
+
+  return (
+    <div className="border-border border-b">
+      <div className="flex items-center gap-3 px-4 py-3">
+        {children}
+        <button
+          aria-label="Close command palette"
+          onClick={onClose}
+          className="rounded p-0.5 transition-colors hover:bg-hover"
+        >
+          <X size={12} className="text-text-lighter" />
+        </button>
+        {showClearButton && (
+          <button
+            aria-label="Clear persisted actions"
+            onClick={clearActionsStack}
+            className="rounded p-0.5 transition-colors hover:bg-hover"
+          >
+            <RefreshCwIcon size={10} className="text-text-lighter" />
+          </button>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface CommandListProps {
   children: React.ReactNode;

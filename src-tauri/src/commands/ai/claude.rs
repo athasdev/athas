@@ -1,4 +1,4 @@
-use crate::claude_bridge::{ClaudeCodeBridge, ClaudeStatus};
+use crate::features::claude_bridge::{ClaudeCodeBridge, ClaudeStatus};
 use std::sync::Arc;
 use tauri::State;
 use tokio::{io::AsyncWriteExt, sync::Mutex};

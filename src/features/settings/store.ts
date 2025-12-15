@@ -22,6 +22,13 @@ interface Settings {
   tabSize: number;
   wordWrap: boolean;
   lineNumbers: boolean;
+  // Terminal
+  terminalFontFamily: string;
+  terminalFontSize: number;
+  terminalLineHeight: number;
+  terminalLetterSpacing: number;
+  terminalCursorStyle: "block" | "underline" | "bar";
+  terminalCursorBlink: boolean;
   // UI
   uiFontFamily: string;
   // Theme
@@ -79,13 +86,20 @@ const defaultSettings: Settings = {
   mouseWheelZoom: false,
   commandBarPreview: true,
   // Editor
-  fontFamily: "JetBrains Mono",
+  fontFamily: "Menlo, Consolas, Liberation Mono, monospace",
   fontSize: 14,
   tabSize: 2,
   wordWrap: true,
   lineNumbers: true,
+  // Terminal
+  terminalFontFamily: "Menlo, Consolas, Liberation Mono, monospace",
+  terminalFontSize: 14,
+  terminalLineHeight: 1.2,
+  terminalLetterSpacing: 0,
+  terminalCursorStyle: "block",
+  terminalCursorBlink: true,
   // UI
-  uiFontFamily: "JetBrains Mono",
+  uiFontFamily: "Menlo, Consolas, Liberation Mono, monospace",
   // Theme
   theme: "one-dark", // Changed from "auto" since we don't support continuous monitoring
   iconTheme: "colorful-material",
@@ -124,6 +138,7 @@ const defaultSettings: Settings = {
     diagnostics: true,
     aiChat: true,
     breadcrumbs: true,
+    persistentCommands: true,
   },
   // Advanced
   //  > nothing here, yet
@@ -144,11 +159,15 @@ const getStore = async () => {
   if (!storeInstance) {
     storeInstance = await load("settings.json", { autoSave: true } as Parameters<typeof load>[1]);
 
-    // Initialize defaults if not present
+    // Initialize defaults if not present, merge nested objects
     for (const [key, value] of Object.entries(defaultSettings)) {
       const current = await storeInstance.get(key);
       if (current === null || current === undefined) {
         await storeInstance.set(key, value);
+      } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+        // Merge nested objects to add new keys from defaults
+        const merged = { ...value, ...current };
+        await storeInstance.set(key, merged);
       }
     }
     await storeInstance.save();

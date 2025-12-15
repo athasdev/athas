@@ -6,15 +6,25 @@ import { SearchAddon } from "@xterm/addon-search";
 import { SerializeAddon } from "@xterm/addon-serialize";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { WebglAddon } from "@xterm/addon-webgl";
 import type { Terminal } from "@xterm/xterm";
 
 export interface TerminalAddons {
   fitAddon: FitAddon;
   searchAddon: SearchAddon;
   serializeAddon: SerializeAddon;
+  webglAddon: WebglAddon | null;
 }
 
-export function createTerminalAddons(terminal: Terminal): TerminalAddons {
+export interface CreateTerminalAddonsOptions {
+  /** Skip WebGL addon - use canvas renderer instead (better for some fonts like Nerd Fonts) */
+  skipWebGL?: boolean;
+}
+
+export function createTerminalAddons(
+  terminal: Terminal,
+  options: CreateTerminalAddonsOptions = {},
+): TerminalAddons {
   const fitAddon = new FitAddon();
   const searchAddon = new SearchAddon();
   const serializeAddon = new SerializeAddon();
@@ -27,7 +37,17 @@ export function createTerminalAddons(terminal: Terminal): TerminalAddons {
   terminal.loadAddon(unicode11Addon);
   terminal.loadAddon(clipboardAddon);
 
-  return { fitAddon, searchAddon, serializeAddon };
+  let webglAddon: WebglAddon | null = null;
+
+  if (!options.skipWebGL) {
+    webglAddon = new WebglAddon();
+    webglAddon.onContextLoss(() => {
+      webglAddon?.dispose();
+    });
+    terminal.loadAddon(webglAddon);
+  }
+
+  return { fitAddon, searchAddon, serializeAddon, webglAddon };
 }
 
 export function loadWebLinksAddon(terminal: Terminal): void {

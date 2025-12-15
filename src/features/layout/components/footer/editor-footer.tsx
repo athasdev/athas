@@ -1,147 +1,187 @@
-import { Menu, MenuButton, MenuItems } from "@headlessui/react";
 import {
   AlertCircle,
-  ChevronDown,
   Download,
   Loader2,
   Terminal as TerminalIcon,
-  X,
   Zap,
   ZapOff,
 } from "lucide-react";
-import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { type RefObject, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useOnClickOutside } from "usehooks-ts";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "../../../../stores/ui-state-store";
-import {
-  getFilenameFromPath,
-  getLanguageFromFilename,
-} from "../../../file-system/controllers/file-utils";
+import { getFilenameFromPath } from "../../../file-system/controllers/file-utils";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
 import GitBranchManager from "../../../version-control/git/components/git-branch-manager";
 import { getGitStatus } from "../../../version-control/git/controllers/git";
 import { useGitStore } from "../../../version-control/git/controllers/git-store";
 import VimStatusIndicator from "../../../vim/components/vim-status-indicator";
 
-// LSP Status Dropdown Component
-const LspStatusDropdown = ({ activeBuffer }: { activeBuffer: any }) => {
+// LSP Status Indicator Component
+const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => {
   const lspStatus = useLspStore.use.lspStatus();
+  const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Check if LSP is supported for this file
-  const isLspSupported = activeBuffer ? extensionRegistry.isLspSupported(activeBuffer.path) : false;
+  // Close on click outside
+  useOnClickOutside(dropdownRef as RefObject<HTMLElement>, (event) => {
+    const target = event.target as HTMLElement;
+    if (target && buttonRef.current?.contains(target)) {
+      return;
+    }
+    setIsOpen(false);
+  });
 
-  // Show dropdown for all files (will show disconnected for unsupported files)
-  if (!activeBuffer) {
-    return null;
-  }
+  // Update position when opened
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const dropdownWidth = 260;
+      const dropdownHeight = 180;
+      const padding = 8;
 
-  const getStatusIcon = (status: LspStatus) => {
+      // Calculate position - open above and to the left
+      let left = rect.right - dropdownWidth;
+      let top = rect.top - dropdownHeight - padding;
+
+      // Ensure it doesn't go off the left edge
+      if (left < padding) {
+        left = padding;
+      }
+
+      // Ensure it doesn't go off the right edge
+      if (left + dropdownWidth > window.innerWidth - padding) {
+        left = window.innerWidth - dropdownWidth - padding;
+      }
+
+      // Ensure it doesn't go off the top edge
+      if (top < padding) {
+        top = rect.bottom + padding;
+      }
+
+      setPosition({ top, left });
+    }
+  }, [isOpen]);
+
+  const getStatusConfig = (status: LspStatus) => {
     switch (status) {
       case "connected":
-        return <Zap size={10} className="text-green-400" />;
+        return {
+          icon: <Zap size={12} />,
+          color: "text-green-400",
+          bgHover: "hover:bg-green-400/10",
+          title: "Language Servers Active",
+        };
       case "connecting":
-        return <Loader2 size={10} className="animate-spin text-yellow-400" />;
+        return {
+          icon: <Loader2 size={12} className="animate-spin" />,
+          color: "text-yellow-400",
+          bgHover: "hover:bg-yellow-400/10",
+          title: "Connecting to Language Server...",
+        };
       case "error":
-        return <X size={10} className="text-red-400" />;
+        return {
+          icon: <ZapOff size={12} />,
+          color: "text-red-400",
+          bgHover: "hover:bg-red-400/10",
+          title: `Language Server Error: ${lspStatus.lastError || "Unknown"}`,
+        };
       default:
-        return <ZapOff size={10} className="text-text-lighter" />;
+        return {
+          icon: <ZapOff size={12} />,
+          color: "text-text-lighter opacity-50",
+          bgHover: "hover:bg-hover",
+          title: "No active language servers",
+        };
     }
   };
 
-  const getStatusText = (status: LspStatus) => {
-    const language = activeBuffer
-      ? getLanguageFromFilename(getFilenameFromPath(activeBuffer.path))
-      : null;
+  const config = getStatusConfig(lspStatus.status);
 
-    switch (status) {
-      case "connected":
-        return language && language !== "Text" ? language : "LSP";
-      case "connecting":
-        return "Connecting...";
-      case "error":
-        return "LSP Error";
-      default:
-        return language && language !== "Text" ? language : "LSP";
-    }
-  };
+  // Get active language servers from supported languages or workspaces
+  const activeServers = lspStatus.supportedLanguages || [];
+  const hasActiveServers = lspStatus.status === "connected" && activeServers.length > 0;
 
-  const getDropdownTitle = (status: LspStatus) => {
-    switch (status) {
-      case "connected":
-        return `LSP Connected - Active workspaces: ${lspStatus.activeWorkspaces.join(", ")}`;
-      case "connecting":
-        return "LSP Connecting...";
-      case "error":
-        return `LSP Error: ${lspStatus.lastError || "Unknown error"}`;
-      default:
-        return "LSP Disconnected";
-    }
-  };
+  const renderDropdown = () => {
+    if (!isOpen) return null;
 
-  return (
-    <Menu as="div" className="relative">
-      <MenuButton
-        className="flex items-center gap-1 rounded px-1 py-0.5 text-[10px] text-text-lighter transition-colors hover:bg-hover"
-        style={{ minHeight: 0, minWidth: 0 }}
-        title={getDropdownTitle(lspStatus.status)}
+    return (
+      <div
+        ref={dropdownRef}
+        className="fixed z-[9999] w-[260px] overflow-hidden rounded-lg border border-border bg-secondary-bg shadow-xl"
+        style={{ top: position.top, left: position.left }}
       >
-        {getStatusIcon(lspStatus.status)}
-        <span>{getStatusText(lspStatus.status)}</span>
-        <ChevronDown size={8} className="text-text-lighter" />
-      </MenuButton>
+        {/* Header - Project Name */}
+        <div className="border-border border-b bg-primary-bg/50 px-3 py-2">
+          <span className="font-medium text-text text-xs">{projectName || "No Project"}</span>
+        </div>
 
-      <MenuItems className="absolute right-0 bottom-full z-50 mb-1 w-56 rounded-md border border-border bg-secondary-bg shadow-xl focus:outline-none">
+        {/* Language Servers List */}
         <div className="p-2">
-          {/* Language Info */}
-          <div className="mb-2 border-border border-b pb-2">
-            <div className="font-medium text-text text-xs">
-              {getLanguageFromFilename(getFilenameFromPath(activeBuffer.path))}
-            </div>
-            <div className="mt-0.5 text-[10px] text-text-lighter">
-              {activeBuffer.path.substring(activeBuffer.path.lastIndexOf("/") + 1)}
-            </div>
-          </div>
-
-          {/* LSP Status Info */}
-          {isLspSupported ? (
-            <div className="rounded-md bg-primary-bg p-2">
-              <div className="flex items-center gap-2 text-xs">
-                {getStatusIcon(lspStatus.status)}
-                <span className="font-medium text-text">
-                  {lspStatus.status === "connected"
-                    ? "Language Server Connected"
-                    : lspStatus.status === "connecting"
-                      ? "Connecting to Language Server..."
-                      : lspStatus.status === "error"
-                        ? "Language Server Error"
-                        : "Language Server Disconnected"}
-                </span>
+          {hasActiveServers ? (
+            <div className="space-y-1">
+              <div className="px-1 pb-1 text-[10px] text-text-lighter uppercase tracking-wide">
+                Active Language Servers
               </div>
-              {lspStatus.activeWorkspaces.length > 0 && (
-                <div className="mt-1.5 text-[10px] text-text-lighter">
-                  <div className="flex items-center gap-1">
-                    <span className="opacity-60">Workspaces:</span>
-                    <span className="font-medium">{lspStatus.activeWorkspaces.join(", ")}</span>
-                  </div>
+              {activeServers.map((server) => (
+                <div
+                  key={server}
+                  className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-hover"
+                >
+                  <Zap size={10} className="text-green-400" />
+                  <span className="text-text text-xs capitalize">{server}</span>
                 </div>
-              )}
+              ))}
+            </div>
+          ) : lspStatus.status === "connecting" ? (
+            <div className="flex items-center gap-2 px-2 py-2 text-text-lighter">
+              <Loader2 size={12} className="animate-spin text-yellow-400" />
+              <span className="text-xs">Connecting...</span>
+            </div>
+          ) : lspStatus.status === "error" ? (
+            <div className="space-y-2 p-1">
+              <div className="flex items-center gap-2 text-red-400">
+                <ZapOff size={12} />
+                <span className="text-xs">Connection Error</span>
+              </div>
               {lspStatus.lastError && (
-                <div className="mt-1.5 rounded bg-red-500/10 px-1.5 py-1 text-[10px] text-red-400">
+                <div className="rounded-md bg-red-500/10 px-2 py-1.5 text-[10px] text-red-400">
                   {lspStatus.lastError}
                 </div>
               )}
             </div>
           ) : (
-            <div className="rounded-md bg-primary-bg px-2 py-2 text-center text-[10px] text-text-lighter">
-              Language server not available for this file type
+            <div className="flex items-center gap-2 px-2 py-2 text-text-lighter">
+              <ZapOff size={12} className="opacity-50" />
+              <span className="text-xs">No active language servers</span>
             </div>
           )}
         </div>
-      </MenuItems>
-    </Menu>
+      </div>
+    );
+  };
+
+  return (
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center justify-center rounded p-1 transition-colors ${config.color} ${config.bgHover}`}
+        style={{ minHeight: 0, minWidth: 0 }}
+        title={config.title}
+      >
+        {config.icon}
+      </button>
+      {typeof document !== "undefined" && createPortal(renderDropdown(), document.body)}
+    </div>
   );
 };
 
@@ -221,6 +261,11 @@ const EditorFooter = () => {
           </button>
         )}
 
+        {/* LSP Status indicator */}
+        <LspStatusIndicator
+          projectName={rootFolderPath ? getFilenameFromPath(rootFolderPath) : null}
+        />
+
         {/* Vim status indicator */}
         <VimStatusIndicator />
 
@@ -253,7 +298,6 @@ const EditorFooter = () => {
           <span>
             Ln {cursorPosition.line + 1}, Col {cursorPosition.column + 1}
           </span>
-          <LspStatusDropdown activeBuffer={activeBuffer} />
         </div>
       )}
     </div>
