@@ -297,6 +297,18 @@ const TerminalContainer = ({
     };
   }, [registerTerminalFocus, clearTerminalFocus, focusActiveTerminal]);
 
+  // Listen for close-active-terminal event from native menu
+  useEffect(() => {
+    const handleCloseActiveTerminal = () => {
+      if (activeTerminalId) {
+        closeTerminal(activeTerminalId);
+      }
+    };
+
+    window.addEventListener("close-active-terminal", handleCloseActiveTerminal);
+    return () => window.removeEventListener("close-active-terminal", handleCloseActiveTerminal);
+  }, [activeTerminalId, closeTerminal]);
+
   // Terminal-specific keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -465,7 +477,7 @@ const TerminalContainer = ({
 
   return (
     <div
-      className={`flex h-full flex-col overflow-hidden ${className}`}
+      className={`terminal-container flex h-full flex-col overflow-hidden ${className}`}
       data-terminal-container="active"
     >
       {/* Terminal Tab Bar */}

@@ -48,11 +48,13 @@ export function useKeymaps() {
         return;
       }
 
-      // Skip if target is an input (except our editor textarea)
+      // Skip if target is an input (except our editor textarea or terminal)
       const target = e.target as HTMLElement;
+      const isEditorTextarea = target.classList.contains("editor-textarea");
+      const isTerminalTextarea = target.classList.contains("xterm-helper-textarea");
       if (
         target.tagName === "INPUT" ||
-        (target.tagName === "TEXTAREA" && !target.classList.contains("editor-textarea"))
+        (target.tagName === "TEXTAREA" && !isEditorTextarea && !isTerminalTextarea)
       ) {
         return;
       }
