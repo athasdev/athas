@@ -27,7 +27,7 @@ export class OpenRouterProvider extends AIProvider {
 
   async validateApiKey(apiKey: string): Promise<boolean> {
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/auth/key", {
+      const response = await fetch("https://openrouter.ai/api/v1/key", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${apiKey}`,
