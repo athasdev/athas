@@ -13,27 +13,39 @@ export interface TerminalAddons {
   fitAddon: FitAddon;
   searchAddon: SearchAddon;
   serializeAddon: SerializeAddon;
-  webglAddon: WebglAddon;
+  webglAddon: WebglAddon | null;
 }
 
-export function createTerminalAddons(terminal: Terminal): TerminalAddons {
+export interface CreateTerminalAddonsOptions {
+  /** Skip WebGL addon - use canvas renderer instead (better for some fonts like Nerd Fonts) */
+  skipWebGL?: boolean;
+}
+
+export function createTerminalAddons(
+  terminal: Terminal,
+  options: CreateTerminalAddonsOptions = {},
+): TerminalAddons {
   const fitAddon = new FitAddon();
   const searchAddon = new SearchAddon();
   const serializeAddon = new SerializeAddon();
   const unicode11Addon = new Unicode11Addon();
   const clipboardAddon = new ClipboardAddon();
-  const webglAddon = new WebglAddon();
-
-  webglAddon.onContextLoss(() => {
-    webglAddon.dispose();
-  });
 
   terminal.loadAddon(fitAddon);
   terminal.loadAddon(searchAddon);
   terminal.loadAddon(serializeAddon);
   terminal.loadAddon(unicode11Addon);
   terminal.loadAddon(clipboardAddon);
-  terminal.loadAddon(webglAddon);
+
+  let webglAddon: WebglAddon | null = null;
+
+  if (!options.skipWebGL) {
+    webglAddon = new WebglAddon();
+    webglAddon.onContextLoss(() => {
+      webglAddon?.dispose();
+    });
+    terminal.loadAddon(webglAddon);
+  }
 
   return { fitAddon, searchAddon, serializeAddon, webglAddon };
 }

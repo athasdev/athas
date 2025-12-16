@@ -69,6 +69,14 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     if (!terminalRef.current || isInitialized || isInitializingRef.current) return;
 
     isInitializingRef.current = true;
+
+    // Wait for font to load before initializing terminal
+    try {
+      await document.fonts.load(`${terminalFontSize}px "${terminalFontFamily}"`);
+    } catch {
+      // Font load failed, continue with fallback
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     if (!terminalRef.current) {
@@ -77,8 +85,13 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     }
 
     try {
+      // Quote font names with spaces for CSS
+      const fontFamily = terminalFontFamily.includes(" ")
+        ? `"${terminalFontFamily}", monospace`
+        : `${terminalFontFamily}, monospace`;
+
       const terminal = new Terminal({
-        fontFamily: `"${terminalFontFamily}", monospace`,
+        fontFamily,
         fontSize: terminalFontSize,
         lineHeight: terminalLineHeight,
         letterSpacing: terminalLetterSpacing,
@@ -91,7 +104,9 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         convertEol: true,
       });
 
-      const addons = createTerminalAddons(terminal);
+      // Skip WebGL for fonts with spaces (like Nerd Fonts) - they have issues with WebGL's texture atlas
+      const skipWebGL = terminalFontFamily.includes(" ");
+      const addons = createTerminalAddons(terminal, { skipWebGL });
       terminal.open(terminalRef.current);
 
       terminal.attachCustomKeyEventHandler((e) => {
@@ -286,17 +301,36 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
   // Handle font changes
   useEffect(() => {
-    if (!xtermRef.current) return;
-    xtermRef.current.options.fontFamily = `"${terminalFontFamily}", monospace`;
-    xtermRef.current.options.fontSize = terminalFontSize;
-    xtermRef.current.options.lineHeight = terminalLineHeight;
-    xtermRef.current.options.letterSpacing = terminalLetterSpacing;
-    xtermRef.current.options.cursorBlink = terminalCursorBlink;
-    xtermRef.current.options.cursorStyle = terminalCursorStyle;
+    if (!xtermRef.current || !addonsRef.current) return;
 
-    // Refresh WebGL addon to ensure new font glyphs are loaded
-    addonsRef.current?.webglAddon?.clearTextureAtlas();
-    addonsRef.current?.fitAddon.fit();
+    const applyFontSettings = () => {
+      if (!xtermRef.current || !addonsRef.current) return;
+
+      // Dispose WebGL addon - the canvas renderer handles font changes more reliably,
+      // especially for Nerd Fonts which have issues with WebGL's texture atlas
+      addonsRef.current.webglAddon?.dispose();
+
+      // Set font options (quote font names with spaces for CSS)
+      const fontFamily = terminalFontFamily.includes(" ")
+        ? `"${terminalFontFamily}", monospace`
+        : `${terminalFontFamily}, monospace`;
+
+      xtermRef.current.options.fontFamily = fontFamily;
+      xtermRef.current.options.fontSize = terminalFontSize;
+      xtermRef.current.options.lineHeight = terminalLineHeight;
+      xtermRef.current.options.letterSpacing = terminalLetterSpacing;
+      xtermRef.current.options.cursorBlink = terminalCursorBlink;
+      xtermRef.current.options.cursorStyle = terminalCursorStyle;
+
+      addonsRef.current.fitAddon.fit();
+      xtermRef.current.refresh(0, xtermRef.current.rows - 1);
+    };
+
+    // Wait for font to load before applying
+    document.fonts
+      .load(`${terminalFontSize}px "${terminalFontFamily}"`)
+      .then(() => applyFontSettings())
+      .catch(() => applyFontSettings());
   }, [
     terminalFontFamily,
     terminalFontSize,
