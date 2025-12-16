@@ -658,9 +658,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
               <ModelSelectorDropdown
                 currentProviderId={settings.aiProviderId}
                 currentModelId={settings.aiModelId}
-                currentModelName={
-                  getModelById(settings.aiProviderId, settings.aiModelId)?.name || "Select Model"
-                }
+                currentModelName={(() => {
+                  const { dynamicModels } = useAIChatStore.getState();
+                  const providerModels = dynamicModels[settings.aiProviderId];
+                  const dynamicModel = providerModels?.find((m) => m.id === settings.aiModelId);
+                  if (dynamicModel) return dynamicModel.name;
+
+                  return (
+                    getModelById(settings.aiProviderId, settings.aiModelId)?.name || "Select Model"
+                  );
+                })()}
                 onSelect={(providerId, modelId) => {
                   updateSetting("aiProviderId", providerId);
                   updateSetting("aiModelId", modelId);

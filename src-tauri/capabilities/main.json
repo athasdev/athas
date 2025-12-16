@@ -53,6 +53,9 @@
       "allow": [
         {
           "url": "https://generativelanguage.googleapis.com/**"
+        },
+        {
+          "url": "http://localhost:11434/**"
         }
       ]
     },

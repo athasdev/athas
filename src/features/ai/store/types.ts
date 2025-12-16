@@ -1,6 +1,7 @@
 import type { SessionMode, SlashCommand } from "@/features/ai/types/acp";
 import type { AgentType, Chat, Message } from "@/features/ai/types/ai-chat";
 import type { FileEntry } from "@/features/file-system/types/app";
+import type { ProviderModel } from "@/utils/providers/provider-interface";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
@@ -35,6 +36,9 @@ export interface AIChatState {
   // Provider API keys state
   providerApiKeys: Map<string, boolean>;
   apiKeyModalState: { isOpen: boolean; providerId: string | null };
+
+  // Dynamic models state
+  dynamicModels: Record<string, ProviderModel[]>;
 
   // Mention state
   mentionState: {
@@ -114,6 +118,9 @@ export interface AIChatActions {
   saveApiKey: (providerId: string, apiKey: string) => Promise<boolean>;
   removeApiKey: (providerId: string) => Promise<void>;
   hasProviderApiKey: (providerId: string) => boolean;
+
+  // Dynamic models actions
+  setDynamicModels: (providerId: string, models: ProviderModel[]) => void;
 
   // Mention actions
   showMention: (
