@@ -4,10 +4,11 @@
  */
 
 import type { ExtensionManifest } from "../types/extension-manifest";
+import { getQueryCdnUrl, getWasmCdnUrl } from "./parser-cdn";
 
-// CDN base URL for downloading WASM parsers and highlight queries
+// Fallback CDN base URL for languages not in parser-cdn.ts
 // Can be configured via environment variable
-const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
+const FALLBACK_CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
 
 // Old manifest format from JSON files
 interface LanguageManifestFile {
@@ -40,10 +41,6 @@ function convertLanguageManifest(manifest: LanguageManifestFile): ExtensionManif
     ext.startsWith(".") ? ext : `.${ext}`,
   );
 
-  // Extract parser name from wasmPath
-  // "/tree-sitter/parsers/tree-sitter-javascript.wasm" -> "tree-sitter-javascript.wasm"
-  const wasmFileName = languageProvider.wasmPath.split("/").pop() || "";
-
   return {
     id: manifest.id,
     name: manifest.name,
@@ -62,7 +59,7 @@ function convertLanguageManifest(manifest: LanguageManifestFile): ExtensionManif
     activationEvents: [`onLanguage:${languageProvider.id}`],
     // Extension is downloadable from CDN
     installation: {
-      downloadUrl: `${CDN_BASE_URL}/parsers/${wasmFileName}`,
+      downloadUrl: getWasmUrlForLanguage(languageProvider.id),
       size: 0, // Will be determined during download
       checksum: "", // Will be calculated after download
       minEditorVersion: "0.1.0",
@@ -116,14 +113,28 @@ export function getLanguageExtensionByFileExt(fileExt: string): ExtensionManifes
 
 /**
  * Get WASM download URL for a language
+ * Uses GitHub/jsdelivr CDN if configured, otherwise falls back to athas.dev
  */
 export function getWasmUrlForLanguage(languageId: string): string {
-  return `${CDN_BASE_URL}/parsers/tree-sitter-${languageId}.wasm`;
+  // Check if this language has a version-pinned CDN config
+  const cdnUrl = getWasmCdnUrl(languageId);
+  if (cdnUrl) {
+    return cdnUrl;
+  }
+  // Fall back to default CDN
+  return `${FALLBACK_CDN_BASE_URL}/parsers/tree-sitter-${languageId}.wasm`;
 }
 
 /**
  * Get highlight query URL for a language
+ * Uses GitHub CDN if configured, otherwise falls back to athas.dev
  */
 export function getHighlightQueryUrl(languageId: string): string {
-  return `${CDN_BASE_URL}/queries/${languageId}/highlights.scm`;
+  // Check if this language has a version-pinned CDN config
+  const cdnUrl = getQueryCdnUrl(languageId);
+  if (cdnUrl) {
+    return cdnUrl;
+  }
+  // Fall back to default CDN
+  return `${FALLBACK_CDN_BASE_URL}/queries/${languageId}/highlights.scm`;
 }

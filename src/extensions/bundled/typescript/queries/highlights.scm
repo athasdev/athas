@@ -1,9 +1,5 @@
-; Combined highlights for TSX (JavaScript + JSX + TypeScript)
-; Based on tree-sitter-javascript and tree-sitter-typescript queries
-
-; ====================
-; JavaScript Base
-; ====================
+; Highlights for TSX/TypeScript/JavaScript
+; Simplified query compatible with tree-sitter-wasms
 
 ; Variables
 (identifier) @variable
@@ -23,18 +19,9 @@
   key: (property_identifier) @function.method
   value: [(function_expression) (arrow_function)])
 
-(assignment_expression
-  left: (member_expression
-    property: (property_identifier) @function.method)
-  right: [(function_expression) (arrow_function)])
-
 (variable_declarator
   name: (identifier) @function
   value: [(function_expression) (arrow_function)])
-
-(assignment_expression
-  left: (identifier) @function
-  right: [(function_expression) (arrow_function)])
 
 ; Function and method calls
 (call_expression
@@ -54,14 +41,6 @@
     (shorthand_property_identifier_pattern)
  ] @constant
  (#match? @constant "^[A-Z_][A-Z\\d_]+$"))
-
-((identifier) @variable.builtin
- (#match? @variable.builtin "^(arguments|module|console|window|document)$")
- (#is-not? local))
-
-((identifier) @function.builtin
- (#eq? @function.builtin "require")
- (#is-not? local))
 
 ; Literals
 (this) @variable.builtin
@@ -84,7 +63,7 @@
 (regex) @string.special
 (number) @number
 
-; Tokens
+; Punctuation
 [
   ";"
   (optional_chain)
@@ -196,24 +175,7 @@
   "yield"
 ] @keyword
 
-; ====================
-; JSX Extensions
-; ====================
-
-(jsx_opening_element (identifier) @tag (#match? @tag "^[a-z][^.]*$"))
-(jsx_closing_element (identifier) @tag (#match? @tag "^[a-z][^.]*$"))
-(jsx_self_closing_element (identifier) @tag (#match? @tag "^[a-z][^.]*$"))
-
-(jsx_attribute (property_identifier) @attribute)
-(jsx_opening_element (["<" ">"]) @punctuation.bracket)
-(jsx_closing_element (["</" ">"]) @punctuation.bracket)
-(jsx_self_closing_element (["<" "/>"]) @punctuation.bracket)
-
-; ====================
 ; TypeScript Extensions
-; ====================
-
-; Types
 (type_identifier) @type
 (predefined_type) @type.builtin
 
@@ -224,11 +186,9 @@
   "<" @punctuation.bracket
   ">" @punctuation.bracket)
 
-; Variables
 (required_parameter (identifier) @variable.parameter)
 (optional_parameter (identifier) @variable.parameter)
 
-; TypeScript Keywords
 [
   "abstract"
   "declare"

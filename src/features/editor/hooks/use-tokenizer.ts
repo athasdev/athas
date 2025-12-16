@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useRef, useState } from "react";
+import { getQueryCdnUrl, getWasmCdnUrl, hasCdnConfig } from "@/extensions/languages/parser-cdn";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
 import { indexedDBParserCache } from "../lib/wasm-parser/cache-indexeddb";
@@ -89,10 +90,16 @@ export function getLanguageId(filePath: string): string | null {
 }
 
 /**
- * Map language IDs to their local WASM paths
- * TypeScript and JavaScript use the tsx parser
+ * Get WASM path for a language - uses CDN if configured, otherwise local
  */
-function getLocalWasmPath(languageId: string): string {
+function getWasmPath(languageId: string): string {
+  // Check if this language has CDN configuration
+  const cdnUrl = getWasmCdnUrl(languageId);
+  if (cdnUrl) {
+    return cdnUrl;
+  }
+
+  // Fall back to local paths
   // TypeScript and JavaScript both use tsx parser
   if (languageId === "typescript" || languageId === "javascript") {
     return "/tree-sitter/parsers/tree-sitter-tsx.wasm";
@@ -101,13 +108,36 @@ function getLocalWasmPath(languageId: string): string {
 }
 
 /**
- * Get the query folder for a language ID
+ * Get highlight query URL for a language - uses CDN if configured, otherwise local
  */
-function getQueryFolder(languageId: string): string {
-  if (languageId === "typescript" || languageId === "javascript") {
-    return "tsx";
+function getQueryUrl(languageId: string): string {
+  // Check if this language has CDN configuration
+  const cdnUrl = getQueryCdnUrl(languageId);
+  if (cdnUrl) {
+    return cdnUrl;
   }
-  return languageId;
+
+  // Fall back to local paths
+  const queryFolder =
+    languageId === "typescript" || languageId === "javascript" ? "tsx" : languageId;
+  return `/tree-sitter/queries/${queryFolder}/highlights.scm`;
+}
+
+/**
+ * Validate that a string is a valid tree-sitter query (not HTML or other error response)
+ */
+function isValidHighlightQuery(text: string | undefined): boolean {
+  if (!text || text.trim().length === 0) return false;
+  // Reject HTML responses (common 404 error pages)
+  if (text.trimStart().startsWith("<!") || text.trimStart().startsWith("<html")) return false;
+  // Valid queries start with comments (;), patterns ([ or (), or string literals (")
+  const trimmed = text.trimStart();
+  return (
+    trimmed.startsWith(";") ||
+    trimmed.startsWith("[") ||
+    trimmed.startsWith("(") ||
+    trimmed.startsWith('"')
+  );
 }
 
 /**
@@ -154,44 +184,55 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
         let highlightQuery: string | undefined;
 
         if (cached) {
-          // Use cached config
-          wasmPath = cached.sourceUrl || getLocalWasmPath(languageId);
-          highlightQuery = cached.highlightQuery;
+          // Use cached config - prefer cached sourceUrl, fall back to CDN or local
+          wasmPath = cached.sourceUrl || getWasmPath(languageId);
+          highlightQuery = isValidHighlightQuery(cached.highlightQuery)
+            ? cached.highlightQuery
+            : undefined;
 
-          // Try to load highlight query if not cached
-          if (!highlightQuery || highlightQuery.trim().length === 0) {
-            const queryFolder = getQueryFolder(languageId);
-            const queryPath = `/tree-sitter/queries/${queryFolder}/highlights.scm`;
+          // Try to load highlight query if not cached or invalid
+          if (!highlightQuery) {
+            const queryPath = getQueryUrl(languageId);
             try {
               const response = await fetch(queryPath);
               if (response.ok) {
-                highlightQuery = await response.text();
-                // Update cache with the loaded query
-                await indexedDBParserCache.set({
-                  ...cached,
-                  highlightQuery,
-                });
-                logger.info("Editor", `[Tokenizer] Loaded highlight query from ${queryPath}`);
+                const queryText = await response.text();
+                if (isValidHighlightQuery(queryText)) {
+                  highlightQuery = queryText;
+                  // Update cache with the loaded query
+                  await indexedDBParserCache.set({
+                    ...cached,
+                    highlightQuery,
+                  });
+                  logger.info("Editor", `[Tokenizer] Loaded highlight query from ${queryPath}`);
+                } else {
+                  logger.warn("Editor", `[Tokenizer] Invalid highlight query from ${queryPath}`);
+                }
               }
             } catch {
               logger.warn("Editor", `[Tokenizer] Failed to load highlight query from ${queryPath}`);
             }
           }
         } else {
-          // Parser not in IndexedDB - try to load from local path
+          // Parser not in IndexedDB - load from CDN or local path
+          wasmPath = getWasmPath(languageId);
+          const isCdn = hasCdnConfig(languageId);
           logger.info(
             "Editor",
-            `[Tokenizer] Parser for ${languageId} not in cache, loading from local path`,
+            `[Tokenizer] Parser for ${languageId} not in cache, loading from ${isCdn ? "CDN" : "local"}`,
           );
-          wasmPath = getLocalWasmPath(languageId);
 
-          // Load highlight query from local path
-          const queryFolder = getQueryFolder(languageId);
-          const queryPath = `/tree-sitter/queries/${queryFolder}/highlights.scm`;
+          // Load highlight query
+          const queryPath = getQueryUrl(languageId);
           try {
             const response = await fetch(queryPath);
             if (response.ok) {
-              highlightQuery = await response.text();
+              const queryText = await response.text();
+              if (isValidHighlightQuery(queryText)) {
+                highlightQuery = queryText;
+              } else {
+                logger.warn("Editor", `[Tokenizer] Invalid highlight query from ${queryPath}`);
+              }
             }
           } catch {
             logger.warn("Editor", `[Tokenizer] Failed to load highlight query from ${queryPath}`);
@@ -255,39 +296,45 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
         let highlightQuery: string | undefined;
 
         if (cached) {
-          // Use cached config
-          wasmPath = cached.sourceUrl || getLocalWasmPath(languageId);
-          highlightQuery = cached.highlightQuery;
+          // Use cached config - prefer cached sourceUrl, fall back to CDN or local
+          wasmPath = cached.sourceUrl || getWasmPath(languageId);
+          highlightQuery = isValidHighlightQuery(cached.highlightQuery)
+            ? cached.highlightQuery
+            : undefined;
 
-          // Try to load highlight query if not cached
-          if (!highlightQuery || highlightQuery.trim().length === 0) {
-            const queryFolder = getQueryFolder(languageId);
-            const queryPath = `/tree-sitter/queries/${queryFolder}/highlights.scm`;
+          // Try to load highlight query if not cached or invalid
+          if (!highlightQuery) {
+            const queryPath = getQueryUrl(languageId);
             try {
               const response = await fetch(queryPath);
               if (response.ok) {
-                highlightQuery = await response.text();
-                // Update cache with the loaded query
-                await indexedDBParserCache.set({
-                  ...cached,
-                  highlightQuery,
-                });
+                const queryText = await response.text();
+                if (isValidHighlightQuery(queryText)) {
+                  highlightQuery = queryText;
+                  // Update cache with the loaded query
+                  await indexedDBParserCache.set({
+                    ...cached,
+                    highlightQuery,
+                  });
+                }
               }
             } catch {
               logger.warn("Editor", `[Tokenizer] Failed to load highlight query from ${queryPath}`);
             }
           }
         } else {
-          // Parser not in IndexedDB - try to load from local path
-          wasmPath = getLocalWasmPath(languageId);
+          // Parser not in IndexedDB - load from CDN or local path
+          wasmPath = getWasmPath(languageId);
 
-          // Load highlight query from local path
-          const queryFolder = getQueryFolder(languageId);
-          const queryPath = `/tree-sitter/queries/${queryFolder}/highlights.scm`;
+          // Load highlight query
+          const queryPath = getQueryUrl(languageId);
           try {
             const response = await fetch(queryPath);
             if (response.ok) {
-              highlightQuery = await response.text();
+              const queryText = await response.text();
+              if (isValidHighlightQuery(queryText)) {
+                highlightQuery = queryText;
+              }
             }
           } catch {
             logger.warn("Editor", `[Tokenizer] Failed to load highlight query from ${queryPath}`);
