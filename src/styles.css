@@ -1073,23 +1073,19 @@ textarea::-webkit-scrollbar-thumb:hover {
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background-color: rgba(100, 100, 100, 0.5);
   border-radius: 10px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(100, 100, 100, 0.7);
 }
 
-/* Hide scrollbar utility */
-.scrollbar-hide {
-  scrollbar-width: none; /* Standard property (future-proofing) */
-}
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
