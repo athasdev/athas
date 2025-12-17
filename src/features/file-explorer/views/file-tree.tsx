@@ -655,7 +655,8 @@ const FileTree = ({
             className={cn(
               "flex min-h-[20px] w-full min-w-max cursor-pointer",
               "select-none items-center gap-1.5",
-              "whitespace-nowrap border-none bg-transparent",
+              "whitespace-nowrap border-none",
+              !file.isDir && "bg-transparent",
               "ui-font px-1.5 py-0.5 text-left text-text text-xs",
               "shadow-none outline-none transition-colors duration-150",
               "hover:bg-hover focus:outline-none",
