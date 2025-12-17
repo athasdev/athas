@@ -2,6 +2,7 @@ import "../styles/overlay-editor.css";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useGitGutter } from "@/features/version-control/git/controllers/use-git-gutter";
+import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
 import { useContextMenu } from "../hooks/use-context-menu";
@@ -19,7 +20,13 @@ import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
 import type { Decoration } from "../types/editor";
 import { applyVirtualEdit, calculateActualOffset } from "../utils/fold-transformer";
-import { calculateLineHeight, calculateLineOffset, splitLines } from "../utils/lines";
+import {
+  animateScrollLeft,
+  calculateLineHeight,
+  calculateLineOffset,
+  getMaxVisibleLineWidth,
+  splitLines,
+} from "../utils/lines";
 import { applyMultiCursorBackspace, applyMultiCursorEdit } from "../utils/multi-cursor";
 import { calculateCursorPosition } from "../utils/position";
 import { scrollLogger } from "../utils/scroll-logger";
@@ -41,6 +48,7 @@ export function Editor({ className, onMouseMove, onMouseLeave, onMouseEnter }: E
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const multiCursorRef = useRef<HTMLDivElement>(null);
+  const scrollAnimationCleanupRef = useRef<(() => void) | null>(null);
 
   const bufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
@@ -554,6 +562,54 @@ export function Editor({ className, onMouseMove, onMouseLeave, onMouseEnter }: E
     }
   }, [initializeViewport, lines.length]);
 
+  // Clamp horizontal scroll when viewport changes and visible content is shorter
+  // This handles cases where vertical scrolling brings shorter lines into view
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea || textarea.scrollLeft === 0) return;
+
+    // Calculate actual visible lines (without buffer)
+    const scrollTop = textarea.scrollTop;
+    const viewportHeight = textarea.clientHeight;
+    const actualStartLine = Math.max(0, Math.floor(scrollTop / lineHeight));
+    const visibleLineCount = Math.ceil(viewportHeight / lineHeight);
+    const actualEndLine = Math.min(lines.length, actualStartLine + visibleLineCount);
+
+    const { maxWidth } = getMaxVisibleLineWidth(
+      lines,
+      actualStartLine,
+      actualEndLine,
+      fontSize,
+      fontFamily,
+      tabSize,
+    );
+
+    const viewportWidth =
+      textarea.clientWidth -
+      EDITOR_CONSTANTS.EDITOR_PADDING_LEFT -
+      EDITOR_CONSTANTS.EDITOR_PADDING_RIGHT;
+    const overflow = maxWidth - viewportWidth;
+
+    let targetScrollLeft: number | null = null;
+
+    if (overflow <= 0) {
+      // No overflow in visible content, animate to 0
+      targetScrollLeft = 0;
+    } else if (textarea.scrollLeft > overflow) {
+      // Clamp to max overflow
+      targetScrollLeft = overflow;
+    }
+
+    if (targetScrollLeft !== null && targetScrollLeft !== textarea.scrollLeft) {
+      // Cancel any ongoing animation
+      if (scrollAnimationCleanupRef.current) {
+        scrollAnimationCleanupRef.current();
+      }
+      // Start smooth animation
+      scrollAnimationCleanupRef.current = animateScrollLeft(textarea, targetScrollLeft, 150);
+    }
+  }, [viewportRange, lines, fontSize, fontFamily, tabSize, lineHeight]);
+
   // Set textarea ref in editorAPI for operations like selectAll
   useEffect(() => {
     editorAPI.setTextareaRef(inputRef.current);
@@ -576,6 +632,7 @@ export function Editor({ className, onMouseMove, onMouseLeave, onMouseEnter }: E
 
   // Native wheel handler for textarea - required for Tauri/WebView
   // React's onWheel doesn't support passive: false which is needed for proper scroll control
+  // Horizontal scroll is limited to visible content overflow only
   useEffect(() => {
     const textarea = inputRef.current;
     if (!textarea) return;
@@ -583,12 +640,43 @@ export function Editor({ className, onMouseMove, onMouseLeave, onMouseEnter }: E
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       textarea.scrollTop += e.deltaY;
-      textarea.scrollLeft += e.deltaX;
+
+      // Only allow horizontal scroll if visible lines overflow the viewport
+      if (e.deltaX !== 0) {
+        // Calculate actual visible lines (without buffer) based on scroll position
+        const scrollTop = textarea.scrollTop;
+        const viewportHeight = textarea.clientHeight;
+        const actualStartLine = Math.max(0, Math.floor(scrollTop / lineHeight));
+        const visibleLineCount = Math.ceil(viewportHeight / lineHeight);
+        const actualEndLine = Math.min(lines.length, actualStartLine + visibleLineCount);
+
+        const { maxWidth } = getMaxVisibleLineWidth(
+          lines,
+          actualStartLine,
+          actualEndLine,
+          fontSize,
+          fontFamily,
+          tabSize,
+        );
+
+        // Account for editor padding
+        const viewportWidth =
+          textarea.clientWidth -
+          EDITOR_CONSTANTS.EDITOR_PADDING_LEFT -
+          EDITOR_CONSTANTS.EDITOR_PADDING_RIGHT;
+        const overflow = maxWidth - viewportWidth;
+
+        if (overflow > 0) {
+          // Allow horizontal scroll but clamp to visible content overflow
+          const newScrollLeft = textarea.scrollLeft + e.deltaX;
+          textarea.scrollLeft = Math.max(0, Math.min(newScrollLeft, overflow));
+        }
+      }
     };
 
     textarea.addEventListener("wheel", handleWheel, { passive: false });
     return () => textarea.removeEventListener("wheel", handleWheel);
-  }, []);
+  }, [lines, fontSize, fontFamily, tabSize, lineHeight]);
 
   // Track viewport height for cursor visibility calculations
   useEffect(() => {
