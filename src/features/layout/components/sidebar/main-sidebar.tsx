@@ -114,7 +114,11 @@ export const MainSidebar = memo(() => {
       <div className="flex-1 overflow-hidden">
         {settings.coreFeatures.git && (
           <div className={cn("h-full", !isGitViewActive && "hidden")}>
-            <GitView repoPath={rootFolderPath} onFileSelect={handleFileSelect} />
+            <GitView
+              repoPath={rootFolderPath}
+              onFileSelect={handleFileSelect}
+              isActive={isGitViewActive}
+            />
           </div>
         )}
 
