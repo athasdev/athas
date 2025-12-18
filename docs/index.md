@@ -8,7 +8,7 @@ Athas is a lightweight, cross-platform code editor designed for developers who w
 
 ## Getting Started
 
-- [Installation](installation) - Download and install Athas
+- [Installation](/docs/installation) - Download and install Athas
 
 ## Technology Stack
 
