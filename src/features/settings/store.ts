@@ -44,6 +44,7 @@ interface Settings {
   aiChatWidth: number;
   isAIChatVisible: boolean;
   aiCompletion: boolean;
+  aiAutoOpenReadFiles: boolean;
   // Layout
   sidebarWidth: number;
   // Keyboard
@@ -113,6 +114,7 @@ const defaultSettings: Settings = {
   aiChatWidth: 400,
   isAIChatVisible: false,
   aiCompletion: true,
+  aiAutoOpenReadFiles: true,
   // Layout
   sidebarWidth: 220,
   // Keyboard

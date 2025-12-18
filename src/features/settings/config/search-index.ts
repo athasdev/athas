@@ -210,6 +210,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Configure API keys for AI providers",
     keywords: ["api", "key", "authentication", "credentials"],
   },
+  {
+    id: "ai-auto-open-files",
+    tab: "ai",
+    section: "Behavior",
+    label: "Auto Open Read Files",
+    description: "Automatically open files in the editor when AI reads them",
+    keywords: ["ai", "auto", "open", "read", "files", "editor"],
+  },
 
   // Keyboard Settings
   {

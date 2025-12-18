@@ -8,6 +8,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
 import Dropdown from "@/ui/dropdown";
 import Section, { SettingRow } from "@/ui/section";
+import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
 
 export const AISettings = () => {
@@ -306,6 +307,19 @@ export const AISettings = () => {
           ))}
         </Section>
       )}
+
+      <Section title="Behavior">
+        <SettingRow
+          label="Auto Open Read Files"
+          description="Automatically open files in the editor when AI reads them"
+        >
+          <Switch
+            checked={settings.aiAutoOpenReadFiles}
+            onChange={(checked) => updateSetting("aiAutoOpenReadFiles", checked)}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import type { ClaudeStatus } from "@/features/ai/types/claude";
 import { getAvailableProviders, setClaudeCodeAvailability } from "@/features/ai/types/providers";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
 import { getChatCompletionStream } from "@/utils/ai-chat";
@@ -341,6 +342,21 @@ details: ${errorDetails || mainError}
         (toolName: string) => {
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
+
+          // Find the tool call that just completed
+          const completedToolCall = currentMsg?.toolCalls?.find(
+            (tc) => tc.name === toolName && !tc.isComplete,
+          );
+
+          // Auto-open Read files if setting is enabled
+          if (toolName === "Read" && completedToolCall?.input?.file_path) {
+            const { settings } = useSettingsStore.getState();
+            if (settings.aiAutoOpenReadFiles) {
+              const { handleFileSelect } = useFileSystemStore.getState();
+              handleFileSelect(completedToolCall.input.file_path, false);
+            }
+          }
+
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
             toolCalls: currentMsg?.toolCalls?.map((tc) =>
               tc.name === toolName && !tc.isComplete ? { ...tc, isComplete: true } : tc,
