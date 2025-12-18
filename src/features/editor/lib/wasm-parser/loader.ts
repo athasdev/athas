@@ -179,8 +179,12 @@ class WasmParserLoader {
         await this.initialize();
       }
 
-      // Try to load from IndexedDB cache first
-      const cached = await indexedDBParserCache.get(languageId);
+      // Check if this is a local/bundled parser (not a remote URL)
+      // Local parsers should always use the local file, not IndexedDB cache
+      const isLocalParser = wasmPath.startsWith("/tree-sitter/");
+
+      // Try to load from IndexedDB cache first (skip for local parsers)
+      const cached = isLocalParser ? null : await indexedDBParserCache.get(languageId);
 
       let wasmBytes: Uint8Array;
       let queryText = highlightQuery;

@@ -43,7 +43,7 @@ export const fullExtensions: ExtensionManifest[] = [
   {
     id: "athas.php",
     name: "PHP",
-    displayName: "PHP Language Support",
+    displayName: "PHP",
     description:
       "Full PHP language support with IntelliSense, diagnostics, formatting, and snippets via Intelephense",
     version: "1.0.0",

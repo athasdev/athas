@@ -1,0 +1,47 @@
+{
+  "id": "athas.seti-icons",
+  "name": "Seti Icons",
+  "displayName": "Seti File Icons",
+  "description": "Simple colored dots inspired by Seti UI",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "license": "MIT",
+  "category": "icon-theme",
+  "bundled": true,
+  "capabilities": {
+    "type": "icon-theme",
+    "iconDefinitions": {
+      "file": { "iconPath": "icons/dot-default.svg" },
+      "folder": { "iconPath": "icons/folder.svg" },
+      "folder-open": { "iconPath": "icons/folder-open.svg" },
+      "dot-js": { "iconPath": "icons/dot-js.svg" },
+      "dot-ts": { "iconPath": "icons/dot-ts.svg" },
+      "dot-html": { "iconPath": "icons/dot-html.svg" },
+      "dot-css": { "iconPath": "icons/dot-css.svg" },
+      "dot-json": { "iconPath": "icons/dot-json.svg" },
+      "dot-md": { "iconPath": "icons/dot-md.svg" },
+      "dot-py": { "iconPath": "icons/dot-py.svg" },
+      "dot-rs": { "iconPath": "icons/dot-rs.svg" },
+      "dot-go": { "iconPath": "icons/dot-go.svg" }
+    },
+    "file": "file",
+    "folder": "folder",
+    "folderExpanded": "folder-open",
+    "fileExtensions": {
+      "js": "dot-js",
+      "jsx": "dot-js",
+      "ts": "dot-ts",
+      "tsx": "dot-ts",
+      "html": "dot-html",
+      "htm": "dot-html",
+      "css": "dot-css",
+      "scss": "dot-css",
+      "json": "dot-json",
+      "md": "dot-md",
+      "markdown": "dot-md",
+      "py": "dot-py",
+      "rs": "dot-rs",
+      "go": "dot-go"
+    }
+  }
+}

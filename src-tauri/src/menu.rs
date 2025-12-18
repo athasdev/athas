@@ -20,7 +20,6 @@ pub async fn rebuild_menu_themes(
          .map_err(|e| format!("Failed to create menu: {}", e))?;
       app.set_menu(new_menu)
          .map_err(|e| format!("Failed to set menu: {}", e))?;
-      log::info!("Menu rebuilt with dynamic themes");
    } else {
       log::info!("Native menu bar is disabled, skipping menu rebuild");
    }
