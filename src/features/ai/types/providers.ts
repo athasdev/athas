@@ -212,6 +212,11 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 1048576,
       },
       {
+        id: "gemini-3-flash-preview",
+        name: "Gemini 3 Flash Preview",
+        maxTokens: 1048576,
+      },
+      {
         id: "gemini-2.5-pro",
         name: "Gemini 2.5 Pro",
         maxTokens: 1048576,
@@ -222,18 +227,18 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 1048576,
       },
       {
+        id: "gemini-2.5-flash-lite",
+        name: "Gemini 2.5 Flash Lite",
+        maxTokens: 1048576,
+      },
+      {
         id: "gemini-2.0-flash",
         name: "Gemini 2.0 Flash",
-        maxTokens: 1000000,
+        maxTokens: 1048576,
       },
       {
-        id: "gemini-1.5-pro",
-        name: "Gemini 1.5 Pro",
-        maxTokens: 2097152,
-      },
-      {
-        id: "gemini-1.5-flash",
-        name: "Gemini 1.5 Flash",
+        id: "gemini-2.0-flash-lite",
+        name: "Gemini 2.0 Flash Lite",
         maxTokens: 1048576,
       },
     ],
