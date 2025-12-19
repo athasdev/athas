@@ -31,7 +31,7 @@ function initializeProviders(): void {
     name: "Gemini",
     apiUrl: "https://generativelanguage.googleapis.com/v1beta/models",
     requiresApiKey: true,
-    maxTokens: 8192,
+    maxTokens: 65536,
   };
   providers.set("gemini", new GeminiProvider(geminiConfig));
 

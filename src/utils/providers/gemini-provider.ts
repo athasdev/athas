@@ -19,6 +19,15 @@ export class GeminiProvider extends AIProvider {
   buildPayload(request: StreamRequest): any {
     const systemMessage = request.messages.find((msg) => msg.role === "system");
 
+    const generationConfig: Record<string, unknown> = {
+      temperature: request.temperature,
+      maxOutputTokens: request.maxTokens,
+    };
+
+    if (request.responseFormat === "json_object") {
+      generationConfig.responseMimeType = "application/json";
+    }
+
     const payload: Record<string, unknown> = {
       contents: request.messages
         .filter((msg) => msg.role !== "system")
@@ -26,10 +35,7 @@ export class GeminiProvider extends AIProvider {
           role: msg.role === "assistant" ? "model" : "user",
           parts: [{ text: msg.content }],
         })),
-      generationConfig: {
-        temperature: request.temperature,
-        maxOutputTokens: request.maxTokens,
-      },
+      generationConfig,
     };
 
     if (systemMessage) {

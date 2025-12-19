@@ -18,6 +18,7 @@ export interface StreamRequest {
   maxTokens: number;
   temperature: number;
   apiKey?: string;
+  responseFormat?: "text" | "json_object";
 }
 
 export abstract class AIProvider {
