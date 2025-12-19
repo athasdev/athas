@@ -17,7 +17,9 @@ export class GeminiProvider extends AIProvider {
   }
 
   buildPayload(request: StreamRequest): any {
-    return {
+    const systemMessage = request.messages.find((msg) => msg.role === "system");
+
+    const payload: Record<string, unknown> = {
       contents: request.messages
         .filter((msg) => msg.role !== "system")
         .map((msg) => ({
@@ -29,6 +31,14 @@ export class GeminiProvider extends AIProvider {
         maxOutputTokens: request.maxTokens,
       },
     };
+
+    if (systemMessage) {
+      payload.systemInstruction = {
+        parts: [{ text: systemMessage.content }],
+      };
+    }
+
+    return payload;
   }
 
   async validateApiKey(apiKey: string): Promise<boolean> {
