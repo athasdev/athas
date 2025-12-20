@@ -19,7 +19,11 @@ GitHubMarkdown.displayName = "GitHubMarkdown";
 function renderMarkdown(text: string): React.ReactNode[] {
   const lines = text.split("\n");
   const elements: React.ReactNode[] = [];
-  let currentList: { type: "ol" | "ul"; items: string[]; start?: number } | null = null;
+  let currentList: {
+    type: "ol" | "ul" | "checklist";
+    items: Array<{ text: string; checked?: boolean }>;
+    start?: number;
+  } | null = null;
   let currentParagraph: string[] = [];
   let inCodeBlock = false;
   let codeBlockLanguage = "";
@@ -33,17 +37,36 @@ function renderMarkdown(text: string): React.ReactNode[] {
           <ol key={key++} className="my-2 ml-6 list-decimal space-y-1" start={currentList.start}>
             {currentList.items.map((item, idx) => (
               <li key={idx} className="text-text-light">
-                {renderInline(item)}
+                {renderInline(item.text)}
               </li>
             ))}
           </ol>,
+        );
+      } else if (currentList.type === "checklist") {
+        elements.push(
+          <ul key={key++} className="my-2 ml-1 list-none space-y-1">
+            {currentList.items.map((item, idx) => (
+              <li key={idx} className="flex items-start gap-2 text-text-light">
+                <input
+                  type="checkbox"
+                  checked={item.checked}
+                  disabled
+                  className="mt-0.5 h-4 w-4 shrink-0 cursor-default rounded border-border accent-accent"
+                  aria-label={item.checked ? "Completed" : "Not completed"}
+                />
+                <span className={item.checked ? "text-text-lighter line-through" : ""}>
+                  {renderInline(item.text)}
+                </span>
+              </li>
+            ))}
+          </ul>,
         );
       } else {
         elements.push(
           <ul key={key++} className="my-2 ml-6 list-disc space-y-1">
             {currentList.items.map((item, idx) => (
               <li key={idx} className="text-text-light">
-                {renderInline(item)}
+                {renderInline(item.text)}
               </li>
             ))}
           </ul>,
@@ -165,7 +188,22 @@ function renderMarkdown(text: string): React.ReactNode[] {
         flushList();
         currentList = { type: "ol", items: [], start: num };
       }
-      currentList.items.push(numberedMatch[2]);
+      currentList.items.push({ text: numberedMatch[2] });
+      continue;
+    }
+
+    // Checklist (must be checked before regular bullet list)
+    const checklistMatch = trimmedLine.match(/^[-*+]\s+\[([ xX])\]\s+(.*)$/);
+    if (checklistMatch) {
+      flushParagraph();
+      if (currentList?.type !== "checklist") {
+        flushList();
+        currentList = { type: "checklist", items: [] };
+      }
+      currentList.items.push({
+        text: checklistMatch[2],
+        checked: checklistMatch[1].toLowerCase() === "x",
+      });
       continue;
     }
 
@@ -177,7 +215,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
         flushList();
         currentList = { type: "ul", items: [] };
       }
-      currentList.items.push(bulletMatch[1]);
+      currentList.items.push({ text: bulletMatch[1] });
       continue;
     }
 
