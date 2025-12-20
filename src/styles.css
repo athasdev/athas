@@ -75,6 +75,8 @@
 
 /* Import token theme from editor feature */
 @import "./features/editor/styles/token-theme.css";
+/* Import markdown preview styles for hover tooltips and markdown rendering */
+@import "./features/editor/markdown/styles.css";
 
 /* Define custom Tailwind theme variables using @theme directive */
 @theme inline {

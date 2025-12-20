@@ -108,8 +108,8 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   // Get cursor position for LSP integration
   const cursorPosition = useEditorStateStore.use.cursorPosition();
 
-  // Consolidated LSP integration (document lifecycle, completions, hover)
-  const { hoverHandlers } = useLspIntegration({
+  // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
+  const { hoverHandlers, goToDefinitionHandlers } = useLspIntegration({
     filePath,
     value,
     cursorPosition,
@@ -224,6 +224,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
                 onMouseMove={hoverHandlers.handleHover}
                 onMouseLeave={hoverHandlers.handleMouseLeave}
                 onMouseEnter={hoverHandlers.handleMouseEnter}
+                onClick={goToDefinitionHandlers.handleClick}
               />
             )}
           </div>

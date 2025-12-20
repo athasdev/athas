@@ -170,7 +170,11 @@ impl LspClient {
             if let Ok(content_str) = String::from_utf8(content)
                && let Ok(message) = serde_json::from_str::<Value>(&content_str)
             {
-               log::debug!("LSP Message: {}", content_str);
+               // Log all messages for debugging
+               let method = message.get("method").and_then(|m| m.as_str());
+               if let Some(m) = method {
+                  log::info!("LSP Notification received: {}", m);
+               }
 
                // Check if this is a response (has id) or notification (no id)
                if message.get("id").is_some() {
@@ -198,11 +202,57 @@ impl LspClient {
    pub async fn initialize(&self, root_uri: Url) -> Result<()> {
       log::info!("Initializing LSP server with root_uri: {}", root_uri);
 
+      // Build client capabilities with text document sync and diagnostics support
+      let text_document_capabilities = TextDocumentClientCapabilities {
+         synchronization: Some(TextDocumentSyncClientCapabilities {
+            dynamic_registration: Some(true),
+            will_save: Some(true),
+            will_save_wait_until: Some(true),
+            did_save: Some(true),
+         }),
+         completion: Some(CompletionClientCapabilities {
+            dynamic_registration: Some(true),
+            completion_item: Some(CompletionItemCapability {
+               snippet_support: Some(true),
+               commit_characters_support: Some(true),
+               documentation_format: Some(vec![MarkupKind::Markdown, MarkupKind::PlainText]),
+               deprecated_support: Some(true),
+               preselect_support: Some(true),
+               ..Default::default()
+            }),
+            ..Default::default()
+         }),
+         hover: Some(HoverClientCapabilities {
+            dynamic_registration: Some(true),
+            content_format: Some(vec![MarkupKind::Markdown, MarkupKind::PlainText]),
+         }),
+         definition: Some(GotoCapability {
+            dynamic_registration: Some(true),
+            link_support: Some(true),
+         }),
+         references: Some(DynamicRegistrationClientCapabilities {
+            dynamic_registration: Some(true),
+         }),
+         publish_diagnostics: Some(PublishDiagnosticsClientCapabilities {
+            related_information: Some(true),
+            tag_support: Some(TagSupport {
+               value_set: vec![DiagnosticTag::UNNECESSARY, DiagnosticTag::DEPRECATED],
+            }),
+            version_support: Some(true),
+            code_description_support: Some(true),
+            data_support: Some(true),
+         }),
+         ..Default::default()
+      };
+
       let init_params = InitializeParams {
          process_id: Some(std::process::id()),
          #[allow(deprecated)]
          root_uri: Some(root_uri),
-         capabilities: ClientCapabilities::default(),
+         capabilities: ClientCapabilities {
+            text_document: Some(text_document_capabilities),
+            ..Default::default()
+         },
          ..Default::default()
       };
 
@@ -236,27 +286,50 @@ impl LspClient {
       let method = notification.get("method").and_then(|m| m.as_str());
       let params = notification.get("params");
 
+      log::info!(
+         "handle_notification called with method: {:?}, has_params: {}, has_app_handle: {}",
+         method,
+         params.is_some(),
+         app_handle.is_some()
+      );
+
       match method {
          Some("textDocument/publishDiagnostics") => {
+            log::info!("Processing publishDiagnostics notification");
             if let Some(params) = params {
-               log::debug!("Received diagnostics: {:?}", params);
+               log::info!("Diagnostics params: {:?}", params);
 
                // Parse diagnostics
-               if let Ok(diagnostic_params) =
-                  serde_json::from_value::<PublishDiagnosticsParams>(params.clone())
-               {
-                  // Emit event to frontend
-                  if let Some(app) = app_handle {
-                     let _ = app.emit("lsp://diagnostics", &diagnostic_params);
-                     log::info!("Emitted diagnostics for file: {}", diagnostic_params.uri);
+               match serde_json::from_value::<PublishDiagnosticsParams>(params.clone()) {
+                  Ok(diagnostic_params) => {
+                     log::info!(
+                        "Parsed diagnostics: uri={}, count={}",
+                        diagnostic_params.uri,
+                        diagnostic_params.diagnostics.len()
+                     );
+                     // Emit event to frontend
+                     if let Some(app) = app_handle {
+                        match app.emit("lsp://diagnostics", &diagnostic_params) {
+                           Ok(_) => log::info!(
+                              "Successfully emitted diagnostics for file: {}",
+                              diagnostic_params.uri
+                           ),
+                           Err(e) => log::error!("Failed to emit diagnostics: {}", e),
+                        }
+                     } else {
+                        log::error!("No app_handle available to emit diagnostics");
+                     }
                   }
-               } else {
-                  log::error!("Failed to parse diagnostics params");
+                  Err(e) => {
+                     log::error!("Failed to parse diagnostics params: {}", e);
+                  }
                }
+            } else {
+               log::warn!("publishDiagnostics notification has no params");
             }
          }
          Some(method_name) => {
-            log::debug!("Unhandled LSP notification: {}", method_name);
+            log::info!("Unhandled LSP notification: {}", method_name);
          }
          None => {
             log::warn!("Received notification without method");

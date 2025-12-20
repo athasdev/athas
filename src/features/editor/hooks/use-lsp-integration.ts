@@ -6,9 +6,11 @@
 import type { RefObject } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { useEditorLayout } from "@/features/editor/hooks/use-layout";
 import { useSnippetCompletion } from "@/features/editor/hooks/use-snippet-completion";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
+import { useGoToDefinition } from "@/features/editor/lsp/use-go-to-definition";
 import { useHover } from "@/features/editor/lsp/use-hover";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
@@ -59,6 +61,9 @@ export const useLspIntegration = ({
   // Snippet completion integration
   const snippetCompletion = useSnippetCompletion(filePath);
 
+  // Get layout dimensions for hover position calculations
+  const { gutterWidth, charWidth } = useEditorLayout();
+
   // Use fixed debounce for predictable completion behavior
   const completionTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const COMPLETION_DEBOUNCE = 400; // Fixed 400ms debounce
@@ -80,6 +85,19 @@ export const useLspIntegration = ({
     filePath: filePath || "",
     fontSize,
     lineNumbers,
+    gutterWidth,
+    charWidth,
+  });
+
+  // Set up go-to-definition (Cmd+Click)
+  const goToDefinitionHandlers = useGoToDefinition({
+    getDefinition: lspClient.getDefinition.bind(lspClient),
+    isLanguageSupported: (fp) => isFileSupported(fp),
+    filePath: filePath || "",
+    fontSize,
+    lineNumbers,
+    gutterWidth,
+    charWidth,
   });
 
   // Handle document lifecycle (open/close)
@@ -170,5 +188,6 @@ export const useLspIntegration = ({
     isLspSupported,
     snippetCompletion,
     hoverHandlers,
+    goToDefinitionHandlers,
   };
 };

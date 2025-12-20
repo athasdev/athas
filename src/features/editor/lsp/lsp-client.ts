@@ -49,26 +49,58 @@ export class LspClient {
 
   private async setupDiagnosticsListener() {
     try {
-      await listen<PublishDiagnosticsParams>("lsp://diagnostics", (event) => {
-        const { uri, diagnostics } = event.payload;
-        logger.debug("LSPClient", `Received diagnostics for ${uri}:`, diagnostics);
+      console.log("[LSPClient] Setting up diagnostics listener...");
+      const unlisten = await listen<PublishDiagnosticsParams>("lsp://diagnostics", (event) => {
+        try {
+          console.log("[LSPClient] Received diagnostics event:", JSON.stringify(event, null, 2));
 
-        // Convert URI to file path
-        const filePath = uri.replace("file://", "");
+          if (!event.payload) {
+            console.error("[LSPClient] No payload in diagnostics event");
+            return;
+          }
 
-        // Convert LSP diagnostics to our internal format
-        const convertedDiagnostics = diagnostics.map((d) => convertLSPDiagnostic(d));
+          const { uri, diagnostics } = event.payload;
 
-        // Update diagnostics store
-        const { setDiagnostics } = useDiagnosticsStore.getState().actions;
-        setDiagnostics(filePath, convertedDiagnostics);
+          if (!uri) {
+            console.error("[LSPClient] No uri in diagnostics payload:", event.payload);
+            return;
+          }
 
-        logger.info(
-          "LSPClient",
-          `Updated diagnostics for ${filePath}: ${convertedDiagnostics.length} items`,
-        );
+          logger.debug("LSPClient", `Received diagnostics for ${uri}:`, diagnostics);
+
+          // Convert URI to file path
+          const filePath = uri.replace("file://", "");
+          console.log(`[LSPClient] File path: ${filePath}`);
+
+          // Convert LSP diagnostics to our internal format
+          const diagnosticsList = diagnostics || [];
+          const convertedDiagnostics = diagnosticsList.map((d) => convertLSPDiagnostic(d));
+          console.log(
+            `[LSPClient] Converted ${convertedDiagnostics.length} diagnostics for ${filePath}`,
+          );
+
+          // Update diagnostics store
+          const { setDiagnostics } = useDiagnosticsStore.getState().actions;
+          setDiagnostics(filePath, convertedDiagnostics);
+
+          logger.info(
+            "LSPClient",
+            `Updated diagnostics for ${filePath}: ${convertedDiagnostics.length} items`,
+          );
+
+          // Log store state after update
+          const currentState = useDiagnosticsStore.getState();
+          console.log("[LSPClient] Diagnostics store state:", {
+            size: currentState.diagnosticsByFile.size,
+            files: Array.from(currentState.diagnosticsByFile.keys()),
+          });
+        } catch (innerError) {
+          console.error("[LSPClient] Error processing diagnostics event:", innerError);
+        }
       });
+      console.log("[LSPClient] Diagnostics listener setup complete, unlisten:", unlisten);
     } catch (error) {
+      console.error("[LSPClient] Failed to setup diagnostics listener:", error);
       logger.error("LSPClient", "Failed to setup diagnostics listener:", error);
     }
   }

@@ -201,14 +201,12 @@ const saveSettingsToStore = async (settings: Partial<Settings>) => {
   }
 };
 
-// Apply theme to document
 const applyTheme = async (theme: Theme) => {
   if (typeof window === "undefined") return;
 
   // Use the theme registry
   try {
     const { themeRegistry } = await import("@/extensions/themes/theme-registry");
-    console.log(`Settings store: Attempting to apply theme "${theme}"`);
 
     // Check if theme registry is ready
     if (!themeRegistry.isRegistryReady()) {

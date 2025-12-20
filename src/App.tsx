@@ -1,5 +1,6 @@
 import { enableMapSet } from "immer";
 import { useEffect } from "react";
+import { useLspInitialization } from "@/features/editor/hooks/use-lsp-initialization";
 import { useKeymapContext } from "@/features/keymaps/hooks/use-keymap-context";
 import { useKeymaps } from "@/features/keymaps/hooks/use-keymaps";
 import { useRemoteConnection } from "@/features/remote/hooks/use-remote-connection";
@@ -71,6 +72,7 @@ function App() {
   useRemoteConnection();
   useRemoteWindowClose();
   useContextMenuPrevention();
+  useLspInitialization();
 
   // File watcher setup
   useEffect(() => {

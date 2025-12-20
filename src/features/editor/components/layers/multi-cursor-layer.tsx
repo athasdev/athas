@@ -40,7 +40,13 @@ const MultiCursorLayerComponent = forwardRef<HTMLDivElement, MultiCursorLayerPro
       return { top, left: column * fontSize * 0.6 + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT };
     };
 
-    const secondaryCursors = cursors.filter((cursor) => cursor.id !== primaryCursorId);
+    // Filter out primary cursor and cursors with invalid positions (out of bounds)
+    const secondaryCursors = cursors.filter((cursor) => {
+      if (cursor.id === primaryCursorId) return false;
+      // Bounds check: don't render if line is out of range
+      if (cursor.position.line < 0 || cursor.position.line >= lines.length) return false;
+      return true;
+    });
 
     if (secondaryCursors.length === 0) return null;
 

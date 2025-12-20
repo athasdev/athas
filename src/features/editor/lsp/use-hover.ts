@@ -10,6 +10,8 @@ interface UseHoverProps {
   filePath: string;
   fontSize: number;
   lineNumbers: boolean;
+  gutterWidth: number;
+  charWidth: number;
 }
 
 export const useHover = ({
@@ -18,6 +20,8 @@ export const useHover = ({
   filePath,
   fontSize,
   lineNumbers,
+  gutterWidth,
+  charWidth,
 }: UseHoverProps) => {
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -40,17 +44,21 @@ export const useHover = ({
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        const lineHeight = fontSize * 1.4;
-        const charWidth = fontSize * 0.6;
-        const paddingLeft = lineNumbers ? 8 : 16;
-        const paddingTop = 16;
+        const lineHeight = fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER;
+        // Use actual gutter width + margin for content offset
+        const contentOffsetX = lineNumbers
+          ? gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN
+          : EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
+        const paddingTop = EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
 
         const line = Math.floor((y - paddingTop + editor.scrollTop) / lineHeight);
-        const character = Math.floor((x - paddingLeft + editor.scrollLeft) / charWidth);
+        const character = Math.floor((x - contentOffsetX + editor.scrollLeft) / charWidth);
 
         if (line >= 0 && character >= 0) {
           try {
+            logger.debug("Editor", `Requesting hover at ${filePath}:${line}:${character}`);
             const hoverResult = await getHover(filePath || "", line, character);
+            logger.debug("Editor", `Hover result:`, hoverResult);
             if (hoverResult?.contents) {
               let content = "";
 
@@ -112,7 +120,16 @@ export const useHover = ({
         }
       }, EDITOR_CONSTANTS.HOVER_TOOLTIP_DELAY);
     },
-    [getHover, isLanguageSupported, filePath, fontSize, lineNumbers, actions.setHoverInfo],
+    [
+      getHover,
+      isLanguageSupported,
+      filePath,
+      fontSize,
+      lineNumbers,
+      gutterWidth,
+      charWidth,
+      actions.setHoverInfo,
+    ],
   );
 
   const handleMouseLeave = useCallback(() => {

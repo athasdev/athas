@@ -9,6 +9,7 @@ import {
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
+import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
@@ -196,6 +197,13 @@ const EditorFooter = () => {
   const { available, downloading, installing, updateInfo, downloadAndInstall } = useUpdater(false);
   const cursorPosition = useEditorStateStore.use.cursorPosition();
 
+  // Get diagnostics count for badge display
+  const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
+  const diagnosticsCount = Array.from(diagnosticsByFile.values()).reduce(
+    (total, diagnostics) => total + diagnostics.length,
+    0,
+  );
+
   return (
     <div className="relative z-20 flex min-h-8 shrink-0 items-center justify-between border-border border-t bg-secondary-bg px-2 py-1">
       <div className="ui-font flex items-center gap-0.5 text-text-lighter text-xs">
@@ -252,12 +260,19 @@ const EditorFooter = () => {
             className={`flex items-center gap-0.5 rounded px-1 py-0.5 transition-colors ${
               uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"
                 ? "bg-selected text-text"
-                : "text-text-lighter hover:bg-hover"
+                : diagnosticsCount > 0
+                  ? "text-warning hover:bg-hover"
+                  : "text-text-lighter hover:bg-hover"
             }`}
             style={{ minHeight: 0, minWidth: 0 }}
-            title="Toggle Diagnostics Panel"
+            title={
+              diagnosticsCount > 0
+                ? `${diagnosticsCount} diagnostic${diagnosticsCount === 1 ? "" : "s"}`
+                : "Toggle Diagnostics Panel"
+            }
           >
             <AlertCircle size={12} />
+            {diagnosticsCount > 0 && <span className="ml-0.5 text-[10px]">{diagnosticsCount}</span>}
           </button>
         )}
 
