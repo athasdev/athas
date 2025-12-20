@@ -4,11 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useContextMenu } from "@/hooks/use-context-menu";
+import { useUIState } from "@/stores/ui-state-store";
 import type { ProjectTab } from "@/stores/workspace-tabs-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
 import { cn } from "@/utils/cn";
+import ProjectPickerDialog from "./project-picker-dialog";
 
 const DRAG_THRESHOLD = 5;
 
@@ -23,7 +25,8 @@ interface TabPosition {
 const ProjectTabs = () => {
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const { reorderProjectTabs } = useWorkspaceTabsStore.getState();
-  const { handleOpenFolder, switchToProject, closeProject } = useFileSystemStore();
+  const { switchToProject, closeProject } = useFileSystemStore();
+  const { isProjectPickerVisible, setIsProjectPickerVisible } = useUIState();
 
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -179,8 +182,8 @@ const ProjectTabs = () => {
     await closeProject(projectId);
   };
 
-  const handleAddProject = async () => {
-    await handleOpenFolder();
+  const handleAddProject = () => {
+    setIsProjectPickerVisible(true);
   };
 
   // Build context menu items based on the selected tab
@@ -388,6 +391,14 @@ const ProjectTabs = () => {
           position={contextMenu.position}
           items={getContextMenuItems(contextMenu.data)}
           onClose={contextMenu.close}
+        />,
+        document.body,
+      )}
+
+      {createPortal(
+        <ProjectPickerDialog
+          isOpen={isProjectPickerVisible}
+          onClose={() => setIsProjectPickerVisible(false)}
         />,
         document.body,
       )}
