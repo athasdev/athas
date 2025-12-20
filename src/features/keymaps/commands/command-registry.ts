@@ -99,11 +99,11 @@ const fileCommands: Command[] = [
   },
   {
     id: "file.open",
-    title: "Open Folder",
+    title: "Open Project",
     category: "File",
     keybinding: "cmd+o",
-    execute: async () => {
-      await useFileSystemStore.getState().handleOpenFolder();
+    execute: () => {
+      useUIState.getState().setIsProjectPickerVisible(true);
     },
   },
   {
