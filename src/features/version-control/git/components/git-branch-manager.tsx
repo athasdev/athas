@@ -176,7 +176,7 @@ const GitBranchManager = ({
       >
         <GitBranch
           size={compact ? 11 : 12}
-          className={compact ? "flex-shrink-0" : "text-text-lighter"}
+          className={compact ? "shrink-0" : "text-text-lighter"}
         />
         <span
           className={cn(

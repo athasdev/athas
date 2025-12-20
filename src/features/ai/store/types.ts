@@ -1,4 +1,5 @@
-import type { Chat, Message } from "@/features/ai/types/ai-chat";
+import type { SessionMode, SlashCommand } from "@/features/ai/types/acp";
+import type { AgentType, Chat, Message } from "@/features/ai/types/ai-chat";
 import type { FileEntry } from "@/features/file-system/types/app";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
@@ -14,6 +15,7 @@ export interface AIChatState {
   // Single session state
   chats: Chat[];
   currentChatId: string | null;
+  selectedAgentId: AgentType; // Current agent selection for new chats
   input: string;
   isTyping: boolean;
   streamingMessageId: string | null;
@@ -42,10 +44,29 @@ export interface AIChatState {
     startIndex: number;
     selectedIndex: number;
   };
+
+  // Slash command state
+  slashCommandState: {
+    active: boolean;
+    position: { top: number; left: number };
+    search: string;
+    selectedIndex: number;
+  };
+  availableSlashCommands: SlashCommand[];
+
+  // Session mode state
+  sessionModeState: {
+    currentModeId: string | null;
+    availableModes: SessionMode[];
+  };
 }
 
 export interface AIChatActions {
-  // Claude Code specific actions
+  // Agent selection
+  setSelectedAgentId: (agentId: AgentType) => void;
+  getCurrentAgentId: () => AgentType; // Gets agent for current chat or selected agent
+
+  // Chat mode actions
   setMode: (mode: ChatMode) => void;
   setOutputStyle: (outputStyle: OutputStyle) => void;
 
@@ -70,7 +91,7 @@ export interface AIChatActions {
   autoSelectBuffer: (bufferId: string) => void;
 
   // Chat actions
-  createNewChat: () => string;
+  createNewChat: (agentId?: AgentType) => string;
   switchToChat: (chatId: string) => void;
   deleteChat: (chatId: string) => void;
   updateChatTitle: (chatId: string, title: string) => void;
@@ -84,6 +105,7 @@ export interface AIChatActions {
   loadChatsFromDatabase: () => Promise<void>;
   loadChatMessages: (chatId: string) => Promise<void>;
   syncChatToDatabase: (chatId: string) => Promise<void>;
+  clearAllChats: () => Promise<void>;
 
   // Provider API key actions
   setApiKeyModalState: (apiKeyModalState: { isOpen: boolean; providerId: string | null }) => void;
@@ -106,6 +128,24 @@ export interface AIChatActions {
   selectPrevious: () => void;
   setSelectedIndex: (index: number) => void;
   getFilteredFiles: (allFiles: FileEntry[]) => FileEntry[];
+
+  // Slash command actions
+  showSlashCommands: (position: { top: number; left: number }, search: string) => void;
+  hideSlashCommands: () => void;
+  updateSlashCommandSearch: (search: string) => void;
+  selectNextSlashCommand: () => void;
+  selectPreviousSlashCommand: () => void;
+  setSlashCommandSelectedIndex: (index: number) => void;
+  setAvailableSlashCommands: (commands: SlashCommand[]) => void;
+  getFilteredSlashCommands: () => SlashCommand[];
+
+  // Session mode actions
+  setSessionModeState: (currentModeId: string | null, availableModes: SessionMode[]) => void;
+  setCurrentModeId: (modeId: string) => void;
+  changeSessionMode: (modeId: string) => Promise<void>;
+
+  // Settings integration
+  applyDefaultSettings: () => void;
 
   // Helper getters
   getCurrentChat: () => Chat | undefined;

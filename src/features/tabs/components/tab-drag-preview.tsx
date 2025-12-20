@@ -23,7 +23,7 @@ const TabDragPreview = ({ x, y, buffer }: TabDragPreviewProps) => (
           <FileIcon fileName={buffer.name} isDir={false} className="text-text-lighter" size={12} />
         )}
       </span>
-      {buffer.isPinned && <Pin size={8} className="flex-shrink-0 text-accent" />}
+      {buffer.isPinned && <Pin size={8} className="shrink-0 text-accent" />}
       <span className="max-w-[200px] truncate text-text">
         {buffer.name}
         {buffer.isDirty && <span className="ml-1 text-text-lighter">•</span>}

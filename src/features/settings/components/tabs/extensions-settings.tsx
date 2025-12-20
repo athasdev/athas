@@ -75,16 +75,16 @@ const ExtensionRow = ({
         </div>
       </div>
       {extension.isBundled ? (
-        <span className="flex-shrink-0 text-accent text-xs">Built-in</span>
+        <span className="shrink-0 text-accent text-xs">Built-in</span>
       ) : isInstalling ? (
-        <div className="flex flex-shrink-0 items-center gap-1.5 text-accent">
+        <div className="flex shrink-0 items-center gap-1.5 text-accent">
           <RefreshCw size={12} className="animate-spin" />
           <span className="text-xs">Installing</span>
         </div>
       ) : extension.isInstalled ? (
         <button
           onClick={onToggle}
-          className="flex-shrink-0 text-text-lighter text-xs transition-colors hover:text-red-500"
+          className="shrink-0 text-text-lighter text-xs transition-colors hover:text-red-500"
           title="Uninstall"
         >
           Uninstall
@@ -92,7 +92,7 @@ const ExtensionRow = ({
       ) : (
         <button
           onClick={onToggle}
-          className="flex-shrink-0 text-text-lighter text-xs transition-colors hover:text-accent"
+          className="shrink-0 text-text-lighter text-xs transition-colors hover:text-accent"
           title="Install"
         >
           Install

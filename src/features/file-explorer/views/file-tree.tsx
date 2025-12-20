@@ -574,7 +574,7 @@ const FileTree = ({
               fileName={file.isDir ? "folder" : "file"}
               isDir={file.isDir}
               isExpanded={false}
-              className="flex-shrink-0 text-text-lighter"
+              className="shrink-0 text-text-lighter"
             />
             <input
               ref={(inputElement) => {
@@ -683,7 +683,7 @@ const FileTree = ({
               isDir={file.isDir}
               isExpanded={file.expanded}
               isSymlink={file.isSymlink}
-              className="flex-shrink-0 text-text-lighter"
+              className="shrink-0 text-text-lighter"
             />
             <span
               className={cn("select-none whitespace-nowrap", getGitStatusColor(file))}

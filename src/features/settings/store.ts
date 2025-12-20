@@ -45,6 +45,10 @@ interface Settings {
   isAIChatVisible: boolean;
   aiCompletion: boolean;
   aiAutoOpenReadFiles: boolean;
+  aiTemperature: number;
+  aiMaxTokens: number;
+  aiDefaultOutputStyle: "default" | "explanatory" | "learning";
+  aiDefaultSessionMode: string;
   // Layout
   sidebarWidth: number;
   // Keyboard
@@ -115,6 +119,10 @@ const defaultSettings: Settings = {
   isAIChatVisible: false,
   aiCompletion: true,
   aiAutoOpenReadFiles: true,
+  aiTemperature: 0.7,
+  aiMaxTokens: 4096,
+  aiDefaultOutputStyle: "default",
+  aiDefaultSessionMode: "",
   // Layout
   sidebarWidth: 220,
   // Keyboard

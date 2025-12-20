@@ -575,7 +575,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   return (
     <>
-      <div className="relative flex-shrink-0 border-border border-b">
+      <div className="relative shrink-0 border-border border-b">
         <div
           ref={tabBarRef}
           className="flex overflow-x-auto overflow-y-hidden bg-secondary-bg [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

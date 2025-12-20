@@ -211,7 +211,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
             onClick={handleUploadTheme}
             variant="ghost"
             size="xs"
-            className="flex-shrink-0 gap-1 px-2"
+            className="shrink-0 gap-1 px-2"
           >
             <Upload size={12} />
           </Button>
@@ -250,9 +250,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
                 isSelected={isSelected}
                 className="gap-3 px-2 py-1.5"
               >
-                <div className="flex-shrink-0 text-text-lighter">
-                  {theme.icon || <Moon size={14} />}
-                </div>
+                <div className="shrink-0 text-text-lighter">{theme.icon || <Moon size={14} />}</div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 truncate text-xs">
                     <span className="truncate">{theme.name}</span>

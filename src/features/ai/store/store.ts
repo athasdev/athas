@@ -2,7 +2,7 @@ import { produce } from "immer";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { Chat } from "@/features/ai/types/ai-chat";
+import type { AgentType, Chat } from "@/features/ai/types/ai-chat";
 import { AI_PROVIDERS } from "@/features/ai/types/providers";
 import type { FileEntry } from "@/features/file-system/types/app";
 import {
@@ -27,6 +27,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         // Single session state
         chats: [],
         currentChatId: null,
+        selectedAgentId: "custom" as AgentType, // Default to custom (API-based)
         input: "",
         isTyping: false,
         streamingMessageId: null,
@@ -54,7 +55,39 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           selectedIndex: 0,
         },
 
-        // Claude Code specific actions
+        slashCommandState: {
+          active: false,
+          position: { top: 0, left: 0 },
+          search: "",
+          selectedIndex: 0,
+        },
+        availableSlashCommands: [],
+
+        sessionModeState: {
+          currentModeId: null,
+          availableModes: [],
+        },
+
+        // Agent selection actions
+        setSelectedAgentId: (agentId) =>
+          set((state) => {
+            state.selectedAgentId = agentId;
+          }),
+
+        getCurrentAgentId: () => {
+          const state = get();
+          // If there's a current chat, return its agent
+          if (state.currentChatId) {
+            const chat = state.chats.find((c) => c.id === state.currentChatId);
+            if (chat?.agentId) {
+              return chat.agentId;
+            }
+          }
+          // Otherwise return the selected agent for new chats
+          return state.selectedAgentId;
+        },
+
+        // Chat mode actions
         setMode: (mode) =>
           set((state) => {
             state.mode = mode;
@@ -163,13 +196,16 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           }),
 
         // Chat actions
-        createNewChat: () => {
+        createNewChat: (agentId?: AgentType) => {
+          const state = get();
+          const chatAgentId = agentId || state.selectedAgentId;
           const newChat: Chat = {
             id: Date.now().toString(),
             title: "New Chat",
             messages: [],
             createdAt: new Date(),
             lastMessageAt: new Date(),
+            agentId: chatAgentId,
           };
           set((state) => {
             state.chats.unshift(newChat);
@@ -522,6 +558,100 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             .map(({ file }) => file);
         },
 
+        // Slash command actions
+        showSlashCommands: (position, search) =>
+          set((state) => {
+            state.slashCommandState = {
+              active: true,
+              position,
+              search,
+              selectedIndex: 0,
+            };
+          }),
+
+        hideSlashCommands: () =>
+          set((state) => {
+            state.slashCommandState = {
+              active: false,
+              position: { top: 0, left: 0 },
+              search: "",
+              selectedIndex: 0,
+            };
+          }),
+
+        updateSlashCommandSearch: (search) =>
+          set((state) => {
+            state.slashCommandState.search = search;
+            state.slashCommandState.selectedIndex = 0;
+          }),
+
+        selectNextSlashCommand: () =>
+          set((state) => {
+            const filtered = get().getFilteredSlashCommands();
+            state.slashCommandState.selectedIndex = Math.min(
+              state.slashCommandState.selectedIndex + 1,
+              filtered.length - 1,
+            );
+          }),
+
+        selectPreviousSlashCommand: () =>
+          set((state) => {
+            state.slashCommandState.selectedIndex = Math.max(
+              state.slashCommandState.selectedIndex - 1,
+              0,
+            );
+          }),
+
+        setSlashCommandSelectedIndex: (index) =>
+          set((state) => {
+            state.slashCommandState.selectedIndex = index;
+          }),
+
+        setAvailableSlashCommands: (commands) =>
+          set((state) => {
+            state.availableSlashCommands = commands;
+          }),
+
+        getFilteredSlashCommands: () => {
+          const { search } = get().slashCommandState;
+          const commands = get().availableSlashCommands;
+          const query = search.toLowerCase();
+
+          if (!query) return commands.slice(0, 10);
+
+          return commands
+            .filter(
+              (cmd) =>
+                cmd.name.toLowerCase().includes(query) ||
+                cmd.description.toLowerCase().includes(query),
+            )
+            .slice(0, 10);
+        },
+
+        // Session mode actions
+        setSessionModeState: (currentModeId, availableModes) =>
+          set((state) => {
+            state.sessionModeState = {
+              currentModeId,
+              availableModes,
+            };
+          }),
+
+        setCurrentModeId: (modeId) =>
+          set((state) => {
+            state.sessionModeState.currentModeId = modeId;
+          }),
+
+        changeSessionMode: async (modeId) => {
+          try {
+            const { invoke } = await import("@tauri-apps/api/core");
+            await invoke("set_acp_session_mode", { modeId });
+            // The mode will be updated via the event handler when the agent confirms
+          } catch (error) {
+            console.error("Failed to change session mode:", error);
+          }
+        },
+
         // SQLite database actions
         initializeDatabase: async () => {
           try {
@@ -569,6 +699,44 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           }
         },
 
+        clearAllChats: async () => {
+          try {
+            const state = get();
+            // Delete all chats from database
+            for (const chat of state.chats) {
+              await deleteChatFromDb(chat.id);
+            }
+            // Clear state
+            set((state) => {
+              state.chats = [];
+              state.currentChatId = null;
+              state.input = "";
+              state.isTyping = false;
+              state.streamingMessageId = null;
+            });
+            console.log("All chats cleared");
+          } catch (error) {
+            console.error("Failed to clear all chats:", error);
+            throw error;
+          }
+        },
+
+        applyDefaultSettings: () => {
+          // Import settings store dynamically to avoid circular dependency
+          import("@/features/settings/store").then(({ useSettingsStore }) => {
+            const settings = useSettingsStore.getState().settings;
+            set((state) => {
+              // Apply default output style if not already set or different
+              if (
+                settings.aiDefaultOutputStyle &&
+                settings.aiDefaultOutputStyle !== state.outputStyle
+              ) {
+                state.outputStyle = settings.aiDefaultOutputStyle;
+              }
+            });
+          });
+        },
+
         // Helper getters
         getCurrentChat: () => {
           const state = get();
@@ -582,19 +750,21 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         },
       }),
       {
-        name: "athas-ai-chat-settings-v5",
-        version: 1,
+        name: "athas-ai-chat-settings-v6",
+        version: 2,
         partialize: (state) => ({
           mode: state.mode,
           outputStyle: state.outputStyle,
+          selectedAgentId: state.selectedAgentId,
         }),
         merge: (persistedState, currentState) =>
           produce(currentState, (draft) => {
-            // Only merge mode and outputStyle from localStorage
+            // Only merge mode, outputStyle, and selectedAgentId from localStorage
             // Chats are loaded from SQLite separately
             if (persistedState) {
               draft.mode = (persistedState as any).mode || "chat";
               draft.outputStyle = (persistedState as any).outputStyle || "default";
+              draft.selectedAgentId = (persistedState as any).selectedAgentId || "custom";
             }
           }),
       },

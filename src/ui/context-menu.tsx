@@ -115,7 +115,7 @@ export const ContextMenu = ({ isOpen, position, items, onClose, className }: Con
               item.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
             )}
           >
-            {item.icon && <span className="size-3 flex-shrink-0">{item.icon}</span>}
+            {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
             <span className="flex-1">{item.label}</span>
             {item.keybinding && (
               <span className="text-text-lighter text-xs">{item.keybinding}</span>

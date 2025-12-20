@@ -195,7 +195,7 @@ const IconThemeSelector = ({
                 isSelected={isSelected}
                 className="gap-3 px-2 py-1.5"
               >
-                <div className="flex-shrink-0 text-text-lighter">
+                <div className="shrink-0 text-text-lighter">
                   {theme.icon || <Palette size={14} />}
                 </div>
                 <div className="min-w-0 flex-1">

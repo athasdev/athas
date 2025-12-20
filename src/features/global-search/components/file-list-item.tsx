@@ -35,7 +35,7 @@ export const FileListItem = ({
     >
       <File
         size={11}
-        className={`flex-shrink-0 ${category === "open" ? "text-accent" : "text-text-lighter"}`}
+        className={`shrink-0 ${category === "open" ? "text-accent" : "text-text-lighter"}`}
       />
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs">

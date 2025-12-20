@@ -93,7 +93,7 @@ export function ResizablePane({ children, position, widthKey, className }: Resiz
       ref={paneRef}
       style={{ width: `${width}px` }}
       className={cn(
-        "relative flex h-full min-w-0 flex-shrink-0 flex-col overflow-hidden border-border bg-secondary-bg",
+        "relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden border-border bg-secondary-bg",
         borderSide,
         className,
       )}

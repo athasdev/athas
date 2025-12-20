@@ -225,12 +225,12 @@ export default function Breadcrumb() {
 
   return (
     <>
-      <div className="flex min-h-[28px] select-none items-center justify-between border-border border-b bg-terniary-bg px-3 py-1">
+      <div className="flex min-h-7 select-none items-center justify-between border-border border-b bg-terniary-bg px-3 py-1">
         <div className="ui-font flex items-center gap-0.5 overflow-hidden text-text-lighter text-xs">
           {segments.map((segment, index) => (
             <div key={index} className="flex min-w-0 items-center gap-0.5">
               {index > 0 && (
-                <ChevronRight size={10} className="mx-0.5 flex-shrink-0 text-text-lighter" />
+                <ChevronRight size={10} className="mx-0.5 shrink-0 text-text-lighter" />
               )}
               <button
                 ref={(el) => {
@@ -293,7 +293,7 @@ export default function Breadcrumb() {
                 onClick={handleGoBack}
                 className="ui-font flex w-full items-center gap-2 border-border border-b px-3 py-1.5 text-left text-text-lighter text-xs hover:bg-hover hover:text-text"
               >
-                <ArrowLeft size={12} className="flex-shrink-0" />
+                <ArrowLeft size={12} className="shrink-0" />
                 <span>Go back</span>
               </button>
             )}
@@ -347,7 +347,7 @@ export default function Breadcrumb() {
                   fileName={item.name}
                   isDir={item.isDir}
                   isExpanded={false}
-                  className="flex-shrink-0 text-text-lighter"
+                  className="shrink-0 text-text-lighter"
                 />
                 <span className="truncate">{item.name}</span>
               </button>
