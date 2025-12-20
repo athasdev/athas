@@ -1,9 +1,8 @@
-import { Server } from "lucide-react";
 import { memo, useEffect, useMemo, useRef } from "react";
 import FileTree from "@/features/file-explorer/views/file-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
-import RemoteConnectionView from "@/features/remote/remote-connection-view";
+import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { useSettingsStore } from "@/features/settings/store";
 import GitView from "@/features/version-control/git/components/git-view";
 import { useSearchViewStore } from "@/stores/search-view-store";
@@ -32,7 +31,8 @@ const flattenFileTree = (files: FileEntry[]): FileEntry[] => {
 
 export const MainSidebar = memo(() => {
   // Get state from stores
-  const { isGitViewActive, isSearchViewActive, isRemoteViewActive, setActiveView } = useUIState();
+  const { isGitViewActive, isSearchViewActive, isGitHubPRsViewActive, setActiveView } =
+    useUIState();
 
   // Ref for SearchView to enable focus functionality
   const searchViewRef = useRef<SearchViewRef>(null);
@@ -57,11 +57,6 @@ export const MainSidebar = memo(() => {
 
   // sidebar store
   const activePath = useSidebarStore.use.activePath?.();
-  const remoteConnectionName = useSidebarStore.use.remoteConnectionName?.();
-
-  // Check if this is a remote window directly from URL params
-  const urlParams = new URLSearchParams(window.location.search);
-  const isRemoteWindow = !!urlParams.get("remote");
   const updateActivePath = useSidebarStore.use.updateActivePath?.();
 
   const { settings } = useSettingsStore();
@@ -95,21 +90,10 @@ export const MainSidebar = memo(() => {
       <SidebarPaneSelector
         isGitViewActive={isGitViewActive}
         isSearchViewActive={isSearchViewActive}
-        isRemoteViewActive={isRemoteViewActive}
-        isRemoteWindow={isRemoteWindow}
+        isGitHubPRsViewActive={isGitHubPRsViewActive}
         coreFeatures={settings.coreFeatures}
         onViewChange={setActiveView}
       />
-
-      {/* Remote Window Header */}
-      {isRemoteWindow && remoteConnectionName && (
-        <div className="flex items-center border-border border-b bg-secondary-bg px-2 py-1.5">
-          <Server size={12} className="mr-2 text-text-lighter" />
-          <span className="flex-1 px-2 py-1 font-medium text-text text-xs">
-            {remoteConnectionName}
-          </span>
-        </div>
-      )}
 
       <div className="flex-1 overflow-hidden">
         {settings.coreFeatures.git && (
@@ -129,16 +113,16 @@ export const MainSidebar = memo(() => {
           </div>
         )}
 
-        {settings.coreFeatures.remote && (
-          <div className={cn("h-full", !isRemoteViewActive && "hidden")}>
-            <RemoteConnectionView onFileSelect={handleFileSelect} />
+        {settings.coreFeatures.github && (
+          <div className={cn("h-full", !isGitHubPRsViewActive && "hidden")}>
+            <GitHubPRsView />
           </div>
         )}
 
         <div
           className={cn(
             "h-full",
-            (isGitViewActive || isSearchViewActive || isRemoteViewActive) && "hidden",
+            (isGitViewActive || isSearchViewActive || isGitHubPRsViewActive) && "hidden",
           )}
         >
           {isFileTreeLoading ? (

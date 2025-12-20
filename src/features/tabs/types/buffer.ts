@@ -13,4 +13,6 @@ export interface Buffer {
   language?: string; // File language for syntax highlighting and formatting
   isWebViewer?: boolean; // Web viewer tab
   webViewerUrl?: string; // URL for web viewer
+  isPullRequest?: boolean; // GitHub PR view
+  prNumber?: number; // PR number for GitHub PR view
 }

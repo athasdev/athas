@@ -70,6 +70,9 @@ nucleo-matcher = "0.3.1"
 toml = "0.8"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-deep-link = "2"
+agent-client-protocol = "0.9"
+async-trait = "0.1"
+tokio-util = { version = "0.7", features = ["compat"] }
 
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

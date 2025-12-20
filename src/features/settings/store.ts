@@ -134,6 +134,7 @@ const defaultSettings: Settings = {
   // Features
   coreFeatures: {
     git: true,
+    github: true,
     remote: true,
     terminal: true,
     search: true,

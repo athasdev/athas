@@ -10,6 +10,7 @@ export interface CoreFeature {
 
 export interface CoreFeaturesState {
   git: boolean;
+  github: boolean;
   remote: boolean;
   terminal: boolean;
   search: boolean;

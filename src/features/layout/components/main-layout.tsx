@@ -14,6 +14,7 @@ import { ExternalEditorTerminal } from "@/features/editor/components/external-ed
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import PRViewer from "@/features/github/components/pr-viewer";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { ImageViewer } from "@/features/image-viewer/components/image-viewer";
 import { useSettingsStore } from "@/features/settings/store";
@@ -210,7 +211,7 @@ export function MainLayout() {
       )}
 
       <CustomTitleBarWithSettings />
-      <div className="h-px flex-shrink-0 bg-border" />
+      <div className="h-px shrink-0 bg-border" />
 
       <div className="z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
@@ -239,6 +240,8 @@ export function MainLayout() {
                   return (
                     <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />
                   );
+                } else if (activeBuffer.isPullRequest && activeBuffer.prNumber) {
+                  return <PRViewer prNumber={activeBuffer.prNumber} />;
                 } else if (activeBuffer.isImage) {
                   return (
                     <ImageViewer

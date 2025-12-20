@@ -2,10 +2,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use commands::*;
-use features::{ClaudeCodeBridge, FileWatcher};
+use features::{AcpAgentBridge, ClaudeCodeBridge, FileWatcher};
 use log::{debug, info};
 use lsp::LspManager;
-use ssh::{ssh_connect, ssh_disconnect, ssh_disconnect_only, ssh_write_file};
+use ssh::{
+   ssh_connect, ssh_disconnect, ssh_disconnect_only, ssh_read_directory, ssh_read_file,
+   ssh_write_file,
+};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri_plugin_os::platform;
@@ -62,9 +65,13 @@ fn main() {
          // Set up the file watcher
          app.manage(Arc::new(FileWatcher::new(app.handle().clone())));
 
-         // Set up Claude bridge
+         // Set up Claude bridge (legacy, kept for rollback)
          let claude_bridge = Arc::new(Mutex::new(ClaudeCodeBridge::new(app.handle().clone())));
          app.manage(claude_bridge.clone());
+
+         // Set up ACP agent bridge (new implementation)
+         let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(app.handle().clone())));
+         app.manage(acp_bridge);
 
          // Set up LSP manager
          app.manage(LspManager::new(app.handle().clone()));
@@ -296,6 +303,15 @@ fn main() {
          store_github_token,
          get_github_token,
          remove_github_token,
+         github_check_cli_auth,
+         github_list_prs,
+         github_get_current_user,
+         github_open_pr_in_browser,
+         github_checkout_pr,
+         github_get_pr_details,
+         github_get_pr_diff,
+         github_get_pr_files,
+         github_get_pr_comments,
          // AI Provider token commands
          store_ai_provider_token,
          get_ai_provider_token,
@@ -331,11 +347,22 @@ fn main() {
          ssh_disconnect,
          ssh_disconnect_only,
          ssh_write_file,
-         // Claude commands
+         ssh_read_directory,
+         ssh_read_file,
+         // Claude commands (legacy)
          start_claude_code,
          stop_claude_code,
          send_claude_input,
          get_claude_status,
+         // ACP agent commands (new)
+         get_available_agents,
+         start_acp_agent,
+         stop_acp_agent,
+         send_acp_prompt,
+         get_acp_status,
+         respond_acp_permission,
+         set_acp_session_mode,
+         cancel_acp_prompt,
          // Theme commands
          get_system_theme,
          load_toml_themes,
