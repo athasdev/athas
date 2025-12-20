@@ -54,14 +54,6 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
     const loadThemes = () => {
       const registryThemes = themeRegistry.getAllThemes();
       const themeInfos: ThemeInfo[] = [
-        // System theme always first
-        {
-          id: "auto",
-          name: "Auto",
-          description: "Follow system preference",
-          category: "System",
-          icon: <Monitor size={14} />,
-        },
         // Convert registry themes to ThemeInfo
         ...registryThemes.map(
           (theme: ThemeDefinition): ThemeInfo => ({
