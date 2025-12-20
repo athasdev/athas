@@ -1,0 +1,77 @@
+{
+  "name": "Christmas",
+  "author": "Athas",
+  "description": "Festive holiday themes with classic Christmas colors",
+  "themes": [
+    {
+      "id": "christmas-dark",
+      "name": "Christmas Eve",
+      "description": "Dark festive theme with red and green accents",
+      "appearance": "dark",
+      "colors": {
+        "primary-bg": "#1a1f16",
+        "secondary-bg": "#242b1e",
+        "text": "#f5f0e6",
+        "text-light": "#d4cfc5",
+        "text-lighter": "#a8a396",
+        "border": "#3d4a34",
+        "hover": "#2e3828",
+        "selected": "#3d4a34",
+        "accent": "#c41e3a"
+      },
+      "syntax": {
+        "keyword": "#c41e3a",
+        "string": "#228b22",
+        "number": "#d4af37",
+        "comment": "#6b7c5f",
+        "variable": "#e8a838",
+        "function": "#2e8b57",
+        "constant": "#d4af37",
+        "property": "#90c090",
+        "type": "#ffd700",
+        "operator": "#c41e3a",
+        "punctuation": "#f5f0e6",
+        "boolean": "#d4af37",
+        "null": "#d4af37",
+        "regex": "#228b22",
+        "tag": "#c41e3a",
+        "attribute": "#2e8b57"
+      }
+    },
+    {
+      "id": "christmas-light",
+      "name": "Christmas Morning",
+      "description": "Light festive theme inspired by fresh snow",
+      "appearance": "light",
+      "colors": {
+        "primary-bg": "#faf8f5",
+        "secondary-bg": "#f0ece4",
+        "text": "#2a2a2a",
+        "text-light": "#4a4a4a",
+        "text-lighter": "#6b6b6b",
+        "border": "#d4d0c8",
+        "hover": "#e8e4dc",
+        "selected": "#dcd8d0",
+        "accent": "#b22234"
+      },
+      "syntax": {
+        "keyword": "#b22234",
+        "string": "#1a6b1a",
+        "number": "#b8860b",
+        "comment": "#8b9980",
+        "variable": "#c4820e",
+        "function": "#1a6b1a",
+        "constant": "#b8860b",
+        "property": "#2e7d32",
+        "type": "#9a6700",
+        "operator": "#b22234",
+        "punctuation": "#4a4a4a",
+        "boolean": "#b8860b",
+        "null": "#b8860b",
+        "regex": "#1a6b1a",
+        "tag": "#b22234",
+        "attribute": "#2e7d32"
+      }
+    }
+  ]
+}

@@ -115,7 +115,7 @@ const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => 
     return (
       <div
         ref={dropdownRef}
-        className="fixed z-[9999] w-[260px] overflow-hidden rounded-lg border border-border bg-secondary-bg shadow-xl"
+        className="fixed z-9999 w-[260px] overflow-hidden rounded-lg border border-border bg-secondary-bg shadow-xl"
         style={{ top: position.top, left: position.left }}
       >
         {/* Header - Project Name */}
@@ -197,7 +197,7 @@ const EditorFooter = () => {
   const cursorPosition = useEditorStateStore.use.cursorPosition();
 
   return (
-    <div className="relative z-20 flex min-h-[32px] flex-shrink-0 items-center justify-between border-border border-t bg-secondary-bg px-2 py-1">
+    <div className="relative z-20 flex min-h-8 shrink-0 items-center justify-between border-border border-t bg-secondary-bg px-2 py-1">
       <div className="ui-font flex items-center gap-0.5 text-text-lighter text-xs">
         {/* Git branch manager */}
         {rootFolderPath && gitStatus?.branch && (
