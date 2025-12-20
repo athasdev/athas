@@ -222,6 +222,13 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       setIsInitialized(true);
       isInitializingRef.current = false;
 
+      // Emit terminal-ready event for pending commands
+      window.dispatchEvent(
+        new CustomEvent("terminal-ready", {
+          detail: { terminalId: sessionId, connectionId },
+        }),
+      );
+
       onTerminalRef?.({ focus: () => terminal.focus(), terminal });
       onReady?.();
     } catch (error) {
