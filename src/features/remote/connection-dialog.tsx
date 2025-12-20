@@ -1,12 +1,9 @@
-import { AlertCircle, CheckCircle, Eye, EyeOff, Save, Server } from "lucide-react";
+import { AlertCircle, CheckCircle, Eye, EyeOff, Server } from "lucide-react";
 import { useEffect, useState } from "react";
-
+import Button from "@/ui/button";
+import Dialog from "@/ui/dialog";
+import Dropdown from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
-
-import Button from "../../ui/button";
-import Dialog from "../../ui/dialog";
-import Dropdown from "../../ui/dropdown";
-
 import type { RemoteConnection, RemoteConnectionFormData } from "./types";
 
 interface ConnectionDialogProps {
@@ -73,7 +70,6 @@ const ConnectionDialog = ({
     }
   }, [isOpen, editingConnection]);
 
-  // Handle ESC key to close modal
   useEffect(() => {
     if (isOpen) {
       const handleKeyDown = (event: KeyboardEvent) => {
@@ -128,190 +124,178 @@ const ConnectionDialog = ({
 
   const isFormValid = formData.name.trim() && formData.host.trim() && formData.username.trim();
 
+  const inputClassName = cn(
+    "w-full rounded border border-border bg-secondary-bg",
+    "px-3 py-2 text-text text-xs placeholder-text-lighter",
+    "focus:border-accent focus:outline-none",
+  );
+
   return (
     <Dialog
       onClose={onClose}
       title={editingConnection ? "Edit Connection" : "New Remote Connection"}
       icon={Server}
       classNames={{
-        modal: "max-h-[90vh] w-[480px]",
-        content: "flex-col",
+        modal: "max-w-[420px]",
       }}
+      footer={
+        <>
+          <Button onClick={onClose} variant="ghost" size="sm">
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!isFormValid || isValidating} size="sm">
+            {isValidating
+              ? "Saving..."
+              : editingConnection
+                ? "Update Connection"
+                : "Save Connection"}
+          </Button>
+        </>
+      }
     >
-      <div className="flex-col space-y-4 overflow-y-auto p-4">
-        <div className="text-text-lighter text-xs leading-relaxed">
+      <div className="space-y-4">
+        <p className="text-text-lighter text-xs">
           {editingConnection
             ? "Update your remote connection settings."
             : "Connect to remote servers via SSH or SFTP."}
+        </p>
+
+        {/* Connection Name */}
+        <div className="space-y-1.5">
+          <label htmlFor="connection-name" className="font-medium text-text text-xs">
+            Connection Name <span className="text-text-lighter">*</span>
+          </label>
+          <input
+            id="connection-name"
+            type="text"
+            value={formData.name}
+            onChange={(e) => updateFormData({ name: e.target.value })}
+            placeholder="My Server"
+            className={inputClassName}
+            disabled={isValidating}
+          />
         </div>
 
-        {/* Connection Form */}
-        <div className="space-y-4">
-          {/* Connection Name */}
-          <div className="space-y-2">
-            <label htmlFor="connection-name" className="font-medium text-text text-xs">
-              Connection Name *
+        {/* Host and Port */}
+        <div className="grid grid-cols-12 gap-3">
+          <div className="col-span-8 space-y-1.5">
+            <label htmlFor="host" className="font-medium text-text text-xs">
+              Host <span className="text-text-lighter">*</span>
             </label>
             <input
-              id="connection-name"
+              id="host"
               type="text"
-              value={formData.name}
-              onChange={(e) => updateFormData({ name: e.target.value })}
-              placeholder="My Server"
-              className={cn(
-                "w-full rounded border border-border bg-secondary-bg",
-                "px-3 py-2 text-text text-xs placeholder-text-lighter",
-                "focus:border-blue-500 focus:outline-none",
-              )}
+              value={formData.host}
+              onChange={(e) => updateFormData({ host: e.target.value })}
+              placeholder="192.168.1.100"
+              className={inputClassName}
               disabled={isValidating}
             />
           </div>
-
-          {/* Host, Port, Type */}
-          <div className="grid grid-cols-12 gap-3">
-            <div className="col-span-6 space-y-2">
-              <label htmlFor="host" className="font-medium text-text text-xs">
-                Host *
-              </label>
-              <input
-                id="host"
-                type="text"
-                value={formData.host}
-                onChange={(e) => updateFormData({ host: e.target.value })}
-                placeholder="192.168.1.100"
-                className={cn(
-                  "w-full rounded border border-border bg-secondary-bg",
-                  "px-3 py-2 text-text text-xs placeholder-text-lighter",
-                  "focus:border-blue-500 focus:outline-none",
-                )}
-                disabled={isValidating}
-              />
-            </div>
-            <div className="col-span-3 space-y-2">
-              <label htmlFor="port" className="font-medium text-text text-xs">
-                Port
-              </label>
-              <input
-                id="port"
-                type="number"
-                value={formData.port}
-                onChange={(e) => updateFormData({ port: parseInt(e.target.value) || 22 })}
-                placeholder="22"
-                min="1"
-                max="65535"
-                className={cn(
-                  "w-full rounded border border-border bg-secondary-bg",
-                  "px-3 py-2 text-text text-xs placeholder-text-lighter",
-                  "focus:border-blue-500 focus:outline-none",
-                )}
-                disabled={isValidating}
-              />
-            </div>
-            <div className="col-span-3 space-y-2">
-              <label htmlFor="type" className="font-medium text-text text-xs">
-                Type
-              </label>
-              <Dropdown
-                value={formData.type}
-                options={connectionTypeOptions}
-                onChange={(value) => updateFormData({ type: value as "ssh" | "sftp" })}
-                className="text-xs"
-              />
-            </div>
-
-            {/* Save Credentials Option */}
-            {formData.password && (
-              <div className="space-y-2">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.saveCredentials}
-                    onChange={(e) => updateFormData({ saveCredentials: e.target.checked })}
-                    className="rounded border border-border bg-secondary-bg text-blue-500 focus:ring-blue-500"
-                    disabled={isValidating}
-                  />
-                  <span className="font-medium text-text text-xs">
-                    Save password for future connections
-                  </span>
-                </label>
-                <div className="text-text-lighter text-xs leading-relaxed">
-                  When unchecked, you'll need to enter the password each time you connect.
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Username */}
-          <div className="space-y-2">
-            <label htmlFor="username" className="font-medium text-text text-xs">
-              Username *
+          <div className="col-span-4 space-y-1.5">
+            <label htmlFor="port" className="font-medium text-text text-xs">
+              Port
             </label>
             <input
-              id="username"
-              type="text"
-              value={formData.username}
-              onChange={(e) => updateFormData({ username: e.target.value })}
-              placeholder="root"
-              className={cn(
-                "w-full rounded border border-border bg-secondary-bg",
-                "px-3 py-2 text-text text-xs placeholder-text-lighter",
-                "focus:border-blue-500 focus:outline-none",
-              )}
+              id="port"
+              type="number"
+              value={formData.port}
+              onChange={(e) => updateFormData({ port: parseInt(e.target.value) || 22 })}
+              placeholder="22"
+              min="1"
+              max="65535"
+              className={inputClassName}
               disabled={isValidating}
             />
           </div>
+        </div>
 
-          {/* Password */}
-          <div className="space-y-2">
-            <label htmlFor="password" className="font-medium text-text text-xs">
-              Password (optional)
-            </label>
-            <div className="relative">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={formData.password}
-                onChange={(e) => updateFormData({ password: e.target.value })}
-                placeholder="Leave empty to use key authentication"
-                className={cn(
-                  "w-full rounded border border-border bg-secondary-bg",
-                  "px-3 py-2 pr-10 text-text text-xs placeholder-text-lighter",
-                  "focus:border-blue-500 focus:outline-none",
-                )}
-                disabled={isValidating}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className={cn(
-                  "-translate-y-1/2 absolute top-1/2 right-3 transform",
-                  "text-text-lighter transition-colors hover:text-text",
-                )}
-              >
-                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
-            </div>
-          </div>
+        {/* Type */}
+        <div className="space-y-1.5">
+          <label htmlFor="type" className="font-medium text-text text-xs">
+            Connection Type
+          </label>
+          <Dropdown
+            value={formData.type}
+            options={connectionTypeOptions}
+            onChange={(value) => updateFormData({ type: value as "ssh" | "sftp" })}
+            className="text-xs"
+          />
+        </div>
 
-          {/* Private Key Path */}
-          <div className="space-y-2">
-            <label htmlFor="keypath" className="font-medium text-text text-xs">
-              Private Key Path (optional)
-            </label>
+        {/* Username */}
+        <div className="space-y-1.5">
+          <label htmlFor="username" className="font-medium text-text text-xs">
+            Username <span className="text-text-lighter">*</span>
+          </label>
+          <input
+            id="username"
+            type="text"
+            value={formData.username}
+            onChange={(e) => updateFormData({ username: e.target.value })}
+            placeholder="root"
+            className={inputClassName}
+            disabled={isValidating}
+          />
+        </div>
+
+        {/* Password */}
+        <div className="space-y-1.5">
+          <label htmlFor="password" className="font-medium text-text text-xs">
+            Password <span className="text-text-lighter">(optional)</span>
+          </label>
+          <div className="relative">
             <input
-              id="keypath"
-              type="text"
-              value={formData.keyPath}
-              onChange={(e) => updateFormData({ keyPath: e.target.value })}
-              placeholder="~/.ssh/id_rsa"
-              className={cn(
-                "w-full rounded border border-border bg-secondary-bg",
-                "px-3 py-2 text-text text-xs placeholder-text-lighter",
-                "focus:border-blue-500 focus:outline-none",
-              )}
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={formData.password}
+              onChange={(e) => updateFormData({ password: e.target.value })}
+              placeholder="Leave empty to use key authentication"
+              className={cn(inputClassName, "pr-10")}
               disabled={isValidating}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className={cn(
+                "-translate-y-1/2 absolute top-1/2 right-3 transform",
+                "text-text-lighter transition-colors hover:text-text",
+              )}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
           </div>
+        </div>
+
+        {/* Save Credentials Option */}
+        {formData.password && (
+          <label className="flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={formData.saveCredentials}
+              onChange={(e) => updateFormData({ saveCredentials: e.target.checked })}
+              className="rounded border-border bg-secondary-bg text-accent focus:ring-accent"
+              disabled={isValidating}
+            />
+            <span className="text-text text-xs">Save password for future connections</span>
+          </label>
+        )}
+
+        {/* Private Key Path */}
+        <div className="space-y-1.5">
+          <label htmlFor="keypath" className="font-medium text-text text-xs">
+            Private Key Path <span className="text-text-lighter">(optional)</span>
+          </label>
+          <input
+            id="keypath"
+            type="text"
+            value={formData.keyPath}
+            onChange={(e) => updateFormData({ keyPath: e.target.value })}
+            placeholder="~/.ssh/id_rsa"
+            className={inputClassName}
+            disabled={isValidating}
+          />
         </div>
 
         {/* Validation Status */}
@@ -328,17 +312,6 @@ const ConnectionDialog = ({
             {errorMessage}
           </div>
         )}
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-2 border-border border-t p-4">
-        <Button onClick={handleSave} disabled={!isFormValid || isValidating} className="flex-1">
-          <Save size={14} className="mr-2" />
-          {isValidating ? "Saving..." : editingConnection ? "Update Connection" : "Save Connection"}
-        </Button>
-        <Button onClick={onClose} variant="ghost" className="px-4">
-          Cancel
-        </Button>
       </div>
     </Dialog>
   );
