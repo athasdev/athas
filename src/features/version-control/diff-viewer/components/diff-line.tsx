@@ -1,8 +1,118 @@
 import { Copy } from "lucide-react";
-import { memo } from "react";
+import { memo, type ReactNode } from "react";
+import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
 import { cn } from "@/utils/cn";
 import { copyLineContent } from "../controllers/diff-helpers";
 import type { DiffLineProps } from "../types/diff";
+
+/**
+ * Visualize whitespace characters in text
+ */
+function visualizeWhitespace(text: string, keyPrefix: string): ReactNode[] {
+  return text.split("").map((char, i) => {
+    if (char === " ") {
+      return (
+        <span key={`${keyPrefix}-${i}`} className="text-text-lighter/50">
+          ·
+        </span>
+      );
+    }
+    if (char === "\t") {
+      return (
+        <span key={`${keyPrefix}-${i}`} className="text-text-lighter/50">
+          →
+        </span>
+      );
+    }
+    if (char === "\r" || char === "\n") {
+      return (
+        <span key={`${keyPrefix}-${i}`} className="text-text-lighter/50">
+          ↵
+        </span>
+      );
+    }
+    return char;
+  });
+}
+
+/**
+ * Render content with syntax highlighting tokens
+ */
+function renderTokenizedContent(
+  content: string,
+  tokens: HighlightToken[],
+  showWhitespace: boolean,
+): ReactNode[] {
+  if (!content || tokens.length === 0) {
+    return showWhitespace ? visualizeWhitespace(content, "plain") : [content];
+  }
+
+  // Sort tokens by start position, then by size (smaller/more specific first)
+  const sortedTokens = [...tokens].sort((a, b) => {
+    const startDiff = a.startPosition.column - b.startPosition.column;
+    if (startDiff !== 0) return startDiff;
+    // For same start, prefer smaller (more specific) tokens
+    const aSize = a.endPosition.column - a.startPosition.column;
+    const bSize = b.endPosition.column - b.startPosition.column;
+    return aSize - bSize;
+  });
+
+  const result: ReactNode[] = [];
+  let currentPos = 0;
+
+  for (const token of sortedTokens) {
+    const start = token.startPosition.column;
+    const end = token.endPosition.column;
+
+    // Skip tokens that are out of bounds or already covered
+    if (start >= content.length) continue;
+    if (start < currentPos) continue; // Skip overlapping tokens
+
+    // Add plain text before this token
+    if (start > currentPos) {
+      const plainText = content.slice(currentPos, start);
+      if (showWhitespace) {
+        result.push(...visualizeWhitespace(plainText, `pre-${start}`));
+      } else {
+        result.push(plainText);
+      }
+    }
+
+    // Add the tokenized text
+    const tokenEnd = Math.min(end, content.length);
+    if (tokenEnd > start) {
+      const tokenText = content.slice(start, tokenEnd);
+      const tokenContent = showWhitespace
+        ? visualizeWhitespace(tokenText, `tok-${start}`)
+        : tokenText;
+
+      // Skip wrapping for token-text as it should inherit parent color
+      if (token.type === "token-text") {
+        result.push(tokenContent);
+      } else {
+        result.push(
+          <span key={`${start}-${tokenEnd}`} className={token.type}>
+            {tokenContent}
+          </span>,
+        );
+      }
+    }
+
+    currentPos = Math.max(currentPos, tokenEnd);
+  }
+
+  // Add remaining plain text
+  if (currentPos < content.length) {
+    const remaining = content.slice(currentPos);
+    if (showWhitespace) {
+      result.push(...visualizeWhitespace(remaining, "post"));
+    } else {
+      result.push(remaining);
+    }
+  }
+
+  return result;
+}
 
 export const DiffLine = memo(function DiffLine({
   line,
@@ -10,46 +120,26 @@ export const DiffLine = memo(function DiffLine({
   hunkId,
   viewMode,
   showWhitespace,
+  tokens,
 }: DiffLineProps) {
   const renderTextContent = (content: string) => {
     if (!content) return " ";
 
-    if (showWhitespace) {
-      // When showWhitespace is true, replace whitespace with visual indicators
-      const processedContent = content.split("").map((char, index) => {
-        if (char === " ") {
-          return (
-            <span key={index} className="text-text-lighter/50">
-              ·
-            </span>
-          );
-        } else if (char === "\t") {
-          return (
-            <span key={index} className="text-text-lighter/50">
-              →
-            </span>
-          );
-        } else if (char === "\r") {
-          return (
-            <span key={index} className="text-text-lighter/50">
-              ↵
-            </span>
-          );
-        } else if (char === "\n") {
-          return (
-            <span key={index} className="text-text-lighter/50">
-              ↵
-            </span>
-          );
-        } else {
-          return char;
-        }
-      });
-
-      return <span className="whitespace-pre-wrap">{processedContent}</span>;
+    // Use syntax highlighting tokens if available, with optional whitespace visualization
+    if (tokens && tokens.length > 0) {
+      return (
+        <span className="whitespace-pre-wrap">
+          {renderTokenizedContent(content, tokens, showWhitespace)}
+        </span>
+      );
     }
 
-    // When showWhitespace is false, preserve original whitespace
+    // No tokens - just handle whitespace visualization
+    if (showWhitespace) {
+      return <span className="whitespace-pre-wrap">{visualizeWhitespace(content, "plain")}</span>;
+    }
+
+    // Fallback: preserve original whitespace without highlighting
     return <span className="whitespace-pre-wrap">{content}</span>;
   };
 
@@ -79,9 +169,12 @@ export const DiffLine = memo(function DiffLine({
   const oldNum = line.old_line_number?.toString() || "";
   const newNum = line.new_line_number?.toString() || "";
 
-  const renderContent = (content: string, className: string) => (
-    <span className={className}>{renderTextContent(content || " ")}</span>
-  );
+  const renderContent = (content: string, bgClassName: string, textClassName: string) => {
+    // Always apply text-text as base color for gaps between tokens, override with textClassName if no tokens
+    const hasTokens = tokens && tokens.length > 0;
+    const className = cn(bgClassName, hasTokens ? "text-text" : textClassName);
+    return <span className={className}>{renderTextContent(content || " ")}</span>;
+  };
 
   if (viewMode === "split") {
     return (
@@ -102,9 +195,9 @@ export const DiffLine = memo(function DiffLine({
           {/* Old Content */}
           <div className="flex-1 overflow-x-auto px-3 py-1">
             {line.line_type === "removed" ? (
-              renderContent(line.content, "bg-red-500/10 text-red-300")
+              renderContent(line.content, "bg-red-500/10", "text-red-300")
             ) : line.line_type === "context" ? (
-              renderContent(line.content, "text-text")
+              renderContent(line.content, "", "text-text")
             ) : (
               <span className="select-none text-transparent">&nbsp;</span>
             )}
@@ -127,9 +220,9 @@ export const DiffLine = memo(function DiffLine({
           {/* New Content */}
           <div className="flex-1 overflow-x-auto px-3 py-1">
             {line.line_type === "added" ? (
-              renderContent(line.content, "bg-green-500/10 text-green-300")
+              renderContent(line.content, "bg-green-500/10", "text-green-300")
             ) : line.line_type === "context" ? (
-              renderContent(line.content, "text-text")
+              renderContent(line.content, "", "text-text")
             ) : (
               <span className="select-none text-transparent">&nbsp;</span>
             )}
@@ -189,6 +282,7 @@ export const DiffLine = memo(function DiffLine({
       <div className="flex-1 overflow-x-auto px-3 py-1">
         {renderContent(
           line.content,
+          "",
           line.line_type === "added"
             ? "text-green-300"
             : line.line_type === "removed"

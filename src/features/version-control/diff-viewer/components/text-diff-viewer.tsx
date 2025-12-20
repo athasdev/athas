@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { cn } from "@/utils/cn";
 import { groupLinesIntoHunks } from "../controllers/diff-helpers";
+import { useDiffHighlighting } from "../controllers/use-diff-highlighting";
 import { useDiffViewState } from "../controllers/use-diff-view-state";
 import type { TextDiffViewerProps } from "../types/diff";
 import { DiffHunkHeader } from "./diff-hunk-header";
@@ -16,6 +17,7 @@ export const TextDiffViewer = memo(function TextDiffViewer({
   isInMultiFileView = false,
 }: TextDiffViewerProps) {
   const { isHunkCollapsed, toggleHunkCollapse } = useDiffViewState();
+  const tokenMap = useDiffHighlighting(diff.lines, diff.file_path);
 
   const hunks = groupLinesIntoHunks(diff.lines);
   const contextLines = diff.lines.filter((line) => line.line_type === "context").length;
@@ -63,16 +65,20 @@ export const TextDiffViewer = memo(function TextDiffViewer({
               />
               {!isHunkCollapsed(hunk.id) && (
                 <div className="bg-primary-bg">
-                  {hunk.lines.map((line, index) => (
-                    <DiffLine
-                      key={`${hunk.id}-${index}`}
-                      line={line}
-                      index={index}
-                      hunkId={hunk.id}
-                      viewMode={viewMode}
-                      showWhitespace={showWhitespace}
-                    />
-                  ))}
+                  {hunk.lines.map((line, index) => {
+                    const globalIndex = diff.lines.indexOf(line);
+                    return (
+                      <DiffLine
+                        key={`${hunk.id}-${index}`}
+                        line={line}
+                        index={index}
+                        hunkId={hunk.id}
+                        viewMode={viewMode}
+                        showWhitespace={showWhitespace}
+                        tokens={tokenMap.get(globalIndex)}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
