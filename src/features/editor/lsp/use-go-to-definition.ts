@@ -56,7 +56,7 @@ export const useGoToDefinition = ({
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
-      const lineHeight = fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER;
+      const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
       const contentOffsetX = lineNumbers
         ? gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN
         : EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;

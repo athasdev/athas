@@ -2,6 +2,7 @@ import "../styles/overlay-editor.css";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useGitGutter } from "@/features/version-control/git/controllers/use-git-gutter";
+import { useZoomStore } from "@/stores/zoom-store";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
 import { useContextMenu } from "../hooks/use-context-menu";
@@ -64,8 +65,13 @@ export function Editor({
   const multiCursorState = useEditorStateStore.use.multiCursorState();
   const onChange = useEditorStateStore.use.onChange();
 
-  const fontSize = useEditorSettingsStore.use.fontSize();
+  const baseFontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
+  const zoomLevel = useZoomStore.use.editorZoomLevel();
+
+  // Apply zoom by scaling font size instead of CSS transform
+  // This ensures text and positioned elements use the same rendering path
+  const fontSize = baseFontSize * zoomLevel;
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
   const tabSize = useEditorSettingsStore.use.tabSize();
 
@@ -100,6 +106,8 @@ export function Editor({
   const actualLines = useMemo(() => splitLines(content), [content]);
   const lines = foldTransform.hasActiveFolds ? foldTransform.virtualLines : actualLines;
   const displayContent = foldTransform.hasActiveFolds ? foldTransform.virtualContent : content;
+  // Use consistent line height for both textarea and gutter
+  // This ensures they stay synchronized at all zoom levels
   const lineHeight = useMemo(() => calculateLineHeight(fontSize), [fontSize]);
 
   const {

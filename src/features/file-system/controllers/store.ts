@@ -6,10 +6,7 @@ import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
-import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useFileTreeStore } from "@/features/file-explorer/controllers/file-tree-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { getGitStatus } from "@/features/version-control/git/controllers/git";
@@ -513,21 +510,15 @@ export const useFileSystemStore = createSelectors(
           }
         }
 
-        // Scroll to line if specified
+        // Dispatch go-to-line event to center the line in viewport
         if (line) {
-          const textarea = document.querySelector(
-            "textarea.editor-textarea",
-          ) as HTMLTextAreaElement;
-          if (textarea) {
-            const { fontSize } = useEditorSettingsStore.getState();
-            const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
-            const targetScrollTop = Math.max(0, (line - 1) * lineHeight);
-
-            const viewport = editorAPI.getViewportRef();
-            if (viewport) {
-              viewport.scrollTop = targetScrollTop;
-            }
-          }
+          setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent("menu-go-to-line", {
+                detail: { line },
+              }),
+            );
+          }, 100);
         }
       },
 

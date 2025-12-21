@@ -139,7 +139,7 @@ class EditorAPIImpl implements EditorAPI {
     // Direct viewport scrolling for immediate response
     if (this.viewportRef) {
       const fontSize = this.getSettings().fontSize;
-      const lineHeight = EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER * fontSize;
+      const lineHeight = Math.ceil(EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER * fontSize);
       const targetLineTop = position.line * lineHeight;
       const targetLineBottom = targetLineTop + lineHeight;
       const currentScrollTop = this.viewportRef.scrollTop;

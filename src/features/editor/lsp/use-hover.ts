@@ -44,7 +44,7 @@ export const useHover = ({
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        const lineHeight = fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER;
+        const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
         // Use actual gutter width + margin for content offset
         const contentOffsetX = lineNumbers
           ? gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN
