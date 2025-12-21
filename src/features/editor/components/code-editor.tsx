@@ -121,6 +121,69 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   // Scroll management
   useEditorScroll(editorRef, null);
 
+  // Handle go-to-line events (from search results, diagnostics, vim, etc.)
+  useEffect(() => {
+    const goToLine = (lineNumber: number) => {
+      if (!editorRef.current) return false;
+
+      const textarea = editorRef.current.querySelector("textarea");
+      if (!textarea) return false;
+
+      const currentContent = textarea.value;
+      if (!currentContent) return false;
+
+      const { fontSize } = useEditorSettingsStore.getState();
+      const lineHeight = Math.round(fontSize * 1.5);
+      const lines = currentContent.split("\n");
+
+      // Convert to 0-indexed line number and clamp to valid range
+      const targetLine = Math.max(0, Math.min(lineNumber - 1, lines.length - 1));
+
+      // Calculate character offset for the target line
+      let offset = 0;
+      for (let i = 0; i < targetLine; i++) {
+        offset += lines[i].length + 1;
+      }
+
+      // Set cursor position in textarea
+      textarea.selectionStart = offset;
+      textarea.selectionEnd = offset;
+      textarea.focus();
+
+      // Calculate scroll position to CENTER the line in the viewport
+      const lineTop = targetLine * lineHeight;
+      const viewportHeight = textarea.clientHeight;
+      const centeredScrollTop = Math.max(0, lineTop - viewportHeight / 2 + lineHeight / 2);
+
+      textarea.scrollTop = centeredScrollTop;
+
+      // Update cursor position in store
+      const { setCursorPosition } = useEditorStateStore.getState().actions;
+      setCursorPosition({
+        line: targetLine,
+        column: 0,
+        offset: offset,
+      });
+
+      return true;
+    };
+
+    const handleGoToLine = (event: CustomEvent<{ line: number }>) => {
+      const lineNumber = event.detail?.line;
+      if (!lineNumber) return;
+
+      // Try immediately, then retry if content not ready yet
+      if (!goToLine(lineNumber)) {
+        setTimeout(() => goToLine(lineNumber), 150);
+      }
+    };
+
+    window.addEventListener("menu-go-to-line", handleGoToLine as EventListener);
+    return () => {
+      window.removeEventListener("menu-go-to-line", handleGoToLine as EventListener);
+    };
+  }, []);
+
   // Search functionality with debouncing to prevent lag on large files
   useEffect(() => {
     // Clear existing timer
