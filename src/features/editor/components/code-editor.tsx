@@ -133,7 +133,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
       if (!currentContent) return false;
 
       const { fontSize } = useEditorSettingsStore.getState();
-      const lineHeight = Math.round(fontSize * 1.5);
+      const lineHeight = Math.ceil(fontSize * 1.4); // Must match calculateLineHeight()
       const lines = currentContent.split("\n");
 
       // Convert to 0-indexed line number and clamp to valid range
@@ -261,15 +261,12 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
         <div
           ref={editorRef}
           className={`editor-container relative min-h-0 flex-1 overflow-hidden ${className || ""}`}
+          data-zoom-level={zoomLevel}
           style={{
             scrollbarWidth: "none",
             msOverflowStyle: "none",
-            ...(zoomLevel !== 1 && {
-              transform: `scale(${zoomLevel})`,
-              transformOrigin: "top left",
-              width: `${100 / zoomLevel}%`,
-              height: `${100 / zoomLevel}%`,
-            }),
+            // Zoom is now applied via font size scaling in Editor component
+            // to avoid subpixel rendering mismatches between text and positioned elements
           }}
         >
           {/* Hover Tooltip */}
