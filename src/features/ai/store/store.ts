@@ -46,6 +46,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         providerApiKeys: new Map<string, boolean>(),
         apiKeyModalState: { isOpen: false, providerId: null },
+        dynamicModels: {},
 
         mentionState: {
           active: false,
@@ -349,8 +350,10 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         checkApiKey: async (providerId) => {
           try {
-            // Claude Code doesn't require an API key in the frontend
-            if (providerId === "claude-code") {
+            const provider = AI_PROVIDERS.find((p) => p.id === providerId);
+
+            // If provider doesn't require an API key, set hasApiKey to true
+            if (provider && !provider.requiresApiKey) {
               set((state) => {
                 state.hasApiKey = true;
               });
@@ -374,8 +377,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
           for (const provider of AI_PROVIDERS) {
             try {
-              // Claude Code doesn't require an API key in the frontend
-              if (provider.id === "claude-code") {
+              // If provider doesn't require an API key, mark it as having one
+              if (!provider.requiresApiKey) {
                 newApiKeyMap.set(provider.id, true);
                 continue;
               }
@@ -402,7 +405,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               const newApiKeyMap = new Map<string, boolean>();
               for (const provider of AI_PROVIDERS) {
                 try {
-                  if (provider.id === "claude-code") {
+                  if (!provider.requiresApiKey) {
                     newApiKeyMap.set(provider.id, true);
                     continue;
                   }
@@ -417,7 +420,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               });
 
               // Update hasApiKey for current provider
-              if (providerId === "claude-code") {
+              const currentProvider = AI_PROVIDERS.find((p) => p.id === providerId);
+              if (currentProvider && !currentProvider.requiresApiKey) {
                 set((state) => {
                   state.hasApiKey = true;
                 });
@@ -445,7 +449,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             const newApiKeyMap = new Map<string, boolean>();
             for (const provider of AI_PROVIDERS) {
               try {
-                if (provider.id === "claude-code") {
+                if (!provider.requiresApiKey) {
                   newApiKeyMap.set(provider.id, true);
                   continue;
                 }
@@ -460,7 +464,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             });
 
             // Update hasApiKey for current provider
-            if (providerId === "claude-code") {
+            const currentProvider = AI_PROVIDERS.find((p) => p.id === providerId);
+            if (currentProvider && !currentProvider.requiresApiKey) {
               set((state) => {
                 state.hasApiKey = true;
               });
@@ -478,6 +483,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         hasProviderApiKey: (providerId) => {
           return get().providerApiKeys.get(providerId) || false;
         },
+
+        setDynamicModels: (providerId, models) =>
+          set((state) => {
+            state.dynamicModels[providerId] = models;
+          }),
 
         // Mention actions
         showMention: (position, search, startIndex) =>

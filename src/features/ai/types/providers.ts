@@ -453,6 +453,13 @@ export const AI_PROVIDERS: ModelProvider[] = [
       },
     ],
   },
+  {
+    id: "ollama",
+    name: "Ollama (Local)",
+    apiUrl: "http://localhost:11434/v1/chat/completions",
+    requiresApiKey: false,
+    models: [],
+  },
 ];
 
 // Get all API providers (no longer includes Claude Code since it's now an agent)

@@ -1,5 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
-import { AlertCircle, Check, CheckCircle, Eye, EyeOff, Key, Trash2, X } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  CheckCircle,
+  Eye,
+  EyeOff,
+  Key,
+  RefreshCw,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionMode } from "@/features/ai/types/acp";
@@ -11,6 +21,7 @@ import Section, { SettingRow } from "@/ui/section";
 import Slider from "@/ui/slider";
 import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
+import { getProvider } from "@/utils/providers";
 
 export const AISettings = () => {
   const { settings, updateSetting } = useSettingsStore();
@@ -53,6 +64,11 @@ export const AISettings = () => {
     message?: string;
   }>({ providerId: null, status: null });
 
+  // Dynamic models state
+  const { dynamicModels, setDynamicModels } = useAIChatStore();
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [modelFetchError, setModelFetchError] = useState<string | null>(null);
+
   // API Key functions from AI chat store
   const saveApiKey = useAIChatStore((state) => state.saveApiKey);
   const removeApiKey = useAIChatStore((state) => state.removeApiKey);
@@ -64,31 +80,65 @@ export const AISettings = () => {
     checkAllProviderApiKeys();
   }, [checkAllProviderApiKeys]);
 
-  const currentProvider = getAvailableProviders().find((p) => p.id === settings.aiProviderId);
+  const providers = getAvailableProviders();
+  const currentProvider = providers.find((p) => p.id === settings.aiProviderId);
+
+  // Fetch dynamic models if provider supports it
+  const fetchDynamicModels = async () => {
+    const providerInstance = getProvider(settings.aiProviderId);
+    const providerConfig = providers.find((p) => p.id === settings.aiProviderId);
+
+    // Always clear error when fetching/switching
+    setModelFetchError(null);
+
+    // Only fetch dynamic models if provider supports it AND does not require an API key (unless explicitly allowed)
+    // This enforces static lists for cloud providers like OpenAI as requested
+    if (providerInstance?.getModels && !providerConfig?.requiresApiKey) {
+      setIsLoadingModels(true);
+      try {
+        const models = await providerInstance.getModels();
+        if (models.length > 0) {
+          setDynamicModels(settings.aiProviderId, models);
+          // If current model is not in the list, select the first one
+          if (!models.find((m) => m.id === settings.aiModelId)) {
+            updateSetting("aiModelId", models[0].id);
+          }
+        } else {
+          setDynamicModels(settings.aiProviderId, []);
+          const errorMessage =
+            settings.aiProviderId === "ollama"
+              ? "No models detected. Please install a model in Ollama."
+              : "No models found.";
+          setModelFetchError(errorMessage);
+        }
+      } catch (error) {
+        console.error("Failed to fetch models:", error);
+        setModelFetchError("Failed to fetch models");
+      } finally {
+        setIsLoadingModels(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchDynamicModels();
+  }, [settings.aiProviderId, updateSetting, setDynamicModels]);
 
   const providerOptions = getAvailableProviders().map((provider) => ({
     value: provider.id,
     label: provider.name,
   }));
 
-  const modelOptions =
-    currentProvider?.models.map((model) => ({
-      value: model.id,
-      label: model.name,
-    })) || [];
-
   const handleProviderChange = (providerId: string) => {
     const provider = getAvailableProviders().find((p) => p.id === providerId);
-    if (provider && provider.models.length > 0) {
+    if (provider) {
       updateSetting("aiProviderId", providerId);
-      updateSetting("aiModelId", provider.models[0].id);
+      // Reset model ID, it will be updated by fetchDynamicModels or default logic
+      if (provider.models.length > 0) {
+        updateSetting("aiModelId", provider.models[0].id);
+      }
     }
   };
-
-  const handleModelChange = (modelId: string) => {
-    updateSetting("aiModelId", modelId);
-  };
-
   const startEditing = (providerId: string) => {
     setEditingProvider(providerId);
     setApiKeyInput("");
@@ -273,6 +323,9 @@ export const AISettings = () => {
     (p) => p.requiresAuth && !p.requiresApiKey,
   );
 
+  const providerInstance = getProvider(settings.aiProviderId);
+  const supportsDynamicModels = !!providerInstance?.getModels;
+
   return (
     <div className="space-y-4">
       <Section title="Provider & Model">
@@ -287,13 +340,40 @@ export const AISettings = () => {
         </SettingRow>
 
         <SettingRow label="Model" description="Select the AI model to use">
-          <Dropdown
-            value={settings.aiModelId}
-            options={modelOptions}
-            onChange={handleModelChange}
-            size="xs"
-            searchable={true}
-          />
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <select
+                value={settings.aiModelId}
+                onChange={(e) => updateSetting("aiModelId", e.target.value)}
+                className="flex-1 rounded-md border border-border bg-secondary-bg px-3 py-1.5 text-sm text-text outline-none focus:border-accent"
+              >
+                {(dynamicModels[settings.aiProviderId] || currentProvider?.models || []).map(
+                  (model: any) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+            {supportsDynamicModels && (
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => fetchDynamicModels()}
+                disabled={isLoadingModels}
+                title="Refresh models"
+              >
+                <RefreshCw size={14} className={cn(isLoadingModels && "animate-spin")} />
+              </Button>
+            )}
+          </div>
+          {modelFetchError && (
+            <div className="mt-1 flex items-center gap-1.5 text-red-500 text-xs">
+              <AlertCircle size={12} />
+              <span>{modelFetchError}</span>
+            </div>
+          )}
         </SettingRow>
       </Section>
 

@@ -1,4 +1,5 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
@@ -58,7 +59,20 @@ export const getChatCompletionStream = async (
 
     // For "custom" agent, use HTTP API providers
     const provider = getProviderById(providerId);
-    const model = getModelById(providerId, modelId);
+
+    // Check for model in static list or dynamic store
+    let model = getModelById(providerId, modelId);
+    if (!model) {
+      const { dynamicModels } = useAIChatStore.getState();
+      const providerModels = dynamicModels[providerId];
+      const dynamicModel = providerModels?.find((m) => m.id === modelId);
+      if (dynamicModel) {
+        model = {
+          ...dynamicModel,
+          maxTokens: dynamicModel.maxTokens || 4096, // Default max tokens if missing
+        };
+      }
+    }
 
     if (!provider || !model) {
       throw new Error(`Provider or model not found: ${providerId}/${modelId}`);
@@ -111,8 +125,8 @@ export const getChatCompletionStream = async (
 
     console.log(`Making ${provider.name} streaming chat request with model ${model.name}...`);
 
-    // Use Tauri's fetch for Gemini to bypass CORS restrictions
-    const fetchFn = providerId === "gemini" ? tauriFetch : fetch;
+    // Use Tauri's fetch for Gemini and Ollama to bypass CORS restrictions
+    const fetchFn = providerId === "gemini" || providerId === "ollama" ? tauriFetch : fetch;
     const response = await fetchFn(url, {
       method: "POST",
       headers,
@@ -128,10 +142,9 @@ export const getChatCompletionStream = async (
       return;
     }
 
-    // Use stream processing utility
     await processStreamingResponse(response, onChunk, onComplete, onError);
-  } catch (error) {
+  } catch (error: any) {
     console.error(`${providerId} streaming chat completion error:`, error);
-    onError(`Failed to connect to ${providerId} API`);
+    onError(`Failed to connect to ${providerId} API: ${error.message || error}`);
   }
 };

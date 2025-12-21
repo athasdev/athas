@@ -1,7 +1,9 @@
 import { Check, ChevronDown, Key, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAIChatStore } from "@/features/ai/store/store";
 import { getAvailableProviders } from "@/features/ai/types/providers";
 import { cn } from "@/utils/cn";
+import { getProvider } from "@/utils/providers";
 
 interface ModelSelectorDropdownProps {
   currentProviderId: string;
@@ -23,11 +25,40 @@ export function ModelSelectorDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const { dynamicModels, setDynamicModels } = useAIChatStore();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const providers = getAvailableProviders();
+
+  // Fetch dynamic models on mount
+  useEffect(() => {
+    const fetchModels = async () => {
+      for (const provider of providers) {
+        // Skip if we already have models for this provider
+        if (dynamicModels[provider.id]?.length > 0) continue;
+
+        // Only fetch dynamic models if provider supports it AND does not require an API key
+        // This enforces static lists for cloud providers like OpenAI
+        if (provider.requiresApiKey) continue;
+
+        const providerInstance = getProvider(provider.id);
+        if (providerInstance?.getModels) {
+          try {
+            const models = await providerInstance.getModels();
+            if (models.length > 0) {
+              setDynamicModels(provider.id, models);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch models for ${provider.id}:`, error);
+          }
+        }
+      }
+    };
+
+    fetchModels();
+  }, [providers, dynamicModels, setDynamicModels]);
 
   const filteredItems = useMemo(() => {
     const items: Array<{
@@ -45,7 +76,11 @@ export function ModelSelectorDropdown({
     for (const provider of providers) {
       const providerMatches = provider.name.toLowerCase().includes(searchLower);
       const providerHasKey = !provider.requiresApiKey || hasApiKey(provider.id);
-      const matchingModels = provider.models.filter(
+
+      // Use dynamic models if available, otherwise use static models
+      const models = dynamicModels[provider.id] || provider.models;
+
+      const matchingModels = models.filter(
         (model) =>
           providerMatches ||
           model.name.toLowerCase().includes(searchLower) ||
@@ -63,7 +98,7 @@ export function ModelSelectorDropdown({
 
         // Only show models if provider has API key or doesn't require one
         if (providerHasKey) {
-          const modelsToShow = search ? matchingModels : provider.models;
+          const modelsToShow = search ? matchingModels : models;
           for (const model of modelsToShow) {
             items.push({
               type: "model",
@@ -78,7 +113,7 @@ export function ModelSelectorDropdown({
     }
 
     return items;
-  }, [providers, search, hasApiKey]);
+  }, [providers, search, hasApiKey, dynamicModels]);
 
   const selectableItems = useMemo(
     () => filteredItems.filter((item) => item.type === "model"),
@@ -183,7 +218,12 @@ export function ModelSelectorDropdown({
 
             <div className="max-h-[340px] overflow-y-auto p-1">
               {filteredItems.length === 0 ? (
-                <div className="p-4 text-center text-text-lighter text-xs">No models found</div>
+                <div className="p-4 text-center text-text-lighter text-xs">
+                  {providers.find((p) => p.id === currentProviderId)?.id === "ollama" &&
+                  !dynamicModels.ollama?.length
+                    ? "No models detected. Please install a model."
+                    : "No models found"}
+                </div>
               ) : (
                 filteredItems.map((item) => {
                   if (item.type === "provider") {
