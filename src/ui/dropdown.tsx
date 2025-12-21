@@ -123,11 +123,7 @@ const Dropdown = ({
     return (
       <div
         ref={dropdownRef}
-        className={cn(
-          "fixed z-[9999] max-h-96 overflow-auto",
-          "rounded border border-border bg-primary-bg shadow-xl",
-          searchable ? "pt-0" : "py-1",
-        )}
+        className="fixed z-9999 max-h-96 overflow-auto rounded border border-border bg-primary-bg shadow-xl"
         style={{
           top: dropdownPosition.top,
           left: dropdownPosition.left,
@@ -199,7 +195,7 @@ const Dropdown = ({
           <ChevronDown
             size={iconSizes[size]}
             className={cn(
-              "flex-shrink-0 text-text-lighter transition-transform",
+              "shrink-0 text-text-lighter transition-transform",
               isOpen && "rotate-180",
             )}
           />

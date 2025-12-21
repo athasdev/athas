@@ -1,4 +1,4 @@
-import { Folder, GitBranch, Search, Server } from "lucide-react";
+import { Folder, GitBranch, GitPullRequest, Search } from "lucide-react";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import Tooltip from "@/ui/tooltip";
 import Button from "../../../../ui/button";
@@ -6,21 +6,19 @@ import Button from "../../../../ui/button";
 interface SidebarPaneSelectorProps {
   isGitViewActive: boolean;
   isSearchViewActive: boolean;
-  isRemoteViewActive: boolean;
-  isRemoteWindow: boolean;
+  isGitHubPRsViewActive: boolean;
   coreFeatures: CoreFeaturesState;
-  onViewChange: (view: "files" | "git" | "search" | "remote") => void;
+  onViewChange: (view: "files" | "git" | "search" | "github-prs") => void;
 }
 
 export const SidebarPaneSelector = ({
   isGitViewActive,
   isSearchViewActive,
-  isRemoteViewActive,
-  isRemoteWindow,
+  isGitHubPRsViewActive,
   coreFeatures,
   onViewChange,
 }: SidebarPaneSelectorProps) => {
-  const isFilesActive = !isGitViewActive && !isSearchViewActive && !isRemoteViewActive;
+  const isFilesActive = !isGitViewActive && !isSearchViewActive && !isGitHubPRsViewActive;
 
   return (
     <div className="flex gap-0.5 border-border border-b bg-secondary-bg px-1.5 py-0.5">
@@ -85,23 +83,23 @@ export const SidebarPaneSelector = ({
         </Tooltip>
       )}
 
-      {coreFeatures.remote && !isRemoteWindow && (
-        <Tooltip content="Remote Connections" side="right">
+      {coreFeatures.github && (
+        <Tooltip content="Pull Requests" side="right">
           <Button
             aria-role="tab"
-            aria-selected={isRemoteViewActive}
-            aria-label="Remote Connections"
-            onClick={() => onViewChange("remote")}
+            aria-selected={isGitHubPRsViewActive}
+            aria-label="GitHub Pull Requests"
+            onClick={() => onViewChange("github-prs")}
             variant="ghost"
             size="sm"
-            data-active={isRemoteViewActive}
+            data-active={isGitHubPRsViewActive}
             className={`flex h-6 w-6 items-center justify-center rounded p-0 text-xs ${
-              isRemoteViewActive
+              isGitHubPRsViewActive
                 ? "bg-selected text-text"
                 : "text-text-lighter hover:bg-hover hover:text-text"
             }`}
           >
-            <Server size={14} />
+            <GitPullRequest size={14} />
           </Button>
         </Tooltip>
       )}

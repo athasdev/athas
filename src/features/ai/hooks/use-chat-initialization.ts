@@ -16,6 +16,7 @@ export function useChatInitialization() {
 
   const initializeDatabase = useAIChatStore((state) => state.initializeDatabase);
   const loadChatsFromDatabase = useAIChatStore((state) => state.loadChatsFromDatabase);
+  const applyDefaultSettings = useAIChatStore((state) => state.applyDefaultSettings);
 
   useEffect(() => {
     // Prevent double initialization in strict mode
@@ -44,6 +45,10 @@ export function useChatInitialization() {
         console.log("3. Loading chats from database...");
         await loadChatsFromDatabase();
 
+        // Step 4: Apply default settings from settings store
+        console.log("4. Applying default settings...");
+        applyDefaultSettings();
+
         console.log("AI chat storage initialized successfully");
         setIsInitialized(true);
       } catch (err) {
@@ -56,7 +61,7 @@ export function useChatInitialization() {
     }
 
     initialize();
-  }, [initializeDatabase, loadChatsFromDatabase]);
+  }, [initializeDatabase, loadChatsFromDatabase, applyDefaultSettings]);
 
   return { isInitialized, isLoading, error };
 }

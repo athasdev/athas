@@ -209,6 +209,14 @@ export const useEditorStateStore = createSelectors(
           set((state) => {
             if (!state.multiCursorState) return state;
 
+            // Check for duplicate cursor at the same position
+            const isDuplicate = state.multiCursorState.cursors.some(
+              (cursor) =>
+                cursor.position.line === position.line &&
+                cursor.position.column === position.column,
+            );
+            if (isDuplicate) return state;
+
             const newCursorId = `cursor-${Date.now()}-${state.multiCursorState.cursors.length}`;
             const newCursor: Cursor = {
               id: newCursorId,

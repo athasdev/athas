@@ -79,7 +79,18 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         });
 
         // Built-in language IDs that are always available (syntax highlighting only, no LSP)
-        const BUILTIN_LANGUAGE_IDS = new Set(["html", "css", "markdown"]);
+        // These have local parsers in public/tree-sitter/parsers/
+        const BUILTIN_LANGUAGE_IDS = new Set([
+          "html",
+          "css",
+          "markdown",
+          "json",
+          "yaml",
+          "toml",
+          "bash",
+          "rust",
+          "tsx", // Also used for typescript and javascript
+        ]);
 
         try {
           // Load language extensions from packager (installable)
@@ -189,17 +200,16 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               const extensionId = `language.${installed.languageId}`;
 
               if (!state.installedExtensions.has(extensionId)) {
-                // Check if we have manifest info for this extension
+                // Get manifest info if available, but always add to installedExtensions
+                // to avoid timing issues where availableExtensions hasn't loaded yet
                 const ext = state.availableExtensions.get(extensionId);
-                if (ext) {
-                  state.installedExtensions.set(extensionId, {
-                    id: extensionId,
-                    name: ext.manifest.displayName,
-                    version: installed.version,
-                    installed_at: new Date().toISOString(),
-                    enabled: true,
-                  });
-                }
+                state.installedExtensions.set(extensionId, {
+                  id: extensionId,
+                  name: ext?.manifest.displayName || installed.languageId,
+                  version: installed.version,
+                  installed_at: new Date().toISOString(),
+                  enabled: true,
+                });
               }
             }
 

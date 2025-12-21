@@ -80,7 +80,7 @@ export function KeybindingInput({
             e.stopPropagation();
             handleCancel();
           }}
-          className="flex-shrink-0 text-[10px] text-text-lighter hover:text-text"
+          className="shrink-0 text-[10px] text-text-lighter hover:text-text"
           aria-label="Cancel recording"
         >
           ESC

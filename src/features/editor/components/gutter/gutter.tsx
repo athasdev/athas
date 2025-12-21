@@ -73,7 +73,15 @@ function GutterComponent({
 
     const syncScroll = () => {
       const scrollTop = textarea.scrollTop;
-      scrollTopRef.current = scrollTop;
+      const textareaScrollHeight = textarea.scrollHeight;
+
+      // Scale gutter scroll to match textarea's actual content height
+      // This compensates for browser rendering lines at slightly different heights
+      // than our calculated lineHeight
+      const scrollRatio = textareaScrollHeight > 0 ? totalContentHeight / textareaScrollHeight : 1;
+      const adjustedScrollTop = scrollTop * scrollRatio;
+
+      scrollTopRef.current = adjustedScrollTop;
 
       if (rafId === null) {
         rafId = requestAnimationFrame(() => {

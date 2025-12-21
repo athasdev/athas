@@ -22,6 +22,12 @@ export const useExtensionInstallPrompt = () => {
       const customEvent = event as CustomEvent<ExtensionInstallNeededEvent>;
       const { extensionId, extensionName, filePath } = customEvent.detail;
 
+      // Check if already installed in store (synchronous check to handle timing issues)
+      const { installedExtensions } = useExtensionStore.getState();
+      if (installedExtensions.has(extensionId)) {
+        return;
+      }
+
       // Don't show if user already dismissed this extension prompt in this session
       if (dismissedExtensions.current.has(extensionId)) {
         return;

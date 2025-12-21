@@ -165,7 +165,7 @@ const GlobalSearch = () => {
 
         {/* Right Column - Preview Pane */}
         {showPreview && (
-          <div className="w-[450px] flex-shrink-0">
+          <div className="w-[450px] shrink-0">
             <FilePreview filePath={previewFilePath} />
           </div>
         )}

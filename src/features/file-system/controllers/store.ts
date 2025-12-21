@@ -6,10 +6,7 @@ import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
-import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useFileTreeStore } from "@/features/file-explorer/controllers/file-tree-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { getGitStatus } from "@/features/version-control/git/controllers/git";
@@ -285,6 +282,74 @@ export const useFileSystemStore = createSelectors(
         return true;
       },
 
+      handleOpenRemoteProject: async (connectionId: string, connectionName: string) => {
+        set((state) => {
+          state.isFileTreeLoading = true;
+        });
+
+        try {
+          // Read remote root directory
+          const entries = await invoke<
+            Array<{ name: string; path: string; is_dir: boolean; size: number }>
+          >("ssh_read_directory", {
+            connectionId,
+            path: "/",
+          });
+
+          // Convert to FileEntry format
+          const fileTree: FileEntry[] = entries.map((entry) => ({
+            name: entry.name,
+            path: `remote://${connectionId}${entry.path}`,
+            isDir: entry.is_dir,
+            children: entry.is_dir ? [] : undefined,
+          }));
+
+          // Create remote root path
+          const remotePath = `remote://${connectionId}/`;
+
+          // Add project to workspace tabs
+          useWorkspaceTabsStore.getState().addProjectTab(remotePath, connectionName);
+
+          // Wrap with root folder
+          const wrappedFileTree: FileEntry[] = [
+            {
+              name: connectionName,
+              path: remotePath,
+              isDir: true,
+              expanded: true,
+              children: fileTree,
+            },
+          ];
+
+          // Clear tree UI state
+          useFileTreeStore.getState().collapseAll();
+
+          // Update project store
+          const { setRootFolderPath, setProjectName } = useProjectStore.getState();
+          setRootFolderPath(remotePath);
+          setProjectName(connectionName);
+
+          set((state) => {
+            state.isFileTreeLoading = false;
+            state.files = wrappedFileTree;
+            state.rootFolderPath = remotePath;
+            state.isRemoteWindow = true;
+            state.remoteConnectionId = connectionId;
+            state.remoteConnectionName = connectionName;
+            state.filesVersion++;
+            state.projectFilesCache = undefined;
+          });
+
+          return true;
+        } catch (error) {
+          console.error("Failed to open remote project:", error);
+          set((state) => {
+            state.isFileTreeLoading = false;
+          });
+          return false;
+        }
+      },
+
       handleFileSelect: async (
         path: string,
         isDir: boolean,
@@ -380,7 +445,23 @@ export const useFileSystemStore = createSelectors(
             }
           }
 
-          const content = await readFileContent(resolvedPath);
+          let content: string;
+
+          // Check if this is a remote file
+          if (path.startsWith("remote://")) {
+            const match = path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
+            if (!match) return;
+
+            const connectionId = match[1];
+            const remotePath = match[2] || "/";
+
+            content = await invoke<string>("ssh_read_file", {
+              connectionId,
+              filePath: remotePath,
+            });
+          } else {
+            content = await readFileContent(resolvedPath);
+          }
 
           // Check if this is a diff file
           if (isDiffFile(path, content)) {
@@ -429,43 +510,63 @@ export const useFileSystemStore = createSelectors(
           }
         }
 
-        // Scroll to line if specified
+        // Dispatch go-to-line event to center the line in viewport
         if (line) {
-          const textarea = document.querySelector(
-            "textarea.editor-textarea",
-          ) as HTMLTextAreaElement;
-          if (textarea) {
-            const { fontSize } = useEditorSettingsStore.getState();
-            const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
-            const targetScrollTop = Math.max(0, (line - 1) * lineHeight);
-
-            const viewport = editorAPI.getViewportRef();
-            if (viewport) {
-              viewport.scrollTop = targetScrollTop;
-            }
-          }
+          setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent("menu-go-to-line", {
+                detail: { line },
+              }),
+            );
+          }, 100);
         }
       },
 
       toggleFolder: async (path: string) => {
-        const { isRemoteWindow, remoteConnectionId } = get();
-
-        if (isRemoteWindow && remoteConnectionId) {
-          // TODO: Implement remote folder operations
-          return;
-        }
-
         const folder = findFileInTree(get().files, path);
 
         if (!folder || !folder.isDir) return;
 
+        // Check if this is a remote path
+        const isRemotePath = path.startsWith("remote://");
+
         if (!folder.expanded) {
-          // Expand folder - load children
-          const entries = await readDirectoryContents(folder.path);
+          let childEntries: FileEntry[];
+
+          if (isRemotePath) {
+            // Extract connection ID and remote path from the full path
+            // Format: remote://{connectionId}{remotePath}
+            const match = path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
+            if (!match) return;
+
+            const connectionId = match[1];
+            const remotePath = match[2] || "/";
+
+            // Fetch remote directory contents
+            const entries = await invoke<
+              Array<{ name: string; path: string; is_dir: boolean; size: number }>
+            >("ssh_read_directory", {
+              connectionId,
+              path: remotePath,
+            });
+
+            // Convert to FileEntry format with remote:// prefix
+            childEntries = entries.map((entry) => ({
+              name: entry.name,
+              path: `remote://${connectionId}${entry.path}`,
+              isDir: entry.is_dir,
+              children: entry.is_dir ? [] : undefined,
+            }));
+          } else {
+            // Local folder - load children
+            const entries = await readDirectoryContents(folder.path);
+            childEntries = sortFileEntries(entries);
+          }
+
           const updatedFiles = updateFileInTree(get().files, path, (item) => ({
             ...item,
             expanded: true,
-            children: sortFileEntries(entries),
+            children: childEntries,
           }));
 
           useFileTreeStore.getState().toggleFolder(path);

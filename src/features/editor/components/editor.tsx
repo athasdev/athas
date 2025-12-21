@@ -2,6 +2,7 @@ import "../styles/overlay-editor.css";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useGitGutter } from "@/features/version-control/git/controllers/use-git-gutter";
+import { useZoomStore } from "@/stores/zoom-store";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
 import { useContextMenu } from "../hooks/use-context-menu";
@@ -35,9 +36,16 @@ interface EditorProps {
   onMouseMove?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onMouseLeave?: () => void;
   onMouseEnter?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
-export function Editor({ className, onMouseMove, onMouseLeave, onMouseEnter }: EditorProps) {
+export function Editor({
+  className,
+  onMouseMove,
+  onMouseLeave,
+  onMouseEnter,
+  onClick,
+}: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const multiCursorRef = useRef<HTMLDivElement>(null);
@@ -57,8 +65,13 @@ export function Editor({ className, onMouseMove, onMouseLeave, onMouseEnter }: E
   const multiCursorState = useEditorStateStore.use.multiCursorState();
   const onChange = useEditorStateStore.use.onChange();
 
-  const fontSize = useEditorSettingsStore.use.fontSize();
+  const baseFontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
+  const zoomLevel = useZoomStore.use.editorZoomLevel();
+
+  // Apply zoom by scaling font size instead of CSS transform
+  // This ensures text and positioned elements use the same rendering path
+  const fontSize = baseFontSize * zoomLevel;
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
   const tabSize = useEditorSettingsStore.use.tabSize();
 
@@ -93,6 +106,8 @@ export function Editor({ className, onMouseMove, onMouseLeave, onMouseEnter }: E
   const actualLines = useMemo(() => splitLines(content), [content]);
   const lines = foldTransform.hasActiveFolds ? foldTransform.virtualLines : actualLines;
   const displayContent = foldTransform.hasActiveFolds ? foldTransform.virtualContent : content;
+  // Use consistent line height for both textarea and gutter
+  // This ensures they stay synchronized at all zoom levels
   const lineHeight = useMemo(() => calculateLineHeight(fontSize), [fontSize]);
 
   const {
@@ -252,11 +267,7 @@ export function Editor({ className, onMouseMove, onMouseLeave, onMouseEnter }: E
         const selectionEnd = inputRef.current.selectionEnd;
         const contentLines = splitLines(content);
 
-        const position = calculateCursorPosition(selectionStart, contentLines);
-
-        if (!multiCursorState) {
-          enableMultiCursor();
-        }
+        const clickedPosition = calculateCursorPosition(selectionStart, contentLines);
 
         const selection =
           selectionStart !== selectionEnd
@@ -266,7 +277,20 @@ export function Editor({ className, onMouseMove, onMouseLeave, onMouseEnter }: E
               }
             : undefined;
 
-        addCursor(position, selection);
+        if (!multiCursorState) {
+          // Enable multi-cursor mode - this creates a cursor at current position
+          enableMultiCursor();
+          // Only add a new cursor if clicked position is different from current cursor
+          const isDifferentPosition =
+            clickedPosition.line !== cursorPosition.line ||
+            clickedPosition.column !== cursorPosition.column;
+          if (isDifferentPosition) {
+            addCursor(clickedPosition, selection);
+          }
+        } else {
+          // Already in multi-cursor mode, just add the cursor
+          addCursor(clickedPosition, selection);
+        }
         return;
       }
 
@@ -274,7 +298,15 @@ export function Editor({ className, onMouseMove, onMouseLeave, onMouseEnter }: E
         clearSecondaryCursors();
       }
     },
-    [bufferId, content, multiCursorState, enableMultiCursor, addCursor, clearSecondaryCursors],
+    [
+      bufferId,
+      content,
+      multiCursorState,
+      cursorPosition,
+      enableMultiCursor,
+      addCursor,
+      clearSecondaryCursors,
+    ],
   );
 
   const isLspCompletionVisible = useEditorUIStore.use.isLspCompletionVisible();
@@ -724,6 +756,7 @@ export function Editor({ className, onMouseMove, onMouseLeave, onMouseEnter }: E
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
         onMouseEnter={onMouseEnter}
+        onClick={onClick}
       >
         {hasSyntaxHighlighting && (
           <HighlightLayer

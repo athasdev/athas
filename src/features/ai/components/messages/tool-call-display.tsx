@@ -5,6 +5,7 @@ import {
   Clock,
   Database,
   Edit,
+  ExternalLink,
   FileText,
   FolderOpen,
   Globe,
@@ -22,6 +23,7 @@ interface ToolCallDisplayProps {
   output?: any;
   isStreaming?: boolean;
   error?: string;
+  onOpenInEditor?: (filePath: string) => void;
 }
 
 const toolIcons: Record<string, React.ElementType> = {
@@ -59,6 +61,7 @@ export default function ToolCallDisplay({
   output,
   isStreaming,
   error,
+  onOpenInEditor,
 }: ToolCallDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -195,6 +198,19 @@ export default function ToolCallDisplay({
           <CheckCircle size={8} className="ml-1 text-green-400 opacity-40" />
         )}
         {error && <AlertCircle size={8} className="ml-1 text-red-400 opacity-40" />}
+        {toolName === "Read" && input?.file_path && !isStreaming && !error && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenInEditor?.(input.file_path);
+            }}
+            className="ml-1 rounded p-0.5 text-text-lighter opacity-40 transition-all hover:bg-hover hover:opacity-100"
+            title="Open in editor"
+            aria-label="Open file in editor"
+          >
+            <ExternalLink size={10} />
+          </button>
+        )}
         <ChevronRight
           size={8}
           className={cn(

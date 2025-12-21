@@ -1,7 +1,8 @@
-import { Eye, EyeOff, Lock, X } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
+import Button from "@/ui/button";
+import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
-import Button from "../../ui/button";
 import type { RemoteConnection } from "./types";
 
 interface PasswordPromptDialogProps {
@@ -61,7 +62,6 @@ const PasswordPromptDialog = ({
       await onConnect(connection.id, password);
       onClose();
     } catch (error) {
-      // Display a user-friendly error message
       const rawError = error instanceof Error ? error.message : String(error);
       let friendlyError = rawError;
 
@@ -87,78 +87,66 @@ const PasswordPromptDialog = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden rounded-xl bg-black/50">
-      <div className="flex w-[400px] flex-col rounded-lg border border-border bg-primary-bg">
-        {/* Header */}
-        <div className="flex items-center justify-between border-border border-b p-4">
-          <div className="flex items-center gap-2">
-            <Lock size={16} className="text-text" />
-            <h3 className="ui-font text-sm text-text">Enter Password</h3>
-          </div>
-          <button onClick={onClose} className="text-text-lighter transition-colors hover:text-text">
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="space-y-4 p-4">
-          <div className="text-text-lighter text-xs leading-relaxed">
-            Enter the password for <span className="font-medium text-text">{connection.name}</span>{" "}
-            ({connection.username}@{connection.host}:{connection.port})
-          </div>
-
-          {/* Password Input */}
-          <div className="space-y-2">
-            <label htmlFor="password-prompt" className="font-medium text-text text-xs">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                id="password-prompt"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setErrorMessage("");
-                }}
-                placeholder="Enter password"
-                className={cn(
-                  "w-full rounded border border-border bg-secondary-bg",
-                  "px-3 py-2 pr-10 text-text text-xs placeholder-text-lighter",
-                  "focus:border-blue-500 focus:outline-none",
-                )}
-                disabled={isConnecting}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className={cn(
-                  "-translate-y-1/2 absolute top-1/2 right-3 transform",
-                  "text-text-lighter transition-colors hover:text-text",
-                )}
-              >
-                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
-            </div>
-          </div>
-
-          {errorMessage && <div className="text-red-500 text-xs">{errorMessage}</div>}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 border-border border-t p-4">
-          <Button
-            onClick={handleConnect}
-            disabled={!password.trim() || isConnecting}
-            className="flex-1"
-          >
-            {isConnecting ? "Connecting..." : "Connect"}
-          </Button>
-          <Button onClick={onClose} variant="ghost" className="px-4">
+    <Dialog
+      onClose={onClose}
+      title="Enter Password"
+      size="sm"
+      footer={
+        <>
+          <Button onClick={onClose} variant="ghost" size="sm">
             Cancel
           </Button>
+          <Button onClick={handleConnect} disabled={!password.trim() || isConnecting} size="sm">
+            {isConnecting ? "Connecting..." : "Connect"}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <p className="text-text-lighter text-xs">
+          Enter the password for <span className="font-medium text-text">{connection.name}</span> (
+          {connection.username}@{connection.host}:{connection.port})
+        </p>
+
+        <div className="space-y-1.5">
+          <label htmlFor="password-prompt" className="font-medium text-text text-xs">
+            Password
+          </label>
+          <div className="relative">
+            <input
+              id="password-prompt"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setErrorMessage("");
+              }}
+              placeholder="Enter password"
+              autoFocus
+              className={cn(
+                "w-full rounded border border-border bg-secondary-bg",
+                "px-3 py-2 pr-10 text-text text-xs placeholder-text-lighter",
+                "focus:border-accent focus:outline-none",
+              )}
+              disabled={isConnecting}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className={cn(
+                "-translate-y-1/2 absolute top-1/2 right-3 transform",
+                "text-text-lighter transition-colors hover:text-text",
+              )}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
         </div>
+
+        {errorMessage && <p className="text-red-500 text-xs">{errorMessage}</p>}
       </div>
-    </div>
+    </Dialog>
   );
 };
 

@@ -293,7 +293,8 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
     };
 
     const handleResultClick = (result: SearchResult) => {
-      onFileSelect(result.file, result.line, result.column);
+      // Convert 0-indexed line to 1-indexed for consistency with other navigation
+      onFileSelect(result.file, result.line + 1, result.column);
     };
 
     const getFileName = (filePath: string) => {

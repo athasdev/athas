@@ -2,12 +2,17 @@ use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 #[cfg(unix)]
-use std::path::Path;
 use tauri::command;
 
 // Platform-specific CLI paths
 #[cfg(unix)]
-const CLI_SCRIPT_PATH: &str = "/usr/local/bin/athas";
+fn get_cli_script_path() -> Result<std::path::PathBuf, String> {
+   let home = std::env::var("HOME").map_err(|_| "Failed to get home directory".to_string())?;
+   Ok(std::path::PathBuf::from(home)
+      .join(".local")
+      .join("bin")
+      .join("athas"))
+}
 
 #[cfg(windows)]
 fn get_cli_script_path() -> Result<std::path::PathBuf, String> {
@@ -21,21 +26,18 @@ fn get_cli_script_path() -> Result<std::path::PathBuf, String> {
 
 #[command]
 pub fn check_cli_installed() -> Result<bool, String> {
-   #[cfg(unix)]
-   {
-      Ok(Path::new(CLI_SCRIPT_PATH).exists())
-   }
-
-   #[cfg(windows)]
-   {
-      let cli_path = get_cli_script_path()?;
-      Ok(cli_path.exists())
-   }
+   let cli_path = get_cli_script_path()?;
+   Ok(cli_path.exists())
 }
 
 #[cfg(unix)]
 #[command]
 pub fn install_cli_command() -> Result<String, String> {
+   let cli_path = get_cli_script_path()?;
+   let bin_dir = cli_path
+      .parent()
+      .ok_or_else(|| "Failed to get parent directory".to_string())?;
+
    // Create the CLI launcher script content
    let script_content = r#"#!/bin/bash
 # Athas CLI launcher
@@ -51,37 +53,28 @@ else
 fi
 "#;
 
-   // Check if /usr/local/bin exists, create if not
-   let bin_dir = Path::new("/usr/local/bin");
+   // Create the bin directory if it doesn't exist
    if !bin_dir.exists() {
-      fs::create_dir_all(bin_dir).map_err(|e| {
-         format!(
-            "Failed to create /usr/local/bin directory: {}. You may need to run this with \
-             administrator privileges.",
-            e
-         )
-      })?;
+      fs::create_dir_all(bin_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
    }
 
    // Write the script
-   fs::write(CLI_SCRIPT_PATH, script_content).map_err(|e| {
-      format!(
-         "Failed to write CLI script: {}. You may need to run this with administrator privileges.",
-         e
-      )
-   })?;
+   fs::write(&cli_path, script_content)
+      .map_err(|e| format!("Failed to write CLI script: {}", e))?;
 
    // Make the script executable
-   let mut perms = fs::metadata(CLI_SCRIPT_PATH)
+   let mut perms = fs::metadata(&cli_path)
       .map_err(|e| format!("Failed to get file permissions: {}", e))?
       .permissions();
    perms.set_mode(0o755);
-   fs::set_permissions(CLI_SCRIPT_PATH, perms)
+   fs::set_permissions(&cli_path, perms)
       .map_err(|e| format!("Failed to set executable permissions: {}", e))?;
 
    Ok(format!(
-      "CLI command installed successfully at {}. You can now type 'athas' in your terminal!",
-      CLI_SCRIPT_PATH
+      "CLI command installed successfully at {}.\n\nNote: Make sure {} is in your PATH. Add this \
+       to your ~/.zshrc or ~/.bashrc:\nexport PATH=\"$HOME/.local/bin:$PATH\"",
+      cli_path.display(),
+      bin_dir.display()
    ))
 }
 
@@ -135,16 +128,13 @@ if exist "%LOCALAPPDATA%\Programs\Athas\Athas.exe" (
 #[cfg(unix)]
 #[command]
 pub fn uninstall_cli_command() -> Result<String, String> {
-   if !Path::new(CLI_SCRIPT_PATH).exists() {
+   let cli_path = get_cli_script_path()?;
+
+   if !cli_path.exists() {
       return Err("CLI command is not installed".to_string());
    }
 
-   fs::remove_file(CLI_SCRIPT_PATH).map_err(|e| {
-      format!(
-         "Failed to remove CLI script: {}. You may need to run this with administrator privileges.",
-         e
-      )
-   })?;
+   fs::remove_file(&cli_path).map_err(|e| format!("Failed to remove CLI script: {}", e))?;
 
    Ok("CLI command uninstalled successfully".to_string())
 }

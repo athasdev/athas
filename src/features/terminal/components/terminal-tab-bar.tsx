@@ -340,7 +340,7 @@ const TerminalTabBar = ({
     return (
       <div
         className={cn(
-          "flex min-h-[28px] items-center justify-between",
+          "flex min-h-7 items-center justify-between",
           "border-border border-b bg-secondary-bg px-2 py-1",
         )}
       >
@@ -371,7 +371,7 @@ const TerminalTabBar = ({
         ref={tabBarRef}
         className={cn(
           "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border",
-          "flex min-h-[28px] items-center justify-between overflow-x-auto",
+          "flex min-h-7 items-center justify-between overflow-x-auto",
           "border-border border-b bg-secondary-bg",
         )}
         style={{
@@ -443,7 +443,7 @@ const TerminalTabBar = ({
             <button
               onClick={onNewTerminal}
               className={cn(
-                "flex flex-shrink-0 cursor-pointer items-center rounded p-1",
+                "flex shrink-0 cursor-pointer items-center rounded p-1",
                 "text-text-lighter transition-colors hover:bg-hover",
               )}
             >
@@ -459,7 +459,7 @@ const TerminalTabBar = ({
               <button
                 onClick={onSplitView}
                 className={cn(
-                  "flex flex-shrink-0 cursor-pointer items-center rounded p-1",
+                  "flex shrink-0 cursor-pointer items-center rounded p-1",
                   isSplitView
                     ? "bg-selected text-text"
                     : "text-text-lighter transition-colors hover:bg-hover",
@@ -478,7 +478,7 @@ const TerminalTabBar = ({
               <button
                 onClick={onFullScreen}
                 className={cn(
-                  "flex flex-shrink-0 cursor-pointer items-center rounded p-1",
+                  "flex shrink-0 cursor-pointer items-center rounded p-1",
                   "text-text-lighter transition-colors hover:bg-hover",
                 )}
               >
@@ -509,12 +509,12 @@ const TerminalTabBar = ({
             }}
           >
             {/* Terminal Icon */}
-            <span className="flex-shrink-0">
+            <span className="shrink-0">
               <TerminalIcon size={12} className="text-text-lighter" />
             </span>
             {/* Pin indicator */}
             {sortedTerminals[draggedIndex].isPinned && (
-              <Pin size={8} className="flex-shrink-0 text-blue-500" />
+              <Pin size={8} className="shrink-0 text-blue-500" />
             )}
             <span className="truncate">{sortedTerminals[draggedIndex].name}</span>
           </div>

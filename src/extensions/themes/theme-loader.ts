@@ -2,6 +2,7 @@ import type { EditorAPI } from "@/features/editor/extensions/types";
 import { BaseThemeExtension } from "./base-theme-extension";
 // Import all theme JSON files
 import catppuccinThemes from "./builtin/catppuccin.json";
+import christmasThemes from "./builtin/christmas.json";
 import contrastThemes from "./builtin/contrast-themes.json";
 import draculaThemes from "./builtin/dracula.json";
 import githubThemes from "./builtin/github.json";
@@ -44,6 +45,7 @@ export class ThemeLoader extends BaseThemeExtension {
       // Combine all theme files
       const allThemeFiles: ThemeFile[] = [
         catppuccinThemes as ThemeFile,
+        christmasThemes as ThemeFile,
         contrastThemes as ThemeFile,
         draculaThemes as ThemeFile,
         githubThemes as ThemeFile,

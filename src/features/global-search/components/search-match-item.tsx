@@ -50,16 +50,16 @@ export const SearchMatchItem = ({
           fileName={fileName}
           isDir={false}
           size={12}
-          className="flex-shrink-0 text-text-lighter"
+          className="shrink-0 text-text-lighter"
         />
-        <span className="flex-shrink-0 text-[11px] text-text">{fileName}</span>
+        <span className="shrink-0 text-[11px] text-text">{fileName}</span>
         {dirPath && (
           <span className="truncate text-[11px] text-text-lighter opacity-60">{dirPath}</span>
         )}
       </div>
 
       {/* Line number */}
-      <span className="w-12 flex-shrink-0 text-right text-[11px] text-text-lighter">
+      <span className="w-12 shrink-0 text-right text-[11px] text-text-lighter">
         :{match.line_number}
       </span>
 

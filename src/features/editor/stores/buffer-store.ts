@@ -28,6 +28,7 @@ export interface Buffer {
   isMarkdownPreview: boolean;
   isExternalEditor: boolean;
   isWebViewer: boolean;
+  isPullRequest: boolean;
   isActive: boolean;
   language?: string; // File language for syntax highlighting and formatting
   // For diff buffers, store the parsed diff data (single or multi-file)
@@ -38,6 +39,8 @@ export interface Buffer {
   terminalConnectionId?: string;
   // For web viewer buffers, store the URL
   webViewerUrl?: string;
+  // For PR buffers, store the PR number
+  prNumber?: number;
   // Cached syntax highlighting tokens
   tokens: {
     start: number;
@@ -83,6 +86,7 @@ interface BufferActions {
   ) => string;
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
   openWebViewerBuffer: (url: string) => string;
+  openPRBuffer: (prNumber: number) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
   closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
@@ -134,7 +138,7 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
 
     if (!rootFolderPath) return;
 
-    // Only save real files, not virtual/diff/image/sqlite/external editor/web viewer buffers
+    // Only save real files, not virtual/diff/image/sqlite/external editor/web viewer/PR buffers
     const persistableBuffers = buffers
       .filter(
         (b) =>
@@ -144,7 +148,8 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
           !b.isSQLite &&
           !b.isMarkdownPreview &&
           !b.isExternalEditor &&
-          !b.isWebViewer,
+          !b.isWebViewer &&
+          !b.isPullRequest,
       )
       .map((b) => ({
         path: b.path,
@@ -162,7 +167,8 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
       !activeBuffer.isSQLite &&
       !activeBuffer.isMarkdownPreview &&
       !activeBuffer.isExternalEditor &&
-      !activeBuffer.isWebViewer
+      !activeBuffer.isWebViewer &&
+      !activeBuffer.isPullRequest
         ? activeBuffer.path
         : null;
 
@@ -229,6 +235,7 @@ export const useBufferStore = createSelectors(
             isMarkdownPreview,
             isExternalEditor: false,
             isWebViewer: false,
+            isPullRequest: false,
             isActive: true,
             language: detectLanguageFromFileName(name),
             diffData,
@@ -383,6 +390,7 @@ export const useBufferStore = createSelectors(
             isMarkdownPreview: false,
             isExternalEditor: true,
             isWebViewer: false,
+            isPullRequest: false,
             isActive: true,
             language: detectLanguageFromFileName(name),
             terminalConnectionId,
@@ -453,8 +461,64 @@ export const useBufferStore = createSelectors(
             isMarkdownPreview: false,
             isExternalEditor: false,
             isWebViewer: true,
+            isPullRequest: false,
             isActive: true,
             webViewerUrl: url,
+            tokens: [],
+          };
+
+          set((state) => {
+            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+            state.activeBufferId = newBuffer.id;
+          });
+
+          return newBuffer.id;
+        },
+
+        openPRBuffer: (prNumber: number): string => {
+          const { buffers, maxOpenTabs } = get();
+          const path = `pr://${prNumber}`;
+          const displayName = `PR #${prNumber}`;
+
+          // Check if already open
+          const existing = buffers.find((b) => b.isPullRequest && b.prNumber === prNumber);
+          if (existing) {
+            set((state) => {
+              state.activeBufferId = existing.id;
+              state.buffers = state.buffers.map((b) => ({
+                ...b,
+                isActive: b.id === existing.id,
+              }));
+            });
+            return existing.id;
+          }
+
+          // Handle max tabs limit
+          let newBuffers = [...buffers];
+          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+            const lruBuffer = unpinnedBuffers[0];
+            newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+          }
+
+          const newBuffer: Buffer = {
+            id: generateBufferId(path),
+            path,
+            name: displayName,
+            content: "",
+            savedContent: "",
+            isDirty: false,
+            isVirtual: true,
+            isPinned: false,
+            isImage: false,
+            isSQLite: false,
+            isDiff: false,
+            isMarkdownPreview: false,
+            isExternalEditor: false,
+            isWebViewer: false,
+            isPullRequest: true,
+            prNumber,
+            isActive: true,
             tokens: [],
           };
 

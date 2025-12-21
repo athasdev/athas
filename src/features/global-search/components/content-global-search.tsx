@@ -179,7 +179,7 @@ const ContentGlobalSearch = () => {
                 className="ui-font"
               />
               {hasResults && (
-                <span className="flex-shrink-0 text-[10px] text-text-lighter">
+                <span className="shrink-0 text-[10px] text-text-lighter">
                   {displayedCount} {displayedCount === 1 ? "result" : "results"}
                   {hasMore && ` (${totalMatches} total)`}
                 </span>
@@ -247,7 +247,7 @@ const ContentGlobalSearch = () => {
 
         {/* Right Column - Preview Pane */}
         {commandBarPreview && (
-          <div className="w-[600px] flex-shrink-0">
+          <div className="w-[600px] shrink-0">
             <FilePreview filePath={previewFilePath} />
           </div>
         )}

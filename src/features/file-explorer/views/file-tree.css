@@ -35,6 +35,7 @@
 .file-tree-item-dir {
   position: sticky !important;
   top: calc(var(--depth, 0) * 22px) !important;
+  z-index: calc(100 - var(--depth, 0)) !important;
 }
 
 /* Ensure file tree content wrapper stretches to full scrollable area */
@@ -67,7 +68,7 @@
 }
 
 /* Sticky folders need solid background to hide text beneath */
-.file-tree-container .file-tree-item-dir {
+.file-tree-container .file-tree-item button.file-tree-item-dir {
   background-color: var(--color-secondary-bg) !important;
   width: 100% !important;
   min-width: 100% !important;
@@ -75,11 +76,11 @@
   justify-content: flex-start !important;
 }
 
-.file-tree-container .file-tree-item-dir:hover {
+.file-tree-container .file-tree-item button.file-tree-item-dir:hover {
   background-color: var(--color-hover) !important;
 }
 
-.file-tree-container .file-tree-item-dir.bg-selected {
+.file-tree-container .file-tree-item button.file-tree-item-dir.bg-selected {
   background-color: var(--color-selected) !important;
 }
 

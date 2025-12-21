@@ -1,0 +1,22 @@
+{
+  "id": "athas.toml",
+  "name": "TOML",
+  "displayName": "TOML Language Support",
+  "description": "TOML syntax highlighting",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "license": "MIT",
+  "category": "language",
+  "bundled": true,
+  "capabilities": {
+    "type": "language",
+    "languageId": "toml",
+    "fileExtensions": ["toml"],
+    "aliases": ["TOML", "toml"],
+    "grammar": {
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-toml.wasm",
+      "highlightQuery": "/tree-sitter/queries/toml/highlights.scm",
+      "scopeName": "source.toml"
+    }
+  }
+}

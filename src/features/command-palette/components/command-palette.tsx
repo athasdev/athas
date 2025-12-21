@@ -314,12 +314,12 @@ const CommandPalette = () => {
                 isSelected={index === selectedIndex}
                 className="px-3 py-1.5"
               >
-                {isRecent && <History size={12} className="flex-shrink-0 text-text-lighter" />}
+                {isRecent && <History size={12} className="shrink-0 text-text-lighter" />}
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-xs">{action.label}</div>
                 </div>
                 {action.keybinding && (
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <KeybindingBadge keys={action.keybinding} />
                   </div>
                 )}

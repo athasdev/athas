@@ -45,14 +45,10 @@ const GitBlameLayerComponent = ({
 
   if (!blameLine) return null;
 
-  // Calculate viewport-relative position by subtracting scroll offset
-  const viewportTop =
-    visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP - scrollTop;
-
-  // Hide if the line is scrolled out of view
-  if (viewportTop < 0 || viewportTop > window.innerHeight) {
-    return null;
-  }
+  // Position relative to content (same pattern as multi-cursor-layer)
+  const top = visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+  const left =
+    lineContentWidth + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + EDITOR_CONSTANTS.GUTTER_MARGIN;
 
   return (
     <div
@@ -61,6 +57,9 @@ const GitBlameLayerComponent = ({
         fontSize: `${fontSize}px`,
         fontFamily,
         lineHeight: `${lineHeight}px`,
+        // Use transform for scroll sync (same pattern as gutter and other layers)
+        transform: `translate(${-scrollLeft}px, ${-scrollTop}px)`,
+        willChange: "transform",
       }}
     >
       {/* Hidden element to measure actual text width */}
@@ -80,8 +79,8 @@ const GitBlameLayerComponent = ({
       <div
         className="pointer-events-auto absolute flex items-center"
         style={{
-          top: `${viewportTop}px`,
-          left: `${lineContentWidth + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT - scrollLeft + 16}px`,
+          top: `${top}px`,
+          left: `${left}px`,
           height: `${lineHeight}px`,
         }}
       >

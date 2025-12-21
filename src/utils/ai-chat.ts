@@ -1,13 +1,21 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
+import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { getModelById, getProviderById } from "@/features/ai/types/providers";
-import { ClaudeCodeStreamHandler } from "./claude-code-handler";
+import { AcpStreamHandler } from "./acp-handler";
 import { buildContextPrompt, buildSystemPrompt } from "./context-builder";
 import { getProvider } from "./providers";
 import { processStreamingResponse } from "./stream-utils";
 import { getProviderApiToken } from "./token-manager";
 import type { ContextInfo } from "./types";
+
+// Check if an agent uses ACP (CLI-based) vs HTTP API
+export const isAcpAgent = (agentId: AgentType): boolean => {
+  const agent = AGENT_OPTIONS.find((a) => a.id === agentId);
+  return agent?.isAcp ?? false;
+};
 
 export {
   getProviderApiToken,
@@ -17,8 +25,9 @@ export {
 } from "./token-manager";
 // Re-export types and legacy functions;
 
-// Generic streaming chat completion function that works with any provider
+// Generic streaming chat completion function that works with any agent/provider
 export const getChatCompletionStream = async (
+  agentId: AgentType,
   providerId: string,
   modelId: string,
   userMessage: string,
@@ -34,16 +43,9 @@ export const getChatCompletionStream = async (
   outputStyle: OutputStyle = "default",
 ): Promise<void> => {
   try {
-    const provider = getProviderById(providerId);
-    const model = getModelById(providerId, modelId);
-
-    if (!provider || !model) {
-      throw new Error(`Provider or model not found: ${providerId}/${modelId}`);
-    }
-
-    // Handle Claude Code provider differently
-    if (providerId === "claude-code") {
-      const handler = new ClaudeCodeStreamHandler({
+    // Handle ACP-based CLI agents (Claude Code, Gemini CLI, Codex CLI)
+    if (isAcpAgent(agentId)) {
+      const handler = new AcpStreamHandler(agentId, {
         onChunk,
         onComplete,
         onError,
@@ -53,6 +55,27 @@ export const getChatCompletionStream = async (
       });
       await handler.start(userMessage, context);
       return;
+    }
+
+    // For "custom" agent, use HTTP API providers
+    const provider = getProviderById(providerId);
+
+    // Check for model in static list or dynamic store
+    let model = getModelById(providerId, modelId);
+    if (!model) {
+      const { dynamicModels } = useAIChatStore.getState();
+      const providerModels = dynamicModels[providerId];
+      const dynamicModel = providerModels?.find((m) => m.id === modelId);
+      if (dynamicModel) {
+        model = {
+          ...dynamicModel,
+          maxTokens: dynamicModel.maxTokens || 4096, // Default max tokens if missing
+        };
+      }
+    }
+
+    if (!provider || !model) {
+      throw new Error(`Provider or model not found: ${providerId}/${modelId}`);
     }
 
     const apiKey = await getProviderApiToken(providerId);
@@ -102,8 +125,8 @@ export const getChatCompletionStream = async (
 
     console.log(`Making ${provider.name} streaming chat request with model ${model.name}...`);
 
-    // Use Tauri's fetch for Gemini to bypass CORS restrictions
-    const fetchFn = providerId === "gemini" ? tauriFetch : fetch;
+    // Use Tauri's fetch for Gemini and Ollama to bypass CORS restrictions
+    const fetchFn = providerId === "gemini" || providerId === "ollama" ? tauriFetch : fetch;
     const response = await fetchFn(url, {
       method: "POST",
       headers,
@@ -119,10 +142,9 @@ export const getChatCompletionStream = async (
       return;
     }
 
-    // Use stream processing utility
     await processStreamingResponse(response, onChunk, onComplete, onError);
-  } catch (error) {
+  } catch (error: any) {
     console.error(`${providerId} streaming chat completion error:`, error);
-    onError(`Failed to connect to ${providerId} API`);
+    onError(`Failed to connect to ${providerId} API: ${error.message || error}`);
   }
 };

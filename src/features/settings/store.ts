@@ -44,6 +44,11 @@ interface Settings {
   aiChatWidth: number;
   isAIChatVisible: boolean;
   aiCompletion: boolean;
+  aiAutoOpenReadFiles: boolean;
+  aiTemperature: number;
+  aiMaxTokens: number;
+  aiDefaultOutputStyle: "default" | "explanatory" | "learning";
+  aiDefaultSessionMode: string;
   // Layout
   sidebarWidth: number;
   // Keyboard
@@ -113,6 +118,11 @@ const defaultSettings: Settings = {
   aiChatWidth: 400,
   isAIChatVisible: false,
   aiCompletion: true,
+  aiAutoOpenReadFiles: true,
+  aiTemperature: 0.7,
+  aiMaxTokens: 4096,
+  aiDefaultOutputStyle: "default",
+  aiDefaultSessionMode: "",
   // Layout
   sidebarWidth: 220,
   // Keyboard
@@ -132,6 +142,7 @@ const defaultSettings: Settings = {
   // Features
   coreFeatures: {
     git: true,
+    github: true,
     remote: true,
     terminal: true,
     search: true,
@@ -190,14 +201,12 @@ const saveSettingsToStore = async (settings: Partial<Settings>) => {
   }
 };
 
-// Apply theme to document
 const applyTheme = async (theme: Theme) => {
   if (typeof window === "undefined") return;
 
   // Use the theme registry
   try {
     const { themeRegistry } = await import("@/extensions/themes/theme-registry");
-    console.log(`Settings store: Attempting to apply theme "${theme}"`);
 
     // Check if theme registry is ready
     if (!themeRegistry.isRegistryReady()) {

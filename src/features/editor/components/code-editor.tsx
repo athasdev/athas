@@ -108,8 +108,8 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   // Get cursor position for LSP integration
   const cursorPosition = useEditorStateStore.use.cursorPosition();
 
-  // Consolidated LSP integration (document lifecycle, completions, hover)
-  const { hoverHandlers } = useLspIntegration({
+  // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
+  const { hoverHandlers, goToDefinitionHandlers } = useLspIntegration({
     filePath,
     value,
     cursorPosition,
@@ -120,6 +120,69 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
 
   // Scroll management
   useEditorScroll(editorRef, null);
+
+  // Handle go-to-line events (from search results, diagnostics, vim, etc.)
+  useEffect(() => {
+    const goToLine = (lineNumber: number) => {
+      if (!editorRef.current) return false;
+
+      const textarea = editorRef.current.querySelector("textarea");
+      if (!textarea) return false;
+
+      const currentContent = textarea.value;
+      if (!currentContent) return false;
+
+      const { fontSize } = useEditorSettingsStore.getState();
+      const lineHeight = Math.ceil(fontSize * 1.4); // Must match calculateLineHeight()
+      const lines = currentContent.split("\n");
+
+      // Convert to 0-indexed line number and clamp to valid range
+      const targetLine = Math.max(0, Math.min(lineNumber - 1, lines.length - 1));
+
+      // Calculate character offset for the target line
+      let offset = 0;
+      for (let i = 0; i < targetLine; i++) {
+        offset += lines[i].length + 1;
+      }
+
+      // Set cursor position in textarea
+      textarea.selectionStart = offset;
+      textarea.selectionEnd = offset;
+      textarea.focus();
+
+      // Calculate scroll position to CENTER the line in the viewport
+      const lineTop = targetLine * lineHeight;
+      const viewportHeight = textarea.clientHeight;
+      const centeredScrollTop = Math.max(0, lineTop - viewportHeight / 2 + lineHeight / 2);
+
+      textarea.scrollTop = centeredScrollTop;
+
+      // Update cursor position in store
+      const { setCursorPosition } = useEditorStateStore.getState().actions;
+      setCursorPosition({
+        line: targetLine,
+        column: 0,
+        offset: offset,
+      });
+
+      return true;
+    };
+
+    const handleGoToLine = (event: CustomEvent<{ line: number }>) => {
+      const lineNumber = event.detail?.line;
+      if (!lineNumber) return;
+
+      // Try immediately, then retry if content not ready yet
+      if (!goToLine(lineNumber)) {
+        setTimeout(() => goToLine(lineNumber), 150);
+      }
+    };
+
+    window.addEventListener("menu-go-to-line", handleGoToLine as EventListener);
+    return () => {
+      window.removeEventListener("menu-go-to-line", handleGoToLine as EventListener);
+    };
+  }, []);
 
   // Search functionality with debouncing to prevent lag on large files
   useEffect(() => {
@@ -198,15 +261,12 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
         <div
           ref={editorRef}
           className={`editor-container relative min-h-0 flex-1 overflow-hidden ${className || ""}`}
+          data-zoom-level={zoomLevel}
           style={{
             scrollbarWidth: "none",
             msOverflowStyle: "none",
-            ...(zoomLevel !== 1 && {
-              transform: `scale(${zoomLevel})`,
-              transformOrigin: "top left",
-              width: `${100 / zoomLevel}%`,
-              height: `${100 / zoomLevel}%`,
-            }),
+            // Zoom is now applied via font size scaling in Editor component
+            // to avoid subpixel rendering mismatches between text and positioned elements
           }}
         >
           {/* Hover Tooltip */}
@@ -224,6 +284,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
                 onMouseMove={hoverHandlers.handleHover}
                 onMouseLeave={hoverHandlers.handleMouseLeave}
                 onMouseEnter={hoverHandlers.handleMouseEnter}
+                onClick={goToDefinitionHandlers.handleClick}
               />
             )}
           </div>

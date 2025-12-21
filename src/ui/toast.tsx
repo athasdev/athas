@@ -13,23 +13,23 @@ export const ToastContainer = () => {
         >
           <div className="flex items-start gap-2">
             {toast.type === "error" && (
-              <CircleX size={14} className="mt-0.5 flex-shrink-0 text-red-400" />
+              <CircleX size={14} className="mt-0.5 shrink-0 text-red-400" />
             )}
             {toast.type === "warning" && (
-              <CircleAlert size={14} className="mt-0.5 flex-shrink-0 text-yellow-400" />
+              <CircleAlert size={14} className="mt-0.5 shrink-0 text-yellow-400" />
             )}
             {toast.type === "success" && (
-              <CircleCheck size={14} className="mt-0.5 flex-shrink-0 text-green-400" />
+              <CircleCheck size={14} className="mt-0.5 shrink-0 text-green-400" />
             )}
             {toast.type === "info" && (
-              <CircleQuestionMark size={14} className="mt-0.5 flex-shrink-0 text-blue-400" />
+              <CircleQuestionMark size={14} className="mt-0.5 shrink-0 text-blue-400" />
             )}
 
             <p className="ui-font flex-1 text-text text-xs">{toast.message}</p>
 
             <button
               onClick={() => dismissToast(toast.id)}
-              className="flex-shrink-0 rounded p-0.5 transition-colors hover:bg-hover"
+              className="shrink-0 rounded p-0.5 transition-colors hover:bg-hover"
             >
               <X size={12} className="text-text-lighter" />
             </button>

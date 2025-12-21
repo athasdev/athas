@@ -96,7 +96,11 @@ export function useViewportLines(options: UseViewportLinesOptions) {
       const containerHeight = containerElement.clientHeight;
       containerHeightRef.current = containerHeight;
 
-      const initialRange = calculateViewportRange(0, containerHeight, totalLines);
+      const initialRange = calculateViewportRange(
+        containerElement.scrollTop,
+        containerHeight,
+        totalLines,
+      );
       setViewportRange(initialRange);
     },
     [calculateViewportRange],

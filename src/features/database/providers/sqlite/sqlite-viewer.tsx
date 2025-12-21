@@ -767,7 +767,7 @@ const SQLiteViewer = ({ databasePath }: SQLiteViewerProps) => {
                   selectedTable === table.name ? "bg-selected" : ""
                 }`}
               >
-                <Table size={12} className="flex-shrink-0" />
+                <Table size={12} className="shrink-0" />
                 <span className="truncate">{table.name}</span>
               </button>
             ))}

@@ -27,6 +27,7 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
   const triggerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const showTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const documentRef = useRef(document);
   const { settings } = useSettingsStore();
   const [isCopied, setIsCopied] = useState(false);
@@ -38,6 +39,13 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
     if (hideTimeoutRef.current) {
       clearTimeout(hideTimeoutRef.current);
       hideTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearShowTimeout = useCallback(() => {
+    if (showTimeoutRef.current) {
+      clearTimeout(showTimeoutRef.current);
+      showTimeoutRef.current = null;
     }
   }, []);
 
@@ -81,17 +89,21 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
 
   const showPopover = useCallback(() => {
     clearHideTimeout();
-    if (!showCard) {
-      updatePosition();
-      setShowCard(true);
-      showOverlay("git-blame");
+    if (!showCard && !showTimeoutRef.current) {
+      showTimeoutRef.current = setTimeout(() => {
+        updatePosition();
+        setShowCard(true);
+        showOverlay("git-blame");
+        showTimeoutRef.current = null;
+      }, 1000);
     }
   }, [clearHideTimeout, showCard, updatePosition, showOverlay]);
 
   const hidePopover = useCallback(() => {
+    clearShowTimeout();
     scheduleHide();
     hideOverlay("git-blame");
-  }, [scheduleHide, hideOverlay]);
+  }, [clearShowTimeout, scheduleHide, hideOverlay]);
 
   const handleCopyCommitHash = useCallback(
     async (e: React.MouseEvent) => {
@@ -244,12 +256,13 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
     };
   }, [showCard]);
 
-  // Clean up timeout on unmount
+  // Clean up timeouts on unmount
   useEffect(() => {
     return () => {
       clearHideTimeout();
+      clearShowTimeout();
     };
-  }, [clearHideTimeout]);
+  }, [clearHideTimeout, clearShowTimeout]);
 
   return (
     <div ref={triggerRef} className="relative inline-flex">

@@ -47,6 +47,7 @@ function getLegacyChats(): Chat[] {
     const rawChats = parsed?.state?.chats || [];
 
     // Convert legacy chats to proper Chat format
+    // Legacy chats default to "custom" agent (HTTP API)
     return rawChats.map((chat: any) => ({
       id: chat.id,
       title: chat.title,
@@ -60,6 +61,7 @@ function getLegacyChats(): Chat[] {
       })),
       createdAt: new Date(chat.createdAt),
       lastMessageAt: new Date(chat.lastMessageAt),
+      agentId: "custom" as const,
     }));
   } catch (error) {
     console.error("Error reading legacy chats:", error);

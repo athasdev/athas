@@ -275,12 +275,15 @@ export class ExtensionInstaller {
   /**
    * List all installed languages
    */
-  async listInstalled(): Promise<Array<{ languageId: string; version: string; size: number }>> {
+  async listInstalled(): Promise<
+    Array<{ languageId: string; version: string; size: number; downloadedAt?: number }>
+  > {
     const entries = await indexedDBParserCache.list();
     return entries.map((entry) => ({
       languageId: entry.languageId,
       version: entry.version,
       size: entry.size,
+      downloadedAt: entry.downloadedAt,
     }));
   }
 

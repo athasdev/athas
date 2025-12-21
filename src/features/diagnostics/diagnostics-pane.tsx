@@ -88,9 +88,7 @@ const DiagnosticsPane = ({
                       className="flex cursor-pointer items-start gap-1.5 border-border/10 border-b px-2 py-0.5 transition-colors duration-150 hover:bg-hover"
                       onClick={() => onDiagnosticClick?.(diagnostic)}
                     >
-                      <div className="mt-0.5 flex-shrink-0">
-                        {getSeverityIcon(diagnostic.severity)}
-                      </div>
+                      <div className="mt-0.5 shrink-0">{getSeverityIcon(diagnostic.severity)}</div>
                       <div className="min-w-0 flex-1">
                         <div className="mb-0 flex items-center gap-1 text-text-lighter text-xs">
                           <span className="ui-font text-xs opacity-70">

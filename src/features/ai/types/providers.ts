@@ -13,20 +13,60 @@ interface Model {
   maxTokens: number;
 }
 
-export const AI_PROVIDERS: ModelProvider[] = [
+// CLI Agents that use Agent Client Protocol (ACP)
+export interface AIAgent {
+  id: string;
+  name: string;
+  binaryName: string;
+  description: string;
+  installed?: boolean;
+}
+
+export const AI_AGENTS: AIAgent[] = [
   {
     id: "claude-code",
-    name: "Claude Code (Local)",
-    apiUrl: "local",
-    requiresApiKey: false,
-    models: [
-      {
-        id: "claude-code",
-        name: "Claude Code",
-        maxTokens: 200000,
-      },
-    ],
+    name: "Claude Code",
+    binaryName: "claude",
+    description: "Anthropic's Claude Code CLI agent",
+    installed: false,
   },
+  {
+    id: "gemini-cli",
+    name: "Gemini CLI",
+    binaryName: "gemini",
+    description: "Google's Gemini CLI agent",
+    installed: false,
+  },
+  {
+    id: "codex-cli",
+    name: "Codex CLI",
+    binaryName: "codex",
+    description: "OpenAI's Codex CLI agent",
+    installed: false,
+  },
+];
+
+// Helper to check if a provider ID is an agent
+export const isAgentProvider = (id: string): boolean => {
+  return AI_AGENTS.some((agent) => agent.id === id);
+};
+
+// Get agent by ID
+export const getAgentById = (id: string): AIAgent | undefined => {
+  return AI_AGENTS.find((agent) => agent.id === id);
+};
+
+// Update agent installation status
+export const updateAgentStatus = (agents: Array<{ id: string; installed: boolean }>) => {
+  for (const update of agents) {
+    const agent = AI_AGENTS.find((a) => a.id === update.id);
+    if (agent) {
+      agent.installed = update.installed;
+    }
+  }
+};
+
+export const AI_PROVIDERS: ModelProvider[] = [
   {
     id: "openai",
     name: "OpenAI",
@@ -212,6 +252,11 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 1048576,
       },
       {
+        id: "gemini-3-flash-preview",
+        name: "Gemini 3 Flash Preview",
+        maxTokens: 1048576,
+      },
+      {
         id: "gemini-2.5-pro",
         name: "Gemini 2.5 Pro",
         maxTokens: 1048576,
@@ -222,18 +267,18 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 1048576,
       },
       {
+        id: "gemini-2.5-flash-lite",
+        name: "Gemini 2.5 Flash Lite",
+        maxTokens: 1048576,
+      },
+      {
         id: "gemini-2.0-flash",
         name: "Gemini 2.0 Flash",
-        maxTokens: 1000000,
+        maxTokens: 1048576,
       },
       {
-        id: "gemini-1.5-pro",
-        name: "Gemini 1.5 Pro",
-        maxTokens: 2097152,
-      },
-      {
-        id: "gemini-1.5-flash",
-        name: "Gemini 1.5 Flash",
+        id: "gemini-2.0-flash-lite",
+        name: "Gemini 2.0 Flash Lite",
         maxTokens: 1048576,
       },
     ],
@@ -408,21 +453,23 @@ export const AI_PROVIDERS: ModelProvider[] = [
       },
     ],
   },
+  {
+    id: "ollama",
+    name: "Ollama (Local)",
+    apiUrl: "http://localhost:11434/v1/chat/completions",
+    requiresApiKey: false,
+    models: [],
+  },
 ];
 
-// Track Claude Code availability
-let claudeCodeAvailable = false;
-
-export const setClaudeCodeAvailability = (available: boolean) => {
-  claudeCodeAvailable = available;
+// Get all API providers (no longer includes Claude Code since it's now an agent)
+export const getAvailableProviders = (): ModelProvider[] => {
+  return AI_PROVIDERS;
 };
 
-export const getAvailableProviders = (): ModelProvider[] => {
-  if (claudeCodeAvailable) {
-    return AI_PROVIDERS;
-  }
-  // Filter out Claude Code if not available
-  return AI_PROVIDERS.filter((provider) => provider.id !== "claude-code");
+// Get installed agents only
+export const getInstalledAgents = (): AIAgent[] => {
+  return AI_AGENTS.filter((agent) => agent.installed);
 };
 
 export const getProviderById = (id: string): ModelProvider | undefined => {

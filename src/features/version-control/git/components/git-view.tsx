@@ -1,5 +1,5 @@
 import { GitBranch, RefreshCw } from "lucide-react";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import {
   getBranches,
@@ -25,9 +25,10 @@ import GitTagManager from "./git-tag-manager";
 interface GitViewProps {
   repoPath?: string;
   onFileSelect?: (path: string, isDir: boolean) => void;
+  isActive?: boolean;
 }
 
-const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
+const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const { gitStatus, isLoadingGitData, isRefreshing, actions } = useGitStore();
   const { setIsLoadingGitData, setIsRefreshing } = actions;
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
@@ -41,6 +42,9 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
   const [showStashManager, setShowStashManager] = useState(false);
   const [showRemoteManager, setShowRemoteManager] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
+
+  // Track previous isActive value to detect when view becomes active
+  const wasActiveRef = useRef(isActive);
 
   // Initial load of Git data (only for first time or repo change)
   const loadInitialGitData = useCallback(async () => {
@@ -103,6 +107,15 @@ const GitView = ({ repoPath, onFileSelect }: GitViewProps) => {
   useEffect(() => {
     loadInitialGitData();
   }, [loadInitialGitData]);
+
+  // Refresh when the view becomes active (user clicks on Source Control)
+  useEffect(() => {
+    if (isActive && !wasActiveRef.current && gitStatus) {
+      // View just became active and we have data - refresh it
+      refreshGitData();
+    }
+    wasActiveRef.current = isActive;
+  }, [isActive, gitStatus, refreshGitData]);
 
   // Listen for git status changes (from staging/unstaging hunks)
   useEffect(() => {

@@ -9,6 +9,7 @@ pub struct ChatData {
    pub title: String,
    pub created_at: i64,
    pub last_message_at: i64,
+   pub agent_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -68,11 +69,18 @@ pub async fn init_chat_database(app: tauri::AppHandle) -> Result<(), String> {
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
             created_at INTEGER NOT NULL,
-            last_message_at INTEGER NOT NULL
+            last_message_at INTEGER NOT NULL,
+            agent_id TEXT DEFAULT 'custom'
         )",
          [],
       )
       .map_err(|e| format!("Failed to create chats table: {}", e))?;
+
+   // Migration: Add agent_id column if it doesn't exist (for existing databases)
+   let _ = conn.execute(
+      "ALTER TABLE chats ADD COLUMN agent_id TEXT DEFAULT 'custom'",
+      [],
+   );
 
    conn
       .execute(
@@ -149,9 +157,18 @@ pub async fn save_chat(
 
    // Insert or replace chat
    match conn.execute(
-      "INSERT OR REPLACE INTO chats (id, title, created_at, last_message_at) VALUES (?1, ?2, ?3, \
-       ?4)",
-      params![chat.id, chat.title, chat.created_at, chat.last_message_at],
+      "INSERT OR REPLACE INTO chats (id, title, created_at, last_message_at, agent_id) VALUES \
+       (?1, ?2, ?3, ?4, ?5)",
+      params![
+         chat.id,
+         chat.title,
+         chat.created_at,
+         chat.last_message_at,
+         chat
+            .agent_id
+            .clone()
+            .unwrap_or_else(|| "custom".to_string())
+      ],
    ) {
       Ok(_) => {}
       Err(e) => {
@@ -231,7 +248,8 @@ pub async fn load_all_chats(app: tauri::AppHandle) -> Result<Vec<ChatData>, Stri
 
    let mut stmt = conn
       .prepare(
-         "SELECT id, title, created_at, last_message_at FROM chats ORDER BY last_message_at DESC",
+         "SELECT id, title, created_at, last_message_at, agent_id FROM chats ORDER BY \
+          last_message_at DESC",
       )
       .map_err(|e| format!("Failed to prepare query: {}", e))?;
 
@@ -242,6 +260,7 @@ pub async fn load_all_chats(app: tauri::AppHandle) -> Result<Vec<ChatData>, Stri
             title: row.get(1)?,
             created_at: row.get(2)?,
             last_message_at: row.get(3)?,
+            agent_id: row.get(4)?,
          })
       })
       .map_err(|e| format!("Failed to query chats: {}", e))?
@@ -257,7 +276,7 @@ pub async fn load_chat(app: tauri::AppHandle, chat_id: String) -> Result<ChatWit
 
    // Load chat
    let mut stmt = conn
-      .prepare("SELECT id, title, created_at, last_message_at FROM chats WHERE id = ?1")
+      .prepare("SELECT id, title, created_at, last_message_at, agent_id FROM chats WHERE id = ?1")
       .map_err(|e| format!("Failed to prepare chat query: {}", e))?;
 
    let chat = stmt
@@ -267,6 +286,7 @@ pub async fn load_chat(app: tauri::AppHandle, chat_id: String) -> Result<ChatWit
             title: row.get(1)?,
             created_at: row.get(2)?,
             last_message_at: row.get(3)?,
+            agent_id: row.get(4)?,
          })
       })
       .map_err(|e| format!("Failed to load chat: {}", e))?;
@@ -364,7 +384,7 @@ pub async fn search_chats(app: tauri::AppHandle, query: String) -> Result<Vec<Ch
 
    let mut stmt = conn
       .prepare(
-         "SELECT DISTINCT c.id, c.title, c.created_at, c.last_message_at
+         "SELECT DISTINCT c.id, c.title, c.created_at, c.last_message_at, c.agent_id
              FROM chats c
              LEFT JOIN messages m ON c.id = m.chat_id
              WHERE c.title LIKE ?1 OR m.content LIKE ?1
@@ -379,6 +399,7 @@ pub async fn search_chats(app: tauri::AppHandle, query: String) -> Result<Vec<Ch
             title: row.get(1)?,
             created_at: row.get(2)?,
             last_message_at: row.get(3)?,
+            agent_id: row.get(4)?,
          })
       })
       .map_err(|e| format!("Failed to query search results: {}", e))?
