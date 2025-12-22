@@ -1,7 +1,7 @@
 import "../styles/overlay-editor.css";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useGitGutter } from "@/features/version-control/git/controllers/use-git-gutter";
+import { useGitGutter } from "@/features/version-control/git/controllers/use-gutter";
 import { useZoomStore } from "@/stores/zoom-store";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";

@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { gitDiffCache } from "@/features/version-control/git/controllers/git-diff-cache";
+import { gitDiffCache } from "@/features/version-control/git/controllers/diff-cache";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "../features/file-system/controllers/platform";
 

@@ -1,4 +1,4 @@
-import { GitBranch, RefreshCw } from "lucide-react";
+import { MoreHorizontal, RefreshCw } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import {
@@ -8,19 +8,19 @@ import {
   getGitLog,
   getGitStatus,
 } from "@/features/version-control/git/controllers/git";
-import { useGitStore } from "@/features/version-control/git/controllers/git-store";
+import { useGitStore } from "@/features/version-control/git/controllers/store";
 import { cn } from "@/utils/cn";
 import type { MultiFileDiff } from "../../diff-viewer/types/diff";
 import type { GitFile } from "../types/git";
 // Import modular components
-import GitActionsMenu from "./git-actions-menu";
-import GitBranchManager from "./git-branch-manager";
-import GitCommitHistory from "./git-commit-history";
-import GitCommitPanel from "./git-commit-panel";
-import GitRemoteManager from "./git-remote-manager";
-import GitStashManager from "./git-stash-manager";
-import GitStatusPanel from "./git-status-panel";
-import GitTagManager from "./git-tag-manager";
+import GitActionsMenu from "./actions-menu";
+import GitBranchManager from "./branch-manager";
+import GitCommitHistory from "./commit-history";
+import GitCommitPanel from "./commit-panel";
+import GitRemoteManager from "./remote-manager";
+import GitStashManager from "./stash-manager";
+import GitStatusPanel from "./status-panel";
+import GitTagManager from "./tag-manager";
 
 interface GitViewProps {
   repoPath?: string;
@@ -339,7 +339,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     }
   };
 
-  const renderGitButton = () => (
+  const renderActionsButton = () => (
     <button
       onClick={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -351,13 +351,13 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         setShowBranchDropdown(false);
       }}
       className={cn(
-        "flex cursor-pointer items-center gap-1 rounded px-2 py-1.5",
-        "font-medium text-text text-xs hover:bg-hover",
+        "flex h-5 w-5 cursor-pointer items-center justify-center rounded p-0",
+        "text-text-lighter transition-colors hover:bg-hover hover:text-text",
       )}
       title="Git Actions"
+      aria-label="Git Actions"
     >
-      <GitBranch size={12} className="text-text-lighter" />
-      <span>Git</span>
+      <MoreHorizontal size={12} />
     </button>
   );
 
@@ -370,7 +370,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             "bg-secondary-bg px-2 py-1.5",
           )}
         >
-          <div className="flex items-center gap-2">{renderGitButton()}</div>
+          <div className="flex items-center gap-2">{renderActionsButton()}</div>
         </div>
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="ui-font text-center text-text-lighter text-xs">
@@ -391,7 +391,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             "bg-secondary-bg px-2 py-1.5",
           )}
         >
-          <div className="flex items-center gap-2">{renderGitButton()}</div>
+          <div className="flex items-center gap-2">{renderActionsButton()}</div>
         </div>
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="ui-font text-center text-text-lighter text-xs">Loading Git status...</div>
@@ -409,7 +409,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             "bg-secondary-bg px-2 py-1.5",
           )}
         >
-          <div className="flex items-center gap-2">{renderGitButton()}</div>
+          <div className="flex items-center gap-2">{renderActionsButton()}</div>
         </div>
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="ui-font text-center text-text-lighter text-xs">
@@ -433,20 +433,19 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             "bg-secondary-bg px-2 py-1.5",
           )}
         >
-          <div className="flex items-center gap-2">
-            {renderGitButton()}
-
+          <div className="flex items-center gap-1">
             <GitBranchManager
               currentBranch={gitStatus.branch}
               repoPath={repoPath}
               onBranchChange={refreshGitData}
+              compact
             />
-
             {(gitStatus.ahead > 0 || gitStatus.behind > 0) && (
-              <span className="text-[10px] text-text-lighter">
-                {gitStatus.ahead > 0 && `↑${gitStatus.ahead}`}
-                {gitStatus.ahead > 0 && gitStatus.behind > 0 && " "}
-                {gitStatus.behind > 0 && `↓${gitStatus.behind}`}
+              <span className="text-[9px] text-text-lighter">
+                {gitStatus.ahead > 0 && <span className="text-git-added">↑{gitStatus.ahead}</span>}
+                {gitStatus.behind > 0 && (
+                  <span className="text-git-deleted">↓{gitStatus.behind}</span>
+                )}
               </span>
             )}
           </div>
@@ -461,12 +460,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 "disabled:opacity-50",
               )}
               title="Refresh"
+              aria-label="Refresh git status"
             >
               <RefreshCw
                 size={12}
                 className={isLoadingGitData || isRefreshing ? "animate-spin" : ""}
               />
             </button>
+            {renderActionsButton()}
           </div>
         </div>
 

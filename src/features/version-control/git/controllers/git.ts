@@ -9,7 +9,7 @@ import type {
   GitStatus,
   GitTag,
 } from "../types/git";
-import { gitDiffCache } from "./git-diff-cache";
+import { gitDiffCache } from "./diff-cache";
 
 export const getGitStatus = async (repoPath: string): Promise<GitStatus | null> => {
   try {
