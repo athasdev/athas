@@ -1,7 +1,7 @@
 {
   "name": "athas-code",
   "private": true,
-  "version": "0.2.7",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "tauri": "tauri",
@@ -20,6 +20,7 @@
     "setup": "bun scripts/setup.ts",
     "dev": "WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev",
     "dev:scan": "WEBKIT_DISABLE_DMABUF_RENDERER=1 VITE_REACT_SCAN=true tauri dev",
+    "pre-release": "bun scripts/pre-release-check.ts",
     "release": "bun scripts/release.ts",
     "release:patch": "bun scripts/release.ts patch",
     "release:minor": "bun scripts/release.ts minor",

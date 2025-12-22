@@ -52,10 +52,10 @@ impl NodeRuntime {
       }
 
       // Check managed installation
-      if let Ok(managed_dir) = Self::get_managed_dir(app_handle) {
-         if Self::from_managed_path(&managed_dir).is_ok() {
-            return RuntimeStatus::ManagedInstalled;
-         }
+      if let Ok(managed_dir) = Self::get_managed_dir(app_handle)
+         && Self::from_managed_path(&managed_dir).is_ok()
+      {
+         return RuntimeStatus::ManagedInstalled;
       }
 
       RuntimeStatus::NotInstalled
@@ -63,10 +63,10 @@ impl NodeRuntime {
 
    /// Get the Node.js version if installed
    pub async fn get_version(app_handle: &tauri::AppHandle) -> Option<String> {
-      if let Ok(runtime) = Self::get_or_install(app_handle).await {
-         if let Ok(version) = runtime.check_version().await {
-            return Some(format!("{}.{}.{}", version.0, version.1, version.2));
-         }
+      if let Ok(runtime) = Self::get_or_install(app_handle).await
+         && let Ok(version) = runtime.check_version().await
+      {
+         return Some(format!("{}.{}.{}", version.0, version.1, version.2));
       }
       None
    }
@@ -96,7 +96,7 @@ impl NodeRuntime {
    }
 
    /// Create runtime from managed installation path
-   fn from_managed_path(managed_dir: &PathBuf) -> Result<Self, RuntimeError> {
+   fn from_managed_path(managed_dir: &std::path::Path) -> Result<Self, RuntimeError> {
       let binary_path = downloader::get_node_binary_path(managed_dir);
 
       if !binary_path.exists() {

@@ -104,16 +104,15 @@ async fn format_with_generic(
    match cmd.spawn() {
       Ok(mut child) => {
          // Write content to stdin if using stdin input
-         if input_method == "stdin" {
-            if let Some(mut stdin) = child.stdin.take() {
-               if let Err(e) = stdin.write_all(content.as_bytes()) {
-                  return Ok(FormatResponse {
-                     formatted_content: content.to_string(),
-                     success: false,
-                     error: Some(format!("Failed to write to formatter stdin: {}", e)),
-                  });
-               }
-            }
+         if input_method == "stdin"
+            && let Some(mut stdin) = child.stdin.take()
+            && stdin.write_all(content.as_bytes()).is_err()
+         {
+            return Ok(FormatResponse {
+               formatted_content: content.to_string(),
+               success: false,
+               error: Some("Failed to write to formatter stdin".to_string()),
+            });
          }
 
          // Wait for the process to complete

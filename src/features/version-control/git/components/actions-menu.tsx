@@ -17,7 +17,7 @@ import {
   pullChanges,
   pushChanges,
 } from "@/features/version-control/git/controllers/git";
-import { useGitStore } from "@/features/version-control/git/controllers/git-store";
+import { useGitStore } from "@/features/version-control/git/controllers/store";
 import { cn } from "@/utils/cn";
 
 interface GitActionsMenuProps {

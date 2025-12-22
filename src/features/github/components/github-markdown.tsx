@@ -304,7 +304,7 @@ function renderHtmlImage(html: string, key: number): React.ReactNode {
       <img
         src={srcMatch[1]}
         alt={altMatch?.[1] || "Image"}
-        className="max-w-full rounded border border-border"
+        className="max-h-[400px] max-w-full rounded border border-border object-contain"
         loading="lazy"
       />
     </div>

@@ -9,13 +9,13 @@ import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileTreeStore } from "@/features/file-explorer/controllers/file-tree-store";
 import { useSettingsStore } from "@/features/settings/store";
-import { getGitStatus } from "@/features/version-control/git/controllers/git";
-import { gitDiffCache } from "@/features/version-control/git/controllers/git-diff-cache";
+import { gitDiffCache } from "@/features/version-control/git/controllers/diff-cache";
 import {
   isDiffFile,
   parseRawDiffContent,
-} from "@/features/version-control/git/controllers/git-diff-parser";
-import { useGitStore } from "@/features/version-control/git/controllers/git-store";
+} from "@/features/version-control/git/controllers/diff-parser";
+import { getGitStatus } from "@/features/version-control/git/controllers/git";
+import { useGitStore } from "@/features/version-control/git/controllers/store";
 import { useGitBlameStore } from "@/stores/git-blame-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
