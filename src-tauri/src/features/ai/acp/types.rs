@@ -107,22 +107,12 @@ impl AgentConfig {
 /// Status of an ACP agent connection
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[derive(Default)]
 pub struct AcpAgentStatus {
    pub agent_id: String,
    pub running: bool,
    pub session_active: bool,
    pub initialized: bool,
-}
-
-impl Default for AcpAgentStatus {
-   fn default() -> Self {
-      Self {
-         agent_id: String::new(),
-         running: false,
-         session_active: false,
-         initialized: false,
-      }
-   }
 }
 
 /// Content block types in ACP messages

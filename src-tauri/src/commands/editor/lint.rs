@@ -116,16 +116,15 @@ async fn lint_with_generic(
    match cmd.spawn() {
       Ok(mut child) => {
          // Write content to stdin if using stdin input
-         if input_method == "stdin" {
-            if let Some(mut stdin) = child.stdin.take() {
-               if let Err(e) = stdin.write_all(content.as_bytes()) {
-                  return Ok(LintResponse {
-                     diagnostics: vec![],
-                     success: false,
-                     error: Some(format!("Failed to write to linter stdin: {}", e)),
-                  });
-               }
-            }
+         if input_method == "stdin"
+            && let Some(mut stdin) = child.stdin.take()
+            && stdin.write_all(content.as_bytes()).is_err()
+         {
+            return Ok(LintResponse {
+               diagnostics: vec![],
+               success: false,
+               error: Some("Failed to write to linter stdin".to_string()),
+            });
          }
 
          // Wait for the process to complete
@@ -212,9 +211,7 @@ fn parse_json_diagnostics(output: &str) -> Vec<Diagnostic> {
 
    // Try to parse as single Clippy/Cargo message
    if let Ok(json_obj) = serde_json::from_str::<serde_json::Value>(output) {
-      if let Some(diagnostic) = parse_cargo_diagnostic(&json_obj) {
-         diagnostics.push(diagnostic);
-      }
+      diagnostics.extend(parse_cargo_diagnostic(&json_obj));
    }
 
    diagnostics

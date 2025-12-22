@@ -60,10 +60,10 @@ impl TerminalConnection {
       if let Ok(output) = output {
          let reader = BufReader::new(output.stdout.as_slice());
          for line in reader.lines() {
-            if let Ok(line) = line {
-               if let Some((key, value)) = line.split_once('=') {
-                  env_map.insert(key.to_string(), value.to_string());
-               }
+            if let Ok(line) = line
+               && let Some((key, value)) = line.split_once('=')
+            {
+               env_map.insert(key.to_string(), value.to_string());
             }
          }
       }
@@ -77,10 +77,10 @@ impl TerminalConnection {
          }
       }
 
-      if !env_map.contains_key("USER") {
-         if let Ok(user) = std::env::var("USER") {
-            env_map.insert("USER".to_string(), user);
-         }
+      if !env_map.contains_key("USER")
+         && let Ok(user) = std::env::var("USER")
+      {
+         env_map.insert("USER".to_string(), user);
       }
 
       if !env_map.contains_key("PATH") {

@@ -21,7 +21,7 @@ enum AcpCommand {
    Initialize {
       agent_id: String,
       workspace_path: Option<String>,
-      config: AgentConfig,
+      config: Box<AgentConfig>,
       app_handle: AppHandle,
       response_tx: oneshot::Sender<Result<(AcpAgentStatus, mpsc::Sender<PermissionResponse>)>>,
    },
@@ -87,11 +87,7 @@ impl AcpWorker {
       );
 
       // Build command
-      let binary = config
-         .binary_path
-         .as_ref()
-         .map(|p| p.as_str())
-         .unwrap_or(&config.binary_name);
+      let binary = config.binary_path.as_deref().unwrap_or(&config.binary_name);
 
       let mut cmd = Command::new(binary);
       cmd.args(&config.args)
@@ -235,16 +231,16 @@ impl AcpWorker {
       };
 
       // Emit initial session mode state if available
-      if let (Some(sid), Some(mode_state)) = (&session_id, initial_modes) {
-         if let Err(e) = app_handle.emit(
+      if let (Some(sid), Some(mode_state)) = (&session_id, initial_modes)
+         && let Err(e) = app_handle.emit(
             "acp-event",
             AcpEvent::SessionModeUpdate {
                session_id: sid.to_string(),
                mode_state,
             },
-         ) {
-            log::warn!("Failed to emit initial session mode state: {}", e);
-         }
+         )
+      {
+         log::warn!("Failed to emit initial session mode state: {}", e);
       }
 
       // Store state
@@ -414,7 +410,7 @@ impl AcpAgentBridge {
                response_tx,
             } => {
                let result = worker
-                  .initialize(agent_id, workspace_path, config, app_handle)
+                  .initialize(agent_id, workspace_path, *config, app_handle)
                   .await;
 
                // Update shared status
@@ -483,7 +479,7 @@ impl AcpAgentBridge {
          .send(AcpCommand::Initialize {
             agent_id: agent_id.to_string(),
             workspace_path,
-            config,
+            config: Box::new(config),
             app_handle: self.app_handle.clone(),
             response_tx,
          })

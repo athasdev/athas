@@ -49,10 +49,11 @@ impl AthasAcpClient {
    }
 
    fn resolve_path(&self, path: &str) -> String {
-      if let Some(ref workspace) = self.workspace_path {
-         if !path.starts_with('/') && !path.starts_with(workspace) {
-            return format!("{}/{}", workspace, path);
-         }
+      if let Some(ref workspace) = self.workspace_path
+         && !path.starts_with('/')
+         && !path.starts_with(workspace)
+      {
+         return format!("{}/{}", workspace, path);
       }
       path.to_string()
    }
@@ -195,10 +196,10 @@ impl acp::Client for AthasAcpClient {
       let path = self.resolve_path(&path_str);
 
       // Create parent directories if needed
-      if let Some(parent) = std::path::Path::new(&path).parent() {
-         if let Err(e) = tokio::fs::create_dir_all(parent).await {
-            log::warn!("Failed to create parent directories: {}", e);
-         }
+      if let Some(parent) = std::path::Path::new(&path).parent()
+         && let Err(e) = tokio::fs::create_dir_all(parent).await
+      {
+         log::warn!("Failed to create parent directories: {}", e);
       }
 
       match tokio::fs::write(&path, &args.content).await {

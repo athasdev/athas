@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.7] - 2025-12-22
+
+### Added
+- Ollama support for local AI models
+- ACP (Agent Client Protocol) integration with session modes
+- GitHub pull request integration with checklist rendering
+- Project picker dialog for workspace management
+- Web viewer for browsing URLs in editor
+- Extension system core architecture with bundled extensions
+- Syntax highlighting in diff viewer
+- Markdown syntax highlighting
+- Terminal font settings customization
+- Advanced model selector dropdown in AI chat
+- ARIA accessibility descriptors for menus and tabs
+- Persistent commands feature
+- SSH key authentication with multiple key fallback
+- Open File in Editor feature for AI agent
+- Slider component and Christmas theme
+- Pre-release check script for validating releases
+
+### Changed
+- Replace expandable commits with hover previews in source control
+- Improve LSP integration with diagnostics
+- Improve scrollbar design
+- Auto-refresh Source Control when view becomes active
+- Add 1 second delay before showing git blame popover
+- Refactor theme system
+- Extend Gemini API support
+
+### Fixed
+- Fix LSP popup position
+- Fix editor viewport and line alignment bugs
+- Fix terminal font rendering for Nerd Fonts
+- Fix context menu positioning
+- Fix sticky folder background transparency in file tree
+- Fix workspace reset and terminal persistence
+- Fix drag region for window on macOS
+- Fix autosave functionality and dirty state logic
+- Fix traffic lights for macOS 26
+- Fix LSP for JavaScript/TypeScript files
+
 ## [0.2.6] - 2025-12-04
 
 ### Added
