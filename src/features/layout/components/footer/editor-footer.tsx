@@ -6,7 +6,7 @@ import {
   Zap,
   ZapOff,
 } from "lucide-react";
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
@@ -41,11 +41,12 @@ const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => 
   });
 
   // Update position when opened
-  useEffect(() => {
-    if (isOpen && buttonRef.current) {
+  useLayoutEffect(() => {
+    if (isOpen && buttonRef.current && dropdownRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      const dropdownWidth = 260;
-      const dropdownHeight = 180;
+      const dropdownRect = dropdownRef.current.getBoundingClientRect();
+      const dropdownWidth = dropdownRect.width;
+      const dropdownHeight = dropdownRect.height;
       const padding = 8;
 
       // Calculate position - open above and to the left
