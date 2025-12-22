@@ -4,7 +4,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { useSettingsStore } from "@/features/settings/store";
-import GitView from "@/features/version-control/git/components/git-view";
+import GitView from "@/features/version-control/git/components/view";
 import { useSearchViewStore } from "@/stores/search-view-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useUIState } from "@/stores/ui-state-store";

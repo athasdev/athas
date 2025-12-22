@@ -15,7 +15,7 @@ import {
   stageAllFiles,
   unstageAllFiles,
 } from "@/features/version-control/git/controllers/git";
-import { useGitStore } from "@/features/version-control/git/controllers/git-store";
+import { useGitStore } from "@/features/version-control/git/controllers/store";
 import { vimCommands } from "@/features/vim/stores/vim-commands";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useAppStore } from "@/stores/app-store";

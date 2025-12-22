@@ -9,9 +9,11 @@ import {
   MessageSquare,
   RefreshCw,
 } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { cn } from "@/utils/cn";
+import { usePRDiffHighlighting } from "../hooks/use-pr-diff-highlighting";
 import { useGitHubStore } from "../store";
 import type { Label, LinkedIssue, ReviewRequest } from "../types";
 import GitHubMarkdown from "./github-markdown";
@@ -99,43 +101,97 @@ function getTimeAgo(dateString: string): string {
   return `${Math.floor(seconds / 604800)}w ago`;
 }
 
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+/**
+ * Render content with syntax highlighting tokens
+ */
+function renderTokenizedContent(content: string, tokens: HighlightToken[]): ReactNode[] {
+  if (!content || tokens.length === 0) {
+    return [content];
+  }
+
+  const sortedTokens = [...tokens].sort((a, b) => {
+    const startDiff = a.startPosition.column - b.startPosition.column;
+    if (startDiff !== 0) return startDiff;
+    const aSize = a.endPosition.column - a.startPosition.column;
+    const bSize = b.endPosition.column - b.startPosition.column;
+    return aSize - bSize;
   });
+
+  const result: ReactNode[] = [];
+  let currentPos = 0;
+
+  for (const token of sortedTokens) {
+    const start = token.startPosition.column;
+    const end = token.endPosition.column;
+
+    if (start >= content.length) continue;
+    if (start < currentPos) continue;
+
+    if (start > currentPos) {
+      result.push(content.slice(currentPos, start));
+    }
+
+    const tokenEnd = Math.min(end, content.length);
+    if (tokenEnd > start) {
+      const tokenText = content.slice(start, tokenEnd);
+      if (token.type === "token-text") {
+        result.push(tokenText);
+      } else {
+        result.push(
+          <span key={`${start}-${tokenEnd}`} className={token.type}>
+            {tokenText}
+          </span>,
+        );
+      }
+    }
+
+    currentPos = Math.max(currentPos, tokenEnd);
+  }
+
+  if (currentPos < content.length) {
+    result.push(content.slice(currentPos));
+  }
+
+  return result;
 }
 
 interface DiffLineDisplayProps {
   line: string;
   index: number;
+  tokens?: HighlightToken[];
 }
 
-const DiffLineDisplay = memo(({ line, index }: DiffLineDisplayProps) => {
+const DiffLineDisplay = memo(({ line, index, tokens }: DiffLineDisplayProps) => {
   let bgClass = "";
   let textClass = "text-text";
+  let content = line;
 
   if (line.startsWith("@@")) {
     bgClass = "bg-blue-500/10";
     textClass = "text-blue-400";
   } else if (line.startsWith("+")) {
-    bgClass = "bg-green-500/10";
-    textClass = "text-green-400";
+    bgClass = "bg-git-added/10";
+    textClass = tokens && tokens.length > 0 ? "text-text" : "text-git-added";
+    content = line.slice(1);
   } else if (line.startsWith("-")) {
-    bgClass = "bg-red-500/10";
-    textClass = "text-red-400";
+    bgClass = "bg-git-deleted/10";
+    textClass = tokens && tokens.length > 0 ? "text-text" : "text-git-deleted";
+    content = line.slice(1);
   }
+
+  const renderContent = () => {
+    if (tokens && tokens.length > 0) {
+      return renderTokenizedContent(content, tokens);
+    }
+    return content || " ";
+  };
 
   return (
     <div className={cn("px-4 py-0.5 font-mono text-xs", bgClass, textClass)}>
       <span className="mr-4 inline-block w-10 select-none text-right text-text-lighter/50">
         {index + 1}
       </span>
-      <span className="whitespace-pre">{line || " "}</span>
+      <span className="whitespace-pre">{renderContent()}</span>
     </div>
   );
 });
@@ -149,9 +205,10 @@ interface FileDiffViewProps {
 
 const FileDiffView = memo(({ file, defaultExpanded = false }: FileDiffViewProps) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const tokenMap = usePRDiffHighlighting(isExpanded ? file.lines : [], file.path);
 
   return (
-    <div className="border-border border-b">
+    <div className="min-w-0 border-border border-b">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-hover"
@@ -166,13 +223,13 @@ const FileDiffView = memo(({ file, defaultExpanded = false }: FileDiffViewProps)
         {file.oldPath && (
           <span className="text-text-lighter text-xs">(renamed from {file.oldPath})</span>
         )}
-        <span className="text-green-500 text-xs">+{file.additions}</span>
-        <span className="text-red-500 text-xs">-{file.deletions}</span>
+        <span className="text-git-added text-xs">+{file.additions}</span>
+        <span className="text-git-deleted text-xs">-{file.deletions}</span>
       </button>
       {isExpanded && (
-        <div className="max-h-[600px] overflow-y-auto border-border border-t bg-primary-bg">
+        <div className="max-h-[600px] overflow-auto border-border border-t bg-primary-bg">
           {file.lines.map((line, index) => (
-            <DiffLineDisplay key={index} line={line} index={index} />
+            <DiffLineDisplay key={index} line={line} index={index} tokens={tokenMap.get(index)} />
           ))}
         </div>
       )}
@@ -189,17 +246,23 @@ interface CommitItemProps {
 const CommitItem = memo(({ commit }: CommitItemProps) => {
   const author = commit.authors[0];
   const shortSha = commit.oid.slice(0, 7);
+  const authorName = author?.login || author?.name || "Unknown";
 
   return (
     <div className="flex items-start gap-3 border-border border-b px-4 py-3 hover:bg-hover/50">
-      <GitCommit size={16} className="mt-0.5 shrink-0 text-text-lighter" />
+      <img
+        src={`https://github.com/${authorName}.png?size=32`}
+        alt={authorName}
+        className="h-6 w-6 shrink-0 rounded-full bg-secondary-bg"
+        loading="lazy"
+      />
       <div className="min-w-0 flex-1">
         <p className="text-sm text-text">{commit.messageHeadline}</p>
         {commit.messageBody && (
           <p className="mt-1 text-text-lighter text-xs">{commit.messageBody}</p>
         )}
         <div className="mt-1.5 flex items-center gap-2 text-text-lighter text-xs">
-          <span className="font-medium">{author?.login || author?.name || "Unknown"}</span>
+          <span className="font-medium">{authorName}</span>
           <span>committed {getTimeAgo(commit.authoredDate)}</span>
           <code className="rounded bg-primary-bg px-1.5 py-0.5 font-mono">{shortSha}</code>
         </div>
@@ -209,6 +272,40 @@ const CommitItem = memo(({ commit }: CommitItemProps) => {
 });
 
 CommitItem.displayName = "CommitItem";
+
+interface CommentItemProps {
+  comment: {
+    author: { login: string };
+    body: string;
+    createdAt: string;
+  };
+}
+
+const CommentItem = memo(({ comment }: CommentItemProps) => {
+  const authorLogin = comment.author.login;
+
+  return (
+    <div className="flex gap-3 border-border border-b px-4 py-4">
+      <img
+        src={`https://github.com/${authorLogin}.png?size=40`}
+        alt={authorLogin}
+        className="h-8 w-8 shrink-0 rounded-full bg-secondary-bg"
+        loading="lazy"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm text-text">{authorLogin}</span>
+          <span className="text-text-lighter text-xs">{getTimeAgo(comment.createdAt)}</span>
+        </div>
+        <div className="mt-2">
+          <GitHubMarkdown content={comment.body} />
+        </div>
+      </div>
+    </div>
+  );
+});
+
+CommentItem.displayName = "CommentItem";
 
 interface PRViewerProps {
   prNumber: number;
@@ -465,7 +562,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="min-w-0 flex-1 overflow-y-auto">
         {/* Description Tab */}
         {activeTab === "description" && (
           <div className="p-4">
@@ -479,7 +576,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
 
         {/* Files Tab */}
         {activeTab === "files" && (
-          <div>
+          <div className="min-w-0">
             {parsedDiff.length === 0 ? (
               <div className="flex items-center justify-center p-8">
                 <p className="text-sm text-text-lighter">No file changes</p>
@@ -514,15 +611,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
               </div>
             ) : (
               selectedPRComments.map((comment, index) => (
-                <div key={index} className="border-border border-b px-4 py-3">
-                  <div className="flex items-center gap-2 text-text-lighter text-xs">
-                    <span className="font-medium text-text">{comment.author.login}</span>
-                    <span>{formatDate(comment.createdAt)}</span>
-                  </div>
-                  <div className="mt-2">
-                    <GitHubMarkdown content={comment.body} />
-                  </div>
-                </div>
+                <CommentItem key={index} comment={comment} />
               ))
             )}
           </div>

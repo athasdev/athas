@@ -249,7 +249,7 @@ const GitBranchManager = ({
                     className={cn(
                       "flex-1 rounded border border-border bg-secondary-bg",
                       "px-2 py-1.5 text-text text-xs",
-                      "focus:border-blue-500 focus:outline-none",
+                      "focus:border-accent focus:outline-none",
                     )}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && newBranchName.trim()) {
@@ -271,9 +271,9 @@ const GitBranchManager = ({
                     onClick={handleCreateBranch}
                     disabled={!newBranchName.trim() || isLoading}
                     className={cn(
-                      "flex items-center gap-1 rounded border border-blue-600",
-                      "bg-blue-600 px-2 py-1.5 text-white text-xs",
-                      "hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50",
+                      "flex items-center gap-1 rounded border border-accent",
+                      "bg-accent px-2 py-1.5 text-white text-xs",
+                      "hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
                     )}
                   >
                     <Plus size={10} />
@@ -319,13 +319,11 @@ const GitBranchManager = ({
                               : "text-text-lighter hover:text-text",
                           )}
                         >
-                          {branch === currentBranch && (
-                            <Check size={10} className="text-green-400" />
-                          )}
+                          {branch === currentBranch && <Check size={10} className="text-success" />}
                           <GitBranch size={10} className="text-text-lighter" />
                           <span className="ui-font truncate">{branch}</span>
                           {branch === currentBranch && (
-                            <span className="ml-auto text-[9px] text-green-400">current</span>
+                            <span className="ml-auto text-[9px] text-success">current</span>
                           )}
                         </button>
                         {branch !== currentBranch && (
@@ -333,8 +331,8 @@ const GitBranchManager = ({
                             onClick={() => handleDeleteBranch(branch)}
                             disabled={isLoading}
                             className={cn(
-                              "rounded p-0.5 text-red-400 opacity-0",
-                              "hover:bg-red-400/10 hover:text-red-300",
+                              "rounded p-0.5 text-git-deleted opacity-0",
+                              "hover:bg-git-deleted/10 hover:opacity-80",
                               "disabled:opacity-50 group-hover:opacity-100",
                             )}
                             title="Delete branch"

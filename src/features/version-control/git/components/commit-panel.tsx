@@ -1,4 +1,4 @@
-import { AlertCircle, GitCommit as GitCommitIcon, Send } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { commitChanges } from "@/features/version-control/git/controllers/git";
@@ -45,25 +45,14 @@ const GitCommitPanel = ({ stagedFilesCount, repoPath, onCommitSuccess }: GitComm
 
   const isCommitDisabled = !commitMessage.trim() || stagedFilesCount === 0 || isCommitting;
 
-  if (stagedFilesCount === 0) {
-    return null;
-  }
-
   return (
     <div className="border-border border-t bg-secondary-bg">
-      <div className="p-3">
-        <div className="mb-2 flex items-center gap-2">
-          <GitCommitIcon size={12} className="text-text-lighter" />
-          <span className="font-medium text-text text-xs">
-            Commit {stagedFilesCount} file{stagedFilesCount !== 1 ? "s" : ""}
-          </span>
-        </div>
-
+      <div className="p-2">
         {error && (
           <div
             className={cn(
-              "mb-2 flex items-center gap-2 rounded border border-red-500 border-opacity-30",
-              "bg-red-900 bg-opacity-20 p-2 text-red-400 text-xs",
+              "mb-2 flex items-center gap-2 rounded border border-error/30",
+              "bg-error/20 p-2 text-error text-xs",
             )}
           >
             <AlertCircle size={12} />
@@ -71,44 +60,46 @@ const GitCommitPanel = ({ stagedFilesCount, repoPath, onCommitSuccess }: GitComm
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <textarea
             value={commitMessage}
             onChange={(e) => setCommitMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Enter commit message..."
+            placeholder="Commit message..."
             className={cn(
               "w-full resize-none border border-border bg-primary-bg px-2 py-1.5",
-              "ui-font text-text text-xs focus:border-blue-500 focus:outline-none",
+              "ui-font text-[10px] text-text placeholder:text-text-lighter",
+              "focus:border-accent focus:outline-none",
             )}
-            rows={3}
+            rows={2}
             disabled={isCommitting}
           />
 
           <div className="flex items-center justify-between">
-            <div className="text-[9px] text-text-lighter">Ctrl+Enter to commit</div>
+            <span className="text-[9px] text-text-lighter">
+              {stagedFilesCount > 0
+                ? `${stagedFilesCount} file${stagedFilesCount !== 1 ? "s" : ""} staged`
+                : "No files staged"}
+            </span>
 
             <button
               onClick={handleCommit}
               disabled={isCommitDisabled}
               className={cn(
-                "flex items-center gap-1 rounded border px-3 py-1.5",
-                "ui-font text-xs transition-colors duration-150",
+                "flex items-center gap-1 rounded px-2 py-0.5",
+                "ui-font text-[10px] transition-colors duration-150",
                 isCommitDisabled
-                  ? "cursor-not-allowed border-border bg-secondary-bg text-text-lighter"
-                  : "border-blue-500 bg-blue-600 text-white hover:bg-blue-700",
+                  ? "cursor-not-allowed bg-secondary-bg text-text-lighter"
+                  : "bg-accent text-white hover:opacity-90",
               )}
             >
               {isCommitting ? (
                 <>
-                  <div className="h-3 w-3 animate-spin rounded-full border border-white border-t-transparent"></div>
-                  Committing...
+                  <div className="h-2.5 w-2.5 animate-spin rounded-full border border-white border-t-transparent"></div>
+                  Committing
                 </>
               ) : (
-                <>
-                  <Send size={12} />
-                  Commit
-                </>
+                "Commit"
               )}
             </button>
           </div>

@@ -18,9 +18,9 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "../../../../stores/ui-state-store";
 import { getFilenameFromPath } from "../../../file-system/controllers/file-utils";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
-import GitBranchManager from "../../../version-control/git/components/git-branch-manager";
+import GitBranchManager from "../../../version-control/git/components/branch-manager";
 import { getGitStatus } from "../../../version-control/git/controllers/git";
-import { useGitStore } from "../../../version-control/git/controllers/git-store";
+import { useGitStore } from "../../../version-control/git/controllers/store";
 import VimStatusIndicator from "../../../vim/components/vim-status-indicator";
 
 // LSP Status Indicator Component
