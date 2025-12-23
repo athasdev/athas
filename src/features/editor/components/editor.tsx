@@ -808,6 +808,7 @@ export function Editor({
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             tabSize={tabSize}
+            textareaRef={inputRef}
           />
         )}
 

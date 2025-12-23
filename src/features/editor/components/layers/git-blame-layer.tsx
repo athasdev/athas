@@ -14,6 +14,7 @@ interface GitBlameLayerProps {
   fontFamily: string;
   lineHeight: number;
   tabSize?: number;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
 const GitBlameLayerComponent = ({
@@ -25,9 +26,12 @@ const GitBlameLayerComponent = ({
   fontFamily,
   lineHeight,
   tabSize = 2,
+  textareaRef,
 }: GitBlameLayerProps) => {
+  // Subscribe to scroll state for reactivity
   const scrollTop = useEditorStateStore.use.scrollTop();
   const scrollLeft = useEditorStateStore.use.scrollLeft();
+
   const { getBlameForLine } = useGitBlame(filePath);
   const blameLine = getBlameForLine(cursorLine);
   const measureRef = useRef<HTMLSpanElement>(null);
@@ -45,21 +49,33 @@ const GitBlameLayerComponent = ({
 
   if (!blameLine) return null;
 
-  // Position relative to content (same pattern as multi-cursor-layer)
-  const top = visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+  // Calculate scroll ratio to compensate for browser rendering differences
+  // (same approach as gutter component)
+  const textarea = textareaRef.current;
+  const totalLines = lines.length;
+  const totalContentHeight = totalLines * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP * 2;
+  const textareaScrollHeight = textarea?.scrollHeight ?? totalContentHeight;
+  const scrollRatio = textareaScrollHeight > 0 ? totalContentHeight / textareaScrollHeight : 1;
+
+  // Apply ratio to get adjusted scroll position
+  const adjustedScrollTop = scrollTop * scrollRatio;
+
+  // Position relative to viewport (subtract adjusted scroll to get viewport-relative position)
+  const top =
+    visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP - adjustedScrollTop;
   const left =
-    lineContentWidth + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + EDITOR_CONSTANTS.GUTTER_MARGIN;
+    lineContentWidth +
+    EDITOR_CONSTANTS.EDITOR_PADDING_LEFT +
+    EDITOR_CONSTANTS.GUTTER_MARGIN -
+    scrollLeft;
 
   return (
     <div
-      className="git-blame-layer pointer-events-none absolute inset-0 overflow-hidden"
+      className="git-blame-layer pointer-events-none absolute inset-0"
       style={{
         fontSize: `${fontSize}px`,
         fontFamily,
         lineHeight: `${lineHeight}px`,
-        // Use transform for scroll sync (same pattern as gutter and other layers)
-        transform: `translate(${-scrollLeft}px, ${-scrollTop}px)`,
-        willChange: "transform",
       }}
     >
       {/* Hidden element to measure actual text width */}
