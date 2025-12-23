@@ -7,13 +7,18 @@ import { useCallback, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
 import { indexedDBParserCache } from "../lib/wasm-parser/cache-indexeddb";
-import { tokenizeCode, tokenizeRange as wasmTokenizeRange } from "../lib/wasm-parser/tokenizer";
+import {
+  tokenizeCodeWithTree,
+  tokenizeRange as wasmTokenizeRange,
+} from "../lib/wasm-parser/tokenizer";
 import type { HighlightToken } from "../lib/wasm-parser/types";
+import { useTreeCacheStore } from "../stores/tree-cache-store";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/html";
 import type { ViewportRange } from "./use-viewport-lines";
 
 interface TokenizerOptions {
   filePath: string | undefined;
+  bufferId?: string;
   enabled?: boolean;
   incremental?: boolean;
 }
@@ -21,6 +26,7 @@ interface TokenizerOptions {
 interface TokenCache {
   fullTokens: Token[];
   lastFullTokenizeTime: number;
+  previousContent: string;
 }
 
 /**
@@ -123,10 +129,21 @@ function convertToToken(highlightToken: HighlightToken): Token {
 
 const FULL_TOKENIZE_INTERVAL = 30000; // Re-tokenize full document every 30 seconds
 
-export function useTokenizer({ filePath, enabled = true, incremental = true }: TokenizerOptions) {
+export function useTokenizer({
+  filePath,
+  bufferId,
+  enabled = true,
+  incremental = true,
+}: TokenizerOptions) {
   const [tokens, setTokens] = useState<Token[]>([]);
+  const [tokenizedContent, setTokenizedContent] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const cacheRef = useRef<TokenCache>({ fullTokens: [], lastFullTokenizeTime: 0 });
+  const cacheRef = useRef<TokenCache>({
+    fullTokens: [],
+    lastFullTokenizeTime: 0,
+    previousContent: "",
+  });
+  const treeCacheActions = useTreeCacheStore.use.actions();
 
   /**
    * Tokenize the full document using WASM parser
@@ -198,29 +215,39 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
           }
         }
 
-        // Load and tokenize using WASM
-        const highlightTokens = await tokenizeCode(normalizedText, languageId, {
+        // Always do full parse - incremental parsing disabled for now
+        // The debouncing provides sufficient performance improvement
+        const parseResult = await tokenizeCodeWithTree(normalizedText, languageId, {
           languageId,
           wasmPath,
           highlightQuery,
         });
 
-        // Convert to Token format
-        const result = highlightTokens.map(convertToToken);
+        // Cache the tree for potential future use
+        if (bufferId && parseResult.tree) {
+          treeCacheActions.setTree(bufferId, parseResult.tree, normalizedText.length, languageId);
+        }
 
-        setTokens(result);
+        // Convert to Token format
+        const newTokens = parseResult.tokens.map(convertToToken);
+
+        // Update tokens and content together to keep them in sync
+        setTokens(newTokens);
+        setTokenizedContent(normalizedText);
         cacheRef.current = {
-          fullTokens: result,
+          fullTokens: newTokens,
           lastFullTokenizeTime: Date.now(),
+          previousContent: normalizedText,
         };
       } catch (error) {
         logger.warn("Editor", "[Tokenizer] Full tokenization failed:", error);
         setTokens([]);
+        setTokenizedContent("");
       } finally {
         setLoading(false);
       }
     },
-    [enabled, filePath],
+    [enabled, filePath, bufferId, treeCacheActions],
   );
 
   /**
@@ -327,10 +354,13 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
           (a, b) => a.start - b.start,
         );
 
+        const normalizedText = normalizeLineEndings(text);
         setTokens(mergedTokens);
+        setTokenizedContent(normalizedText);
 
-        // Update cache with merged tokens
+        // Update cache with merged tokens and previous content
         cacheRef.current.fullTokens = mergedTokens;
+        cacheRef.current.previousContent = normalizedText;
       } catch (error) {
         logger.warn(
           "Editor",
@@ -369,5 +399,5 @@ export function useTokenizer({ filePath, enabled = true, incremental = true }: T
     [tokenizeFull],
   );
 
-  return { tokens, loading, tokenize, forceFullTokenize };
+  return { tokens, tokenizedContent, loading, tokenize, forceFullTokenize };
 }
