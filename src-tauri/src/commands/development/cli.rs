@@ -1,7 +1,6 @@
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-#[cfg(unix)]
 use tauri::command;
 
 // Platform-specific CLI paths

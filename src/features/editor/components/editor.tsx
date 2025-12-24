@@ -118,8 +118,9 @@ export function Editor({
     lineHeight,
   });
 
-  const { tokens, tokenize, forceFullTokenize } = useTokenizer({
+  const { tokens, tokenizedContent, tokenize, forceFullTokenize } = useTokenizer({
     filePath,
+    bufferId: bufferId || undefined,
     incremental: true,
     enabled: hasSyntaxHighlighting,
   });
@@ -181,23 +182,10 @@ export function Editor({
         setCursorPosition(position);
       }
 
-      if (hasSyntaxHighlighting) {
-        // Tokenize the content that will be displayed (full tokenize on input for accuracy)
-        const contentToTokenize = foldTransform.hasActiveFolds
-          ? newVirtualContent
-          : newActualContent;
-        tokenize(contentToTokenize);
-      }
+      // Tokenization is handled by the debounced useEffect that watches buffer content
+      // This avoids double tokenization and provides better performance when typing
     },
-    [
-      bufferId,
-      updateBufferContent,
-      setCursorPosition,
-      tokenize,
-      hasSyntaxHighlighting,
-      content,
-      foldTransform,
-    ],
+    [bufferId, updateBufferContent, setCursorPosition, content, foldTransform, onChange],
   );
 
   const editorOps = useEditorOperations({
@@ -388,7 +376,7 @@ export function Editor({
             inputRef.current.selectionEnd = primaryCursor.position.offset;
           }
 
-          tokenize(newContent);
+          // Tokenization handled by debounced useEffect watching buffer content
           return;
         }
 
@@ -420,7 +408,7 @@ export function Editor({
             inputRef.current.selectionEnd = primaryCursor.position.offset;
           }
 
-          tokenize(newContent);
+          // Tokenization handled by debounced useEffect watching buffer content
           return;
         }
       }
@@ -644,32 +632,29 @@ export function Editor({
     };
   }, []);
 
-  // Debounced tokenization to avoid blocking during scroll
-  const tokenizeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Tokenization scheduled via requestAnimationFrame for smooth updates
+  const tokenizeRafRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!buffer?.content || !buffer?.path) return;
 
     // Clear any pending tokenization
-    if (tokenizeTimerRef.current) {
-      clearTimeout(tokenizeTimerRef.current);
+    if (tokenizeRafRef.current !== null) {
+      cancelAnimationFrame(tokenizeRafRef.current);
     }
 
     const contentToTokenize = foldTransform.hasActiveFolds ? displayContent : buffer.content;
 
-    // If actively scrolling, debounce the tokenization
-    if (isScrollingRef.current) {
-      tokenizeTimerRef.current = setTimeout(() => {
-        tokenize(contentToTokenize, viewportRange);
-      }, 200);
-    } else {
-      // Not scrolling, tokenize immediately
+    // Use requestAnimationFrame for smooth tokenization
+    // This batches updates to the next frame without visible delay
+    tokenizeRafRef.current = requestAnimationFrame(() => {
       tokenize(contentToTokenize, viewportRange);
-    }
+      tokenizeRafRef.current = null;
+    });
 
     return () => {
-      if (tokenizeTimerRef.current) {
-        clearTimeout(tokenizeTimerRef.current);
+      if (tokenizeRafRef.current !== null) {
+        cancelAnimationFrame(tokenizeRafRef.current);
       }
     };
   }, [
@@ -728,9 +713,9 @@ export function Editor({
       if (inputRef.current) {
         inputRef.current.value = newContent;
       }
-      tokenize(newContent);
+      // Tokenization handled by debounced useEffect watching buffer content
     },
-    [lines, bufferId, updateBufferContent, tokenize],
+    [lines, bufferId, updateBufferContent],
   );
 
   if (!buffer) return null;
@@ -761,7 +746,7 @@ export function Editor({
         {hasSyntaxHighlighting && (
           <HighlightLayer
             ref={highlightRef}
-            content={displayContent}
+            content={tokenizedContent || displayContent}
             tokens={tokens}
             fontSize={fontSize}
             fontFamily={fontFamily}
