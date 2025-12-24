@@ -356,6 +356,7 @@ export const useFileSystemStore = createSelectors(
         line?: number,
         column?: number,
         codeEditorRef?: React.RefObject<CodeEditorRef | null>,
+        isPreview = true,
       ) => {
         const { updateActivePath } = useSidebarStore.getState();
 
@@ -469,7 +470,19 @@ export const useFileSystemStore = createSelectors(
             const diffJson = JSON.stringify(parsedDiff);
             openBuffer(path, fileName, diffJson, false, false, true, false);
           } else {
-            openBuffer(path, fileName, content, false, false, false, false);
+            openBuffer(
+              path,
+              fileName,
+              content,
+              false,
+              false,
+              false,
+              false,
+              undefined,
+              undefined,
+              undefined,
+              isPreview,
+            );
           }
 
           // Handle navigation to specific line/column
@@ -520,6 +533,11 @@ export const useFileSystemStore = createSelectors(
             );
           }, 100);
         }
+      },
+
+      // Open file in definite mode (not preview) - for double-click
+      handleFileOpen: async (path: string, isDir: boolean) => {
+        await get().handleFileSelect(path, isDir, undefined, undefined, undefined, false);
       },
 
       toggleFolder: async (path: string) => {

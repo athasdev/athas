@@ -13,6 +13,7 @@ interface TabBarItemProps {
   showDropIndicatorBefore: boolean;
   tabRef: (el: HTMLDivElement | null) => void;
   onMouseDown: (e: React.MouseEvent) => void;
+  onDoubleClick: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: (e: React.DragEvent) => void;
@@ -29,6 +30,7 @@ const TabBarItem = memo(function TabBarItem({
   showDropIndicatorBefore,
   tabRef,
   onMouseDown,
+  onDoubleClick,
   onContextMenu,
   onDragStart,
   onDragEnd,
@@ -57,7 +59,7 @@ const TabBarItem = memo(function TabBarItem({
         ref={tabRef}
         role="tab"
         aria-selected={isActive}
-        aria-label={`${buffer.name}${buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}`}
+        aria-label={`${buffer.name}${buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         className={cn(
           "group relative flex shrink-0 cursor-pointer select-none items-center gap-1 whitespace-nowrap border-border border-r px-1.5 py-0.5 transition-[transform,opacity] duration-200 ease-[ease]",
@@ -67,6 +69,7 @@ const TabBarItem = memo(function TabBarItem({
         )}
         style={{ minWidth: 100, maxWidth: 300 }}
         onMouseDown={onMouseDown}
+        onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
         draggable
@@ -93,6 +96,7 @@ const TabBarItem = memo(function TabBarItem({
           className={cn(
             "ui-font flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs",
             isActive ? "text-text" : "text-text-light",
+            buffer.isPreview && "italic",
           )}
           title={buffer.path}
         >

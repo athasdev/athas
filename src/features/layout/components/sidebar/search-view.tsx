@@ -24,7 +24,7 @@ export interface SearchViewRef {
 }
 
 const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
-  ({ rootFolderPath, allProjectFiles, onFileSelect }, ref) => {
+  ({ rootFolderPath, allProjectFiles, onFileSelect, onFileOpen }, ref) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
@@ -297,6 +297,12 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
       onFileSelect(result.file, result.line + 1, result.column);
     };
 
+    const handleResultDoubleClick = (result: SearchResult) => {
+      // Double-click opens in definite mode (not preview)
+      // Convert 0-indexed line to 1-indexed for consistency with other navigation
+      onFileOpen?.(result.file, result.line + 1, result.column);
+    };
+
     const getFileName = (filePath: string) => {
       return filePath.split("/").pop() || filePath;
     };
@@ -523,6 +529,7 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
                               else resultRefs.current.delete(key);
                             }}
                             onClick={() => handleResultClick(result)}
+                            onDoubleClick={() => handleResultDoubleClick(result)}
                             className={cn(
                               "flex w-full items-start gap-2 rounded px-1 py-1 text-left hover:bg-hover",
                               isSelected && "bg-selected",

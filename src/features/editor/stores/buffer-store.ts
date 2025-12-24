@@ -22,6 +22,7 @@ export interface Buffer {
   isDirty: boolean;
   isVirtual: boolean;
   isPinned: boolean;
+  isPreview: boolean;
   isImage: boolean;
   isSQLite: boolean;
   isDiff: boolean;
@@ -83,7 +84,9 @@ interface BufferActions {
     diffData?: GitDiff | MultiFileDiff,
     isMarkdownPreview?: boolean,
     sourceFilePath?: string,
+    isPreview?: boolean,
   ) => string;
+  convertPreviewToDefinite: (bufferId: string) => void;
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
   openWebViewerBuffer: (url: string) => string;
   openPRBuffer: (prNumber: number) => string;
@@ -196,8 +199,13 @@ export const useBufferStore = createSelectors(
           diffData?: GitDiff | MultiFileDiff,
           isMarkdownPreview = false,
           sourceFilePath?: string,
+          isPreview = true,
         ) => {
           const { buffers, maxOpenTabs } = get();
+
+          // Special buffers should never be in preview mode
+          const shouldBePreview =
+            isPreview && !isImage && !isSQLite && !isDiff && !isVirtual && !isMarkdownPreview;
 
           // Check if already open
           const existing = buffers.find((b) => b.path === path);
@@ -207,15 +215,26 @@ export const useBufferStore = createSelectors(
               state.buffers = state.buffers.map((b) => ({
                 ...b,
                 isActive: b.id === existing.id,
+                // If opening in definite mode, convert existing preview to definite
+                isPreview: b.id === existing.id && !shouldBePreview ? false : b.isPreview,
               }));
             });
             return existing.id;
           }
 
-          // Handle max tabs limit
           let newBuffers = [...buffers];
-          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+
+          // If opening in preview mode, close any existing preview buffer
+          if (shouldBePreview) {
+            const existingPreview = newBuffers.find((b) => b.isPreview);
+            if (existingPreview) {
+              newBuffers = newBuffers.filter((b) => b.id !== existingPreview.id);
+            }
+          }
+
+          // Handle max tabs limit
+          if (newBuffers.filter((b) => !b.isPinned && !b.isPreview).length >= maxOpenTabs) {
+            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned && !b.isPreview);
             const lruBuffer = unpinnedBuffers[0]; // Simplified LRU
             newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
           }
@@ -229,6 +248,7 @@ export const useBufferStore = createSelectors(
             isDirty: false,
             isVirtual,
             isPinned: false,
+            isPreview: shouldBePreview,
             isImage,
             isSQLite,
             isDiff,
@@ -384,6 +404,7 @@ export const useBufferStore = createSelectors(
             isDirty: false,
             isVirtual: false,
             isPinned: false,
+            isPreview: false, // External editor buffers are never preview
             isImage: false,
             isSQLite: false,
             isDiff: false,
@@ -455,6 +476,7 @@ export const useBufferStore = createSelectors(
             isDirty: false,
             isVirtual: true,
             isPinned: false,
+            isPreview: false, // Web viewer buffers are never preview
             isImage: false,
             isSQLite: false,
             isDiff: false,
@@ -510,6 +532,7 @@ export const useBufferStore = createSelectors(
             isDirty: false,
             isVirtual: true,
             isPinned: false,
+            isPreview: false, // PR buffers are never preview
             isImage: false,
             isSQLite: false,
             isDiff: false,
@@ -687,6 +710,10 @@ export const useBufferStore = createSelectors(
                   buffer.isDirty = false;
                 } else {
                   buffer.isDirty = content !== buffer.savedContent;
+                  // Convert preview to definite when user makes an edit
+                  if (buffer.isPreview && content !== buffer.savedContent) {
+                    buffer.isPreview = false;
+                  }
                 }
               }
               // Keep tokens - syntax highlighter will update them automatically
@@ -746,11 +773,24 @@ export const useBufferStore = createSelectors(
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer) {
               buffer.isPinned = !buffer.isPinned;
+              // Pinned tabs should never be in preview mode
+              if (buffer.isPinned) {
+                buffer.isPreview = false;
+              }
             }
           });
 
           // Save session
           saveSessionToStore(get().buffers, get().activeBufferId);
+        },
+
+        convertPreviewToDefinite: (bufferId: string) => {
+          set((state) => {
+            const buffer = state.buffers.find((b) => b.id === bufferId);
+            if (buffer) {
+              buffer.isPreview = false;
+            }
+          });
         },
 
         handleCloseOtherTabs: (keepBufferId: string) => {
