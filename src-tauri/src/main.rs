@@ -417,6 +417,7 @@ fn main() {
          check_cli_installed,
          install_cli_command,
          uninstall_cli_command,
+         get_cli_install_command,
          // Runtime commands
          ensure_runtime,
          get_runtime_status,
