@@ -3,9 +3,16 @@
  * Provides tokenization API using Tree-sitter WASM parsers
  */
 
+import type { Tree } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
 import { wasmParserLoader } from "./loader";
-import type { HighlightToken, LoadedParser, ParserConfig } from "./types";
+import type {
+  HighlightToken,
+  IncrementalParseOptions,
+  LoadedParser,
+  ParserConfig,
+  TokenizeResult,
+} from "./types";
 
 /**
  * Map Tree-sitter capture names to CSS class names
@@ -110,13 +117,15 @@ function mapCaptureToClass(captureName: string): string {
 }
 
 /**
- * Tokenize code using a WASM parser
+ * Tokenize code using a WASM parser with optional incremental parsing support.
+ * Returns both tokens and the parse tree for caching.
  */
-export async function tokenizeCode(
+export async function tokenizeCodeWithTree(
   content: string,
   languageId: string,
   config?: ParserConfig,
-): Promise<HighlightToken[]> {
+  incrementalOptions?: IncrementalParseOptions,
+): Promise<TokenizeResult> {
   try {
     // Load parser if not already loaded
     let loadedParser: LoadedParser;
@@ -132,23 +141,43 @@ export async function tokenizeCode(
 
     const { parser, highlightQuery } = loadedParser;
 
-    // Parse the code
-    const tree = parser.parse(content);
+    let tree: Tree | null;
+
+    // Use incremental parsing if previous tree and edit are provided
+    if (incrementalOptions?.previousTree && incrementalOptions?.edit) {
+      try {
+        // Copy the tree before editing to avoid mutating the cached tree
+        const treeCopy = incrementalOptions.previousTree.copy();
+        // Apply the edit to the copy
+        treeCopy.edit(incrementalOptions.edit);
+        // Parse incrementally using the edited copy
+        tree = parser.parse(content, treeCopy);
+        // Clean up the copy (the new tree is independent)
+        treeCopy.delete();
+      } catch (error) {
+        // Fall back to full parse if incremental fails
+        logger.warn("WasmTokenizer", "Incremental parse failed, falling back to full parse", error);
+        tree = parser.parse(content);
+      }
+    } else {
+      // Full parse
+      tree = parser.parse(content);
+    }
 
     // Check if parse was successful
     if (!tree) {
       logger.error("WasmTokenizer", `Failed to parse code for ${languageId}`);
-      return [];
+      return { tokens: [], tree: null as unknown as TokenizeResult["tree"] };
     }
 
-    // If no highlight query, return empty tokens
+    // If no highlight query, return empty tokens but keep tree
     if (!highlightQuery) {
       logger.warn(
         "WasmTokenizer",
         `No highlight query for ${languageId} - syntax highlighting disabled. ` +
           `Ensure the highlight query was downloaded with the extension.`,
       );
-      return [];
+      return { tokens: [], tree };
     }
 
     // Get highlights
@@ -172,11 +201,31 @@ export async function tokenizeCode(
       };
     });
 
-    return tokens;
+    return { tokens, tree };
   } catch (error) {
     logger.error("WasmTokenizer", `Failed to tokenize code for ${languageId}`, error);
     throw error;
   }
+}
+
+/**
+ * Tokenize code using a WASM parser (legacy function, returns only tokens)
+ */
+export async function tokenizeCode(
+  content: string,
+  languageId: string,
+  config?: ParserConfig,
+): Promise<HighlightToken[]> {
+  const result = await tokenizeCodeWithTree(content, languageId, config);
+  // Delete the tree since caller doesn't need it
+  if (result.tree) {
+    try {
+      result.tree.delete();
+    } catch {
+      // Tree may already be deleted
+    }
+  }
+  return result.tokens;
 }
 
 /**
