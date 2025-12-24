@@ -2,15 +2,22 @@ import { produce } from "immer";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { Chat } from "@/features/ai/types/types";
-import type { FileEntry } from "@/file-system/models/app";
-import { AI_PROVIDERS } from "@/types/ai-provider";
+import type { AgentType, Chat } from "@/features/ai/types/ai-chat";
+import { AI_PROVIDERS } from "@/features/ai/types/providers";
+import type { FileEntry } from "@/features/file-system/types/app";
 import {
   getProviderApiToken,
   removeProviderApiToken,
   storeProviderApiToken,
   validateProviderApiKey,
 } from "@/utils/ai-chat";
+import {
+  deleteChatFromDb,
+  initChatDatabase,
+  loadAllChatsFromDb,
+  loadChatFromDb,
+  saveChatToDb,
+} from "@/utils/chat-history-db";
 import type { AIChatActions, AIChatState } from "./types";
 
 export const useAIChatStore = create<AIChatState & AIChatActions>()(
@@ -20,6 +27,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         // Single session state
         chats: [],
         currentChatId: null,
+        selectedAgentId: "custom" as AgentType, // Default to custom (API-based)
         input: "",
         isTyping: false,
         streamingMessageId: null,
@@ -38,6 +46,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         providerApiKeys: new Map<string, boolean>(),
         apiKeyModalState: { isOpen: false, providerId: null },
+        dynamicModels: {},
 
         mentionState: {
           active: false,
@@ -47,9 +56,39 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           selectedIndex: 0,
         },
 
-        // ─────────────────────────────────────────────────────────────────
-        // Claude Code specific actions
-        // ─────────────────────────────────────────────────────────────────
+        slashCommandState: {
+          active: false,
+          position: { top: 0, left: 0 },
+          search: "",
+          selectedIndex: 0,
+        },
+        availableSlashCommands: [],
+
+        sessionModeState: {
+          currentModeId: null,
+          availableModes: [],
+        },
+
+        // Agent selection actions
+        setSelectedAgentId: (agentId) =>
+          set((state) => {
+            state.selectedAgentId = agentId;
+          }),
+
+        getCurrentAgentId: () => {
+          const state = get();
+          // If there's a current chat, return its agent
+          if (state.currentChatId) {
+            const chat = state.chats.find((c) => c.id === state.currentChatId);
+            if (chat?.agentId) {
+              return chat.agentId;
+            }
+          }
+          // Otherwise return the selected agent for new chats
+          return state.selectedAgentId;
+        },
+
+        // Chat mode actions
         setMode: (mode) =>
           set((state) => {
             state.mode = mode;
@@ -60,9 +99,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.outputStyle = outputStyle;
           }),
 
-        // ─────────────────────────────────────────────────────────────────
         // Message queue actions
-        // ─────────────────────────────────────────────────────────────────
         addMessageToQueue: (message) =>
           set((state) => {
             const queuedMessage = {
@@ -92,9 +129,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.isProcessingQueue = false;
           }),
 
-        // ─────────────────────────────────────────────────────────────────
         // Input actions
-        // ─────────────────────────────────────────────────────────────────
         setInput: (input) =>
           set((state) => {
             state.input = input;
@@ -161,16 +196,17 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             }
           }),
 
-        // ─────────────────────────────────────────────────────────────────
         // Chat actions
-        // ─────────────────────────────────────────────────────────────────
-        createNewChat: () => {
+        createNewChat: (agentId?: AgentType) => {
+          const state = get();
+          const chatAgentId = agentId || state.selectedAgentId;
           const newChat: Chat = {
             id: Date.now().toString(),
             title: "New Chat",
             messages: [],
             createdAt: new Date(),
             lastMessageAt: new Date(),
+            agentId: chatAgentId,
           };
           set((state) => {
             state.chats.unshift(newChat);
@@ -181,6 +217,10 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.isTyping = false;
             state.streamingMessageId = null;
           });
+          // Save to SQLite
+          saveChatToDb(newChat).catch((err) =>
+            console.error("Failed to save new chat to database:", err),
+          );
           return newChat.id;
         },
 
@@ -193,6 +233,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.isTyping = false;
             state.streamingMessageId = null;
           });
+          // Load messages from database
+          get().loadChatMessages(chatId);
         },
 
         deleteChat: (chatId) => {
@@ -214,6 +256,10 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               }
             }
           });
+          // Delete from SQLite
+          deleteChatFromDb(chatId).catch((err) =>
+            console.error("Failed to delete chat from database:", err),
+          );
         },
 
         updateChatTitle: (chatId, title) => {
@@ -223,6 +269,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               chat.title = title;
             }
           });
+          // Save to SQLite
+          get().syncChatToDatabase(chatId);
         },
 
         addMessage: (chatId, message) => {
@@ -233,6 +281,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               chat.lastMessageAt = new Date();
             }
           });
+          // Save to SQLite
+          get().syncChatToDatabase(chatId);
         },
 
         updateMessage: (chatId, messageId, updates) => {
@@ -246,6 +296,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               }
             }
           });
+          // Save to SQLite
+          get().syncChatToDatabase(chatId);
         },
 
         regenerateResponse: () => {
@@ -277,6 +329,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             }
           });
 
+          // Save to SQLite
+          if (state.currentChatId) {
+            get().syncChatToDatabase(state.currentChatId);
+          }
+
           return lastUserMessage.content;
         },
 
@@ -285,9 +342,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.isChatHistoryVisible = isChatHistoryVisible;
           }),
 
-        // ─────────────────────────────────────────────────────────────────
         // Provider API key actions
-        // ─────────────────────────────────────────────────────────────────
         setApiKeyModalState: (apiKeyModalState) =>
           set((state) => {
             state.apiKeyModalState = apiKeyModalState;
@@ -295,8 +350,10 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         checkApiKey: async (providerId) => {
           try {
-            // Claude Code doesn't require an API key in the frontend
-            if (providerId === "claude-code") {
+            const provider = AI_PROVIDERS.find((p) => p.id === providerId);
+
+            // If provider doesn't require an API key, set hasApiKey to true
+            if (provider && !provider.requiresApiKey) {
               set((state) => {
                 state.hasApiKey = true;
               });
@@ -320,8 +377,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
           for (const provider of AI_PROVIDERS) {
             try {
-              // Claude Code doesn't require an API key in the frontend
-              if (provider.id === "claude-code") {
+              // If provider doesn't require an API key, mark it as having one
+              if (!provider.requiresApiKey) {
                 newApiKeyMap.set(provider.id, true);
                 continue;
               }
@@ -348,7 +405,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               const newApiKeyMap = new Map<string, boolean>();
               for (const provider of AI_PROVIDERS) {
                 try {
-                  if (provider.id === "claude-code") {
+                  if (!provider.requiresApiKey) {
                     newApiKeyMap.set(provider.id, true);
                     continue;
                   }
@@ -363,7 +420,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               });
 
               // Update hasApiKey for current provider
-              if (providerId === "claude-code") {
+              const currentProvider = AI_PROVIDERS.find((p) => p.id === providerId);
+              if (currentProvider && !currentProvider.requiresApiKey) {
                 set((state) => {
                   state.hasApiKey = true;
                 });
@@ -391,7 +449,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             const newApiKeyMap = new Map<string, boolean>();
             for (const provider of AI_PROVIDERS) {
               try {
-                if (provider.id === "claude-code") {
+                if (!provider.requiresApiKey) {
                   newApiKeyMap.set(provider.id, true);
                   continue;
                 }
@@ -406,7 +464,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             });
 
             // Update hasApiKey for current provider
-            if (providerId === "claude-code") {
+            const currentProvider = AI_PROVIDERS.find((p) => p.id === providerId);
+            if (currentProvider && !currentProvider.requiresApiKey) {
               set((state) => {
                 state.hasApiKey = true;
               });
@@ -425,9 +484,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           return get().providerApiKeys.get(providerId) || false;
         },
 
-        // ─────────────────────────────────────────────────────────────────
+        setDynamicModels: (providerId, models) =>
+          set((state) => {
+            state.dynamicModels[providerId] = models;
+          }),
+
         // Mention actions
-        // ─────────────────────────────────────────────────────────────────
         showMention: (position, search, startIndex) =>
           set((state) => {
             state.mentionState = {
@@ -506,9 +568,186 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             .map(({ file }) => file);
         },
 
-        // ─────────────────────────────────────────────────────────────────
+        // Slash command actions
+        showSlashCommands: (position, search) =>
+          set((state) => {
+            state.slashCommandState = {
+              active: true,
+              position,
+              search,
+              selectedIndex: 0,
+            };
+          }),
+
+        hideSlashCommands: () =>
+          set((state) => {
+            state.slashCommandState = {
+              active: false,
+              position: { top: 0, left: 0 },
+              search: "",
+              selectedIndex: 0,
+            };
+          }),
+
+        updateSlashCommandSearch: (search) =>
+          set((state) => {
+            state.slashCommandState.search = search;
+            state.slashCommandState.selectedIndex = 0;
+          }),
+
+        selectNextSlashCommand: () =>
+          set((state) => {
+            const filtered = get().getFilteredSlashCommands();
+            state.slashCommandState.selectedIndex = Math.min(
+              state.slashCommandState.selectedIndex + 1,
+              filtered.length - 1,
+            );
+          }),
+
+        selectPreviousSlashCommand: () =>
+          set((state) => {
+            state.slashCommandState.selectedIndex = Math.max(
+              state.slashCommandState.selectedIndex - 1,
+              0,
+            );
+          }),
+
+        setSlashCommandSelectedIndex: (index) =>
+          set((state) => {
+            state.slashCommandState.selectedIndex = index;
+          }),
+
+        setAvailableSlashCommands: (commands) =>
+          set((state) => {
+            state.availableSlashCommands = commands;
+          }),
+
+        getFilteredSlashCommands: () => {
+          const { search } = get().slashCommandState;
+          const commands = get().availableSlashCommands;
+          const query = search.toLowerCase();
+
+          if (!query) return commands.slice(0, 10);
+
+          return commands
+            .filter(
+              (cmd) =>
+                cmd.name.toLowerCase().includes(query) ||
+                cmd.description.toLowerCase().includes(query),
+            )
+            .slice(0, 10);
+        },
+
+        // Session mode actions
+        setSessionModeState: (currentModeId, availableModes) =>
+          set((state) => {
+            state.sessionModeState = {
+              currentModeId,
+              availableModes,
+            };
+          }),
+
+        setCurrentModeId: (modeId) =>
+          set((state) => {
+            state.sessionModeState.currentModeId = modeId;
+          }),
+
+        changeSessionMode: async (modeId) => {
+          try {
+            const { invoke } = await import("@tauri-apps/api/core");
+            await invoke("set_acp_session_mode", { modeId });
+            // The mode will be updated via the event handler when the agent confirms
+          } catch (error) {
+            console.error("Failed to change session mode:", error);
+          }
+        },
+
+        // SQLite database actions
+        initializeDatabase: async () => {
+          try {
+            await initChatDatabase();
+            console.log("Chat database initialized");
+          } catch (error) {
+            console.error("Failed to initialize chat database:", error);
+          }
+        },
+
+        loadChatsFromDatabase: async () => {
+          try {
+            const chatsMetadata = await loadAllChatsFromDb();
+            set((state) => {
+              state.chats = chatsMetadata as Chat[];
+            });
+            console.log(`Loaded ${chatsMetadata.length} chats from database`);
+          } catch (error) {
+            console.error("Failed to load chats from database:", error);
+          }
+        },
+
+        loadChatMessages: async (chatId: string) => {
+          try {
+            const fullChat = await loadChatFromDb(chatId);
+            set((state) => {
+              const chatIndex = state.chats.findIndex((c) => c.id === chatId);
+              if (chatIndex !== -1) {
+                state.chats[chatIndex] = fullChat;
+              }
+            });
+          } catch (error) {
+            console.error(`Failed to load messages for chat ${chatId}:`, error);
+          }
+        },
+
+        syncChatToDatabase: async (chatId: string) => {
+          try {
+            const chat = get().chats.find((c) => c.id === chatId);
+            if (chat) {
+              await saveChatToDb(chat);
+            }
+          } catch (error) {
+            console.error(`Failed to sync chat ${chatId} to database:`, error);
+          }
+        },
+
+        clearAllChats: async () => {
+          try {
+            const state = get();
+            // Delete all chats from database
+            for (const chat of state.chats) {
+              await deleteChatFromDb(chat.id);
+            }
+            // Clear state
+            set((state) => {
+              state.chats = [];
+              state.currentChatId = null;
+              state.input = "";
+              state.isTyping = false;
+              state.streamingMessageId = null;
+            });
+            console.log("All chats cleared");
+          } catch (error) {
+            console.error("Failed to clear all chats:", error);
+            throw error;
+          }
+        },
+
+        applyDefaultSettings: () => {
+          // Import settings store dynamically to avoid circular dependency
+          import("@/features/settings/store").then(({ useSettingsStore }) => {
+            const settings = useSettingsStore.getState().settings;
+            set((state) => {
+              // Apply default output style if not already set or different
+              if (
+                settings.aiDefaultOutputStyle &&
+                settings.aiDefaultOutputStyle !== state.outputStyle
+              ) {
+                state.outputStyle = settings.aiDefaultOutputStyle;
+              }
+            });
+          });
+        },
+
         // Helper getters
-        // ─────────────────────────────────────────────────────────────────
         getCurrentChat: () => {
           const state = get();
           return state.chats.find((chat) => chat.id === state.currentChatId);
@@ -521,42 +760,21 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         },
       }),
       {
-        name: "athas-ai-chat-v4",
-        version: 1,
+        name: "athas-ai-chat-settings-v6",
+        version: 2,
         partialize: (state) => ({
-          chats: state.chats,
-          currentChatId: state.currentChatId,
           mode: state.mode,
           outputStyle: state.outputStyle,
+          selectedAgentId: state.selectedAgentId,
         }),
         merge: (persistedState, currentState) =>
           produce(currentState, (draft) => {
-            // Merge persisted state into draft
-            Object.assign(draft, persistedState);
-            // Convert date strings back to Date objects
-            if (draft.chats) {
-              // Restore Sets from arrays
-              draft.selectedBufferIds = new Set(draft.selectedBufferIds);
-              draft.selectedFilesPaths = new Set(draft.selectedFilesPaths);
-              // Ensure mode and outputStyle exist (for backward compatibility)
-              if (!draft.mode) {
-                draft.mode = "chat";
-              }
-              if (!draft.outputStyle) {
-                draft.outputStyle = "default";
-              }
-              draft.chats.forEach((chat) => {
-                chat.createdAt = new Date(chat.createdAt);
-                chat.lastMessageAt = new Date(chat.lastMessageAt);
-                chat.messages.forEach((msg) => {
-                  msg.timestamp = new Date(msg.timestamp);
-                  if (msg.toolCalls) {
-                    msg.toolCalls.forEach((tc) => {
-                      tc.timestamp = new Date(tc.timestamp);
-                    });
-                  }
-                });
-              });
+            // Only merge mode, outputStyle, and selectedAgentId from localStorage
+            // Chats are loaded from SQLite separately
+            if (persistedState) {
+              draft.mode = (persistedState as any).mode || "chat";
+              draft.outputStyle = (persistedState as any).outputStyle || "default";
+              draft.selectedAgentId = (persistedState as any).selectedAgentId || "custom";
             }
           }),
       },

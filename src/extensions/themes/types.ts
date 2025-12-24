@@ -1,5 +1,9 @@
-import type { EditorExtension } from "../extension-types";
+import type { EditorExtension } from "@/features/editor/extensions/types";
 
+/**
+ * Internal theme definition used by the registry
+ * CSS variables are stored with their full names (e.g., --primary-bg, --syntax-keyword)
+ */
 export interface ThemeDefinition {
   id: string;
   name: string;

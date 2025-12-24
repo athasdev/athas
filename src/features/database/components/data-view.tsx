@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, Filter } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import Input from "@/components/ui/input";
 import { useUIState } from "@/stores/ui-state-store";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import type { ColumnInfo, QueryResult } from "../models/common.types";
 
@@ -156,14 +156,14 @@ export default function DataViewComponent({
   if (queryResult.rows.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="font-mono text-sm text-text-lighter italic">No data returned</div>
+        <div className="ui-font text-sm text-text-lighter italic">No data returned</div>
       </div>
     );
   }
 
   return (
     <div className="select-none">
-      <table className="w-full border-collapse font-mono text-xs">
+      <table className="ui-font w-full border-collapse text-xs">
         <thead className="sticky top-0 z-10">
           <tr className="bg-secondary-bg">
             {/* Row number column */}

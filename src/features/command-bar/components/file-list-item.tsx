@@ -1,7 +1,7 @@
 import { ClockIcon, File } from "lucide-react";
-import { CommandItem } from "@/components/ui/command";
+import { CommandItem } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
-import type { FileCategory, FileItem } from "../models/types";
+import type { FileCategory, FileItem } from "../types/command-bar";
 
 interface FileListItemProps {
   file: FileItem;
@@ -28,11 +28,11 @@ export const FileListItem = ({
       data-item-index={index}
       onClick={() => onClick(file.path)}
       isSelected={isSelected}
-      className="font-mono"
+      className="ui-font"
     >
       <File
         size={11}
-        className={`flex-shrink-0 ${category === "open" ? "text-accent" : "text-text-lighter"}`}
+        className={`shrink-0 ${category === "open" ? "text-accent" : "text-text-lighter"}`}
       />
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs">

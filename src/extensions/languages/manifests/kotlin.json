@@ -1,0 +1,17 @@
+{
+  "id": "language.kotlin",
+  "name": "Kotlin",
+  "version": "1.0.0",
+  "description": "Kotlin language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "kotlin",
+      "extensions": ["kt", "kts"],
+      "aliases": ["kotlin"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-kotlin.wasm",
+      "highlightQuery": "/tree-sitter/queries/kotlin/highlights.scm"
+    }
+  }
+}

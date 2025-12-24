@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { readFileContent } from "@/file-system/controllers/file-operations";
-import { getTokens, type Token } from "@/lib/rust-api/tokens";
+import { extensionManager } from "@/features/editor/extensions/manager";
+import type { Token } from "@/features/editor/extensions/types";
+import { readFileContent } from "@/features/file-system/controllers/file-operations";
 
 interface UseFilePreviewReturn {
   content: string;
@@ -74,9 +75,18 @@ export const useFilePreview = (filePath: string | null): UseFilePreviewReturn =>
         const finalContent = isTruncated ? `${limitedContent}\n\n... (truncated)` : limitedContent;
         setContent(finalContent);
 
-        // Get syntax tokens
+        // Get syntax tokens (with lazy loading)
         const extension = filePath.split(".").pop() || "txt";
-        const fileTokens = await getTokens(limitedContent, extension);
+        const languageProvider = await extensionManager.ensureLanguageProvider(extension);
+
+        let fileTokens: Token[] = [];
+        if (languageProvider) {
+          try {
+            fileTokens = await languageProvider.getTokens(limitedContent);
+          } catch (error) {
+            console.warn(`Failed to tokenize with ${extension}:`, error);
+          }
+        }
 
         if (isCancelled) return;
 

@@ -5,7 +5,7 @@ export const compactIconTheme: IconThemeDefinition = {
   id: "compact",
   name: "Compact",
   description: "Smaller, space-efficient icons",
-  getFileIcon: (_fileName: string, isDir: boolean, isExpanded = false) => {
+  getFileIcon: (_fileName: string, isDir: boolean, isExpanded = false, _isSymlink = false) => {
     if (isDir) {
       const Icon = isExpanded ? FolderOpen : Folder;
       return {

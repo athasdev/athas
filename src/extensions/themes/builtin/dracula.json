@@ -1,0 +1,77 @@
+{
+  "name": "Dracula",
+  "author": "Dracula Theme",
+  "description": "A dark theme with rich purples and vibrant accents",
+  "themes": [
+    {
+      "id": "dracula",
+      "name": "Dracula",
+      "description": "Official Dracula theme with rich purples and vibrant accents",
+      "appearance": "dark",
+      "colors": {
+        "primary-bg": "#282a36",
+        "secondary-bg": "#44475a",
+        "text": "#f8f8f2",
+        "text-light": "#f8f8f2",
+        "text-lighter": "#6272a4",
+        "border": "#44475a",
+        "hover": "#44475a",
+        "selected": "#6272a4",
+        "accent": "#bd93f9"
+      },
+      "syntax": {
+        "keyword": "#ff79c6",
+        "string": "#f1fa8c",
+        "number": "#bd93f9",
+        "comment": "#6272a4",
+        "variable": "#f8f8f2",
+        "function": "#50fa7b",
+        "constant": "#bd93f9",
+        "property": "#f8f8f2",
+        "type": "#8be9fd",
+        "operator": "#ff79c6",
+        "punctuation": "#f8f8f2",
+        "boolean": "#bd93f9",
+        "null": "#bd93f9",
+        "regex": "#f1fa8c",
+        "tag": "#ff79c6",
+        "attribute": "#50fa7b"
+      }
+    },
+    {
+      "id": "dracula-soft",
+      "name": "Dracula Soft",
+      "description": "Softer variant with reduced contrast",
+      "appearance": "dark",
+      "colors": {
+        "primary-bg": "#21222c",
+        "secondary-bg": "#282a36",
+        "text": "#f8f8f2",
+        "text-light": "#e9e9e9",
+        "text-lighter": "#6272a4",
+        "border": "#44475a",
+        "hover": "#3a3c4e",
+        "selected": "#4d5066",
+        "accent": "#bd93f9"
+      },
+      "syntax": {
+        "keyword": "#ff79c6",
+        "string": "#f1fa8c",
+        "number": "#bd93f9",
+        "comment": "#6272a4",
+        "variable": "#f8f8f2",
+        "function": "#50fa7b",
+        "constant": "#bd93f9",
+        "property": "#f8f8f2",
+        "type": "#8be9fd",
+        "operator": "#ff79c6",
+        "punctuation": "#f8f8f2",
+        "boolean": "#bd93f9",
+        "null": "#bd93f9",
+        "regex": "#f1fa8c",
+        "tag": "#ff79c6",
+        "attribute": "#50fa7b"
+      }
+    }
+  ]
+}

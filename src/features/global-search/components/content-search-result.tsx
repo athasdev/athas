@@ -1,5 +1,5 @@
 import { File } from "lucide-react";
-import type { FileSearchResult, SearchMatch } from "@/lib/rust-api/search";
+import type { FileSearchResult, SearchMatch } from "@/features/global-search/lib/rust-api/search";
 
 interface ContentSearchResultProps {
   result: FileSearchResult;
@@ -37,7 +37,7 @@ const MatchLine = ({
       onMouseEnter={onHover}
       className="flex w-full items-start gap-2 px-4 py-1 text-left font-mono text-[11px] hover:bg-hover"
     >
-      <span className="w-10 flex-shrink-0 text-right text-text-lighter">{match.line_number}</span>
+      <span className="w-10 shrink-0 text-right text-text-lighter">{match.line_number}</span>
       <span className="flex-1 truncate text-text">
         {highlightMatch(match.line_content, match.column_start, match.column_end)}
       </span>
@@ -63,9 +63,9 @@ export const ContentSearchResult = ({
         onMouseEnter={() => onFileHover?.(result.file_path)}
         className="flex w-full items-center gap-2 px-2 py-1.5 hover:bg-hover"
       >
-        <File size={12} className="flex-shrink-0 text-text-lighter" />
+        <File size={12} className="shrink-0 text-text-lighter" />
         <span className="truncate font-medium text-text text-xs">{displayPath}</span>
-        <span className="ml-auto flex-shrink-0 text-[10px] text-text-lighter">
+        <span className="ml-auto shrink-0 text-[10px] text-text-lighter">
           {result.total_matches} {result.total_matches === 1 ? "match" : "matches"}
         </span>
       </button>

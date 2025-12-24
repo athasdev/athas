@@ -1,0 +1,112 @@
+{
+  "name": "Contrast Themes",
+  "author": "Athas",
+  "description": "High contrast themes for accessibility",
+  "themes": [
+    {
+      "id": "high-contrast-light",
+      "name": "High Contrast Light",
+      "description": "Maximum contrast light theme for accessibility",
+      "appearance": "light",
+      "colors": {
+        "primary-bg": "#ffffff",
+        "secondary-bg": "#f5f5f5",
+        "text": "#000000",
+        "text-light": "#333333",
+        "text-lighter": "#666666",
+        "border": "#cccccc",
+        "hover": "#e5e5e5",
+        "selected": "#e5e5e5",
+        "accent": "#0066cc"
+      },
+      "syntax": {
+        "keyword": "#0000ff",
+        "string": "#008800",
+        "number": "#cc6600",
+        "comment": "#666666",
+        "variable": "#cc0000",
+        "function": "#8800cc",
+        "constant": "#cc6600",
+        "property": "#0066cc",
+        "type": "#cc6600",
+        "operator": "#0000ff",
+        "punctuation": "#000000",
+        "boolean": "#cc6600",
+        "null": "#cc6600",
+        "regex": "#008800",
+        "tag": "#0066cc",
+        "attribute": "#8800cc"
+      }
+    },
+    {
+      "id": "high-contrast-dark",
+      "name": "High Contrast Dark",
+      "description": "Maximum contrast dark theme for accessibility",
+      "appearance": "dark",
+      "colors": {
+        "primary-bg": "#000000",
+        "secondary-bg": "#1a1a1a",
+        "text": "#ffffff",
+        "text-light": "#cccccc",
+        "text-lighter": "#999999",
+        "border": "#666666",
+        "hover": "#333333",
+        "selected": "#333333",
+        "accent": "#66ccff"
+      },
+      "syntax": {
+        "keyword": "#66ccff",
+        "string": "#66ff66",
+        "number": "#ffcc66",
+        "comment": "#999999",
+        "variable": "#ff9999",
+        "function": "#cc99ff",
+        "constant": "#ffcc66",
+        "property": "#66ccff",
+        "type": "#ffcc66",
+        "operator": "#66ccff",
+        "punctuation": "#ffffff",
+        "boolean": "#ffcc66",
+        "null": "#ffcc66",
+        "regex": "#66ff66",
+        "tag": "#66ccff",
+        "attribute": "#cc99ff"
+      }
+    },
+    {
+      "id": "monochrome",
+      "name": "Monochrome",
+      "description": "Pure black and white theme for minimal distraction",
+      "appearance": "dark",
+      "colors": {
+        "primary-bg": "#000000",
+        "secondary-bg": "#111111",
+        "text": "#ffffff",
+        "text-light": "#cccccc",
+        "text-lighter": "#888888",
+        "border": "#444444",
+        "hover": "#222222",
+        "selected": "#222222",
+        "accent": "#ffffff"
+      },
+      "syntax": {
+        "keyword": "#ffffff",
+        "string": "#cccccc",
+        "number": "#aaaaaa",
+        "comment": "#666666",
+        "variable": "#cccccc",
+        "function": "#ffffff",
+        "constant": "#aaaaaa",
+        "property": "#cccccc",
+        "type": "#ffffff",
+        "operator": "#ffffff",
+        "punctuation": "#ffffff",
+        "boolean": "#aaaaaa",
+        "null": "#aaaaaa",
+        "regex": "#cccccc",
+        "tag": "#ffffff",
+        "attribute": "#ffffff"
+      }
+    }
+  ]
+}

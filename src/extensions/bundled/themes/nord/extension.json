@@ -1,0 +1,87 @@
+{
+  "id": "athas.nord",
+  "name": "Nord",
+  "displayName": "Nord Theme",
+  "description": "An arctic, north-bluish color palette",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "license": "MIT",
+  "category": "theme",
+  "bundled": true,
+  "capabilities": {
+    "type": "theme",
+    "author": "Arctic Ice Studio",
+    "variants": [
+      {
+        "id": "nord",
+        "name": "Nord",
+        "description": "Clean arctic theme with north-bluish colors",
+        "appearance": "dark",
+        "colors": {
+          "primary-bg": "#2e3440",
+          "secondary-bg": "#3b4252",
+          "text": "#eceff4",
+          "text-light": "#d8dee9",
+          "text-lighter": "#81a1c1",
+          "border": "#4c566a",
+          "hover": "#434c5e",
+          "selected": "#4c566a",
+          "accent": "#88c0d0"
+        },
+        "syntax": {
+          "keyword": "#81a1c1",
+          "string": "#a3be8c",
+          "number": "#b48ead",
+          "comment": "#616e88",
+          "variable": "#d08770",
+          "function": "#88c0d0",
+          "constant": "#b48ead",
+          "property": "#8fbcbb",
+          "type": "#ebcb8b",
+          "operator": "#81a1c1",
+          "punctuation": "#eceff4",
+          "boolean": "#b48ead",
+          "null": "#b48ead",
+          "regex": "#a3be8c",
+          "tag": "#d08770",
+          "attribute": "#81a1c1"
+        }
+      },
+      {
+        "id": "nord-aurora",
+        "name": "Nord Aurora",
+        "description": "Nord variant with aurora-inspired accent colors",
+        "appearance": "dark",
+        "colors": {
+          "primary-bg": "#2e3440",
+          "secondary-bg": "#3b4252",
+          "text": "#eceff4",
+          "text-light": "#d8dee9",
+          "text-lighter": "#81a1c1",
+          "border": "#4c566a",
+          "hover": "#434c5e",
+          "selected": "#4c566a",
+          "accent": "#bf616a"
+        },
+        "syntax": {
+          "keyword": "#bf616a",
+          "string": "#a3be8c",
+          "number": "#d08770",
+          "comment": "#616e88",
+          "variable": "#bf616a",
+          "function": "#5e81ac",
+          "constant": "#d08770",
+          "property": "#88c0d0",
+          "type": "#ebcb8b",
+          "operator": "#81a1c1",
+          "punctuation": "#eceff4",
+          "boolean": "#d08770",
+          "null": "#d08770",
+          "regex": "#a3be8c",
+          "tag": "#bf616a",
+          "attribute": "#5e81ac"
+        }
+      }
+    ]
+  }
+}

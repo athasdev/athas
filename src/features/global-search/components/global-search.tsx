@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { CommandInput, CommandList } from "@/components/ui/command";
+import { CommandInput, CommandList } from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { useGlobalSearch } from "../hooks/use-global-search";
 import { EmptyState } from "./empty-state";
@@ -71,7 +71,7 @@ const GlobalSearch = () => {
                 value={query}
                 onChange={setQuery}
                 placeholder="Search files globally..."
-                className="font-mono"
+                className="ui-font"
               />
               <FileCountBadge
                 totalFiles={files.length}
@@ -165,7 +165,7 @@ const GlobalSearch = () => {
 
         {/* Right Column - Preview Pane */}
         {showPreview && (
-          <div className="w-[450px] flex-shrink-0">
+          <div className="w-[450px] shrink-0">
             <FilePreview filePath={previewFilePath} />
           </div>
         )}

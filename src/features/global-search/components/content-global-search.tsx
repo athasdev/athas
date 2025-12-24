@@ -1,11 +1,12 @@
 import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CommandInput } from "@/components/ui/command";
-import { useFileSystemStore } from "@/file-system/controllers/store";
-import { useSettingsStore } from "@/settings/store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
+import { CommandInput } from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { useContentSearch } from "../hooks/use-content-search";
+import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
 import { FilePreview } from "./file-preview";
 import { SearchMatchItem } from "./search-match-item";
 
@@ -45,43 +46,6 @@ const ContentGlobalSearch = () => {
     [handleFileSelect, onClose],
   );
 
-  // Focus input when visible
-  useEffect(() => {
-    if (isVisible && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isVisible]);
-
-  // Handle click outside
-  useEffect(() => {
-    if (!isVisible) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Element;
-      if (!target.closest("[data-global-search]")) {
-        onClose();
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isVisible, onClose]);
-
-  // Handle Escape key
-  useEffect(() => {
-    if (!isVisible) return;
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [isVisible, onClose]);
-
   // Flatten results into individual match items for performance
   const flattenedMatches = useMemo(() => {
     const matches: Array<{
@@ -116,6 +80,59 @@ const ContentGlobalSearch = () => {
 
     return matches;
   }, [results, rootFolderPath]);
+
+  // Prepare data for keyboard navigation - convert matches to FileItem format
+  const navigationItems = useMemo(() => {
+    return flattenedMatches.map((item) => ({
+      path: `${item.filePath}:${item.match.line_number}`,
+      name: item.filePath.split("/").pop() || "",
+      isDir: false,
+    }));
+  }, [flattenedMatches]);
+
+  // Keyboard navigation
+  const { selectedIndex, scrollContainerRef } = useKeyboardNavigation({
+    isVisible,
+    allResults: navigationItems,
+    onClose,
+    onSelect: (path) => {
+      const [filePath, lineStr] = path.split(":");
+      const lineNumber = parseInt(lineStr, 10);
+      handleFileClick(filePath, lineNumber);
+    },
+  });
+
+  // Update preview when selected index changes
+  useEffect(() => {
+    if (commandBarPreview && flattenedMatches.length > 0 && selectedIndex >= 0) {
+      const selectedMatch = flattenedMatches[selectedIndex];
+      if (selectedMatch) {
+        setPreviewFilePath(selectedMatch.filePath);
+      }
+    }
+  }, [selectedIndex, flattenedMatches, commandBarPreview]);
+
+  // Focus input when visible
+  useEffect(() => {
+    if (isVisible && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isVisible]);
+
+  // Handle click outside
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (!target.closest("[data-global-search]")) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isVisible, onClose]);
 
   if (!isVisible) {
     return null;
@@ -159,10 +176,10 @@ const ContentGlobalSearch = () => {
                 value={query}
                 onChange={setQuery}
                 placeholder="Search in files..."
-                className="font-mono"
+                className="ui-font"
               />
               {hasResults && (
-                <span className="flex-shrink-0 text-[10px] text-text-lighter">
+                <span className="shrink-0 text-[10px] text-text-lighter">
                   {displayedCount} {displayedCount === 1 ? "result" : "results"}
                   {hasMore && ` (${totalMatches} total)`}
                 </span>
@@ -174,7 +191,10 @@ const ContentGlobalSearch = () => {
           </div>
 
           {/* Results */}
-          <div className="custom-scrollbar-thin flex-1 overflow-y-auto p-2">
+          <div
+            ref={scrollContainerRef}
+            className="custom-scrollbar-thin flex-1 overflow-y-auto p-2"
+          >
             {!debouncedQuery && (
               <div className="flex h-full items-center justify-center text-center text-text-lighter text-xs">
                 Type to search across all files in your project
@@ -204,6 +224,8 @@ const ContentGlobalSearch = () => {
                 {flattenedMatches.map((item, idx) => (
                   <SearchMatchItem
                     key={`${item.filePath}-${item.match.line_number}-${idx}`}
+                    index={idx}
+                    isSelected={idx === selectedIndex}
                     filePath={item.filePath}
                     displayPath={item.displayPath}
                     match={item.match}
@@ -225,7 +247,7 @@ const ContentGlobalSearch = () => {
 
         {/* Right Column - Preview Pane */}
         {commandBarPreview && (
-          <div className="w-[600px] flex-shrink-0">
+          <div className="w-[600px] shrink-0">
             <FilePreview filePath={previewFilePath} />
           </div>
         )}

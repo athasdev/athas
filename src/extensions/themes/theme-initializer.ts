@@ -1,8 +1,25 @@
-import { extensionManager } from "../extension-manager";
+import { invoke } from "@tauri-apps/api/core";
+import { extensionManager } from "@/features/editor/extensions/manager";
 import { themeLoader } from "./theme-loader";
 import { themeRegistry } from "./theme-registry";
 
 let isThemeSystemInitialized = false;
+
+// Helper function to rebuild native menu with current themes
+const rebuildNativeMenu = async () => {
+  try {
+    const themes = themeRegistry.getAllThemes();
+    const themeData = themes.map((theme) => ({
+      id: theme.id,
+      name: theme.name,
+      category: theme.category,
+    }));
+
+    await invoke("rebuild_menu_themes", { themes: themeData });
+  } catch (error) {
+    console.error("Failed to rebuild native menu:", error);
+  }
+};
 
 export const initializeThemeSystem = async () => {
   if (isThemeSystemInitialized) {
@@ -31,6 +48,7 @@ export const initializeThemeSystem = async () => {
       setSelection: () => {},
       getCursorPosition: () => ({ line: 0, column: 0, offset: 0 }),
       setCursorPosition: () => {},
+      selectAll: () => {},
       addDecoration: () => "",
       removeDecoration: () => {},
       updateDecoration: () => {},
@@ -38,6 +56,13 @@ export const initializeThemeSystem = async () => {
       getLines: () => [],
       getLine: () => undefined,
       getLineCount: () => 0,
+      duplicateLine: () => {},
+      deleteLine: () => {},
+      toggleComment: () => {},
+      moveLineUp: () => {},
+      moveLineDown: () => {},
+      copyLineUp: () => {},
+      copyLineDown: () => {},
       undo: () => {},
       redo: () => {},
       canUndo: () => false,
@@ -47,7 +72,7 @@ export const initializeThemeSystem = async () => {
         tabSize: 2,
         lineNumbers: true,
         wordWrap: false,
-        theme: "athas-dark",
+        theme: "one-dark",
       }),
       updateSettings: () => {},
       on: () => () => {},
@@ -72,6 +97,14 @@ export const initializeThemeSystem = async () => {
 
     // Mark theme registry as ready
     themeRegistry.markAsReady();
+
+    // Rebuild native menu with loaded themes
+    await rebuildNativeMenu();
+
+    // Listen for theme registry changes and rebuild menu
+    themeRegistry.onRegistryChange(() => {
+      rebuildNativeMenu();
+    });
 
     console.log("Theme system initialized successfully");
   } catch (error) {

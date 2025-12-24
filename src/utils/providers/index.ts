@@ -1,3 +1,6 @@
+import { GeminiProvider } from "./gemini-provider";
+import { GrokProvider } from "./grok-provider";
+import { OllamaProvider } from "./ollama-provider";
 import { OpenAIProvider } from "./openai-provider";
 import { OpenRouterProvider } from "./openrouter-provider";
 import type { AIProvider, ProviderConfig } from "./provider-interface";
@@ -23,6 +26,33 @@ function initializeProviders(): void {
     maxTokens: 4096,
   };
   providers.set("openrouter", new OpenRouterProvider(openRouterConfig));
+
+  const geminiConfig: ProviderConfig = {
+    id: "gemini",
+    name: "Gemini",
+    apiUrl: "https://generativelanguage.googleapis.com/v1beta/models",
+    requiresApiKey: true,
+    maxTokens: 65536,
+  };
+  providers.set("gemini", new GeminiProvider(geminiConfig));
+
+  const grokConfig: ProviderConfig = {
+    id: "grok",
+    name: "xAI Grok",
+    apiUrl: "https://api.x.ai/v1/chat/completions",
+    requiresApiKey: true,
+    maxTokens: 131072,
+  };
+  providers.set("grok", new GrokProvider(grokConfig));
+
+  const ollamaConfig: ProviderConfig = {
+    id: "ollama",
+    name: "Ollama",
+    apiUrl: "http://localhost:11434/v1/chat/completions",
+    requiresApiKey: false,
+    maxTokens: 4096,
+  };
+  providers.set("ollama", new OllamaProvider(ollamaConfig));
 }
 
 export function getProvider(providerId: string): AIProvider | undefined {

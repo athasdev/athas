@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import type { FontInfo } from "@/stores/types/font";
 import { createSelectors } from "@/utils/zustand-selectors";
-import type { FontInfo } from "../types/font";
 
 interface FontState {
   availableFonts: FontInfo[];
@@ -90,14 +90,8 @@ export const useFontStore = createSelectors(
         console.log("Initializing with cached fonts:", cache.availableFonts.length, "fonts");
       }
 
-      // Add web fonts as custom fonts
-      const webFonts: FontInfo[] = [
-        { family: "Space Grotesk", name: "Space Grotesk", style: "Regular", is_monospace: false },
-      ];
-
       return {
         ...initialValues,
-        availableFonts: [...webFonts, ...initialValues.availableFonts],
         actions: {
           loadAvailableFonts: async (forceRefresh = false) => {
             const current = get();
@@ -119,26 +113,16 @@ export const useFontStore = createSelectors(
               const fonts = await invoke<FontInfo[]>("get_system_fonts");
               const monospaceFonts = fonts.filter((font) => font.is_monospace);
 
-              // Add web fonts
-              const webFonts: FontInfo[] = [
-                {
-                  family: "Space Grotesk",
-                  name: "Space Grotesk",
-                  style: "Regular",
-                  is_monospace: false,
-                },
-              ];
-
               set((state) => {
-                state.availableFonts = [...webFonts, ...fonts];
+                state.availableFonts = fonts;
                 state.monospaceFonts = monospaceFonts;
                 state.isLoading = false;
                 state.lastCacheTime = Date.now();
               });
 
               // Save to cache
-              saveFontsToCache([...webFonts, ...fonts], monospaceFonts);
-              console.log("Loaded and cached", fonts.length + webFonts.length, "fonts");
+              saveFontsToCache(fonts, monospaceFonts);
+              console.log("Loaded and cached", fonts.length, "fonts");
             } catch (error) {
               console.error("Failed to load fonts:", error);
               set((state) => {

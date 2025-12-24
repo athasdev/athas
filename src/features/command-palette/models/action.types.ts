@@ -10,4 +10,4 @@ export interface Action {
   action: () => void;
 }
 
-export type ActionCategory = "View" | "Settings" | "File" | "Window" | "Navigation";
+export type ActionCategory = "View" | "Settings" | "File" | "Window" | "Navigation" | "Markdown";

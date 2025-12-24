@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { SearchViewRef } from "@/components/search-view";
+import type { SearchViewRef } from "@/features/layout/components/sidebar/search-view";
 
 interface SearchViewStore {
   searchViewRef: SearchViewRef | null;

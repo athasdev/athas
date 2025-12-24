@@ -18,7 +18,7 @@ export const FileCountBadge = ({
     : `${totalFiles} ${totalFiles === 1 ? "file" : "files"}`;
 
   return (
-    <div className="flex-shrink-0 rounded bg-secondary-bg px-2 py-0.5 font-mono text-[10px] text-text-lighter">
+    <div className="ui-font shrink-0 rounded bg-secondary-bg px-2 py-0.5 text-[10px] text-text-lighter">
       {displayText}
     </div>
   );

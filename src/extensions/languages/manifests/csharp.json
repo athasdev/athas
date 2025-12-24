@@ -1,0 +1,17 @@
+{
+  "id": "language.csharp",
+  "name": "C#",
+  "version": "1.0.0",
+  "description": "C# language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "csharp",
+      "extensions": ["cs", "csx"],
+      "aliases": ["csharp", "cs"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-c_sharp.wasm",
+      "highlightQuery": "/tree-sitter/queries/csharp/highlights.scm"
+    }
+  }
+}

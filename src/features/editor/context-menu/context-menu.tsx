@@ -1,0 +1,468 @@
+import {
+  AlignLeft,
+  Bookmark,
+  CaseSensitive,
+  ChevronDown,
+  ChevronUp,
+  ClipboardPaste,
+  Code,
+  Copy,
+  FileText,
+  Indent,
+  Outdent,
+  RotateCcw,
+  Scissors,
+  Search,
+  Trash2,
+  Type,
+} from "lucide-react";
+import { useEffect, useRef } from "react";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { logger } from "@/features/editor/utils/logger";
+import KeybindingBadge from "@/ui/keybinding-badge";
+
+// import { useOverlayManager } from "../components/overlays/overlay-manager";
+
+interface EditorContextMenuProps {
+  isOpen: boolean;
+  position: { x: number; y: number };
+  onClose: () => void;
+  onCopy?: () => void;
+  onCut?: () => void;
+  onPaste?: () => void;
+  onSelectAll?: () => void;
+  onFind?: () => void;
+  onGoToLine?: () => void;
+  onDelete?: () => void;
+  onDuplicate?: () => void;
+  onIndent?: () => void;
+  onOutdent?: () => void;
+  onToggleComment?: () => void;
+  onFormat?: () => void;
+  onToggleCase?: () => void;
+  onMoveLineUp?: () => void;
+  onMoveLineDown?: () => void;
+  onToggleBookmark?: () => void;
+}
+
+const EditorContextMenu = ({
+  isOpen,
+  position,
+  onClose,
+  onCopy,
+  onCut,
+  onPaste,
+  onSelectAll,
+  onFind,
+  onGoToLine,
+  onDelete,
+  onDuplicate,
+  onIndent,
+  onOutdent,
+  onToggleComment,
+  onFormat,
+  onToggleCase,
+  onMoveLineUp,
+  onMoveLineDown,
+  onToggleBookmark,
+}: EditorContextMenuProps) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const selection = useEditorStateStore.use.selection?.() ?? undefined;
+  const hasSelection = selection && selection.start.offset !== selection.end.offset;
+  // const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
+
+  // Register/unregister with overlay manager
+  // useEffect(() => {
+  //   if (isOpen) {
+  //     showOverlay("context-menu");
+  //   } else {
+  //     hideOverlay("context-menu");
+  //   }
+  // }, [isOpen, showOverlay, hideOverlay]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    // Adjust menu position to ensure it's visible (only if needed)
+    if (menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // Start with the provided position
+      let adjustedX = position.x;
+      let adjustedY = position.y;
+      let needsAdjustment = false;
+
+      // Prevent menu from going off the right edge
+      if (position.x + rect.width > viewportWidth) {
+        adjustedX = viewportWidth - rect.width - EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN;
+        needsAdjustment = true;
+      }
+
+      // Prevent menu from going off the bottom edge
+      if (position.y + rect.height > viewportHeight) {
+        adjustedY = viewportHeight - rect.height - EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN;
+        needsAdjustment = true;
+      }
+
+      // Prevent menu from going off the left edge
+      if (position.x < EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN) {
+        adjustedX = EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN;
+        needsAdjustment = true;
+      }
+
+      // Prevent menu from going off the top edge
+      if (position.y < EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN) {
+        adjustedY = EDITOR_CONSTANTS.CONTEXT_MENU_EDGE_MARGIN;
+        needsAdjustment = true;
+      }
+
+      // Only apply adjustment if needed
+      if (needsAdjustment) {
+        menuRef.current.style.left = `${adjustedX}px`;
+        menuRef.current.style.top = `${adjustedY}px`;
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen, onClose, position]);
+
+  // const shouldShow = shouldShowOverlay("context-menu");
+
+  if (!isOpen) return null;
+
+  const handleCopy = async () => {
+    if (onCopy) {
+      onCopy();
+    } else if (hasSelection && selection) {
+      // Default copy behavior will be handled by the parent component
+      // This is a fallback that won't actually work without parent handling
+      logger.warn("Editor", "Copy action requires parent component to handle onCopy");
+    }
+    onClose();
+  };
+
+  const handleCut = async () => {
+    if (onCut) {
+      onCut();
+    }
+    onClose();
+  };
+
+  const handlePaste = async () => {
+    if (onPaste) {
+      onPaste();
+    }
+    onClose();
+  };
+
+  const handleSelectAll = () => {
+    if (onSelectAll) {
+      onSelectAll();
+    }
+    onClose();
+  };
+
+  const handleFind = () => {
+    if (onFind) {
+      onFind();
+    }
+    onClose();
+  };
+
+  const handleGoToLine = () => {
+    if (onGoToLine) {
+      onGoToLine();
+    }
+    onClose();
+  };
+
+  // Additional handlers
+  const handleDelete = () => {
+    if (onDelete) onDelete();
+    onClose();
+  };
+
+  const handleDuplicate = () => {
+    if (onDuplicate) onDuplicate();
+    onClose();
+  };
+
+  const handleIndent = () => {
+    if (onIndent) onIndent();
+    onClose();
+  };
+
+  const handleOutdent = () => {
+    if (onOutdent) onOutdent();
+    onClose();
+  };
+
+  const handleToggleComment = () => {
+    if (onToggleComment) onToggleComment();
+    onClose();
+  };
+
+  const handleFormat = () => {
+    if (onFormat) onFormat();
+    onClose();
+  };
+
+  const handleToggleCase = () => {
+    if (onToggleCase) onToggleCase();
+    onClose();
+  };
+
+  const handleMoveLineUp = () => {
+    if (onMoveLineUp) onMoveLineUp();
+    onClose();
+  };
+
+  const handleMoveLineDown = () => {
+    if (onMoveLineDown) onMoveLineDown();
+    onClose();
+  };
+
+  const handleToggleBookmark = () => {
+    if (onToggleBookmark) onToggleBookmark();
+    onClose();
+  };
+
+  return (
+    <div
+      ref={menuRef}
+      className="fixed w-[200px] select-none rounded-md border border-border bg-secondary-bg py-0.5 shadow-lg"
+      style={{
+        zIndex: EDITOR_CONSTANTS.Z_INDEX.CONTEXT_MENU,
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        transform: "translateZ(0)", // Force GPU acceleration for consistent rendering
+      }}
+    >
+      {/* Copy */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={handleCopy}
+        disabled={!hasSelection}
+      >
+        <div className="flex items-center gap-2">
+          <Copy size={11} />
+          <span>Copy</span>
+        </div>
+        <KeybindingBadge keys={["⌘", "C"]} className="opacity-60" />
+      </button>
+
+      {/* Cut */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={handleCut}
+        disabled={!hasSelection}
+      >
+        <div className="flex items-center gap-2">
+          <Scissors size={11} />
+          <span>Cut</span>
+        </div>
+        <KeybindingBadge keys={["⌘", "X"]} className="opacity-60" />
+      </button>
+
+      {/* Paste */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        onClick={handlePaste}
+      >
+        <div className="flex items-center gap-2">
+          <ClipboardPaste size={11} />
+          <span>Paste</span>
+        </div>
+        <KeybindingBadge keys={["⌘", "V"]} className="opacity-60" />
+      </button>
+
+      {/* Delete */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={handleDelete}
+        disabled={!hasSelection}
+      >
+        <div className="flex items-center gap-2">
+          <Trash2 size={11} />
+          <span>Delete</span>
+        </div>
+        <KeybindingBadge keys={["Del"]} className="opacity-60" />
+      </button>
+
+      <div className="my-0.5 border-border border-t" />
+
+      {/* Select All */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        onClick={handleSelectAll}
+      >
+        <div className="flex items-center gap-2">
+          <Type size={11} />
+          <span>Select All</span>
+        </div>
+        <KeybindingBadge keys={["⌘", "A"]} className="opacity-60" />
+      </button>
+
+      {/* Duplicate Line */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        onClick={handleDuplicate}
+      >
+        <div className="flex items-center gap-2">
+          <FileText size={11} />
+          <span>Duplicate Line</span>
+        </div>
+        <KeybindingBadge keys={["⌘", "D"]} className="opacity-60" />
+      </button>
+
+      <div className="my-0.5 border-border border-t" />
+
+      {/* Toggle Comment */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        onClick={handleToggleComment}
+      >
+        <div className="flex items-center gap-2">
+          <Code size={11} />
+          <span>Toggle Comment</span>
+        </div>
+        <KeybindingBadge keys={["⌘", "/"]} className="opacity-60" />
+      </button>
+
+      {/* Indent */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        onClick={handleIndent}
+      >
+        <div className="flex items-center gap-2">
+          <Indent size={11} />
+          <span>Indent</span>
+        </div>
+        <KeybindingBadge keys={["Tab"]} className="opacity-60" />
+      </button>
+
+      {/* Outdent */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        onClick={handleOutdent}
+      >
+        <div className="flex items-center gap-2">
+          <Outdent size={11} />
+          <span>Outdent</span>
+        </div>
+        <KeybindingBadge keys={["⇧", "Tab"]} className="opacity-60" />
+      </button>
+
+      {/* Format */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        onClick={handleFormat}
+      >
+        <div className="flex items-center gap-2">
+          <AlignLeft size={11} />
+          <span>Format Document</span>
+        </div>
+        <KeybindingBadge keys={["⇧", "⌥", "F"]} className="opacity-60" />
+      </button>
+
+      <div className="my-0.5 border-border border-t" />
+
+      {/* Move Line Up */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        onClick={handleMoveLineUp}
+      >
+        <div className="flex items-center gap-2">
+          <ChevronUp size={11} />
+          <span>Move Line Up</span>
+        </div>
+        <KeybindingBadge keys={["⌥", "↑"]} className="opacity-60" />
+      </button>
+
+      {/* Move Line Down */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        onClick={handleMoveLineDown}
+      >
+        <div className="flex items-center gap-2">
+          <ChevronDown size={11} />
+          <span>Move Line Down</span>
+        </div>
+        <KeybindingBadge keys={["⌥", "↓"]} className="opacity-60" />
+      </button>
+
+      {/* Toggle Case */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={handleToggleCase}
+        disabled={!hasSelection}
+      >
+        <div className="flex items-center gap-2">
+          <CaseSensitive size={11} />
+          <span>Toggle Case</span>
+        </div>
+      </button>
+
+      <div className="my-0.5 border-border border-t" />
+
+      {/* Find */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        onClick={handleFind}
+      >
+        <div className="flex items-center gap-2">
+          <Search size={11} />
+          <span>Find</span>
+        </div>
+        <KeybindingBadge keys={["⌘", "F"]} className="opacity-60" />
+      </button>
+
+      {/* Go to Line */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        onClick={handleGoToLine}
+      >
+        <div className="flex items-center gap-2">
+          <RotateCcw size={11} />
+          <span>Go to Line</span>
+        </div>
+        <KeybindingBadge keys={["⌘", "G"]} className="opacity-60" />
+      </button>
+
+      {/* Toggle Bookmark */}
+      <button
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        onClick={handleToggleBookmark}
+      >
+        <div className="flex items-center gap-2">
+          <Bookmark size={11} />
+          <span>Toggle Bookmark</span>
+        </div>
+        <KeybindingBadge keys={["⌘", "K", "⌘", "K"]} className="opacity-60" />
+      </button>
+    </div>
+  );
+};
+
+export default EditorContextMenu;

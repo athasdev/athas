@@ -1,0 +1,17 @@
+{
+  "id": "language.yaml",
+  "name": "YAML",
+  "version": "1.0.0",
+  "description": "YAML language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "yaml",
+      "extensions": ["yaml", "yml"],
+      "aliases": ["yaml", "yml"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-yaml.wasm",
+      "highlightQuery": "/tree-sitter/queries/yaml/highlights.scm"
+    }
+  }
+}

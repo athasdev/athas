@@ -1,15 +1,15 @@
 import { Palette } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
+import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
 import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { iconThemeRegistry } from "@/extensions/icon-themes";
-import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
+} from "@/ui/command";
 
 interface IconThemeInfo {
   id: string;
@@ -195,7 +195,7 @@ const IconThemeSelector = ({
                 isSelected={isSelected}
                 className="gap-3 px-2 py-1.5"
               >
-                <div className="flex-shrink-0 text-text-lighter">
+                <div className="shrink-0 text-text-lighter">
                   {theme.icon || <Palette size={14} />}
                 </div>
                 <div className="min-w-0 flex-1">

@@ -1,0 +1,127 @@
+/**
+ * Overlay Editor Styles
+ * Two-layer architecture: transparent input + syntax-highlighted background
+ */
+
+:root {
+  --editor-padding-top: 8px;
+  --editor-padding-left: 16px;
+  --editor-padding-bottom: 8px;
+  --editor-padding-right: 16px;
+}
+
+.overlay-editor-container {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Background layer - syntax highlighted, read-only */
+.highlight-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+  padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
+    var(--editor-padding-left);
+  white-space: pre;
+  word-wrap: break-word;
+  user-select: none;
+  color: var(--text, #d4d4d4);
+
+  /* Performance optimizations */
+  contain: layout style paint;
+}
+
+/* Inner content that gets transformed for scroll sync */
+.highlight-layer-content {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Foreground layer - transparent text, visible caret */
+.input-layer {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  z-index: 2;
+  padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
+    var(--editor-padding-left);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: transparent;
+  caret-color: var(--text, #d4d4d4);
+  white-space: pre;
+  word-wrap: break-word;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  tab-size: inherit;
+
+  scroll-behavior: auto;
+}
+
+/* Ensure both layers have matching scroll behavior */
+.highlight-layer::-webkit-scrollbar,
+.input-layer::-webkit-scrollbar {
+  display: none;
+}
+
+.highlight-layer,
+.input-layer {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Selection styling for the input layer */
+.input-layer::selection {
+  background: var(--selection-bg, rgba(38, 79, 120, 0.6));
+  color: var(--text, #d4d4d4);
+}
+
+.input-layer::-moz-selection {
+  background: var(--selection-bg, rgba(38, 79, 120, 0.6));
+  color: var(--text, #d4d4d4);
+}
+
+/* Line structure in highlight layer */
+.highlight-layer-line {
+  display: block;
+  min-height: 1em;
+  line-height: inherit;
+  box-sizing: border-box;
+}
+
+/* Multi-cursor layer */
+.multi-cursor-layer {
+  padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
+    var(--editor-padding-left);
+}
+
+/* Git blame layer */
+.git-blame-layer {
+  padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
+    var(--editor-padding-left);
+}
+
+/* Cursor blink animation */
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}

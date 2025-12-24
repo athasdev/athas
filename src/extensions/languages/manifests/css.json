@@ -1,0 +1,17 @@
+{
+  "id": "language.css",
+  "name": "CSS",
+  "version": "1.0.0",
+  "description": "CSS language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "css",
+      "extensions": ["css"],
+      "aliases": ["css"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-css.wasm",
+      "highlightQuery": "/tree-sitter/queries/css/highlights.scm"
+    }
+  }
+}

@@ -1,11 +1,21 @@
-import { Cloud, FileText, FolderOpen, GitBranch, Hash, Package, Search } from "lucide-react";
+import {
+  FileText,
+  FolderOpen,
+  GitBranch,
+  GitPullRequest,
+  Hash,
+  Package,
+  Search,
+} from "lucide-react";
+import type { SettingsTab } from "@/stores/ui-state/types";
 import type { Action } from "../models/action.types";
 
 interface NavigationActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
-  setActiveView: (view: "files" | "git" | "search" | "remote" | "extensions") => void;
+  setActiveView: (view: "files" | "git" | "search" | "github-prs") => void;
   setIsCommandBarVisible: (v: boolean) => void;
   setIsGlobalSearchVisible: (v: boolean) => void;
+  openSettingsDialog: (tab?: SettingsTab) => void;
   onClose: () => void;
 }
 
@@ -15,6 +25,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     setActiveView,
     setIsCommandBarVisible,
     setIsGlobalSearchVisible,
+    openSettingsDialog,
     onClose,
   } = params;
 
@@ -44,6 +55,18 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       },
     },
     {
+      id: "view-show-github-prs",
+      label: "View: Show Pull Requests",
+      description: "Switch to GitHub Pull Requests view",
+      icon: <GitPullRequest size={14} />,
+      category: "Navigation",
+      action: () => {
+        setIsSidebarVisible(true);
+        setActiveView("github-prs");
+        onClose();
+      },
+    },
+    {
       id: "view-show-search",
       label: "View: Show Search",
       description: "Switch to project search view in sidebar",
@@ -69,27 +92,14 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       },
     },
     {
-      id: "view-show-remote",
-      label: "View: Show Remote",
-      description: "Switch to remote development view",
-      icon: <Cloud size={14} />,
-      category: "Navigation",
-      action: () => {
-        setIsSidebarVisible(true);
-        setActiveView("remote");
-        onClose();
-      },
-    },
-    {
       id: "view-show-extensions",
       label: "View: Show Extensions",
-      description: "Switch to extensions view",
+      description: "Open extensions in settings",
       icon: <Package size={14} />,
       category: "Navigation",
       action: () => {
-        setIsSidebarVisible(true);
-        setActiveView("extensions");
         onClose();
+        openSettingsDialog("extensions");
       },
     },
     {

@@ -1,6 +1,6 @@
 import { Image } from "lucide-react";
 import { useEffect, useState } from "react";
-import Dialog from "@/components/ui/dialog";
+import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import type { ImageFormat } from "../models/image-operation.types";
 import { convertImageFormat } from "../utils/image-conversion";
@@ -149,7 +149,7 @@ export function ImageFormatDialog({
       <div className="flex flex-col gap-1">
         <p className="text-text text-xs">{config.description}</p>
         <p className="text-text-lighter text-xs">
-          Current: <span className="font-mono">{currentFileName}</span> •{" "}
+          Current: <span className="ui-font">{currentFileName}</span> •{" "}
           {formatFileSize(currentSize)}
         </p>
       </div>
@@ -191,11 +191,11 @@ export function ImageFormatDialog({
               <span className="text-text-lighter text-xs">Calculating...</span>
             ) : estimatedSize ? (
               <>
-                <span className="font-mono text-text text-xs">{formatFileSize(estimatedSize)}</span>
+                <span className="ui-font text-text text-xs">{formatFileSize(estimatedSize)}</span>
                 {sizeDiff !== 0 && (
                   <span
                     className={cn(
-                      "font-mono text-xs",
+                      "ui-font text-xs",
                       sizeDiff < 0 ? "text-green-500" : "text-orange-500",
                     )}
                   >

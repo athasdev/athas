@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
-import { useRecentFilesStore } from "@/file-system/controllers/recent-files-store";
-import { useFileSystemStore } from "@/file-system/controllers/store";
-import { useSettingsStore } from "@/settings/store";
+import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { useFileLoader } from "./use-file-loader";

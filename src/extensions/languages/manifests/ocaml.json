@@ -1,0 +1,17 @@
+{
+  "id": "language.ocaml",
+  "name": "OCaml",
+  "version": "1.0.0",
+  "description": "OCaml language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "ocaml",
+      "extensions": ["ml", "mli"],
+      "aliases": ["ocaml"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-ocaml.wasm",
+      "highlightQuery": "/tree-sitter/queries/ocaml/highlights.scm"
+    }
+  }
+}

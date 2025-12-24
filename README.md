@@ -1,34 +1,35 @@
-# Athas
+<div align="center">
+  <img src="public/icon.png" alt="Athas" width="120">
+  <h1>Athas</h1>
+  <p>A lightweight, cross-platform code editor, built with <a href="https://tauri.app/" title="Tauri">Tauri</a> (Rust and React) with Git support, AI agents, vim keybindings.</p>
+  <img src="public/screenshot.png" alt="Athas Screenshot" width="800">
+</div>
 
-A lightweight code editor built with React, TypeScript, and Tauri.
-Designed for developers who want a fast and customizable development environment.
+## Features
+
+- External editor support (Neovim, Helix, etc.)
+- Git integration
+- AI agents
+- Terminal
 
 ## Download
 
-Download the latest version of Athas from our [releases page](https://github.com/athasdev/athas/releases).
+Get the latest version from the [releases page](https://github.com/athasdev/athas/releases).
 
-## Developing Athas
+## Documentation
 
-Choose your platform for detailed setup instructions:
-
-- [**macOS**](docs/develop/macos.md) - Setup for macOS development
-- [**Windows**](docs/develop/windows.md) - Setup for Windows development (includes automated script)
-- [**Linux**](docs/develop/linux.md) - Setup for Linux development (includes automated script)
-
-## Customizing
-
-### Themes
-
-Create custom themes by adding TOML files. See the [themes documentation](src/extensions/themes/builtin/README.md) for details.
+See the [documentation](https://athas.dev/docs).
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed contribution guidelines.
+Contributions are welcome! See the [contributing guide](CONTRIBUTING.md).
 
 ## Support
 
-If you encounter any issues or have questions:
+- [Issues](https://github.com/athasdev/athas/issues)
+- [Discussions](https://github.com/athasdev/athas/discussions)
+- [Discord](https://discord.gg/55nmWmQwKw)
 
-- Open an [issue](https://github.com/athasdev/athas/issues)
-- Check the [documentation](https://athas.dev/docs)
-- Join [discussions](https://github.com/athasdev/athas/discussions)
+## License
+
+[AGPL-3.0](LICENSE)

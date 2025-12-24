@@ -1,0 +1,17 @@
+{
+  "id": "language.rust",
+  "name": "Rust",
+  "version": "1.0.0",
+  "description": "Rust language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "rust",
+      "extensions": ["rs"],
+      "aliases": ["rust"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-rust.wasm",
+      "highlightQuery": "/tree-sitter/queries/rust/highlights.scm"
+    }
+  }
+}

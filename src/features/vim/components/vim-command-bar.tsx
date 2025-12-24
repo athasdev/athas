@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  getVimCommandSuggestions,
+  parseAndExecuteVimCommand,
+  type VimCommand,
+} from "@/features/vim/stores/vim-commands";
+import { useVimStore } from "@/features/vim/stores/vim-store";
 import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import {
-  getVimCommandSuggestions,
-  parseAndExecuteVimCommand,
-  type VimCommand,
-} from "@/stores/vim-commands";
-import { useVimStore } from "@/stores/vim-store";
+} from "@/ui/command";
 
 const VimCommandBar = () => {
   const isCommandMode = useVimStore.use.isCommandMode();
@@ -143,20 +143,20 @@ const VimCommandBar = () => {
   return (
     <Command isVisible={isCommandMode} className="max-h-80">
       <CommandHeader onClose={exitCommandMode}>
-        <span className="font-mono text-accent text-sm">:</span>
+        <span className="ui-font text-accent text-sm">:</span>
         <CommandInput
           ref={inputRef}
           value={commandInput}
           onChange={handleInputChange}
           placeholder="Enter vim command..."
-          className="font-mono"
+          className="ui-font"
         />
       </CommandHeader>
 
       <CommandList ref={scrollContainerRef}>
         {suggestions.length === 0 ? (
           <CommandEmpty>
-            <div className="font-mono">
+            <div className="ui-font">
               {commandInput ? "No matching commands" : "Type a command"}
             </div>
           </CommandEmpty>
@@ -174,7 +174,7 @@ const VimCommandBar = () => {
                   data-item-index={index}
                   onClick={() => handleItemSelect(command)}
                   isSelected={isSelected}
-                  className="font-mono"
+                  className="ui-font"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-xs">

@@ -1,4 +1,4 @@
-import Command, { CommandHeader, CommandInput, CommandList } from "@/components/ui/command";
+import Command, { CommandHeader, CommandInput, CommandList } from "@/ui/command";
 import { useCommandBar } from "../hooks/use-command-bar";
 import { EmptyState } from "./empty-state";
 import { FileCountBadge } from "./file-count-badge";
@@ -40,7 +40,7 @@ const CommandBar = () => {
           value={query}
           onChange={setQuery}
           placeholder="Type to search files..."
-          className="font-mono"
+          className="ui-font"
         />
         <FileCountBadge
           totalFiles={files.length}

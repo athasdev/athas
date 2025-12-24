@@ -1,4 +1,4 @@
-import type { AIMessage } from "@/types/ai-chat";
+import type { AIMessage } from "@/features/ai/types/messages";
 
 export interface ProviderConfig {
   id: string;
@@ -18,6 +18,13 @@ export interface StreamRequest {
   maxTokens: number;
   temperature: number;
   apiKey?: string;
+  responseFormat?: "text" | "json_object";
+}
+
+export interface ProviderModel {
+  id: string;
+  name: string;
+  maxTokens?: number;
 }
 
 export abstract class AIProvider {
@@ -26,6 +33,14 @@ export abstract class AIProvider {
   abstract buildHeaders(apiKey?: string): ProviderHeaders;
   abstract buildPayload(request: StreamRequest): any;
   abstract validateApiKey(apiKey: string): Promise<boolean>;
+
+  // Optional: Allows providers to customize the URL (e.g., add API key as query param)
+  buildUrl?(request: StreamRequest): string;
+
+  // Optional: Allows providers to fetch available models dynamically
+  async getModels?(): Promise<ProviderModel[]> {
+    return [];
+  }
 
   get id(): string {
     return this.config.id;

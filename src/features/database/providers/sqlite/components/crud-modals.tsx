@@ -1,8 +1,8 @@
 import { PlusIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
-import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
+import Button from "@/ui/button";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import type { ColumnInfo } from "../../../models/common.types";
 
@@ -83,7 +83,7 @@ export const CreateRowModal = ({
         className="w-full max-w-md rounded-lg border border-border bg-secondary-bg p-6 shadow-xl"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-medium font-mono text-lg text-text">Add Row to {tableName}</h2>
+          <h2 className="ui-font font-medium text-lg text-text">Add Row to {tableName}</h2>
           <button onClick={handleClose} className="rounded-md p-1 text-text-lighter hover:bg-hover">
             <XIcon size="16" />
           </button>
@@ -96,7 +96,7 @@ export const CreateRowModal = ({
               <div key={column.name} className="space-y-1">
                 <label
                   htmlFor={`create-${column.name}`}
-                  className="block font-mono text-sm text-text"
+                  className="ui-font block text-sm text-text"
                 >
                   {column.name}
                   <span className="ml-1 text-text-lighter text-xs">({column.type})</span>
@@ -223,7 +223,7 @@ export const EditRowModal = ({
         className="w-full max-w-md rounded-lg border border-border bg-secondary-bg p-6 shadow-xl"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-medium font-mono text-lg text-text">Edit Row in {tableName}</h2>
+          <h2 className="ui-font font-medium text-lg text-text">Edit Row in {tableName}</h2>
           <button onClick={handleClose} className="rounded-md p-1 text-text-lighter hover:bg-hover">
             <XIcon size="16" />
           </button>
@@ -234,10 +234,7 @@ export const EditRowModal = ({
             .filter((col) => col.name.toLowerCase() !== "rowid")
             .map((column) => (
               <div key={column.name} className="space-y-1">
-                <label
-                  htmlFor={`edit-${column.name}`}
-                  className="block font-mono text-sm text-text"
-                >
+                <label htmlFor={`edit-${column.name}`} className="ui-font block text-sm text-text">
                   {column.name}
                   <span className="ml-1 text-text-lighter text-xs">({column.type})</span>
                 </label>
@@ -348,7 +345,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
         className="w-full max-w-lg rounded-lg border border-border bg-secondary-bg p-6 shadow-xl"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-medium font-mono text-lg text-text">Create New Table</h2>
+          <h2 className="ui-font font-medium text-lg text-text">Create New Table</h2>
           <button onClick={handleClose} className="rounded-md p-1 text-text-lighter hover:bg-hover">
             <XIcon size="16" />
           </button>
@@ -356,7 +353,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
-            <label htmlFor="table-name" className="block font-mono text-sm text-text">
+            <label htmlFor="table-name" className="ui-font block text-sm text-text">
               Table Name
             </label>
             <Input
@@ -369,7 +366,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
           </div>
 
           <div className="space-y-2">
-            <div className="block font-mono text-sm text-text">Columns</div>
+            <div className="ui-font block text-sm text-text">Columns</div>
             {columns.map((column, index) => (
               <div key={index} className="flex items-center gap-2">
                 <Input
@@ -384,14 +381,14 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                 <select
                   value={column.type}
                   onChange={(e) => updateColumn(index, "type", e.target.value)}
-                  className="rounded-md border border-border bg-input px-2 py-1 font-mono text-sm text-text"
+                  className="ui-font rounded-md border border-border bg-input px-2 py-1 text-sm text-text"
                 >
                   <option value="TEXT">TEXT</option>
                   <option value="INTEGER">INTEGER</option>
                   <option value="REAL">REAL</option>
                   <option value="BLOB">BLOB</option>
                 </select>
-                <label className="flex items-center gap-1 font-mono text-text text-xs">
+                <label className="ui-font flex items-center gap-1 text-text text-xs">
                   <input
                     type="checkbox"
                     checked={column.notnull}
@@ -416,7 +413,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
               onClick={addColumn}
               className={cn(
                 "flex items-center gap-1 rounded-md px-2 py-1",
-                "font-mono text-sm text-text hover:bg-hover",
+                "ui-font text-sm text-text hover:bg-hover",
               )}
             >
               <PlusIcon size="12" />

@@ -1,12 +1,12 @@
 import { Search } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { EDITOR_CONSTANTS } from "@/constants/editor-constants";
 import { useAIChatStore } from "@/features/ai/store/store";
-import FileIcon from "@/file-explorer/views/file.icon";
-import { useFileSystemStore } from "@/file-system/controllers/store";
-import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/file-system/controllers/utils";
-import type { FileEntry } from "@/file-system/models/app";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import FileIcon from "@/features/file-explorer/views/file.icon";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
+import type { FileEntry } from "@/features/file-system/types/app";
 import { useProjectStore } from "@/stores/project-store";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
@@ -280,7 +280,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       {/* Files list */}
       <div className="items-container py-1" role="listbox" aria-label="File list">
         {filteredFiles.length === 0 ? (
-          <div className="px-3 py-2 text-center font-mono text-text-lighter text-xs">
+          <div className="ui-font px-3 py-2 text-center text-text-lighter text-xs">
             {searchTerm ? "No matching files found" : "No files available"}
           </div>
         ) : (
@@ -289,7 +289,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
               key={file.path}
               onClick={() => handleFileClick(file)}
               className={cn(
-                "flex w-full items-center gap-2 px-3 py-1 text-left font-mono text-xs transition-colors",
+                "ui-font flex w-full items-center gap-2 px-3 py-1 text-left text-xs transition-colors",
                 "focus:outline-none focus:ring-1 focus:ring-accent/50",
                 index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
               )}
@@ -302,7 +302,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
                 isDir={false}
                 isExpanded={false}
                 size={10}
-                className="flex-shrink-0 text-text-lighter"
+                className="shrink-0 text-text-lighter"
               />
               <div className="min-w-0 flex-1 truncate">
                 <span className="text-text">{file.name}</span>

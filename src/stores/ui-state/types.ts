@@ -1,10 +1,21 @@
 export type SettingsTab =
   | "general"
   | "editor"
-  | "theme"
+  | "appearance"
+  | "extensions"
   | "ai"
   | "keyboard"
   | "language"
   | "features"
   | "advanced"
-  | "fileTree";
+  | "fileTree"
+  | "terminal";
+
+export type BottomPaneTab = "terminal" | "diagnostics";
+
+export interface QuickEditSelection {
+  text: string;
+  start: number;
+  end: number;
+  cursorPosition: { x: number; y: number };
+}

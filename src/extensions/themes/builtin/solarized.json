@@ -1,0 +1,77 @@
+{
+  "name": "Solarized",
+  "author": "Ethan Schoonover",
+  "description": "Precision colors for machines and people",
+  "themes": [
+    {
+      "id": "solarized-light",
+      "name": "Solarized Light",
+      "description": "Light variant with carefully chosen colors",
+      "appearance": "light",
+      "colors": {
+        "primary-bg": "#fdf6e3",
+        "secondary-bg": "#eee8d5",
+        "text": "#657b83",
+        "text-light": "#839496",
+        "text-lighter": "#93a1a1",
+        "border": "#eee8d5",
+        "hover": "#eee8d5",
+        "selected": "#eee8d5",
+        "accent": "#268bd2"
+      },
+      "syntax": {
+        "keyword": "#859900",
+        "string": "#2aa198",
+        "number": "#d33682",
+        "comment": "#93a1a1",
+        "variable": "#b58900",
+        "function": "#268bd2",
+        "constant": "#d33682",
+        "property": "#b58900",
+        "type": "#859900",
+        "operator": "#dc322f",
+        "punctuation": "#657b83",
+        "boolean": "#d33682",
+        "null": "#d33682",
+        "regex": "#2aa198",
+        "tag": "#859900",
+        "attribute": "#268bd2"
+      }
+    },
+    {
+      "id": "solarized-dark",
+      "name": "Solarized Dark",
+      "description": "Dark variant with carefully chosen colors",
+      "appearance": "dark",
+      "colors": {
+        "primary-bg": "#002b36",
+        "secondary-bg": "#073642",
+        "text": "#839496",
+        "text-light": "#657b83",
+        "text-lighter": "#586e75",
+        "border": "#073642",
+        "hover": "#073642",
+        "selected": "#073642",
+        "accent": "#268bd2"
+      },
+      "syntax": {
+        "keyword": "#859900",
+        "string": "#2aa198",
+        "number": "#d33682",
+        "comment": "#586e75",
+        "variable": "#b58900",
+        "function": "#268bd2",
+        "constant": "#d33682",
+        "property": "#b58900",
+        "type": "#859900",
+        "operator": "#dc322f",
+        "punctuation": "#839496",
+        "boolean": "#d33682",
+        "null": "#d33682",
+        "regex": "#2aa198",
+        "tag": "#859900",
+        "attribute": "#268bd2"
+      }
+    }
+  ]
+}

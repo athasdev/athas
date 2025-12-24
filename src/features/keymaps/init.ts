@@ -1,0 +1,15 @@
+/**
+ * Initialize the keymaps system
+ * Call this once at app startup
+ */
+
+import { registerCommands } from "./commands/command-registry";
+import { registerDefaultKeymaps } from "./defaults/register-defaults";
+
+export function initializeKeymaps(): void {
+  // Register all commands from the unified registry
+  registerCommands();
+
+  // Register default keybindings
+  registerDefaultKeymaps();
+}

@@ -1,0 +1,17 @@
+{
+  "id": "language.go",
+  "name": "Go",
+  "version": "1.0.0",
+  "description": "Go language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "go",
+      "extensions": ["go"],
+      "aliases": ["go"],
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-go.wasm",
+      "highlightQuery": "/tree-sitter/queries/go/highlights.scm"
+    }
+  }
+}

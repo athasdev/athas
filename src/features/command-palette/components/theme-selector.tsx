@@ -1,16 +1,16 @@
 import { Monitor, Moon, Palette, Sun, Upload } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Button from "@/components/ui/button";
+import { themeRegistry } from "@/extensions/themes/theme-registry";
+import type { ThemeDefinition } from "@/extensions/themes/types";
+import Button from "@/ui/button";
 import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { themeRegistry } from "@/extensions/themes/theme-registry";
-import type { ThemeDefinition } from "@/extensions/themes/types";
+} from "@/ui/command";
 
 interface ThemeInfo {
   id: string;
@@ -54,14 +54,6 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
     const loadThemes = () => {
       const registryThemes = themeRegistry.getAllThemes();
       const themeInfos: ThemeInfo[] = [
-        // System theme always first
-        {
-          id: "auto",
-          name: "Auto",
-          description: "Follow system preference",
-          category: "System",
-          icon: <Monitor size={14} />,
-        },
         // Convert registry themes to ThemeInfo
         ...registryThemes.map(
           (theme: ThemeDefinition): ThemeInfo => ({
@@ -166,7 +158,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
     // Create file input element
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".toml";
+    input.accept = ".json";
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
@@ -211,7 +203,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
             onClick={handleUploadTheme}
             variant="ghost"
             size="xs"
-            className="flex-shrink-0 gap-1 px-2"
+            className="shrink-0 gap-1 px-2"
           >
             <Upload size={12} />
           </Button>
@@ -250,9 +242,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
                 isSelected={isSelected}
                 className="gap-3 px-2 py-1.5"
               >
-                <div className="flex-shrink-0 text-text-lighter">
-                  {theme.icon || <Moon size={14} />}
-                </div>
+                <div className="shrink-0 text-text-lighter">{theme.icon || <Moon size={14} />}</div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 truncate text-xs">
                     <span className="truncate">{theme.name}</span>

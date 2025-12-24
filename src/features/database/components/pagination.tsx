@@ -1,6 +1,6 @@
 import { useState } from "react";
-import Dropdown from "@/components/ui/dropdown";
-import Input from "@/components/ui/input";
+import Dropdown from "@/ui/dropdown";
+import Input from "@/ui/input";
 
 interface PaginationProps {
   currentPage: number;
@@ -63,14 +63,14 @@ export default function Pagination({
           size="xs"
           className="min-w-16"
         />
-        <span className="font-mono text-text-lighter text-xs">per page</span>
+        <span className="ui-font text-text-lighter text-xs">per page</span>
       </div>
 
       <div className="flex items-center gap-1">
         <button
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="px-2 py-1 font-mono text-text-lighter text-xs transition-colors hover:text-text disabled:opacity-50"
+          className="ui-font px-2 py-1 text-text-lighter text-xs transition-colors hover:text-text disabled:opacity-50"
         >
           ← Prev
         </button>
@@ -85,15 +85,15 @@ export default function Pagination({
             onBlur={handlePageInputBlur}
             min={1}
             max={totalPages}
-            className="h-6 w-12 px-1 py-0 text-center font-mono text-xs"
+            className="ui-font h-6 w-12 px-1 py-0 text-center text-xs"
           />
-          <span className="font-mono text-text-lighter text-xs">/ {totalPages}</span>
+          <span className="ui-font text-text-lighter text-xs">/ {totalPages}</span>
         </form>
 
         <button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          className="px-2 py-1 font-mono text-text-lighter text-xs transition-colors hover:text-text disabled:opacity-50"
+          className="ui-font px-2 py-1 text-text-lighter text-xs transition-colors hover:text-text disabled:opacity-50"
         >
           Next →
         </button>

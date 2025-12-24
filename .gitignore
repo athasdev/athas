@@ -23,6 +23,7 @@ package-lock.json
 pnpm-lock.yaml
 yarn.lock
 bun.lockb
+bun.lock
 
 # rust compiled folders
 target/
@@ -63,3 +64,13 @@ TODO.md
 src-tauri/gen/
 apps/desktop/src-tauri/gen/
 **/src-tauri/gen/
+
+# storybook for UI prototyping / testing
+storybook-static/
+
+# tree-sitter parsers and queries (downloaded from CDN)
+public/tree-sitter/parsers/*.wasm
+public/tree-sitter/queries/
+
+# Bundled tree-sitter grammars
+src/extensions/bundled/*/grammars/*.wasm

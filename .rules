@@ -1,0 +1,111 @@
+## Important
+
+- Commits should have the first character uppercased
+- Do not prefix unused variables with an underscore, delete them instead
+- Do not use emojis in commit messages, logs, or documentation
+- Never change the .rules file unless the user specifically asks for it
+
+## Zustand
+
+This project uses Zustand for state management with specific patterns:
+
+- `createSelectors` - Creates automatic selectors for each state property. Use like `store.use.property()` instead of `store((state) => state.property)`
+- `immer` - Use when stores have deep nesting to enable direct mutations in set functions
+- `persist` - Use to sync store state with localStorage
+- `createWithEqualityFn` - Use when you need custom comparison functions for selectors to avoid unnecessary rerenders when stable references change
+- `useShallow` - Use when creating selectors that return objects/arrays to compare them shallowly and avoid rerenders
+
+### Store Access Patterns
+
+- Use `getState()` to access other stores' state within actions: `const { fontSize } = useEditorSettingsStore.getState()`
+- Prefer accessing dependent store state inside actions rather than passing parameters
+- Group all actions in an `actions` object within the store
+- Always use `createSelectors` wrapper for stores
+
+### CSS Variables for Theming
+
+All theme colors are defined as CSS variables following this structure:
+
+**Variable Naming Convention:**
+- Use semantic names without prefixes: `--primary-bg`, `--text`, `--accent`
+- No `--tw-` prefix (this was removed during standardization)
+- Variables are defined in `:root` with system theme fallbacks via `@media (prefers-color-scheme: dark)`
+
+**Tailwind Integration:**
+- CSS variables map to Tailwind colors via `@theme inline` directive
+- Use pattern: `--color-{name}: var(--{name})`
+- Enables utilities like `bg-primary-bg`, `text-text`, `border-border`
+
+**Theme System:**
+- All themes (including built-ins) are defined in JSON files in `src/extensions/themes/builtin/`
+- Themes override CSS variables via the Theme Registry
+- No CSS classes for themes - pure variable-based theming
+- Data attributes track current theme: `data-theme="theme-id"` and `data-theme-type="light|dark"`
+
+### File Organization
+
+```
+src/
+├── styles.css                    # Global styles, Tailwind imports, theme config
+├── features/
+│   └── [feature]/
+│       └── styles/              # Feature-specific CSS files
+└── extensions/
+    └── themes/
+        ├── builtin/*.json       # Theme definitions
+        ├── theme-registry.ts    # Theme management
+        └── types.ts             # Theme interfaces
+```
+
+### Available CSS Variables
+
+**UI Colors:**
+- `--primary-bg`, `--secondary-bg`
+- `--text`, `--text-light`, `--text-lighter`
+- `--border`, `--hover`, `--selected`
+- `--accent`
+
+**Editor:**
+- `--cursor`, `--cursor-vim-normal`, `--cursor-vim-insert`
+
+**Semantic Colors:**
+- `--error`, `--warning`, `--success`, `--info`
+
+**Git Status:**
+- `--git-modified`, `--git-added`, `--git-deleted`, `--git-untracked`, `--git-renamed`
+
+**Syntax Highlighting:**
+- `--syntax-comment`, `--syntax-keyword`, `--syntax-string`, `--syntax-number`
+- `--syntax-function`, `--syntax-variable`, `--syntax-tag`, `--syntax-attribute`
+- `--syntax-punctuation`, `--syntax-constant`, `--syntax-property`, `--syntax-type`
+
+**Terminal Colors:**
+- `--terminal-{color}` for black, red, green, yellow, blue, magenta, cyan, white
+- `--terminal-bright-{color}` for bright variants
+
+### Best Practices
+
+1. **Consistency**: Use Tailwind utilities for all standard component styling
+2. **Performance**: Use CSS files for complex layouts with many styles
+3. **Theming**: Always use CSS variables for colors, never hardcode hex values
+4. **Maintainability**: Keep styles close to their components using feature-based organization
+5. **Customization**: Make components themeable by using semantic CSS variable names
+
+### Accessibility
+
+- Always add accessibility attributes like `aria-label`, `role`, etc. to interactive elements
+
+### Folder Structure
+
+- Group related components, hooks, and utils into feature-based folders (e.g. `src/features/editor/[components,types,utils,config,constants,etc.])
+- Use `src/` for shared, generic components used across multiple features (e.g. `src/components`, `src/hooks`, `src/utils`, etc.)
+- Use `src/extensions/` for extension-specific code (e.g. themes, plugins, etc.)
+
+### Documentation
+
+- Update relevant documentation files when adding new features or making significant changes
+- Documentation should be clear and concise, focusing on usage and examples
+- Documentation is for users, not developers - avoid internal implementation details unless necessary for understanding usage, except for `docs/contributing/`
+- Use markdown format for documentation files with proper headings, lists, and code blocks
+- Documentation is stored in the same repository as the codebase for easy access and versioning (e.g. `docs/` folder or README files in relevant directories)
+- Directories should not contain README files, all documentation should be centralized in a `docs/` folders- Documents that concern developers should be stored in `docs/contributing/`

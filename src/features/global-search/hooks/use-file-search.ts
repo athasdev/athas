@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { useRecentFilesStore } from "@/file-system/controllers/recent-files-store";
-import { useBufferStore } from "@/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
 import {
   MAX_OTHER_FILES_NO_QUERY,
   MAX_OTHER_FILES_SHOWN,

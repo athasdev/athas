@@ -1,8 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { PersistedTerminal } from "@/features/terminal/types/terminal";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 interface BufferSession {
+  id?: string;
   path: string;
   name: string;
   isPinned: boolean;
@@ -12,6 +14,7 @@ interface ProjectSession {
   projectPath: string;
   activeBufferPath: string | null;
   buffers: BufferSession[];
+  terminals: PersistedTerminal[];
   lastSaved: number;
 }
 
@@ -21,6 +24,7 @@ interface SessionState {
     projectPath: string,
     buffers: BufferSession[],
     activeBufferPath: string | null,
+    terminals?: PersistedTerminal[],
   ) => void;
   getSession: (projectPath: string) => ProjectSession | null;
   clearSession: (projectPath: string) => void;
@@ -32,7 +36,7 @@ const useSessionStoreBase = create<SessionState>()(
     (set, get) => ({
       sessions: {},
 
-      saveSession: (projectPath, buffers, activeBufferPath) => {
+      saveSession: (projectPath, buffers, activeBufferPath, terminals = []) => {
         set((state) => ({
           sessions: {
             ...state.sessions,
@@ -40,6 +44,7 @@ const useSessionStoreBase = create<SessionState>()(
               projectPath,
               activeBufferPath,
               buffers,
+              terminals,
               lastSaved: Date.now(),
             },
           },

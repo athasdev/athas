@@ -14,6 +14,11 @@ interface SSEData {
     delta?: { content?: string };
     message?: { content?: string };
   }>;
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{ text?: string }>;
+    };
+  }>;
 }
 
 class SSEStreamParser {
@@ -51,7 +56,7 @@ class SSEStreamParser {
 
       this.handlers.onComplete();
     } catch (streamError) {
-      console.error("❌ Streaming error:", streamError);
+      console.error("Streaming error:", streamError);
       this.handlers.onError("Error reading stream");
     } finally {
       reader.releaseLock();
@@ -74,9 +79,10 @@ class SSEStreamParser {
 
         // Handle different response formats
         let content = "";
+
+        // OpenAI/OpenRouter format
         if (data.choices?.[0]) {
           const choice = data.choices[0];
-          console.log("🔍 Choice data:", choice);
           if (choice.delta?.content) {
             content = choice.delta.content;
             console.log("🔍 Delta content found:", content);
@@ -85,13 +91,17 @@ class SSEStreamParser {
             console.log("🔍 Message content found:", content);
           }
         }
+        // Gemini format
+        else if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+          content = data.candidates[0].content.parts[0].text;
+          console.log("🔍 Gemini content found:", content);
+        }
 
         if (content) {
-          console.log("✅ Sending chunk to callback:", content);
           this.handlers.onChunk(content);
         }
       } catch (parseError) {
-        console.warn("❌ Failed to parse SSE data:", parseError, "Raw data:", trimmedLine);
+        console.warn("Failed to parse SSE data:", parseError, "Raw data:", trimmedLine);
       }
     }
   }

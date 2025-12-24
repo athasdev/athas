@@ -48,7 +48,17 @@
     "fs:allow-write-text-file",
     "fs:allow-remove",
     "fs:allow-copy-file",
-    "http:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://generativelanguage.googleapis.com/**"
+        },
+        {
+          "url": "http://localhost:11434/**"
+        }
+      ]
+    },
     "http:allow-fetch",
     "process:allow-restart",
     "process:allow-exit",
@@ -107,6 +117,8 @@
         }
       ]
     },
-    "store:default"
+    "store:default",
+    "deep-link:default",
+    "updater:default"
   ]
 }

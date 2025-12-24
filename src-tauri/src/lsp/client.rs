@@ -1,9 +1,11 @@
+use crate::features::runtime::NodeRuntime;
 use anyhow::{Context, Result};
 use crossbeam_channel::{Sender, bounded};
 use lsp_types::*;
 use serde_json::{Value, json};
 use std::{
    collections::HashMap,
+   ffi::OsStr,
    io::{BufRead, BufReader, Read, Write},
    path::PathBuf,
    process::{Child, Command, Stdio},
@@ -13,6 +15,7 @@ use std::{
    },
    thread,
 };
+use tauri::{AppHandle, Emitter};
 use tokio::sync::oneshot;
 
 type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>>;
@@ -26,10 +29,54 @@ pub struct LspClient {
 }
 
 impl LspClient {
-   pub fn start(server_path: PathBuf, args: Vec<String>, _root_uri: Url) -> Result<(Self, Child)> {
-      log::info!("Starting language server: {:?} {:?}", server_path, args);
-      let mut child = Command::new(server_path)
-         .args(args)
+   pub async fn start(
+      server_path: PathBuf,
+      args: Vec<String>,
+      _root_uri: Url,
+      app_handle: Option<AppHandle>,
+   ) -> Result<(Self, Child)> {
+      // Check if this is a JavaScript-based language server
+      let is_js_server = server_path
+         .extension()
+         .map(|ext| ext == OsStr::new("js") || ext == OsStr::new("mjs") || ext == OsStr::new("cjs"))
+         .unwrap_or(false);
+
+      let (command_path, final_args) = if is_js_server {
+         // JS-based server requires Node.js runtime
+         let node_path = if let Some(ref handle) = app_handle {
+            // Get Node.js runtime asynchronously
+            let runtime = NodeRuntime::get_or_install(handle)
+               .await
+               .context("Failed to get Node.js runtime for JS-based language server")?;
+            runtime.binary_path().clone()
+         } else {
+            // Fallback: try to find node on system PATH
+            which::which("node").context(
+               "No AppHandle provided and Node.js not found on PATH for JS-based language server",
+            )?
+         };
+
+         // Build args: node <server_path> <original_args>
+         let mut node_args = vec![server_path.to_string_lossy().to_string()];
+         node_args.extend(args);
+
+         log::info!(
+            "Starting JS-based language server with Node.js: {:?} {:?}",
+            node_path,
+            node_args
+         );
+         (node_path, node_args)
+      } else {
+         log::info!(
+            "Starting native language server: {:?} {:?}",
+            server_path,
+            args
+         );
+         (server_path, args)
+      };
+
+      let mut child = Command::new(&command_path)
+         .args(&final_args)
          .stdin(Stdio::piped())
          .stdout(Stdio::piped())
          .stderr(Stdio::piped())
@@ -45,6 +92,7 @@ impl LspClient {
       let (stdin_tx, stdin_rx) = bounded::<String>(100);
       let pending_requests = Arc::new(Mutex::new(HashMap::new()));
       let pending_requests_clone = Arc::clone(&pending_requests);
+      let app_handle_clone = app_handle.clone();
 
       // Stderr reader thread
       thread::spawn(move || {
@@ -120,10 +168,20 @@ impl LspClient {
             }
 
             if let Ok(content_str) = String::from_utf8(content)
-               && let Ok(response) = serde_json::from_str::<Value>(&content_str)
+               && let Ok(message) = serde_json::from_str::<Value>(&content_str)
             {
-               log::debug!("LSP Response: {}", content_str);
-               Self::handle_response(response, &pending_requests_clone);
+               // Log all messages for debugging
+               let method = message.get("method").and_then(|m| m.as_str());
+               if let Some(m) = method {
+                  log::info!("LSP Notification received: {}", m);
+               }
+
+               // Check if this is a response (has id) or notification (no id)
+               if message.get("id").is_some() {
+                  Self::handle_response(message, &pending_requests_clone);
+               } else if message.get("method").is_some() {
+                  Self::handle_notification(message, &app_handle_clone);
+               }
             }
          }
       });
@@ -144,11 +202,57 @@ impl LspClient {
    pub async fn initialize(&self, root_uri: Url) -> Result<()> {
       log::info!("Initializing LSP server with root_uri: {}", root_uri);
 
+      // Build client capabilities with text document sync and diagnostics support
+      let text_document_capabilities = TextDocumentClientCapabilities {
+         synchronization: Some(TextDocumentSyncClientCapabilities {
+            dynamic_registration: Some(true),
+            will_save: Some(true),
+            will_save_wait_until: Some(true),
+            did_save: Some(true),
+         }),
+         completion: Some(CompletionClientCapabilities {
+            dynamic_registration: Some(true),
+            completion_item: Some(CompletionItemCapability {
+               snippet_support: Some(true),
+               commit_characters_support: Some(true),
+               documentation_format: Some(vec![MarkupKind::Markdown, MarkupKind::PlainText]),
+               deprecated_support: Some(true),
+               preselect_support: Some(true),
+               ..Default::default()
+            }),
+            ..Default::default()
+         }),
+         hover: Some(HoverClientCapabilities {
+            dynamic_registration: Some(true),
+            content_format: Some(vec![MarkupKind::Markdown, MarkupKind::PlainText]),
+         }),
+         definition: Some(GotoCapability {
+            dynamic_registration: Some(true),
+            link_support: Some(true),
+         }),
+         references: Some(DynamicRegistrationClientCapabilities {
+            dynamic_registration: Some(true),
+         }),
+         publish_diagnostics: Some(PublishDiagnosticsClientCapabilities {
+            related_information: Some(true),
+            tag_support: Some(TagSupport {
+               value_set: vec![DiagnosticTag::UNNECESSARY, DiagnosticTag::DEPRECATED],
+            }),
+            version_support: Some(true),
+            code_description_support: Some(true),
+            data_support: Some(true),
+         }),
+         ..Default::default()
+      };
+
       let init_params = InitializeParams {
          process_id: Some(std::process::id()),
          #[allow(deprecated)]
          root_uri: Some(root_uri),
-         capabilities: ClientCapabilities::default(),
+         capabilities: ClientCapabilities {
+            text_document: Some(text_document_capabilities),
+            ..Default::default()
+         },
          ..Default::default()
       };
 
@@ -174,6 +278,61 @@ impl LspClient {
             let _ = tx.send(Err(anyhow::anyhow!("LSP error: {:?}", error)));
          } else if let Some(result) = response.get("result") {
             let _ = tx.send(Ok(result.clone()));
+         }
+      }
+   }
+
+   fn handle_notification(notification: Value, app_handle: &Option<AppHandle>) {
+      let method = notification.get("method").and_then(|m| m.as_str());
+      let params = notification.get("params");
+
+      log::info!(
+         "handle_notification called with method: {:?}, has_params: {}, has_app_handle: {}",
+         method,
+         params.is_some(),
+         app_handle.is_some()
+      );
+
+      match method {
+         Some("textDocument/publishDiagnostics") => {
+            log::info!("Processing publishDiagnostics notification");
+            if let Some(params) = params {
+               log::info!("Diagnostics params: {:?}", params);
+
+               // Parse diagnostics
+               match serde_json::from_value::<PublishDiagnosticsParams>(params.clone()) {
+                  Ok(diagnostic_params) => {
+                     log::info!(
+                        "Parsed diagnostics: uri={}, count={}",
+                        diagnostic_params.uri,
+                        diagnostic_params.diagnostics.len()
+                     );
+                     // Emit event to frontend
+                     if let Some(app) = app_handle {
+                        match app.emit("lsp://diagnostics", &diagnostic_params) {
+                           Ok(_) => log::info!(
+                              "Successfully emitted diagnostics for file: {}",
+                              diagnostic_params.uri
+                           ),
+                           Err(e) => log::error!("Failed to emit diagnostics: {}", e),
+                        }
+                     } else {
+                        log::error!("No app_handle available to emit diagnostics");
+                     }
+                  }
+                  Err(e) => {
+                     log::error!("Failed to parse diagnostics params: {}", e);
+                  }
+               }
+            } else {
+               log::warn!("publishDiagnostics notification has no params");
+            }
+         }
+         Some(method_name) => {
+            log::info!("Unhandled LSP notification: {}", method_name);
+         }
+         None => {
+            log::warn!("Received notification without method");
          }
       }
    }

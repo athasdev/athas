@@ -1,10 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { useFileSystemStore } from "@/file-system/controllers/store";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { gitDiffCache } from "@/features/version-control/git/controllers/diff-cache";
 import { createSelectors } from "@/utils/zustand-selectors";
-import { gitDiffCache } from "@/version-control/git/controllers/git-diff-cache";
-import { writeFile } from "../file-system/controllers/platform";
+import { writeFile } from "../features/file-system/controllers/platform";
+
+// History tracking state (module-level to avoid re-renders)
+const HISTORY_DEBOUNCE_MS = 500;
+const historyDebounceTimers = new Map<string, NodeJS.Timeout>();
+const lastBufferContent = new Map<string, string>();
 
 interface AppState {
   // Autosave state
@@ -45,11 +51,12 @@ export const useAppStore = createSelectors(
       actions: {
         handleContentChange: async (content: string) => {
           // Import stores dynamically to avoid circular dependencies
-          const { useBufferStore } = await import("./buffer-store");
+          const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
           const { useFileWatcherStore } = await import(
-            "../file-system/controllers/file-watcher-store"
+            "../features/file-system/controllers/file-watcher-store"
           );
-          const { useSettingsStore } = await import("@/settings/store");
+          const { useSettingsStore } = await import("@/features/settings/store");
+          const { useHistoryStore } = await import("@/features/editor/stores/history-store");
 
           // Get dependencies from other stores
           const { activeBufferId, buffers } = useBufferStore.getState();
@@ -59,6 +66,45 @@ export const useAppStore = createSelectors(
 
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
           if (!activeBuffer) return;
+
+          // Track history for this buffer (debounced)
+          if (activeBufferId) {
+            const lastContent = lastBufferContent.get(activeBufferId);
+
+            // Initialize lastContent if this is the first edit
+            if (lastContent === undefined) {
+              lastBufferContent.set(activeBufferId, activeBuffer.content);
+            }
+
+            // Only track if content actually changed
+            if (content !== lastContent) {
+              // Clear existing debounce timer
+              const existingTimer = historyDebounceTimers.get(activeBufferId);
+              if (existingTimer) {
+                clearTimeout(existingTimer);
+              }
+
+              // Set new debounce timer to save history
+              const timer = setTimeout(() => {
+                const { pushHistory } = useHistoryStore.getState().actions;
+                const oldContent = lastBufferContent.get(activeBufferId);
+
+                // Save the OLD content to history (before this change)
+                if (oldContent !== undefined) {
+                  pushHistory(activeBufferId, {
+                    content: oldContent,
+                    timestamp: Date.now(),
+                  });
+                }
+
+                // Update last content reference
+                lastBufferContent.set(activeBufferId, content);
+                historyDebounceTimers.delete(activeBufferId);
+              }, HISTORY_DEBOUNCE_MS);
+
+              historyDebounceTimers.set(activeBufferId, timer);
+            }
+          }
 
           const isRemoteFile = activeBuffer.path.startsWith("remote://");
 
@@ -87,6 +133,9 @@ export const useAppStore = createSelectors(
                   if (rootFolderPath) {
                     gitDiffCache.invalidate(rootFolderPath, activeBuffer.path);
                     // Small delay to ensure git operations are complete before updating gutter
+                    // Note: This timeout is intentionally not stored as it's very short (50ms)
+                    // and will complete before any cleanup is needed. If component unmounts
+                    // during this time, the event will still fire but won't cause issues.
                     setTimeout(() => {
                       window.dispatchEvent(
                         new CustomEvent("git-status-updated", {
@@ -110,10 +159,10 @@ export const useAppStore = createSelectors(
 
         handleSave: async () => {
           // Import stores dynamically to avoid circular dependencies
-          const { useBufferStore } = await import("./buffer-store");
-          const { useSettingsStore } = await import("@/settings/store");
+          const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
+          const { useSettingsStore } = await import("@/features/settings/store");
           const { useFileWatcherStore } = await import(
-            "../file-system/controllers/file-watcher-store"
+            "../features/file-system/controllers/file-watcher-store"
           );
 
           const { activeBufferId, buffers } = useBufferStore.getState();
@@ -155,8 +204,55 @@ export const useAppStore = createSelectors(
             // Handle local save
             try {
               markPendingSave(activeBuffer.path);
-              await writeFile(activeBuffer.path, activeBuffer.content);
+
+              let contentToSave = activeBuffer.content;
+
+              // Format on save if enabled
+              const { settings } = useSettingsStore.getState();
+              if (settings.formatOnSave) {
+                const { formatContent } = await import(
+                  "@/features/editor/formatter/formatter-service"
+                );
+                const languageId = extensionRegistry.getLanguageId(activeBuffer.path);
+
+                const formatResult = await formatContent({
+                  filePath: activeBuffer.path,
+                  content: activeBuffer.content,
+                  languageId: languageId || undefined,
+                });
+
+                if (formatResult.success && formatResult.formattedContent) {
+                  contentToSave = formatResult.formattedContent;
+
+                  // Update buffer with formatted content
+                  const { updateBufferContent } = useBufferStore.getState().actions;
+                  updateBufferContent(activeBufferId!, contentToSave, false);
+                }
+              }
+
+              await writeFile(activeBuffer.path, contentToSave);
               markBufferDirty(activeBuffer.id, false);
+
+              // Lint on save if enabled
+              if (settings.lintOnSave) {
+                const { lintContent } = await import("@/features/editor/linter/linter-service");
+                const languageId = extensionRegistry.getLanguageId(activeBuffer.path);
+
+                const lintResult = await lintContent({
+                  filePath: activeBuffer.path,
+                  content: contentToSave,
+                  languageId: languageId || undefined,
+                });
+
+                if (lintResult.success && lintResult.diagnostics) {
+                  // TODO: Store diagnostics and display in UI
+                  // For now, just log them
+                  console.log(
+                    `Linting found ${lintResult.diagnostics.length} issues:`,
+                    lintResult.diagnostics,
+                  );
+                }
+              }
 
               // Invalidate git diff cache for this file
               const rootFolderPath = useFileSystemStore.getState().rootFolderPath;

@@ -1,10 +1,12 @@
-import FileIcon from "@/file-explorer/views/file.icon";
-import type { SearchMatch } from "@/lib/rust-api/search";
+import FileIcon from "@/features/file-explorer/views/file.icon";
+import type { SearchMatch } from "@/features/global-search/lib/rust-api/search";
 
 interface SearchMatchItemProps {
   filePath: string;
   displayPath: string;
   match: SearchMatch;
+  index: number;
+  isSelected: boolean;
   onClick: () => void;
   onHover?: () => void;
 }
@@ -27,6 +29,8 @@ export const SearchMatchItem = ({
   filePath,
   displayPath,
   match,
+  index,
+  isSelected,
   onClick,
   onHover,
 }: SearchMatchItemProps) => {
@@ -35,9 +39,10 @@ export const SearchMatchItem = ({
 
   return (
     <button
+      data-item-index={index}
       onClick={onClick}
       onMouseEnter={onHover}
-      className="flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-hover"
+      className={`flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-hover ${isSelected ? "bg-hover" : ""}`}
     >
       {/* File icon, name and path */}
       <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -45,16 +50,16 @@ export const SearchMatchItem = ({
           fileName={fileName}
           isDir={false}
           size={12}
-          className="flex-shrink-0 text-text-lighter"
+          className="shrink-0 text-text-lighter"
         />
-        <span className="flex-shrink-0 text-[11px] text-text">{fileName}</span>
+        <span className="shrink-0 text-[11px] text-text">{fileName}</span>
         {dirPath && (
           <span className="truncate text-[11px] text-text-lighter opacity-60">{dirPath}</span>
         )}
       </div>
 
       {/* Line number */}
-      <span className="w-12 flex-shrink-0 text-right text-[11px] text-text-lighter">
+      <span className="w-12 shrink-0 text-right text-[11px] text-text-lighter">
         :{match.line_number}
       </span>
 

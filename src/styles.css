@@ -1,226 +1,155 @@
 @import "tailwindcss";
 
+/* ============================================
+   TAILWIND THEME - Define font utilities
+   ============================================ */
+
+@theme {
+  --font-sans:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+}
+
 /* Define layer order */
-@layer base, utilities, themes;
+@layer base, utilities;
 
-/* utils like animations */
-@import "./styles/utils.css";
-@import "./styles/token-theme.css";
-
-/* Theme classes - defined inline since we only have 2 themes */
-@layer themes {
-  /* Force Athas Light theme */
-  .force-athas-light {
-    --tw-primary-bg: #ffffff;
-    --tw-secondary-bg: #f8f8f8;
-    --tw-text: #333333;
-    --tw-text-light: #666666;
-    --tw-text-lighter: #999999;
-    --tw-border: #e0e0e0;
-    --tw-hover: #f0f0f0;
-    --tw-selected: #e8e8e8;
-
-    /* Paper colors */
-    --tw-paper-bg: #ffffff;
-
-    --tw-paper-texture-overlay: rgb(200 200 200 / 0.01);
-
-    /* Accent color */
-    --tw-accent: #3b82f6;
-
-    /* Cursor color */
-    --tw-cursor: #1a1a1a;
-    --tw-cursor-vim-normal: #3b82f6a6;
-    --tw-cursor-vim-insert: #22c55e;
-
-    /* Diagnostic colors */
-    --tw-error: #c53030;
-    --tw-warning: #d69e2e;
-    --tw-success: #10b981;
-    --tw-info: #3182ce;
-
-    /* Git status colors */
-    --tw-git-modified: #d69e2e;
-    --tw-git-modified-staged: #e67e22;
-    --tw-git-added: #28a745;
-    --tw-git-deleted: #dc3545;
-    --tw-git-untracked: #17a2b8;
-    --tw-git-renamed: #6f42c1;
-
-    /* Syntax highlighting */
-    --tw-syntax-comment: #6a737d;
-    --tw-syntax-keyword: #d73a49;
-    --tw-syntax-string: #032f62;
-    --tw-syntax-number: #005cc5;
-    --tw-syntax-function: #6f42c1;
-    --tw-syntax-variable: #e36209;
-    --tw-syntax-tag: #22863a;
-    --tw-syntax-attribute: #6f42c1;
-    --tw-syntax-punctuation: #24292e;
-
-    /* Terminal ANSI colors - harmonized with syntax highlighting */
-    --tw-terminal-black: #24292e;
-    --tw-terminal-red: #d73a49;
-    --tw-terminal-green: #22863a;
-    --tw-terminal-yellow: #e36209;
-    --tw-terminal-blue: #005cc5;
-    --tw-terminal-magenta: #6f42c1;
-    --tw-terminal-cyan: #032f62;
-    --tw-terminal-white: #666666;
-    --tw-terminal-bright-black: #6a737d;
-    --tw-terminal-bright-red: #c53030;
-    --tw-terminal-bright-green: #28a745;
-    --tw-terminal-bright-yellow: #d69e2e;
-    --tw-terminal-bright-blue: #3182ce;
-    --tw-terminal-bright-magenta: #8b5cf6;
-    --tw-terminal-bright-cyan: #0891b2;
-    --tw-terminal-bright-white: #333333;
+/* Utils like animations - inlined from utils.css */
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
   }
-
-  /* Force Athas Dark theme */
-  .force-athas-dark {
-    --tw-primary-bg: #1a1a1a;
-    --tw-secondary-bg: #2a2a2a;
-    --tw-text: #e5e5e5;
-    --tw-text-light: #b3b3b3;
-    --tw-text-lighter: #808080;
-    --tw-border: #404040;
-    --tw-hover: #333333;
-    --tw-selected: #404040;
-
-    /* Paper/Welcome screen specific colors - Dark */
-    --tw-paper-bg: #1a1a1a;
-
-    --tw-paper-texture-overlay: rgb(100 100 100 / 0.02);
-
-    /* Accent color - Dark */
-    --tw-accent: #60a5fa;
-
-    /* Cursor color - Dark */
-    --tw-cursor: #e5e5e5;
-    --tw-cursor-vim-normal: #3b82f6a6;
-    --tw-cursor-vim-insert: #22c55e;
-
-    /* Diagnostic colors */
-    --tw-error: #f87171;
-    --tw-success: #10b981;
-    --tw-warning: #fbbf24;
-    --tw-info: #60a5fa;
-
-    /* Git status colors - Dark */
-    --tw-git-modified: #fbbf24;
-    --tw-git-modified-staged: #f59e0b;
-    --tw-git-added: #10b981;
-    --tw-git-deleted: #ef4444;
-    --tw-git-untracked: #06b6d4;
-    --tw-git-renamed: #8b5cf6;
-
-    /* Syntax highlighting colors - Dark theme */
-    --tw-syntax-comment: #8b949e;
-    --tw-syntax-keyword: #ff7b72;
-    --tw-syntax-string: #a5d6ff;
-    --tw-syntax-number: #79c0ff;
-    --tw-syntax-function: #d2a8ff;
-    --tw-syntax-variable: #ffa657;
-    --tw-syntax-tag: #7ee787;
-    --tw-syntax-attribute: #d2a8ff;
-    --tw-syntax-punctuation: #b3b3b3;
-
-    /* Terminal ANSI colors - harmonized with syntax highlighting */
-    --tw-terminal-black: #1a1a1a;
-    --tw-terminal-red: #ff7b72;
-    --tw-terminal-green: #7ee787;
-    --tw-terminal-yellow: #ffa657;
-    --tw-terminal-blue: #79c0ff;
-    --tw-terminal-magenta: #d2a8ff;
-    --tw-terminal-cyan: #a5d6ff;
-    --tw-terminal-white: #b3b3b3;
-    --tw-terminal-bright-black: #8b949e;
-    --tw-terminal-bright-red: #f87171;
-    --tw-terminal-bright-green: #86efac;
-    --tw-terminal-bright-yellow: #fbbf24;
-    --tw-terminal-bright-blue: #60a5fa;
-    --tw-terminal-bright-magenta: #c084fc;
-    --tw-terminal-bright-cyan: #67e8f9;
-    --tw-terminal-bright-white: #e5e5e5;
+  to {
+    transform: translateX(0);
+    opacity: 1;
   }
 }
+
+@utility animate-slide-in-left {
+  animation: slide-in-left 0.5s ease-out;
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@utility animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@utility animate-slide-out-right {
+  animation: slide-out-right 0.3s ease-in;
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Import token theme from editor feature */
+@import "./features/editor/styles/token-theme.css";
+/* Import markdown preview styles for hover tooltips and markdown rendering */
+@import "./features/editor/markdown/styles.css";
 
 /* Define custom Tailwind theme variables using @theme directive */
 @theme inline {
   /* Main UI colors - reference CSS variables for dynamic theming */
-  --color-primary-bg: var(--tw-primary-bg);
-  --color-secondary-bg: var(--tw-secondary-bg);
-  --color-text: var(--tw-text);
-  --color-text-light: var(--tw-text-light);
-  --color-text-lighter: var(--tw-text-lighter);
-  --color-border: var(--tw-border);
-  --color-hover: var(--tw-hover);
-  --color-selected: var(--tw-selected);
-
-  /* Paper/Welcome screen specific colors */
-  --color-paper-bg: var(--tw-paper-bg);
-  --color-paper-texture-overlay: var(--tw-paper-texture-overlay);
+  --color-primary-bg: var(--primary-bg);
+  --color-secondary-bg: var(--secondary-bg);
+  --color-text: var(--text);
+  --color-text-light: var(--text-light);
+  --color-text-lighter: var(--text-lighter);
+  --color-border: var(--border);
+  --color-hover: var(--hover);
+  --color-selected: var(--selected);
+  --color-selection-bg: var(--selection-bg);
 
   /* Accent color */
-  --color-accent: var(--tw-accent);
+  --color-accent: var(--accent);
 
   /* Cursor color */
-  --color-cursor: var(--tw-cursor);
-  --color-cursor-vim-normal: var(--tw-cursor-vim-normal);
-  --color-cursor-vim-insert: var(--tw-cursor-vim-insert);
+  --color-cursor: var(--cursor);
+  --color-cursor-vim-normal: var(--cursor-vim-normal);
+  --color-cursor-vim-insert: var(--cursor-vim-insert);
 
   /* Diagnostic colors */
-  --color-error: var(--tw-error);
-  --color-success: var(--tw-success);
-  --color-warning: var(--tw-warning);
-  --color-info: var(--tw-info);
+  --color-error: var(--error);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
 
   /* Git status colors */
-  --color-git-modified: var(--tw-git-modified);
-  --color-git-modified-staged: var(--tw-git-modified-staged);
-  --color-git-added: var(--tw-git-added);
-  --color-git-deleted: var(--tw-git-deleted);
-  --color-git-untracked: var(--tw-git-untracked);
-  --color-git-renamed: var(--tw-git-renamed);
+  --color-git-modified: var(--git-modified);
+  --color-git-modified-staged: var(--git-modified-staged);
+  --color-git-added: var(--git-added);
+  --color-git-deleted: var(--git-deleted);
+  --color-git-untracked: var(--git-untracked);
+  --color-git-renamed: var(--git-renamed);
 
   /* Syntax highlighting colors */
-  --color-syntax-comment: var(--tw-syntax-comment);
-  --color-syntax-keyword: var(--tw-syntax-keyword);
-  --color-syntax-string: var(--tw-syntax-string);
-  --color-syntax-number: var(--tw-syntax-number);
-  --color-syntax-function: var(--tw-syntax-function);
-  --color-syntax-variable: var(--tw-syntax-variable);
-  --color-syntax-tag: var(--tw-syntax-tag);
-  --color-syntax-attribute: var(--tw-syntax-attribute);
-  --color-syntax-punctuation: var(--tw-syntax-punctuation);
-  --color-syntax-constant: var(--tw-syntax-constant);
-  --color-syntax-property: var(--tw-syntax-property);
-  --color-syntax-type: var(--tw-syntax-type);
-  --color-syntax-operator: var(--tw-syntax-operator);
-  --color-syntax-boolean: var(--tw-syntax-boolean);
-  --color-syntax-null: var(--tw-syntax-null);
-  --color-syntax-regex: var(--tw-syntax-regex);
-  --color-syntax-jsx: var(--tw-syntax-jsx);
-  --color-syntax-jsx-attribute: var(--tw-syntax-jsx-attribute);
+  --color-syntax-comment: var(--syntax-comment);
+  --color-syntax-keyword: var(--syntax-keyword);
+  --color-syntax-string: var(--syntax-string);
+  --color-syntax-number: var(--syntax-number);
+  --color-syntax-function: var(--syntax-function);
+  --color-syntax-variable: var(--syntax-variable);
+  --color-syntax-tag: var(--syntax-tag);
+  --color-syntax-attribute: var(--syntax-attribute);
+  --color-syntax-punctuation: var(--syntax-punctuation);
+  --color-syntax-constant: var(--syntax-constant);
+  --color-syntax-property: var(--syntax-property);
+  --color-syntax-type: var(--syntax-type);
+  --color-syntax-operator: var(--syntax-operator);
+  --color-syntax-boolean: var(--syntax-boolean);
+  --color-syntax-null: var(--syntax-null);
+  --color-syntax-regex: var(--syntax-regex);
+  --color-syntax-jsx: var(--syntax-jsx);
+  --color-syntax-jsx-attribute: var(--syntax-jsx-attribute);
 
   /* Terminal colors */
-  --color-terminal-black: var(--tw-terminal-black);
-  --color-terminal-red: var(--tw-terminal-red);
-  --color-terminal-green: var(--tw-terminal-green);
-  --color-terminal-yellow: var(--tw-terminal-yellow);
-  --color-terminal-blue: var(--tw-terminal-blue);
-  --color-terminal-magenta: var(--tw-terminal-magenta);
-  --color-terminal-cyan: var(--tw-terminal-cyan);
-  --color-terminal-white: var(--tw-terminal-white);
-  --color-terminal-bright-black: var(--tw-terminal-bright-black);
-  --color-terminal-bright-red: var(--tw-terminal-bright-red);
-  --color-terminal-bright-green: var(--tw-terminal-bright-green);
-  --color-terminal-bright-yellow: var(--tw-terminal-bright-yellow);
-  --color-terminal-bright-blue: var(--tw-terminal-bright-blue);
-  --color-terminal-bright-magenta: var(--tw-terminal-bright-magenta);
-  --color-terminal-bright-cyan: var(--tw-terminal-bright-cyan);
-  --color-terminal-bright-white: var(--tw-terminal-bright-white);
+  --color-terminal-black: var(--terminal-black);
+  --color-terminal-red: var(--terminal-red);
+  --color-terminal-green: var(--terminal-green);
+  --color-terminal-yellow: var(--terminal-yellow);
+  --color-terminal-blue: var(--terminal-blue);
+  --color-terminal-magenta: var(--terminal-magenta);
+  --color-terminal-cyan: var(--terminal-cyan);
+  --color-terminal-white: var(--terminal-white);
+  --color-terminal-bright-black: var(--terminal-bright-black);
+  --color-terminal-bright-red: var(--terminal-bright-red);
+  --color-terminal-bright-green: var(--terminal-bright-green);
+  --color-terminal-bright-yellow: var(--terminal-bright-yellow);
+  --color-terminal-bright-blue: var(--terminal-bright-blue);
+  --color-terminal-bright-magenta: var(--terminal-bright-magenta);
+  --color-terminal-bright-cyan: var(--terminal-bright-cyan);
+  --color-terminal-bright-white: var(--terminal-bright-white);
 }
 
 /* Global smooth scrolling and box model */
@@ -249,8 +178,7 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family:
-    var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif;
+  /* Font inherits from html */
   overscroll-behavior: none !important;
   /* Prevent elastic bounce globally */
   background: transparent;
@@ -261,21 +189,24 @@ button {
   cursor: pointer;
 }
 
-/* Apply app-wide font family to all elements */
-* {
-  font-family:
-    var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif;
-}
+/* ============================================
+   FONT UTILITIES - Simplified
+   ============================================ */
 
-/* Override Tailwind's font-mono class to use our custom variable */
 .font-mono {
-  font-family:
-    var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif !important;
+  font-family: var(--editor-font-family);
 }
 
-/* Specific overrides for components that should use editor font */
+.ui-font {
+  font-family: var(--app-font-family);
+}
+
+/* ============================================
+   COMPONENT-SPECIFIC FONT OVERRIDES
+   ============================================ */
+
+/* Editor and code components */
 .editor-container,
-.editor-container *,
 .monaco-editor,
 .editor-input,
 .line-numbers,
@@ -291,158 +222,155 @@ button {
 .virtual-editor-container,
 .editor-textarea,
 .code-editor-content {
-  font-family:
-    var(--editor-font-family, "JetBrains Mono"), "JetBrains Mono", monospace !important;
+  font-family: var(--editor-font-family);
 }
 
-/* Markdown preview should use UI font */
-.markdown-preview,
-.markdown-preview * {
-  font-family:
-    var(--app-font-family, "Space Grotesk"), "Space Grotesk", sans-serif !important;
+/* Markdown preview uses UI font */
+.markdown-preview {
+  font-family: var(--app-font-family);
 }
 
 /* CSS variables that themes can override */
 @layer base {
   :root {
-    /* Font defaults */
-    --app-font-family: "Space Grotesk", sans-serif;
-    --editor-font-family: "JetBrains Mono", monospace;
+    /* Font variables for runtime control - use @theme font definitions */
+    --app-font-family: var(--font-sans);
+    --editor-font-family: var(--font-mono);
 
     /* Default light theme colors */
-    --tw-primary-bg: #ffffff;
-    --tw-secondary-bg: #f8f8f8;
-    --tw-text: #333333;
-    --tw-text-light: #666666;
-    --tw-text-lighter: #999999;
-    --tw-border: #e0e0e0;
-    --tw-hover: #f0f0f0;
-    --tw-selected: #e8e8e8;
-
-    /* Paper colors */
-    --tw-paper-bg: #ffffff;
-
-    --tw-paper-texture-overlay: rgb(200 200 200 / 0.01);
+    --primary-bg: #ffffff;
+    --secondary-bg: #f8f8f8;
+    --text: #333333;
+    --text-light: #666666;
+    --text-lighter: #999999;
+    --border: #e0e0e0;
+    --hover: #f0f0f0;
+    --selected: #e8e8e8;
+    --selection-bg: rgba(173, 214, 255, 0.4);
 
     /* Accent color */
-    --tw-accent: #3b82f6;
+    --accent: #3b82f6;
 
     /* Cursor color */
-    --tw-cursor: #1a1a1a;
-    --tw-cursor-vim-normal: #3b82f6a6;
-    --tw-cursor-vim-insert: #22c55e;
+    --cursor: #1a1a1a;
+    --cursor-vim-normal: #3b82f6a6;
+    --cursor-vim-insert: #22c55e;
 
     /* Diagnostic colors */
-    --tw-error: #c53030;
-    --tw-success: #10b981;
-    --tw-warning: #d69e2e;
-    --tw-info: #3182ce;
+    --error: #c53030;
+    --success: #10b981;
+    --warning: #d69e2e;
+    --info: #3182ce;
 
     /* Git status colors */
-    --tw-git-modified: #d69e2e;
-    --tw-git-modified-staged: #e67e22;
-    --tw-git-added: #28a745;
-    --tw-git-deleted: #dc3545;
-    --tw-git-untracked: #17a2b8;
-    --tw-git-renamed: #6f42c1;
+    --git-modified: #d69e2e;
+    --git-modified-staged: #e67e22;
+    --git-added: #28a745;
+    --git-deleted: #dc3545;
+    --git-untracked: #17a2b8;
+    --git-renamed: #6f42c1;
 
     /* Syntax highlighting */
-    --tw-syntax-comment: #6a737d;
-    --tw-syntax-keyword: #d73a49;
-    --tw-syntax-string: #032f62;
-    --tw-syntax-number: #005cc5;
-    --tw-syntax-function: #6f42c1;
-    --tw-syntax-variable: #e36209;
-    --tw-syntax-tag: #22863a;
-    --tw-syntax-attribute: #6f42c1;
-    --tw-syntax-punctuation: #24292e;
+    --syntax-comment: #6a737d;
+    --syntax-keyword: #d73a49;
+    --syntax-string: #032f62;
+    --syntax-number: #005cc5;
+    --syntax-function: #6f42c1;
+    --syntax-variable: #e36209;
+    --syntax-tag: #22863a;
+    --syntax-attribute: #6f42c1;
+    --syntax-punctuation: #24292e;
 
     /* Terminal ANSI colors - harmonized with syntax highlighting */
-    --tw-terminal-black: #24292e;
-    --tw-terminal-red: #d73a49;
-    --tw-terminal-green: #22863a;
-    --tw-terminal-yellow: #e36209;
-    --tw-terminal-blue: #005cc5;
-    --tw-terminal-magenta: #6f42c1;
-    --tw-terminal-cyan: #032f62;
-    --tw-terminal-white: #666666;
-    --tw-terminal-bright-black: #6a737d;
-    --tw-terminal-bright-red: #c53030;
-    --tw-terminal-bright-green: #28a745;
-    --tw-terminal-bright-yellow: #d69e2e;
-    --tw-terminal-bright-blue: #3182ce;
-    --tw-terminal-bright-magenta: #8b5cf6;
-    --tw-terminal-bright-cyan: #0891b2;
-    --tw-terminal-bright-white: #333333;
+    --terminal-black: #24292e;
+    --terminal-red: #d73a49;
+    --terminal-green: #22863a;
+    --terminal-yellow: #e36209;
+    --terminal-blue: #005cc5;
+    --terminal-magenta: #6f42c1;
+    --terminal-cyan: #032f62;
+    --terminal-white: #666666;
+    --terminal-bright-black: #6a737d;
+    --terminal-bright-red: #c53030;
+    --terminal-bright-green: #28a745;
+    --terminal-bright-yellow: #d69e2e;
+    --terminal-bright-blue: #3182ce;
+    --terminal-bright-magenta: #8b5cf6;
+    --terminal-bright-cyan: #0891b2;
+    --terminal-bright-white: #333333;
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
       /* Override with dark theme colors when system is in dark mode */
-      --tw-primary-bg: #1a1a1a;
-      --tw-secondary-bg: #2a2a2a;
-      --tw-text: #e5e5e5;
-      --tw-text-light: #b3b3b3;
-      --tw-text-lighter: #808080;
-      --tw-border: #404040;
-      --tw-hover: #333333;
-      --tw-selected: #404040;
-
-      /* Paper/Welcome screen specific colors - Dark */
-      --tw-paper-bg: #1a1a1a;
-      --tw-paper-texture-overlay: rgb(100 100 100 / 0.02);
+      --primary-bg: #1a1a1a;
+      --secondary-bg: #2a2a2a;
+      --text: #e5e5e5;
+      --text-light: #b3b3b3;
+      --text-lighter: #808080;
+      --border: #404040;
+      --hover: #333333;
+      --selected: #404040;
+      --selection-bg: rgba(38, 79, 120, 0.6);
 
       /* Accent color - Dark */
-      --tw-accent: #60a5fa;
+      --accent: #60a5fa;
 
       /* Cursor color - Dark */
-      --tw-cursor: #e5e5e5;
-      --tw-cursor-vim-normal: #3b82f6a6;
-      --tw-cursor-vim-insert: #22c55e;
+      --cursor: #e5e5e5;
+      --cursor-vim-normal: #3b82f6a6;
+      --cursor-vim-insert: #22c55e;
 
       /* Diagnostic colors */
-      --tw-error: #f87171;
-      --tw-success: #10b981;
-      --tw-warning: #fbbf24;
-      --tw-info: #60a5fa;
+      --error: #f87171;
+      --success: #10b981;
+      --warning: #fbbf24;
+      --info: #60a5fa;
 
       /* Git status colors - Dark */
-      --tw-git-modified: #fbbf24;
-      --tw-git-modified-staged: #f59e0b;
-      --tw-git-added: #10b981;
-      --tw-git-deleted: #ef4444;
-      --tw-git-untracked: #06b6d4;
-      --tw-git-renamed: #8b5cf6;
+      --git-modified: #fbbf24;
+      --git-modified-staged: #f59e0b;
+      --git-added: #10b981;
+      --git-deleted: #ef4444;
+      --git-untracked: #06b6d4;
+      --git-renamed: #8b5cf6;
 
       /* Syntax highlighting colors - Dark theme */
-      --tw-syntax-comment: #8b949e;
-      --tw-syntax-keyword: #ff7b72;
-      --tw-syntax-string: #a5d6ff;
-      --tw-syntax-number: #79c0ff;
-      --tw-syntax-function: #d2a8ff;
-      --tw-syntax-variable: #ffa657;
-      --tw-syntax-tag: #7ee787;
-      --tw-syntax-attribute: #d2a8ff;
-      --tw-syntax-punctuation: #b3b3b3;
+      --syntax-comment: #8b949e;
+      --syntax-keyword: #ff7b72;
+      --syntax-string: #a5d6ff;
+      --syntax-number: #79c0ff;
+      --syntax-function: #d2a8ff;
+      --syntax-variable: #ffa657;
+      --syntax-tag: #7ee787;
+      --syntax-attribute: #d2a8ff;
+      --syntax-punctuation: #b3b3b3;
 
       /* Terminal ANSI colors - harmonized with syntax highlighting */
-      --tw-terminal-black: #1a1a1a;
-      --tw-terminal-red: #ff7b72;
-      --tw-terminal-green: #7ee787;
-      --tw-terminal-yellow: #ffa657;
-      --tw-terminal-blue: #79c0ff;
-      --tw-terminal-magenta: #d2a8ff;
-      --tw-terminal-cyan: #a5d6ff;
-      --tw-terminal-white: #b3b3b3;
-      --tw-terminal-bright-black: #8b949e;
-      --tw-terminal-bright-red: #f87171;
-      --tw-terminal-bright-green: #86efac;
-      --tw-terminal-bright-yellow: #fbbf24;
-      --tw-terminal-bright-blue: #60a5fa;
-      --tw-terminal-bright-magenta: #c084fc;
-      --tw-terminal-bright-cyan: #67e8f9;
-      --tw-terminal-bright-white: #e5e5e5;
+      --terminal-black: #1a1a1a;
+      --terminal-red: #ff7b72;
+      --terminal-green: #7ee787;
+      --terminal-yellow: #ffa657;
+      --terminal-blue: #79c0ff;
+      --terminal-magenta: #d2a8ff;
+      --terminal-cyan: #a5d6ff;
+      --terminal-white: #b3b3b3;
+      --terminal-bright-black: #8b949e;
+      --terminal-bright-red: #f87171;
+      --terminal-bright-green: #86efac;
+      --terminal-bright-yellow: #fbbf24;
+      --terminal-bright-blue: #60a5fa;
+      --terminal-bright-magenta: #c084fc;
+      --terminal-bright-cyan: #67e8f9;
+      --terminal-bright-white: #e5e5e5;
     }
+  }
+
+  /* ============================================
+     Set default font on html - everything inherits naturally
+     ============================================ */
+  html {
+    font-family: var(--app-font-family);
   }
 }
 
@@ -704,6 +632,40 @@ button {
   background: transparent;
 }
 
+/* Editor viewport scrollbar - thin and styled like tab bar */
+.editor-scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 128, 128, 0.3) transparent;
+  overscroll-behavior: none;
+}
+
+.editor-scrollable::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.editor-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+}
+
+.editor-scrollable:hover::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
+.editor-scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-lighter);
+}
+
+.editor-scrollable::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Smooth scrolling for all custom scrollbars */
 .custom-scrollbar,
 .custom-scrollbar-thin,
@@ -711,6 +673,8 @@ button {
   scroll-behavior: smooth;
   overscroll-behavior: none !important;
 }
+
+/* Note: .editor-scrollable does NOT use scroll-behavior: smooth to ensure instant scrolling feedback */
 
 /* Hide scrollbar completely for certain elements */
 .scrollbar-hidden {
@@ -828,85 +792,6 @@ textarea::-webkit-scrollbar-thumb:hover {
   overscroll-behavior: none !important;
 }
 
-/* Paper texture and theme-aware colors for welcome screen */
-.paper-texture {
-  background: var(--color-primary-bg);
-  position: relative;
-}
-
-.paper-texture::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: none;
-  pointer-events: none;
-}
-
-.paper-texture::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      var(--color-paper-texture-overlay) 45%,
-      calc(var(--color-paper-texture-overlay) * 2) 50%,
-      var(--color-paper-texture-overlay) 55%,
-      transparent 100%
-    ),
-    linear-gradient(
-      0deg,
-      transparent 0%,
-      var(--color-paper-texture-overlay) 48%,
-      calc(var(--color-paper-texture-overlay) * 2) 50%,
-      var(--color-paper-texture-overlay) 52%,
-      transparent 100%
-    );
-  background-size:
-    300px 1px,
-    1px 300px;
-  background-position:
-    0 0,
-    0 0;
-  pointer-events: none;
-}
-
-.logo-blue {
-  color: #2563eb;
-  text-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
-}
-
-.logo-gradient {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #2563eb 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.2));
-}
-
-/* Paper texture noise overlay */
-.paper-noise {
-  position: relative;
-}
-
-.paper-noise::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.015'/%3E%3C/svg%3E");
-  pointer-events: none;
-}
-
 /* Layered UI design with floating buffer */
 .buffer-container {
   position: relative;
@@ -914,7 +799,7 @@ textarea::-webkit-scrollbar-thumb:hover {
   background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
+  transition: box-shadow 0.2s ease;
 }
 
 .buffer-container:hover {
@@ -992,7 +877,6 @@ textarea::-webkit-scrollbar-thumb:hover {
   border-radius: 6px;
   position: relative;
   z-index: 5;
-  transition: all 0.2s ease;
 }
 
 .pane-header {
@@ -1055,12 +939,6 @@ textarea::-webkit-scrollbar-thumb:hover {
   transform: translateY(-2px);
 }
 
-/* Subtle transitions */
-* {
-  transition:
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
-}
 
 .token.erb-output,
 .token.erb-comment,
@@ -1130,12 +1008,6 @@ textarea::-webkit-scrollbar-thumb:hover {
   padding: 0 2px;
 }
 
-.tab-bar-item {
-  transition:
-    transform 0.2s ease,
-    opacity 0.2s ease;
-}
-
 .tab-drag-preview {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
@@ -1197,3 +1069,25 @@ textarea::-webkit-scrollbar-thumb:hover {
   font-size: 0.75rem;
   line-height: 1.3;
 }
+
+/* Works on WebKit/Blink (Tauri on all platforms) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 100, 100, 0.5);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 100, 100, 0.7);
+}
+

@@ -1,8 +1,8 @@
 // todo: we should make a context menu component that can be used for other things too
 import { Copy, FolderOpen, Pin, PinOff, RotateCcw } from "lucide-react";
 import { useEffect, useRef } from "react";
-import KeybindingBadge from "@/components/ui/keybinding-badge";
-import type { Buffer } from "@/types/buffer";
+import type { Buffer } from "@/features/tabs/types/buffer";
+import KeybindingBadge from "@/ui/keybinding-badge";
 
 interface TabContextMenuProps {
   isOpen: boolean;
@@ -109,7 +109,7 @@ const TabContextMenu = ({
       }}
     >
       <button
-        className="flex w-full items-center gap-2 px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onPin(buffer.id);
           onClose();
@@ -122,7 +122,7 @@ const TabContextMenu = ({
       <div className="my-0.5 border-border border-t" />
 
       <button
-        className="flex w-full items-center gap-2 px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
         onClick={async () => {
           if (onCopyPath) {
             onCopyPath(buffer.path);
@@ -141,7 +141,7 @@ const TabContextMenu = ({
       </button>
 
       <button
-        className="flex w-full items-center gap-2 px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
         onClick={async () => {
           if (onCopyRelativePath) {
             onCopyRelativePath(buffer.path);
@@ -154,7 +154,7 @@ const TabContextMenu = ({
       </button>
 
       <button
-        className="flex w-full items-center gap-2 px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onRevealInFinder?.(buffer.path);
           onClose();
@@ -166,7 +166,7 @@ const TabContextMenu = ({
 
       {buffer.path !== "extensions://marketplace" && (
         <button
-          className="flex w-full items-center gap-2 px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+          className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
           onClick={() => {
             if (onReload) {
               onReload(buffer.id);
@@ -181,7 +181,7 @@ const TabContextMenu = ({
 
       <div className="my-0.5 border-border border-t" />
       <button
-        className="flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseTab(buffer.id);
           onClose();
@@ -191,7 +191,7 @@ const TabContextMenu = ({
         <KeybindingBadge keys={["⌘", "W"]} className="opacity-60" />
       </button>
       <button
-        className="w-full px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font w-full px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseOthers(buffer.id);
           onClose();
@@ -200,7 +200,7 @@ const TabContextMenu = ({
         Close Others
       </button>
       <button
-        className="w-full px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font w-full px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseToRight(buffer.id);
           onClose();
@@ -209,7 +209,7 @@ const TabContextMenu = ({
         Close to Right
       </button>
       <button
-        className="w-full px-2.5 py-1 text-left font-mono text-text text-xs hover:bg-hover"
+        className="ui-font w-full px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseAll();
           onClose();

@@ -1,9 +1,9 @@
 import { Database, FileText, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import FileIcon from "@/file-explorer/views/file.icon";
-import { useFileSystemStore } from "@/file-system/controllers/store";
-import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/file-system/controllers/utils";
-import type { FileEntry } from "@/file-system/models/app";
+import FileIcon from "@/features/file-explorer/views/file.icon";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
+import type { FileEntry } from "@/features/file-system/types/app";
 import { useProjectStore } from "@/stores/project-store";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
@@ -250,7 +250,7 @@ export function ContextSelector({
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1">
-      <div className="relative flex-shrink-0" ref={dropdownRef}>
+      <div className="relative shrink-0" ref={dropdownRef}>
         <button
           onClick={onToggleOpen}
           className={cn(
@@ -304,7 +304,7 @@ export function ContextSelector({
             {/* Unified file list */}
             <div className="py-1" role="listbox" aria-label="Files and buffers">
               {allItems.length === 0 ? (
-                <div className="px-3 py-2 text-center font-mono text-text-lighter text-xs">
+                <div className="ui-font px-3 py-2 text-center text-text-lighter text-xs">
                   {searchTerm ? "No matching files found" : "No files available"}
                 </div>
               ) : (
@@ -319,7 +319,7 @@ export function ContextSelector({
                       }
                     }}
                     className={cn(
-                      "group flex w-full cursor-pointer items-center gap-2 px-3 py-1 text-left font-mono text-xs transition-colors hover:bg-hover focus:outline-none focus:ring-1 focus:ring-accent/50",
+                      "group ui-font flex w-full cursor-pointer items-center gap-2 px-3 py-1 text-left text-xs transition-colors hover:bg-hover focus:outline-none focus:ring-1 focus:ring-accent/50",
                       item.isSelected && "bg-selected",
                     )}
                     aria-label={`${item.isSelected ? "Remove" : "Add"} ${item.name} ${item.isSelected ? "from" : "to"} context`}
@@ -327,16 +327,16 @@ export function ContextSelector({
                     <div className="flex min-w-0 flex-1 items-center gap-2">
                       {item.type === "buffer" ? (
                         item.isSQLite ? (
-                          <Database size={10} className="flex-shrink-0 text-text-lighter" />
+                          <Database size={10} className="shrink-0 text-text-lighter" />
                         ) : (
-                          <FileText size={10} className="flex-shrink-0 text-text-lighter" />
+                          <FileText size={10} className="shrink-0 text-text-lighter" />
                         )
                       ) : (
                         <FileIcon
                           fileName={item.name}
                           isDir={false}
                           size={10}
-                          className="flex-shrink-0 text-text-lighter"
+                          className="shrink-0 text-text-lighter"
                         />
                       )}
                       <div className="min-w-0 flex-1 truncate">
@@ -388,7 +388,7 @@ export function ContextSelector({
         {selectedItems.map((item) => (
           <div
             key={`selected-${item.type}-${item.id}`}
-            className="group flex flex-shrink-0 select-none items-center gap-1 rounded border border-border bg-hover px-1.5 py-0.5 text-xs"
+            className="group flex shrink-0 select-none items-center gap-1 rounded border border-border bg-hover px-1.5 py-0.5 text-xs"
           >
             {item.type === "buffer" ? (
               item.isSQLite ? (

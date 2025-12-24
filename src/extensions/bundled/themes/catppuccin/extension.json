@@ -1,0 +1,157 @@
+{
+  "id": "athas.catppuccin",
+  "name": "Catppuccin",
+  "displayName": "Catppuccin Theme",
+  "description": "Soothing pastel theme for the high-spirited",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "license": "MIT",
+  "category": "theme",
+  "bundled": true,
+  "capabilities": {
+    "type": "theme",
+    "author": "Catppuccin",
+    "variants": [
+      {
+        "id": "catppuccin-latte",
+        "name": "Catppuccin Latte",
+        "description": "Light variant with warm, cozy colors",
+        "appearance": "light",
+        "colors": {
+          "primary-bg": "#eff1f5",
+          "secondary-bg": "#e6e9ef",
+          "text": "#4c4f69",
+          "text-light": "#6c6f85",
+          "text-lighter": "#9ca0b0",
+          "border": "#bcc0cc",
+          "hover": "#dce0e8",
+          "selected": "#ccd0da",
+          "accent": "#1e66f5"
+        },
+        "syntax": {
+          "keyword": "#8839ef",
+          "string": "#40a02b",
+          "number": "#fe640b",
+          "comment": "#9ca0b0",
+          "variable": "#d20f39",
+          "function": "#1e66f5",
+          "constant": "#fe640b",
+          "property": "#04a5e5",
+          "type": "#df8e1d",
+          "operator": "#179299",
+          "punctuation": "#4c4f69",
+          "boolean": "#fe640b",
+          "null": "#fe640b",
+          "regex": "#40a02b",
+          "tag": "#d20f39",
+          "attribute": "#8839ef"
+        }
+      },
+      {
+        "id": "catppuccin-frappe",
+        "name": "Catppuccin Frappe",
+        "description": "Dark variant with soft, calm colors",
+        "appearance": "dark",
+        "colors": {
+          "primary-bg": "#303446",
+          "secondary-bg": "#292c3c",
+          "text": "#c6d0f5",
+          "text-light": "#b5bfe2",
+          "text-lighter": "#a5adce",
+          "border": "#51576d",
+          "hover": "#414559",
+          "selected": "#51576d",
+          "accent": "#99d1db"
+        },
+        "syntax": {
+          "keyword": "#ca9ee6",
+          "string": "#a6d189",
+          "number": "#ef9f76",
+          "comment": "#737994",
+          "variable": "#e78284",
+          "function": "#8caaee",
+          "constant": "#ef9f76",
+          "property": "#99d1db",
+          "type": "#e5c890",
+          "operator": "#81c8be",
+          "punctuation": "#c6d0f5",
+          "boolean": "#ef9f76",
+          "null": "#ef9f76",
+          "regex": "#a6d189",
+          "tag": "#e78284",
+          "attribute": "#ca9ee6"
+        }
+      },
+      {
+        "id": "catppuccin-macchiato",
+        "name": "Catppuccin Macchiato",
+        "description": "Medium dark variant with balanced contrast",
+        "appearance": "dark",
+        "colors": {
+          "primary-bg": "#24273a",
+          "secondary-bg": "#1e2030",
+          "text": "#cad3f5",
+          "text-light": "#b8c0e0",
+          "text-lighter": "#a5adcb",
+          "border": "#494d64",
+          "hover": "#363a4f",
+          "selected": "#494d64",
+          "accent": "#8aadf4"
+        },
+        "syntax": {
+          "keyword": "#c6a0f6",
+          "string": "#a6da95",
+          "number": "#f5a97f",
+          "comment": "#6e738d",
+          "variable": "#f5bde6",
+          "function": "#8aadf4",
+          "constant": "#f5a97f",
+          "property": "#8bd5ca",
+          "type": "#eed49f",
+          "operator": "#91d7e3",
+          "punctuation": "#cad3f5",
+          "boolean": "#f5a97f",
+          "null": "#f5a97f",
+          "regex": "#a6da95",
+          "tag": "#f5bde6",
+          "attribute": "#c6a0f6"
+        }
+      },
+      {
+        "id": "catppuccin-mocha",
+        "name": "Catppuccin Mocha",
+        "description": "Darkest variant with warm, cozy colors",
+        "appearance": "dark",
+        "colors": {
+          "primary-bg": "#1e1e2e",
+          "secondary-bg": "#181825",
+          "text": "#cdd6f4",
+          "text-light": "#bac2de",
+          "text-lighter": "#a6adc8",
+          "border": "#45475a",
+          "hover": "#313244",
+          "selected": "#45475a",
+          "accent": "#89b4fa"
+        },
+        "syntax": {
+          "keyword": "#cba6f7",
+          "string": "#a6e3a1",
+          "number": "#fab387",
+          "comment": "#6c7086",
+          "variable": "#f38ba8",
+          "function": "#89b4fa",
+          "constant": "#fab387",
+          "property": "#89dceb",
+          "type": "#f9e2af",
+          "operator": "#94e2d5",
+          "punctuation": "#cdd6f4",
+          "boolean": "#fab387",
+          "null": "#fab387",
+          "regex": "#a6e3a1",
+          "tag": "#f38ba8",
+          "attribute": "#cba6f7"
+        }
+      }
+    ]
+  }
+}

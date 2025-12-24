@@ -1,14 +1,15 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import UnsavedChangesDialog from "@/components/ui/unsaved-changes-dialog";
-import { useFileSystemStore } from "@/file-system/controllers/store";
-import { useSettingsStore } from "@/settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useSettingsStore } from "@/features/settings/store";
+import type { Buffer } from "@/features/tabs/types/buffer";
 import { useAppStore } from "@/stores/app-store";
-import { useBufferStore } from "@/stores/buffer-store";
-import { useEditorCursorStore } from "@/stores/editor-cursor-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import type { Buffer } from "@/types/buffer";
+import UnsavedChangesDialog from "@/ui/unsaved-changes-dialog";
+import { calculateDisplayNames } from "../utils/path-shortener";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
 import TabDragPreview from "./tab-drag-preview";
@@ -32,6 +33,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const pendingClose = useBufferStore.use.pendingClose();
+  const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
   const {
     handleTabClick,
     handleTabClose,
@@ -81,7 +83,20 @@ const TabBar = ({ paneId }: TabBarProps) => {
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragStateRef = useRef(dragState);
   const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
-  const { clearPositionCache } = useEditorCursorStore.getState().actions;
+  const { clearPositionCache } = useEditorStateStore.getState().actions;
+
+  // Handle horizontal scrolling with mouse wheel
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    const container = tabBarRef.current;
+    if (!container) return;
+
+    // Only handle horizontal scrolling when scrolling vertically over the tab bar
+    if (e.deltaY !== 0) {
+      e.preventDefault();
+      // Multiply by 5 for smoother, less friction scrolling
+      container.scrollLeft += e.deltaY;
+    }
+  }, []);
 
   useEffect(() => {
     dragStateRef.current = dragState;
@@ -94,6 +109,11 @@ const TabBar = ({ paneId }: TabBarProps) => {
       return 0;
     });
   }, [buffers]);
+
+  // Calculate display names for tabs with minimal distinguishing paths
+  const displayNames = useMemo(() => {
+    return calculateDisplayNames(buffers, rootFolderPath);
+  }, [buffers, rootFolderPath]);
 
   useEffect(() => {
     if (settings.maxOpenTabs > 0 && buffers.length > settings.maxOpenTabs && handleTabClose) {
@@ -334,7 +354,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
       e.dataTransfer.effectAllowed = "move";
       const dragImage = document.createElement("div");
       dragImage.className =
-        "bg-primary-bg border border-border rounded px-2 py-1 text-xs font-mono shadow-lg";
+        "bg-primary-bg border border-border rounded px-2 py-1 text-xs ui-font shadow-lg";
       dragImage.textContent = buffer.name;
       dragImage.style.position = "absolute";
       dragImage.style.top = "-1000px";
@@ -546,7 +566,8 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
 
-  if (buffers.length === 0) {
+  // Only hide tab bar if there's no project open at all
+  if (buffers.length === 0 && !rootFolderPath && !isSwitchingProject) {
     return null;
   }
 
@@ -554,12 +575,13 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   return (
     <>
-      <div className="relative">
+      <div className="relative shrink-0 border-border border-b">
         <div
           ref={tabBarRef}
-          className="scrollbar-hidden flex overflow-x-auto bg-secondary-bg"
+          className="flex overflow-x-auto overflow-y-hidden bg-secondary-bg [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="tablist"
           aria-label="Open files"
+          onWheel={handleWheel}
         >
           {sortedBuffers.map((buffer, index) => {
             const isActive = buffer.id === activeBufferId;
@@ -570,6 +592,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
               <TabBarItem
                 key={buffer.id}
                 buffer={buffer}
+                displayName={displayNames.get(buffer.id) || buffer.name}
                 index={index}
                 isActive={isActive}
                 isDraggedTab={isDraggedTab}
@@ -587,6 +610,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
                   // Clear cached position for this buffer
                   clearPositionCache(id);
                 }}
+                handleTabPin={handleTabPin}
               />
             );
           })}

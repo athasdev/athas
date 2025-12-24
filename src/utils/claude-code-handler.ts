@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { ClaudeStatus, InterceptorMessage } from "@/types/claude";
+import type { ClaudeStatus, InterceptorMessage } from "@/features/ai/types/claude";
 import { buildContextPrompt } from "./context-builder";
 import type { ContextInfo } from "./types";
 
@@ -36,7 +36,7 @@ export class ClaudeCodeStreamHandler {
       await invoke("send_claude_input", { input: fullMessage });
       this.setupTimeout();
     } catch (error) {
-      console.error("❌ Claude Code error:", error);
+      console.error("Claude Code error:", error);
       this.handlers.onError("Claude Code is currently unavailable");
     }
   }
@@ -46,7 +46,7 @@ export class ClaudeCodeStreamHandler {
       const status = await invoke<ClaudeStatus>("get_claude_status");
 
       if (!status.running) {
-        console.log("🚀 Starting Claude Code...");
+        console.log("Starting Claude Code...");
         const startStatus = await invoke<ClaudeStatus>("start_claude_code");
 
         if (!startStatus.running) {
@@ -87,7 +87,7 @@ export class ClaudeCodeStreamHandler {
         this.handleResponse(message.data?.parsed_response);
         break;
       case "error":
-        console.log("❌ Error from interceptor, cleaning up...");
+        console.log("Error from interceptor, cleaning up...");
         this.cleanup();
         this.handlers.onError(message.error || "Unknown error from interceptor");
         break;
@@ -180,7 +180,7 @@ export class ClaudeCodeStreamHandler {
 
       // If no activity for 5 seconds and not expecting more messages, complete
       if (inactiveTime > 5000 && !this.expectingMoreMessages) {
-        console.log("✅ No activity for 5 seconds, conversation appears complete");
+        console.log("No activity for 5 seconds, conversation appears complete");
         this.cleanup();
         this.handlers.onComplete();
         return;
