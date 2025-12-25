@@ -6,7 +6,7 @@ use std::{
    io::Write,
    path::{Path, PathBuf},
 };
-use tauri::{AppHandle, command};
+use tauri::{AppHandle, Runtime, command};
 
 #[command]
 pub async fn download_extension(
@@ -162,7 +162,7 @@ fn get_extensions_dir() -> Result<PathBuf, String> {
 }
 
 #[command]
-pub fn get_bundled_extensions_path(app_handle: AppHandle) -> Result<String, String> {
+pub fn get_bundled_extensions_path<R: Runtime>(app_handle: AppHandle<R>) -> Result<String, String> {
    // In production, use Tauri's resource directory API
    // In development, fall back to the source path
    let extensions_path = if cfg!(debug_assertions) {
@@ -262,4 +262,81 @@ pub fn get_extension_path(app_handle: AppHandle, extension_id: String) -> Result
       .to_str()
       .ok_or("Failed to convert path to string")?
       .to_string())
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+   use std::path::Path;
+
+   #[test]
+   fn test_get_bundled_extensions_path_ends_with_bundled() {
+      // Create a mock Tauri app for testing
+      let app = tauri::test::mock_app();
+      let app_handle = app.handle().clone();
+
+      // Call the function
+      let result = get_bundled_extensions_path(app_handle);
+
+      // Verify it succeeds and the path ends with "bundled"
+      assert!(result.is_ok(), "get_bundled_extensions_path should succeed");
+      let path = result.unwrap();
+      let path = Path::new(&path);
+
+      // The path must end with "bundled", not "_up_/src/extensions/bundled"
+      // This verifies the fix for issue #475 where Linux builds had wrong paths
+      assert!(
+         path.ends_with("bundled"),
+         "Path should end with 'bundled', got: {:?}",
+         path
+      );
+
+      // Verify the path doesn't contain "_up_" which indicates incorrect Tauri resource bundling
+      assert!(
+         !path.to_string_lossy().contains("_up_"),
+         "Path should not contain '_up_' (incorrect bundling), got: {:?}",
+         path
+      );
+   }
+
+   #[test]
+   fn test_get_bundled_extensions_path_is_absolute_in_debug() {
+      let app = tauri::test::mock_app();
+      let app_handle = app.handle().clone();
+
+      let result = get_bundled_extensions_path(app_handle);
+      assert!(result.is_ok());
+
+      let path_str = result.unwrap();
+      let path = Path::new(&path_str);
+
+      // In debug mode, the path should be constructed from current_dir
+      // and should be an absolute path
+      assert!(
+         path.is_absolute(),
+         "Path should be absolute in debug mode, got: {:?}",
+         path
+      );
+   }
+
+   #[test]
+   fn test_get_bundled_extensions_path_contains_expected_structure() {
+      let app = tauri::test::mock_app();
+      let app_handle = app.handle().clone();
+
+      let result = get_bundled_extensions_path(app_handle);
+      assert!(result.is_ok());
+
+      let path_str = result.unwrap();
+
+      // In debug mode, path should contain src/extensions/bundled
+      // This is the development path structure
+      assert!(
+         path_str.contains("src")
+            && path_str.contains("extensions")
+            && path_str.ends_with("bundled"),
+         "Debug path should have structure .../src/extensions/bundled, got: {}",
+         path_str
+      );
+   }
 }
