@@ -67,6 +67,13 @@
       "signingIdentity": "Developer ID Application: Mehmet Ozgul (N43BXFX4H4)",
       "providerShortName": null,
       "entitlements": null
+    },
+    "linux": {
+      "appimage": {
+        "files": {
+          "/usr/lib/x86_64-linux-gnu/libfreetype.so.6": "/usr/lib/"
+        }
+      }
     }
   },
   "plugins": {
