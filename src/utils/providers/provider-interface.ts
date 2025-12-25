@@ -18,6 +18,13 @@ export interface StreamRequest {
   maxTokens: number;
   temperature: number;
   apiKey?: string;
+  responseFormat?: "text" | "json_object";
+}
+
+export interface ProviderModel {
+  id: string;
+  name: string;
+  maxTokens?: number;
 }
 
 export abstract class AIProvider {
@@ -29,6 +36,11 @@ export abstract class AIProvider {
 
   // Optional: Allows providers to customize the URL (e.g., add API key as query param)
   buildUrl?(request: StreamRequest): string;
+
+  // Optional: Allows providers to fetch available models dynamically
+  async getModels?(): Promise<ProviderModel[]> {
+    return [];
+  }
 
   get id(): string {
     return this.config.id;

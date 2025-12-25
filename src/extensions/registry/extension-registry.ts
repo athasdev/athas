@@ -4,7 +4,6 @@
  */
 
 import { logger } from "@/features/editor/utils/logger";
-import rustManifest from "../bundled/rust/extension.json";
 
 // Import bundled extension manifests
 import typescriptManifest from "../bundled/typescript/extension.json";
@@ -19,12 +18,20 @@ class ExtensionRegistry {
   private extensions = new Map<string, BundledExtension>();
   private activatedExtensions = new Set<string>();
   private platform: Platform;
+  private initPromise: Promise<void>;
 
   constructor() {
     this.platform = this.detectPlatform();
-    this.loadBundledExtensions().catch((error) => {
+    this.initPromise = this.loadBundledExtensions().catch((error) => {
       logger.error("ExtensionRegistry", "Failed to load bundled extensions:", error);
     });
+  }
+
+  /**
+   * Wait for registry to be fully initialized
+   */
+  async ensureInitialized(): Promise<void> {
+    await this.initPromise;
   }
 
   /**
@@ -52,10 +59,7 @@ class ExtensionRegistry {
    * Load all bundled extensions
    */
   private async loadBundledExtensions() {
-    const bundledManifests: ExtensionManifest[] = [
-      typescriptManifest as ExtensionManifest,
-      rustManifest as ExtensionManifest,
-    ];
+    const bundledManifests: ExtensionManifest[] = [typescriptManifest as ExtensionManifest];
 
     // Get absolute path to bundled extensions
     let basePath = "";
@@ -301,6 +305,7 @@ class ExtensionRegistry {
   getFormatterForFile(filePath: string): {
     command: string;
     args: string[];
+    env?: Record<string, string>;
     inputMethod?: "stdin" | "file";
     outputMethod?: "stdout" | "file";
   } | null {
@@ -330,6 +335,7 @@ class ExtensionRegistry {
     return {
       command: resolvedCommand,
       args: formatterConfig.args || [],
+      env: formatterConfig.env,
       inputMethod: formatterConfig.inputMethod,
       outputMethod: formatterConfig.outputMethod,
     };
@@ -341,6 +347,7 @@ class ExtensionRegistry {
   getFormatterForLanguage(languageId: string): {
     command: string;
     args: string[];
+    env?: Record<string, string>;
     inputMethod?: "stdin" | "file";
     outputMethod?: "stdout" | "file";
   } | null {
@@ -367,6 +374,7 @@ class ExtensionRegistry {
     return {
       command: resolvedCommand,
       args: formatterConfig.args || [],
+      env: formatterConfig.env,
       inputMethod: formatterConfig.inputMethod,
       outputMethod: formatterConfig.outputMethod,
     };
@@ -378,6 +386,7 @@ class ExtensionRegistry {
   getLinterForFile(filePath: string): {
     command: string;
     args: string[];
+    env?: Record<string, string>;
     inputMethod?: "stdin" | "file";
     diagnosticFormat?: "lsp" | "regex";
     diagnosticPattern?: string;
@@ -405,6 +414,7 @@ class ExtensionRegistry {
     return {
       command: resolvedCommand,
       args: linterConfig.args || [],
+      env: linterConfig.env,
       inputMethod: linterConfig.inputMethod,
       diagnosticFormat: linterConfig.diagnosticFormat,
       diagnosticPattern: linterConfig.diagnosticPattern,
@@ -417,6 +427,7 @@ class ExtensionRegistry {
   getLinterForLanguage(languageId: string): {
     command: string;
     args: string[];
+    env?: Record<string, string>;
     inputMethod?: "stdin" | "file";
     diagnosticFormat?: "lsp" | "regex";
     diagnosticPattern?: string;
@@ -443,6 +454,7 @@ class ExtensionRegistry {
     return {
       command: resolvedCommand,
       args: linterConfig.args || [],
+      env: linterConfig.env,
       inputMethod: linterConfig.inputMethod,
       diagnosticFormat: linterConfig.diagnosticFormat,
       diagnosticPattern: linterConfig.diagnosticPattern,

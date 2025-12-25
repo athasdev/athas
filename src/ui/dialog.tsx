@@ -56,7 +56,7 @@ const Dialog = ({
         )}
       >
         {/* Header */}
-        <div className="flex flex-shrink-0 items-center justify-between border-border border-b px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between border-border border-b px-4 py-3">
           <div className="flex items-center gap-2">
             {Icon && <Icon size={16} className="text-text" />}
             <h2 className="font-medium text-sm text-text">{title}</h2>
@@ -64,7 +64,7 @@ const Dialog = ({
 
           <button
             onClick={onClose}
-            className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded transition-colors hover:bg-hover"
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded transition-colors hover:bg-hover"
             aria-label="Close dialog"
           >
             <X size={14} className="text-text-lighter" />
@@ -76,7 +76,7 @@ const Dialog = ({
 
         {/* Footer */}
         {footer && (
-          <div className="flex flex-shrink-0 items-center justify-end gap-2 border-border border-t px-4 py-3">
+          <div className="flex shrink-0 items-center justify-end gap-2 border-border border-t px-4 py-3">
             {footer}
           </div>
         )}

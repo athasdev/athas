@@ -250,7 +250,7 @@ export function ContextSelector({
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1">
-      <div className="relative flex-shrink-0" ref={dropdownRef}>
+      <div className="relative shrink-0" ref={dropdownRef}>
         <button
           onClick={onToggleOpen}
           className={cn(
@@ -327,16 +327,16 @@ export function ContextSelector({
                     <div className="flex min-w-0 flex-1 items-center gap-2">
                       {item.type === "buffer" ? (
                         item.isSQLite ? (
-                          <Database size={10} className="flex-shrink-0 text-text-lighter" />
+                          <Database size={10} className="shrink-0 text-text-lighter" />
                         ) : (
-                          <FileText size={10} className="flex-shrink-0 text-text-lighter" />
+                          <FileText size={10} className="shrink-0 text-text-lighter" />
                         )
                       ) : (
                         <FileIcon
                           fileName={item.name}
                           isDir={false}
                           size={10}
-                          className="flex-shrink-0 text-text-lighter"
+                          className="shrink-0 text-text-lighter"
                         />
                       )}
                       <div className="min-w-0 flex-1 truncate">
@@ -388,7 +388,7 @@ export function ContextSelector({
         {selectedItems.map((item) => (
           <div
             key={`selected-${item.type}-${item.id}`}
-            className="group flex flex-shrink-0 select-none items-center gap-1 rounded border border-border bg-hover px-1.5 py-0.5 text-xs"
+            className="group flex shrink-0 select-none items-center gap-1 rounded border border-border bg-hover px-1.5 py-0.5 text-xs"
           >
             {item.type === "buffer" ? (
               item.isSQLite ? (

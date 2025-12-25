@@ -1,7 +1,9 @@
-import { forwardRef, memo, useMemo } from "react";
+import { memo, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { splitLines } from "@/features/editor/utils/lines";
-import { InlineGitBlame } from "@/features/version-control/git/components/inline-git-blame";
-import { useGitBlame } from "@/features/version-control/git/controllers/use-git-blame";
+import { InlineGitBlame } from "@/features/version-control/git/components/inline-blame";
+import { useGitBlame } from "@/features/version-control/git/controllers/use-blame";
 
 interface GitBlameLayerProps {
   filePath: string;
@@ -11,54 +13,98 @@ interface GitBlameLayerProps {
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
+  tabSize?: number;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
-const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
-  (
-    { filePath, cursorLine, visualCursorLine, visualContent, fontSize, fontFamily, lineHeight },
-    ref,
-  ) => {
-    const { getBlameForLine } = useGitBlame(filePath);
-    const blameLine = getBlameForLine(cursorLine);
+const GitBlameLayerComponent = ({
+  filePath,
+  cursorLine,
+  visualCursorLine,
+  visualContent,
+  fontSize,
+  fontFamily,
+  lineHeight,
+  tabSize = 2,
+  textareaRef,
+}: GitBlameLayerProps) => {
+  // Subscribe to scroll state for reactivity
+  const scrollTop = useEditorStateStore.use.scrollTop();
+  const scrollLeft = useEditorStateStore.use.scrollLeft();
 
-    const lines = useMemo(() => splitLines(visualContent), [visualContent]);
-    const currentLineContent = lines[visualCursorLine] || "";
+  const { getBlameForLine } = useGitBlame(filePath);
+  const blameLine = getBlameForLine(cursorLine);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [lineContentWidth, setLineContentWidth] = useState(0);
 
-    if (!blameLine) return null;
+  const lines = useMemo(() => splitLines(visualContent), [visualContent]);
+  const currentLineContent = lines[visualCursorLine] || "";
 
-    return (
-      <div
-        className="git-blame-layer pointer-events-none absolute inset-0 overflow-hidden"
+  // Measure the actual rendered width using a hidden element
+  useLayoutEffect(() => {
+    if (measureRef.current) {
+      setLineContentWidth(measureRef.current.offsetWidth);
+    }
+  }, [currentLineContent, fontSize, fontFamily, tabSize]);
+
+  if (!blameLine) return null;
+
+  // Calculate scroll ratio to compensate for browser rendering differences
+  // (same approach as gutter component)
+  const textarea = textareaRef.current;
+  const totalLines = lines.length;
+  const totalContentHeight = totalLines * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP * 2;
+  const textareaScrollHeight = textarea?.scrollHeight ?? totalContentHeight;
+  const scrollRatio = textareaScrollHeight > 0 ? totalContentHeight / textareaScrollHeight : 1;
+
+  // Apply ratio to get adjusted scroll position
+  const adjustedScrollTop = scrollTop * scrollRatio;
+
+  // Position relative to viewport (subtract adjusted scroll to get viewport-relative position)
+  const top =
+    visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP - adjustedScrollTop;
+  const left =
+    lineContentWidth +
+    EDITOR_CONSTANTS.EDITOR_PADDING_LEFT +
+    EDITOR_CONSTANTS.GUTTER_MARGIN -
+    scrollLeft;
+
+  return (
+    <div
+      className="git-blame-layer pointer-events-none absolute inset-0"
+      style={{
+        fontSize: `${fontSize}px`,
+        fontFamily,
+        lineHeight: `${lineHeight}px`,
+      }}
+    >
+      {/* Hidden element to measure actual text width */}
+      <span
+        ref={measureRef}
+        aria-hidden="true"
         style={{
-          fontSize: `${fontSize}px`,
-          fontFamily,
-          lineHeight: `${lineHeight}px`,
+          position: "absolute",
+          visibility: "hidden",
+          whiteSpace: "pre",
+          tabSize,
         }}
       >
-        <div
-          ref={ref}
-          style={{
-            willChange: "transform",
-            transform: "translateZ(0)",
-          }}
-        >
-          <div
-            className="pointer-events-auto absolute flex items-center"
-            style={{
-              top: `${visualCursorLine * lineHeight + lineHeight / 3}px`,
-              left: `${currentLineContent.length}ch`,
-              height: `${lineHeight}px`,
-              paddingLeft: "2rem",
-              transform: "translateY(1px)",
-            }}
-          >
-            <InlineGitBlame blameLine={blameLine} />
-          </div>
-        </div>
+        {currentLineContent}
+      </span>
+
+      <div
+        className="pointer-events-auto absolute flex items-center"
+        style={{
+          top: `${top}px`,
+          left: `${left}px`,
+          height: `${lineHeight}px`,
+        }}
+      >
+        <InlineGitBlame blameLine={blameLine} />
       </div>
-    );
-  },
-);
+    </div>
+  );
+};
 
 GitBlameLayerComponent.displayName = "GitBlameLayer";
 

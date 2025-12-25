@@ -106,7 +106,7 @@ export function SearchableModelDropdown({
         <ChevronDown
           size={10}
           className={cn(
-            "flex-shrink-0 text-text-lighter transition-transform duration-200",
+            "shrink-0 text-text-lighter transition-transform duration-200",
             isOpen && "rotate-180",
           )}
         />
@@ -160,15 +160,13 @@ export function SearchableModelDropdown({
                           <span className="ui-font truncate text-text text-xs">
                             {model.modelName}
                           </span>
-                          {isSelected && (
-                            <Check size={10} className="flex-shrink-0 text-text-lighter" />
-                          )}
+                          {isSelected && <Check size={10} className="shrink-0 text-text-lighter" />}
                         </div>
                         <div className="ui-font truncate text-[10px] text-text-lighter">
                           {model.providerName}
                         </div>
                       </div>
-                      <div className="flex-shrink-0 text-right">
+                      <div className="shrink-0 text-right">
                         <div className="ui-font text-[10px] text-text-lighter">
                           {formatTokens(model.maxTokens)}
                         </div>

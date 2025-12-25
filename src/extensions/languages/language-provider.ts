@@ -4,6 +4,7 @@ import type {
   Token,
 } from "@/features/editor/extensions/types";
 import { convertToEditorTokens, tokenizeCode } from "@/features/editor/lib/wasm-parser";
+import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 
 export interface LanguageConfig {
   id: string;
@@ -63,6 +64,27 @@ export abstract class BaseLanguageProvider implements LanguageExtension {
       const response = await fetch(this.highlightQueryPath);
       if (response.ok) {
         this.highlightQuery = await response.text();
+
+        // Also update IndexedDB cache with the highlight query
+        // This ensures the direct tokenizer path has access to it
+        try {
+          const cached = await indexedDBParserCache.get(this.languageId);
+          if (cached && (!cached.highlightQuery || cached.highlightQuery.trim().length === 0)) {
+            await indexedDBParserCache.set({
+              ...cached,
+              highlightQuery: this.highlightQuery,
+            });
+            console.log(
+              `[LanguageProvider] Updated IndexedDB cache with highlight query for ${this.languageId}`,
+            );
+          }
+        } catch (cacheError) {
+          // Ignore cache errors - not critical
+          console.debug(
+            `[LanguageProvider] Could not update cache for ${this.languageId}:`,
+            cacheError,
+          );
+        }
       } else {
         console.warn(`Failed to load highlight query for ${this.languageId}`);
       }

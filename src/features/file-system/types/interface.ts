@@ -25,7 +25,9 @@ export interface FsActions {
   // Folder operations
   handleOpenFolder: () => Promise<boolean>;
   handleOpenFolderByPath: (path: string) => Promise<boolean>;
+  handleOpenRemoteProject: (connectionId: string, connectionName: string) => Promise<boolean>;
   closeFolder: () => Promise<boolean>;
+  resetWorkspace: () => Promise<void>;
   switchToProject: (projectId: string) => Promise<boolean>;
   closeProject: (projectId: string) => Promise<boolean>;
   // File operations
@@ -35,7 +37,9 @@ export interface FsActions {
     line?: number,
     column?: number,
     codeEditorRef?: React.RefObject<CodeEditorRef | null>,
+    isPreview?: boolean,
   ) => Promise<void>;
+  handleFileOpen: (path: string, isDir: boolean) => Promise<void>;
   toggleFolder: (path: string) => Promise<void>;
   handleCreateNewFile: () => Promise<void>;
   handleCreateNewFileInDirectory: (

@@ -3,7 +3,6 @@ import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
 import { logger } from "@/features/editor/utils/logger";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -18,14 +17,18 @@ export interface Buffer {
   path: string;
   name: string;
   content: string;
+  savedContent: string;
   isDirty: boolean;
   isVirtual: boolean;
   isPinned: boolean;
+  isPreview: boolean;
   isImage: boolean;
   isSQLite: boolean;
   isDiff: boolean;
   isMarkdownPreview: boolean;
   isExternalEditor: boolean;
+  isWebViewer: boolean;
+  isPullRequest: boolean;
   isActive: boolean;
   language?: string; // File language for syntax highlighting and formatting
   // For diff buffers, store the parsed diff data (single or multi-file)
@@ -34,6 +37,10 @@ export interface Buffer {
   sourceFilePath?: string;
   // For external editor buffers, store the terminal connection ID
   terminalConnectionId?: string;
+  // For web viewer buffers, store the URL
+  webViewerUrl?: string;
+  // For PR buffers, store the PR number
+  prNumber?: number;
   // Cached syntax highlighting tokens
   tokens: {
     start: number;
@@ -76,8 +83,12 @@ interface BufferActions {
     diffData?: GitDiff | MultiFileDiff,
     isMarkdownPreview?: boolean,
     sourceFilePath?: string,
+    isPreview?: boolean,
   ) => string;
+  convertPreviewToDefinite: (bufferId: string) => void;
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
+  openWebViewerBuffer: (url: string) => string;
+  openPRBuffer: (prNumber: number) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
   closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
@@ -129,7 +140,7 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
 
     if (!rootFolderPath) return;
 
-    // Only save real files, not virtual/diff/image/sqlite/external editor buffers
+    // Only save real files, not virtual/diff/image/sqlite/external editor/web viewer/PR buffers
     const persistableBuffers = buffers
       .filter(
         (b) =>
@@ -138,7 +149,9 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
           !b.isImage &&
           !b.isSQLite &&
           !b.isMarkdownPreview &&
-          !b.isExternalEditor,
+          !b.isExternalEditor &&
+          !b.isWebViewer &&
+          !b.isPullRequest,
       )
       .map((b) => ({
         path: b.path,
@@ -155,7 +168,9 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
       !activeBuffer.isImage &&
       !activeBuffer.isSQLite &&
       !activeBuffer.isMarkdownPreview &&
-      !activeBuffer.isExternalEditor
+      !activeBuffer.isExternalEditor &&
+      !activeBuffer.isWebViewer &&
+      !activeBuffer.isPullRequest
         ? activeBuffer.path
         : null;
 
@@ -183,8 +198,13 @@ export const useBufferStore = createSelectors(
           diffData?: GitDiff | MultiFileDiff,
           isMarkdownPreview = false,
           sourceFilePath?: string,
+          isPreview = true,
         ) => {
           const { buffers, maxOpenTabs } = get();
+
+          // Special buffers should never be in preview mode
+          const shouldBePreview =
+            isPreview && !isImage && !isSQLite && !isDiff && !isVirtual && !isMarkdownPreview;
 
           // Check if already open
           const existing = buffers.find((b) => b.path === path);
@@ -194,15 +214,26 @@ export const useBufferStore = createSelectors(
               state.buffers = state.buffers.map((b) => ({
                 ...b,
                 isActive: b.id === existing.id,
+                // If opening in definite mode, convert existing preview to definite
+                isPreview: b.id === existing.id && !shouldBePreview ? false : b.isPreview,
               }));
             });
             return existing.id;
           }
 
-          // Handle max tabs limit
           let newBuffers = [...buffers];
-          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+
+          // If opening in preview mode, close any existing preview buffer
+          if (shouldBePreview) {
+            const existingPreview = newBuffers.find((b) => b.isPreview);
+            if (existingPreview) {
+              newBuffers = newBuffers.filter((b) => b.id !== existingPreview.id);
+            }
+          }
+
+          // Handle max tabs limit
+          if (newBuffers.filter((b) => !b.isPinned && !b.isPreview).length >= maxOpenTabs) {
+            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned && !b.isPreview);
             const lruBuffer = unpinnedBuffers[0]; // Simplified LRU
             newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
           }
@@ -212,14 +243,18 @@ export const useBufferStore = createSelectors(
             path,
             name,
             content,
+            savedContent: content,
             isDirty: false,
             isVirtual,
             isPinned: false,
+            isPreview: shouldBePreview,
             isImage,
             isSQLite,
             isDiff,
             isMarkdownPreview,
             isExternalEditor: false,
+            isWebViewer: false,
+            isPullRequest: false,
             isActive: true,
             language: detectLanguageFromFileName(name),
             diffData,
@@ -237,26 +272,42 @@ export const useBufferStore = createSelectors(
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
 
             // Check if extension is available and start LSP or prompt installation
-            import("@/extensions/registry/extension-store")
+            // First wait for bundled extensions to finish loading
+            logger.info("BufferStore", `Checking extension support for ${path}`);
+            import("@/extensions/loader/extension-loader")
+              .then(({ extensionLoader }) => {
+                logger.debug("BufferStore", "Waiting for extension loader initialization...");
+                return extensionLoader.waitForInitialization();
+              })
+              .then(() => {
+                logger.debug("BufferStore", "Extension loader initialized, importing store...");
+                return import("@/extensions/registry/extension-store");
+              })
               .then(({ useExtensionStore }) => {
-                const { getExtensionForFile, isExtensionInstalled } =
-                  useExtensionStore.getState().actions;
+                const { getExtensionForFile } = useExtensionStore.getState().actions;
 
                 const extension = getExtensionForFile(path);
+                logger.debug(
+                  "BufferStore",
+                  `getExtensionForFile(${path}) returned:`,
+                  extension?.manifest?.name || "undefined",
+                );
 
                 if (extension) {
-                  const installed = isExtensionInstalled(extension.manifest.id);
+                  // Bundled extensions don't have installation metadata - they're always available
+                  const isBundled = !extension.manifest.installation;
+                  const installed = extension.isInstalled || isBundled;
                   logger.info(
                     "BufferStore",
-                    `Extension ${extension.manifest.name} for ${path}: installed=${installed}`,
+                    `Extension ${extension.manifest.name} for ${path}: installed=${installed}, bundled=${isBundled}`,
                   );
 
                   if (installed) {
-                    // Extension installed, start LSP
+                    // Extension installed or bundled, start LSP
                     logger.info("BufferStore", `Starting LSP for ${path}`);
                     import("@/features/editor/lsp/lsp-client")
                       .then(({ LspClient }) => {
-                        import("@/features/file-system/controllers/store").then(
+                        return import("@/features/file-system/controllers/store").then(
                           ({ useFileSystemStore }) => {
                             const lspClient = LspClient.getInstance();
                             const workspacePath =
@@ -269,11 +320,14 @@ export const useBufferStore = createSelectors(
                           },
                         );
                       })
+                      .then(() => {
+                        logger.info("BufferStore", `LSP started successfully for ${path}`);
+                      })
                       .catch((error) => {
                         logger.error("BufferStore", "Failed to start LSP:", error);
                       });
                   } else {
-                    // Extension not installed, emit event for UI to handle
+                    // Marketplace extension not installed, emit event for UI to handle
                     logger.info(
                       "BufferStore",
                       `Extension ${extension.manifest.name} not installed for ${path}`,
@@ -345,14 +399,18 @@ export const useBufferStore = createSelectors(
             path,
             name,
             content: "", // External editor buffers don't have content
+            savedContent: "",
             isDirty: false,
             isVirtual: false,
             isPinned: false,
+            isPreview: false, // External editor buffers are never preview
             isImage: false,
             isSQLite: false,
             isDiff: false,
             isMarkdownPreview: false,
             isExternalEditor: true,
+            isWebViewer: false,
+            isPullRequest: false,
             isActive: true,
             language: detectLanguageFromFileName(name),
             terminalConnectionId,
@@ -366,6 +424,130 @@ export const useBufferStore = createSelectors(
 
           // Save session
           saveSessionToStore(get().buffers, get().activeBufferId);
+
+          return newBuffer.id;
+        },
+
+        openWebViewerBuffer: (url: string): string => {
+          const { buffers, maxOpenTabs } = get();
+
+          // Extract hostname for display name
+          let displayName = "Web Viewer";
+          if (url && url !== "about:blank") {
+            try {
+              const urlObj = new URL(url);
+              if (urlObj.hostname) {
+                displayName = `Web: ${urlObj.hostname}`;
+              }
+            } catch {
+              // Invalid URL, use default
+            }
+          }
+          const path = `web-viewer://${url}`;
+
+          // Check if already open with the same URL
+          const existing = buffers.find((b) => b.isWebViewer && b.webViewerUrl === url);
+          if (existing) {
+            set((state) => {
+              state.activeBufferId = existing.id;
+              state.buffers = state.buffers.map((b) => ({
+                ...b,
+                isActive: b.id === existing.id,
+              }));
+            });
+            return existing.id;
+          }
+
+          // Handle max tabs limit
+          let newBuffers = [...buffers];
+          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+            const lruBuffer = unpinnedBuffers[0];
+            newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+          }
+
+          const newBuffer: Buffer = {
+            id: generateBufferId(path),
+            path,
+            name: displayName,
+            content: "",
+            savedContent: "",
+            isDirty: false,
+            isVirtual: true,
+            isPinned: false,
+            isPreview: false, // Web viewer buffers are never preview
+            isImage: false,
+            isSQLite: false,
+            isDiff: false,
+            isMarkdownPreview: false,
+            isExternalEditor: false,
+            isWebViewer: true,
+            isPullRequest: false,
+            isActive: true,
+            webViewerUrl: url,
+            tokens: [],
+          };
+
+          set((state) => {
+            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+            state.activeBufferId = newBuffer.id;
+          });
+
+          return newBuffer.id;
+        },
+
+        openPRBuffer: (prNumber: number): string => {
+          const { buffers, maxOpenTabs } = get();
+          const path = `pr://${prNumber}`;
+          const displayName = `PR #${prNumber}`;
+
+          // Check if already open
+          const existing = buffers.find((b) => b.isPullRequest && b.prNumber === prNumber);
+          if (existing) {
+            set((state) => {
+              state.activeBufferId = existing.id;
+              state.buffers = state.buffers.map((b) => ({
+                ...b,
+                isActive: b.id === existing.id,
+              }));
+            });
+            return existing.id;
+          }
+
+          // Handle max tabs limit
+          let newBuffers = [...buffers];
+          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+            const lruBuffer = unpinnedBuffers[0];
+            newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+          }
+
+          const newBuffer: Buffer = {
+            id: generateBufferId(path),
+            path,
+            name: displayName,
+            content: "",
+            savedContent: "",
+            isDirty: false,
+            isVirtual: true,
+            isPinned: false,
+            isPreview: false, // PR buffers are never preview
+            isImage: false,
+            isSQLite: false,
+            isDiff: false,
+            isMarkdownPreview: false,
+            isExternalEditor: false,
+            isWebViewer: false,
+            isPullRequest: true,
+            prNumber,
+            isActive: true,
+            tokens: [],
+          };
+
+          set((state) => {
+            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+            state.activeBufferId = newBuffer.id;
+          });
 
           return newBuffer.id;
         },
@@ -405,14 +587,15 @@ export const useBufferStore = createSelectors(
             });
           }
 
-          // Stop LSP for this file (only for real files, not virtual/diff/image/sqlite/external editor)
+          // Stop LSP for this file (only for real files, not virtual/diff/image/sqlite/external editor/web viewer)
           if (
             !closedBuffer.isVirtual &&
             !closedBuffer.isDiff &&
             !closedBuffer.isImage &&
             !closedBuffer.isSQLite &&
             !closedBuffer.isMarkdownPreview &&
-            !closedBuffer.isExternalEditor
+            !closedBuffer.isExternalEditor &&
+            !closedBuffer.isWebViewer
           ) {
             // Stop LSP for this file in background (don't block buffer closing)
             import("@/features/editor/lsp/lsp-client")
@@ -497,8 +680,6 @@ export const useBufferStore = createSelectors(
               isActive: b.id === bufferId,
             }));
           });
-          // Restore cursor position for the new buffer
-          useEditorStateStore.getState().actions.restorePositionForFile(bufferId);
         },
 
         updateBufferContent: (
@@ -521,7 +702,16 @@ export const useBufferStore = createSelectors(
                 buffer.diffData = diffData;
               }
               if (!buffer.isVirtual) {
-                buffer.isDirty = markDirty;
+                if (!markDirty) {
+                  buffer.savedContent = content;
+                  buffer.isDirty = false;
+                } else {
+                  buffer.isDirty = content !== buffer.savedContent;
+                  // Convert preview to definite when user makes an edit
+                  if (buffer.isPreview && content !== buffer.savedContent) {
+                    buffer.isPreview = false;
+                  }
+                }
               }
               // Keep tokens - syntax highlighter will update them automatically
               // The 16ms debounce ensures smooth updates without glitches
@@ -543,6 +733,9 @@ export const useBufferStore = createSelectors(
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer) {
               buffer.isDirty = isDirty;
+              if (!isDirty) {
+                buffer.savedContent = buffer.content;
+              }
             }
           });
         },
@@ -564,8 +757,6 @@ export const useBufferStore = createSelectors(
               isActive: b.id === bufferId,
             }));
           });
-          // Restore cursor position for the new buffer
-          useEditorStateStore.getState().actions.restorePositionForFile(bufferId);
         },
 
         handleTabClose: (bufferId: string) => {
@@ -577,11 +768,24 @@ export const useBufferStore = createSelectors(
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer) {
               buffer.isPinned = !buffer.isPinned;
+              // Pinned tabs should never be in preview mode
+              if (buffer.isPinned) {
+                buffer.isPreview = false;
+              }
             }
           });
 
           // Save session
           saveSessionToStore(get().buffers, get().activeBufferId);
+        },
+
+        convertPreviewToDefinite: (bufferId: string) => {
+          set((state) => {
+            const buffer = state.buffers.find((b) => b.id === bufferId);
+            if (buffer) {
+              buffer.isPreview = false;
+            }
+          });
         },
 
         handleCloseOtherTabs: (keepBufferId: string) => {
@@ -672,9 +876,6 @@ export const useBufferStore = createSelectors(
               isActive: b.id === nextBufferId,
             }));
           });
-
-          // Restore cursor position for the new buffer
-          useEditorStateStore.getState().actions.restorePositionForFile(nextBufferId);
         },
 
         switchToPreviousBuffer: () => {
@@ -692,9 +893,6 @@ export const useBufferStore = createSelectors(
               isActive: b.id === prevBufferId,
             }));
           });
-
-          // Restore cursor position for the new buffer
-          useEditorStateStore.getState().actions.restorePositionForFile(prevBufferId);
         },
 
         getActiveBuffer: (): Buffer | null => {
@@ -715,7 +913,8 @@ export const useBufferStore = createSelectors(
             buffer.isVirtual ||
             buffer.isImage ||
             buffer.isSQLite ||
-            buffer.isMarkdownPreview
+            buffer.isMarkdownPreview ||
+            buffer.isWebViewer
           ) {
             return;
           }

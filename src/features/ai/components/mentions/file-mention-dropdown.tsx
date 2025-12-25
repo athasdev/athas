@@ -302,7 +302,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
                 isDir={false}
                 isExpanded={false}
                 size={10}
-                className="flex-shrink-0 text-text-lighter"
+                className="shrink-0 text-text-lighter"
               />
               <div className="min-w-0 flex-1 truncate">
                 <span className="text-text">{file.name}</span>

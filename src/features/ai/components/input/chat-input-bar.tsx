@@ -1,6 +1,7 @@
-import { ChevronDown, Send, Square } from "lucide-react";
+import { Send, Slash, Square } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
+import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
 import { getModelById } from "@/features/ai/types/providers";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
@@ -9,7 +10,11 @@ import { useUIState } from "@/stores/ui-state-store";
 import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
+import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
+import { ChatModeSelector } from "../selectors/chat-mode-selector";
 import { ContextSelector } from "../selectors/context-selector";
+import { ModelSelectorDropdown } from "../selectors/model-selector-dropdown";
+import { SessionModeSelector } from "../selectors/session-mode-selector";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -27,7 +32,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [hasInputText, setHasInputText] = useState(false);
 
   // Get state from stores with optimized selectors
-  const { settings } = useSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
   const { openSettingsDialog } = useUIState();
   const { fontSize, fontFamily } = useEditorSettingsStore();
 
@@ -41,6 +46,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const queueCount = useAIChatStore((state) => state.messageQueue.length);
   const hasApiKey = useAIChatStore((state) => state.hasApiKey);
   const mentionState = useAIChatStore((state) => state.mentionState);
+  const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
+
+  // Check if current agent is "custom" (only show model selector for custom agent)
+  const currentAgentId = getCurrentAgentId();
+  const isCustomAgent = currentAgentId === "custom";
+
+  // ACP agents don't need API key (they handle their own auth)
+  const isInputEnabled = isCustomAgent ? hasApiKey : true;
 
   // Memoize action selectors
   const setInput = useAIChatStore((state) => state.setInput);
@@ -54,6 +67,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const selectNext = useAIChatStore((state) => state.selectNext);
   const selectPrevious = useAIChatStore((state) => state.selectPrevious);
   const getFilteredFiles = useAIChatStore((state) => state.getFilteredFiles);
+
+  // Slash command state and actions
+  const slashCommandState = useAIChatStore((state) => state.slashCommandState);
+  const showSlashCommands = useAIChatStore((state) => state.showSlashCommands);
+  const hideSlashCommands = useAIChatStore((state) => state.hideSlashCommands);
+  const selectNextSlashCommand = useAIChatStore((state) => state.selectNextSlashCommand);
+  const selectPreviousSlashCommand = useAIChatStore((state) => state.selectPreviousSlashCommand);
+  const getFilteredSlashCommands = useAIChatStore((state) => state.getFilteredSlashCommands);
 
   // Highly optimized function to get plain text from contentEditable div
   const getPlainTextFromDiv = useCallback(() => {
@@ -216,7 +237,25 @@ const AIChatInputBar = memo(function AIChatInputBar({
   }, [setIsContextDropdownOpen]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (mentionState.active) {
+    // Handle slash command navigation
+    if (slashCommandState.active) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        selectNextSlashCommand();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        selectPreviousSlashCommand();
+      } else if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        const filteredCommands = getFilteredSlashCommands();
+        if (filteredCommands[slashCommandState.selectedIndex]) {
+          handleSlashCommandSelect(filteredCommands[slashCommandState.selectedIndex]);
+        }
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        hideSlashCommands();
+      }
+    } else if (mentionState.active) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
         selectNext();
@@ -344,6 +383,22 @@ const AIChatInputBar = memo(function AIChatInputBar({
       // Update local state for button enabled/disabled
       setHasInputText(plainTextFromDiv.trim().length > 0);
 
+      // Detect slash commands at start of input
+      if (plainTextFromDiv.startsWith("/")) {
+        const search = plainTextFromDiv.slice(1).split(" ")[0]; // Get text after / until space
+        if (!plainTextFromDiv.includes(" ") && search.length < 50) {
+          const position = {
+            top: inputRef.current.offsetTop + inputRef.current.offsetHeight + 4,
+            left: inputRef.current.offsetLeft,
+          };
+          showSlashCommands(position, search);
+        } else {
+          hideSlashCommands();
+        }
+      } else if (slashCommandState.active) {
+        hideSlashCommands();
+      }
+
       // Only do mention detection if text contains @ and is reasonably short
       if (plainTextFromDiv.includes("@") && plainTextFromDiv.length < 500) {
         debouncedMentionDetection(plainTextFromDiv);
@@ -351,7 +406,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
         hideMention();
       }
     }
-  }, [setInput, getPlainTextFromDiv, debouncedMentionDetection, hideMention, mentionState.active]);
+  }, [
+    setInput,
+    getPlainTextFromDiv,
+    debouncedMentionDetection,
+    hideMention,
+    mentionState.active,
+    showSlashCommands,
+    hideSlashCommands,
+    slashCommandState.active,
+  ]);
 
   // Handle file mention selection
   const handleFileMentionSelect = useCallback(
@@ -438,9 +502,44 @@ const AIChatInputBar = memo(function AIChatInputBar({
     ],
   );
 
+  // Handle slash command selection
+  const handleSlashCommandSelect = useCallback(
+    (command: SlashCommand) => {
+      if (!inputRef.current) return;
+
+      isUpdatingContentRef.current = true;
+
+      // Replace the current input with the slash command
+      const newInput = `/${command.name} `;
+      setInput(newInput);
+      hideSlashCommands();
+
+      // Update the DOM content
+      setTimeout(() => {
+        if (!inputRef.current) return;
+
+        inputRef.current.textContent = newInput;
+
+        // Position cursor at the end
+        const selection = window.getSelection();
+        if (selection) {
+          const range = document.createRange();
+          range.selectNodeContents(inputRef.current);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+
+        inputRef.current.focus();
+        isUpdatingContentRef.current = false;
+      }, 0);
+    },
+    [setInput, hideSlashCommands],
+  );
+
   const handleSendMessage = async () => {
     const currentInput = useAIChatStore.getState().input;
-    if (!currentInput.trim() || !hasApiKey) return;
+    if (!currentInput.trim() || !isInputEnabled) return;
 
     // Trigger send animation
     setIsSendAnimating(true);
@@ -459,14 +558,57 @@ const AIChatInputBar = memo(function AIChatInputBar({
     }
   };
 
+  // Get available slash commands
+  const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
+  const hasSlashCommands = availableSlashCommands.length > 0;
+
   return (
     <div
       ref={aiChatContainerRef}
       className="ai-chat-container border-border border-t bg-terniary-bg"
     >
       <div className="px-2 py-1.5">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
+        {/* Input area */}
+        <div
+          ref={inputRef}
+          contentEditable={isInputEnabled}
+          onInput={handleInputChange}
+          onKeyDown={handleKeyDown}
+          data-placeholder={
+            isInputEnabled
+              ? hasSlashCommands
+                ? "Message... (@ files, / commands)"
+                : "Message... (@ to mention files)"
+              : "Configure API key to enable AI chat..."
+          }
+          className={cn(
+            "max-h-[120px] min-h-[60px] w-full resize-none overflow-y-auto border-none bg-transparent",
+            "p-1 text-text",
+            "focus:outline-none",
+            !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
+            // Custom styles for contentEditable placeholder
+            "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
+          )}
+          style={
+            {
+              // Use dynamic font settings (slightly smaller than editor for UI consistency)
+              fontFamily: `${fontFamily}, "Fira Code", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace`,
+              fontSize: `${Math.max(fontSize - 2, 11)}px`,
+              // Ensure proper line height and text rendering
+              lineHeight: "1.4",
+              wordWrap: "break-word",
+              overflowWrap: "break-word",
+            } as React.CSSProperties
+          }
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Message input"
+          tabIndex={isInputEnabled ? 0 : -1}
+        />
+
+        {/* Bottom row: Context + Mode + Style + Model/Agent + Send */}
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1">
             <ContextSelector
               buffers={buffers}
               selectedBufferIds={selectedBufferIds}
@@ -476,77 +618,84 @@ const AIChatInputBar = memo(function AIChatInputBar({
               isOpen={isContextDropdownOpen}
               onToggleOpen={() => setIsContextDropdownOpen(!isContextDropdownOpen)}
             />
-          </div>
-          <div
-            ref={inputRef}
-            contentEditable={hasApiKey}
-            onInput={handleInputChange}
-            onKeyDown={handleKeyDown}
-            data-placeholder={
-              hasApiKey
-                ? "Enter your prompt ('@' tag files)"
-                : "Configure API key to enable AI chat..."
-            }
-            className={cn(
-              "max-h-[120px] min-h-[60px] w-full resize-none overflow-y-auto border-none bg-transparent",
-              "p-1 text-text",
-              "focus:outline-none",
-              !hasApiKey ? "cursor-not-allowed opacity-50" : "cursor-text",
-              // Custom styles for contentEditable placeholder
-              "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
-            )}
-            style={
-              {
-                // Use dynamic font settings (slightly smaller than editor for UI consistency)
-                fontFamily: `${fontFamily}, "Fira Code", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace`,
-                fontSize: `${Math.max(fontSize - 2, 11)}px`,
-                // Ensure proper line height and text rendering
-                lineHeight: "1.4",
-                wordWrap: "break-word",
-                overflowWrap: "break-word",
-              } as React.CSSProperties
-            }
-            role="textbox"
-            aria-multiline="true"
-            aria-label="Message input"
-            tabIndex={hasApiKey ? 0 : -1}
-          />
-        </div>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+
             {/* Queue indicator */}
             {queueCount > 0 && (
               <div className="flex items-center gap-1 rounded bg-blue-500/10 px-2 py-1 text-blue-400 text-xs">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
-                <span>{queueCount} queued</span>
+                <span>{queueCount}</span>
               </div>
             )}
           </div>
+
           <div className="flex select-none items-center gap-1">
-            {/* Model selector button */}
-            <button
-              onClick={() => openSettingsDialog("ai")}
-              className="ui-font flex items-center gap-1 rounded bg-transparent px-2 py-1 text-xs transition-colors hover:bg-hover"
-              title="Open AI settings to change model"
-            >
-              <div className="truncate text-text-lighter text-xs">
-                {getModelById(settings.aiProviderId, settings.aiModelId)?.name ||
-                  "Claude Code Local"}
-              </div>
-              <ChevronDown size={12} className="text-text-lighter" />
-            </button>
+            {/* Chat mode selector */}
+            <ChatModeSelector />
+
+            {/* Slash command hint button */}
+            {hasSlashCommands && (
+              <button
+                onClick={() => {
+                  if (inputRef.current && isInputEnabled) {
+                    inputRef.current.textContent = "/";
+                    setInput("/");
+                    setHasInputText(true);
+                    inputRef.current.focus();
+                    // Trigger slash command detection
+                    const position = {
+                      top: inputRef.current.offsetTop + inputRef.current.offsetHeight + 4,
+                      left: inputRef.current.offsetLeft,
+                    };
+                    showSlashCommands(position, "");
+                  }
+                }}
+                className="flex h-7 items-center gap-1 rounded px-1.5 text-text-lighter text-xs hover:bg-hover hover:text-text"
+                title="Show slash commands"
+              >
+                <Slash size={12} />
+              </button>
+            )}
+
+            {/* Model selector dropdown - only shown for custom agent */}
+            {isCustomAgent ? (
+              <ModelSelectorDropdown
+                currentProviderId={settings.aiProviderId}
+                currentModelId={settings.aiModelId}
+                currentModelName={(() => {
+                  const { dynamicModels } = useAIChatStore.getState();
+                  const providerModels = dynamicModels[settings.aiProviderId];
+                  const dynamicModel = providerModels?.find((m) => m.id === settings.aiModelId);
+                  if (dynamicModel) return dynamicModel.name;
+
+                  return (
+                    getModelById(settings.aiProviderId, settings.aiModelId)?.name || "Select Model"
+                  );
+                })()}
+                onSelect={(providerId, modelId) => {
+                  updateSetting("aiProviderId", providerId);
+                  updateSetting("aiModelId", modelId);
+                }}
+                onOpenSettings={() => openSettingsDialog("ai")}
+                hasApiKey={(providerId) => useAIChatStore.getState().hasProviderApiKey(providerId)}
+              />
+            ) : (
+              <SessionModeSelector />
+            )}
+
             <Button
               type="submit"
-              disabled={!hasInputText || !hasApiKey}
+              disabled={!hasInputText || !isInputEnabled}
               onClick={isTyping && streamingMessageId ? onStopStreaming : handleSendMessage}
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded p-0 text-text-lighter hover:bg-hover hover:text-text",
+                "flex h-7 w-7 items-center justify-center rounded p-0 text-text-lighter hover:bg-hover hover:text-text",
                 "send-button-hover button-transition focus:outline-none focus:ring-2 focus:ring-accent/50",
                 isTyping && streamingMessageId && !isSendAnimating && "button-morphing",
                 hasInputText &&
-                  hasApiKey &&
+                  isInputEnabled &&
                   "bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500/50",
-                !hasInputText || !hasApiKey ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                !hasInputText || !isInputEnabled
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer",
               )}
               title={
                 isTyping && streamingMessageId
@@ -576,6 +725,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       {/* File Mention Dropdown */}
       {mentionState.active && <FileMentionDropdown onSelect={handleFileMentionSelect} />}
+
+      {/* Slash Command Dropdown */}
+      {slashCommandState.active && <SlashCommandDropdown onSelect={handleSlashCommandSelect} />}
     </div>
   );
 });

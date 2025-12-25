@@ -11,14 +11,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["save", "automatic", "files"],
   },
   {
-    id: "general-sidebar-position",
-    tab: "general",
-    section: "Layout",
-    label: "Sidebar Position",
-    description: "Choose where to position the sidebar",
-    keywords: ["sidebar", "position", "layout", "left", "right"],
-  },
-  {
     id: "general-mouse-wheel-zoom",
     tab: "general",
     section: "Zoom",
@@ -68,14 +60,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
 
   // Editor Settings
-  {
-    id: "editor-ui-font-family",
-    tab: "editor",
-    section: "Typography",
-    label: "UI Font Family",
-    description: "Font family for UI elements (file tree, markdown, etc.)",
-    keywords: ["font", "ui", "typography", "family"],
-  },
   {
     id: "editor-font-family",
     tab: "editor",
@@ -151,27 +135,51 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["hidden", "directories", "folders", "patterns", "glob", "filter", "exclude"],
   },
 
-  // Theme Settings
+  // Appearance Settings
   {
-    id: "theme-theme",
-    tab: "theme",
-    section: "Appearance",
-    label: "Theme",
+    id: "appearance-theme",
+    tab: "appearance",
+    section: "Theme",
+    label: "Color Theme",
     description: "Choose your preferred color theme",
     keywords: ["theme", "color", "appearance", "dark", "light"],
   },
   {
-    id: "theme-native-menu-bar",
-    tab: "theme",
-    section: "Appearance",
+    id: "appearance-icon-theme",
+    tab: "appearance",
+    section: "Theme",
+    label: "Icon Theme",
+    description: "Icons displayed in the file tree and tabs",
+    keywords: ["icon", "theme", "file", "tree", "tabs"],
+  },
+  {
+    id: "appearance-ui-font",
+    tab: "appearance",
+    section: "Typography",
+    label: "UI Font Family",
+    description: "Font family for UI elements (file tree, markdown, etc.)",
+    keywords: ["font", "ui", "typography", "family"],
+  },
+  {
+    id: "appearance-sidebar-position",
+    tab: "appearance",
+    section: "Layout",
+    label: "Sidebar Position",
+    description: "Choose where to position the sidebar",
+    keywords: ["sidebar", "position", "left", "right", "layout"],
+  },
+  {
+    id: "appearance-native-menu-bar",
+    tab: "appearance",
+    section: "Layout",
     label: "Native Menu Bar",
     description: "Use the native menu bar or a custom UI menu bar",
     keywords: ["menu", "bar", "native", "ui"],
   },
   {
-    id: "theme-compact-menu-bar",
-    tab: "theme",
-    section: "Appearance",
+    id: "appearance-compact-menu-bar",
+    tab: "appearance",
+    section: "Layout",
     label: "Compact Menu Bar",
     description: "Requires UI menu bar; compact hamburger or full UI menu",
     keywords: ["menu", "bar", "compact", "hamburger", "ui"],
@@ -201,6 +209,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "API Keys",
     description: "Configure API keys for AI providers",
     keywords: ["api", "key", "authentication", "credentials"],
+  },
+  {
+    id: "ai-auto-open-files",
+    tab: "ai",
+    section: "Behavior",
+    label: "Auto Open Read Files",
+    description: "Automatically open files in the editor when AI reads them",
+    keywords: ["ai", "auto", "open", "read", "files", "editor"],
   },
 
   // Keyboard Settings

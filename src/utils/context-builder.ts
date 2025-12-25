@@ -16,10 +16,16 @@ export const buildContextPrompt = (context: ContextInfo): string => {
     }
   }
 
-  // Currently active file
+  // Currently active file or web viewer
   if (context.activeBuffer) {
-    // For Claude Code, just provide the path
-    if (context.providerId === "claude-code") {
+    // Handle web viewer buffers
+    if (context.activeBuffer.isWebViewer && context.activeBuffer.webViewerUrl) {
+      contextPrompt += `\nCurrently viewing web page: ${context.activeBuffer.webViewerUrl}`;
+      if (context.activeBuffer.webViewerContent) {
+        contextPrompt += `\n\nWeb page content:\n${context.activeBuffer.webViewerContent}`;
+      }
+    } else if (context.providerId === "claude-code") {
+      // For Claude Code, just provide the path
       contextPrompt += `\nCurrently editing: ${context.activeBuffer.path}`;
       if (context.language && context.language !== "Text") {
         contextPrompt += ` (${context.language})`;
@@ -185,6 +191,12 @@ Key capabilities:
 - Code generation and refactoring
 - Architecture and design guidance
 - Access to selected project files for comprehensive context
+- Opening files in the editor (files are automatically displayed when read)
+
+File opening behavior:
+- When asked to "open", "show", or "view" a file, use the Read tool to open it in the editor
+- If the exact path is unknown, first use Glob to locate the file, then use Read to open it
+- If multiple files match, list them and ask the user to specify which one to open
 
 Guidelines:
 - Be concise but thorough in your explanations

@@ -6,23 +6,19 @@ import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
-import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { editorAPI } from "@/features/editor/extensions/api";
-// Store imports - Note: Direct store communication via getState() is used here.
-// This is an acceptable Zustand pattern, though it creates coupling between stores.
-// See: https://github.com/pmndrs/zustand/discussions/1319
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useFileTreeStore } from "@/features/file-explorer/controllers/file-tree-store";
 import { useSettingsStore } from "@/features/settings/store";
-import { getGitStatus } from "@/features/version-control/git/controllers/git";
-import { gitDiffCache } from "@/features/version-control/git/controllers/git-diff-cache";
+import { gitDiffCache } from "@/features/version-control/git/controllers/diff-cache";
 import {
   isDiffFile,
   parseRawDiffContent,
-} from "@/features/version-control/git/controllers/git-diff-parser";
-import { useGitStore } from "@/features/version-control/git/controllers/git-store";
+} from "@/features/version-control/git/controllers/diff-parser";
+import { getGitStatus } from "@/features/version-control/git/controllers/git";
+import { useGitStore } from "@/features/version-control/git/controllers/store";
+import { useGitBlameStore } from "@/stores/git-blame-store";
 import { useProjectStore } from "@/stores/project-store";
+import { useSearchResultsStore } from "@/stores/search-results-store";
 import { useSessionStore } from "@/stores/session-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
@@ -46,7 +42,7 @@ import {
 } from "./file-tree-utils";
 import { getFilenameFromPath, isImageFile, isSQLiteFile } from "./file-utils";
 import { useFileWatcherStore } from "./file-watcher-store";
-import { openFolder, readDirectory, renameFile } from "./platform";
+import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
 
@@ -141,12 +137,14 @@ export const useFileSystemStore = createSelectors(
         return true;
       },
 
-      closeFolder: async () => {
+      resetWorkspace: async () => {
         // Reset all project-related state to return to welcome screen
         set((state) => {
           state.files = [];
           state.isFileTreeLoading = false;
           state.filesVersion++;
+          state.rootFolderPath = undefined;
+          state.projectFilesCache = undefined;
         });
 
         // Clear tree UI state
@@ -157,19 +155,81 @@ export const useFileSystemStore = createSelectors(
         setRootFolderPath("");
         setProjectName("");
 
-        // Close all buffers (close them individually since closeAllBuffers doesn't exist)
+        // Close all buffers
         const { buffers, actions: bufferActions } = useBufferStore.getState();
         buffers.forEach((buffer) => bufferActions.closeBuffer(buffer.id));
 
         // Stop file watching
         await useFileWatcherStore.getState().setProjectRoot("");
 
-        // Reset git store
+        // Reset git store completely
         const { actions: gitActions } = useGitStore.getState();
-        gitActions.resetCommits();
+        gitActions.resetGitState();
 
         // Clear git diff cache
         gitDiffCache.clear();
+
+        // Clear search results
+        useSearchResultsStore.getState().clearSearchResults();
+        useSearchResultsStore.getState().clearActivePathSearchResults();
+
+        // Clear git blame data
+        useGitBlameStore.getState().clearAllBlame();
+      },
+
+      restoreSession: async (projectPath: string) => {
+        const session = useSessionStore.getState().getSession(projectPath);
+        if (session) {
+          const { actions: bufferActions } = useBufferStore.getState();
+
+          // Restore buffers
+          for (const buffer of session.buffers) {
+            // Use handleFileSelect to open the file (it handles reading content)
+            await get().handleFileSelect(buffer.path, false);
+
+            // If it was pinned, we might need to handle that, but handleFileSelect doesn't support pinning arg.
+            // We can pin it after opening if needed.
+            if (buffer.isPinned) {
+              const newBuffers = useBufferStore.getState().buffers;
+              const openedBuffer = newBuffers.find((b) => b.path === buffer.path);
+              if (openedBuffer) {
+                bufferActions.handleTabPin(openedBuffer.id);
+              }
+            }
+          }
+
+          // Restore active buffer
+          if (session.activeBufferPath) {
+            const { buffers } = useBufferStore.getState();
+            const activeBuffer = buffers.find((b) => b.path === session.activeBufferPath);
+            if (activeBuffer) {
+              useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
+            }
+          }
+
+          // Restore terminals
+          if (session.terminals && session.terminals.length > 0) {
+            window.dispatchEvent(
+              new CustomEvent("restore-terminals", {
+                detail: { terminals: session.terminals },
+              }),
+            );
+          }
+        }
+      },
+
+      closeFolder: async () => {
+        // Find the active project tab
+        const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+
+        if (activeTab) {
+          // If we have an active tab, close it properly via closeProject
+          // This will handle removing the tab and if it's the last one, it will clear the file system
+          return await get().closeProject(activeTab.id);
+        }
+
+        // Fallback: Reset all project-related state to return to welcome screen
+        await get().resetWorkspace();
 
         return true;
       },
@@ -222,18 +282,114 @@ export const useFileSystemStore = createSelectors(
         return true;
       },
 
+      handleOpenRemoteProject: async (connectionId: string, connectionName: string) => {
+        set((state) => {
+          state.isFileTreeLoading = true;
+        });
+
+        try {
+          // Read remote root directory
+          const entries = await invoke<
+            Array<{ name: string; path: string; is_dir: boolean; size: number }>
+          >("ssh_read_directory", {
+            connectionId,
+            path: "/",
+          });
+
+          // Convert to FileEntry format
+          const fileTree: FileEntry[] = entries.map((entry) => ({
+            name: entry.name,
+            path: `remote://${connectionId}${entry.path}`,
+            isDir: entry.is_dir,
+            children: entry.is_dir ? [] : undefined,
+          }));
+
+          // Create remote root path
+          const remotePath = `remote://${connectionId}/`;
+
+          // Add project to workspace tabs
+          useWorkspaceTabsStore.getState().addProjectTab(remotePath, connectionName);
+
+          // Wrap with root folder
+          const wrappedFileTree: FileEntry[] = [
+            {
+              name: connectionName,
+              path: remotePath,
+              isDir: true,
+              expanded: true,
+              children: fileTree,
+            },
+          ];
+
+          // Clear tree UI state
+          useFileTreeStore.getState().collapseAll();
+
+          // Update project store
+          const { setRootFolderPath, setProjectName } = useProjectStore.getState();
+          setRootFolderPath(remotePath);
+          setProjectName(connectionName);
+
+          set((state) => {
+            state.isFileTreeLoading = false;
+            state.files = wrappedFileTree;
+            state.rootFolderPath = remotePath;
+            state.isRemoteWindow = true;
+            state.remoteConnectionId = connectionId;
+            state.remoteConnectionName = connectionName;
+            state.filesVersion++;
+            state.projectFilesCache = undefined;
+          });
+
+          return true;
+        } catch (error) {
+          console.error("Failed to open remote project:", error);
+          set((state) => {
+            state.isFileTreeLoading = false;
+          });
+          return false;
+        }
+      },
+
       handleFileSelect: async (
         path: string,
         isDir: boolean,
         line?: number,
         column?: number,
         codeEditorRef?: React.RefObject<CodeEditorRef | null>,
+        isPreview = true,
       ) => {
         const { updateActivePath } = useSidebarStore.getState();
 
         if (isDir) {
           await get().toggleFolder(path);
           return;
+        }
+
+        let resolvedPath = path;
+
+        try {
+          const workspaceRoot = get().rootFolderPath;
+          const symlinkInfo = await getSymlinkInfo(path, workspaceRoot);
+
+          if (symlinkInfo.is_symlink && symlinkInfo.target) {
+            const pathSeparator = path.includes("\\") ? "\\" : "/";
+            const pathParts = path.split(pathSeparator);
+            pathParts.pop();
+            const parentDir = pathParts.join(pathSeparator);
+
+            if (
+              symlinkInfo.target.startsWith(pathSeparator) ||
+              symlinkInfo.target.match(/^[a-zA-Z]:/)
+            ) {
+              resolvedPath = symlinkInfo.target;
+            } else {
+              resolvedPath = workspaceRoot
+                ? `${workspaceRoot}${pathSeparator}${symlinkInfo.target}`
+                : `${parentDir}${pathSeparator}${symlinkInfo.target}`;
+            }
+          }
+        } catch (error) {
+          console.error("Failed to resolve symlink:", error);
         }
 
         updateActivePath(path);
@@ -260,9 +416,9 @@ export const useFileSystemStore = createSelectors(
         }
 
         // Handle special file types
-        if (isSQLiteFile(path)) {
+        if (isSQLiteFile(resolvedPath)) {
           openBuffer(path, fileName, "", false, true, false, false);
-        } else if (isImageFile(path)) {
+        } else if (isImageFile(resolvedPath)) {
           openBuffer(path, fileName, "", true, false, false, false);
         } else {
           // Check if external editor is enabled for text files
@@ -283,14 +439,30 @@ export const useFileSystemStore = createSelectors(
               });
 
               // Open external editor buffer
-              openExternalEditorBuffer(path, fileName, connectionId);
+              openExternalEditorBuffer(resolvedPath, fileName, connectionId);
               return;
             } catch (error) {
               console.error("Failed to create external editor terminal:", error);
             }
           }
 
-          const content = await readFileContent(path);
+          let content: string;
+
+          // Check if this is a remote file
+          if (path.startsWith("remote://")) {
+            const match = path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
+            if (!match) return;
+
+            const connectionId = match[1];
+            const remotePath = match[2] || "/";
+
+            content = await invoke<string>("ssh_read_file", {
+              connectionId,
+              filePath: remotePath,
+            });
+          } else {
+            content = await readFileContent(resolvedPath);
+          }
 
           // Check if this is a diff file
           if (isDiffFile(path, content)) {
@@ -298,7 +470,19 @@ export const useFileSystemStore = createSelectors(
             const diffJson = JSON.stringify(parsedDiff);
             openBuffer(path, fileName, diffJson, false, false, true, false);
           } else {
-            openBuffer(path, fileName, content, false, false, false, false);
+            openBuffer(
+              path,
+              fileName,
+              content,
+              false,
+              false,
+              false,
+              false,
+              undefined,
+              undefined,
+              undefined,
+              isPreview,
+            );
           }
 
           // Handle navigation to specific line/column
@@ -339,43 +523,68 @@ export const useFileSystemStore = createSelectors(
           }
         }
 
-        // Scroll to line if specified
+        // Dispatch go-to-line event to center the line in viewport
         if (line) {
-          const textarea = document.querySelector(
-            "textarea.editor-textarea",
-          ) as HTMLTextAreaElement;
-          if (textarea) {
-            const { fontSize } = useEditorSettingsStore.getState();
-            const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
-            const targetScrollTop = Math.max(0, (line - 1) * lineHeight);
-
-            const viewport = editorAPI.getViewportRef();
-            if (viewport) {
-              viewport.scrollTop = targetScrollTop;
-            }
-          }
+          setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent("menu-go-to-line", {
+                detail: { line },
+              }),
+            );
+          }, 100);
         }
       },
 
+      // Open file in definite mode (not preview) - for double-click
+      handleFileOpen: async (path: string, isDir: boolean) => {
+        await get().handleFileSelect(path, isDir, undefined, undefined, undefined, false);
+      },
+
       toggleFolder: async (path: string) => {
-        const { isRemoteWindow, remoteConnectionId } = get();
-
-        if (isRemoteWindow && remoteConnectionId) {
-          // TODO: Implement remote folder operations
-          return;
-        }
-
         const folder = findFileInTree(get().files, path);
 
         if (!folder || !folder.isDir) return;
 
+        // Check if this is a remote path
+        const isRemotePath = path.startsWith("remote://");
+
         if (!folder.expanded) {
-          // Expand folder - load children
-          const entries = await readDirectoryContents(folder.path);
+          let childEntries: FileEntry[];
+
+          if (isRemotePath) {
+            // Extract connection ID and remote path from the full path
+            // Format: remote://{connectionId}{remotePath}
+            const match = path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
+            if (!match) return;
+
+            const connectionId = match[1];
+            const remotePath = match[2] || "/";
+
+            // Fetch remote directory contents
+            const entries = await invoke<
+              Array<{ name: string; path: string; is_dir: boolean; size: number }>
+            >("ssh_read_directory", {
+              connectionId,
+              path: remotePath,
+            });
+
+            // Convert to FileEntry format with remote:// prefix
+            childEntries = entries.map((entry) => ({
+              name: entry.name,
+              path: `remote://${connectionId}${entry.path}`,
+              isDir: entry.is_dir,
+              children: entry.is_dir ? [] : undefined,
+            }));
+          } else {
+            // Local folder - load children
+            const entries = await readDirectoryContents(folder.path);
+            childEntries = sortFileEntries(entries);
+          }
+
           const updatedFiles = updateFileInTree(get().files, path, (item) => ({
             ...item,
             expanded: true,
-            children: sortFileEntries(entries),
+            children: childEntries,
           }));
 
           useFileTreeStore.getState().toggleFolder(path);
@@ -925,51 +1134,6 @@ export const useFileSystemStore = createSelectors(
         });
       },
 
-      restoreSession: async (projectPath: string) => {
-        // Get the saved session for this project
-        const session = useSessionStore.getState().getSession(projectPath);
-
-        if (!session || session.buffers.length === 0) {
-          return;
-        }
-
-        const { openBuffer } = useBufferStore.getState().actions;
-
-        // Open all saved buffers
-        for (const buffer of session.buffers) {
-          try {
-            // Check if file still exists and read its content
-            const content = await readFileContent(buffer.path);
-            const bufferId = openBuffer(
-              buffer.path,
-              buffer.name,
-              content,
-              false,
-              false,
-              false,
-              false,
-            );
-
-            // Restore pinned state
-            if (buffer.isPinned) {
-              useBufferStore.getState().actions.handleTabPin(bufferId);
-            }
-          } catch (error) {
-            console.warn(`Failed to restore buffer: ${buffer.path}`, error);
-            // Continue with other buffers even if one fails
-          }
-        }
-
-        // Restore active buffer
-        if (session.activeBufferPath) {
-          const { buffers } = useBufferStore.getState();
-          const activeBuffer = buffers.find((b) => b.path === session.activeBufferPath);
-          if (activeBuffer) {
-            useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
-          }
-        }
-      },
-
       switchToProject: async (projectId: string) => {
         const tab = useWorkspaceTabsStore
           .getState()
@@ -1059,12 +1223,6 @@ export const useFileSystemStore = createSelectors(
       closeProject: async (projectId: string) => {
         const tabs = useWorkspaceTabsStore.getState().projectTabs;
 
-        // Can't close the last tab
-        if (tabs.length <= 1) {
-          console.warn("Cannot close the last project tab");
-          return false;
-        }
-
         const tab = tabs.find((t: { id: string }) => t.id === projectId);
         if (!tab) {
           console.warn(`Project tab not found: ${projectId}`);
@@ -1072,11 +1230,24 @@ export const useFileSystemStore = createSelectors(
         }
 
         const wasActive = tab.isActive;
+        const isLastTab = tabs.length <= 1;
 
         // Save session before closing if it's the active project
         if (wasActive) {
           const { buffers, activeBufferId } = useBufferStore.getState();
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+
+          // Get current terminals from local storage (temporary persistence)
+          let terminals: any[] = [];
+          try {
+            const storedTerminals = localStorage.getItem("terminal-sessions");
+            if (storedTerminals) {
+              terminals = JSON.parse(storedTerminals);
+            }
+          } catch (e) {
+            console.error("Failed to read terminal sessions", e);
+          }
+
           useSessionStore.getState().saveSession(
             tab.path,
             buffers.map((b) => ({
@@ -1086,17 +1257,51 @@ export const useFileSystemStore = createSelectors(
               isPinned: b.isPinned,
             })),
             activeBuffer?.path || null,
+            terminals,
           );
         }
 
         // Remove project tab
         useWorkspaceTabsStore.getState().removeProjectTab(projectId);
 
+        // If this was the last tab, reset to empty state
+        if (isLastTab) {
+          // Stop file watching
+          useFileWatcherStore.getState().reset();
+
+          // Clear all buffers
+          const { buffers } = useBufferStore.getState();
+          const allBufferIds = buffers.map((b) => b.id);
+          useBufferStore.getState().actions.closeBuffersBatch(allBufferIds, true);
+
+          // Clear git state
+          const gitActions = useGitStore.getState().actions;
+          gitActions.setGitStatus(null);
+          gitActions.resetCommits();
+
+          // Clear project store
+          const { setRootFolderPath, setProjectName } = useProjectStore.getState();
+          setRootFolderPath(undefined);
+          setProjectName("Explorer");
+
+          // Reset file system state
+          set((state) => {
+            state.files = [];
+            state.rootFolderPath = undefined;
+            state.filesVersion = 0;
+          });
+
+          return true;
+        }
+
         // If we closed the active project, switch to the newly active one
         if (wasActive) {
           const newActiveTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
           if (newActiveTab) {
             await get().switchToProject(newActiveTab.id);
+          } else {
+            // If no active tab (we closed the last one), clear the workspace
+            await get().resetWorkspace();
           }
         }
 

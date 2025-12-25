@@ -1,5 +1,6 @@
 import { memo, useMemo } from "react";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
+import { EDITOR_CONSTANTS } from "../../config/constants";
 
 interface DiagnosticIndicatorsProps {
   filePath?: string;
@@ -10,8 +11,6 @@ interface DiagnosticIndicatorsProps {
   endLine: number;
 }
 
-const GUTTER_PADDING = 8;
-
 function DiagnosticIndicatorsComponent({
   filePath,
   lineHeight,
@@ -20,47 +19,79 @@ function DiagnosticIndicatorsComponent({
 }: DiagnosticIndicatorsProps) {
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
 
-  const indicators = useMemo(() => {
-    if (!filePath) return [];
+  // Group diagnostics by line, keeping only the highest severity per line
+  const diagnosticsByLine = useMemo(() => {
+    if (!filePath) return new Map<number, "error" | "warning" | "info">();
 
     const diagnostics = diagnosticsByFile.get(filePath) || [];
-    const result = [];
+    const lineMap = new Map<number, "error" | "warning" | "info">();
 
     for (const diag of diagnostics) {
-      if (diag.line >= startLine && diag.line < endLine) {
-        const isError = diag.severity === "error";
-        const icon = isError ? "●" : "▲";
-        const color = isError ? "var(--error, #f85149)" : "var(--warning, #d29922)";
+      const existing = lineMap.get(diag.line);
+      // Priority: error > warning > info
+      if (
+        !existing ||
+        diag.severity === "error" ||
+        (diag.severity === "warning" && existing === "info")
+      ) {
+        lineMap.set(diag.line, diag.severity);
+      }
+    }
 
+    return lineMap;
+  }, [filePath, diagnosticsByFile]);
+
+  const indicators = useMemo(() => {
+    const result: React.ReactNode[] = [];
+
+    const getColor = (severity: "error" | "warning" | "info") => {
+      if (severity === "error") return "var(--error, #f85149)";
+      if (severity === "warning") return "var(--warning, #d29922)";
+      return "var(--info, #58a6ff)";
+    };
+
+    for (let lineNum = startLine; lineNum < endLine; lineNum++) {
+      const severity = diagnosticsByLine.get(lineNum);
+      if (severity) {
         result.push(
           <div
-            key={`${diag.line}-${diag.message}`}
+            key={`diag-${lineNum}`}
             style={{
               position: "absolute",
-              top: `${diag.line * lineHeight + GUTTER_PADDING}px`,
+              top: `${lineNum * lineHeight + EDITOR_CONSTANTS.GUTTER_PADDING}px`,
               left: 0,
               right: 0,
               height: `${lineHeight}px`,
-              lineHeight: `${lineHeight}px`,
-              color,
-              textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               userSelect: "none",
             }}
+            title={`${severity.charAt(0).toUpperCase() + severity.slice(1)} on line ${lineNum + 1}`}
           >
-            {icon}
+            <div
+              style={{
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                backgroundColor: getColor(severity),
+                opacity: 0.9,
+              }}
+            />
           </div>,
         );
       }
     }
 
     return result;
-  }, [filePath, diagnosticsByFile, startLine, endLine, lineHeight]);
+  }, [diagnosticsByLine, startLine, endLine, lineHeight]);
 
   return (
     <div
       style={{
         position: "relative",
-        width: "16px",
+        width: "14px",
+        zIndex: 1,
       }}
     >
       {indicators}

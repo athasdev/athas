@@ -20,22 +20,24 @@ import {
 import type React from "react";
 import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useIsMac } from "@/hooks/use-platform";
 
 // Performance optimizations
 const GIT_STATUS_DEBOUNCE_MS = 500;
 
+import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { moveFile, readDirectory, readFile } from "@/features/file-system/controllers/platform";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { ContextMenuState, FileEntry } from "@/features/file-system/types/app";
+import { useSettingsStore } from "@/features/settings/store";
 import { getGitStatus } from "@/features/version-control/git/controllers/git";
 import type { GitFile, GitStatus } from "@/features/version-control/git/types/git";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
-import FileIcon from "./file.icon";
 import { useCustomDragDrop } from "./file-tree-custom-dnd";
 import "./file-tree.css";
-import { useEventListener, useOnClickOutside } from "usehooks-ts";
-import { useSettingsStore } from "@/features/settings/store";
+import FileIcon from "./file.icon";
 
 interface FileTreeProps {
   files: FileEntry[];
@@ -43,6 +45,7 @@ interface FileTreeProps {
   updateActivePath?: (path: string) => void;
   rootFolderPath?: string;
   onFileSelect: (path: string, isDir: boolean) => void;
+  onFileOpen?: (path: string, isDir: boolean) => void;
   onCreateNewFileInDirectory: (directoryPath: string, fileName: string) => void;
   onCreateNewFolderInDirectory?: (directoryPath: string, folderName: string) => void;
   onDeletePath?: (path: string, isDir: boolean) => void;
@@ -64,6 +67,7 @@ const FileTree = ({
   updateActivePath,
   rootFolderPath,
   onFileSelect,
+  onFileOpen,
   onCreateNewFileInDirectory,
   onCreateNewFolderInDirectory,
   onDeletePath,
@@ -88,6 +92,8 @@ const FileTree = ({
   const [deepestStickyFolder, setDeepestStickyFolder] = useState<string | null>(null);
 
   const { settings } = useSettingsStore();
+  const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
+  const isMac = useIsMac();
 
   const userIgnore = useMemo(() => {
     const ig = ignore();
@@ -531,6 +537,17 @@ const FileTree = ({
     [onFileSelect, updateActivePath],
   );
 
+  const handleFileDoubleClick = useCallback(
+    (e: React.MouseEvent, path: string, isDir: boolean) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Double-click opens in definite mode (not preview)
+      onFileOpen?.(path, isDir);
+      updateActivePath?.(path);
+    },
+    [onFileOpen, updateActivePath],
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, file: FileEntry) => {
       if (e.key === "Enter") {
@@ -570,7 +587,7 @@ const FileTree = ({
               fileName={file.isDir ? "folder" : "file"}
               isDir={file.isDir}
               isExpanded={false}
-              className="flex-shrink-0 text-text-lighter"
+              className="shrink-0 text-text-lighter"
             />
             <input
               ref={(inputElement) => {
@@ -611,6 +628,9 @@ const FileTree = ({
             type="button"
             data-file-path={file.path}
             data-is-dir={file.isDir}
+            title={
+              file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
+            }
             onMouseDown={(e) => {
               // Track initial mouse position for drag threshold
               if (e.button === 0) {
@@ -644,11 +664,13 @@ const FileTree = ({
               setMouseDownInfo(null);
             }}
             onClick={(e) => handleFileClick(e, file.path, file.isDir)}
+            onDoubleClick={(e) => handleFileDoubleClick(e, file.path, file.isDir)}
             onContextMenu={(e) => handleContextMenu(e, file.path, file.isDir)}
             className={cn(
               "flex min-h-[20px] w-full min-w-max cursor-pointer",
               "select-none items-center gap-1.5",
-              "whitespace-nowrap border-none bg-transparent",
+              "whitespace-nowrap border-none",
+              !file.isDir && "bg-transparent",
               "ui-font px-1.5 py-0.5 text-left text-text text-xs",
               "shadow-none outline-none transition-colors duration-150",
               "hover:bg-hover focus:outline-none",
@@ -674,7 +696,8 @@ const FileTree = ({
               fileName={file.name}
               isDir={file.isDir}
               isExpanded={file.expanded}
-              className="flex-shrink-0 text-text-lighter"
+              isSymlink={file.isSymlink}
+              className="shrink-0 text-text-lighter"
             />
             <span
               className={cn("select-none whitespace-nowrap", getGitStatusColor(file))}
@@ -772,7 +795,7 @@ const FileTree = ({
   return (
     <div
       className={cn(
-        "file-tree-container flex flex-1 select-none",
+        "file-tree-container relative flex flex-1 select-none",
         "min-w-full flex-col gap-0 overflow-auto",
         dragState.dragOverPath === "__ROOT__" &&
           "!bg-accent !bg-opacity-10 !border-2 !border-accent !border-dashed",
@@ -808,9 +831,25 @@ const FileTree = ({
         updateActivePath?.("");
       }}
     >
-      <div className="w-max min-w-full" style={{ minWidth: "100%", width: "max-content" }}>
-        {renderFileTree(filteredFiles)}
-      </div>
+      {filteredFiles.length === 0 ? (
+        <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
+          <button
+            onClick={handleOpenFolder}
+            style={{ width: "fit-content", minWidth: "fit-content" }}
+            className="ui-font flex items-center justify-center gap-2 rounded border border-border bg-hover px-3 py-1.5 text-text text-xs transition-colors hover:border-accent hover:text-accent"
+          >
+            <FolderOpen size={14} />
+            <span>Open Folder</span>
+            <kbd className="ml-1 rounded bg-secondary-bg px-1.5 py-0.5 font-mono text-[10px] text-text-lighter">
+              {isMac ? "⌘O" : "Ctrl+O"}
+            </kbd>
+          </button>
+        </div>
+      ) : (
+        <div className="w-max min-w-full" style={{ minWidth: "100%", width: "max-content" }}>
+          {renderFileTree(filteredFiles)}
+        </div>
+      )}
 
       {contextMenu &&
         createPortal(

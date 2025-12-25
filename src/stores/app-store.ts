@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { gitDiffCache } from "@/features/version-control/git/controllers/git-diff-cache";
+import { gitDiffCache } from "@/features/version-control/git/controllers/diff-cache";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "../features/file-system/controllers/platform";
 
@@ -232,6 +232,27 @@ export const useAppStore = createSelectors(
 
               await writeFile(activeBuffer.path, contentToSave);
               markBufferDirty(activeBuffer.id, false);
+
+              // Lint on save if enabled
+              if (settings.lintOnSave) {
+                const { lintContent } = await import("@/features/editor/linter/linter-service");
+                const languageId = extensionRegistry.getLanguageId(activeBuffer.path);
+
+                const lintResult = await lintContent({
+                  filePath: activeBuffer.path,
+                  content: contentToSave,
+                  languageId: languageId || undefined,
+                });
+
+                if (lintResult.success && lintResult.diagnostics) {
+                  // TODO: Store diagnostics and display in UI
+                  // For now, just log them
+                  console.log(
+                    `Linting found ${lintResult.diagnostics.length} issues:`,
+                    lintResult.diagnostics,
+                  );
+                }
+              }
 
               // Invalidate git diff cache for this file
               const rootFolderPath = useFileSystemStore.getState().rootFolderPath;

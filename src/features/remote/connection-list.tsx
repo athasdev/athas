@@ -1,7 +1,8 @@
 import { Edit, FolderOpen, Plus, Server, Trash2, Wifi, WifiOff } from "lucide-react";
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
+import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
-import Button from "../../ui/button";
 import type { RemoteConnection } from "./types";
 
 interface ConnectionListProps {
@@ -21,7 +22,7 @@ const ConnectionList = ({
   onFileSelect,
   onAddNew,
 }: ConnectionListProps) => {
-  const [connectionMenu, setConnectionMenu] = useState<{
+  const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     connectionId: string;
@@ -43,14 +44,34 @@ const ConnectionList = ({
   // Handle click outside to close menu
   React.useEffect(() => {
     const handleClickOutside = () => {
-      setConnectionMenu(null);
+      setContextMenu(null);
     };
 
-    if (connectionMenu) {
+    if (contextMenu) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [connectionMenu]);
+  }, [contextMenu]);
+
+  const handleContextMenu = (e: React.MouseEvent, connectionId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    let x = e.pageX;
+    let y = e.pageY;
+
+    const menuWidth = 150;
+    const menuHeight = 100;
+
+    if (x + menuWidth > window.innerWidth) {
+      x = window.innerWidth - menuWidth;
+    }
+    if (y + menuHeight > window.innerHeight) {
+      y = window.innerHeight - menuHeight;
+    }
+
+    setContextMenu({ x, y, connectionId });
+  };
 
   return (
     <div className="flex h-full select-none flex-col bg-secondary-bg">
@@ -65,7 +86,7 @@ const ConnectionList = ({
             "flex h-5 w-5 items-center justify-center rounded p-0",
             "text-text-lighter transition-colors hover:bg-hover hover:text-text",
           )}
-          title="Add Remote Connection"
+          aria-label="Add Remote Connection"
         >
           <Plus size={12} />
         </Button>
@@ -74,166 +95,161 @@ const ConnectionList = ({
       {/* Connections List */}
       <div className="flex-1 overflow-y-auto">
         {connections.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-hover">
-              <Server size={24} className="text-text-lighter" />
-            </div>
-            <h3 className="mb-1 font-medium text-sm text-text">No remote connections</h3>
-            <p className="mb-4 text-sm text-text-lighter">
-              Connect to remote servers via SSH or SFTP
-            </p>
-            <Button onClick={onAddNew} variant="default" size="sm" className="h-8">
-              <Plus size={14} className="mr-2" />
+          <div className="flex h-full flex-col items-center justify-center p-4 text-center">
+            <Server size={20} className="mb-2 text-text-lighter" />
+            <p className="mb-3 text-text-lighter text-xs">No remote connections</p>
+            <button
+              onClick={onAddNew}
+              className={cn(
+                "ui-font flex items-center gap-1.5 rounded border border-border",
+                "bg-hover px-2.5 py-1 text-text text-xs",
+                "transition-colors hover:border-accent hover:text-accent",
+              )}
+            >
+              <Plus size={12} />
               Add Connection
-            </Button>
+            </button>
           </div>
         ) : (
-          <div className="space-y-2 p-2 sm:p-3">
+          <div className="flex flex-col">
             {connections.map((connection) => (
-              <div
+              <button
                 key={connection.id}
+                type="button"
+                onClick={() => onConnect(connection.id)}
+                onContextMenu={(e) => handleContextMenu(e, connection.id)}
                 className={cn(
-                  "group relative overflow-hidden rounded-lg border p-2 transition-all duration-200 hover:shadow-sm",
-                  connection.isConnected
-                    ? "border-green-200/50 bg-green-50/50 dark:border-green-800/30 dark:bg-green-950/20"
-                    : "border-border bg-secondary-bg",
+                  "flex w-full cursor-pointer items-center gap-2",
+                  "border-none bg-transparent px-2 py-1.5 text-left",
+                  "ui-font text-text text-xs transition-colors",
+                  "hover:bg-hover focus:outline-none",
+                  connection.isConnected && "bg-selected",
                 )}
               >
-                <div className="flex items-center gap-3">
-                  {/* Connection Status */}
-                  <div
-                    className={cn(
-                      "h-2.5 w-2.5 flex-shrink-0 rounded-full transition-colors",
-                      connection.isConnected ? "bg-green-500" : "bg-gray-400 dark:bg-gray-600",
-                    )}
-                  />
+                {/* Status Indicator */}
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 shrink-0 rounded-full",
+                    connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
+                  )}
+                />
 
-                  {/* Connection Info - Clickable */}
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex flex-wrap items-center gap-y-2">
-                      <span
-                        className="cursor-pointer truncate rounded px-1 py-0.5 font-medium text-sm text-text hover:bg-hover"
-                        title="Click for options"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setConnectionMenu({
-                            x: e.currentTarget.getBoundingClientRect().left,
-                            y: e.currentTarget.getBoundingClientRect().bottom + 5,
-                            connectionId: connection.id,
-                          });
-                        }}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setConnectionMenu({
-                            x: e.currentTarget.getBoundingClientRect().left,
-                            y: e.currentTarget.getBoundingClientRect().bottom + 5,
-                            connectionId: connection.id,
-                          });
-                        }}
-                      >
-                        {connection.name}
-                      </span>
-                      <span className="ui-font flex-shrink-0 rounded bg-hover px-1 text-text-lighter text-xs">
-                        {connection.type.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="mx-1 truncate text-text-lighter text-xs">
-                      {connection.isConnected
-                        ? "Connected"
-                        : connection.lastConnected
-                          ? `Last connected ${formatLastConnected(connection.lastConnected)}`
-                          : "Never connected"}
-                    </div>
-                  </div>
-
-                  {/* Connect/Disconnect/Browse Buttons */}
-                  <div className="flex flex-shrink-0 items-center gap-1">
-                    {connection.isConnected ? (
-                      <>
-                        <Button
-                          onClick={() => onFileSelect?.(`/remote/${connection.id}/`, true)}
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 cursor-pointer p-0"
-                          title="Browse Files"
-                        >
-                          <FolderOpen size={12} />
-                        </Button>
-                        <Button
-                          onClick={() => onConnect(connection.id)}
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 cursor-pointer p-0 text-text-lighter hover:text-red-400"
-                          title="Disconnect"
-                        >
-                          <WifiOff size={12} />
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        onClick={() => onConnect(connection.id)}
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 cursor-pointer p-0 text-text-lighter hover:text-text"
-                        title="Connect"
-                      >
-                        <Wifi size={12} />
-                      </Button>
-                    )}
-                  </div>
+                {/* Connection Info */}
+                <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <span className="truncate">{connection.name}</span>
+                  <span className="shrink-0 text-[10px] text-text-lighter">
+                    {connection.type.toUpperCase()}
+                  </span>
                 </div>
-              </div>
+
+                {/* Status Text */}
+                <span className="shrink-0 text-[10px] text-text-lighter">
+                  {connection.isConnected
+                    ? "Connected"
+                    : connection.lastConnected
+                      ? formatLastConnected(connection.lastConnected)
+                      : ""}
+                </span>
+
+                {/* Action Buttons */}
+                <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  {connection.isConnected ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onFileSelect?.(`/remote/${connection.id}/`, true);
+                        }}
+                        className="rounded p-0.5 text-text-lighter hover:bg-hover hover:text-text"
+                        aria-label="Browse Files"
+                      >
+                        <FolderOpen size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onConnect(connection.id);
+                        }}
+                        className="rounded p-0.5 text-text-lighter hover:bg-hover hover:text-red-400"
+                        aria-label="Disconnect"
+                      >
+                        <WifiOff size={12} />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onConnect(connection.id);
+                      }}
+                      className="rounded p-0.5 text-text-lighter hover:bg-hover hover:text-text"
+                      aria-label="Connect"
+                    >
+                      <Wifi size={12} />
+                    </button>
+                  )}
+                </div>
+              </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Connection Menu Dropdown */}
-      {connectionMenu && (
-        <div
-          className="fixed z-50 min-w-[120px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
-          style={{
-            left: connectionMenu.x,
-            top: connectionMenu.y,
-          }}
-          onMouseDown={(e) => {
-            e.stopPropagation();
-          }}
-        >
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const connection = connections.find((c) => c.id === connectionMenu.connectionId);
-              if (connection) {
-                onEdit(connection);
-              }
-              setConnectionMenu(null);
-            }}
-            className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
-          >
-            <Edit size={12} />
-            Edit
-          </button>
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onDelete(connectionMenu.connectionId);
-              setConnectionMenu(null);
-            }}
+      {/* Context Menu */}
+      {contextMenu &&
+        createPortal(
+          <div
             className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left",
-              "ui-font text-red-400 text-xs hover:bg-red-500/10",
+              "fixed z-100 min-w-[140px] rounded-md border",
+              "border-border bg-secondary-bg py-1 shadow-lg",
             )}
+            style={{
+              left: contextMenu.x,
+              top: contextMenu.y,
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            <Trash2 size={12} />
-            Delete
-          </button>
-        </div>
-      )}
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const connection = connections.find((c) => c.id === contextMenu.connectionId);
+                if (connection) {
+                  onEdit(connection);
+                }
+                setContextMenu(null);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-1.5",
+                "ui-font text-left text-text text-xs hover:bg-hover",
+              )}
+            >
+              <Edit size={12} />
+              Edit
+            </button>
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete(contextMenu.connectionId);
+                setContextMenu(null);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-1.5",
+                "ui-font text-left text-xs hover:bg-hover hover:text-red-500",
+              )}
+            >
+              <Trash2 size={12} />
+              Delete
+            </button>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

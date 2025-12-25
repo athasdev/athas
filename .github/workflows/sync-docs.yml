@@ -1,0 +1,61 @@
+name: Sync Docs and Releases to Website
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout athas repo
+        uses: actions/checkout@v4
+        with:
+          path: athas
+
+      - name: Checkout www repo
+        uses: actions/checkout@v4
+        with:
+          repository: athasdev/www
+          token: ${{ secrets.WWW_REPO_TOKEN }}
+          path: www
+
+      - name: Sync docs and roadmap
+        run: |
+          rsync -av --delete --exclude='contributing/' athas/docs/ www/docs/
+          cp athas/ROADMAP.md www/ROADMAP.md
+
+      - name: Sync releases data
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p www/data
+          gh api repos/athasdev/athas/releases --paginate | jq '[.[] | {
+            version: .tag_name,
+            name: .name,
+            body: .body,
+            published_at: .published_at,
+            html_url: .html_url,
+            draft: .draft,
+            prerelease: .prerelease,
+            assets: [.assets[] | {
+              name: .name,
+              download_url: .browser_download_url,
+              size: .size
+            }]
+          }]' > www/data/releases.json
+
+      - name: Commit and push changes
+        working-directory: www
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Sync docs and releases from athas ${{ github.event.release.tag_name || 'manual' }}"
+            git push
+          fi

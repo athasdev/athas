@@ -57,12 +57,11 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         aria-label={`${terminal.name}${terminal.isPinned ? " (pinned)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         className={cn(
-          "tab-bar-item group relative flex flex-shrink-0 cursor-pointer select-none items-center gap-1 whitespace-nowrap border-border border-r px-1.5 py-0.5",
+          "tab-bar-item group relative flex shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap border-border border-r px-2 py-1",
           isActive ? "bg-primary-bg" : "bg-secondary-bg",
           terminal.isPinned ? "border-l-2 border-l-accent" : "",
           isDraggedTab ? "opacity-30" : "opacity-100",
         )}
-        style={{ minWidth: 100, maxWidth: 300 }}
         onMouseDown={onMouseDown}
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
@@ -72,19 +71,17 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         onAuxClick={handleAuxClick}
       >
         {isActive && <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-accent" />}
-        <div className="grid size-3 max-h-3 max-w-3 shrink-0 place-content-center py-3">
-          <TerminalIcon size={12} className="text-text-lighter" />
-        </div>
+        {terminal.isPinned && <Pin className="shrink-0 text-accent" size={10} />}
+        <TerminalIcon size={12} className="shrink-0 text-text-lighter" />
         <span
           className={cn(
-            "ui-font flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs",
+            "ui-font overflow-hidden text-ellipsis whitespace-nowrap text-xs",
             isActive ? "text-text" : "text-text-light",
           )}
           title={terminal.currentDirectory}
         >
           {terminal.name}
         </span>
-        {/* Pin button (replaces close button when pinned) */}
         <button
           type="button"
           onClick={(e) => {
@@ -96,8 +93,8 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
             }
           }}
           className={cn(
-            "-translate-y-1/2 absolute top-1/2 right-1 flex size-4 cursor-pointer select-none items-center justify-center rounded transition-opacity",
-            "bg-primary-bg text-text-lighter",
+            "flex size-4 shrink-0 cursor-pointer select-none items-center justify-center rounded transition-opacity",
+            "text-text-lighter",
             "hover:bg-hover hover:text-text",
             terminal.isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100",
           )}

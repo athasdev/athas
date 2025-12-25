@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
@@ -10,7 +11,6 @@ import TerminalTabBar from "./terminal-tab-bar";
 interface TerminalContainerProps {
   currentDirectory?: string;
   className?: string;
-  onClosePanel?: () => void;
   onFullScreen?: () => void;
   isFullScreen?: boolean;
 }
@@ -18,7 +18,6 @@ interface TerminalContainerProps {
 const TerminalContainer = ({
   currentDirectory = "/",
   className = "",
-  onClosePanel,
   onFullScreen,
   isFullScreen = false,
 }: TerminalContainerProps) => {
@@ -54,9 +53,16 @@ const TerminalContainer = ({
   const [renamingTerminalId, setRenamingTerminalId] = useState<string | null>(null);
   const [newTerminalName, setNewTerminalName] = useState("");
   const hasInitializedRef = useRef(false);
+  const wasVisibleRef = useRef(false);
   const terminalSessionRefs = useRef<Map<string, { focus: () => void }>>(new Map());
   const tabFocusTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  const { registerTerminalFocus, clearTerminalFocus } = useUIState();
+  const {
+    registerTerminalFocus,
+    clearTerminalFocus,
+    setIsBottomPaneVisible,
+    isBottomPaneVisible,
+    bottomPaneActiveTab,
+  } = useUIState();
 
   const handleNewTerminal = useCallback(() => {
     const dirName = currentDirectory.split("/").pop() || "terminal";
@@ -120,6 +126,13 @@ const TerminalContainer = ({
     };
   }, []);
 
+  // Auto-close bottom pane when all terminals are closed
+  useEffect(() => {
+    if (terminals.length === 0 && hasInitializedRef.current) {
+      setIsBottomPaneVisible(false);
+    }
+  }, [terminals.length, setIsBottomPaneVisible]);
+
   const handleTabClick = useCallback(
     (terminalId: string) => {
       setActiveTerminal(terminalId);
@@ -142,8 +155,8 @@ const TerminalContainer = ({
   );
 
   const handleTabClose = useCallback(
-    (terminalId: string, event: React.MouseEvent) => {
-      event.stopPropagation();
+    (terminalId: string, event?: React.MouseEvent) => {
+      event?.stopPropagation();
       closeTerminal(terminalId);
     },
     [closeTerminal],
@@ -284,6 +297,73 @@ const TerminalContainer = ({
       clearTerminalFocus();
     };
   }, [registerTerminalFocus, clearTerminalFocus, focusActiveTerminal]);
+
+  // Listen for close-active-terminal event from native menu
+  useEffect(() => {
+    const handleCloseActiveTerminal = () => {
+      if (activeTerminalId) {
+        closeTerminal(activeTerminalId);
+      }
+    };
+
+    window.addEventListener("close-active-terminal", handleCloseActiveTerminal);
+    return () => window.removeEventListener("close-active-terminal", handleCloseActiveTerminal);
+  }, [activeTerminalId, closeTerminal]);
+
+  // Store pending commands for terminals that are initializing
+  const pendingCommandsRef = useRef<Map<string, string>>(new Map());
+
+  // Listen for create-terminal-with-command event (used by agent install buttons)
+  useEffect(() => {
+    const handleCreateTerminalWithCommand = (event: Event) => {
+      const customEvent = event as CustomEvent<{ command: string; name?: string }>;
+      const { command, name } = customEvent.detail;
+
+      // Show bottom pane and switch to terminal tab
+      setIsBottomPaneVisible(true);
+
+      // Create a new terminal
+      const terminalName = name || "Install";
+      const newTerminalId = createTerminal(terminalName, currentDirectory);
+
+      if (newTerminalId) {
+        // Store the pending command
+        pendingCommandsRef.current.set(newTerminalId, `${command}\n`);
+
+        // Focus the terminal after creation
+        setTimeout(() => {
+          const terminalRef = terminalSessionRefs.current.get(newTerminalId);
+          if (terminalRef) {
+            terminalRef.focus();
+          }
+        }, 150);
+      }
+    };
+
+    window.addEventListener("create-terminal-with-command", handleCreateTerminalWithCommand);
+    return () =>
+      window.removeEventListener("create-terminal-with-command", handleCreateTerminalWithCommand);
+  }, [createTerminal, currentDirectory, setIsBottomPaneVisible]);
+
+  // Listen for terminal-ready events to execute pending commands
+  useEffect(() => {
+    const handleTerminalReady = (event: Event) => {
+      const customEvent = event as CustomEvent<{ terminalId: string; connectionId: string }>;
+      const { terminalId, connectionId } = customEvent.detail;
+
+      const pendingCommand = pendingCommandsRef.current.get(terminalId);
+      if (pendingCommand && connectionId) {
+        // Small delay to ensure shell prompt is ready
+        setTimeout(() => {
+          invoke("terminal_write", { id: connectionId, data: pendingCommand }).catch(() => {});
+          pendingCommandsRef.current.delete(terminalId);
+        }, 300);
+      }
+    };
+
+    window.addEventListener("terminal-ready", handleTerminalReady);
+    return () => window.removeEventListener("terminal-ready", handleTerminalReady);
+  }, []);
 
   // Terminal-specific keyboard shortcuts
   useEffect(() => {
@@ -439,41 +519,23 @@ const TerminalContainer = ({
     restoreTerminalsFromPersisted,
   ]);
 
-  // Create first terminal if none exist (fallback UI)
-  if (terminals.length === 0) {
-    return (
-      <div className={`flex h-full flex-col ${className}`} data-terminal-container="active">
-        <TerminalTabBar
-          terminals={[]}
-          activeTerminalId={null}
-          onTabClick={handleTabClick}
-          onTabClose={handleTabClose}
-          onTabReorder={reorderTerminals}
-          onTabPin={handleTabPin}
-          onTabRename={handleTabRename}
-          onNewTerminal={handleNewTerminal}
-          onTabCreate={handleTabCreate}
-          onCloseOtherTabs={handleCloseOtherTabs}
-          onCloseAllTabs={handleCloseAllTabs}
-          onCloseTabsToRight={handleCloseTabsToRight}
-        />
-        <div className="flex flex-1 items-center justify-center text-text-lighter">
-          <div className="text-center">
-            <p className="mb-4 text-xs">No terminal sessions</p>
-            <button
-              onClick={handleNewTerminal}
-              className="rounded bg-selected px-2 py-1 text-text text-xs transition-colors hover:bg-hover"
-            >
-              Create Terminal
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Create terminal when pane becomes visible with no terminals
+  useEffect(() => {
+    const isTerminalVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
+    const justBecameVisible = isTerminalVisible && !wasVisibleRef.current;
+
+    if (justBecameVisible && terminals.length === 0 && hasInitializedRef.current) {
+      handleNewTerminal();
+    }
+
+    wasVisibleRef.current = isTerminalVisible;
+  }, [isBottomPaneVisible, bottomPaneActiveTab, terminals.length, handleNewTerminal]);
 
   return (
-    <div className={`flex h-full flex-col ${className}`} data-terminal-container="active">
+    <div
+      className={`terminal-container flex h-full flex-col overflow-hidden ${className}`}
+      data-terminal-container="active"
+    >
       {/* Terminal Tab Bar */}
       <TerminalTabBar
         terminals={terminals}
@@ -491,19 +553,16 @@ const TerminalContainer = ({
         onSplitView={handleSplitView}
         onFullScreen={onFullScreen}
         isFullScreen={isFullScreen}
-        onClosePanel={onClosePanel}
         isSplitView={terminals.find((t) => t.id === activeTerminalId)?.splitMode || false}
       />
 
       {/* Terminal Sessions */}
       <div
-        className="relative bg-primary-bg"
+        className="relative min-h-0 flex-1 overflow-hidden bg-primary-bg"
         style={{
-          //height: "calc(100% - 28px)",
           transform: `scale(${zoomLevel})`,
           transformOrigin: "top left",
           width: `${100 / zoomLevel}%`,
-          height: `${100 / zoomLevel}%`,
         }}
       >
         {(() => {

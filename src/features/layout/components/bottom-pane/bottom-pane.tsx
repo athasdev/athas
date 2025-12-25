@@ -13,7 +13,7 @@ interface BottomPaneProps {
 }
 
 const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
-  const { isBottomPaneVisible, bottomPaneActiveTab, setIsBottomPaneVisible } = useUIState();
+  const { isBottomPaneVisible, bottomPaneActiveTab } = useUIState();
   const { rootFolderPath } = useProjectStore();
   const { settings } = useSettingsStore();
   const [height, setHeight] = useState(320);
@@ -67,8 +67,8 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
   return (
     <div
       className={cn(
-        "relative flex flex-col border-border border-t bg-secondary-bg",
-        isFullScreen && "fixed inset-x-0 z-40",
+        "relative flex flex-col overflow-hidden border-border border-t bg-secondary-bg",
+        isFullScreen && "fixed inset-x-0 z-[100]",
         !isBottomPaneVisible && "hidden",
       )}
       style={
@@ -101,13 +101,12 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
       </div>
 
       {/* Content Area */}
-      <div className="h-full">
+      <div className="h-full overflow-hidden">
         {/* Terminal Container - Always mounted to preserve terminal sessions */}
         {settings.coreFeatures.terminal && (
           <TerminalContainer
             currentDirectory={rootFolderPath}
             className={cn("h-full", bottomPaneActiveTab === "terminal" ? "block" : "hidden")}
-            onClosePanel={() => setIsBottomPaneVisible(false)}
             onFullScreen={() => setIsFullScreen(!isFullScreen)}
             isFullScreen={isFullScreen}
           />

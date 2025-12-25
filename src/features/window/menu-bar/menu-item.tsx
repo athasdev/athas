@@ -36,6 +36,7 @@ const MenuItem = ({ children, shortcut, onClick, separator }: Props) => {
 
   return (
     <button
+      role="menuitem"
       className="flex w-full cursor-pointer items-center justify-between px-3 py-1.5 text-text text-xs hover:bg-hover"
       onClick={onClick}
     >

@@ -44,6 +44,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
     reorderBuffers,
     confirmCloseWithoutSaving,
     cancelPendingClose,
+    convertPreviewToDefinite,
   } = useBufferStore.use.actions();
   const { handleSave } = useAppStore.use.actions();
   const { settings } = useSettingsStore();
@@ -319,6 +320,19 @@ const TabBar = ({ paneId }: TabBarProps) => {
     [handleTabClick, sortedBuffers, updateActivePath],
   );
 
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent, index: number) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const buffer = sortedBuffers[index];
+      // Convert preview tab to definite on double-click
+      if (buffer.isPreview) {
+        convertPreviewToDefinite(buffer.id);
+      }
+    },
+    [sortedBuffers, convertPreviewToDefinite],
+  );
+
   const handleContextMenu = useCallback((e: React.MouseEvent, buffer: Buffer) => {
     e.preventDefault();
 
@@ -575,7 +589,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   return (
     <>
-      <div className="relative flex-shrink-0 border-border border-b">
+      <div className="relative shrink-0 border-border border-b">
         <div
           ref={tabBarRef}
           className="flex overflow-x-auto overflow-y-hidden bg-secondary-bg [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -601,6 +615,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
                   tabRefs.current[index] = el;
                 }}
                 onMouseDown={(e) => handleMouseDown(e, index)}
+                onDoubleClick={(e) => handleDoubleClick(e, index)}
                 onContextMenu={(e) => handleContextMenu(e, buffer)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
                 onDragStart={(e) => handleDragStart(e, index)}

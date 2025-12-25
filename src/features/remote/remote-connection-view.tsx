@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { message } from "@tauri-apps/plugin-dialog";
 import { memo, useEffect, useState } from "react";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { connectionStore } from "@/utils/connection-store";
 import ConnectionDialog from "./connection-dialog";
 import ConnectionList from "./connection-list";
@@ -122,14 +123,8 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
         // Refresh local state
         await refreshConnections();
       } else {
-        // Check if we need to prompt for password
-        // Only prompt if no SSH key is available AND no password is saved/provided
-        if (!connection.keyPath && !connection.password && !providedPassword) {
-          setPasswordPromptConnection(connection);
-          return;
-        }
-
-        // Connect
+        // Connect - the backend will try SSH config, SSH agent, and default keys first
+        // Only if all automatic auth methods fail will we prompt for password
         await invoke("ssh_connect", {
           connectionId,
           host: connection.host,
@@ -146,31 +141,41 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
         // Refresh local state
         await refreshConnections();
 
-        // Create new remote window
-        await invoke("create_remote_window", {
-          connectionId,
-          connectionName: connection.name,
-        });
+        // Open the remote project in the file tree
+        const { handleOpenRemoteProject } = useFileSystemStore.getState();
+        if (handleOpenRemoteProject) {
+          await handleOpenRemoteProject(connectionId, connection.name);
+        }
       }
     } catch (error) {
       console.error("Connection error:", error);
+      const errorStr = String(error);
 
-      // If this is a password prompt connection attempt, don't show the dialog
-      // Let the password prompt handle the error display
-      if (!providedPassword) {
-        try {
-          await message(String(error), {
-            title: "Connection Error",
-            kind: "error",
-          });
-        } catch {
-          // Fallback to console if dialog fails
-          console.error("Connection failed:", error);
-        }
+      // Check if this is an authentication failure that could be resolved with password
+      const isAuthFailure =
+        errorStr.includes("No valid authentication method") ||
+        errorStr.includes("Authentication failed");
+
+      // If auth failed and no password was provided yet, prompt for password
+      if (isAuthFailure && !providedPassword && !connection.password) {
+        setPasswordPromptConnection(connection);
+        return;
       }
 
-      // Re-throw error so password prompt can handle it
-      throw error;
+      // For password prompt attempts, re-throw so the dialog can handle it
+      if (providedPassword) {
+        throw error;
+      }
+
+      // Show error dialog for other failures
+      try {
+        await message(errorStr, {
+          title: "Connection Error",
+          kind: "error",
+        });
+      } catch {
+        console.error("Connection failed:", error);
+      }
     }
   };
 

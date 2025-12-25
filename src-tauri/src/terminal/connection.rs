@@ -2,6 +2,7 @@ use crate::terminal::config::TerminalConfig;
 use anyhow::{Result, anyhow};
 use portable_pty::{CommandBuilder, PtyPair, PtySize};
 use std::{
+   collections::HashMap,
    io::{Read, Write},
    sync::{Arc, Mutex},
    thread,
@@ -38,6 +39,71 @@ impl TerminalConnection {
       })
    }
 
+   /// Get the user's shell environment by sourcing their login shell profile.
+   /// This is critical for production builds on macOS where GUI apps don't inherit
+   /// the user's shell environment when launched from Finder/Launchpad.
+   #[cfg(not(target_os = "windows"))]
+   fn get_user_environment() -> HashMap<String, String> {
+      use std::{
+         io::{BufRead, BufReader},
+         process::Command,
+      };
+
+      let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+
+      // Run the shell as an interactive login shell to source user's profile,
+      // then print all environment variables
+      let output = Command::new(&shell).args(["-ilc", "env"]).output();
+
+      let mut env_map = HashMap::new();
+
+      if let Ok(output) = output {
+         let reader = BufReader::new(output.stdout.as_slice());
+         for line in reader.lines() {
+            if let Ok(line) = line
+               && let Some((key, value)) = line.split_once('=')
+            {
+               env_map.insert(key.to_string(), value.to_string());
+            }
+         }
+      }
+
+      // Ensure critical variables have fallback values
+      if !env_map.contains_key("HOME") {
+         if let Ok(home) = std::env::var("HOME") {
+            env_map.insert("HOME".to_string(), home);
+         } else if let Some(home_dir) = dirs::home_dir() {
+            env_map.insert("HOME".to_string(), home_dir.to_string_lossy().to_string());
+         }
+      }
+
+      if !env_map.contains_key("USER")
+         && let Ok(user) = std::env::var("USER")
+      {
+         env_map.insert("USER".to_string(), user);
+      }
+
+      if !env_map.contains_key("PATH") {
+         // Fallback PATH with common locations
+         env_map.insert(
+            "PATH".to_string(),
+            "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin".to_string(),
+         );
+      }
+
+      if !env_map.contains_key("LANG") {
+         env_map.insert("LANG".to_string(), "en_US.UTF-8".to_string());
+      }
+
+      env_map
+   }
+
+   #[cfg(target_os = "windows")]
+   fn get_user_environment() -> HashMap<String, String> {
+      // On Windows, inherit current process environment
+      std::env::vars().collect()
+   }
+
    fn build_command(config: &TerminalConfig) -> Result<CommandBuilder> {
       let default_shell = if cfg!(target_os = "windows") {
          "cmd.exe".to_string()
@@ -69,7 +135,14 @@ impl TerminalConnection {
          cmd.cwd(working_dir);
       }
 
-      // Set up proper terminal environment
+      // First, inherit user's full shell environment
+      // This ensures PATH, HOME, USER, LANG, and other critical vars are available
+      let user_env = Self::get_user_environment();
+      for (key, value) in &user_env {
+         cmd.env(key, value);
+      }
+
+      // Then override with terminal-specific environment variables
       cmd.env("TERM", "xterm-256color");
       cmd.env("COLORTERM", "truecolor");
       cmd.env("TERM_PROGRAM", "athas");
@@ -79,7 +152,7 @@ impl TerminalConnection {
       cmd.env("CLICOLOR", "1");
       cmd.env("CLICOLOR_FORCE", "1");
 
-      // Copy over custom environment variables
+      // Copy over custom environment variables (highest priority)
       if let Some(env_vars) = &config.environment {
          for (key, value) in env_vars {
             cmd.env(key, value);

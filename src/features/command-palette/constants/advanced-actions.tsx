@@ -8,7 +8,12 @@ interface AdvancedActionsParams {
     activeWorkspaces: string[];
     lastError?: string | null | undefined;
   };
-  updateLspStatus: (status: string, workspaces?: string[], error?: string) => void;
+  updateLspStatus: (
+    status: string,
+    workspaces?: string[],
+    error?: string,
+    languages?: string[],
+  ) => void;
   clearLspError: () => void;
   rootFolderPath: string | null | undefined;
   vimMode: boolean;

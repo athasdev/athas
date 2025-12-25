@@ -180,6 +180,8 @@ export const useEditorStateStore = createSelectors(
             set({ cursorPosition: cachedPosition });
             return true;
           }
+          // Reset to beginning for files with no cached position
+          set({ cursorPosition: { line: 0, column: 0, offset: 0 } });
           return false;
         },
 
@@ -208,6 +210,14 @@ export const useEditorStateStore = createSelectors(
         addCursor: (position, selection) =>
           set((state) => {
             if (!state.multiCursorState) return state;
+
+            // Check for duplicate cursor at the same position
+            const isDuplicate = state.multiCursorState.cursors.some(
+              (cursor) =>
+                cursor.position.line === position.line &&
+                cursor.position.column === position.column,
+            );
+            if (isDuplicate) return state;
 
             const newCursorId = `cursor-${Date.now()}-${state.multiCursorState.cursors.length}`;
             const newCursor: Cursor = {

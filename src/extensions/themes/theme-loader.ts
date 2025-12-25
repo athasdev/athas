@@ -1,30 +1,34 @@
 import type { EditorAPI } from "@/features/editor/extensions/types";
 import { BaseThemeExtension } from "./base-theme-extension";
 // Import all theme JSON files
-import athasThemes from "./builtin/athas.json";
 import catppuccinThemes from "./builtin/catppuccin.json";
+import christmasThemes from "./builtin/christmas.json";
 import contrastThemes from "./builtin/contrast-themes.json";
 import draculaThemes from "./builtin/dracula.json";
 import githubThemes from "./builtin/github.json";
 import nordThemes from "./builtin/nord.json";
-import oneDarkThemes from "./builtin/one-dark.json";
+import oneThemes from "./builtin/one.json";
 import solarizedThemes from "./builtin/solarized.json";
 import tokyoNightThemes from "./builtin/tokyo-night.json";
 import vitesseThemes from "./builtin/vitesse.json";
-import vscodeThemes from "./builtin/vscode.json";
 import type { ThemeDefinition } from "./types";
 
+/**
+ * New theme format from JSON files
+ */
 interface JsonTheme {
   id: string;
   name: string;
-  description: string;
-  category: "System" | "Light" | "Dark";
-  isDark?: boolean;
-  cssVariables: Record<string, string>;
-  syntaxTokens?: Record<string, string>;
+  description?: string;
+  appearance: "dark" | "light";
+  colors: Record<string, string>;
+  syntax: Record<string, string>;
 }
 
 interface ThemeFile {
+  name: string;
+  author?: string;
+  description?: string;
   themes: JsonTheme[];
 }
 
@@ -40,17 +44,16 @@ export class ThemeLoader extends BaseThemeExtension {
 
       // Combine all theme files
       const allThemeFiles: ThemeFile[] = [
-        athasThemes as ThemeFile,
         catppuccinThemes as ThemeFile,
+        christmasThemes as ThemeFile,
         contrastThemes as ThemeFile,
         draculaThemes as ThemeFile,
         githubThemes as ThemeFile,
         nordThemes as ThemeFile,
-        oneDarkThemes as ThemeFile,
+        oneThemes as ThemeFile,
         solarizedThemes as ThemeFile,
         tokyoNightThemes as ThemeFile,
         vitesseThemes as ThemeFile,
-        vscodeThemes as ThemeFile,
       ];
 
       // Flatten all themes from all files
@@ -78,15 +81,35 @@ export class ThemeLoader extends BaseThemeExtension {
     }
   }
 
+  /**
+   * Convert new JSON theme format to internal ThemeDefinition
+   * - colors → cssVariables with -- prefix
+   * - syntax → syntaxTokens with --syntax- prefix
+   * - appearance → isDark and category
+   */
   private convertJsonToThemeDefinition(jsonTheme: JsonTheme): ThemeDefinition {
+    // Convert colors to CSS variables with -- prefix
+    const cssVariables: Record<string, string> = {};
+    for (const [key, value] of Object.entries(jsonTheme.colors)) {
+      cssVariables[`--${key}`] = value;
+    }
+
+    // Convert syntax to syntaxTokens with --syntax- prefix
+    const syntaxTokens: Record<string, string> = {};
+    for (const [key, value] of Object.entries(jsonTheme.syntax)) {
+      syntaxTokens[`--syntax-${key}`] = value;
+    }
+
+    const isDark = jsonTheme.appearance === "dark";
+
     return {
       id: jsonTheme.id,
       name: jsonTheme.name,
-      description: jsonTheme.description,
-      category: jsonTheme.category,
-      cssVariables: jsonTheme.cssVariables,
-      syntaxTokens: jsonTheme.syntaxTokens,
-      isDark: jsonTheme.isDark,
+      description: jsonTheme.description || "",
+      category: isDark ? "Dark" : "Light",
+      cssVariables,
+      syntaxTokens,
+      isDark,
       icon: undefined,
     };
   }

@@ -1,56 +1,32 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { ask } from "@tauri-apps/plugin-dialog";
-import { open } from "@tauri-apps/plugin-shell";
-import { ClipboardAddon } from "@xterm/addon-clipboard";
-import { FitAddon } from "@xterm/addon-fit";
-import { SearchAddon } from "@xterm/addon-search";
-import { SerializeAddon } from "@xterm/addon-serialize";
-import { Unicode11Addon } from "@xterm/addon-unicode11";
-import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Terminal } from "@xterm/xterm";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { themeRegistry } from "@/extensions/themes/theme-registry";
+
+import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
-import { useTerminalStore } from "@/stores/terminal-store";
 import { useThemeStore } from "@/stores/theme-store";
-import { cn } from "@/utils/cn";
+import {
+  createTerminalAddons,
+  injectLinkStyles,
+  loadWebLinksAddon,
+  removeLinkStyles,
+  type TerminalAddons,
+} from "../hooks/use-terminal-addons";
+import { useTerminalTheme } from "../hooks/use-terminal-theme";
+import { useTerminalStore } from "../stores/terminal-store";
+import { parseOSC7 } from "../utils/osc-parser";
 import { TerminalSearch } from "./terminal-search";
 import "@xterm/xterm/css/xterm.css";
 import "../styles/terminal.css";
-import { themeRegistry } from "@/extensions/themes/theme-registry";
 
 interface XtermTerminalProps {
   sessionId: string;
   isActive: boolean;
   onReady?: () => void;
-  onTerminalRef?: (ref: any) => void;
+  onTerminalRef?: (ref: { focus: () => void; terminal: Terminal }) => void;
   onTerminalExit?: (sessionId: string) => void;
-}
-
-interface TerminalTheme {
-  background: string;
-  foreground: string;
-  cursor: string;
-  cursorAccent: string;
-  selectionBackground: string;
-  selectionForeground: string;
-  black: string;
-  red: string;
-  green: string;
-  yellow: string;
-  blue: string;
-  magenta: string;
-  cyan: string;
-  white: string;
-  brightBlack: string;
-  brightRed: string;
-  brightGreen: string;
-  brightYellow: string;
-  brightBlue: string;
-  brightMagenta: string;
-  brightCyan: string;
-  brightWhite: string;
 }
 
 export const XtermTerminal: React.FC<XtermTerminalProps> = ({
@@ -62,437 +38,201 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
-  const searchAddonRef = useRef<SearchAddon | null>(null);
-  const serializeAddonRef = useRef<SerializeAddon | null>(null);
+  const addonsRef = useRef<TerminalAddons | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
-  const [searchResults, setSearchResults] = useState<{ current: number; total: number }>({
-    current: 0,
-    total: 0,
-  });
+  const [searchResults, setSearchResults] = useState({ current: 0, total: 0 });
   const isInitializingRef = useRef(false);
   const currentConnectionIdRef = useRef<string | null>(null);
   const onTerminalExitRef = useRef(onTerminalExit);
-  const currentInputLineRef = useRef<string>("");
-  const initFitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const themeRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const resizeRafRef = useRef<number | null>(null);
-  const focusRafRef = useRef<number | null>(null);
+  const currentInputLineRef = useRef("");
 
-  // Keep ref in sync with prop
   useEffect(() => {
     onTerminalExitRef.current = onTerminalExit;
   }, [onTerminalExit]);
 
   const { updateSession, getSession } = useTerminalStore();
   const { currentTheme } = useThemeStore();
-  const { fontSize: editorFontSize, fontFamily: editorFontFamily } = useEditorSettingsStore();
+
+  const {
+    terminalFontFamily,
+    terminalFontSize,
+    terminalLineHeight,
+    terminalLetterSpacing,
+    terminalCursorStyle,
+    terminalCursorBlink,
+  } = useSettingsStore((state) => state.settings);
   const { rootFolderPath } = useProjectStore();
-  const [fontSize, setFontSize] = useState(editorFontSize);
-
-  // Parse OSC 7 sequence for working directory tracking
-  const parseOSC7 = useCallback((data: string): string | null => {
-    // OSC 7 format: ESC]7;file://hostname/pathBEL
-    // Build regex dynamically to avoid control character linting warnings
-    const ESC = String.fromCharCode(0x1b);
-    const BEL = String.fromCharCode(0x07);
-    const osc7Regex = new RegExp(`${ESC}\\]7;file://[^/]*([^${BEL}]+)${BEL}`);
-    const match = data.match(osc7Regex);
-    if (match?.[1]) {
-      try {
-        // Decode URI component to handle special characters
-        return decodeURIComponent(match[1]);
-      } catch {
-        return match[1];
-      }
-    }
-    return null;
-  }, []);
-
-  const getTerminalTheme = useCallback((): TerminalTheme => {
-    const computedStyle = getComputedStyle(document.documentElement);
-    const getColor = (varName: string) => computedStyle.getPropertyValue(varName).trim();
-
-    return {
-      background: getColor("--color-primary-bg"),
-      foreground: getColor("--color-text"),
-      cursor: getColor("--color-accent"),
-      cursorAccent: getColor("--color-background"),
-      selectionBackground: `${getColor("--color-accent")}40`, // 40 = 25% opacity
-      selectionForeground: getColor("--color-text"),
-      black: getColor("--color-terminal-black") || "#000000",
-      red: getColor("--color-terminal-red") || "#CD3131",
-      green: getColor("--color-terminal-green") || "#0DBC79",
-      yellow: getColor("--color-terminal-yellow") || "#E5E510",
-      blue: getColor("--color-terminal-blue") || "#2472C8",
-      magenta: getColor("--color-terminal-magenta") || "#BC3FBC",
-      cyan: getColor("--color-terminal-cyan") || "#11A8CD",
-      white: getColor("--color-terminal-white") || "#E5E5E5",
-      brightBlack: getColor("--color-terminal-bright-black") || "#666666",
-      brightRed: getColor("--color-terminal-bright-red") || "#F14C4C",
-      brightGreen: getColor("--color-terminal-bright-green") || "#23D18B",
-      brightYellow: getColor("--color-terminal-bright-yellow") || "#F5F543",
-      brightBlue: getColor("--color-terminal-bright-blue") || "#3B8EEA",
-      brightMagenta: getColor("--color-terminal-bright-magenta") || "#D670D6",
-      brightCyan: getColor("--color-terminal-bright-cyan") || "#29B8DB",
-      brightWhite: getColor("--color-terminal-bright-white") || "#FFFFFF",
-    };
-  }, []);
+  const { getTerminalTheme } = useTerminalTheme();
 
   const initializeTerminal = useCallback(async () => {
-    if (!terminalRef.current || isInitialized || isInitializingRef.current) {
-      return;
-    }
+    if (!terminalRef.current || isInitialized || isInitializingRef.current) return;
 
     isInitializingRef.current = true;
 
-    // Add a small delay to ensure DOM is ready
+    // Wait for font to load before initializing terminal
+    try {
+      await document.fonts.load(`${terminalFontSize}px "${terminalFontFamily}"`);
+    } catch {
+      // Font load failed, continue with fallback
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     if (!terminalRef.current) {
-      console.warn("Terminal ref is not available after delay");
+      isInitializingRef.current = false;
       return;
     }
 
-    console.log("Creating xterm instance...");
     try {
+      // Quote font names with spaces for CSS
+      const fontFamily = terminalFontFamily.includes(" ")
+        ? `"${terminalFontFamily}", monospace`
+        : `${terminalFontFamily}, monospace`;
+
       const terminal = new Terminal({
-        fontFamily: `${editorFontFamily}, "JetBrains Mono", "Fira Code", "Cascadia Code", Consolas, "Courier New", monospace`,
-        fontSize: fontSize,
-        fontWeight: "normal",
-        fontWeightBold: "bold",
-        lineHeight: 1,
-        letterSpacing: 0,
-        cursorBlink: true,
-        cursorStyle: "bar",
+        fontFamily,
+        fontSize: terminalFontSize,
+        lineHeight: terminalLineHeight,
+        letterSpacing: terminalLetterSpacing,
+        cursorBlink: terminalCursorBlink,
+        cursorStyle: terminalCursorStyle,
         cursorWidth: 2,
-        allowTransparency: false,
         allowProposedApi: true,
         theme: getTerminalTheme(),
         scrollback: 10000,
-        tabStopWidth: 8,
-        drawBoldTextInBrightColors: true,
-        minimumContrastRatio: 4.5,
         convertEol: true,
-        windowOptions: {},
       });
 
-      // Initialize addons
-      const fitAddon = new FitAddon();
-      const searchAddon = new SearchAddon();
-      // WebLinksAddon with custom handler
-      const webLinksAddon = new WebLinksAddon(async (_event: MouseEvent, uri: string) => {
-        console.log("WebLinksAddon: Opening link", uri);
-
-        try {
-          // Show confirmation dialog
-          const confirmed = await ask(`Do you want to open this link in your browser?\n\n${uri}`, {
-            title: "Open External Link",
-            kind: "warning",
-            okLabel: "Open",
-            cancelLabel: "Cancel",
-          });
-
-          if (confirmed) {
-            await open(uri);
-            console.log("Successfully opened link");
-          } else {
-            console.log("User cancelled opening link");
-          }
-        } catch (error) {
-          console.error("Failed to open link:", error);
-        }
-      });
-      const serializeAddon = new SerializeAddon();
-      const unicode11Addon = new Unicode11Addon();
-      const clipboardAddon = new ClipboardAddon();
-
-      terminal.loadAddon(fitAddon);
-      terminal.loadAddon(searchAddon);
-      terminal.loadAddon(serializeAddon);
-      terminal.loadAddon(unicode11Addon);
-      terminal.loadAddon(clipboardAddon);
-
-      // Open terminal in DOM
+      // Skip WebGL for fonts with spaces (like Nerd Fonts) - they have issues with WebGL's texture atlas
+      const skipWebGL = terminalFontFamily.includes(" ");
+      const addons = createTerminalAddons(terminal, { skipWebGL });
       terminal.open(terminalRef.current);
 
-      // Allow shortcuts to be handled, but let terminal control keys through
       terminal.attachCustomKeyEventHandler((e) => {
-        // Allow all Ctrl key combinations to pass through to the terminal
-        // This includes Ctrl+C, Ctrl+Z, etc.
-        if (e.ctrlKey && !e.metaKey) {
-          return true; // Allow terminal to handle
-        }
-
-        // Block Cmd/Meta key combinations so they can be handled by the app
-        if (e.metaKey) {
-          return false; // Don't let terminal handle
-        }
-
-        return true; // Allow everything else
+        if (e.ctrlKey && !e.metaKey) return true;
+        if (e.metaKey) return false;
+        return true;
       });
 
-      // Load WebLinksAddon after terminal is open
-      terminal.loadAddon(webLinksAddon);
-
-      // Skip WebGL for now to avoid renderer issues
-      console.log("Using default canvas renderer");
-
-      // Activate unicode version 11
+      loadWebLinksAddon(terminal);
       terminal.unicode.activeVersion = "11";
+      injectLinkStyles(sessionId, terminalRef.current.id || `terminal-${sessionId}`);
 
-      // Inject CSS for link styling
-      const styleId = `terminal-link-style-${sessionId}`;
-      if (!document.getElementById(styleId)) {
-        const style = document.createElement("style");
-        style.id = styleId;
-        const accentColor = getComputedStyle(document.documentElement)
-          .getPropertyValue("--color-accent")
-          .trim();
-        style.textContent = `
-          #${terminalRef.current.id || `terminal-${sessionId}`} .xterm-screen a,
-          #${terminalRef.current.id || `terminal-${sessionId}`} .xterm-link,
-          #${terminalRef.current.id || `terminal-${sessionId}`} [style*="text-decoration"] {
-            color: ${accentColor} !important;
-            text-decoration: underline !important;
-            cursor: pointer !important;
-          }
-          #${terminalRef.current.id || `terminal-${sessionId}`} .xterm-screen a:hover,
-          #${terminalRef.current.id || `terminal-${sessionId}`} .xterm-link:hover {
-            opacity: 0.8 !important;
-          }
-        `;
-        document.head.appendChild(style);
-      }
+      setTimeout(() => addons.fitAddon.fit(), 150);
 
-      // Fit terminal to container after a short delay
-      if (initFitTimeoutRef.current) {
-        clearTimeout(initFitTimeoutRef.current);
-      }
-      initFitTimeoutRef.current = setTimeout(() => {
-        if (fitAddon && terminalRef.current) {
-          fitAddon.fit();
-        }
-        initFitTimeoutRef.current = null;
-      }, 150);
-
-      // Store refs
       xtermRef.current = terminal;
-      fitAddonRef.current = fitAddon;
-      searchAddonRef.current = searchAddon;
-      serializeAddonRef.current = serializeAddon;
+      addonsRef.current = addons;
 
-      // Create backend terminal connection
-      try {
-        // Always create a new connection for each terminal instance
-        const existingSession = getSession(sessionId);
-
-        // If we already have a connection, close it first
-        if (existingSession?.connectionId) {
-          try {
-            await invoke("close_terminal", {
-              id: existingSession.connectionId,
-            });
-          } catch (e) {
-            console.warn("Failed to close existing terminal connection:", e);
-          }
-        }
-
-        // Create new connection
-        const connectionId = await invoke<string>("create_terminal", {
-          config: {
-            working_directory: existingSession?.currentDirectory || rootFolderPath || undefined,
-            shell: existingSession?.shell || undefined,
-            rows: terminal.rows,
-            cols: terminal.cols,
-          },
-        });
-
-        console.log("Created new terminal connection:", connectionId, "for session:", sessionId);
-
-        // Store connection ID for this session
-        updateSession(sessionId, { connectionId });
-        currentConnectionIdRef.current = connectionId;
-
-        // Handle terminal input
-        terminal.onData((data) => {
-          const currentId = currentConnectionIdRef.current || connectionId;
-
-          // Track input to detect "exit" command
-          // Check if this data contains a newline/carriage return (command submitted)
-          const hasNewline = data.includes("\n") || data.includes("\r");
-
-          if (hasNewline) {
-            // Command is being submitted - check if it's "exit"
-            currentInputLineRef.current += data;
-            const trimmedLine = currentInputLineRef.current.trim();
-
-            // Check if the command is exactly "exit" (case-insensitive, allowing whitespace)
-            if (/^\s*exit\s*$/i.test(trimmedLine)) {
-              // Reset input tracking
-              currentInputLineRef.current = "";
-
-              // Send the exit command to the terminal first
-              invoke("terminal_write", { id: currentId, data }).catch((e) => {
-                console.error("Failed to write to terminal:", e);
-              });
-
-              // Wait a moment for the shell to process exit, then close the terminal
-              setTimeout(() => {
-                const callback = onTerminalExitRef.current;
-                if (callback) {
-                  console.log("Detected exit command, closing terminal session:", sessionId);
-                  // Close backend connection
-                  invoke("close_terminal", { id: currentId }).catch((e) => {
-                    console.error("Failed to close backend terminal connection:", e);
-                  });
-                  // Close the terminal tab
-                  callback(sessionId);
-                }
-              }, 100);
-              return;
-            } else {
-              // Not an exit command, reset tracking
-              currentInputLineRef.current = "";
-            }
-          } else {
-            // No newline yet, accumulate input
-            currentInputLineRef.current += data;
-
-            // Prevent unbounded growth
-            if (currentInputLineRef.current.length > 1000) {
-              currentInputLineRef.current = currentInputLineRef.current.slice(-100);
-            }
-          }
-
-          // Send data to terminal
-          invoke("terminal_write", { id: currentId, data }).catch((e) => {
-            console.error("Failed to write to terminal:", e);
-          });
-        });
-
-        // Handle terminal key events for enhanced shortcuts
-        terminal.onKey(({ domEvent }) => {
-          const e = domEvent;
-
-          // Cmd+Delete (Mac) or Ctrl+U (Unix) - Clear entire line
-          if ((e.metaKey && e.key === "Backspace") || (e.ctrlKey && e.key === "u")) {
-            e.preventDefault();
-            // Send Ctrl+U to clear the line
-            const currentId = currentConnectionIdRef.current || connectionId;
-            invoke("terminal_write", { id: currentId, data: "\u0015" }).catch((e) => {
-              console.error("Failed to write to terminal:", e);
-            });
-            return;
-          }
-
-          // Cmd+K (Mac) - Clear screen
-          if (e.metaKey && e.key === "k") {
-            e.preventDefault();
-            const currentId = currentConnectionIdRef.current || connectionId;
-            invoke("terminal_write", { id: currentId, data: "\u000c" }).catch((e) => {
-              console.error("Failed to write to terminal:", e);
-            });
-            return;
-          }
-
-          // Option+Delete (Mac) - Delete word backwards
-          if (e.altKey && e.key === "Backspace") {
-            e.preventDefault();
-            // Send Ctrl+W to delete word backwards
-            const currentId = currentConnectionIdRef.current || connectionId;
-            invoke("terminal_write", { id: currentId, data: "\u0017" }).catch((e) => {
-              console.error("Failed to write to terminal:", e);
-            });
-            return;
-          }
-
-          // Cmd+A (Mac) - Move to beginning of line
-          if (e.metaKey && e.key === "a") {
-            e.preventDefault();
-            const currentId = currentConnectionIdRef.current || connectionId;
-            invoke("terminal_write", { id: currentId, data: "\u0001" }).catch((e) => {
-              console.error("Failed to write to terminal:", e);
-            });
-            return;
-          }
-
-          // Cmd+E (Mac) - Move to end of line
-          if (e.metaKey && e.key === "e") {
-            e.preventDefault();
-            const currentId = currentConnectionIdRef.current || connectionId;
-            invoke("terminal_write", { id: currentId, data: "\u0005" }).catch((e) => {
-              console.error("Failed to write to terminal:", e);
-            });
-            return;
-          }
-
-          // Cmd+Left/Right (Mac) - Move to beginning/end of line
-          if (e.metaKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
-            e.preventDefault();
-            const currentId = currentConnectionIdRef.current || connectionId;
-            const sequence = e.key === "ArrowLeft" ? "\u0001" : "\u0005"; // Ctrl+A, Ctrl+E
-            invoke("terminal_write", { id: currentId, data: sequence }).catch((e) => {
-              console.error("Failed to write to terminal:", e);
-            });
-            return;
-          }
-
-          // Option+Left/Right (Mac) - Move by word
-          if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
-            e.preventDefault();
-            const currentId = currentConnectionIdRef.current || connectionId;
-            const sequence = e.key === "ArrowLeft" ? "\u001bb" : "\u001bf"; // Alt+b, Alt+f
-            invoke("terminal_write", { id: currentId, data: sequence }).catch((e) => {
-              console.error("Failed to write to terminal:", e);
-            });
-            return;
-          }
-        });
-
-        // Handle terminal resize
-        terminal.onResize(({ cols, rows }) => {
-          // Use the ref to always have the current connection ID
-          const currentId = currentConnectionIdRef.current || connectionId;
-          invoke("terminal_resize", { id: currentId, rows, cols }).catch((e) => {
-            console.error("Failed to resize terminal:", e);
-          });
-        });
-
-        // Handle selection
-        terminal.onSelectionChange(() => {
-          const selection = terminal.getSelection();
-          if (selection) {
-            updateSession(sessionId, { selection });
-          }
-        });
-
-        // Handle title changes
-        terminal.onTitleChange((title) => {
-          updateSession(sessionId, { title });
-        });
-
-        setIsInitialized(true);
-        isInitializingRef.current = false;
-
-        // Pass terminal reference up to parent
-        if (onTerminalRef) {
-          onTerminalRef({
-            focus: () => terminal.focus(),
-            terminal: terminal,
-          });
-        }
-
-        onReady?.();
-      } catch (innerError) {
-        console.error("Failed to create terminal connection:", innerError);
-        terminal.writeln("\r\n\x1b[31mFailed to create terminal connection\x1b[0m");
-        isInitializingRef.current = false;
+      // Create backend connection
+      const existingSession = getSession(sessionId);
+      if (existingSession?.connectionId) {
+        try {
+          await invoke("close_terminal", { id: existingSession.connectionId });
+        } catch {}
       }
+
+      const connectionId = await invoke<string>("create_terminal", {
+        config: {
+          working_directory: existingSession?.currentDirectory || rootFolderPath || undefined,
+          shell: existingSession?.shell || undefined,
+          rows: terminal.rows,
+          cols: terminal.cols,
+        },
+      });
+
+      updateSession(sessionId, { connectionId });
+      currentConnectionIdRef.current = connectionId;
+
+      // Handle input with exit detection
+      terminal.onData((data) => {
+        const currentId = currentConnectionIdRef.current || connectionId;
+        const hasNewline = data.includes("\n") || data.includes("\r");
+
+        if (hasNewline) {
+          currentInputLineRef.current += data;
+          if (/^\s*exit\s*$/i.test(currentInputLineRef.current.trim())) {
+            currentInputLineRef.current = "";
+            invoke("terminal_write", { id: currentId, data }).catch(() => {});
+            setTimeout(() => {
+              onTerminalExitRef.current?.(sessionId);
+              invoke("close_terminal", { id: currentId }).catch(() => {});
+            }, 100);
+            return;
+          }
+          currentInputLineRef.current = "";
+        } else {
+          currentInputLineRef.current += data;
+          if (currentInputLineRef.current.length > 1000) {
+            currentInputLineRef.current = currentInputLineRef.current.slice(-100);
+          }
+        }
+
+        invoke("terminal_write", { id: currentId, data }).catch(() => {});
+      });
+
+      // Handle keyboard shortcuts
+      terminal.onKey(({ domEvent: e }) => {
+        const currentId = currentConnectionIdRef.current || connectionId;
+        const shortcuts: Record<string, string> = {
+          "meta+Backspace": "\u0015",
+          "ctrl+u": "\u0015",
+          "meta+k": "\u000c",
+          "alt+Backspace": "\u0017",
+          "meta+a": "\u0001",
+          "meta+e": "\u0005",
+        };
+
+        const key = `${e.metaKey ? "meta+" : ""}${e.ctrlKey ? "ctrl+" : ""}${e.altKey ? "alt+" : ""}${e.key}`;
+        if (shortcuts[key]) {
+          e.preventDefault();
+          invoke("terminal_write", { id: currentId, data: shortcuts[key] }).catch(() => {});
+          return;
+        }
+
+        if (e.metaKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+          e.preventDefault();
+          invoke("terminal_write", {
+            id: currentId,
+            data: e.key === "ArrowLeft" ? "\u0001" : "\u0005",
+          }).catch(() => {});
+        }
+
+        if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+          e.preventDefault();
+          invoke("terminal_write", {
+            id: currentId,
+            data: e.key === "ArrowLeft" ? "\u001bb" : "\u001bf",
+          }).catch(() => {});
+        }
+      });
+
+      terminal.onResize(({ cols, rows }) => {
+        const currentId = currentConnectionIdRef.current || connectionId;
+        invoke("terminal_resize", { id: currentId, rows, cols }).catch(() => {});
+      });
+
+      terminal.onSelectionChange(() => {
+        const selection = terminal.getSelection();
+        if (selection) updateSession(sessionId, { selection });
+      });
+
+      terminal.onTitleChange((title) => updateSession(sessionId, { title }));
+
+      setIsInitialized(true);
+      isInitializingRef.current = false;
+
+      // Emit terminal-ready event for pending commands
+      window.dispatchEvent(
+        new CustomEvent("terminal-ready", {
+          detail: { terminalId: sessionId, connectionId },
+        }),
+      );
+
+      onTerminalRef?.({ focus: () => terminal.focus(), terminal });
+      onReady?.();
     } catch (error) {
       console.error("Failed to initialize terminal:", error);
-      setIsInitialized(false);
       isInitializingRef.current = false;
     }
   }, [
@@ -501,84 +241,51 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     getTerminalTheme,
     updateSession,
     onReady,
-    fontSize,
+
     getSession,
-    editorFontFamily,
+    getSession,
+    terminalFontFamily,
+    terminalFontSize,
+    terminalLineHeight,
+    terminalLetterSpacing,
+    terminalCursorStyle,
+    terminalCursorBlink,
     rootFolderPath,
+    onTerminalRef,
   ]);
 
-  // Monitor session for connection ID
   const session = getSession(sessionId);
   const connectionId = session?.connectionId;
 
-  // Handle terminal output with connection monitoring
+  // Handle terminal output
   useEffect(() => {
-    if (!xtermRef.current || !isInitialized || !connectionId) {
-      if (!connectionId) {
-        console.warn("No connection ID available for terminal output handling");
-      }
-      return;
-    }
+    if (!xtermRef.current || !isInitialized || !connectionId) return;
 
-    console.log("Setting up output listener for connection:", connectionId);
     currentConnectionIdRef.current = connectionId;
 
-    const outputEventName = `pty-output-${connectionId}`;
-    const errorEventName = `pty-error-${connectionId}`;
-    const closedEventName = `pty-closed-${connectionId}`;
-
-    const unlistenOutput = listen(outputEventName, (event) => {
+    const unlistenOutput = listen(`pty-output-${connectionId}`, (event) => {
       const data = event.payload as { data: string };
       if (xtermRef.current) {
         xtermRef.current.write(data.data);
-
-        // Check for OSC 7 sequence to track working directory
         const newDirectory = parseOSC7(data.data);
-        if (newDirectory) {
-          console.log("Working directory changed to:", newDirectory);
-          updateSession(sessionId, { currentDirectory: newDirectory });
-        }
+        if (newDirectory) updateSession(sessionId, { currentDirectory: newDirectory });
       }
     });
 
-    const unlistenError = listen(errorEventName, (event) => {
+    const unlistenError = listen(`pty-error-${connectionId}`, (event) => {
       const error = event.payload as { error: string };
-      console.error("Terminal error:", error);
-      if (xtermRef.current) {
-        xtermRef.current.writeln(`\r\n\x1b[31mError: ${error.error}\x1b[0m`);
-      }
+      xtermRef.current?.writeln(`\r\n\x1b[31mError: ${error.error}\x1b[0m`);
     });
 
-    const unlistenClosed = listen(closedEventName, async () => {
-      console.log(
-        "Terminal closed event received for connection:",
-        connectionId,
-        "session:",
-        sessionId,
-      );
-
-      // Close the backend connection
+    const unlistenClosed = listen(`pty-closed-${connectionId}`, async () => {
       try {
         await invoke("close_terminal", { id: connectionId });
-        console.log("Backend terminal connection closed for:", connectionId);
-      } catch (e) {
-        console.error("Failed to close backend terminal connection:", e);
-      }
-
-      // Call the exit callback to close the terminal tab
-      const callback = onTerminalExitRef.current;
-      if (callback) {
-        console.log("Calling onTerminalExit callback for session:", sessionId);
-        callback(sessionId);
-      } else if (xtermRef.current) {
-        xtermRef.current.writeln("\r\n\x1b[33mTerminal session closed\x1b[0m");
-      }
+      } catch {}
+      onTerminalExitRef.current?.(sessionId);
     });
 
     const unlistenThemeChange = themeRegistry.onThemeChange(() => {
-      if (xtermRef.current) {
-        xtermRef.current.options.theme = getTerminalTheme();
-      }
+      if (xtermRef.current) xtermRef.current.options.theme = getTerminalTheme();
     });
 
     return () => {
@@ -587,279 +294,203 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       unlistenClosed.then((fn) => fn());
       unlistenThemeChange();
     };
-  }, [sessionId, isInitialized, connectionId, parseOSC7, updateSession, getTerminalTheme]);
+  }, [sessionId, isInitialized, connectionId, updateSession, getTerminalTheme]);
 
   // Handle theme changes
   useEffect(() => {
     if (!xtermRef.current) return;
-    const newTheme = getTerminalTheme();
-    xtermRef.current.options.theme = newTheme;
-    // Force a complete refresh to apply theme changes immediately
-    if (themeRefreshTimeoutRef.current) {
-      clearTimeout(themeRefreshTimeoutRef.current);
-    }
-    themeRefreshTimeoutRef.current = setTimeout(() => {
-      if (xtermRef.current) {
-        xtermRef.current.refresh(0, xtermRef.current.rows - 1);
-        // Also trigger a resize to ensure proper rendering
-        fitAddonRef.current?.fit();
-      }
-      themeRefreshTimeoutRef.current = null;
+    xtermRef.current.options.theme = getTerminalTheme();
+    setTimeout(() => {
+      xtermRef.current?.refresh(0, xtermRef.current.rows - 1);
+      addonsRef.current?.fitAddon.fit();
     }, 10);
-
-    return () => {
-      if (themeRefreshTimeoutRef.current) {
-        clearTimeout(themeRefreshTimeoutRef.current);
-        themeRefreshTimeoutRef.current = null;
-      }
-    };
   }, [currentTheme, getTerminalTheme]);
 
-  // Handle font changes from editor settings
+  // Handle font changes
   useEffect(() => {
-    if (!xtermRef.current) return;
-    xtermRef.current.options.fontFamily = `${editorFontFamily}, "Fira Code", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace`;
-    xtermRef.current.options.fontSize = fontSize;
-    fitAddonRef.current?.fit();
-  }, [editorFontFamily, fontSize]);
+    if (!xtermRef.current || !addonsRef.current) return;
+
+    const applyFontSettings = () => {
+      if (!xtermRef.current || !addonsRef.current) return;
+
+      // Dispose WebGL addon - the canvas renderer handles font changes more reliably,
+      // especially for Nerd Fonts which have issues with WebGL's texture atlas
+      addonsRef.current.webglAddon?.dispose();
+
+      // Set font options (quote font names with spaces for CSS)
+      const fontFamily = terminalFontFamily.includes(" ")
+        ? `"${terminalFontFamily}", monospace`
+        : `${terminalFontFamily}, monospace`;
+
+      xtermRef.current.options.fontFamily = fontFamily;
+      xtermRef.current.options.fontSize = terminalFontSize;
+      xtermRef.current.options.lineHeight = terminalLineHeight;
+      xtermRef.current.options.letterSpacing = terminalLetterSpacing;
+      xtermRef.current.options.cursorBlink = terminalCursorBlink;
+      xtermRef.current.options.cursorStyle = terminalCursorStyle;
+
+      addonsRef.current.fitAddon.fit();
+      xtermRef.current.refresh(0, xtermRef.current.rows - 1);
+    };
+
+    // Wait for font to load before applying
+    document.fonts
+      .load(`${terminalFontSize}px "${terminalFontFamily}"`)
+      .then(() => applyFontSettings())
+      .catch(() => applyFontSettings());
+  }, [
+    terminalFontFamily,
+    terminalFontSize,
+    terminalLineHeight,
+    terminalLetterSpacing,
+    terminalCursorBlink,
+    terminalCursorStyle,
+  ]);
 
   // Initialize terminal
   useEffect(() => {
     let mounted = true;
-    let initTimer: NodeJS.Timeout;
-
-    const init = async () => {
-      if (!mounted) return;
-
-      // Only initialize after a short delay to ensure theme is loaded
-      initTimer = setTimeout(() => {
-        if (mounted && !isInitialized && !isInitializingRef.current) {
-          initializeTerminal();
-        }
-      }, 200);
-    };
-
-    init();
+    const initTimer = setTimeout(() => {
+      if (mounted && !isInitialized && !isInitializingRef.current) {
+        initializeTerminal();
+      }
+    }, 200);
 
     return () => {
       mounted = false;
       clearTimeout(initTimer);
-
-      // Clean up injected styles
-      const styleId = `terminal-link-style-${sessionId}`;
-      const style = document.getElementById(styleId);
-      if (style) {
-        style.remove();
-      }
-
-      // Don't dispose terminal on cleanup - it might be reused
-      // Only cleanup on actual component unmount
+      removeLinkStyles(sessionId);
     };
-  }, [sessionId, initializeTerminal]); // Add sessionId dependency to reinitialize if it changes
+  }, [sessionId, initializeTerminal, isInitialized]);
 
-  // Cleanup on actual unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Clear all timeouts and animation frames
-      if (initFitTimeoutRef.current) {
-        clearTimeout(initFitTimeoutRef.current);
-        initFitTimeoutRef.current = null;
-      }
-      if (themeRefreshTimeoutRef.current) {
-        clearTimeout(themeRefreshTimeoutRef.current);
-        themeRefreshTimeoutRef.current = null;
-      }
-      if (resizeRafRef.current) {
-        cancelAnimationFrame(resizeRafRef.current);
-        resizeRafRef.current = null;
-      }
-      if (focusRafRef.current) {
-        cancelAnimationFrame(focusRafRef.current);
-        focusRafRef.current = null;
-      }
-
       if (xtermRef.current) {
-        // Close backend connection
         const session = getSession(sessionId);
         if (session?.connectionId) {
           invoke("close_terminal", { id: session.connectionId });
         }
-
         xtermRef.current.dispose();
         xtermRef.current = null;
-        fitAddonRef.current = null;
-        searchAddonRef.current = null;
-        serializeAddonRef.current = null;
-        setIsInitialized(false);
-        isInitializingRef.current = false;
+        addonsRef.current = null;
       }
     };
   }, [sessionId, getSession]);
 
   // Handle resize
   useEffect(() => {
-    if (!fitAddonRef.current || !terminalRef.current || !isInitialized) return;
+    if (!addonsRef.current || !terminalRef.current || !isInitialized) return;
 
+    let rafId: number | null = null;
     const resizeObserver = new ResizeObserver(() => {
-      // Debounce resize to avoid excessive calls
-      if (resizeRafRef.current) {
-        cancelAnimationFrame(resizeRafRef.current);
-      }
-      resizeRafRef.current = requestAnimationFrame(() => {
-        if (fitAddonRef.current && xtermRef.current && terminalRef.current) {
-          try {
-            // Force a reflow to ensure dimensions are correct
-            const rect = terminalRef.current.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-              fitAddonRef.current.fit();
-            }
-          } catch (e) {
-            console.warn("Failed to fit terminal:", e);
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        if (addonsRef.current && terminalRef.current) {
+          const rect = terminalRef.current.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            addonsRef.current.fitAddon.fit();
           }
         }
-        resizeRafRef.current = null;
       });
     });
 
     resizeObserver.observe(terminalRef.current);
-
-    // Initial fit after a short delay
-    const timeoutId = setTimeout(() => {
-      if (fitAddonRef.current && xtermRef.current) {
-        try {
-          fitAddonRef.current.fit();
-        } catch (e) {
-          console.warn("Failed initial fit:", e);
-        }
-      }
-    }, 100);
+    setTimeout(() => addonsRef.current?.fitAddon.fit(), 100);
 
     return () => {
       resizeObserver.disconnect();
-      clearTimeout(timeoutId);
-      if (resizeRafRef.current) {
-        cancelAnimationFrame(resizeRafRef.current);
-        resizeRafRef.current = null;
-      }
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, [isInitialized]);
 
-  // Handle focus - ensure terminal is focused when it becomes active or is initialized
+  // Handle focus
   useEffect(() => {
     if (isActive && xtermRef.current && isInitialized) {
-      // Use requestAnimationFrame to ensure DOM is ready
-      if (focusRafRef.current) {
-        cancelAnimationFrame(focusRafRef.current);
-      }
-      focusRafRef.current = requestAnimationFrame(() => {
-        xtermRef.current?.focus();
-        focusRafRef.current = null;
-      });
+      requestAnimationFrame(() => xtermRef.current?.focus());
     }
-
-    return () => {
-      if (focusRafRef.current) {
-        cancelAnimationFrame(focusRafRef.current);
-        focusRafRef.current = null;
-      }
-    };
   }, [isActive, isInitialized]);
 
   // Zoom handlers
-  const handleZoomIn = useCallback(() => {
-    const newSize = Math.min(fontSize + 2, 32);
-    setFontSize(newSize);
-    if (xtermRef.current) {
-      xtermRef.current.options.fontSize = newSize;
-      fitAddonRef.current?.fit();
-    }
-  }, [fontSize]);
-
-  const handleZoomOut = useCallback(() => {
-    const newSize = Math.max(fontSize - 2, 8);
-    setFontSize(newSize);
-    if (xtermRef.current) {
-      xtermRef.current.options.fontSize = newSize;
-      fitAddonRef.current?.fit();
-    }
-  }, [fontSize]);
+  const handleZoom = useCallback(
+    (delta: number) => {
+      const newSize = Math.min(Math.max(terminalFontSize + delta, 8), 32);
+      useSettingsStore.getState().updateSetting("terminalFontSize", newSize);
+      if (xtermRef.current) {
+        xtermRef.current.options.fontSize = newSize;
+        addonsRef.current?.fitAddon.fit();
+      }
+    },
+    [terminalFontSize],
+  );
 
   const handleZoomReset = useCallback(() => {
-    setFontSize(editorFontSize);
+    useSettingsStore.getState().updateSetting("terminalFontSize", 14);
     if (xtermRef.current) {
-      xtermRef.current.options.fontSize = editorFontSize;
-      fitAddonRef.current?.fit();
+      xtermRef.current.options.fontSize = 14;
+      addonsRef.current?.fitAddon.fit();
     }
-  }, [editorFontSize]);
+  }, []);
 
-  // Handle keyboard shortcuts
+  // Keyboard shortcuts
   useEffect(() => {
     if (!isActive) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check if the event is from the terminal element or its children
       const isTerminalFocused = terminalRef.current?.contains(e.target as Node);
 
-      // Ctrl+F or Cmd+F for search - only when terminal is focused or already searching
       if ((e.ctrlKey || e.metaKey) && e.key === "f" && (isTerminalFocused || isSearchVisible)) {
         e.preventDefault();
         e.stopPropagation();
         setIsSearchVisible(true);
       }
-      // Escape to close search
+
       if (e.key === "Escape" && isSearchVisible) {
         e.preventDefault();
         setIsSearchVisible(false);
         xtermRef.current?.focus();
       }
-      // Ctrl/Cmd + Plus for zoom in
-      if ((e.ctrlKey || e.metaKey) && (e.key === "+" || e.key === "=") && isTerminalFocused) {
-        e.preventDefault();
-        handleZoomIn();
-      }
-      // Ctrl/Cmd + Minus for zoom out
-      if ((e.ctrlKey || e.metaKey) && e.key === "-" && isTerminalFocused) {
-        e.preventDefault();
-        handleZoomOut();
-      }
-      // Ctrl/Cmd + 0 for reset zoom
-      if ((e.ctrlKey || e.metaKey) && e.key === "0" && isTerminalFocused) {
-        e.preventDefault();
-        handleZoomReset();
+
+      if (isTerminalFocused && (e.ctrlKey || e.metaKey)) {
+        if (e.key === "+" || e.key === "=") {
+          e.preventDefault();
+          handleZoom(2);
+        } else if (e.key === "-") {
+          e.preventDefault();
+          handleZoom(-2);
+        } else if (e.key === "0") {
+          e.preventDefault();
+          handleZoomReset();
+        }
       }
     };
 
-    // Use capture phase to ensure we get the event before other handlers
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [isActive, isSearchVisible, handleZoomIn, handleZoomOut, handleZoomReset]);
+  }, [isActive, isSearchVisible, handleZoom, handleZoomReset]);
 
   // Search handlers
   const handleSearch = useCallback((term: string) => {
-    if (!term || !searchAddonRef.current) {
+    if (!term || !addonsRef.current) {
       setSearchResults({ current: 0, total: 0 });
       return;
     }
-    const found = searchAddonRef.current.findNext(term);
-    if (found) {
-      setSearchResults((prev) => ({ ...prev, current: prev.current + 1 }));
-    } else {
-      setSearchResults({ current: 0, total: 0 });
-    }
+    const found = addonsRef.current.searchAddon.findNext(term);
+    setSearchResults((prev) =>
+      found ? { ...prev, current: prev.current + 1 } : { current: 0, total: 0 },
+    );
   }, []);
 
   const handleSearchNext = useCallback((term: string) => {
-    if (!term || !searchAddonRef.current) return;
-    const found = searchAddonRef.current.findNext(term);
-    if (found) {
+    if (!term || !addonsRef.current) return;
+    if (addonsRef.current.searchAddon.findNext(term)) {
       setSearchResults((prev) => ({ ...prev, current: prev.current + 1 }));
     }
   }, []);
 
   const handleSearchPrevious = useCallback((term: string) => {
-    if (!term || !searchAddonRef.current) return;
-    const found = searchAddonRef.current.findPrevious(term);
-    if (found) {
+    if (!term || !addonsRef.current) return;
+    if (addonsRef.current.searchAddon.findPrevious(term)) {
       setSearchResults((prev) => ({ ...prev, current: Math.max(1, prev.current - 1) }));
     }
   }, []);
@@ -870,12 +501,12 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     xtermRef.current?.focus();
   }, []);
 
-  // Public methods via imperative handle
+  // Imperative handle
   React.useImperativeHandle(
     getSession(sessionId)?.ref,
     () => ({
       terminal: xtermRef.current,
-      searchAddon: searchAddonRef.current,
+      searchAddon: addonsRef.current?.searchAddon,
       focus: () => xtermRef.current?.focus(),
       blur: () => xtermRef.current?.blur(),
       clear: () => xtermRef.current?.clear(),
@@ -885,12 +516,12 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       paste: (text: string) => xtermRef.current?.paste(text),
       scrollToTop: () => xtermRef.current?.scrollToTop(),
       scrollToBottom: () => xtermRef.current?.scrollToBottom(),
-      findNext: (term: string) => searchAddonRef.current?.findNext(term),
-      findPrevious: (term: string) => searchAddonRef.current?.findPrevious(term),
-      serialize: () => (xtermRef.current ? serializeAddonRef.current?.serialize() : ""),
-      resize: () => fitAddonRef.current?.fit(),
+      findNext: (term: string) => addonsRef.current?.searchAddon.findNext(term),
+      findPrevious: (term: string) => addonsRef.current?.searchAddon.findPrevious(term),
+      serialize: () => (xtermRef.current ? addonsRef.current?.serializeAddon.serialize() : ""),
+      resize: () => addonsRef.current?.fitAddon.fit(),
     }),
-    [sessionId, isInitialized],
+    [sessionId, isInitialized, getSession],
   );
 
   return (
@@ -907,13 +538,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       <div
         ref={terminalRef}
         id={`terminal-${sessionId}`}
-        className={cn(
-          "xterm-container",
-          "w-full",
-          "h-full",
-          "text-text",
-          !isActive && "opacity-60",
-        )}
+        className={`xterm-container h-full w-full text-text ${!isActive && "opacity-60"}`}
       />
     </div>
   );

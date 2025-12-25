@@ -66,6 +66,16 @@ export function useMenuEventsWrapper() {
       }
     },
     onCloseTab: () => {
+      // Check if terminal is focused - if so, dispatch event to close terminal instead
+      const activeElement = document.activeElement as HTMLElement;
+      const isTerminalFocused = activeElement?.closest(".terminal-container") !== null;
+
+      if (isTerminalFocused) {
+        // Dispatch a custom event that terminal-container listens to
+        window.dispatchEvent(new CustomEvent("close-active-terminal"));
+        return;
+      }
+
       if (activeBuffer) {
         closeBuffer(activeBuffer.id);
       }

@@ -1,35 +1,24 @@
-pub mod ai_tokens;
-pub mod chat_history;
-pub mod claude;
-pub mod cli;
-pub mod extensions;
-pub mod font;
-pub mod format;
-pub mod fs;
-pub mod fuzzy;
-pub mod git;
-pub mod github;
-pub mod lsp;
-pub mod search;
-pub mod sqlite;
-pub mod theme;
-pub mod watcher;
-pub mod window;
+// Domain-organized command modules
+pub mod ai;
+pub mod database;
+pub mod development;
+pub mod editor;
+pub mod project;
+pub mod ui;
+pub mod vcs;
 
-pub use ai_tokens::*;
-pub use chat_history::*;
-pub use claude::*;
-pub use cli::*;
+// Standalone modules (not domain-specific)
+pub mod extensions;
+pub mod fuzzy;
+
+// Re-export all commands from domain modules
+pub use ai::*;
+pub use database::*;
+pub use development::*;
+pub use editor::*;
+// Re-export standalone modules
 pub use extensions::*;
-pub use font::*;
-pub use format::*;
-pub use fs::*;
 pub use fuzzy::*;
-pub use git::*;
-pub use github::*;
-pub use lsp::*;
-pub use search::*;
-pub use sqlite::*;
-pub use theme::*;
-pub use watcher::*;
-pub use window::*;
+pub use project::*;
+pub use ui::*;
+pub use vcs::*;

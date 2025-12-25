@@ -9,6 +9,7 @@ import { createSelectors } from "@/utils/zustand-selectors";
 import type { Keybinding, KeymapContext, KeymapStore } from "../types";
 
 interface KeymapState extends KeymapStore {
+  recordingCommandId: string | null;
   actions: {
     addKeybinding: (keybinding: Keybinding) => void;
     removeKeybinding: (commandId: string) => void;
@@ -16,6 +17,8 @@ interface KeymapState extends KeymapStore {
     resetToDefaults: () => void;
     setContext: (key: keyof KeymapContext, value: boolean) => void;
     setContexts: (contexts: Partial<KeymapContext>) => void;
+    startRecording: (commandId: string) => void;
+    stopRecording: () => void;
   };
 }
 
@@ -23,6 +26,7 @@ const useKeymapStoreBase = create<KeymapState>()(
   persist(
     (set) => ({
       keybindings: [],
+      recordingCommandId: null,
       contexts: {
         editorFocus: false,
         vimMode: false,
@@ -33,6 +37,7 @@ const useKeymapStoreBase = create<KeymapState>()(
         sidebarFocus: false,
         findWidgetVisible: false,
         hasSelection: false,
+        isRecordingKeybinding: false,
       },
       actions: {
         addKeybinding: (keybinding) =>
@@ -60,6 +65,16 @@ const useKeymapStoreBase = create<KeymapState>()(
         setContexts: (contexts) =>
           set((state) => ({
             contexts: { ...state.contexts, ...contexts },
+          })),
+        startRecording: (commandId) =>
+          set((state) => ({
+            recordingCommandId: commandId,
+            contexts: { ...state.contexts, isRecordingKeybinding: true },
+          })),
+        stopRecording: () =>
+          set((state) => ({
+            recordingCommandId: null,
+            contexts: { ...state.contexts, isRecordingKeybinding: false },
           })),
       },
     }),

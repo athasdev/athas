@@ -34,7 +34,7 @@ export function SettingRow({ label, description, children, className }: SettingR
         <div className="font-medium text-text text-xs">{label}</div>
         {description && <div className="text-text-lighter text-xs">{description}</div>}
       </div>
-      <div className="flex-shrink-0">{children}</div>
+      <div className="shrink-0">{children}</div>
     </div>
   );
 }

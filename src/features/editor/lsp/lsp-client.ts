@@ -10,6 +10,7 @@ import {
   useDiagnosticsStore,
 } from "@/features/diagnostics/stores/diagnostics-store";
 import { logger } from "../utils/logger";
+import { useLspStore } from "./lsp-store";
 
 export interface LspError {
   message: string;
@@ -18,9 +19,25 @@ export interface LspError {
 export class LspClient {
   private static instance: LspClient | null = null;
   private activeLanguageServers = new Set<string>(); // workspace:language format
+  private activeLanguages = new Set<string>(); // Track active language IDs for status
 
   private constructor() {
     this.setupDiagnosticsListener();
+  }
+
+  /**
+   * Update the LSP status store with current state
+   */
+  private updateLspStatus() {
+    const { actions } = useLspStore.getState();
+    const workspaces = this.getActiveWorkspaces();
+    const languages = Array.from(this.activeLanguages);
+
+    if (this.activeLanguageServers.size > 0) {
+      actions.updateLspStatus("connected", workspaces, undefined, languages);
+    } else {
+      actions.updateLspStatus("disconnected", [], undefined, []);
+    }
   }
 
   static getInstance(): LspClient {
@@ -32,26 +49,58 @@ export class LspClient {
 
   private async setupDiagnosticsListener() {
     try {
-      await listen<PublishDiagnosticsParams>("lsp://diagnostics", (event) => {
-        const { uri, diagnostics } = event.payload;
-        logger.debug("LSPClient", `Received diagnostics for ${uri}:`, diagnostics);
+      console.log("[LSPClient] Setting up diagnostics listener...");
+      const unlisten = await listen<PublishDiagnosticsParams>("lsp://diagnostics", (event) => {
+        try {
+          console.log("[LSPClient] Received diagnostics event:", JSON.stringify(event, null, 2));
 
-        // Convert URI to file path
-        const filePath = uri.replace("file://", "");
+          if (!event.payload) {
+            console.error("[LSPClient] No payload in diagnostics event");
+            return;
+          }
 
-        // Convert LSP diagnostics to our internal format
-        const convertedDiagnostics = diagnostics.map((d) => convertLSPDiagnostic(d));
+          const { uri, diagnostics } = event.payload;
 
-        // Update diagnostics store
-        const { setDiagnostics } = useDiagnosticsStore.getState().actions;
-        setDiagnostics(filePath, convertedDiagnostics);
+          if (!uri) {
+            console.error("[LSPClient] No uri in diagnostics payload:", event.payload);
+            return;
+          }
 
-        logger.info(
-          "LSPClient",
-          `Updated diagnostics for ${filePath}: ${convertedDiagnostics.length} items`,
-        );
+          logger.debug("LSPClient", `Received diagnostics for ${uri}:`, diagnostics);
+
+          // Convert URI to file path
+          const filePath = uri.replace("file://", "");
+          console.log(`[LSPClient] File path: ${filePath}`);
+
+          // Convert LSP diagnostics to our internal format
+          const diagnosticsList = diagnostics || [];
+          const convertedDiagnostics = diagnosticsList.map((d) => convertLSPDiagnostic(d));
+          console.log(
+            `[LSPClient] Converted ${convertedDiagnostics.length} diagnostics for ${filePath}`,
+          );
+
+          // Update diagnostics store
+          const { setDiagnostics } = useDiagnosticsStore.getState().actions;
+          setDiagnostics(filePath, convertedDiagnostics);
+
+          logger.info(
+            "LSPClient",
+            `Updated diagnostics for ${filePath}: ${convertedDiagnostics.length} items`,
+          );
+
+          // Log store state after update
+          const currentState = useDiagnosticsStore.getState();
+          console.log("[LSPClient] Diagnostics store state:", {
+            size: currentState.diagnosticsByFile.size,
+            files: Array.from(currentState.diagnosticsByFile.keys()),
+          });
+        } catch (innerError) {
+          console.error("[LSPClient] Error processing diagnostics event:", innerError);
+        }
       });
+      console.log("[LSPClient] Diagnostics listener setup complete, unlisten:", unlisten);
     } catch (error) {
+      console.error("[LSPClient] Failed to setup diagnostics listener:", error);
       logger.error("LSPClient", "Failed to setup diagnostics listener:", error);
     }
   }
@@ -82,6 +131,12 @@ export class LspClient {
             return;
           }
         }
+      }
+
+      // If no LSP server is configured, return early
+      if (!serverPath) {
+        logger.debug("LSPClient", `No LSP server configured for workspace ${workspacePath}`);
+        return;
       }
 
       logger.info("LSPClient", `Invoking lsp_start with:`, {
@@ -120,7 +175,16 @@ export class LspClient {
       );
       for (const server of serversToRemove) {
         this.activeLanguageServers.delete(server);
+        // Extract language from server key and remove from active languages
+        const language = server.split(":")[1];
+        if (language) {
+          const displayName = this.getLanguageDisplayName(language);
+          this.activeLanguages.delete(displayName);
+        }
       }
+
+      // Update status store
+      this.updateLspStatus();
 
       logger.debug("LSPClient", "LSP stopped successfully for workspace:", workspacePath);
     } catch (error) {
@@ -139,6 +203,12 @@ export class LspClient {
       const serverPath = extensionRegistry.getLspServerPath(filePath) || undefined;
       const serverArgs = extensionRegistry.getLspServerArgs(filePath);
       const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
+
+      // If no LSP server is configured for this file type, return early
+      if (!serverPath) {
+        logger.debug("LSPClient", `No LSP server configured for ${filePath}`);
+        return;
+      }
 
       logger.info("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
 
@@ -169,13 +239,48 @@ export class LspClient {
       if (languageId) {
         const serverKey = `${workspacePath}:${languageId}`;
         this.activeLanguageServers.add(serverKey);
+        // Track language with proper display name
+        const displayName = this.getLanguageDisplayName(languageId);
+        this.activeLanguages.add(displayName);
+        // Update status store
+        this.updateLspStatus();
       }
 
       logger.debug("LSPClient", "LSP started successfully for file:", filePath);
     } catch (error) {
       logger.error("LSPClient", "Failed to start LSP for file:", error);
+      // Update status to error
+      const { actions } = useLspStore.getState();
+      actions.setLspError(`Failed to start LSP: ${error}`);
       throw error;
     }
+  }
+
+  /**
+   * Get display name for a language ID
+   */
+  private getLanguageDisplayName(languageId: string): string {
+    const displayNames: Record<string, string> = {
+      typescript: "TypeScript",
+      javascript: "JavaScript",
+      rust: "Rust",
+      python: "Python",
+      go: "Go",
+      java: "Java",
+      c: "C",
+      cpp: "C++",
+      csharp: "C#",
+      ruby: "Ruby",
+      php: "PHP",
+      html: "HTML",
+      css: "CSS",
+      json: "JSON",
+      yaml: "YAML",
+      toml: "TOML",
+      markdown: "Markdown",
+      bash: "Bash",
+    };
+    return displayNames[languageId] || languageId;
   }
 
   async stopForFile(filePath: string): Promise<void> {

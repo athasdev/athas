@@ -5,12 +5,17 @@
 
 import type { RefObject } from "react";
 import { useEffect, useMemo, useRef } from "react";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { useEditorLayout } from "@/features/editor/hooks/use-layout";
 import { useSnippetCompletion } from "@/features/editor/hooks/use-snippet-completion";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
+import { useGoToDefinition } from "@/features/editor/lsp/use-go-to-definition";
 import { useHover } from "@/features/editor/lsp/use-hover";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { Position } from "../types/editor";
 
 interface UseLspIntegrationOptions {
@@ -27,8 +32,8 @@ interface UseLspIntegrationOptions {
  */
 const isFileSupported = (filePath: string | undefined): boolean => {
   if (!filePath) return false;
-  const ext = filePath.split(".").pop()?.toLowerCase();
-  return ext === "ts" || ext === "tsx" || ext === "js" || ext === "jsx";
+  // Use extension registry to check if LSP is supported for this file
+  return extensionRegistry.isLspSupported(filePath);
 };
 
 /**
@@ -45,6 +50,9 @@ export const useLspIntegration = ({
   // Get LSP client instance (singleton)
   const lspClient = useMemo(() => LspClient.getInstance(), []);
 
+  // Get workspace path
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+
   // Check if current file is supported
   const isLspSupported = useMemo(() => isFileSupported(filePath), [filePath]);
 
@@ -54,9 +62,11 @@ export const useLspIntegration = ({
   // Snippet completion integration
   const snippetCompletion = useSnippetCompletion(filePath);
 
-  // Use fixed debounce for predictable completion behavior
+  // Get layout dimensions for hover position calculations
+  const { gutterWidth, charWidth } = useEditorLayout();
+
+  // Use constant debounce for predictable completion behavior
   const completionTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  const COMPLETION_DEBOUNCE = 400; // Fixed 400ms debounce
 
   // Get completion application state
   const isApplyingCompletion = useEditorUIStore.use.isApplyingCompletion();
@@ -69,22 +79,55 @@ export const useLspIntegration = ({
   }, [lspClient, lspActions]);
 
   // Set up hover functionality
-  useHover({
+  const hoverHandlers = useHover({
     getHover: lspClient.getHover.bind(lspClient),
     isLanguageSupported: (fp) => isFileSupported(fp),
     filePath: filePath || "",
     fontSize,
     lineNumbers,
+    gutterWidth,
+    charWidth,
+  });
+
+  // Set up go-to-definition (Cmd+Click)
+  const goToDefinitionHandlers = useGoToDefinition({
+    getDefinition: lspClient.getDefinition.bind(lspClient),
+    isLanguageSupported: (fp) => isFileSupported(fp),
+    filePath: filePath || "",
+    fontSize,
+    lineNumbers,
+    gutterWidth,
+    charWidth,
   });
 
   // Handle document lifecycle (open/close)
   useEffect(() => {
     if (!filePath || !isLspSupported) return;
 
-    // Notify LSP about document open
-    lspClient.notifyDocumentOpen(filePath, value).catch((error) => {
-      console.error("LSP document open error:", error);
-    });
+    // Derive workspace path from file path if rootFolderPath is not set
+    // This handles cases where files are opened without a project folder
+    const workspacePath = rootFolderPath || filePath.substring(0, filePath.lastIndexOf("/"));
+
+    if (!workspacePath) {
+      console.warn("LSP: Could not determine workspace path for", filePath);
+      return;
+    }
+
+    // Start LSP server for this file and then notify about document open
+    const initLsp = async () => {
+      try {
+        console.log("LSP: Starting LSP for file", filePath, "in workspace", workspacePath);
+        // Start LSP server for this file type
+        await lspClient.startForFile(filePath, workspacePath);
+        // Notify LSP about document open
+        await lspClient.notifyDocumentOpen(filePath, value);
+        console.log("LSP: LSP started and document opened for", filePath);
+      } catch (error) {
+        console.error("LSP initialization error:", error);
+      }
+    };
+
+    initLsp();
 
     return () => {
       // Notify LSP about document close
@@ -92,7 +135,7 @@ export const useLspIntegration = ({
         console.error("LSP document close error:", error);
       });
     };
-  }, [filePath, isLspSupported, lspClient]);
+  }, [filePath, isLspSupported, lspClient, rootFolderPath]);
 
   // Handle document content changes
   useEffect(() => {
@@ -124,7 +167,7 @@ export const useLspIntegration = ({
         value: buffer.content, // Use latest content from store
         editorRef: editorRef as RefObject<HTMLDivElement | null>,
       });
-    }, COMPLETION_DEBOUNCE);
+    }, EDITOR_CONSTANTS.COMPLETION_DEBOUNCE_MS);
 
     return () => {
       if (completionTimerRef.current) {
@@ -144,5 +187,7 @@ export const useLspIntegration = ({
     lspClient,
     isLspSupported,
     snippetCompletion,
+    hoverHandlers,
+    goToDefinitionHandlers,
   };
 };

@@ -1,3 +1,4 @@
+import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
 import type { GitDiff, GitDiffLine, GitHunk } from "@/features/version-control/git/types/git";
 
 export interface DiffViewerProps {
@@ -55,6 +56,7 @@ export interface DiffLineProps {
   hunkId: number;
   viewMode: "unified" | "split";
   showWhitespace: boolean;
+  tokens?: HighlightToken[];
 }
 
 export interface TextDiffViewerProps {

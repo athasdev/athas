@@ -22,16 +22,79 @@ export interface Message {
   toolCalls?: ToolCall[];
 }
 
+// Agent types for AI chat
+export type AgentType =
+  | "claude-code"
+  | "codex-cli"
+  | "gemini-cli"
+  | "kimi-cli"
+  | "opencode"
+  | "qwen-code"
+  | "custom";
+
+export interface AgentInfo {
+  id: AgentType;
+  name: string;
+  description: string;
+  isAcp: boolean; // true for CLI agents, false for custom (HTTP API)
+}
+
+export const AGENT_OPTIONS: AgentInfo[] = [
+  {
+    id: "claude-code",
+    name: "Claude Code",
+    description: "Anthropic Claude Code",
+    isAcp: true,
+  },
+  {
+    id: "codex-cli",
+    name: "Codex CLI",
+    description: "OpenAI Codex",
+    isAcp: true,
+  },
+  {
+    id: "gemini-cli",
+    name: "Gemini CLI",
+    description: "Google Gemini CLI",
+    isAcp: true,
+  },
+  {
+    id: "kimi-cli",
+    name: "Kimi CLI",
+    description: "Moonshot Kimi CLI",
+    isAcp: true,
+  },
+  {
+    id: "opencode",
+    name: "OpenCode",
+    description: "SST OpenCode",
+    isAcp: true,
+  },
+  {
+    id: "qwen-code",
+    name: "Qwen Code",
+    description: "Alibaba Qwen Code",
+    isAcp: true,
+  },
+  {
+    id: "custom",
+    name: "Custom (API)",
+    description: "Use HTTP API providers",
+    isAcp: false,
+  },
+];
+
 export interface Chat {
   id: string;
   title: string;
   messages: Message[];
   createdAt: Date;
   lastMessageAt: Date;
+  agentId: AgentType; // Which agent this chat uses
 }
 
 export interface ContextInfo {
-  activeBuffer?: Buffer;
+  activeBuffer?: Buffer & { webViewerContent?: string };
   openBuffers?: Buffer[];
   selectedFiles?: string[];
   projectRoot?: string;

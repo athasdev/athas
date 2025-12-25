@@ -1,5 +1,0 @@
-{
-  "ignores": [
-    "typescript-language-server",
-  ]
-}

@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useEditorDecorationsStore } from "../../stores/decorations-store";
 import type { Decoration } from "../../types/editor";
 
@@ -10,8 +11,6 @@ interface GitIndicatorsProps {
   startLine: number;
   endLine: number;
 }
-
-const GUTTER_PADDING = 8;
 
 function GitIndicatorsComponent({
   lineHeight,
@@ -61,7 +60,7 @@ function GitIndicatorsComponent({
         key={`${type[0]}${lineNum}`}
         style={{
           position: "absolute",
-          top: `${lineNum * lineHeight + GUTTER_PADDING}px`,
+          top: `${lineNum * lineHeight + EDITOR_CONSTANTS.GUTTER_PADDING}px`,
           left: 0,
           right: 0,
           height: `${lineHeight}px`,

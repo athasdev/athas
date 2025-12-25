@@ -26,7 +26,6 @@ export function useViewportLines(options: UseViewportLinesOptions) {
     totalLines: 0,
   });
 
-  const updateThrottleTimer = useRef<NodeJS.Timeout | null>(null);
   const containerHeightRef = useRef<number>(0);
 
   /**
@@ -53,46 +52,37 @@ export function useViewportLines(options: UseViewportLinesOptions) {
 
   /**
    * Update viewport range based on scroll position
-   * Uses requestAnimationFrame for smooth updates without lag
+   * Does NOT use RAF - caller should handle batching
    */
   const updateViewportRange = useCallback(
     (scrollTop: number, totalLines: number) => {
-      if (updateThrottleTimer.current) {
-        return; // Skip update if already scheduled
-      }
+      const newRange = calculateViewportRange(scrollTop, containerHeightRef.current, totalLines);
 
-      // Use requestAnimationFrame for immediate but batched updates
-      updateThrottleTimer.current = requestAnimationFrame(() => {
-        const newRange = calculateViewportRange(scrollTop, containerHeightRef.current, totalLines);
+      // Only update if range has changed significantly
+      setViewportRange((prev) => {
+        const startLineDiff = Math.abs(newRange.startLine - prev.startLine);
+        const endLineDiff = Math.abs(newRange.endLine - prev.endLine);
 
-        // Only update if range has changed significantly
-        setViewportRange((prev) => {
-          const startLineDiff = Math.abs(newRange.startLine - prev.startLine);
-          const endLineDiff = Math.abs(newRange.endLine - prev.endLine);
+        if (
+          startLineDiff > EDITOR_CONSTANTS.SIGNIFICANT_LINE_DIFF ||
+          endLineDiff > EDITOR_CONSTANTS.SIGNIFICANT_LINE_DIFF ||
+          newRange.totalLines !== prev.totalLines
+        ) {
+          return newRange;
+        }
 
-          if (
-            startLineDiff > EDITOR_CONSTANTS.SIGNIFICANT_LINE_DIFF ||
-            endLineDiff > EDITOR_CONSTANTS.SIGNIFICANT_LINE_DIFF ||
-            newRange.totalLines !== prev.totalLines
-          ) {
-            return newRange;
-          }
-
-          return prev;
-        });
-
-        updateThrottleTimer.current = null;
-      }) as unknown as NodeJS.Timeout;
+        return prev;
+      });
     },
     [calculateViewportRange],
   );
 
   /**
    * Handle scroll event from editor
+   * Note: This should be called within a RAF callback for best performance
    */
   const handleScroll = useCallback(
-    (e: React.UIEvent<HTMLElement>, totalLines: number) => {
-      const scrollTop = e.currentTarget.scrollTop;
+    (scrollTop: number, totalLines: number) => {
       updateViewportRange(scrollTop, totalLines);
     },
     [updateViewportRange],
@@ -106,7 +96,11 @@ export function useViewportLines(options: UseViewportLinesOptions) {
       const containerHeight = containerElement.clientHeight;
       containerHeightRef.current = containerHeight;
 
-      const initialRange = calculateViewportRange(0, containerHeight, totalLines);
+      const initialRange = calculateViewportRange(
+        containerElement.scrollTop,
+        containerHeight,
+        totalLines,
+      );
       setViewportRange(initialRange);
     },
     [calculateViewportRange],

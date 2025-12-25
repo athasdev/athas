@@ -1,6 +1,7 @@
 import { Check, Copy, RefreshCw, RotateCcw, Undo2 } from "lucide-react";
 import { memo, useCallback, useState } from "react";
 import type { Message } from "@/features/ai/types/ai-chat";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import Tooltip from "@/ui/tooltip";
 import { useAIChatStore } from "../../store/store";
 import MarkdownRenderer from "../messages/markdown-renderer";
@@ -25,6 +26,14 @@ export const ChatMessage = memo(function ChatMessage({
   const currentChatId = useAIChatStore((state) => state.currentChatId);
   const getCurrentChat = useAIChatStore((state) => state.getCurrentChat);
   const regenerateResponse = useAIChatStore((state) => state.regenerateResponse);
+  const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
+
+  const handleOpenInEditor = useCallback(
+    (filePath: string) => {
+      handleFileSelect(filePath, false);
+    },
+    [handleFileSelect],
+  );
 
   const isToolOnlyMessage =
     message.role === "assistant" &&
@@ -110,6 +119,7 @@ export const ChatMessage = memo(function ChatMessage({
             output={toolCall.output}
             error={toolCall.error}
             isStreaming={!toolCall.isComplete && message.isStreaming}
+            onOpenInEditor={handleOpenInEditor}
           />
         ))}
       </>
@@ -128,6 +138,7 @@ export const ChatMessage = memo(function ChatMessage({
               output={toolCall.output}
               error={toolCall.error}
               isStreaming={!toolCall.isComplete && message.isStreaming}
+              onOpenInEditor={handleOpenInEditor}
             />
           ))}
         </div>

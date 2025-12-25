@@ -8,6 +8,9 @@ export class JavaScriptLanguageExtension extends BaseLanguageProvider {
       extensions: ["js", "jsx", "mjs", "cjs"],
       aliases: ["js", "jsx"],
       description: "JavaScript language support with JSX",
+      // Use tsx parser since it supports JavaScript/JSX
+      wasmPath: "/tree-sitter/parsers/tree-sitter-tsx.wasm",
+      highlightQueryPath: "/tree-sitter/queries/tsx/highlights.scm",
     });
   }
 }

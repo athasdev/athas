@@ -4,6 +4,7 @@ import { cn } from "@/utils/cn";
 import { useKeybindingRecorder } from "../hooks/use-keybinding-recorder";
 
 interface KeybindingInputProps {
+  commandId: string;
   value?: string;
   onSave: (keybinding: string) => void;
   onCancel: () => void;
@@ -11,13 +12,14 @@ interface KeybindingInputProps {
 }
 
 export function KeybindingInput({
+  commandId,
   value,
   onSave,
   onCancel,
   autoFocus = true,
 }: KeybindingInputProps) {
   const { isRecording, keys, keybindingString, startRecording, stopRecording, reset } =
-    useKeybindingRecorder();
+    useKeybindingRecorder(commandId);
 
   useEffect(() => {
     if (autoFocus) {
@@ -47,7 +49,7 @@ export function KeybindingInput({
   return (
     <div
       className={cn(
-        "flex h-7 items-center justify-between gap-2 rounded border px-2",
+        "flex h-7 w-full min-w-0 items-center justify-between gap-1 rounded border px-2",
         isRecording ? "border-accent bg-accent/5" : "border-border bg-secondary-bg",
       )}
       onClick={handleClick}
@@ -62,13 +64,15 @@ export function KeybindingInput({
       aria-label="Record keybinding"
       tabIndex={0}
     >
-      {keys.length > 0 ? (
-        <KeybindingBadge keys={keys} />
-      ) : (
-        <span className="text-text-lighter text-xs">
-          {isRecording ? "Press keys..." : value || "Not assigned"}
-        </span>
-      )}
+      <div className="min-w-0 flex-1 truncate">
+        {keys.length > 0 ? (
+          <KeybindingBadge keys={keys} />
+        ) : (
+          <span className="text-[10px] text-text-lighter">
+            {isRecording ? "Press keys..." : value || "Not assigned"}
+          </span>
+        )}
+      </div>
       {isRecording && (
         <button
           type="button"
@@ -76,10 +80,10 @@ export function KeybindingInput({
             e.stopPropagation();
             handleCancel();
           }}
-          className="text-text-lighter text-xs hover:text-text"
+          className="shrink-0 text-[10px] text-text-lighter hover:text-text"
           aria-label="Cancel recording"
         >
-          Esc to cancel
+          ESC
         </button>
       )}
     </div>

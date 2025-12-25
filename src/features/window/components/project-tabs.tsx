@@ -1,13 +1,16 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Copy, Folder, FolderOpen, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useContextMenu } from "@/hooks/use-context-menu";
+import { useUIState } from "@/stores/ui-state-store";
 import type { ProjectTab } from "@/stores/workspace-tabs-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
 import { cn } from "@/utils/cn";
+import ProjectPickerDialog from "./project-picker-dialog";
 
 const DRAG_THRESHOLD = 5;
 
@@ -22,7 +25,8 @@ interface TabPosition {
 const ProjectTabs = () => {
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const { reorderProjectTabs } = useWorkspaceTabsStore.getState();
-  const { handleOpenFolder, switchToProject, closeProject } = useFileSystemStore();
+  const { switchToProject, closeProject } = useFileSystemStore();
+  const { isProjectPickerVisible, setIsProjectPickerVisible } = useUIState();
 
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -178,8 +182,8 @@ const ProjectTabs = () => {
     await closeProject(projectId);
   };
 
-  const handleAddProject = async () => {
-    await handleOpenFolder();
+  const handleAddProject = () => {
+    setIsProjectPickerVisible(true);
   };
 
   // Build context menu items based on the selected tab
@@ -216,17 +220,14 @@ const ProjectTabs = () => {
         },
       ];
 
-      // Only show Close Project if there's more than one tab
-      if (projectTabs.length > 1) {
-        items.push({
-          id: "close-project",
-          label: "Close Project",
-          icon: <X size={11} />,
-          onClick: () => {
-            closeProject(tab.id);
-          },
-        });
-      }
+      items.push({
+        id: "close-project",
+        label: "Close Project",
+        icon: <X size={11} />,
+        onClick: () => {
+          closeProject(tab.id);
+        },
+      });
 
       items.push({
         id: "close-others",
@@ -255,18 +256,16 @@ const ProjectTabs = () => {
         },
       });
 
-      // Only show Close All if there's more than one tab
-      if (projectTabs.length > 1) {
-        items.push({
-          id: "close-all",
-          label: "Close All Projects",
-          onClick: () => {
-            for (let i = projectTabs.length - 1; i >= 1; i--) {
-              closeProject(projectTabs[i].id);
-            }
-          },
-        });
-      }
+      items.push({
+        id: "close-all",
+        label: "Close All Projects",
+        onClick: () => {
+          // Close all tabs one by one
+          // We copy the array to avoid issues while iterating and modifying
+          const tabsToClose = [...projectTabs];
+          tabsToClose.forEach((t) => closeProject(t.id));
+        },
+      });
 
       return items;
     },
@@ -338,6 +337,7 @@ const ProjectTabs = () => {
                 <div className="absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
               )}
               <button
+                role="tab"
                 ref={(el) => {
                   tabRefs.current[index] = el;
                 }}
@@ -354,20 +354,18 @@ const ProjectTabs = () => {
               >
                 <Folder size={12} />
                 <span className="max-w-32 truncate">{tab.name}</span>
-                {projectTabs.length > 1 && (
-                  <button
-                    onClick={(e) => handleCloseTab(e, tab.id)}
-                    className={cn(
-                      "close-button -translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 items-center justify-center rounded bg-selected transition-opacity",
-                      "hover:bg-primary-bg hover:text-text",
-                      "opacity-0 group-hover:opacity-100",
-                    )}
-                    title="Close project"
-                    aria-label="Close project"
-                  >
-                    <X size={10} />
-                  </button>
-                )}
+                <button
+                  onClick={(e) => handleCloseTab(e, tab.id)}
+                  className={cn(
+                    "close-button -translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 items-center justify-center rounded bg-selected transition-opacity",
+                    "hover:bg-primary-bg hover:text-text",
+                    "opacity-0 group-hover:opacity-100",
+                  )}
+                  title="Close project"
+                  aria-label="Close project"
+                >
+                  <X size={10} />
+                </button>
               </button>
             </div>
           );
@@ -387,12 +385,23 @@ const ProjectTabs = () => {
         </button>
       </div>
 
-      <ContextMenu
-        isOpen={contextMenu.isOpen}
-        position={contextMenu.position}
-        items={getContextMenuItems(contextMenu.data)}
-        onClose={contextMenu.close}
-      />
+      {createPortal(
+        <ContextMenu
+          isOpen={contextMenu.isOpen}
+          position={contextMenu.position}
+          items={getContextMenuItems(contextMenu.data)}
+          onClose={contextMenu.close}
+        />,
+        document.body,
+      )}
+
+      {createPortal(
+        <ProjectPickerDialog
+          isOpen={isProjectPickerVisible}
+          onClose={() => setIsProjectPickerVisible(false)}
+        />,
+        document.body,
+      )}
     </>
   );
 };

@@ -1,9 +1,11 @@
 import { memo, useMemo } from "react";
+import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useEditorStateStore } from "../../stores/state-store";
 import { calculateLineNumberWidth } from "../../utils/gutter";
 
 interface LineMapping {
   virtualToActual: Map<number, number>;
+  actualToVirtual: Map<number, number>;
 }
 
 interface LineNumbersProps {
@@ -17,8 +19,6 @@ interface LineNumbersProps {
   endLine: number;
 }
 
-const GUTTER_PADDING = 8;
-
 function LineNumbersComponent({
   totalLines,
   lineHeight,
@@ -29,21 +29,29 @@ function LineNumbersComponent({
   startLine,
   endLine,
 }: LineNumbersProps) {
-  const activeLine = useEditorStateStore.use.cursorPosition().line;
+  const actualCursorLine = useEditorStateStore.use.cursorPosition().line;
   const lineNumberWidth = calculateLineNumberWidth(totalLines);
+
+  // Convert actual cursor line to virtual for comparison when folds are active
+  const visualCursorLine = useMemo(() => {
+    if (foldMapping?.actualToVirtual) {
+      return foldMapping.actualToVirtual.get(actualCursorLine) ?? actualCursorLine;
+    }
+    return actualCursorLine;
+  }, [actualCursorLine, foldMapping]);
 
   const lineNumbers = useMemo(() => {
     const result = [];
     for (let i = startLine; i < endLine; i++) {
       const actualLineNumber = foldMapping?.virtualToActual.get(i) ?? i;
-      const isActive = actualLineNumber === activeLine;
+      const isActive = i === visualCursorLine;
 
       result.push(
         <div
           key={i}
           style={{
             position: "absolute",
-            top: `${i * lineHeight + GUTTER_PADDING}px`,
+            top: `${i * lineHeight + EDITOR_CONSTANTS.GUTTER_PADDING}px`,
             left: 0,
             right: 0,
             height: `${lineHeight}px`,
@@ -66,7 +74,7 @@ function LineNumbersComponent({
       );
     }
     return result;
-  }, [startLine, endLine, activeLine, lineHeight, onLineClick, foldMapping]);
+  }, [startLine, endLine, visualCursorLine, lineHeight, onLineClick, foldMapping]);
 
   return (
     <div

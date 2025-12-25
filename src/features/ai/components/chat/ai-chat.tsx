@@ -1,13 +1,12 @@
-import { invoke } from "@tauri-apps/api/core";
 import { memo, useCallback, useEffect, useRef } from "react";
 import ApiKeyModal from "@/features/ai/components/api-key-modal";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
-import type { ClaudeStatus } from "@/features/ai/types/claude";
-import { getAvailableProviders, setClaudeCodeAvailability } from "@/features/ai/types/providers";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
-import { getChatCompletionStream } from "@/utils/ai-chat";
+import { AcpStreamHandler } from "@/utils/acp-handler";
+import { getChatCompletionStream, isAcpAgent } from "@/utils/ai-chat";
 import type { ContextInfo } from "@/utils/types";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import { useAIChatStore } from "../../store/store";
@@ -25,7 +24,7 @@ const AIChat = memo(function AIChat({
   onApplyCode,
 }: AIChatProps) {
   const { rootFolderPath } = useProjectStore();
-  const { settings, updateSetting } = useSettingsStore();
+  const { settings } = useSettingsStore();
 
   const chatState = useChatState();
   const chatActions = useChatActions();
@@ -44,34 +43,8 @@ const AIChat = memo(function AIChat({
     chatActions.checkAllProviderApiKeys();
   }, [settings.aiProviderId, chatActions.checkApiKey, chatActions.checkAllProviderApiKeys]);
 
-  useEffect(() => {
-    const checkClaudeCodeStatus = async () => {
-      try {
-        const status = await invoke<ClaudeStatus>("get_claude_status");
-        setClaudeCodeAvailability(status.interceptor_running);
-
-        if (settings.aiProviderId === "claude-code" && !status.interceptor_running) {
-          const availableProviders = getAvailableProviders();
-          if (availableProviders.length > 0) {
-            const firstProvider = availableProviders[0];
-            updateSetting("aiProviderId", firstProvider.id);
-            updateSetting("aiModelId", firstProvider.models[0].id);
-          }
-        }
-      } catch {
-        setClaudeCodeAvailability(false);
-        if (settings.aiProviderId === "claude-code") {
-          const availableProviders = getAvailableProviders();
-          if (availableProviders.length > 0) {
-            const firstProvider = availableProviders[0];
-            updateSetting("aiProviderId", firstProvider.id);
-            updateSetting("aiModelId", firstProvider.models[0].id);
-          }
-        }
-      }
-    };
-    checkClaudeCodeStatus();
-  }, [settings.aiProviderId, updateSetting]);
+  // Agent availability is now handled dynamically by the model-provider-selector component
+  // No need to check Claude Code status on mount
 
   const handleDeleteChat = (chatId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -82,10 +55,24 @@ const AIChat = memo(function AIChat({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const buildContext = (): ContextInfo => {
+  const buildContext = async (): Promise<ContextInfo> => {
     const selectedBuffers = buffers.filter((buffer) => chatState.selectedBufferIds.has(buffer.id));
+
+    // Build active buffer context, including web viewer content if applicable
+    let activeBufferContext: (typeof activeBuffer & { webViewerContent?: string }) | undefined =
+      activeBuffer || undefined;
+    if (activeBuffer?.isWebViewer && activeBuffer.webViewerUrl) {
+      // Fetch web page content for context
+      const { fetchWebPageContent } = await import("@/utils/web-fetcher");
+      const webContent = await fetchWebPageContent(activeBuffer.webViewerUrl);
+      activeBufferContext = {
+        ...activeBuffer,
+        webViewerContent: webContent,
+      };
+    }
+
     const context: ContextInfo = {
-      activeBuffer: activeBuffer || undefined,
+      activeBuffer: activeBufferContext,
       openBuffers: selectedBuffers,
       selectedFiles,
       selectedProjectFiles: Array.from(chatState.selectedFilesPaths),
@@ -93,7 +80,7 @@ const AIChat = memo(function AIChat({
       providerId: settings.aiProviderId,
     };
 
-    if (activeBuffer) {
+    if (activeBuffer && !activeBuffer.isWebViewer) {
       const extension = activeBuffer.path.split(".").pop()?.toLowerCase() || "";
       const languageMap: Record<string, string> = {
         js: "JavaScript",
@@ -122,7 +109,17 @@ const AIChat = memo(function AIChat({
     return context;
   };
 
-  const stopStreaming = () => {
+  const stopStreaming = async () => {
+    // For ACP agents, send cancel notification
+    const currentAgentId = chatActions.getCurrentAgentId();
+    if (isAcpAgent(currentAgentId)) {
+      try {
+        await AcpStreamHandler.cancelPrompt();
+      } catch (error) {
+        console.error("Failed to cancel ACP prompt:", error);
+      }
+    }
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -134,21 +131,7 @@ const AIChat = memo(function AIChat({
   const processMessage = async (messageContent: string) => {
     if (!messageContent.trim() || !chatState.hasApiKey) return;
 
-    if (settings.aiProviderId === "claude-code") {
-      try {
-        const status = await invoke<ClaudeStatus>("get_claude_status");
-        if (!status.running) {
-          await invoke("start_claude_code", {
-            workspacePath: rootFolderPath || null,
-          });
-        }
-      } catch (error) {
-        const errorMsg = String(error);
-        if (!errorMsg.includes("already running")) {
-          console.error("Failed to start claude-code:", error);
-        }
-      }
-    }
+    // Agents are started automatically by AcpStreamHandler when needed
 
     let chatId = chatState.currentChatId;
     if (!chatId) {
@@ -160,7 +143,7 @@ const AIChat = memo(function AIChat({
       allProjectFiles,
     );
 
-    const context = buildContext();
+    const context = await buildContext();
     const userMessage: Message = {
       id: Date.now().toString(),
       content: messageContent.trim(),
@@ -206,8 +189,10 @@ const AIChat = memo(function AIChat({
 
       const enhancedMessage = processedMessage;
       let currentAssistantMessageId = assistantMessageId;
+      const currentAgentId = chatActions.getCurrentAgentId();
 
       await getChatCompletionStream(
+        currentAgentId,
         settings.aiProviderId,
         settings.aiModelId,
         enhancedMessage,
@@ -327,6 +312,21 @@ details: ${errorDetails || mainError}
         (toolName: string) => {
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
+
+          // Find the tool call that just completed
+          const completedToolCall = currentMsg?.toolCalls?.find(
+            (tc) => tc.name === toolName && !tc.isComplete,
+          );
+
+          // Auto-open Read files if setting is enabled
+          if (toolName === "Read" && completedToolCall?.input?.file_path) {
+            const { settings } = useSettingsStore.getState();
+            if (settings.aiAutoOpenReadFiles) {
+              const { handleFileSelect } = useFileSystemStore.getState();
+              handleFileSelect(completedToolCall.input.file_path, false);
+            }
+          }
+
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
             toolCalls: currentMsg?.toolCalls?.map((tc) =>
               tc.name === toolName && !tc.isComplete ? { ...tc, isComplete: true } : tc,

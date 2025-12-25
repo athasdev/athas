@@ -112,3 +112,18 @@ export async function moveFile(sourcePath: string, targetPath: string): Promise<
 export async function renameFile(sourcePath: string, targetPath: string): Promise<void> {
   await invoke("rename_file", { sourcePath, targetPath });
 }
+
+export interface SymlinkInfo {
+  is_symlink: boolean;
+  target?: string;
+  is_dir: boolean;
+}
+
+/**
+ * Get symlink information for a file or directory
+ * @param path The path to check
+ * @param workspaceRoot The workspace root for relative path calculation
+ */
+export async function getSymlinkInfo(path: string, workspaceRoot?: string): Promise<SymlinkInfo> {
+  return await invoke("get_symlink_info", { path, workspaceRoot });
+}

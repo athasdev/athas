@@ -6,7 +6,7 @@ export const materialIconTheme: IconThemeDefinition = {
   id: "material",
   name: "Material Icons",
   description: "Material Design file icons",
-  getFileIcon: (fileName: string, isDir: boolean, isExpanded = false) => {
+  getFileIcon: (fileName: string, isDir: boolean, isExpanded = false, _isSymlink = false) => {
     if (isDir) {
       const Icon = isExpanded ? FolderOpen : Folder;
       return {

@@ -8,8 +8,8 @@
   "capabilities": {
     "languageProvider": {
       "id": "yaml",
-      "extensions": ["yaml"],
-      "aliases": ["yaml"],
+      "extensions": ["yaml", "yml"],
+      "aliases": ["yaml", "yml"],
       "wasmPath": "/tree-sitter/parsers/tree-sitter-yaml.wasm",
       "highlightQuery": "/tree-sitter/queries/yaml/highlights.scm"
     }

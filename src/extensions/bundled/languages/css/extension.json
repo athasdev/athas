@@ -1,0 +1,22 @@
+{
+  "id": "athas.css",
+  "name": "CSS",
+  "displayName": "CSS Language Support",
+  "description": "CSS syntax highlighting",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "license": "MIT",
+  "category": "language",
+  "bundled": true,
+  "capabilities": {
+    "type": "language",
+    "languageId": "css",
+    "fileExtensions": ["css", "scss", "sass", "less"],
+    "aliases": ["CSS", "css", "SCSS", "SASS", "LESS"],
+    "grammar": {
+      "wasmPath": "/tree-sitter/parsers/tree-sitter-css.wasm",
+      "highlightQuery": "/tree-sitter/queries/css/highlights.scm",
+      "scopeName": "source.css"
+    }
+  }
+}

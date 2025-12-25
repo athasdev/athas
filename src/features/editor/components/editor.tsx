@@ -1,7 +1,8 @@
 import "../styles/overlay-editor.css";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useGitGutter } from "@/features/version-control/git/controllers/use-git-gutter";
+import { useGitGutter } from "@/features/version-control/git/controllers/use-gutter";
+import { useZoomStore } from "@/stores/zoom-store";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
 import { useContextMenu } from "../hooks/use-context-menu";
@@ -32,12 +33,26 @@ import { MultiCursorLayer } from "./layers/multi-cursor-layer";
 
 interface EditorProps {
   className?: string;
+  onMouseMove?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onMouseLeave?: () => void;
+  onMouseEnter?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
-export function Editor({ className }: EditorProps) {
+export function Editor({
+  className,
+  onMouseMove,
+  onMouseLeave,
+  onMouseEnter,
+  onClick,
+}: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
-  const gitBlameRef = useRef<HTMLDivElement>(null);
+  const multiCursorRef = useRef<HTMLDivElement>(null);
+
+  // Track buffer changes to handle cursor positioning correctly
+  const prevBufferIdRef = useRef<string | null>(null);
+  const isBufferSwitchRef = useRef(false);
 
   const bufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
@@ -52,9 +67,15 @@ export function Editor({ className }: EditorProps) {
   } = useEditorStateStore.use.actions();
   const cursorPosition = useEditorStateStore.use.cursorPosition();
   const multiCursorState = useEditorStateStore.use.multiCursorState();
+  const onChange = useEditorStateStore.use.onChange();
 
-  const fontSize = useEditorSettingsStore.use.fontSize();
+  const baseFontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
+  const zoomLevel = useZoomStore.use.editorZoomLevel();
+
+  // Apply zoom by scaling font size instead of CSS transform
+  // This ensures text and positioned elements use the same rendering path
+  const fontSize = baseFontSize * zoomLevel;
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
   const tabSize = useEditorSettingsStore.use.tabSize();
 
@@ -89,17 +110,39 @@ export function Editor({ className }: EditorProps) {
   const actualLines = useMemo(() => splitLines(content), [content]);
   const lines = foldTransform.hasActiveFolds ? foldTransform.virtualLines : actualLines;
   const displayContent = foldTransform.hasActiveFolds ? foldTransform.virtualContent : content;
+  // Use consistent line height for both textarea and gutter
+  // This ensures they stay synchronized at all zoom levels
   const lineHeight = useMemo(() => calculateLineHeight(fontSize), [fontSize]);
 
-  const { handleScroll: handleViewportScroll, initializeViewport } = useViewportLines({
+  const {
+    viewportRange,
+    handleScroll: handleViewportScroll,
+    initializeViewport,
+  } = useViewportLines({
     lineHeight,
   });
 
-  const { tokens, tokenize } = useTokenizer({
+  const { tokens, tokenize, forceFullTokenize } = useTokenizer({
     filePath,
+    bufferId: bufferId || undefined,
     incremental: true,
     enabled: hasSyntaxHighlighting,
   });
+
+  // Listen for extension installation to re-trigger tokenization
+  useEffect(() => {
+    const handleExtensionInstalled = (event: Event) => {
+      const customEvent = event as CustomEvent<{ extensionId: string; filePath: string }>;
+      if (customEvent.detail.filePath === filePath && content) {
+        forceFullTokenize(content);
+      }
+    };
+
+    window.addEventListener("extension-installed", handleExtensionInstalled);
+    return () => {
+      window.removeEventListener("extension-installed", handleExtensionInstalled);
+    };
+  }, [filePath, content, forceFullTokenize]);
 
   const visualCursorLine = useMemo(() => {
     if (foldTransform.hasActiveFolds) {
@@ -120,6 +163,7 @@ export function Editor({ className }: EditorProps) {
       }
 
       updateBufferContent(bufferId, newActualContent);
+      onChange(newActualContent);
 
       const selectionStart = inputRef.current.selectionStart;
       const virtualLines = splitLines(newVirtualContent);
@@ -142,23 +186,10 @@ export function Editor({ className }: EditorProps) {
         setCursorPosition(position);
       }
 
-      if (hasSyntaxHighlighting) {
-        // Tokenize the content that will be displayed
-        const contentToTokenize = foldTransform.hasActiveFolds
-          ? newVirtualContent
-          : newActualContent;
-        tokenize(contentToTokenize);
-      }
+      // Tokenization is handled by the debounced useEffect that watches buffer content
+      // This avoids double tokenization and provides better performance when typing
     },
-    [
-      bufferId,
-      updateBufferContent,
-      setCursorPosition,
-      tokenize,
-      hasSyntaxHighlighting,
-      content,
-      foldTransform,
-    ],
+    [bufferId, updateBufferContent, setCursorPosition, content, foldTransform, onChange],
   );
 
   const editorOps = useEditorOperations({
@@ -171,6 +202,9 @@ export function Editor({ className }: EditorProps) {
 
   const handleCursorChange = useCallback(() => {
     if (!bufferId || !inputRef.current) return;
+
+    // Skip cursor updates during buffer switches to prevent dragging old positions
+    if (isBufferSwitchRef.current) return;
 
     const selectionStart = inputRef.current.selectionStart;
     const selectionEnd = inputRef.current.selectionEnd;
@@ -228,11 +262,7 @@ export function Editor({ className }: EditorProps) {
         const selectionEnd = inputRef.current.selectionEnd;
         const contentLines = splitLines(content);
 
-        const position = calculateCursorPosition(selectionStart, contentLines);
-
-        if (!multiCursorState) {
-          enableMultiCursor();
-        }
+        const clickedPosition = calculateCursorPosition(selectionStart, contentLines);
 
         const selection =
           selectionStart !== selectionEnd
@@ -242,7 +272,20 @@ export function Editor({ className }: EditorProps) {
               }
             : undefined;
 
-        addCursor(position, selection);
+        if (!multiCursorState) {
+          // Enable multi-cursor mode - this creates a cursor at current position
+          enableMultiCursor();
+          // Only add a new cursor if clicked position is different from current cursor
+          const isDifferentPosition =
+            clickedPosition.line !== cursorPosition.line ||
+            clickedPosition.column !== cursorPosition.column;
+          if (isDifferentPosition) {
+            addCursor(clickedPosition, selection);
+          }
+        } else {
+          // Already in multi-cursor mode, just add the cursor
+          addCursor(clickedPosition, selection);
+        }
         return;
       }
 
@@ -250,7 +293,15 @@ export function Editor({ className }: EditorProps) {
         clearSecondaryCursors();
       }
     },
-    [bufferId, content, multiCursorState, enableMultiCursor, addCursor, clearSecondaryCursors],
+    [
+      bufferId,
+      content,
+      multiCursorState,
+      cursorPosition,
+      enableMultiCursor,
+      addCursor,
+      clearSecondaryCursors,
+    ],
   );
 
   const isLspCompletionVisible = useEditorUIStore.use.isLspCompletionVisible();
@@ -332,7 +383,7 @@ export function Editor({ className }: EditorProps) {
             inputRef.current.selectionEnd = primaryCursor.position.offset;
           }
 
-          tokenize(newContent);
+          // Tokenization handled by debounced useEffect watching buffer content
           return;
         }
 
@@ -364,7 +415,7 @@ export function Editor({ className }: EditorProps) {
             inputRef.current.selectionEnd = primaryCursor.position.offset;
           }
 
-          tokenize(newContent);
+          // Tokenization handled by debounced useEffect watching buffer content
           return;
         }
       }
@@ -467,6 +518,8 @@ export function Editor({ className }: EditorProps) {
 
   const scrollRafRef = useRef<number | null>(null);
   const lastScrollRef = useRef({ top: 0, left: 0 });
+  const isScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLTextAreaElement>) => {
@@ -479,11 +532,17 @@ export function Editor({ className }: EditorProps) {
       }
 
       lastScrollRef.current = { top: scrollTop, left: scrollLeft };
+      isScrollingRef.current = true;
+
+      // Clear existing scroll timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
 
       // Log scroll event for debugging
       scrollLogger.log(scrollTop, scrollLeft, "editor-scroll");
 
-      // Batch transform updates with RAF for smoother rendering
+      // Single RAF for both transform updates and viewport tracking
       if (scrollRafRef.current === null) {
         scrollRafRef.current = requestAnimationFrame(() => {
           const { top, left } = lastScrollRef.current;
@@ -493,20 +552,25 @@ export function Editor({ className }: EditorProps) {
             highlightRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
-          // Update git blame layer transform for visual sync
-          if (gitBlameRef.current) {
-            gitBlameRef.current.style.transform = `translate(-${left}px, -${top}px)`;
+          // Update multi-cursor layer transform for visual sync
+          if (multiCursorRef.current) {
+            multiCursorRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
           // Update state store for Vim motions and cursor visibility
           useEditorStateStore.getState().actions.setScroll(top, left);
 
+          // Update viewport tracking in the same RAF
+          handleViewportScroll(top, lines.length);
+
           scrollRafRef.current = null;
         });
       }
 
-      // Update viewport tracking (already uses RAF internally)
-      handleViewportScroll(e, lines.length);
+      // Mark scrolling as finished after 150ms of no scroll events
+      scrollTimeoutRef.current = setTimeout(() => {
+        isScrollingRef.current = false;
+      }, 150);
     },
     [handleViewportScroll, lines.length],
   );
@@ -525,13 +589,37 @@ export function Editor({ className }: EditorProps) {
     };
   }, [inputRef]);
 
-  // Cleanup scroll RAF on unmount
+  // Cleanup scroll RAF and timeout on unmount
   useEffect(() => {
     return () => {
       if (scrollRafRef.current !== null) {
         cancelAnimationFrame(scrollRafRef.current);
       }
+      if (scrollTimeoutRef.current !== null) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
     };
+  }, []);
+
+  // Native wheel handler for textarea - required for Tauri/WebView
+  // Scrolls on dominant axis per event to prevent diagonal scrolling
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      // Scroll on whichever axis has more movement
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        textarea.scrollLeft += e.deltaX;
+      } else {
+        textarea.scrollTop += e.deltaY;
+      }
+    };
+
+    textarea.addEventListener("wheel", handleWheel, { passive: false });
+    return () => textarea.removeEventListener("wheel", handleWheel);
   }, []);
 
   // Track viewport height for cursor visibility calculations
@@ -556,12 +644,31 @@ export function Editor({ className }: EditorProps) {
     };
   }, []);
 
+  // Tokenization scheduled via requestAnimationFrame for smooth updates
+  const tokenizeRafRef = useRef<number | null>(null);
+
   useEffect(() => {
-    if (buffer?.content && buffer?.path) {
-      // Tokenize the content that's actually being displayed
-      const contentToTokenize = foldTransform.hasActiveFolds ? displayContent : buffer.content;
-      tokenize(contentToTokenize);
+    if (!buffer?.content || !buffer?.path) return;
+
+    // Clear any pending tokenization
+    if (tokenizeRafRef.current !== null) {
+      cancelAnimationFrame(tokenizeRafRef.current);
     }
+
+    const contentToTokenize = foldTransform.hasActiveFolds ? displayContent : buffer.content;
+
+    // Use requestAnimationFrame for smooth tokenization
+    // This batches updates to the next frame without visible delay
+    tokenizeRafRef.current = requestAnimationFrame(() => {
+      tokenize(contentToTokenize, viewportRange);
+      tokenizeRafRef.current = null;
+    });
+
+    return () => {
+      if (tokenizeRafRef.current !== null) {
+        cancelAnimationFrame(tokenizeRafRef.current);
+      }
+    };
   }, [
     bufferId,
     buffer?.path,
@@ -569,11 +676,31 @@ export function Editor({ className }: EditorProps) {
     tokenize,
     foldTransform.hasActiveFolds,
     displayContent,
+    viewportRange,
   ]);
+
+  // Restore cursor position when switching buffers (deferred to ensure content sync)
+  useEffect(() => {
+    if (!bufferId) return;
+
+    // Only restore when bufferId changes (not on initial mount)
+    if (prevBufferIdRef.current !== null && prevBufferIdRef.current !== bufferId) {
+      isBufferSwitchRef.current = true;
+      requestAnimationFrame(() => {
+        // Only restore if we're still on the same buffer (user might have switched again)
+        const currentBufferId = useBufferStore.getState().activeBufferId;
+        if (currentBufferId === bufferId) {
+          useEditorStateStore.getState().actions.restorePositionForFile(bufferId);
+        }
+        // Flag will be cleared by the cursor positioning effect after applying position
+      });
+    }
+    prevBufferIdRef.current = bufferId;
+  }, [bufferId]);
 
   useEffect(() => {
     if (inputRef.current && bufferId) {
-      setTimeout(() => {
+      const applyPosition = () => {
         if (inputRef.current && bufferId) {
           const offset = cursorPosition.offset || 0;
           const maxOffset = inputRef.current.value.length;
@@ -583,8 +710,17 @@ export function Editor({ className }: EditorProps) {
             inputRef.current.selectionEnd = safeOffset;
           }
           inputRef.current.focus();
+          // Clear the buffer switch flag after cursor is positioned
+          isBufferSwitchRef.current = false;
         }
-      }, 0);
+      };
+
+      if (isBufferSwitchRef.current) {
+        // During buffer switch, wait for next frame to ensure content is synced
+        requestAnimationFrame(applyPosition);
+      } else {
+        setTimeout(applyPosition, 0);
+      }
     }
   }, [bufferId, cursorPosition.offset]);
 
@@ -617,15 +753,15 @@ export function Editor({ className }: EditorProps) {
       if (inputRef.current) {
         inputRef.current.value = newContent;
       }
-      tokenize(newContent);
+      // Tokenization handled by debounced useEffect watching buffer content
     },
-    [lines, bufferId, updateBufferContent, tokenize],
+    [lines, bufferId, updateBufferContent],
   );
 
   if (!buffer) return null;
 
   return (
-    <div className="relative flex size-full">
+    <div className="absolute inset-0 flex">
       {showLineNumbers && (
         <Gutter
           totalLines={lines.length}
@@ -640,7 +776,13 @@ export function Editor({ className }: EditorProps) {
         />
       )}
 
-      <div className={`overlay-editor-container flex-1 bg-primary-bg ${className || ""}`}>
+      <div
+        className={`overlay-editor-container relative min-h-0 min-w-0 flex-1 bg-primary-bg ${className || ""}`}
+        onMouseMove={onMouseMove}
+        onMouseLeave={onMouseLeave}
+        onMouseEnter={onMouseEnter}
+        onClick={onClick}
+      >
         {hasSyntaxHighlighting && (
           <HighlightLayer
             ref={highlightRef}
@@ -650,10 +792,11 @@ export function Editor({ className }: EditorProps) {
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             tabSize={tabSize}
+            viewportRange={viewportRange}
           />
         )}
         <InputLayer
-          ref={inputRef}
+          textareaRef={inputRef}
           content={displayContent}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
@@ -670,6 +813,7 @@ export function Editor({ className }: EditorProps) {
         />
         {multiCursorState && (
           <MultiCursorLayer
+            ref={multiCursorRef}
             cursors={multiCursorState.cursors}
             primaryCursorId={multiCursorState.primaryCursorId}
             fontSize={fontSize}
@@ -681,7 +825,6 @@ export function Editor({ className }: EditorProps) {
 
         {filePath && (
           <GitBlameLayer
-            ref={gitBlameRef}
             filePath={filePath}
             cursorLine={cursorPosition.line}
             visualCursorLine={visualCursorLine}
@@ -689,6 +832,8 @@ export function Editor({ className }: EditorProps) {
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
+            tabSize={tabSize}
+            textareaRef={inputRef}
           />
         )}
 

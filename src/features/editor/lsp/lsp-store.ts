@@ -9,7 +9,6 @@ import { createSelectors } from "@/utils/zustand-selectors";
 import { useEditorUIStore } from "../stores/ui-store";
 
 // Performance optimizations
-const COMPLETION_DEBOUNCE_MS = EDITOR_CONSTANTS.COMPLETION_DEBOUNCE_MS;
 const COMPLETION_CACHE_TTL_MS = EDITOR_CONSTANTS.COMPLETION_CACHE_TTL_MS;
 const MAX_CACHE_SIZE = EDITOR_CONSTANTS.MAX_COMPLETION_CACHE_SIZE;
 const COMPLETION_HIDE_DELAY_MS = 200; // Stability period before hiding to prevent flicker
@@ -71,7 +70,6 @@ interface LspState {
 
   // Request tracking
   currentCompletionRequest: AbortController | null;
-  debounceTimer: NodeJS.Timeout | null;
   hideCompletionTimer: NodeJS.Timeout | null;
 
   // Cache
@@ -122,7 +120,12 @@ interface LspActions {
   };
 
   // LSP Status actions
-  updateLspStatus: (status: LspStatus, workspaces?: string[], error?: string) => void;
+  updateLspStatus: (
+    status: LspStatus,
+    workspaces?: string[],
+    error?: string,
+    languages?: string[],
+  ) => void;
   setLspError: (error: string) => void;
   clearLspError: () => void;
 }
@@ -132,7 +135,6 @@ export const useLspStore = createSelectors(
     getCompletions: undefined,
     isLanguageSupported: undefined,
     currentCompletionRequest: null,
-    debounceTimer: null,
     hideCompletionTimer: null,
     completionCache: {},
     lspStatus: {
@@ -213,23 +215,9 @@ export const useLspStore = createSelectors(
       },
 
       requestCompletion: async ({ filePath, cursorPos, value, editorRef }) => {
-        const { debounceTimer, actions } = get();
-
-        // Clear existing debounce timer
-        if (debounceTimer) {
-          clearTimeout(debounceTimer);
-        }
-
-        // Debounce completion requests
-        const timer = setTimeout(async () => {
-          try {
-            await actions.performCompletionRequest({ filePath, cursorPos, value, editorRef });
-          } catch (error) {
-            logger.error("Editor", "Debounced completion request failed:", error);
-          }
-        }, COMPLETION_DEBOUNCE_MS);
-
-        set({ debounceTimer: timer });
+        const { actions } = get();
+        // Debouncing is handled by use-lsp-integration, execute immediately
+        await actions.performCompletionRequest({ filePath, cursorPos, value, editorRef });
       },
 
       performCompletionRequest: async ({ filePath, cursorPos, value, editorRef }) => {
@@ -259,6 +247,15 @@ export const useLspStore = createSelectors(
         const prefix = extractPrefix(value, cursorPos);
         completionActions.setCurrentPrefix(prefix);
 
+        const lines = value.substring(0, cursorPos).split("\n");
+        const character = lines[lines.length - 1].length;
+
+        // Hide immediately when cursor is at start of line (after deletion) or no prefix
+        if (character === 0 || (prefix.length === 0 && cursorPos === 0)) {
+          completionActions.setIsLspCompletionVisible(false);
+          return;
+        }
+
         // Smart triggering: check context before requesting completions
         const currentChar = cursorPos > 0 ? value[cursorPos - 1] : "";
 
@@ -268,9 +265,7 @@ export const useLspStore = createSelectors(
           return;
         }
 
-        const lines = value.substring(0, cursorPos).split("\n");
         const line = lines.length - 1;
-        const character = lines[lines.length - 1].length;
 
         // Check cache first
         const cacheKey = actions.getCacheKey(filePath, line, character);
@@ -454,13 +449,14 @@ export const useLspStore = createSelectors(
       },
 
       // LSP Status actions
-      updateLspStatus: (status, workspaces, error) => {
+      updateLspStatus: (status, workspaces, error, languages) => {
         set((state) => ({
           lspStatus: {
             ...state.lspStatus,
             status,
             activeWorkspaces: workspaces || state.lspStatus.activeWorkspaces,
             lastError: error || (status === "error" ? state.lspStatus.lastError : undefined),
+            supportedLanguages: languages || state.lspStatus.supportedLanguages,
           },
         }));
       },

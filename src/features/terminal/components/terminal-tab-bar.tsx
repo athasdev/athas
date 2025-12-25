@@ -1,9 +1,7 @@
-import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import {
   AlignCenter,
-  ChevronDown,
   Maximize,
   Maximize2,
   Minimize2,
@@ -11,18 +9,18 @@ import {
   Plus,
   SplitSquareHorizontal,
   Terminal as TerminalIcon,
-  X,
 } from "lucide-react";
 import type React from "react";
 import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
-import type { Shell, Terminal } from "@/features/terminal/types/terminal";
-import { useProjectStore } from "@/stores/project-store";
-import { type TerminalWidthMode, useTerminalStore } from "@/stores/terminal-store";
+import {
+  type TerminalWidthMode,
+  useTerminalStore,
+} from "@/features/terminal/stores/terminal-store";
+import type { Terminal } from "@/features/terminal/types/terminal";
 import { cn } from "@/utils/cn";
-import Dropdown from "../../../ui/dropdown";
 import Tooltip from "../../../ui/tooltip";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
 import TerminalTabContextMenu from "./terminal-tab-context-menu";
@@ -98,7 +96,7 @@ interface TerminalTabBarProps {
   terminals: Terminal[];
   activeTerminalId: string | null;
   onTabClick: (terminalId: string) => void;
-  onTabClose: (terminalId: string, event: React.MouseEvent) => void;
+  onTabClose: (terminalId: string, event?: React.MouseEvent) => void;
   onTabReorder?: (fromIndex: number, toIndex: number) => void;
   onTabPin?: (terminalId: string) => void;
   onTabRename?: (terminalId: string) => void;
@@ -110,7 +108,6 @@ interface TerminalTabBarProps {
   onSplitView?: () => void;
   onFullScreen?: () => void;
   isFullScreen?: boolean;
-  onClosePanel?: () => void;
   isSplitView?: boolean;
 }
 
@@ -130,14 +127,11 @@ const TerminalTabBar = ({
   onSplitView,
   onFullScreen,
   isFullScreen = false,
-  onClosePanel,
   isSplitView = false,
 }: TerminalTabBarProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dropTarget, setDropTarget] = useState<number | null>(null);
-  const [shells, setShells] = useState<Shell[]>([]);
-  const [selectedShell, setSelectedShell] = useState<string>("");
   const [dragStartPosition, setDragStartPosition] = useState<{
     x: number;
     y: number;
@@ -289,12 +283,12 @@ const TerminalTabBar = ({
     // TODO: Add keyboard navigation support
   };
 
-  const handleTabPin = (terminalId: string) => {
-    onTabPin?.(terminalId);
+  const handleTabCloseWrapper = (terminalId: string) => {
+    onTabClose(terminalId);
   };
 
-  const handleTabCloseWrapper = (terminalId: string) => {
-    onTabClose(terminalId, {} as React.MouseEvent);
+  const handleTabPin = (terminalId: string) => {
+    onTabPin?.(terminalId);
   };
 
   const closeContextMenu = () => {
@@ -328,32 +322,6 @@ const TerminalTabBar = ({
   });
 
   useEffect(() => {
-    // shell functions that will run in the terminal bar
-    async function fetchShells() {
-      try {
-        const res: Shell[] = await invoke("get_shells");
-        setShells(res);
-      } catch (err) {
-        console.error(`Failed to load available shells ${err}`);
-      }
-    }
-    // idk what to fix?
-    // async function executeShell(shellId: string) {
-    //   try {
-    //     const res: Shell[] = await invoke("execute_shell", {
-    //       shell_id: shellId,
-    //     });
-    //     setShells(res);
-    //   } catch (err) {
-    //     console.error(`Failed to load executable for shell ${err}`);
-    //   }
-    // }
-
-    // executeShell("nu");
-    fetchShells();
-  }, []);
-
-  useEffect(() => {
     if (draggedIndex === null) return;
 
     const move = (e: MouseEvent) => handleMouseMove(e);
@@ -372,7 +340,7 @@ const TerminalTabBar = ({
     return (
       <div
         className={cn(
-          "flex min-h-[28px] items-center justify-between",
+          "flex min-h-7 items-center justify-between",
           "border-border border-b bg-secondary-bg px-2 py-1",
         )}
       >
@@ -381,43 +349,17 @@ const TerminalTabBar = ({
           <span className="ui-font text-text-lighter text-xs">No terminals</span>
         </div>
         {onNewTerminal && (
-          <div className="flex items-center gap-1">
-            <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-              <button
-                onClick={() => {
-                  if (selectedShell && onTabCreate) {
-                    const { rootFolderPath } = useProjectStore.getState();
-                    onTabCreate(rootFolderPath || process.cwd(), selectedShell);
-                  } else {
-                    onNewTerminal?.();
-                  }
-                }}
-                className={cn(
-                  "flex items-center gap-0.5 px-1.5 py-1",
-                  "text-text-lighter text-xs transition-colors hover:bg-hover",
-                )}
-              >
-                <Plus size={9} />
-              </button>
-            </Tooltip>
-
-            <Tooltip content="Select a shell" side="top">
-              <Dropdown
-                value={selectedShell}
-                options={shells.map((shell) => ({
-                  value: shell.id,
-                  label: shell.name,
-                }))}
-                onChange={(val) => {
-                  setSelectedShell(val);
-                }}
-                className={cn(
-                  "flex items-center gap-0.5 px-1.5 py-1",
-                  "text-text-lighter text-xs transition-colors hover:bg-hover",
-                )}
-              ></Dropdown>
-            </Tooltip>
-          </div>
+          <Tooltip content="New Terminal (Cmd+T)" side="bottom">
+            <button
+              onClick={onNewTerminal}
+              className={cn(
+                "flex items-center gap-0.5 px-1.5 py-1",
+                "text-text-lighter text-xs transition-colors hover:bg-hover",
+              )}
+            >
+              <Plus size={9} />
+            </button>
+          </Tooltip>
         )}
       </div>
     );
@@ -429,8 +371,8 @@ const TerminalTabBar = ({
         ref={tabBarRef}
         className={cn(
           "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border",
-          "flex min-h-[28px] items-center justify-between overflow-x-auto",
-          "border-border border-b bg-secondary-bg px-1",
+          "flex min-h-7 items-center justify-between overflow-x-auto",
+          "border-border border-b bg-secondary-bg",
         )}
         style={{
           scrollbarWidth: "thin",
@@ -496,52 +438,18 @@ const TerminalTabBar = ({
         </div>
 
         {/* Right side - Action buttons */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-shrink-0 items-center gap-0.5 rounded p-0.5 transition-colors hover:bg-hover">
-            <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-              <button
-                onClick={() => {
-                  if (selectedShell && onTabCreate) {
-                    const { rootFolderPath } = useProjectStore.getState();
-                    onTabCreate(rootFolderPath || process.cwd(), selectedShell);
-                  } else {
-                    onNewTerminal?.();
-                  }
-                }}
-                className={cn(
-                  "flex flex-shrink-0 cursor-pointer items-center ",
-                  "text-text-lighter",
-                )}
-              >
-                <Plus size={16} />
-              </button>
-            </Tooltip>
-            <Tooltip content="Select a shell" side="bottom">
-              <Dropdown
-                searchable={false}
-                value={selectedShell}
-                options={shells.map((shell) => ({
-                  value: shell.id,
-                  label: shell.name,
-                }))}
-                onChange={(val) => {
-                  setSelectedShell(val);
-                }}
-                CustomTrigger={({ ref, onClick }) => (
-                  <button
-                    ref={ref}
-                    onClick={onClick}
-                    className={cn(
-                      "flex flex-shrink-0 cursor-pointer items-center ",
-                      "text-text-lighter ",
-                    )}
-                  >
-                    <ChevronDown size={10} />
-                  </button>
-                )}
-              ></Dropdown>
-            </Tooltip>
-          </div>
+        <div className="flex items-center gap-1 px-1">
+          <Tooltip content="New Terminal (Cmd+T)" side="bottom">
+            <button
+              onClick={onNewTerminal}
+              className={cn(
+                "flex shrink-0 cursor-pointer items-center rounded p-1",
+                "text-text-lighter transition-colors hover:bg-hover",
+              )}
+            >
+              <Plus size={14} />
+            </button>
+          </Tooltip>
           {/* Split View Button */}
           {onSplitView && (
             <Tooltip
@@ -551,7 +459,7 @@ const TerminalTabBar = ({
               <button
                 onClick={onSplitView}
                 className={cn(
-                  "flex flex-shrink-0 cursor-pointer items-center rounded p-1",
+                  "flex shrink-0 cursor-pointer items-center rounded p-1",
                   isSplitView
                     ? "bg-selected text-text"
                     : "text-text-lighter transition-colors hover:bg-hover",
@@ -570,25 +478,11 @@ const TerminalTabBar = ({
               <button
                 onClick={onFullScreen}
                 className={cn(
-                  "flex flex-shrink-0 cursor-pointer items-center rounded p-1",
+                  "flex shrink-0 cursor-pointer items-center rounded p-1",
                   "text-text-lighter transition-colors hover:bg-hover",
                 )}
               >
                 {isFullScreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-              </button>
-            </Tooltip>
-          )}
-          {/* Close Panel Button */}
-          {onClosePanel && (
-            <Tooltip content="Close Terminal Panel" side="bottom">
-              <button
-                onClick={onClosePanel}
-                className={cn(
-                  "flex flex-shrink-0 cursor-pointer items-center rounded p-1",
-                  "text-text-lighter transition-colors hover:bg-hover",
-                )}
-              >
-                <X size={12} />
               </button>
             </Tooltip>
           )}
@@ -615,12 +509,12 @@ const TerminalTabBar = ({
             }}
           >
             {/* Terminal Icon */}
-            <span className="flex-shrink-0">
+            <span className="shrink-0">
               <TerminalIcon size={12} className="text-text-lighter" />
             </span>
             {/* Pin indicator */}
             {sortedTerminals[draggedIndex].isPinned && (
-              <Pin size={8} className="flex-shrink-0 text-blue-500" />
+              <Pin size={8} className="shrink-0 text-blue-500" />
             )}
             <span className="truncate">{sortedTerminals[draggedIndex].name}</span>
           </div>

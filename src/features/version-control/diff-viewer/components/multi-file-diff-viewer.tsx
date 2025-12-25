@@ -63,9 +63,9 @@ const FileRow = memo(function FileRow({
       >
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {isCollapsed ? (
-            <ChevronRight size={12} className="flex-shrink-0 text-text-lighter" />
+            <ChevronRight size={12} className="shrink-0 text-text-lighter" />
           ) : (
-            <ChevronDown size={12} className="flex-shrink-0 text-text-lighter" />
+            <ChevronDown size={12} className="shrink-0 text-text-lighter" />
           )}
           {getStatusIcon(summary.status)}
           <span className="ui-font truncate text-text text-xs">{diff.file_path}</span>

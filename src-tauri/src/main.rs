@@ -1,12 +1,14 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use claude_bridge::ClaudeCodeBridge;
 use commands::*;
-use file_watcher::FileWatcher;
+use features::{AcpAgentBridge, ClaudeCodeBridge, FileWatcher};
 use log::{debug, info};
 use lsp::LspManager;
-use ssh::{ssh_connect, ssh_disconnect, ssh_disconnect_only, ssh_write_file};
+use ssh::{
+   ssh_connect, ssh_disconnect, ssh_disconnect_only, ssh_read_directory, ssh_read_file,
+   ssh_write_file,
+};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri_plugin_os::platform;
@@ -16,10 +18,9 @@ use terminal::{
 };
 use tokio::sync::Mutex;
 
-mod claude_bridge;
 mod commands;
 mod extensions;
-mod file_watcher;
+mod features;
 mod logger;
 mod lsp;
 mod menu;
@@ -39,6 +40,8 @@ fn main() {
       .plugin(tauri_plugin_os::init())
       .plugin(tauri_plugin_http::init())
       .plugin(tauri_plugin_process::init())
+      .plugin(tauri_plugin_deep_link::init())
+      .plugin(tauri_plugin_updater::Builder::new().build())
       .setup(|app| {
          let store = app.store("settings.json")?;
 
@@ -62,15 +65,19 @@ fn main() {
          // Set up the file watcher
          app.manage(Arc::new(FileWatcher::new(app.handle().clone())));
 
-         // Set up Claude bridge
+         // Set up Claude bridge (legacy, kept for rollback)
          let claude_bridge = Arc::new(Mutex::new(ClaudeCodeBridge::new(app.handle().clone())));
          app.manage(claude_bridge.clone());
+
+         // Set up ACP agent bridge (new implementation)
+         let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(app.handle().clone())));
+         app.manage(acp_bridge);
 
          // Set up LSP manager
          app.manage(LspManager::new(app.handle().clone()));
 
          // Set up theme cache
-         app.manage(theme::ThemeCache::new(std::collections::HashMap::new()));
+         app.manage(ThemeCache::new(std::collections::HashMap::new()));
 
          // Auto-start interceptor on app launch
          {
@@ -238,10 +245,7 @@ fn main() {
                      }
                   }
                   // Theme menu items - handle theme IDs from registry
-                  // Theme IDs are either "auto" or contain hyphens (e.g., "catppuccin-mocha")
-                  "auto" => {
-                     let _ = window.emit("menu_theme_change", "auto");
-                  }
+                  // Theme IDs contain hyphens (e.g., "catppuccin-mocha", "one-dark")
                   theme_id if theme_id.contains('-') => {
                      // Theme IDs from registry use hyphens (e.g., "catppuccin-mocha",
                      // "tokyo-night")
@@ -259,6 +263,7 @@ fn main() {
          // File system commands
          move_file,
          rename_file,
+         get_symlink_info,
          // Git commands
          git_status,
          git_add,
@@ -298,6 +303,15 @@ fn main() {
          store_github_token,
          get_github_token,
          remove_github_token,
+         github_check_cli_auth,
+         github_list_prs,
+         github_get_current_user,
+         github_open_pr_in_browser,
+         github_checkout_pr,
+         github_get_pr_details,
+         github_get_pr_diff,
+         github_get_pr_files,
+         github_get_pr_comments,
          // AI Provider token commands
          store_ai_provider_token,
          get_ai_provider_token,
@@ -312,6 +326,11 @@ fn main() {
          get_chat_stats,
          // Window commands
          create_remote_window,
+         create_embedded_webview,
+         close_embedded_webview,
+         navigate_embedded_webview,
+         resize_embedded_webview,
+         set_webview_visible,
          // File watcher commands
          start_watching,
          stop_watching,
@@ -328,11 +347,22 @@ fn main() {
          ssh_disconnect,
          ssh_disconnect_only,
          ssh_write_file,
-         // Claude commands
+         ssh_read_directory,
+         ssh_read_file,
+         // Claude commands (legacy)
          start_claude_code,
          stop_claude_code,
          send_claude_input,
          get_claude_status,
+         // ACP agent commands (new)
+         get_available_agents,
+         start_acp_agent,
+         stop_acp_agent,
+         send_acp_prompt,
+         get_acp_status,
+         respond_acp_permission,
+         set_acp_session_mode,
+         cancel_acp_prompt,
          // Theme commands
          get_system_theme,
          load_toml_themes,
@@ -381,10 +411,17 @@ fn main() {
          search_files_content,
          // Format commands
          format_code,
+         // Lint commands
+         lint_code,
          // CLI commands
          check_cli_installed,
          install_cli_command,
          uninstall_cli_command,
+         get_cli_install_command,
+         // Runtime commands
+         ensure_runtime,
+         get_runtime_status,
+         get_runtime_version,
          // Menu commands
          menu::toggle_menu_bar,
          menu::rebuild_menu_themes,

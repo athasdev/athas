@@ -1,45 +1,41 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from "react";
-import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
-import SQLiteViewer from "@/features/database/providers/sqlite/sqlite-viewer";
-import type { Diagnostic } from "@/features/diagnostics/diagnostics-pane";
-import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useSettingsStore } from "@/features/settings/store";
-import DiffViewer from "@/features/version-control/diff-viewer/components/diff-viewer";
-import { stageHunk, unstageHunk } from "@/features/version-control/git/controllers/git";
-import type { GitHunk } from "@/features/version-control/git/types/git";
-import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
-import { useVimStore } from "@/features/vim/stores/vim-store";
-import { useKeyboardShortcutsWrapper } from "@/features/window/hooks/use-keyboard-shortcuts-wrapper";
-import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
-import { useFolderDrop } from "@/hooks/use-folder-drop";
-import { useTerminalStore } from "@/stores/terminal-store";
-import { useUIState } from "@/stores/ui-state-store";
-import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
-
-// Lazy load AI Chat for better performance
-const AIChat = lazy(() => import("@/features/ai/components/chat/ai-chat"));
-
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import AIChat from "@/features/ai/components/chat/ai-chat";
 import GitHubCopilotSettings from "@/features/ai/components/github-copilot-settings";
+import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import CommandBar from "@/features/command-bar/components/command-bar";
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
+import SQLiteViewer from "@/features/database/providers/sqlite/sqlite-viewer";
+import type { Diagnostic } from "@/features/diagnostics/diagnostics-pane";
+import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import CodeEditor from "@/features/editor/components/code-editor";
 import { ExternalEditorTerminal } from "@/features/editor/components/external-editor-terminal";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import PRViewer from "@/features/github/components/pr-viewer";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { ImageViewer } from "@/features/image-viewer/components/image-viewer";
+import { useSettingsStore } from "@/features/settings/store";
 import TabBar from "@/features/tabs/components/tab-bar";
+import DiffViewer from "@/features/version-control/diff-viewer/components/diff-viewer";
+import { stageHunk, unstageHunk } from "@/features/version-control/git/controllers/git";
+import type { GitHunk } from "@/features/version-control/git/types/git";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
+import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
+import { useVimStore } from "@/features/vim/stores/vim-store";
+import { WebViewer } from "@/features/web-viewer/components/web-viewer";
+import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
+import { useFolderDrop } from "@/hooks/use-folder-drop";
+import { useUIState } from "@/stores/ui-state-store";
+import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
 import EditorFooter from "./footer/editor-footer";
-import ResizableRightPane from "./right-pane/resizable-right-pane";
+import { ResizablePane } from "./resizable-pane";
 import { MainSidebar } from "./sidebar/main-sidebar";
-import ResizableSidebar from "./sidebar/resizable-sidebar";
 
 export function MainLayout() {
   // Initialize AI chat storage (SQLite database + migration)
@@ -73,10 +69,15 @@ export function MainLayout() {
     }
   });
 
-  const { getAllDiagnostics } = useDiagnosticsStore.use.actions();
-  const diagnostics = useMemo(() => getAllDiagnostics(), [getAllDiagnostics]);
+  const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
+  const diagnostics = useMemo(() => {
+    const allDiagnostics: Diagnostic[] = [];
+    diagnosticsByFile.forEach((fileDiagnostics) => {
+      allDiagnostics.push(...fileDiagnostics);
+    });
+    return allDiagnostics;
+  }, [diagnosticsByFile]);
   const sidebarPosition = settings.sidebarPosition;
-  const terminalWidthMode = useTerminalStore((state) => state.widthMode);
 
   const { closeBufferForce } = useBufferStore.use.actions();
 
@@ -154,7 +155,6 @@ export function MainLayout() {
 
   // Initialize event listeners
   useMenuEventsWrapper();
-  useKeyboardShortcutsWrapper();
 
   // Initialize vim mode handling
   useVimKeyboard({
@@ -211,99 +211,80 @@ export function MainLayout() {
       )}
 
       <CustomTitleBarWithSettings />
-      <div className="h-px flex-shrink-0 bg-border" />
+      <div className="h-px shrink-0 bg-border" />
 
       <div className="z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
           {/* Left sidebar or AI chat based on settings */}
-          {sidebarPosition === "right" ? (
-            <ResizableRightPane position="left" isVisible={settings.isAIChatVisible}>
-              <Suspense
-                fallback={
-                  <div className="flex h-full items-center justify-center text-text-lighter text-xs">
-                    Loading...
-                  </div>
-                }
-              >
-                <AIChat mode="chat" />
-              </Suspense>
-            </ResizableRightPane>
-          ) : (
-            isSidebarVisible && (
-              <ResizableSidebar>
-                <MainSidebar />
-              </ResizableSidebar>
-            )
-          )}
+          {sidebarPosition === "right"
+            ? settings.isAIChatVisible && (
+                <ResizablePane position="left" widthKey="aiChatWidth">
+                  <AIChat mode="chat" />
+                </ResizablePane>
+              )
+            : isSidebarVisible && (
+                <ResizablePane position="left" widthKey="sidebarWidth">
+                  <MainSidebar />
+                </ResizablePane>
+              )}
 
           {/* Main content area */}
-          <div className="flex h-full flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col">
             <TabBar />
-            {(() => {
-              if (!activeBuffer) {
-                return <div className="flex flex-1 items-center justify-center"></div>;
-              }
-              if (activeBuffer.isDiff) {
-                return (
-                  <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />
-                );
-              } else if (activeBuffer.isImage) {
-                return (
-                  <ImageViewer
-                    filePath={activeBuffer.path}
-                    fileName={activeBuffer.name}
-                    bufferId={activeBuffer.id}
-                  />
-                );
-              } else if (activeBuffer.isSQLite) {
-                return <SQLiteViewer databasePath={activeBuffer.path} />;
-              } else if (activeBuffer.isExternalEditor && activeBuffer.terminalConnectionId) {
-                return (
-                  <ExternalEditorTerminal
-                    filePath={activeBuffer.path}
-                    fileName={activeBuffer.name}
-                    terminalConnectionId={activeBuffer.terminalConnectionId}
-                    onEditorExit={handleExternalEditorExit}
-                  />
-                );
-              } else {
-                return <CodeEditor />;
-              }
-            })()}
+            <div className="relative min-h-0 flex-1 overflow-hidden">
+              {(() => {
+                if (!activeBuffer) {
+                  return <div className="flex h-full items-center justify-center"></div>;
+                }
+                if (activeBuffer.isDiff) {
+                  return (
+                    <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />
+                  );
+                } else if (activeBuffer.isPullRequest && activeBuffer.prNumber) {
+                  return <PRViewer prNumber={activeBuffer.prNumber} />;
+                } else if (activeBuffer.isImage) {
+                  return (
+                    <ImageViewer
+                      filePath={activeBuffer.path}
+                      fileName={activeBuffer.name}
+                      bufferId={activeBuffer.id}
+                    />
+                  );
+                } else if (activeBuffer.isSQLite) {
+                  return <SQLiteViewer databasePath={activeBuffer.path} />;
+                } else if (activeBuffer.isExternalEditor && activeBuffer.terminalConnectionId) {
+                  return (
+                    <ExternalEditorTerminal
+                      filePath={activeBuffer.path}
+                      fileName={activeBuffer.name}
+                      terminalConnectionId={activeBuffer.terminalConnectionId}
+                      onEditorExit={handleExternalEditorExit}
+                    />
+                  );
+                } else if (activeBuffer.isWebViewer && activeBuffer.webViewerUrl) {
+                  return <WebViewer url={activeBuffer.webViewerUrl} bufferId={activeBuffer.id} />;
+                } else {
+                  return <CodeEditor />;
+                }
+              })()}
+            </div>
+            <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
           </div>
 
           {/* Right sidebar or AI chat based on settings */}
-          {sidebarPosition === "right" ? (
-            isSidebarVisible && (
-              <ResizableRightPane position="right">
-                <MainSidebar />
-              </ResizableRightPane>
-            )
-          ) : (
-            <ResizableRightPane position="right" isVisible={settings.isAIChatVisible}>
-              <Suspense
-                fallback={
-                  <div className="flex h-full items-center justify-center text-text-lighter text-xs">
-                    Loading AI Chat...
-                  </div>
-                }
-              >
-                <AIChat mode="chat" />
-              </Suspense>
-            </ResizableRightPane>
-          )}
+          {sidebarPosition === "right"
+            ? isSidebarVisible && (
+                <ResizablePane position="right" widthKey="sidebarWidth">
+                  <MainSidebar />
+                </ResizablePane>
+              )
+            : settings.isAIChatVisible && (
+                <ResizablePane position="right" widthKey="aiChatWidth">
+                  <AIChat mode="chat" />
+                </ResizablePane>
+              )}
         </div>
-
-        {/* BottomPane in editor width mode - only covers middle section */}
-        {terminalWidthMode === "editor" && (
-          <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
-        )}
       </div>
-
-      {/* BottomPane in full width mode - covers entire window including sidebars */}
-      {terminalWidthMode === "full" && (
-        <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
-      )}
 
       <EditorFooter />
 

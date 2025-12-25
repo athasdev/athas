@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Chat, Message, ToolCall } from "@/features/ai/types/ai-chat";
+import type { AgentType, Chat, Message, ToolCall } from "@/features/ai/types/ai-chat";
 
 /**
  * Chat History Database Utilities
@@ -12,6 +12,7 @@ interface ChatData {
   title: string;
   created_at: number;
   last_message_at: number;
+  agent_id: string | null;
 }
 
 interface MessageData {
@@ -73,6 +74,7 @@ function chatToData(chat: Chat): {
     title: chat.title,
     created_at: chat.createdAt.getTime(),
     last_message_at: chat.lastMessageAt.getTime(),
+    agent_id: chat.agentId,
   };
 
   const messages: MessageData[] = chat.messages.map((msg) => ({
@@ -144,6 +146,7 @@ function dataToChat(data: ChatWithMessages): Chat {
     messages,
     createdAt: new Date(data.chat.created_at),
     lastMessageAt: new Date(data.chat.last_message_at),
+    agentId: (data.chat.agent_id || "custom") as AgentType,
   };
 }
 
@@ -172,6 +175,7 @@ export const loadAllChatsFromDb = async (): Promise<Omit<Chat, "messages">[]> =>
       messages: [], // Messages loaded separately
       createdAt: new Date(chat.created_at),
       lastMessageAt: new Date(chat.last_message_at),
+      agentId: (chat.agent_id || "custom") as AgentType,
     }));
   } catch (error) {
     console.error("Error loading chats from database:", error);
@@ -216,6 +220,7 @@ export const searchChatsInDb = async (query: string): Promise<Omit<Chat, "messag
       messages: [],
       createdAt: new Date(chat.created_at),
       lastMessageAt: new Date(chat.last_message_at),
+      agentId: (chat.agent_id || "custom") as AgentType,
     }));
   } catch (error) {
     console.error(`Error searching chats for "${query}":`, error);

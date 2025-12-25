@@ -101,18 +101,13 @@ export const useGitBlameStore = create<GitBlameState>((set, get) => ({
     }
 
     // Find the blame line that matches the line number
-    // Note: Git blame line numbers are 1-based, editor line numbers might be 0-based
+    // Git blame line numbers are 1-based, editor line numbers are 0-based
+    // A hunk with line_number=N and total_lines=M covers lines N through N+M-1 (inclusive)
     const currentLine = lineNumber + 1;
     const blameLine = blame.lines.find((line) => {
-      if (currentLine === line.line_number) {
-        return true;
-      }
-
-      if (currentLine > line.line_number && currentLine < line.line_number + line.total_lines) {
-        return true;
-      }
-
-      return false;
+      const hunkStart = line.line_number;
+      const hunkEnd = line.line_number + line.total_lines - 1;
+      return currentLine >= hunkStart && currentLine <= hunkEnd;
     });
     return blameLine || null;
   },

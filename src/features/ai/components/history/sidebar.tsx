@@ -1,6 +1,7 @@
+import { Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
-import type { ChatHistoryModalProps } from "@/features/ai/types/ai-chat";
+import { AGENT_OPTIONS, type ChatHistoryModalProps } from "@/features/ai/types/ai-chat";
 import Command, {
   CommandEmpty,
   CommandHeader,
@@ -8,6 +9,46 @@ import Command, {
   CommandItem,
   CommandList,
 } from "@/ui/command";
+
+// Get short agent label for badge
+const getAgentLabel = (agentId: string | undefined): string => {
+  if (!agentId) return "API";
+  const agent = AGENT_OPTIONS.find((a) => a.id === agentId);
+  if (!agent) return "API";
+  // Return short labels
+  switch (agentId) {
+    case "claude-code":
+      return "Claude";
+    case "gemini-cli":
+      return "Gemini";
+    case "codex-cli":
+      return "Codex";
+    case "custom":
+      return "API";
+    default:
+      return agent.name.split(" ")[0];
+  }
+};
+
+// Get badge color based on agent
+const getAgentColor = (agentId: string | undefined): string => {
+  switch (agentId) {
+    case "claude-code":
+      return "bg-orange-500/20 text-orange-400 border-orange-500/30";
+    case "gemini-cli":
+      return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+    case "codex-cli":
+      return "bg-green-500/20 text-green-400 border-green-500/30";
+    case "kimi-cli":
+      return "bg-cyan-500/20 text-cyan-400 border-cyan-500/30";
+    case "opencode":
+      return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+    case "qwen-code":
+      return "bg-pink-500/20 text-pink-400 border-pink-500/30";
+    default:
+      return "bg-purple-500/20 text-purple-400 border-purple-500/30";
+  }
+};
 
 interface ChatHistorySidebarProps extends Omit<ChatHistoryModalProps, "formatTime"> {}
 
@@ -104,10 +145,17 @@ export default function ChatHistorySidebar({
                 onClose();
               }}
               isSelected={index === selectedIndex}
-              className="px-3 py-1.5"
+              className="group px-3 py-1.5"
             >
               <div className="min-w-0 flex-1">
-                <div className="truncate text-xs">{chat.title}</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="truncate text-xs">{chat.title}</span>
+                  <span
+                    className={`shrink-0 rounded border px-1 py-0.5 text-[9px] leading-none ${getAgentColor(chat.agentId)}`}
+                  >
+                    {getAgentLabel(chat.agentId)}
+                  </span>
+                </div>
                 <div className="select-none text-[10px] text-text-lighter">
                   {getRelativeTime(chat.lastMessageAt)}
                 </div>
@@ -117,10 +165,11 @@ export default function ChatHistorySidebar({
                   e.stopPropagation();
                   onDeleteChat(chat.id, e);
                 }}
-                className="ml-2 flex-shrink-0 rounded px-1 py-0.5 text-red-500 text-xs opacity-0 transition-all hover:bg-red-500/20 group-hover:opacity-100"
+                className="ml-2 flex size-5 shrink-0 items-center justify-center rounded text-text-lighter opacity-0 transition-all hover:bg-red-500/20 hover:text-red-400 group-hover:opacity-100"
                 title="Delete chat"
+                aria-label="Delete chat"
               >
-                ×
+                <Trash2 size={12} />
               </button>
             </CommandItem>
           ))

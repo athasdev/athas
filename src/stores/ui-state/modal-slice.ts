@@ -9,6 +9,7 @@ export interface ModalState {
   isThemeSelectorVisible: boolean;
   isIconThemeSelectorVisible: boolean;
   isBranchManagerVisible: boolean;
+  isProjectPickerVisible: boolean;
   settingsInitialTab: SettingsTab;
 }
 
@@ -20,6 +21,7 @@ export interface ModalActions {
   setIsThemeSelectorVisible: (v: boolean) => void;
   setIsIconThemeSelectorVisible: (v: boolean) => void;
   setIsBranchManagerVisible: (v: boolean) => void;
+  setIsProjectPickerVisible: (v: boolean) => void;
   setSettingsInitialTab: (tab: SettingsTab) => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
   hasOpenModal: () => boolean;
@@ -37,6 +39,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   isThemeSelectorVisible: false,
   isIconThemeSelectorVisible: false,
   isBranchManagerVisible: false,
+  isProjectPickerVisible: false,
   settingsInitialTab: "general",
 
   // Actions
@@ -49,7 +52,8 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       state.isThemeSelectorVisible ||
       state.isIconThemeSelectorVisible ||
       state.isSettingsDialogVisible ||
-      state.isBranchManagerVisible
+      state.isBranchManagerVisible ||
+      state.isProjectPickerVisible
     );
   },
 
@@ -76,6 +80,10 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       set({ isCommandBarVisible: false });
       return true;
     }
+    if (state.isProjectPickerVisible) {
+      set({ isProjectPickerVisible: false });
+      return true;
+    }
     if (state.isSettingsDialogVisible) {
       set({ isSettingsDialogVisible: false });
       return true;
@@ -97,6 +105,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
+        isProjectPickerVisible: false,
       });
     } else {
       set({ isCommandBarVisible: v });
@@ -113,6 +122,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
+        isProjectPickerVisible: false,
       });
     } else {
       set({ isCommandPaletteVisible: v });
@@ -129,6 +139,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
+        isProjectPickerVisible: false,
       });
     } else {
       set({ isGlobalSearchVisible: v });
@@ -145,6 +156,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isThemeSelectorVisible: false,
         isIconThemeSelectorVisible: false,
         isBranchManagerVisible: false,
+        isProjectPickerVisible: false,
       });
     } else {
       set({ isSettingsDialogVisible: v });
@@ -161,6 +173,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
+        isProjectPickerVisible: false,
       });
     } else {
       set({ isThemeSelectorVisible: v });
@@ -177,6 +190,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
         isBranchManagerVisible: false,
+        isProjectPickerVisible: false,
       });
     } else {
       set({ isIconThemeSelectorVisible: v });
@@ -193,9 +207,27 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isThemeSelectorVisible: false,
         isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
+        isProjectPickerVisible: false,
       });
     } else {
       set({ isBranchManagerVisible: v });
+    }
+  },
+
+  setIsProjectPickerVisible: (v: boolean) => {
+    if (v) {
+      set({
+        isProjectPickerVisible: true,
+        isCommandBarVisible: false,
+        isCommandPaletteVisible: false,
+        isGlobalSearchVisible: false,
+        isThemeSelectorVisible: false,
+        isIconThemeSelectorVisible: false,
+        isSettingsDialogVisible: false,
+        isBranchManagerVisible: false,
+      });
+    } else {
+      set({ isProjectPickerVisible: v });
     }
   },
 
@@ -210,6 +242,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       isThemeSelectorVisible: false,
       isIconThemeSelectorVisible: false,
       isBranchManagerVisible: false,
+      isProjectPickerVisible: false,
       settingsInitialTab: tab || "general",
     }),
 });
