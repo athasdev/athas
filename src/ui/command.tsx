@@ -79,10 +79,11 @@ export const CommandHeader = ({
 interface CommandListProps {
   children: React.ReactNode;
   ref?: React.Ref<HTMLDivElement>;
+  onFocus?: (e: React.FocusEvent) => void;
 }
 
-export const CommandList = ({ children, ref }: CommandListProps) => (
-  <div ref={ref} className="custom-scrollbar-thin flex-1 overflow-y-auto p-1">
+export const CommandList = ({ children, ref, onFocus }: CommandListProps) => (
+  <div ref={ref} className="custom-scrollbar-thin flex-1 overflow-y-auto p-1" onFocus={onFocus}>
     {children}
   </div>
 );

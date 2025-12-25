@@ -1,5 +1,5 @@
 import { appDataDir } from "@tauri-apps/api/path";
-import { History } from "lucide-react";
+import { History, Star } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -29,6 +29,7 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import KeybindingBadge from "@/ui/keybinding-badge";
+import { cn } from "@/utils/cn";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createFileActions } from "../constants/file-actions";
 import { createGitActions } from "../constants/git-actions";
@@ -71,9 +72,16 @@ const CommandPalette = () => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const scrollAnimationRef = useRef<number | null>(null);
 
   const lastEnteredActions = useActionsStore.use.lastEnteredActionsStack();
   const pushAction = useActionsStore.use.pushAction();
+  const favoriteActions = useActionsStore.use.favoritedActions();
+  const toggleFavoriteAction = useActionsStore.use.toggleFavoriteAction();
+  const [actionsFavoritedThisSession, setActionsFavoritedThisSession] = useState<string[]>([
+    ...favoriteActions,
+  ]);
+
   const { settings } = useSettingsStore();
   const { setMode } = useVimStore.use.actions();
   const lspStatus = useLspStore.use.lspStatus();
@@ -212,17 +220,40 @@ const CommandPalette = () => {
   );
 
   const prioritizedActions = useMemo(() => {
-    if (!settings.coreFeatures.persistentCommands) return filteredActions;
     if (!filteredActions) return [];
 
-    const remaining = filteredActions.filter((action) => !lastEnteredActions.includes(action.id));
+    const actionMap = new Map(filteredActions.map((a) => [a.id, a]));
 
+    // FAVORITES (always first)
+    const favorited = favoriteActions
+      .map((id) => actionMap.get(id))
+      .filter((a): a is Action => !!a);
+
+    // Persistent off → favorites first, then the rest
+    if (!settings.coreFeatures.persistentCommands) {
+      const remaining = filteredActions.filter((a) => !favoriteActions.includes(a.id));
+      return [...favorited, ...remaining];
+    }
+
+    // Persistent on → lastEnteredActions should come AFTER favorites,
+    // but must skip anything that's favorited.
     const prioritized = lastEnteredActions
-      .map((id) => filteredActions.find((a) => a.id === id))
-      .filter((a): a is Action => !!a); // Filter out undefined and assure it is of type Action
+      .filter((id) => !favoriteActions.includes(id)) // <-- FIX
+      .map((id) => actionMap.get(id))
+      .filter((a): a is Action => !!a);
 
-    return [...prioritized, ...remaining];
-  }, [filteredActions, lastEnteredActions, settings.coreFeatures.persistentCommands]);
+    // Remaining items = not in favorites AND not in lastEntered
+    const remaining = filteredActions.filter(
+      (a) => !favoriteActions.includes(a.id) && !lastEnteredActions.includes(a.id),
+    );
+
+    return [...favorited, ...prioritized, ...remaining];
+  }, [
+    filteredActions,
+    lastEnteredActions,
+    favoriteActions,
+    settings.coreFeatures.persistentCommands,
+  ]);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -245,26 +276,18 @@ const CommandPalette = () => {
             pushAction(prioritizedActions[selectedIndex].id);
           }
           break;
-        // Escape is now handled globally in use-keyboard-shortcuts
+        case "Tab":
+          if (e.shiftKey) {
+            e.preventDefault();
+            inputRef.current?.focus();
+            break;
+          }
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isVisible, filteredActions, selectedIndex, prioritizedActions]);
-
-  // Reset state when visibility changes
-  useEffect(() => {
-    if (isVisible) {
-      setQuery("");
-      setSelectedIndex(0);
-      requestAnimationFrame(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      });
-    }
-  }, [isVisible]);
 
   // Update selected index when query changes
   useEffect(() => {
@@ -273,18 +296,67 @@ const CommandPalette = () => {
 
   // Scroll selected item into view
   useEffect(() => {
-    if (resultsRef.current && filteredActions.length > 0) {
-      const selectedElement = resultsRef.current.children[selectedIndex] as HTMLElement;
-      if (selectedElement) {
-        selectedElement.scrollIntoView({
-          block: "nearest",
-          behavior: "smooth",
-        });
+    if (!resultsRef.current || filteredActions.length === 0) return;
+
+    if (scrollAnimationRef.current) cancelAnimationFrame(scrollAnimationRef.current);
+
+    scrollAnimationRef.current = requestAnimationFrame(() => {
+      const container = resultsRef.current;
+      if (container) {
+        // requestAnimationFrame could theorically be called after the container is removed, so an added check is important
+        const selectedElement = container.children[selectedIndex] as HTMLElement;
+        if (selectedElement) {
+          selectedElement.scrollIntoView({ block: "nearest", behavior: "instant" });
+        }
       }
-    }
+    });
   }, [selectedIndex, filteredActions.length]);
 
+  // Reset state when visibility changes
+  useEffect(() => {
+    if (isVisible) {
+      setQuery("");
+      setSelectedIndex(0);
+      requestAnimationFrame(() => inputRef.current?.focus());
+      scrollAnimationRef.current = null;
+      setActionsFavoritedThisSession([...favoriteActions]);
+    } else {
+      const original = actionsFavoritedThisSession;
+      const current = favoriteActions;
+
+      const added = current.filter((id) => !original.includes(id));
+      const removed = original.filter((id) => !current.includes(id));
+
+      for (const id of added) toggleFavoriteAction(id);
+      for (const id of removed) toggleFavoriteAction(id);
+    }
+  }, [isVisible]);
+
   if (!isVisible) return null;
+
+  const onFavoriteActionClick = (actionId: string) => {
+    setActionsFavoritedThisSession((prev) => {
+      if (prev.includes(actionId)) {
+        return prev.filter((id) => id !== actionId);
+      } else {
+        return [...prev, actionId];
+      }
+    });
+  };
+
+  const focusSelectedIndex = (e: React.FocusEvent) => {
+    // Check if the focus is coming from OUTSIDE the results list
+    const isEnteringFromOutside = !resultsRef.current?.contains(e.relatedTarget as Node);
+
+    if (isEnteringFromOutside) {
+      if (prioritizedActions[selectedIndex]) {
+        const elementToFocus = resultsRef.current?.children[selectedIndex] as HTMLElement;
+        if (elementToFocus && document.activeElement !== elementToFocus) {
+          elementToFocus.focus();
+        }
+      }
+    }
+  };
 
   return (
     <Command isVisible={isVisible} onClose={onClose}>
@@ -297,7 +369,7 @@ const CommandPalette = () => {
         />
       </CommandHeader>
 
-      <CommandList ref={resultsRef}>
+      <CommandList ref={resultsRef} onFocus={focusSelectedIndex}>
         {filteredActions.length === 0 ? (
           <CommandEmpty>No commands found</CommandEmpty>
         ) : (
@@ -323,6 +395,23 @@ const CommandPalette = () => {
                     <KeybindingBadge keys={action.keybinding} />
                   </div>
                 )}
+                <button
+                  aria-label="Favorite this action"
+                  className="rounded p-0.5"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onFavoriteActionClick(action.id);
+                  }}
+                >
+                  <Star
+                    size={12}
+                    className={cn(
+                      "text-text-lighter hover:text-accent/75",
+                      actionsFavoritedThisSession.includes(action.id) && "fill-accent",
+                    )}
+                  />
+                </button>
               </CommandItem>
             );
           })

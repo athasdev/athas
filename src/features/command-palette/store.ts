@@ -8,6 +8,9 @@ interface ActionsStore {
   lastEnteredActionsStack: string[];
   pushAction: (actionId: string) => void;
   clearStack: () => void;
+
+  favoritedActions: string[];
+  toggleFavoriteAction: (actionId: string) => boolean;
 }
 
 export const useActionsStore = createSelectors(
@@ -15,6 +18,7 @@ export const useActionsStore = createSelectors(
     persist(
       (set) => ({
         lastEnteredActionsStack: [],
+        favoritedActions: [],
 
         pushAction: (actionId) => {
           set((state) => {
@@ -31,6 +35,24 @@ export const useActionsStore = createSelectors(
 
         clearStack: () => {
           set(() => ({ lastEnteredActionsStack: [] }));
+        },
+
+        toggleFavoriteAction: (actionId) => {
+          let didFavorite = false;
+
+          set((state) => {
+            const alreadyFav = state.favoritedActions.includes(actionId);
+
+            didFavorite = !alreadyFav; // true if adding, false if removing
+
+            const newFavActions = alreadyFav
+              ? state.favoritedActions.filter((id) => id !== actionId)
+              : [...state.favoritedActions, actionId];
+
+            return { favoritedActions: newFavActions };
+          });
+
+          return didFavorite;
         },
       }),
       { name: "actions-storage" },
