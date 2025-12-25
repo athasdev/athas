@@ -60,7 +60,7 @@ export const EDITOR_CONSTANTS = {
   // Performance & Caching
   SMALL_FILE_THRESHOLD: 500, // Lines - always tokenize fully for small files
   UNIFIED_DEBOUNCE_MS: 100, // Single debounce for all updates
-  COMPLETION_DEBOUNCE_MS: 150,
+  COMPLETION_DEBOUNCE_MS: 0,
   COMPLETION_CACHE_TTL_MS: 5000,
   MAX_COMPLETION_CACHE_SIZE: 100,
   MAX_POSITION_CACHE_SIZE: 50,

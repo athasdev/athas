@@ -2,11 +2,13 @@ import {
   AlertCircle,
   Download,
   Loader2,
+  Settings,
+  Sparkles,
   Terminal as TerminalIcon,
   Zap,
   ZapOff,
 } from "lucide-react";
-import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
@@ -191,7 +193,7 @@ const EditorFooter = () => {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
-  const { settings } = useSettingsStore();
+  const { settings, updateSetting } = useSettingsStore();
   const uiState = useUIState();
   const { rootFolderPath } = useFileSystemStore();
   const { gitStatus, actions } = useGitStore();
@@ -309,13 +311,40 @@ const EditorFooter = () => {
         )}
       </div>
 
-      {activeBuffer && (
-        <div className="ui-font flex items-center gap-2 text-[10px] text-text-lighter">
-          <span>
+      <div className="ui-font flex items-center gap-1 text-text-lighter text-xs">
+        {/* Cursor position */}
+        {activeBuffer && (
+          <span className="mr-1 text-[10px]">
             Ln {cursorPosition.line + 1}, Col {cursorPosition.column + 1}
           </span>
-        </div>
-      )}
+        )}
+
+        {/* AI Chat button */}
+        <button
+          onClick={() => {
+            updateSetting("isAIChatVisible", !settings.isAIChatVisible);
+          }}
+          className={`flex items-center justify-center rounded px-1 py-0.5 transition-colors ${
+            settings.isAIChatVisible
+              ? "bg-selected text-text"
+              : "text-text-lighter hover:bg-hover hover:text-text"
+          }`}
+          style={{ minHeight: 0, minWidth: 0 }}
+          title="Toggle AI Chat"
+        >
+          <Sparkles size={12} />
+        </button>
+
+        {/* Settings button */}
+        <button
+          onClick={() => uiState.setIsSettingsDialogVisible(true)}
+          className="flex items-center justify-center rounded px-1 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+          style={{ minHeight: 0, minWidth: 0 }}
+          title="Settings"
+        >
+          <Settings size={12} />
+        </button>
+      </div>
     </div>
   );
 };

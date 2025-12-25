@@ -1,5 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Maximize2, MenuIcon, Minimize2, Minus, Settings, Sparkles, X } from "lucide-react";
+import { CircleUser, Maximize2, MenuIcon, Minimize2, Minus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
@@ -13,11 +13,10 @@ import CustomMenuBar from "./menu-bar";
 interface CustomTitleBarProps {
   title?: string;
   showMinimal?: boolean;
-  onOpenSettings?: () => void;
 }
 
-const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarProps) => {
-  const { settings, updateSetting } = useSettingsStore();
+const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
+  const { settings } = useSettingsStore();
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -134,33 +133,17 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
           <ProjectTabs />
         </div>
 
-        {/* Settings and AI Chat buttons */}
+        {/* Account dropdown placeholder */}
         <div className="flex items-center gap-0.5">
-          <Tooltip content="AI Chat" side="bottom">
+          <Tooltip content="Account" side="bottom">
             <button
-              onClick={() => {
-                updateSetting("isAIChatVisible", !settings.isAIChatVisible);
-              }}
-              className={`flex items-center justify-center rounded p-1 transition-colors ${
-                settings.isAIChatVisible
-                  ? "bg-selected text-text"
-                  : "text-text-lighter hover:bg-hover hover:text-text"
-              }`}
-              style={{ minHeight: 0, minWidth: 0 }}
-            >
-              <Sparkles size={14} />
-            </button>
-          </Tooltip>
-          <Tooltip content="Settings" side="bottom">
-            <button
-              onClick={onOpenSettings}
               className={cn(
                 "mr-4 flex items-center justify-center rounded p-1",
                 "text-text-lighter transition-colors hover:bg-hover hover:text-text",
               )}
               style={{ minHeight: 0, minWidth: 0 }}
             >
-              <Settings size={14} />
+              <CircleUser size={14} />
             </button>
           </Tooltip>
         </div>
@@ -208,33 +191,16 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
 
       {/* Right side */}
       <div className="z-20 flex items-center gap-0.5">
-        {/* AI Chat button */}
-        <Tooltip content="AI Chat" side="bottom">
+        {/* Account dropdown placeholder */}
+        <Tooltip content="Account" side="bottom">
           <button
-            onClick={() => {
-              updateSetting("isAIChatVisible", !settings.isAIChatVisible);
-            }}
-            className={`flex items-center justify-center rounded px-1 py-0.5 transition-colors ${
-              settings.isAIChatVisible
-                ? "bg-selected text-text"
-                : "text-text-lighter hover:bg-hover hover:text-text"
-            }`}
-            style={{ minHeight: 0, minWidth: 0 }}
-          >
-            <Sparkles size={12} />
-          </button>
-        </Tooltip>
-        {/* Settings button */}
-        <Tooltip content="Settings" side="bottom">
-          <button
-            onClick={onOpenSettings}
             className={cn(
               "mr-2 flex items-center justify-center rounded px-1 py-0.5",
               "text-text-lighter transition-colors hover:bg-hover hover:text-text",
             )}
             style={{ minHeight: 0, minWidth: 0 }}
           >
-            <Settings size={12} />
+            <CircleUser size={12} />
           </button>
         </Tooltip>
 
@@ -276,7 +242,7 @@ const CustomTitleBar = ({ showMinimal = false, onOpenSettings }: CustomTitleBarP
   );
 };
 
-const CustomTitleBarWithSettings = (props: Omit<CustomTitleBarProps, "onOpenSettings">) => {
+const CustomTitleBarWithSettings = (props: CustomTitleBarProps) => {
   const isSettingsDialogVisible = useUIState((state) => state.isSettingsDialogVisible);
   const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
 
@@ -298,7 +264,7 @@ const CustomTitleBarWithSettings = (props: Omit<CustomTitleBarProps, "onOpenSett
 
   return (
     <>
-      <CustomTitleBar {...props} onOpenSettings={() => setIsSettingsDialogVisible(true)} />
+      <CustomTitleBar {...props} />
       <SettingsDialog
         isOpen={isSettingsDialogVisible}
         onClose={() => setIsSettingsDialogVisible(false)}

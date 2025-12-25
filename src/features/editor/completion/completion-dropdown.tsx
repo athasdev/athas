@@ -99,7 +99,10 @@ export const CompletionDropdown = memo(
 
       return {
         x: gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + accurateX - scrollOffset.left,
-        y: (cursorPosition.line + 1) * lineHeight - scrollOffset.top, // +1 to appear below current line
+        y:
+          EDITOR_CONSTANTS.EDITOR_PADDING_TOP +
+          (cursorPosition.line + 1) * lineHeight -
+          scrollOffset.top,
       };
     }, [
       cursorPosition.line,
@@ -128,7 +131,7 @@ export const CompletionDropdown = memo(
 
     return (
       <div
-        className="absolute rounded-md border border-border bg-secondary-bg shadow-lg"
+        className="absolute border border-border bg-secondary-bg shadow-md"
         style={{
           left: `${x}px`,
           top: `${y}px`,
@@ -137,7 +140,7 @@ export const CompletionDropdown = memo(
           maxWidth: `${EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH}px`,
         }}
       >
-        <div className="max-h-[300px] overflow-y-auto py-1">
+        <div className="custom-scrollbar-thin max-h-[200px] overflow-y-auto">
           {filteredCompletions.map((filtered, index: number) => {
             const item = filtered.item;
             const isSelected = index === selectedLspIndex;
@@ -146,8 +149,8 @@ export const CompletionDropdown = memo(
               <div
                 key={index}
                 className={cn(
-                  "ui-font cursor-pointer px-3 py-1.5 text-xs",
-                  isSelected ? "bg-blue-500 text-white" : "text-text hover:bg-hover",
+                  "ui-font cursor-pointer px-2 py-1 text-xs",
+                  isSelected ? "bg-accent text-primary-bg" : "text-text hover:bg-hover",
                 )}
                 onClick={() => handleSelect(item)}
               >
@@ -158,7 +161,7 @@ export const CompletionDropdown = memo(
                       : item.label}
                   </span>
                   {item.detail && (
-                    <span className={isSelected ? "text-blue-100" : "text-text-lighter"}>
+                    <span className={isSelected ? "opacity-80" : "text-text-lighter"}>
                       {item.detail}
                     </span>
                   )}
@@ -167,7 +170,7 @@ export const CompletionDropdown = memo(
                   <div
                     className={cn(
                       "mt-0.5 text-xs",
-                      isSelected ? "text-blue-100" : "text-text-lighter",
+                      isSelected ? "opacity-80" : "text-text-lighter",
                     )}
                   >
                     {typeof item.documentation === "string"

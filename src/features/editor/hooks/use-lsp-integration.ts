@@ -6,6 +6,7 @@
 import type { RefObject } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorLayout } from "@/features/editor/hooks/use-layout";
 import { useSnippetCompletion } from "@/features/editor/hooks/use-snippet-completion";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
@@ -64,9 +65,8 @@ export const useLspIntegration = ({
   // Get layout dimensions for hover position calculations
   const { gutterWidth, charWidth } = useEditorLayout();
 
-  // Use fixed debounce for predictable completion behavior
+  // Use constant debounce for predictable completion behavior
   const completionTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  const COMPLETION_DEBOUNCE = 400; // Fixed 400ms debounce
 
   // Get completion application state
   const isApplyingCompletion = useEditorUIStore.use.isApplyingCompletion();
@@ -167,7 +167,7 @@ export const useLspIntegration = ({
         value: buffer.content, // Use latest content from store
         editorRef: editorRef as RefObject<HTMLDivElement | null>,
       });
-    }, COMPLETION_DEBOUNCE);
+    }, EDITOR_CONSTANTS.COMPLETION_DEBOUNCE_MS);
 
     return () => {
       if (completionTimerRef.current) {

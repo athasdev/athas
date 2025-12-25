@@ -118,7 +118,7 @@ export function Editor({
     lineHeight,
   });
 
-  const { tokens, tokenizedContent, tokenize, forceFullTokenize } = useTokenizer({
+  const { tokens, tokenize, forceFullTokenize } = useTokenizer({
     filePath,
     bufferId: bufferId || undefined,
     incremental: true,
@@ -595,15 +595,20 @@ export function Editor({
   }, []);
 
   // Native wheel handler for textarea - required for Tauri/WebView
-  // React's onWheel doesn't support passive: false which is needed for proper scroll control
+  // Scrolls on dominant axis per event to prevent diagonal scrolling
   useEffect(() => {
     const textarea = inputRef.current;
     if (!textarea) return;
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      textarea.scrollTop += e.deltaY;
-      textarea.scrollLeft += e.deltaX;
+
+      // Scroll on whichever axis has more movement
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        textarea.scrollLeft += e.deltaX;
+      } else {
+        textarea.scrollTop += e.deltaY;
+      }
     };
 
     textarea.addEventListener("wheel", handleWheel, { passive: false });
@@ -746,7 +751,7 @@ export function Editor({
         {hasSyntaxHighlighting && (
           <HighlightLayer
             ref={highlightRef}
-            content={tokenizedContent || displayContent}
+            content={displayContent}
             tokens={tokens}
             fontSize={fontSize}
             fontFamily={fontFamily}
