@@ -52,6 +52,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const currentAgentId = getCurrentAgentId();
   const isCustomAgent = currentAgentId === "custom";
 
+  // ACP agents don't need API key (they handle their own auth)
+  const isInputEnabled = isCustomAgent ? hasApiKey : true;
+
   // Memoize action selectors
   const setInput = useAIChatStore((state) => state.setInput);
   const setIsContextDropdownOpen = useAIChatStore((state) => state.setIsContextDropdownOpen);
@@ -536,7 +539,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const handleSendMessage = async () => {
     const currentInput = useAIChatStore.getState().input;
-    if (!currentInput.trim() || !hasApiKey) return;
+    if (!currentInput.trim() || !isInputEnabled) return;
 
     // Trigger send animation
     setIsSendAnimating(true);
@@ -568,11 +571,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
         {/* Input area */}
         <div
           ref={inputRef}
-          contentEditable={hasApiKey}
+          contentEditable={isInputEnabled}
           onInput={handleInputChange}
           onKeyDown={handleKeyDown}
           data-placeholder={
-            hasApiKey
+            isInputEnabled
               ? hasSlashCommands
                 ? "Message... (@ files, / commands)"
                 : "Message... (@ to mention files)"
@@ -582,7 +585,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             "max-h-[120px] min-h-[60px] w-full resize-none overflow-y-auto border-none bg-transparent",
             "p-1 text-text",
             "focus:outline-none",
-            !hasApiKey ? "cursor-not-allowed opacity-50" : "cursor-text",
+            !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
             // Custom styles for contentEditable placeholder
             "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
           )}
@@ -600,7 +603,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           role="textbox"
           aria-multiline="true"
           aria-label="Message input"
-          tabIndex={hasApiKey ? 0 : -1}
+          tabIndex={isInputEnabled ? 0 : -1}
         />
 
         {/* Bottom row: Context + Mode + Style + Model/Agent + Send */}
@@ -633,7 +636,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             {hasSlashCommands && (
               <button
                 onClick={() => {
-                  if (inputRef.current && hasApiKey) {
+                  if (inputRef.current && isInputEnabled) {
                     inputRef.current.textContent = "/";
                     setInput("/");
                     setHasInputText(true);
@@ -681,16 +684,18 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
             <Button
               type="submit"
-              disabled={!hasInputText || !hasApiKey}
+              disabled={!hasInputText || !isInputEnabled}
               onClick={isTyping && streamingMessageId ? onStopStreaming : handleSendMessage}
               className={cn(
                 "flex h-7 w-7 items-center justify-center rounded p-0 text-text-lighter hover:bg-hover hover:text-text",
                 "send-button-hover button-transition focus:outline-none focus:ring-2 focus:ring-accent/50",
                 isTyping && streamingMessageId && !isSendAnimating && "button-morphing",
                 hasInputText &&
-                  hasApiKey &&
+                  isInputEnabled &&
                   "bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500/50",
-                !hasInputText || !hasApiKey ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                !hasInputText || !isInputEnabled
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer",
               )}
               title={
                 isTyping && streamingMessageId

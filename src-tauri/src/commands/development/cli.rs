@@ -124,6 +124,44 @@ if exist "%LOCALAPPDATA%\Programs\Athas\Athas.exe" (
    Ok(path_instruction)
 }
 
+/// Returns the manual CLI install command that users can copy and run in their terminal
+#[cfg(target_os = "macos")]
+#[command]
+pub fn get_cli_install_command() -> Result<String, String> {
+   Ok(
+      r#"mkdir -p ~/.local/bin && cat > ~/.local/bin/athas << 'EOF'
+#!/bin/bash
+if [ -d "/Applications/Athas.app" ]; then
+    open -a "/Applications/Athas.app" "$@"
+elif [ -d "$HOME/Applications/Athas.app" ]; then
+    open -a "$HOME/Applications/Athas.app" "$@"
+else
+    open -a "Athas" "$@"
+fi
+EOF
+chmod +x ~/.local/bin/athas"#
+         .to_string(),
+   )
+}
+
+/// Returns the manual CLI install command for Linux
+#[cfg(all(unix, not(target_os = "macos")))]
+#[command]
+pub fn get_cli_install_command() -> Result<String, String> {
+   Ok(r#"mkdir -p ~/.local/bin && cat > ~/.local/bin/athas << 'EOF'
+#!/bin/bash
+ATHAS_PATH=$(command -v athas 2>/dev/null || find /opt /usr/local -name "athas" -type f 2>/dev/null | head -1)
+if [ -n "$ATHAS_PATH" ] && [ -x "$ATHAS_PATH" ]; then
+    "$ATHAS_PATH" "$@"
+else
+    echo "Athas not found. Please ensure it is installed."
+    exit 1
+fi
+EOF
+chmod +x ~/.local/bin/athas"#
+      .to_string())
+}
+
 #[cfg(unix)]
 #[command]
 pub fn uninstall_cli_command() -> Result<String, String> {
@@ -136,6 +174,25 @@ pub fn uninstall_cli_command() -> Result<String, String> {
    fs::remove_file(&cli_path).map_err(|e| format!("Failed to remove CLI script: {}", e))?;
 
    Ok("CLI command uninstalled successfully".to_string())
+}
+
+/// Returns the manual CLI install command for Windows
+#[cfg(windows)]
+#[command]
+pub fn get_cli_install_command() -> Result<String, String> {
+   Ok(r#"mkdir "%USERPROFILE%\.athas\bin" 2>nul & (
+echo @echo off
+echo REM Athas CLI launcher for Windows
+echo if exist "%LOCALAPPDATA%\Programs\Athas\Athas.exe" ^(
+echo     start "" "%LOCALAPPDATA%\Programs\Athas\Athas.exe" %%*
+echo ^) else if exist "%PROGRAMFILES%\Athas\Athas.exe" ^(
+echo     start "" "%PROGRAMFILES%\Athas\Athas.exe" %%*
+echo ^) else ^(
+echo     echo Error: Athas installation not found
+echo     exit /b 1
+echo ^)
+) > "%USERPROFILE%\.athas\bin\athas.cmd""#
+      .to_string())
 }
 
 #[cfg(windows)]

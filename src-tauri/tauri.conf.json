@@ -57,9 +57,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [
-      "../src/extensions/bundled"
-    ],
+    "resources": {
+      "../src/extensions/bundled": "bundled"
+    },
     "macOS": {
       "frameworks": [],
       "minimumSystemVersion": "10.15",
