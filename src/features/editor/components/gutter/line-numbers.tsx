@@ -5,6 +5,7 @@ import { calculateLineNumberWidth } from "../../utils/gutter";
 
 interface LineMapping {
   virtualToActual: Map<number, number>;
+  actualToVirtual: Map<number, number>;
 }
 
 interface LineNumbersProps {
@@ -28,14 +29,22 @@ function LineNumbersComponent({
   startLine,
   endLine,
 }: LineNumbersProps) {
-  const activeLine = useEditorStateStore.use.cursorPosition().line;
+  const actualCursorLine = useEditorStateStore.use.cursorPosition().line;
   const lineNumberWidth = calculateLineNumberWidth(totalLines);
+
+  // Convert actual cursor line to virtual for comparison when folds are active
+  const visualCursorLine = useMemo(() => {
+    if (foldMapping?.actualToVirtual) {
+      return foldMapping.actualToVirtual.get(actualCursorLine) ?? actualCursorLine;
+    }
+    return actualCursorLine;
+  }, [actualCursorLine, foldMapping]);
 
   const lineNumbers = useMemo(() => {
     const result = [];
     for (let i = startLine; i < endLine; i++) {
       const actualLineNumber = foldMapping?.virtualToActual.get(i) ?? i;
-      const isActive = actualLineNumber === activeLine;
+      const isActive = i === visualCursorLine;
 
       result.push(
         <div
@@ -65,7 +74,7 @@ function LineNumbersComponent({
       );
     }
     return result;
-  }, [startLine, endLine, activeLine, lineHeight, onLineClick, foldMapping]);
+  }, [startLine, endLine, visualCursorLine, lineHeight, onLineClick, foldMapping]);
 
   return (
     <div

@@ -12,4 +12,5 @@ export interface SearchViewProps {
   rootFolderPath?: string;
   allProjectFiles: FileEntry[];
   onFileSelect: (path: string, line?: number, column?: number) => void;
+  onFileOpen?: (path: string, line?: number, column?: number) => void;
 }

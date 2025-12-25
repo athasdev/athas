@@ -10,6 +10,7 @@ export interface Buffer {
   isVirtual: boolean; // Virtual files aren't saved to disk
   isActive: boolean;
   isPinned?: boolean; // Whether the tab is pinned
+  isPreview?: boolean; // Whether the tab is in preview mode (single-click open)
   language?: string; // File language for syntax highlighting and formatting
   isWebViewer?: boolean; // Web viewer tab
   webViewerUrl?: string; // URL for web viewer
