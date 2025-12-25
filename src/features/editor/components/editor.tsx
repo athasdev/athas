@@ -50,6 +50,10 @@ export function Editor({
   const highlightRef = useRef<HTMLDivElement>(null);
   const multiCursorRef = useRef<HTMLDivElement>(null);
 
+  // Track buffer changes to handle cursor positioning correctly
+  const prevBufferIdRef = useRef<string | null>(null);
+  const isBufferSwitchRef = useRef(false);
+
   const bufferId = useBufferStore.use.activeBufferId();
   const buffers = useBufferStore.use.buffers();
   const { updateBufferContent } = useBufferStore.use.actions();
@@ -198,6 +202,9 @@ export function Editor({
 
   const handleCursorChange = useCallback(() => {
     if (!bufferId || !inputRef.current) return;
+
+    // Skip cursor updates during buffer switches to prevent dragging old positions
+    if (isBufferSwitchRef.current) return;
 
     const selectionStart = inputRef.current.selectionStart;
     const selectionEnd = inputRef.current.selectionEnd;
@@ -667,9 +674,28 @@ export function Editor({
     viewportRange,
   ]);
 
+  // Restore cursor position when switching buffers (deferred to ensure content sync)
+  useEffect(() => {
+    if (!bufferId) return;
+
+    // Only restore when bufferId changes (not on initial mount)
+    if (prevBufferIdRef.current !== null && prevBufferIdRef.current !== bufferId) {
+      isBufferSwitchRef.current = true;
+      requestAnimationFrame(() => {
+        // Only restore if we're still on the same buffer (user might have switched again)
+        const currentBufferId = useBufferStore.getState().activeBufferId;
+        if (currentBufferId === bufferId) {
+          useEditorStateStore.getState().actions.restorePositionForFile(bufferId);
+        }
+        // Flag will be cleared by the cursor positioning effect after applying position
+      });
+    }
+    prevBufferIdRef.current = bufferId;
+  }, [bufferId]);
+
   useEffect(() => {
     if (inputRef.current && bufferId) {
-      setTimeout(() => {
+      const applyPosition = () => {
         if (inputRef.current && bufferId) {
           const offset = cursorPosition.offset || 0;
           const maxOffset = inputRef.current.value.length;
@@ -679,8 +705,17 @@ export function Editor({
             inputRef.current.selectionEnd = safeOffset;
           }
           inputRef.current.focus();
+          // Clear the buffer switch flag after cursor is positioned
+          isBufferSwitchRef.current = false;
         }
-      }, 0);
+      };
+
+      if (isBufferSwitchRef.current) {
+        // During buffer switch, wait for next frame to ensure content is synced
+        requestAnimationFrame(applyPosition);
+      } else {
+        setTimeout(applyPosition, 0);
+      }
     }
   }, [bufferId, cursorPosition.offset]);
 
