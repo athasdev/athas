@@ -8,31 +8,63 @@ import { createSelectors } from "@/utils/zustand-selectors";
 import { useBufferStore } from "./buffer-store";
 import { useEditorSettingsStore } from "./settings-store";
 
-// Position Cache Manager
-class PositionCacheManager {
-  private cache = new Map<string, Position>();
+// Types for editor state caching
+interface EditorViewState {
+  cursor: Position;
+  scrollTop: number;
+  scrollLeft: number;
+}
+
+// Editor View State Cache Manager - caches cursor position and scroll offset per buffer
+class EditorViewStateCacheManager {
+  private cache = new Map<string, EditorViewState>();
   private readonly MAX_CACHE_SIZE = EDITOR_CONSTANTS.MAX_POSITION_CACHE_SIZE;
 
-  set(bufferId: string, position: Position): void {
-    const cachedPosition = this.cache.get(bufferId);
-    if (cachedPosition && this.positionsEqual(cachedPosition, position)) {
+  setCursor(bufferId: string, position: Position): void {
+    const cached = this.cache.get(bufferId);
+    if (cached && this.positionsEqual(cached.cursor, position)) {
       return;
     }
 
-    if (this.cache.size >= this.MAX_CACHE_SIZE && !this.cache.has(bufferId)) {
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey) {
-        this.cache.delete(firstKey);
-      }
-    }
+    this.ensureCacheSize(bufferId);
 
-    this.cache.set(bufferId, { ...position });
+    const existing = this.cache.get(bufferId);
+    this.cache.set(bufferId, {
+      cursor: { ...position },
+      scrollTop: existing?.scrollTop ?? 0,
+      scrollLeft: existing?.scrollLeft ?? 0,
+    });
   }
 
-  get(bufferId: string): Position | null {
-    const cachedPosition = this.cache.get(bufferId);
-    if (!cachedPosition) return null;
-    return { ...cachedPosition };
+  setScroll(bufferId: string, scrollTop: number, scrollLeft: number): void {
+    const existing = this.cache.get(bufferId);
+    if (existing && existing.scrollTop === scrollTop && existing.scrollLeft === scrollLeft) {
+      return;
+    }
+
+    this.ensureCacheSize(bufferId);
+
+    this.cache.set(bufferId, {
+      cursor: existing?.cursor ?? { line: 0, column: 0, offset: 0 },
+      scrollTop,
+      scrollLeft,
+    });
+  }
+
+  get(bufferId: string): EditorViewState | null {
+    const cached = this.cache.get(bufferId);
+    if (!cached) return null;
+    return {
+      cursor: { ...cached.cursor },
+      scrollTop: cached.scrollTop,
+      scrollLeft: cached.scrollLeft,
+    };
+  }
+
+  getCursor(bufferId: string): Position | null {
+    const cached = this.cache.get(bufferId);
+    if (!cached) return null;
+    return { ...cached.cursor };
   }
 
   clear(bufferId?: string): void {
@@ -43,12 +75,21 @@ class PositionCacheManager {
     }
   }
 
+  private ensureCacheSize(bufferId: string): void {
+    if (this.cache.size >= this.MAX_CACHE_SIZE && !this.cache.has(bufferId)) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) {
+        this.cache.delete(firstKey);
+      }
+    }
+  }
+
   private positionsEqual(pos1: Position, pos2: Position): boolean {
     return pos1.line === pos2.line && pos1.column === pos2.column && pos1.offset === pos2.offset;
   }
 }
 
-const positionCache = new PositionCacheManager();
+const viewStateCache = new EditorViewStateCacheManager();
 
 const ensureCursorVisible = (position: Position) => {
   if (typeof window === "undefined") return;
@@ -123,6 +164,7 @@ interface EditorStateActions {
 
   // Layout actions
   setScroll: (scrollTop: number, scrollLeft: number) => void;
+  setScrollForBuffer: (bufferId: string | null, scrollTop: number, scrollLeft: number) => void;
   setViewportHeight: (height: number) => void;
 
   // Instance actions
@@ -164,7 +206,7 @@ export const useEditorStateStore = createSelectors(
         setCursorPosition: (position) => {
           const activeBufferId = useBufferStore.getState().activeBufferId;
           if (activeBufferId) {
-            positionCache.set(activeBufferId, position);
+            viewStateCache.setCursor(activeBufferId, position);
           }
           set({ cursorPosition: position });
           ensureCursorVisible(position);
@@ -172,12 +214,30 @@ export const useEditorStateStore = createSelectors(
         setSelection: (selection) => set({ selection }),
         setDesiredColumn: (column) => set({ desiredColumn: column }),
         setCursorVisibility: (visible) => set({ cursorVisible: visible }),
-        getCachedPosition: (bufferId) => positionCache.get(bufferId),
-        clearPositionCache: (bufferId) => positionCache.clear(bufferId),
+        getCachedPosition: (bufferId) => viewStateCache.getCursor(bufferId),
+        clearPositionCache: (bufferId) => viewStateCache.clear(bufferId),
         restorePositionForFile: (bufferId) => {
-          const cachedPosition = positionCache.get(bufferId);
-          if (cachedPosition) {
-            set({ cursorPosition: cachedPosition });
+          const cachedState = viewStateCache.get(bufferId);
+          if (cachedState) {
+            // Restore cursor position and scroll offset together
+            set({
+              cursorPosition: cachedState.cursor,
+              scrollTop: cachedState.scrollTop,
+              scrollLeft: cachedState.scrollLeft,
+            });
+            // Apply scroll position to DOM elements synchronously to avoid flash
+            const viewport = document.querySelector(".editor-viewport") as HTMLDivElement | null;
+            const textarea = document.querySelector(
+              ".editor-textarea",
+            ) as HTMLTextAreaElement | null;
+            if (viewport) {
+              viewport.scrollTop = cachedState.scrollTop;
+              viewport.scrollLeft = cachedState.scrollLeft;
+            }
+            if (textarea) {
+              textarea.scrollTop = cachedState.scrollTop;
+              textarea.scrollLeft = cachedState.scrollLeft;
+            }
             return true;
           }
           // Reset to beginning for files with no cached position
@@ -298,7 +358,24 @@ export const useEditorStateStore = createSelectors(
           }),
 
         // Layout actions
-        setScroll: (scrollTop, scrollLeft) => set({ scrollTop, scrollLeft }),
+        setScroll: (scrollTop, scrollLeft) => {
+          const activeBufferId = useBufferStore.getState().activeBufferId;
+          if (activeBufferId) {
+            viewStateCache.setScroll(activeBufferId, scrollTop, scrollLeft);
+          }
+          set({ scrollTop, scrollLeft });
+        },
+        setScrollForBuffer: (bufferId, scrollTop, scrollLeft) => {
+          // Cache scroll for the specified buffer (avoids race condition when buffer switches)
+          if (bufferId) {
+            viewStateCache.setScroll(bufferId, scrollTop, scrollLeft);
+          }
+          // Only update global state if this is still the active buffer
+          const activeBufferId = useBufferStore.getState().activeBufferId;
+          if (bufferId === activeBufferId) {
+            set({ scrollTop, scrollLeft });
+          }
+        },
         setViewportHeight: (height) => set({ viewportHeight: height }),
 
         // Instance actions
