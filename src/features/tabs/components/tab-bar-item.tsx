@@ -1,6 +1,6 @@
 import { Database, Package, Pin, X } from "lucide-react";
 import { memo, useCallback } from "react";
-import FileIcon from "@/features/file-explorer/views/file.icon";
+import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import { cn } from "@/utils/cn";
 

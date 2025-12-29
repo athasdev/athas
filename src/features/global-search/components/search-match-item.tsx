@@ -1,4 +1,4 @@
-import FileIcon from "@/features/file-explorer/views/file.icon";
+import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import type { SearchMatch } from "@/features/global-search/lib/rust-api/search";
 
 interface SearchMatchItemProps {

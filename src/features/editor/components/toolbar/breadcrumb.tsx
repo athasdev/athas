@@ -6,7 +6,7 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { logger } from "@/features/editor/utils/logger";
-import FileIcon from "@/features/file-explorer/views/file.icon";
+import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";

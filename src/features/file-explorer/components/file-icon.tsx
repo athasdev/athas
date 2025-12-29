@@ -11,20 +11,19 @@ interface FileIconProps {
   className?: string;
 }
 
-const FileIcon = ({
+export function FileIcon({
   fileName,
   isDir,
   isExpanded = false,
   isSymlink = false,
   size = 14,
   className = "text-text-lighter",
-}: FileIconProps) => {
+}: FileIconProps) {
   const { settings } = useSettingsStore();
   const iconTheme = iconThemeRegistry.getTheme(settings.iconTheme);
 
   if (!iconTheme) {
-    // Fallback if no theme is found
-    return <span className={className}>•</span>;
+    return <span className={className}>&#8226;</span>;
   }
 
   const iconResult = iconTheme.getFileIcon(fileName, isDir, isExpanded, isSymlink);
@@ -32,7 +31,9 @@ const FileIcon = ({
   const renderIcon = () => {
     if (iconResult.component) {
       if (isValidElement(iconResult.component)) {
-        return cloneElement(iconResult.component, { className } as any);
+        return cloneElement(iconResult.component, { className } as React.Attributes & {
+          className: string;
+        });
       }
       return <span className={className}>{iconResult.component}</span>;
     }
@@ -52,24 +53,18 @@ const FileIcon = ({
       );
     }
 
-    return <span className={className}>•</span>;
+    return <span className={className}>&#8226;</span>;
   };
 
   if (isSymlink) {
     return (
-      <span style={{ position: "relative", display: "inline-block" }}>
+      <span className="relative inline-block">
         {renderIcon()}
         <svg
           width="8"
           height="8"
           viewBox="0 0 16 16"
-          style={{
-            position: "absolute",
-            bottom: "-2px",
-            right: "-2px",
-            filter: "drop-shadow(0 0 1px rgba(0,0,0,0.5))",
-          }}
-          className="text-accent"
+          className="absolute -bottom-0.5 -right-0.5 text-accent drop-shadow-sm"
           role="img"
           aria-label="Symlink"
         >
@@ -88,6 +83,4 @@ const FileIcon = ({
   }
 
   return renderIcon();
-};
-
-export default FileIcon;
+}
