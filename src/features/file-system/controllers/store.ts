@@ -480,6 +480,7 @@ export const useFileSystemStore = createSelectors(
               false,
               undefined,
               undefined,
+              false,
               undefined,
               isPreview,
             );

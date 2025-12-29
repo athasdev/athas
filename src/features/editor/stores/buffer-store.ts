@@ -26,6 +26,7 @@ export interface Buffer {
   isSQLite: boolean;
   isDiff: boolean;
   isMarkdownPreview: boolean;
+  isHtmlPreview: boolean;
   isExternalEditor: boolean;
   isWebViewer: boolean;
   isPullRequest: boolean;
@@ -82,6 +83,7 @@ interface BufferActions {
     isVirtual?: boolean,
     diffData?: GitDiff | MultiFileDiff,
     isMarkdownPreview?: boolean,
+    isHtmlPreview?: boolean,
     sourceFilePath?: string,
     isPreview?: boolean,
   ) => string;
@@ -149,6 +151,7 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
           !b.isImage &&
           !b.isSQLite &&
           !b.isMarkdownPreview &&
+          !b.isHtmlPreview &&
           !b.isExternalEditor &&
           !b.isWebViewer &&
           !b.isPullRequest,
@@ -168,6 +171,7 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
       !activeBuffer.isImage &&
       !activeBuffer.isSQLite &&
       !activeBuffer.isMarkdownPreview &&
+      !activeBuffer.isHtmlPreview &&
       !activeBuffer.isExternalEditor &&
       !activeBuffer.isWebViewer &&
       !activeBuffer.isPullRequest
@@ -197,6 +201,7 @@ export const useBufferStore = createSelectors(
           isVirtual = false,
           diffData?: GitDiff | MultiFileDiff,
           isMarkdownPreview = false,
+          isHtmlPreview = false,
           sourceFilePath?: string,
           isPreview = true,
         ) => {
@@ -204,7 +209,13 @@ export const useBufferStore = createSelectors(
 
           // Special buffers should never be in preview mode
           const shouldBePreview =
-            isPreview && !isImage && !isSQLite && !isDiff && !isVirtual && !isMarkdownPreview;
+            isPreview &&
+            !isImage &&
+            !isSQLite &&
+            !isDiff &&
+            !isVirtual &&
+            !isMarkdownPreview &&
+            !isHtmlPreview;
 
           // Check if already open
           const existing = buffers.find((b) => b.path === path);
@@ -252,6 +263,7 @@ export const useBufferStore = createSelectors(
             isSQLite,
             isDiff,
             isMarkdownPreview,
+            isHtmlPreview,
             isExternalEditor: false,
             isWebViewer: false,
             isPullRequest: false,
@@ -268,7 +280,14 @@ export const useBufferStore = createSelectors(
           });
 
           // Track in recent files (only for real files, not virtual/diff/markdown preview buffers)
-          if (!isVirtual && !isDiff && !isImage && !isSQLite && !isMarkdownPreview) {
+          if (
+            !isVirtual &&
+            !isDiff &&
+            !isImage &&
+            !isSQLite &&
+            !isMarkdownPreview &&
+            !isHtmlPreview
+          ) {
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
 
             // Check if extension is available and start LSP or prompt installation
@@ -408,6 +427,7 @@ export const useBufferStore = createSelectors(
             isSQLite: false,
             isDiff: false,
             isMarkdownPreview: false,
+            isHtmlPreview: false,
             isExternalEditor: true,
             isWebViewer: false,
             isPullRequest: false,
@@ -480,6 +500,7 @@ export const useBufferStore = createSelectors(
             isSQLite: false,
             isDiff: false,
             isMarkdownPreview: false,
+            isHtmlPreview: false,
             isExternalEditor: false,
             isWebViewer: true,
             isPullRequest: false,
@@ -536,6 +557,7 @@ export const useBufferStore = createSelectors(
             isSQLite: false,
             isDiff: false,
             isMarkdownPreview: false,
+            isHtmlPreview: false,
             isExternalEditor: false,
             isWebViewer: false,
             isPullRequest: true,
@@ -594,6 +616,7 @@ export const useBufferStore = createSelectors(
             !closedBuffer.isImage &&
             !closedBuffer.isSQLite &&
             !closedBuffer.isMarkdownPreview &&
+            !closedBuffer.isHtmlPreview &&
             !closedBuffer.isExternalEditor &&
             !closedBuffer.isWebViewer
           ) {
