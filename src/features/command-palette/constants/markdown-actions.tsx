@@ -15,6 +15,7 @@ interface MarkdownActionsParams {
     isVirtual?: boolean,
     diffData?: any,
     isMarkdownPreview?: boolean,
+    isHtmlPreview?: boolean,
     sourceFilePath?: string,
   ) => string;
   onClose: () => void;
@@ -50,6 +51,7 @@ export const createMarkdownActions = (params: MarkdownActionsParams): Action[] =
           true, // isVirtual
           undefined, // diffData
           true, // isMarkdownPreview
+          false, // isHtmlPreview
           activeBuffer.path, // sourceFilePath
         );
         onClose();

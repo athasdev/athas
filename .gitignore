@@ -74,3 +74,6 @@ public/tree-sitter/queries/
 
 # Bundled tree-sitter grammars
 src/extensions/bundled/*/grammars/*.wasm
+
+# Benchmark files
+benchmark_*.md
