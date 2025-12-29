@@ -54,12 +54,21 @@ export default function Breadcrumb() {
     return extension === "md" || extension === "markdown";
   };
 
+  const isHtmlFile = () => {
+    if (!activeBuffer) return false;
+    const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
+    return extension === "html" || extension === "htm";
+  };
+
   const handlePreviewClick = () => {
-    if (!activeBuffer || activeBuffer.isMarkdownPreview) return;
+    if (!activeBuffer || activeBuffer.isMarkdownPreview || activeBuffer.isHtmlPreview) return;
 
     const { openBuffer } = useBufferStore.getState().actions;
     const previewPath = `${activeBuffer.path}:preview`;
     const previewName = `${activeBuffer.name} (Preview)`;
+
+    const isMarkdown = isMarkdownFile();
+    const isHtml = isHtmlFile();
 
     openBuffer(
       previewPath,
@@ -70,7 +79,8 @@ export default function Breadcrumb() {
       false, // isDiff
       true, // isVirtual
       undefined, // diffData
-      true, // isMarkdownPreview
+      isMarkdown, // isMarkdownPreview
+      isHtml, // isHtmlPreview
       activeBuffer.path, // sourceFilePath
     );
   };
@@ -246,7 +256,8 @@ export default function Breadcrumb() {
           ))}
         </div>
         <div className="flex items-center gap-1">
-          {isMarkdownFile() && !activeBuffer?.isMarkdownPreview && (
+          {((isMarkdownFile() && !activeBuffer?.isMarkdownPreview) ||
+            (isHtmlFile() && !activeBuffer?.isHtmlPreview)) && (
             <button
               onClick={handlePreviewClick}
               className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"

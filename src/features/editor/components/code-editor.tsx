@@ -15,6 +15,7 @@ import { HoverTooltip } from "../lsp/hover-tooltip";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { Editor } from "./editor";
+import { HtmlPreview } from "./html/html-preview";
 import { EditorStylesheet } from "./stylesheet";
 import Breadcrumb from "./toolbar/breadcrumb";
 import FindBar from "./toolbar/find-bar";
@@ -58,6 +59,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const onChange = activeBuffer ? handleContentChange : () => {};
 
   const showMarkdownPreview = activeBuffer?.isMarkdownPreview || false;
+  const showHtmlPreview = activeBuffer?.isHtmlPreview || false;
 
   // Initialize refs in store
   useEffect(() => {
@@ -279,6 +281,8 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
           <div className="absolute inset-0 bg-primary-bg">
             {showMarkdownPreview ? (
               <MarkdownPreview />
+            ) : showHtmlPreview ? (
+              <HtmlPreview />
             ) : (
               <Editor
                 onMouseMove={hoverHandlers.handleHover}
