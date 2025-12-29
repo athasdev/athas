@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { normalizeLanguage } from "./language-map";
 import { highlightCode } from "./prism-languages";
 
@@ -198,5 +199,6 @@ export function parseMarkdown(content: string): string {
     processedLines.push("</div>");
   }
 
-  return processedLines.join("\n");
+  const rawHtml = processedLines.join("\n");
+  return DOMPurify.sanitize(rawHtml);
 }
