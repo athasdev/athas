@@ -110,8 +110,10 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
 
     const sortedTokens = useMemo(() => [...tokens].sort((a, b) => a.start - b.start), [tokens]);
 
+    // Calculate line offsets once when content changes, independent of viewport
+    const lineOffsets = useMemo(() => buildLineOffsetMap(normalizedContent), [normalizedContent]);
+
     const lineTokensMap = useMemo(() => {
-      const lineOffsets = buildLineOffsetMap(normalizedContent);
       const map = new Map<number, Token[]>();
       let tokenIndex = 0;
 
@@ -147,21 +149,22 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
       }
 
       return map;
-    }, [lines, sortedTokens, normalizedContent, viewportRange]);
+    }, [lines, sortedTokens, lineOffsets, viewportRange]);
 
     const renderedLines = useMemo(() => {
-      const lineOffsets = buildLineOffsetMap(normalizedContent);
       const startLine = viewportRange?.startLine ?? 0;
       const endLine = viewportRange?.endLine ?? lines.length;
 
       const result: ReactNode[] = [];
 
-      // Add empty divs for lines before viewport (for correct positioning)
-      for (let i = 0; i < startLine; i++) {
+      // Add spacer for lines before viewport
+      if (startLine > 0) {
         result.push(
-          <div key={i} className="highlight-layer-line">
-            {"\u00A0"}
-          </div>,
+          <div
+            key="spacer-top"
+            style={{ height: `${startLine * lineHeight}px` }}
+            className="highlight-layer-spacer"
+          />,
         );
       }
 
@@ -182,17 +185,20 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
         );
       }
 
-      // Add empty divs for lines after viewport (for correct positioning)
-      for (let i = Math.min(endLine, lines.length); i < lines.length; i++) {
+      // Add spacer for lines after viewport
+      const remainingLines = lines.length - Math.min(endLine, lines.length);
+      if (remainingLines > 0) {
         result.push(
-          <div key={i} className="highlight-layer-line">
-            {"\u00A0"}
-          </div>,
+          <div
+            key="spacer-bottom"
+            style={{ height: `${remainingLines * lineHeight}px` }}
+            className="highlight-layer-spacer"
+          />,
         );
       }
 
       return result;
-    }, [lines, lineTokensMap, normalizedContent, viewportRange]);
+    }, [lines, lineTokensMap, lineOffsets, viewportRange, lineHeight]);
 
     return (
       <div

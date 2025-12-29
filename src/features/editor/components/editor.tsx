@@ -9,6 +9,7 @@ import { useContextMenu } from "../hooks/use-context-menu";
 import { useEditorOperations } from "../hooks/use-editor-operations";
 import { useFoldTransform } from "../hooks/use-fold-transform";
 import { useInlineDiff } from "../hooks/use-inline-diff";
+import { usePerformanceMonitor } from "../hooks/use-performance";
 import { getLanguageId, useTokenizer } from "../hooks/use-tokenizer";
 import { useViewportLines } from "../hooks/use-viewport-lines";
 import { useLspStore } from "../lsp/lsp-store";
@@ -107,7 +108,14 @@ export function Editor({
   const contextMenu = useContextMenu();
   const inlineDiff = useInlineDiff(filePath, content);
 
-  const actualLines = useMemo(() => splitLines(content), [content]);
+  const { startMeasure, endMeasure } = usePerformanceMonitor("Editor");
+
+  const actualLines = useMemo(() => {
+    startMeasure(`splitLines (len: ${content.length})`);
+    const res = splitLines(content);
+    endMeasure(`splitLines (len: ${content.length})`);
+    return res;
+  }, [content, startMeasure, endMeasure]);
   const lines = foldTransform.hasActiveFolds ? foldTransform.virtualLines : actualLines;
   const displayContent = foldTransform.hasActiveFolds ? foldTransform.virtualContent : content;
   // Use consistent line height for both textarea and gutter
