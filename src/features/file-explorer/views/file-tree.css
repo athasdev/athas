@@ -38,6 +38,19 @@
   z-index: calc(100 - var(--depth, 0)) !important;
 }
 
+/* Cover gap above sticky headers to prevent content bleeding through (only when stuck) */
+.file-tree-item-dir.is-stuck::before {
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--depth, 0) * 22px);
+  left: 0;
+  right: 0;
+  height: calc(var(--depth, 0) * 22px);
+  background-color: var(--color-secondary-bg);
+  z-index: -1;
+  pointer-events: none;
+}
+
 /* Ensure file tree content wrapper stretches to full scrollable area */
 .file-tree-container > div:not(.file-tree-empty-state) {
   width: max-content !important;

@@ -133,21 +133,26 @@ const FileTree = ({
       requestAnimationFrame(() => {
         // Find all sticky folders currently visible
         const stickyFolders = container.querySelectorAll(".file-tree-item-dir");
+        const containerRect = container.getBoundingClientRect();
         let deepest = null;
         let maxDepth = -1;
 
         stickyFolders.forEach((folder) => {
           const rect = folder.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
+          const depth = parseInt(folder.getAttribute("data-depth") || "0");
+          const stickyTop = containerRect.top + depth * 22;
 
-          // Check if folder is sticky (at its sticky position)
-          if (rect.top <= containerRect.top + 100) {
-            // 100px buffer for nested folders
-            const depth = parseInt(folder.getAttribute("data-depth") || "0");
+          // Check if folder is stuck (at or near its sticky position)
+          const isStuck = rect.top <= stickyTop + 2;
+
+          if (isStuck) {
+            folder.classList.add("is-stuck");
             if (depth > maxDepth) {
               maxDepth = depth;
               deepest = folder.getAttribute("data-path");
             }
+          } else {
+            folder.classList.remove("is-stuck");
           }
         });
 
