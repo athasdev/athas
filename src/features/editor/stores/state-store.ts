@@ -180,6 +180,8 @@ export const useEditorStateStore = createSelectors(
             set({ cursorPosition: cachedPosition });
             return true;
           }
+          // Reset to beginning for files with no cached position
+          set({ cursorPosition: { line: 0, column: 0, offset: 0 } });
           return false;
         },
 

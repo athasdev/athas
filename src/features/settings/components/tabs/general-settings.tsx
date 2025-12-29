@@ -1,5 +1,6 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useEffect, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
@@ -73,6 +74,16 @@ export const GeneralSettings = () => {
       showToast({ message: `Failed to uninstall CLI: ${error}`, type: "error" });
     } finally {
       setCliInstalling(false);
+    }
+  };
+
+  const handleCopyInstallCommand = async () => {
+    try {
+      const command = await invoke<string>("get_cli_install_command");
+      await writeText(command);
+      showToast({ message: "Install command copied to clipboard", type: "success" });
+    } catch (error) {
+      showToast({ message: `Failed to copy command: ${error}`, type: "error" });
     }
   };
 
@@ -172,15 +183,27 @@ export const GeneralSettings = () => {
                 {cliInstalling ? "Uninstalling..." : "Uninstall"}
               </Button>
             ) : (
-              <Button
-                onClick={handleInstallCli}
-                disabled={cliInstalling || cliChecking}
-                variant="ghost"
-                size="xs"
-                className="px-2 py-1"
-              >
-                {cliInstalling ? "Installing..." : "Install"}
-              </Button>
+              <>
+                <Button
+                  onClick={handleInstallCli}
+                  disabled={cliInstalling || cliChecking}
+                  variant="ghost"
+                  size="xs"
+                  className="px-2 py-1"
+                >
+                  {cliInstalling ? "Installing..." : "Install"}
+                </Button>
+                <Button
+                  onClick={handleCopyInstallCommand}
+                  disabled={cliChecking}
+                  variant="ghost"
+                  size="xs"
+                  className="px-2 py-1"
+                  title="Copy install command to clipboard"
+                >
+                  Copy
+                </Button>
+              </>
             )}
           </div>
         </SettingRow>

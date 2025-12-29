@@ -1,10 +1,11 @@
 import { CircleAlert, CircleCheck, CircleQuestionMark, CircleX, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useToast } from "@/features/layout/contexts/toast-context";
 
 export const ToastContainer = () => {
   const { toasts, dismissToast } = useToast();
 
-  return (
+  return createPortal(
     <div className="fixed right-4 bottom-16 z-[10000] flex flex-col gap-2 text-text">
       {toasts.map((toast) => (
         <div
@@ -50,6 +51,7 @@ export const ToastContainer = () => {
           )}
         </div>
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 };

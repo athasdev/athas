@@ -45,6 +45,7 @@ interface FileTreeProps {
   updateActivePath?: (path: string) => void;
   rootFolderPath?: string;
   onFileSelect: (path: string, isDir: boolean) => void;
+  onFileOpen?: (path: string, isDir: boolean) => void;
   onCreateNewFileInDirectory: (directoryPath: string, fileName: string) => void;
   onCreateNewFolderInDirectory?: (directoryPath: string, folderName: string) => void;
   onDeletePath?: (path: string, isDir: boolean) => void;
@@ -66,6 +67,7 @@ const FileTree = ({
   updateActivePath,
   rootFolderPath,
   onFileSelect,
+  onFileOpen,
   onCreateNewFileInDirectory,
   onCreateNewFolderInDirectory,
   onDeletePath,
@@ -535,6 +537,17 @@ const FileTree = ({
     [onFileSelect, updateActivePath],
   );
 
+  const handleFileDoubleClick = useCallback(
+    (e: React.MouseEvent, path: string, isDir: boolean) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Double-click opens in definite mode (not preview)
+      onFileOpen?.(path, isDir);
+      updateActivePath?.(path);
+    },
+    [onFileOpen, updateActivePath],
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, file: FileEntry) => {
       if (e.key === "Enter") {
@@ -651,6 +664,7 @@ const FileTree = ({
               setMouseDownInfo(null);
             }}
             onClick={(e) => handleFileClick(e, file.path, file.isDir)}
+            onDoubleClick={(e) => handleFileDoubleClick(e, file.path, file.isDir)}
             onContextMenu={(e) => handleContextMenu(e, file.path, file.isDir)}
             className={cn(
               "flex min-h-[20px] w-full min-w-max cursor-pointer",

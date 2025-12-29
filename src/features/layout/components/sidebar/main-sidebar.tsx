@@ -43,6 +43,7 @@ export const MainSidebar = memo(() => {
   const handleCreateNewFolderInDirectory =
     useFileSystemStore.use.handleCreateNewFolderInDirectory?.();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
+  const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const handleCreateNewFileInDirectory = useFileSystemStore.use.handleCreateNewFileInDirectory?.();
   const handleDeletePath = useFileSystemStore.use.handleDeletePath?.();
   const refreshDirectory = useFileSystemStore.use.refreshDirectory?.();
@@ -113,6 +114,9 @@ export const MainSidebar = memo(() => {
               rootFolderPath={rootFolderPath}
               allProjectFiles={allProjectFiles}
               onFileSelect={(path, line, column) => handleFileSelect(path, false, line, column)}
+              onFileOpen={(path, line, column) =>
+                handleFileSelect(path, false, line, column, undefined, false)
+              }
             />
           </div>
         )}
@@ -140,6 +144,7 @@ export const MainSidebar = memo(() => {
               updateActivePath={updateActivePath}
               rootFolderPath={rootFolderPath}
               onFileSelect={handleFileSelect}
+              onFileOpen={handleFileOpen}
               onCreateNewFileInDirectory={handleCreateNewFileInDirectory}
               onCreateNewFolderInDirectory={handleCreateNewFolderInDirectory}
               onDeletePath={handleDeletePath}

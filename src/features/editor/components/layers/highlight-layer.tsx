@@ -28,6 +28,7 @@ const Line = memo<LineProps>(
       const result: ReactNode[] = [];
       let lastIndex = 0;
       let spanKey = 0;
+      let lastTokenClass: string | undefined;
 
       for (const token of tokens) {
         // Calculate token position relative to this line
@@ -44,10 +45,14 @@ const Line = memo<LineProps>(
           continue;
         }
 
-        // Add text before token
+        // Add text before token - use last token's class to avoid flash
         if (tokenStartInLine > lastIndex) {
           const text = lineContent.substring(lastIndex, Math.max(lastIndex, tokenStartInLine));
-          result.push(<span key={`${lineIndex}-${spanKey++}`}>{text}</span>);
+          result.push(
+            <span key={`${lineIndex}-${spanKey++}`} className={lastTokenClass}>
+              {text}
+            </span>,
+          );
         }
 
         // Add token (start from lastIndex if token overlaps with previous)
@@ -61,12 +66,18 @@ const Line = memo<LineProps>(
         );
 
         lastIndex = end;
+        lastTokenClass = token.class_name;
       }
 
-      // Add remaining text
+      // Add remaining text - use the last token's class to avoid white flash
+      // This handles the case where content is added but tokens haven't updated yet
       if (lastIndex < lineContent.length) {
         const text = lineContent.substring(lastIndex);
-        result.push(<span key={`${lineIndex}-${spanKey++}`}>{text}</span>);
+        result.push(
+          <span key={`${lineIndex}-${spanKey++}`} className={lastTokenClass}>
+            {text}
+          </span>,
+        );
       }
 
       return result;

@@ -44,6 +44,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
     reorderBuffers,
     confirmCloseWithoutSaving,
     cancelPendingClose,
+    convertPreviewToDefinite,
   } = useBufferStore.use.actions();
   const { handleSave } = useAppStore.use.actions();
   const { settings } = useSettingsStore();
@@ -317,6 +318,19 @@ const TabBar = ({ paneId }: TabBarProps) => {
       });
     },
     [handleTabClick, sortedBuffers, updateActivePath],
+  );
+
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent, index: number) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const buffer = sortedBuffers[index];
+      // Convert preview tab to definite on double-click
+      if (buffer.isPreview) {
+        convertPreviewToDefinite(buffer.id);
+      }
+    },
+    [sortedBuffers, convertPreviewToDefinite],
   );
 
   const handleContextMenu = useCallback((e: React.MouseEvent, buffer: Buffer) => {
@@ -601,6 +615,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
                   tabRefs.current[index] = el;
                 }}
                 onMouseDown={(e) => handleMouseDown(e, index)}
+                onDoubleClick={(e) => handleDoubleClick(e, index)}
                 onContextMenu={(e) => handleContextMenu(e, buffer)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
                 onDragStart={(e) => handleDragStart(e, index)}
