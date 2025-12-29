@@ -29,9 +29,15 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
 
   // Memoized content hash for efficient change detection
   const contentHash = useMemo(() => {
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(content);
-    return content ? btoa(String.fromCharCode(...bytes)).slice(0, 32) : "";
+    if (!content) return "";
+    // Simple hash for large strings to avoid stack overflow with String.fromCharCode(...bytes)
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash |= 0; // Convert to 32bit integer
+    }
+    return hash.toString(36);
   }, [content]);
 
   // Process git diff lines into line change information

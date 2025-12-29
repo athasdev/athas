@@ -14,6 +14,7 @@ import {
 import type { HighlightToken } from "../lib/wasm-parser/types";
 import { useTreeCacheStore } from "../stores/tree-cache-store";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/html";
+import { usePerformanceMonitor } from "./use-performance";
 import type { ViewportRange } from "./use-viewport-lines";
 
 interface TokenizerOptions {
@@ -103,6 +104,10 @@ function getLocalWasmPath(languageId: string): string {
   if (languageId === "typescript" || languageId === "javascript") {
     return "/tree-sitter/parsers/tree-sitter-tsx.wasm";
   }
+  // Special case for markdown as the file is named tree-sitter.wasm in public folder
+  if (languageId === "markdown") {
+    return "/tree-sitter/tree-sitter.wasm";
+  }
   return `/tree-sitter/parsers/tree-sitter-${languageId}.wasm`;
 }
 
@@ -144,6 +149,7 @@ export function useTokenizer({
     previousContent: "",
   });
   const treeCacheActions = useTreeCacheStore.use.actions();
+  const { startMeasure, endMeasure } = usePerformanceMonitor("Tokenizer");
 
   /**
    * Tokenize the full document using WASM parser
@@ -166,6 +172,7 @@ export function useTokenizer({
 
         // Normalize line endings before tokenizing
         const normalizedText = normalizeLineEndings(text);
+        startMeasure(`tokenizeFull (len: ${normalizedText.length})`);
 
         let wasmPath: string;
         let highlightQuery: string | undefined;
@@ -245,6 +252,7 @@ export function useTokenizer({
         setTokenizedContent("");
       } finally {
         setLoading(false);
+        endMeasure(`tokenizeFull (len: ${normalizeLineEndings(text).length})`);
       }
     },
     [enabled, filePath, bufferId, treeCacheActions],
@@ -259,6 +267,8 @@ export function useTokenizer({
 
       const languageId = getLanguageId(filePath);
       if (!languageId) return;
+
+      startMeasure("tokenizeRangeInternal");
 
       const lineCount = text.split("\n").length;
 
@@ -370,6 +380,7 @@ export function useTokenizer({
         tokenizeFull(text);
       } finally {
         setLoading(false);
+        endMeasure("tokenizeRangeInternal");
       }
     },
     [enabled, filePath, tokenizeFull],
