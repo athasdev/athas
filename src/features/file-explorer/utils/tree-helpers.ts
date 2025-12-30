@@ -126,7 +126,6 @@ export function addNewItemToTree(
       return {
         ...item,
         children: [...(item.children || []), newItem],
-        expanded: true,
       };
     }
     if (item.children) {

@@ -79,7 +79,6 @@ export async function readDirectoryContents(path: string): Promise<FileEntry[]> 
             name: entry.name || "Unknown",
             path: entryPath,
             isDir: symlinkInfo.is_symlink ? false : entry.is_dir || false,
-            expanded: false,
             children: undefined,
             isSymlink: symlinkInfo.is_symlink,
             symlinkTarget: symlinkInfo.target,
@@ -90,7 +89,6 @@ export async function readDirectoryContents(path: string): Promise<FileEntry[]> 
             name: entry.name || "Unknown",
             path: entryPath,
             isDir: entry.is_dir || false,
-            expanded: false,
             children: undefined,
           };
         }

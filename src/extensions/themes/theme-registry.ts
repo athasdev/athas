@@ -63,7 +63,6 @@ class ThemeRegistry implements ThemeRegistryAPI {
     root.setAttribute("data-theme-type", theme.isDark ? "dark" : "light");
 
     this.currentTheme = id;
-    console.log(`Theme registry: Successfully applied theme ${id}`);
     this.notifyThemeChange(id);
   }
 

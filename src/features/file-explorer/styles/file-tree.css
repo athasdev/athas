@@ -31,25 +31,9 @@
   font-family: var(--app-font-family);
 }
 
-/* Sticky parent folders - simple and clean */
-.file-tree-item-dir {
-  position: sticky !important;
-  top: calc(var(--depth, 0) * 22px) !important;
-  z-index: calc(100 - var(--depth, 0)) !important;
-}
 
 /* Cover gap above sticky headers to prevent content bleeding through (only when stuck) */
-.file-tree-item-dir.is-stuck::before {
-  content: "";
-  position: absolute;
-  top: calc(-1 * var(--depth, 0) * 22px);
-  left: 0;
-  right: 0;
-  height: calc(var(--depth, 0) * 22px);
-  background-color: var(--color-secondary-bg);
-  z-index: -1;
-  pointer-events: none;
-}
+/* Removed JS-managed .is-stuck marker; pure CSS sticky remains */
 
 /* Ensure file tree content wrapper stretches to full scrollable area */
 .file-tree-container > div:not(.file-tree-empty-state) {
@@ -80,95 +64,6 @@
   background-color: var(--color-selected) !important;
 }
 
-/* Sticky folders need solid background to hide text beneath */
-.file-tree-container .file-tree-item button.file-tree-item-dir {
-  background-color: var(--color-secondary-bg) !important;
-  width: 100% !important;
-  min-width: 100% !important;
-  display: flex !important;
-  justify-content: flex-start !important;
-}
+/* No sticky folder styling */
 
-.file-tree-container .file-tree-item button.file-tree-item-dir:hover {
-  background-color: var(--color-hover) !important;
-}
-
-.file-tree-container .file-tree-item button.file-tree-item-dir.bg-selected {
-  background-color: var(--color-selected) !important;
-}
-
-/* Hide vertical lines on sticky folders specifically */
-.file-tree-item-dir.file-tree-item[data-depth]::after {
-  display: none !important;
-}
-
-/* Vertical nesting lines - show all parent levels */
-.file-tree-item {
-  position: relative;
-}
-
-/* Vertical lines aligned with icons */
-.file-tree-item[data-depth="1"]::after {
-  content: "";
-  position: absolute;
-  left: 20px;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--color-border);
-  opacity: 0.8;
-  pointer-events: none;
-  z-index: 100;
-}
-
-.file-tree-item[data-depth="2"]::after {
-  content: "";
-  position: absolute;
-  left: 40px;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--color-border);
-  opacity: 0.8;
-  pointer-events: none;
-  z-index: 100;
-}
-
-.file-tree-item[data-depth="3"]::after {
-  content: "";
-  position: absolute;
-  left: 60px;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--color-border);
-  opacity: 0.8;
-  pointer-events: none;
-  z-index: 100;
-}
-
-.file-tree-item[data-depth="4"]::after {
-  content: "";
-  position: absolute;
-  left: 80px;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--color-border);
-  opacity: 0.8;
-  pointer-events: none;
-  z-index: 100;
-}
-
-.file-tree-item[data-depth="5"]::after {
-  content: "";
-  position: absolute;
-  left: 100px;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--color-border);
-  opacity: 0.8;
-  pointer-events: none;
-  z-index: 100;
-}
+.file-tree-item { position: relative; }

@@ -156,7 +156,6 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       name: file.name,
       path: file.path,
       isDir: file.isDir,
-      expanded: false,
       children: undefined,
     };
     onSelect(fileEntry);

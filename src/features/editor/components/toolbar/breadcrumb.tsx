@@ -145,7 +145,6 @@ export default function Breadcrumb() {
         name: entry.name || "Unknown",
         path: entry.path,
         isDir: entry.is_dir || false,
-        expanded: false,
         children: undefined,
       }));
 
@@ -201,7 +200,6 @@ export default function Breadcrumb() {
         name: entry.name || "Unknown",
         path: entry.path,
         isDir: entry.is_dir || false,
-        expanded: false,
         children: undefined,
       }));
 
@@ -336,7 +334,6 @@ export default function Breadcrumb() {
                         name: entry.name || "Unknown",
                         path: entry.path,
                         isDir: entry.is_dir || false,
-                        expanded: false,
                         children: undefined,
                       }));
 

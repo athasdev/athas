@@ -51,7 +51,6 @@ class ThemeProvider {
     // Notify listeners
     this.notifyChange(variantId);
 
-    logger.info("ThemeProvider", `Successfully applied theme: ${variant.name}`);
     return true;
   }
 

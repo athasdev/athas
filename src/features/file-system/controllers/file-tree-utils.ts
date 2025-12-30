@@ -82,7 +82,7 @@ export function addFileToTree(
   const result = files.map((file) => {
     if (file.path === parentPath && file.isDir) {
       const children = sortFileEntries([...(file.children || []), newFile]);
-      return { ...file, children, expanded: true };
+      return { ...file, children };
     }
     if (file.children) {
       return {
@@ -98,7 +98,6 @@ export function addFileToTree(
 export function collapseAllFolders(files: FileEntry[]): FileEntry[] {
   return files.map((file) => ({
     ...file,
-    expanded: false,
     children: file.children ? collapseAllFolders(file.children) : undefined,
   }));
 }

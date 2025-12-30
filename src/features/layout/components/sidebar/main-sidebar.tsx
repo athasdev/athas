@@ -82,8 +82,8 @@ export const MainSidebar = memo(() => {
 
   // Get all project files by flattening the file tree - memoized for performance
   const allProjectFiles = useMemo(() => {
-    return flattenFileTree(files);
-  }, [files]);
+    return isSearchViewActive ? flattenFileTree(files) : [];
+  }, [files, isSearchViewActive]);
 
   return (
     <div className="flex h-full flex-col ">
