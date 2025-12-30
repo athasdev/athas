@@ -60,8 +60,20 @@ export default function Breadcrumb() {
     return extension === "html" || extension === "htm";
   };
 
+  const isCsvFile = () => {
+    if (!activeBuffer) return false;
+    const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
+    return extension === "csv";
+  };
+
   const handlePreviewClick = () => {
-    if (!activeBuffer || activeBuffer.isMarkdownPreview || activeBuffer.isHtmlPreview) return;
+    if (
+      !activeBuffer ||
+      activeBuffer.isMarkdownPreview ||
+      activeBuffer.isHtmlPreview ||
+      activeBuffer.isCsvPreview
+    )
+      return;
 
     const { openBuffer } = useBufferStore.getState().actions;
     const previewPath = `${activeBuffer.path}:preview`;
@@ -69,6 +81,7 @@ export default function Breadcrumb() {
 
     const isMarkdown = isMarkdownFile();
     const isHtml = isHtmlFile();
+    const isCsv = isCsvFile();
 
     openBuffer(
       previewPath,
@@ -81,6 +94,7 @@ export default function Breadcrumb() {
       undefined, // diffData
       isMarkdown, // isMarkdownPreview
       isHtml, // isHtmlPreview
+      isCsv, // isCsvPreview
       activeBuffer.path, // sourceFilePath
     );
   };
@@ -257,12 +271,13 @@ export default function Breadcrumb() {
         </div>
         <div className="flex items-center gap-1">
           {((isMarkdownFile() && !activeBuffer?.isMarkdownPreview) ||
-            (isHtmlFile() && !activeBuffer?.isHtmlPreview)) && (
+            (isHtmlFile() && !activeBuffer?.isHtmlPreview) ||
+            (isCsvFile() && !activeBuffer?.isCsvPreview)) && (
             <button
               onClick={handlePreviewClick}
               className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"
-              title="Preview markdown"
-              aria-label="Preview markdown"
+              title="Preview"
+              aria-label="Preview"
             >
               <Eye size={12} />
             </button>

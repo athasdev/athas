@@ -87,7 +87,7 @@ function FileTreeItemComponent({
             onChange={(e) => onEditingValueChange(e.target.value)}
             onKeyDown={(e) => onKeyDown(e, file)}
             onBlur={() => onBlur(file)}
-            className="ui-font flex-1 border-b border-none border-text bg-transparent text-xs text-text outline-none focus:border-text-lighter"
+            className="ui-font flex-1 border-text border-b border-none bg-transparent text-text text-xs outline-none focus:border-text-lighter"
             placeholder={file.isDir ? "folder name" : "file name"}
           />
         </div>
@@ -116,7 +116,7 @@ function FileTreeItemComponent({
         onContextMenu={(e) => onContextMenu(e, file.path, file.isDir)}
         className={cn(
           "ui-font flex min-h-[20px] w-full min-w-max cursor-pointer select-none items-center gap-1.5",
-          "whitespace-nowrap border-none bg-transparent px-1.5 py-0.5 text-left text-xs text-text",
+          "whitespace-nowrap border-none bg-transparent px-1.5 py-0.5 text-left text-text text-xs",
           "shadow-none outline-none transition-colors duration-150",
           "hover:bg-hover focus:outline-none",
           activePath === file.path && "bg-selected",
@@ -125,7 +125,7 @@ function FileTreeItemComponent({
           isDragging && "cursor-move",
           file.ignored && "opacity-50",
           file.isDir && "file-tree-item-dir",
-          file.isDir && deepestStickyFolder === file.path && "border-b border-white/5",
+          file.isDir && deepestStickyFolder === file.path && "border-white/5 border-b",
         )}
         style={
           {

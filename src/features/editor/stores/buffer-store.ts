@@ -27,6 +27,7 @@ export interface Buffer {
   isDiff: boolean;
   isMarkdownPreview: boolean;
   isHtmlPreview: boolean;
+  isCsvPreview: boolean;
   isExternalEditor: boolean;
   isWebViewer: boolean;
   isPullRequest: boolean;
@@ -84,6 +85,7 @@ interface BufferActions {
     diffData?: GitDiff | MultiFileDiff,
     isMarkdownPreview?: boolean,
     isHtmlPreview?: boolean,
+    isCsvPreview?: boolean,
     sourceFilePath?: string,
     isPreview?: boolean,
   ) => string;
@@ -152,6 +154,7 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
           !b.isSQLite &&
           !b.isMarkdownPreview &&
           !b.isHtmlPreview &&
+          !b.isCsvPreview &&
           !b.isExternalEditor &&
           !b.isWebViewer &&
           !b.isPullRequest,
@@ -172,6 +175,7 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
       !activeBuffer.isSQLite &&
       !activeBuffer.isMarkdownPreview &&
       !activeBuffer.isHtmlPreview &&
+      !activeBuffer.isCsvPreview &&
       !activeBuffer.isExternalEditor &&
       !activeBuffer.isWebViewer &&
       !activeBuffer.isPullRequest
@@ -202,6 +206,7 @@ export const useBufferStore = createSelectors(
           diffData?: GitDiff | MultiFileDiff,
           isMarkdownPreview = false,
           isHtmlPreview = false,
+          isCsvPreview = false,
           sourceFilePath?: string,
           isPreview = true,
         ) => {
@@ -215,7 +220,8 @@ export const useBufferStore = createSelectors(
             !isDiff &&
             !isVirtual &&
             !isMarkdownPreview &&
-            !isHtmlPreview;
+            !isHtmlPreview &&
+            !isCsvPreview;
 
           // Check if already open
           const existing = buffers.find((b) => b.path === path);
@@ -264,6 +270,7 @@ export const useBufferStore = createSelectors(
             isDiff,
             isMarkdownPreview,
             isHtmlPreview,
+            isCsvPreview,
             isExternalEditor: false,
             isWebViewer: false,
             isPullRequest: false,
@@ -286,7 +293,8 @@ export const useBufferStore = createSelectors(
             !isImage &&
             !isSQLite &&
             !isMarkdownPreview &&
-            !isHtmlPreview
+            !isHtmlPreview &&
+            !isCsvPreview
           ) {
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
 
@@ -428,6 +436,7 @@ export const useBufferStore = createSelectors(
             isDiff: false,
             isMarkdownPreview: false,
             isHtmlPreview: false,
+            isCsvPreview: false,
             isExternalEditor: true,
             isWebViewer: false,
             isPullRequest: false,
@@ -501,6 +510,7 @@ export const useBufferStore = createSelectors(
             isDiff: false,
             isMarkdownPreview: false,
             isHtmlPreview: false,
+            isCsvPreview: false,
             isExternalEditor: false,
             isWebViewer: true,
             isPullRequest: false,
@@ -558,6 +568,7 @@ export const useBufferStore = createSelectors(
             isDiff: false,
             isMarkdownPreview: false,
             isHtmlPreview: false,
+            isCsvPreview: false,
             isExternalEditor: false,
             isWebViewer: false,
             isPullRequest: true,
@@ -617,6 +628,7 @@ export const useBufferStore = createSelectors(
             !closedBuffer.isSQLite &&
             !closedBuffer.isMarkdownPreview &&
             !closedBuffer.isHtmlPreview &&
+            !closedBuffer.isCsvPreview &&
             !closedBuffer.isExternalEditor &&
             !closedBuffer.isWebViewer
           ) {
@@ -937,6 +949,8 @@ export const useBufferStore = createSelectors(
             buffer.isImage ||
             buffer.isSQLite ||
             buffer.isMarkdownPreview ||
+            buffer.isHtmlPreview ||
+            buffer.isCsvPreview ||
             buffer.isWebViewer
           ) {
             return;

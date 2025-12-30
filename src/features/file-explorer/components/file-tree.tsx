@@ -22,7 +22,7 @@ import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
-import { moveFile, readDirectory, readFile } from "@/features/file-system/controllers/platform";
+import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { ContextMenuState, FileEntry } from "@/features/file-system/types/app";
 import { useSettingsStore } from "@/features/settings/store";
@@ -574,7 +574,7 @@ function FileTreeComponent({
         <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
           <button
             onClick={handleOpenFolder}
-            className="ui-font flex w-fit min-w-fit items-center justify-center gap-2 rounded border border-border bg-hover px-3 py-1.5 text-xs text-text transition-colors hover:border-accent hover:text-accent"
+            className="ui-font flex w-fit min-w-fit items-center justify-center gap-2 rounded border border-border bg-hover px-3 py-1.5 text-text text-xs transition-colors hover:border-accent hover:text-accent"
           >
             <FolderOpen size={14} />
             <span>Open Folder</span>
@@ -651,7 +651,7 @@ function FileTreeComponent({
                     }}
                   />
                 )}
-                <div className="my-1 border-t border-border" />
+                <div className="my-1 border-border border-t" />
               </>
             )}
 
@@ -706,7 +706,7 @@ function FileTreeComponent({
                     setContextMenu(null);
                   }}
                 />
-                <div className="my-1 border-t border-border" />
+                <div className="my-1 border-border border-t" />
               </>
             )}
 
@@ -766,7 +766,7 @@ function FileTreeComponent({
                 setContextMenu(null);
               }}
             />
-            <div className="my-1 border-t border-border" />
+            <div className="my-1 border-border border-t" />
             <ContextMenuItem
               icon={Trash}
               label="Delete"
@@ -800,7 +800,7 @@ function ContextMenuItem({ icon: Icon, label, onClick, className }: ContextMenuI
         onClick(e);
       }}
       className={cn(
-        "ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-text hover:bg-hover",
+        "ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover",
         className,
       )}
     >

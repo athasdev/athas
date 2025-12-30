@@ -16,6 +16,7 @@ interface MarkdownActionsParams {
     diffData?: any,
     isMarkdownPreview?: boolean,
     isHtmlPreview?: boolean,
+    isCsvPreview?: boolean,
     sourceFilePath?: string,
   ) => string;
   onClose: () => void;
@@ -52,6 +53,7 @@ export const createMarkdownActions = (params: MarkdownActionsParams): Action[] =
           undefined, // diffData
           true, // isMarkdownPreview
           false, // isHtmlPreview
+          false, // isCsvPreview
           activeBuffer.path, // sourceFilePath
         );
         onClose();

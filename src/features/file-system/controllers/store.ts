@@ -481,6 +481,7 @@ export const useFileSystemStore = createSelectors(
               undefined,
               undefined,
               false,
+              false,
               undefined,
               isPreview,
             );
