@@ -22,6 +22,7 @@ import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-tree-store";
+import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { ContextMenuState, FileEntry } from "@/features/file-system/types/app";

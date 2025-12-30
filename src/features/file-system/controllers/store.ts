@@ -145,8 +145,8 @@ export const useFileSystemStore = createSelectors(
           state.projectFilesCache = undefined;
         });
 
-        // Initialize tree UI state: expand root
-        useFileTreeStore.getState().setExpandedPaths(new Set([path]));
+        // Clear tree UI state
+        useFileTreeStore.getState().collapseAll();
 
         // Reset project store
         const { setRootFolderPath, setProjectName } = useProjectStore.getState();
