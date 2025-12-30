@@ -79,6 +79,43 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       },
     },
     {
+      id: "report-bug",
+      label: "Help: Report a Bug",
+      description: "Copy environment details and open the bug report page",
+      icon: <AlertCircle size={14} />,
+      category: "Settings",
+      action: async () => {
+        try {
+          onClose();
+          const { getVersion } = await import("@tauri-apps/api/app");
+          const version = await getVersion();
+          let osSummary = "";
+          try {
+            const os = await import("@tauri-apps/plugin-os");
+            const plat = os.platform();
+            const ver = os.version();
+            osSummary = `${plat} ${ver}`;
+          } catch {
+            osSummary = navigator.userAgent;
+          }
+
+          const text = `Environment\n\n- App: Athas ${version}\n- OS: ${osSummary}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
+
+          try {
+            const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+            await writeText(text);
+          } catch {
+            await navigator.clipboard.writeText(text);
+          }
+
+          const { openUrl } = await import("@tauri-apps/plugin-opener");
+          await openUrl("https://github.com/athasdev/athas/issues/new?template=bug_report.md");
+        } catch (e) {
+          console.error("Failed to prepare bug report:", e);
+        }
+      },
+    },
+    {
       id: "open-settings-json",
       label: "Preferences: Open Settings JSON file",
       description: "Open settings JSON file",

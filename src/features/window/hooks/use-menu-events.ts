@@ -50,6 +50,7 @@ async function setupMenuListeners(handlers: any) {
     ),
     listen("menu_about", () => currentHandlers.current.onAbout()),
     listen("menu_help", () => currentHandlers.current.onHelp()),
+    listen("menu_report_bug", () => currentHandlers.current.onReportBug()),
     listen("menu_about_athas", () => currentHandlers.current.onAboutAthas()),
     listen("menu_toggle_menu_bar", () => currentHandlers.current.onToggleMenuBar()),
   ]);
@@ -83,6 +84,7 @@ interface UseMenuEventsProps {
   onThemeChange: (theme: string) => void;
   onAbout: () => void | Promise<void>;
   onHelp: () => void;
+  onReportBug: () => void | Promise<void>;
   onAboutAthas: () => void | Promise<void>;
   onToggleMenuBar: () => void;
 }

@@ -232,6 +232,9 @@ fn main() {
                   "help" => {
                      let _ = window.emit("menu_help", ());
                   }
+                  "report_bug" => {
+                     let _ = window.emit("menu_report_bug", ());
+                  }
                   "about_athas" => {
                      let _ = window.emit("menu_about_athas", ());
                   }
