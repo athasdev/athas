@@ -30,8 +30,6 @@ class ThemeProvider {
 
     const { variant } = result;
 
-    logger.info("ThemeProvider", `Applying theme: ${variant.name}`);
-
     const root = document.documentElement;
 
     // Apply UI colors

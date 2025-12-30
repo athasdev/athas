@@ -1,4 +1,5 @@
-import { AlertCircle, CheckCircle, Eye, EyeOff, Server } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
+import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Server } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "@/ui/button";
 import Dialog from "@/ui/dialog";
@@ -33,6 +34,9 @@ const ConnectionDialog = ({
   const [isValidating, setIsValidating] = useState(false);
   const [validationStatus, setValidationStatus] = useState<"idle" | "valid" | "invalid">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isTesting, setIsTesting] = useState(false);
+  const [testStatus, setTestStatus] = useState<"idle" | "success" | "error">("idle");
+  const [testMessage, setTestMessage] = useState("");
 
   const connectionTypeOptions = [
     { value: "ssh", label: "SSH" },
@@ -120,6 +124,8 @@ const ConnectionDialog = ({
     setFormData((prev) => ({ ...prev, ...updates }));
     setValidationStatus("idle");
     setErrorMessage("");
+    setTestStatus("idle");
+    setTestMessage("");
   };
 
   const isFormValid = formData.name.trim() && formData.host.trim() && formData.username.trim();
@@ -142,6 +148,50 @@ const ConnectionDialog = ({
         <>
           <Button onClick={onClose} variant="ghost" size="sm">
             Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!formData.host.trim() || !formData.username.trim()) {
+                setTestStatus("error");
+                setTestMessage("Host and username are required to test.");
+                return;
+              }
+              setIsTesting(true);
+              setTestStatus("idle");
+              setTestMessage("");
+              const tempId = `test-${Date.now()}`;
+              try {
+                await invoke("ssh_connect", {
+                  connectionId: tempId,
+                  host: formData.host,
+                  port: formData.port,
+                  username: formData.username,
+                  password: formData.password || null,
+                  keyPath: formData.keyPath || null,
+                  useSftp: formData.type === "sftp",
+                });
+                await invoke("ssh_disconnect_only", { connectionId: tempId });
+                setTestStatus("success");
+                setTestMessage("Connection successful.");
+              } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                setTestStatus("error");
+                setTestMessage(msg || "Connection failed.");
+              } finally {
+                setIsTesting(false);
+              }
+            }}
+            variant="ghost"
+            size="sm"
+            disabled={isTesting}
+          >
+            {isTesting ? (
+              <span className="inline-flex items-center gap-1">
+                <Loader2 size={12} className="animate-spin" /> Testing
+              </span>
+            ) : (
+              "Test Connection"
+            )}
           </Button>
           <Button onClick={handleSave} disabled={!isFormValid || isValidating} size="sm">
             {isValidating
@@ -251,16 +301,13 @@ const ConnectionDialog = ({
               value={formData.password}
               onChange={(e) => updateFormData({ password: e.target.value })}
               placeholder="Leave empty to use key authentication"
-              className={cn(inputClassName, "pr-10")}
+              className={`${inputClassName} pr-10`}
               disabled={isValidating}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className={cn(
-                "-translate-y-1/2 absolute top-1/2 right-3 transform",
-                "text-text-lighter transition-colors hover:text-text",
-              )}
+              className="-translate-y-1/2 absolute top-1/2 right-3 transform text-text-lighter transition-colors hover:text-text"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -298,7 +345,15 @@ const ConnectionDialog = ({
           />
         </div>
 
-        {/* Validation Status */}
+        {/* Validation/Test Status */}
+        {testStatus !== "idle" && (
+          <div
+            className={`flex items-center gap-2 text-xs ${testStatus === "success" ? "text-green-500" : "text-red-500"}`}
+          >
+            {testStatus === "success" ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+            {testMessage}
+          </div>
+        )}
         {validationStatus === "valid" && (
           <div className="flex items-center gap-2 text-green-500 text-xs">
             <CheckCircle size={12} />

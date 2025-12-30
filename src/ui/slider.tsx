@@ -58,7 +58,7 @@ const Slider = ({
         />
       </div>
       {showValue && (
-        <span className="min-w-[3rem] text-right text-text-light text-xs tabular-nums">
+        <span className="min-w-12 text-right text-text-light text-xs tabular-nums">
           {valueFormatter(value)}
         </span>
       )}

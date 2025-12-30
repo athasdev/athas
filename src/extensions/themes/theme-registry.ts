@@ -43,8 +43,6 @@ class ThemeRegistry implements ThemeRegistryAPI {
       return;
     }
 
-    console.log(`Theme registry: Applying theme ${id}`);
-
     // Apply CSS variables to document root
     const root = document.documentElement;
 

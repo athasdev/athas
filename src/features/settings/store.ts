@@ -210,9 +210,7 @@ const applyTheme = async (theme: Theme) => {
 
     // Check if theme registry is ready
     if (!themeRegistry.isRegistryReady()) {
-      console.log("Settings store: Theme registry not ready, waiting...");
       themeRegistry.onReady(() => {
-        console.log("Settings store: Theme registry ready, applying theme");
         themeRegistry.applyTheme(theme);
       });
       return;

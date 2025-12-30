@@ -239,8 +239,6 @@ pub fn uninstall_extension_new(app_handle: AppHandle, extension_id: String) -> R
 pub fn list_installed_extensions_new(
    app_handle: AppHandle,
 ) -> Result<Vec<ExtensionMetadata>, String> {
-   log::info!("Listing installed extensions");
-
    let installer = ExtensionInstaller::new(app_handle)
       .map_err(|e| format!("Failed to create installer: {}", e))?;
 
