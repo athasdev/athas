@@ -1,5 +1,5 @@
 import "../styles/overlay-editor.css";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useGitGutter } from "@/features/version-control/git/controllers/use-gutter";
 import { useZoomStore } from "@/stores/zoom-store";
@@ -542,6 +542,9 @@ export function Editor({
       lastScrollRef.current = { top: scrollTop, left: scrollLeft };
       isScrollingRef.current = true;
 
+      // Capture buffer ID NOW, before RAF executes (buffer might change by then)
+      const currentBufferId = bufferId;
+
       // Clear existing scroll timeout
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
@@ -565,8 +568,8 @@ export function Editor({
             multiCursorRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
-          // Update state store for Vim motions and cursor visibility
-          useEditorStateStore.getState().actions.setScroll(top, left);
+          // Update state store with captured buffer ID to avoid race condition
+          useEditorStateStore.getState().actions.setScrollForBuffer(currentBufferId, top, left);
 
           // Update viewport tracking in the same RAF
           handleViewportScroll(top, lines.length);
@@ -580,7 +583,7 @@ export function Editor({
         isScrollingRef.current = false;
       }, 150);
     },
-    [handleViewportScroll, lines.length],
+    [bufferId, handleViewportScroll, lines.length],
   );
 
   useEffect(() => {
@@ -687,21 +690,15 @@ export function Editor({
     viewportRange,
   ]);
 
-  // Restore cursor position when switching buffers (deferred to ensure content sync)
-  useEffect(() => {
+  // Restore cursor and scroll position when switching buffers
+  // Using useLayoutEffect to apply scroll before paint, avoiding visual flash
+  useLayoutEffect(() => {
     if (!bufferId) return;
 
     // Only restore when bufferId changes (not on initial mount)
     if (prevBufferIdRef.current !== null && prevBufferIdRef.current !== bufferId) {
       isBufferSwitchRef.current = true;
-      requestAnimationFrame(() => {
-        // Only restore if we're still on the same buffer (user might have switched again)
-        const currentBufferId = useBufferStore.getState().activeBufferId;
-        if (currentBufferId === bufferId) {
-          useEditorStateStore.getState().actions.restorePositionForFile(bufferId);
-        }
-        // Flag will be cleared by the cursor positioning effect after applying position
-      });
+      useEditorStateStore.getState().actions.restorePositionForFile(bufferId);
     }
     prevBufferIdRef.current = bufferId;
   }, [bufferId]);

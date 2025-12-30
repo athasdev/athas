@@ -22,7 +22,6 @@ import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/layout/components/zoom-indicator";
 import { useZoomStore } from "./stores/zoom-store";
 import { ToastContainer } from "./ui/toast";
-import { cn } from "./utils/cn";
 
 // Initialize theme system immediately when the module loads
 // This ensures themes are loaded before the settings store tries to apply them
@@ -37,6 +36,7 @@ import { extensionLoader } from "./extensions/loader/extension-loader";
 import { initializeExtensionStore } from "./extensions/registry/extension-store";
 import { initializeWasmTokenizer } from "./features/editor/lib/wasm-parser";
 import { initializeKeymaps } from "./features/keymaps/init";
+import { WindowResizeBorder } from "./features/window/window-resize-border";
 import { useDeepLink } from "./hooks/use-deep-link";
 
 initializeWasmTokenizer().catch(console.error);
@@ -83,32 +83,32 @@ function App() {
   }, []);
 
   return (
-    <div
-      className={cn("h-screen w-screen overflow-hidden bg-transparent")}
-      style={{ zoom: zoomLevel }}
-    >
-      <FontStyleInjector />
-      <div
-        className={cn("window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg")}
-      >
-        <MainLayout />
-      </div>
-      <ZoomIndicator />
-      <ToastContainer />
+    <>
+      {/* Linux window resize handles (must be outside zoom container) */}
+      <WindowResizeBorder />
 
-      {/* Update Dialog */}
-      {showUpdateDialog && updateInfo && (
-        <UpdateDialog
-          updateInfo={updateInfo}
-          downloadProgress={downloadProgress}
-          downloading={downloading}
-          installing={installing}
-          error={updateError}
-          onDownload={downloadUpdate}
-          onDismiss={dismissUpdate}
-        />
-      )}
-    </div>
+      <div className="h-screen w-screen overflow-hidden bg-transparent" style={{ zoom: zoomLevel }}>
+        <FontStyleInjector />
+        <div className="window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg">
+          <MainLayout />
+        </div>
+        <ZoomIndicator />
+        <ToastContainer />
+
+        {/* Update Dialog */}
+        {showUpdateDialog && updateInfo && (
+          <UpdateDialog
+            updateInfo={updateInfo}
+            downloadProgress={downloadProgress}
+            downloading={downloading}
+            installing={installing}
+            error={updateError}
+            onDownload={downloadUpdate}
+            onDismiss={dismissUpdate}
+          />
+        )}
+      </div>
+    </>
   );
 }
 

@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import { shouldIgnore } from "@/features/file-system/controllers/utils";
 import type { SearchResult, SearchViewProps } from "@/features/layout/types/search";
 import { useSearchResultsStore } from "@/stores/search-results-store";
@@ -16,7 +17,6 @@ import { useSidebarStore } from "@/stores/sidebar-store";
 import { cn } from "@/utils/cn";
 import Toggle from "../../../../ui/toggle";
 import Tooltip from "../../../../ui/tooltip";
-import FileIcon from "../../../file-explorer/views/file.icon";
 import { readFile } from "../../../file-system/controllers/platform";
 
 export interface SearchViewRef {

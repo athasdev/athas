@@ -7,7 +7,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileTreeStore } from "@/features/file-explorer/controllers/file-tree-store";
+import { useFileTreeStore } from "@/features/file-explorer/stores/file-tree-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { gitDiffCache } from "@/features/version-control/git/controllers/diff-cache";
 import {

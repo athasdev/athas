@@ -28,6 +28,14 @@ mod ssh;
 mod terminal;
 
 fn main() {
+   #[cfg(target_os = "linux")]
+   if std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
+      // SAFETY: Called at program start before any threads are spawned
+      unsafe {
+         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+      }
+   }
+
    tauri::Builder::default()
       .plugin(tauri_plugin_store::Builder::default().build())
       .plugin(tauri_plugin_clipboard_manager::init())

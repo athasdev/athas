@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef } from "react";
-import FileTree from "@/features/file-explorer/views/file-tree";
+import { FileTree } from "@/features/file-explorer/components/file-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import GitHubPRsView from "@/features/github/components/github-prs-view";

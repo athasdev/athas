@@ -1,6 +1,6 @@
 import { Database, FileText, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import FileIcon from "@/features/file-explorer/views/file.icon";
+import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
 import type { FileEntry } from "@/features/file-system/types/app";
