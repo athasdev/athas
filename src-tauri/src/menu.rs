@@ -305,6 +305,7 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    // Help menu
    let help_menu = SubmenuBuilder::new(app, "Help")
       .text("help", "Help")
+      .text("report_bug", "Report a Bug")
       .separator()
       .text("about_athas", "About Athas")
       .build()?;

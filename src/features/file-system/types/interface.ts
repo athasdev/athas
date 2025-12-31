@@ -62,6 +62,9 @@ export interface FsActions {
   // Search operations
   getAllProjectFiles: () => Promise<FileEntry[]>;
 
+  // Background preload
+  preloadSubtree: (rootPath: string, maxDepth?: number, maxDirs?: number) => Promise<void>;
+
   // CRUD operations
   createFile: (directoryPath: string, fileName: string) => Promise<string>;
   createDirectory: (parentPath: string, folderName: string) => Promise<string>;

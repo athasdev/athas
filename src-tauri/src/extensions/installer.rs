@@ -214,8 +214,6 @@ impl ExtensionInstaller {
 
    /// List installed extensions
    pub fn list_installed_extensions(&self) -> Result<Vec<ExtensionMetadata>> {
-      log::info!("Listing installed extensions");
-
       let mut extensions = Vec::new();
 
       if !self.extensions_dir.exists() {

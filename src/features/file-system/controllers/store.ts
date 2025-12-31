@@ -34,7 +34,6 @@ import {
 } from "./file-operations";
 import {
   addFileToTree,
-  collapseAllFolders,
   findFileInTree,
   removeFileFromTree,
   sortFileEntries,
@@ -60,7 +59,6 @@ const wrapWithRootFolder = (
       path: rootPath,
       isDir: true,
       children: files,
-      expanded: true,
     },
   ];
 };
@@ -102,8 +100,8 @@ export const useFileSystemStore = createSelectors(
         const fileTree = sortFileEntries(entries);
         const wrappedFileTree = wrapWithRootFolder(fileTree, selected, projectName);
 
-        // Clear tree UI state
-        useFileTreeStore.getState().collapseAll();
+        // Initialize tree UI state: expand root
+        useFileTreeStore.getState().setExpandedPaths(new Set([selected]));
 
         // Update project store
         const { setRootFolderPath, setProjectName } = useProjectStore.getState();
@@ -316,13 +314,12 @@ export const useFileSystemStore = createSelectors(
               name: connectionName,
               path: remotePath,
               isDir: true,
-              expanded: true,
               children: fileTree,
             },
           ];
 
-          // Clear tree UI state
-          useFileTreeStore.getState().collapseAll();
+          // Initialize tree UI state: expand remote root
+          useFileTreeStore.getState().setExpandedPaths(new Set([remotePath]));
 
           // Update project store
           const { setRootFolderPath, setProjectName } = useProjectStore.getState();
@@ -481,6 +478,7 @@ export const useFileSystemStore = createSelectors(
               undefined,
               undefined,
               false,
+              false,
               undefined,
               isPreview,
             );
@@ -543,70 +541,167 @@ export const useFileSystemStore = createSelectors(
 
       toggleFolder: async (path: string) => {
         const folder = findFileInTree(get().files, path);
-
         if (!folder || !folder.isDir) return;
 
-        // Check if this is a remote path
-        const isRemotePath = path.startsWith("remote://");
+        const uiStore = useFileTreeStore.getState();
+        const isCurrentlyExpanded = uiStore.isExpanded(path);
 
-        if (!folder.expanded) {
-          let childEntries: FileEntry[];
+        if (!isCurrentlyExpanded) {
+          // Expand: load children if not present
+          if (!folder.children || folder.children.length === 0) {
+            let childEntries: FileEntry[];
+            const isRemotePath = path.startsWith("remote://");
+            if (isRemotePath) {
+              const match = path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
+              if (!match) return;
+              const connectionId = match[1];
+              const remotePath = match[2] || "/";
+              const entries = await invoke<
+                Array<{ name: string; path: string; is_dir: boolean; size: number }>
+              >("ssh_read_directory", {
+                connectionId,
+                path: remotePath,
+              });
+              childEntries = entries.map((entry) => ({
+                name: entry.name,
+                path: `remote://${connectionId}${entry.path}`,
+                isDir: entry.is_dir,
+                children: entry.is_dir ? [] : undefined,
+              }));
+            } else {
+              const entries = await readDirectoryContents(folder.path);
+              childEntries = sortFileEntries(entries);
+            }
 
-          if (isRemotePath) {
-            // Extract connection ID and remote path from the full path
-            // Format: remote://{connectionId}{remotePath}
-            const match = path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
-            if (!match) return;
-
-            const connectionId = match[1];
-            const remotePath = match[2] || "/";
-
-            // Fetch remote directory contents
-            const entries = await invoke<
-              Array<{ name: string; path: string; is_dir: boolean; size: number }>
-            >("ssh_read_directory", {
-              connectionId,
-              path: remotePath,
-            });
-
-            // Convert to FileEntry format with remote:// prefix
-            childEntries = entries.map((entry) => ({
-              name: entry.name,
-              path: `remote://${connectionId}${entry.path}`,
-              isDir: entry.is_dir,
-              children: entry.is_dir ? [] : undefined,
+            const updatedFiles = updateFileInTree(get().files, path, (item) => ({
+              ...item,
+              children: childEntries,
             }));
-          } else {
-            // Local folder - load children
-            const entries = await readDirectoryContents(folder.path);
-            childEntries = sortFileEntries(entries);
+
+            set((state) => {
+              state.files = updatedFiles;
+              state.filesVersion++;
+            });
           }
-
-          const updatedFiles = updateFileInTree(get().files, path, (item) => ({
-            ...item,
-            expanded: true,
-            children: childEntries,
-          }));
-
-          useFileTreeStore.getState().toggleFolder(path);
-
-          set((state) => {
-            state.files = updatedFiles;
-            state.filesVersion++;
-          });
+          uiStore.toggleFolder(path);
+          // Preload deeper children in background for snappier navigation
+          get()
+            .preloadSubtree(path, 2, 80)
+            .catch(() => {});
         } else {
-          // Collapse folder
-          const updatedFiles = updateFileInTree(get().files, path, (item) => ({
-            ...item,
-            expanded: false,
-          }));
+          // Collapse: only toggle UI state; keep children cached
+          uiStore.toggleFolder(path);
+        }
+      },
 
-          useFileTreeStore.getState().toggleFolder(path);
+      // Preload subtree children up to a depth and directory budget
+      preloadSubtree: async (rootPath: string, maxDepth = 2, maxDirs = 80) => {
+        const visited = new Set<string>();
+        type QueueItem = {
+          path: string;
+          depth: number;
+          isRemote: boolean;
+          connectionId?: string;
+          remotePath?: string;
+        };
+        const q: QueueItem[] = [];
 
-          set((state) => {
-            state.files = updatedFiles;
-            state.filesVersion++;
-          });
+        const isRemote = rootPath.startsWith("remote://");
+        let connectionId: string | undefined;
+        let remoteRoot: string | undefined;
+        if (isRemote) {
+          const match = rootPath.match(/^remote:\/\/([^/]+)(\/.*)?$/);
+          if (match) {
+            connectionId = match[1];
+            remoteRoot = match[2] || "/";
+          }
+        }
+
+        q.push({ path: rootPath, depth: 0, isRemote, connectionId, remotePath: remoteRoot });
+        let processed = 0;
+
+        while (q.length && processed < maxDirs) {
+          const batch = q.splice(0, 8);
+          await Promise.all(
+            batch.map(async (item) => {
+              if (visited.has(item.path) || item.depth >= maxDepth) return;
+              visited.add(item.path);
+              processed++;
+
+              try {
+                // Skip if children already present
+                const node = findFileInTree(get().files, item.path);
+                if (!node || !node.isDir) return;
+                if (node.children && node.children.length > 0) {
+                  // Still enqueue subdirs to continue traversal
+                  node.children
+                    ?.filter((c) => c.isDir)
+                    .forEach((c) =>
+                      q.push({
+                        path: c.path,
+                        depth: item.depth + 1,
+                        isRemote: c.path.startsWith("remote://"),
+                        connectionId: item.connectionId,
+                        remotePath: c.path.replace(/^remote:\/\/[^/]+/, ""),
+                      }),
+                    );
+                  return;
+                }
+
+                let entries: Array<{ name: string; path: string; is_dir: boolean }>;
+                if (item.isRemote && item.connectionId) {
+                  const rp = item.remotePath || "/";
+                  const res = await invoke<
+                    Array<{ name: string; path: string; is_dir: boolean; size: number }>
+                  >("ssh_read_directory", {
+                    connectionId: item.connectionId,
+                    path: rp,
+                  });
+                  entries = res.map((e) => ({
+                    name: e.name,
+                    path: `remote://${item.connectionId}${e.path}`,
+                    is_dir: e.is_dir,
+                  }));
+                } else {
+                  const res = await readDirectoryContents(item.path);
+                  entries = res.map((e) => ({ name: e.name, path: e.path, is_dir: e.isDir }));
+                }
+
+                const children: FileEntry[] = sortFileEntries(
+                  entries.map((e) => ({
+                    name: e.name,
+                    path: e.path,
+                    isDir: e.is_dir,
+                    children: e.is_dir ? [] : undefined,
+                  })) as any,
+                );
+
+                set((state) => {
+                  state.files = updateFileInTree(state.files, item.path, (it) => ({
+                    ...it,
+                    children,
+                  }));
+                  state.filesVersion++;
+                });
+
+                // Enqueue subdirs
+                children
+                  .filter((c) => c.isDir)
+                  .forEach((c) =>
+                    q.push({
+                      path: c.path,
+                      depth: item.depth + 1,
+                      isRemote: c.path.startsWith("remote://"),
+                      connectionId: item.connectionId,
+                      remotePath: c.path.replace(/^remote:\/\/[^/]+/, ""),
+                    }),
+                  );
+              } catch {}
+            }),
+          );
+
+          // Yield to UI
+          await new Promise((r) => setTimeout(r, 0));
         }
       },
 
@@ -799,13 +894,7 @@ export const useFileSystemStore = createSelectors(
       },
 
       handleCollapseAllFolders: async () => {
-        const updatedFiles = collapseAllFolders(get().files);
-
-        set((state) => {
-          state.files = updatedFiles;
-          state.filesVersion++;
-        });
-
+        // Only collapse UI, do not mutate file data
         useFileTreeStore.getState().collapseAll();
       },
 
@@ -911,7 +1000,6 @@ export const useFileSystemStore = createSelectors(
                     name,
                     path: entry.path,
                     isDir,
-                    expanded: false,
                     children: undefined,
                   };
 
@@ -978,7 +1066,6 @@ export const useFileSystemStore = createSelectors(
           name: fileName,
           path: filePath,
           isDir: false,
-          expanded: false,
         };
 
         set((state) => {
@@ -996,7 +1083,6 @@ export const useFileSystemStore = createSelectors(
           name: folderName,
           path: folderPath,
           isDir: true,
-          expanded: false,
           children: [],
         };
 
@@ -1064,7 +1150,6 @@ export const useFileSystemStore = createSelectors(
           name: finalName,
           path: finalPath,
           isDir: false,
-          expanded: false,
         };
 
         set((state) => {
@@ -1179,8 +1264,8 @@ export const useFileSystemStore = createSelectors(
         const fileTree = sortFileEntries(entries);
         const wrappedFileTree = wrapWithRootFolder(fileTree, tab.path, tab.name);
 
-        // Clear tree UI state
-        useFileTreeStore.getState().collapseAll();
+        // Initialize tree UI state: expand root
+        useFileTreeStore.getState().setExpandedPaths(new Set([tab.path]));
 
         // Update project store
         const { setRootFolderPath, setProjectName, setActiveProjectId } =

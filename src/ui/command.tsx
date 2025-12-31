@@ -25,7 +25,7 @@ const Command = ({ isVisible, children, className, onClose }: CommandProps) => {
       />
       <div
         className={cn(
-          "relative flex max-h-[320px] w-[520px] flex-col overflow-hidden",
+          "relative flex max-h-80 w-[520px] flex-col overflow-hidden",
           "rounded-md border border-border bg-primary-bg shadow-2xl",
           className,
         )}

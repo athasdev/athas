@@ -13,6 +13,7 @@ import CodeEditor from "@/features/editor/components/code-editor";
 import { ExternalEditorTerminal } from "@/features/editor/components/external-editor-terminal";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
+import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import PRViewer from "@/features/github/components/pr-viewer";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
@@ -57,15 +58,41 @@ export function MainLayout() {
   const { setRelativeLineNumbers } = useVimStore.use.actions();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
+  const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const switchToProject = useFileSystemStore.use.switchToProject?.();
   const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
 
   const hasRestoredWorkspace = useRef(false);
 
-  // Handle folder drag-and-drop
-  const { isDraggingOver } = useFolderDrop(async (path) => {
-    if (handleOpenFolderByPath) {
-      await handleOpenFolderByPath(path);
+  // Handle OS drag-and-drop (folders -> open project, files -> open buffer)
+  const { isDraggingOver } = useFolderDrop(async (paths) => {
+    if (!paths || paths.length === 0) return;
+
+    try {
+      // Determine if first item is a directory
+      const info = await getSymlinkInfo(paths[0]);
+      if (info?.is_dir) {
+        if (handleOpenFolderByPath) {
+          await handleOpenFolderByPath(paths[0]);
+        }
+        return;
+      }
+
+      // Otherwise, treat as files: open all files as non-preview buffers
+      if (handleFileOpen) {
+        for (const p of paths) {
+          try {
+            const pInfo = await getSymlinkInfo(p);
+            if (!pInfo?.is_dir) {
+              await handleFileOpen(p, false);
+            }
+          } catch (e) {
+            console.error("Failed to open dropped path:", p, e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error handling drag-and-drop:", error);
     }
   });
 
@@ -205,7 +232,9 @@ export function MainLayout() {
       {isDraggingOver && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-primary-bg/90 backdrop-blur-sm">
           <div className="rounded-lg border-2 border-accent border-dashed bg-secondary-bg px-8 py-6">
-            <p className="font-medium text-text text-xl">Drop folder to open as project</p>
+            <p className="font-medium text-text text-xl">
+              Drop folder to open project, or file to open buffer
+            </p>
           </div>
         </div>
       )}

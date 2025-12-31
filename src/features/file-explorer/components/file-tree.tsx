@@ -21,8 +21,9 @@ import type React from "react";
 import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
+import { useFileTreeStore } from "@/features/file-explorer/stores/file-tree-store";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
-import { moveFile, readDirectory, readFile } from "@/features/file-system/controllers/platform";
+import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { ContextMenuState, FileEntry } from "@/features/file-system/types/app";
 import { useSettingsStore } from "@/features/settings/store";
@@ -34,6 +35,7 @@ import { getRelativePath } from "@/utils/path-helpers";
 import { useDragDrop } from "../hooks/use-drag-drop";
 import { FileTreeItem } from "./file-tree-item";
 import "../styles/file-tree.css";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 const GIT_STATUS_DEBOUNCE_MS = 500;
 
@@ -87,7 +89,7 @@ function FileTreeComponent({
 
   const [gitIgnore, setGitIgnore] = useState<ReturnType<typeof ignore> | null>(null);
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
-  const [deepestStickyFolder, setDeepestStickyFolder] = useState<string | null>(null);
+  // sticky handled purely by CSS; no JS scanning
 
   const { settings } = useSettingsStore();
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
@@ -122,49 +124,7 @@ function FileTreeComponent({
     [userIgnore, rootFolderPath],
   );
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    let isThrottled = false;
-
-    const handleScroll = () => {
-      if (isThrottled) return;
-      isThrottled = true;
-
-      requestAnimationFrame(() => {
-        const stickyFolders = container.querySelectorAll(".file-tree-item-dir");
-        const containerRect = container.getBoundingClientRect();
-        let deepest: string | null = null;
-        let maxDepth = -1;
-
-        stickyFolders.forEach((folder) => {
-          const rect = folder.getBoundingClientRect();
-          const depth = parseInt(folder.getAttribute("data-depth") || "0");
-          const stickyTop = containerRect.top + depth * 22;
-          const isStuck = rect.top <= stickyTop + 2;
-
-          if (isStuck) {
-            folder.classList.add("is-stuck");
-            if (depth > maxDepth) {
-              maxDepth = depth;
-              deepest = folder.getAttribute("data-path");
-            }
-          } else {
-            folder.classList.remove("is-stuck");
-          }
-        });
-
-        setDeepestStickyFolder(deepest);
-        isThrottled = false;
-      });
-    };
-
-    container.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, [files]);
+  // removed scroll-time DOM scanning for sticky folders
 
   useEffect(() => {
     const loadGitignore = async () => {
@@ -226,35 +186,25 @@ function FileTreeComponent({
     [gitIgnore, rootFolderPath],
   );
 
-  const getGitFileStatus = useCallback(
-    (filePath: string): GitFile | null => {
-      if (!gitStatus || !rootFolderPath) return null;
-      const relativePath = getRelativePath(filePath, rootFolderPath);
-      return gitStatus.files.find((file) => file.path === relativePath) || null;
-    },
-    [gitStatus, rootFolderPath],
-  );
+  // Precompute git status map for O(1) lookups
+  const gitPathMap = useMemo(() => {
+    if (!gitStatus) return null as null | Map<string, GitFile>;
+    const m = new Map<string, GitFile>();
+    for (const f of gitStatus.files) m.set(f.path, f);
+    return m;
+  }, [gitStatus]);
 
-  const hasGitChangesInDirectory = useCallback(
-    (dirPath: string): GitFile | null => {
-      if (!gitStatus || !rootFolderPath) return null;
-      const relativeDirPath = getRelativePath(dirPath, rootFolderPath);
-      return (
-        gitStatus.files.find(
-          (file) => file.path.startsWith(`${relativeDirPath}/`) || file.path === relativeDirPath,
-        ) || null
-      );
-    },
-    [gitStatus, rootFolderPath],
-  );
-
-  const getGitStatusColor = useCallback(
+  const getGitStatusClass = useCallback(
     (file: FileEntry): string => {
-      const gitFile = getGitFileStatus(file.path);
-      if (gitFile) {
-        switch (gitFile.status) {
+      if (!rootFolderPath || !gitPathMap) return "";
+      const rel = getRelativePath(file.path, rootFolderPath);
+      if (!rel) return "";
+      const fileStatus = gitPathMap.get(rel);
+      const mapStatus = (s: GitFile | null | undefined) => {
+        if (!s) return "";
+        switch (s.status) {
           case "modified":
-            return gitFile.staged ? "text-git-modified-staged" : "text-git-modified";
+            return s.staged ? "text-git-modified-staged" : "text-git-modified";
           case "added":
             return "text-git-added";
           case "deleted":
@@ -266,31 +216,17 @@ function FileTreeComponent({
           default:
             return "";
         }
-      }
-
+      };
+      if (fileStatus) return mapStatus(fileStatus);
       if (file.isDir) {
-        const dirChange = hasGitChangesInDirectory(file.path);
-        if (dirChange) {
-          switch (dirChange.status) {
-            case "modified":
-              return dirChange.staged ? "text-git-modified-staged" : "text-git-modified";
-            case "added":
-              return "text-git-added";
-            case "deleted":
-              return "text-git-deleted";
-            case "untracked":
-              return "text-git-untracked";
-            case "renamed":
-              return "text-git-renamed";
-            default:
-              return "";
-          }
+        // Any change under directory
+        for (const [p, s] of gitPathMap) {
+          if (p === rel || p.startsWith(`${rel}/`)) return mapStatus(s);
         }
       }
-
       return "";
     },
-    [getGitFileStatus, hasGitChangesInDirectory],
+    [gitPathMap, rootFolderPath],
   );
 
   const filteredFiles = useMemo(() => {
@@ -306,6 +242,31 @@ function FileTreeComponent({
     return process(files);
   }, [files, isGitIgnored, isUserHidden]);
 
+  // Compute visible rows based on expansion state in the UI store
+  const expandedPaths = useFileTreeStore((s) => s.expandedPaths);
+  const visibleRows = useMemo(() => {
+    const rows: Array<{ file: FileEntry; depth: number; isExpanded: boolean }> = [];
+    const walk = (items: FileEntry[], depth: number) => {
+      for (const item of items) {
+        const isExpanded = item.isDir && expandedPaths.has(item.path);
+        rows.push({ file: item, depth, isExpanded });
+        if (item.isDir && isExpanded && item.children) walk(item.children, depth + 1);
+      }
+    };
+    walk(filteredFiles, 0);
+    return rows;
+  }, [filteredFiles, expandedPaths]);
+
+  // Virtualizer setup
+  const rowVirtualizer = useVirtualizer({
+    count: visibleRows.length,
+    estimateSize: () => 22,
+    getScrollElement: () => containerRef.current,
+    overscan: 8,
+  });
+
+  // No sticky overlays or global guides
+
   const startInlineEditing = (parentPath: string, isFolder: boolean) => {
     if (!onUpdateFiles) return;
 
@@ -320,7 +281,7 @@ function FileTreeComponent({
     const addNewItemToTree = (items: FileEntry[], targetPath: string): FileEntry[] => {
       return items.map((item) => {
         if (item.path === targetPath && item.isDir) {
-          return { ...item, children: [...(item.children || []), newItem], expanded: true };
+          return { ...item, children: [...(item.children || []), newItem] };
         }
         if (item.children) {
           return { ...item, children: addNewItemToTree(item.children, targetPath) };
@@ -334,6 +295,14 @@ function FileTreeComponent({
     } else {
       onUpdateFiles(addNewItemToTree(files, parentPath));
     }
+
+    // Ensure the target folder is expanded in UI
+    try {
+      const current = useFileTreeStore.getState().getExpandedPaths();
+      const next = new Set(current);
+      next.add(parentPath);
+      useFileTreeStore.getState().setExpandedPaths(next);
+    } catch {}
 
     setEditingValue("");
   };
@@ -433,24 +402,62 @@ function FileTreeComponent({
 
   useEventListener("dragover", (e: DragEvent) => e.preventDefault(), documentRef);
 
-  const handleFileClick = useCallback(
-    (e: React.MouseEvent, path: string, isDir: boolean) => {
+  // Fast path->file lookup for delegation
+  const pathToFile = useMemo(() => {
+    const m = new Map<string, FileEntry>();
+    for (const r of visibleRows) m.set(r.file.path, r.file);
+    return m;
+  }, [visibleRows]);
+
+  const getTargetItem = (target: EventTarget | null) => {
+    const el = (target as HTMLElement | null)?.closest("[data-file-path]") as
+      | (HTMLElement & { dataset: { filePath?: string; isDir?: string } })
+      | null;
+    if (!el) return null;
+    const path = el.dataset.filePath || el.getAttribute("data-file-path") || "";
+    const isDir = (el.dataset.isDir || el.getAttribute("data-is-dir")) === "true";
+    const file = pathToFile.get(path);
+    if (!file) return null;
+    return { path, isDir, file };
+  };
+
+  const handleContainerClick = useCallback(
+    (e: React.MouseEvent) => {
+      const t = getTargetItem(e.target);
+      if (!t) {
+        // clicked on empty space clears selection
+        e.preventDefault();
+        e.stopPropagation();
+        updateActivePath?.("");
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
-      onFileSelect(path, isDir);
-      updateActivePath?.(path);
+      onFileSelect(t.path, t.isDir);
+      updateActivePath?.(t.path);
     },
-    [onFileSelect, updateActivePath],
+    [onFileSelect, updateActivePath, pathToFile],
   );
 
-  const handleFileDoubleClick = useCallback(
-    (e: React.MouseEvent, path: string, isDir: boolean) => {
+  const handleContainerDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      const t = getTargetItem(e.target);
+      if (!t) return;
       e.preventDefault();
       e.stopPropagation();
-      onFileOpen?.(path, isDir);
-      updateActivePath?.(path);
+      onFileOpen?.(t.path, t.isDir);
+      updateActivePath?.(t.path);
     },
-    [onFileOpen, updateActivePath],
+    [onFileOpen, updateActivePath, pathToFile],
+  );
+
+  const handleContainerContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      const t = getTargetItem(e.target);
+      if (!t) return;
+      handleContextMenu(e, t.path, t.isDir);
+    },
+    [handleContextMenu, pathToFile],
   );
 
   const handleKeyDown = useCallback(
@@ -469,20 +476,22 @@ function FileTreeComponent({
     [editingValue],
   );
 
-  const handleMouseDown = useCallback((e: React.MouseEvent, file: FileEntry) => {
-    if (e.button === 0) {
-      setMouseDownInfo({ x: e.clientX, y: e.clientY, file });
-    }
-  }, []);
+  const handleContainerMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      const t = getTargetItem(e.target);
+      if (!t) return;
+      setMouseDownInfo({ x: e.clientX, y: e.clientY, file: t.file });
+    },
+    [pathToFile],
+  );
 
-  const handleMouseMove = useCallback(
+  const handleContainerMouseMove = useCallback(
     (e: React.MouseEvent) => {
       if (mouseDownInfo && !dragState.isDragging) {
-        const deltaX = e.clientX - mouseDownInfo.x;
-        const deltaY = e.clientY - mouseDownInfo.y;
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-        if (distance > 5) {
+        const dx = e.clientX - mouseDownInfo.x;
+        const dy = e.clientY - mouseDownInfo.y;
+        if (Math.hypot(dx, dy) > 5) {
           startDrag(e, mouseDownInfo.file);
           setMouseDownInfo(null);
         }
@@ -491,53 +500,10 @@ function FileTreeComponent({
     [mouseDownInfo, dragState.isDragging, startDrag],
   );
 
-  const handleMouseUp = useCallback(() => setMouseDownInfo(null), []);
-  const handleMouseLeave = useCallback(() => setMouseDownInfo(null), []);
+  const handleContainerMouseUp = useCallback(() => setMouseDownInfo(null), []);
+  const handleContainerMouseLeave = useCallback(() => setMouseDownInfo(null), []);
 
-  const renderFileTree = useCallback(
-    (items: FileEntry[], depth = 0) => {
-      return items.map((file) => (
-        <FileTreeItem
-          key={file.path}
-          file={file}
-          depth={depth}
-          activePath={activePath}
-          dragOverPath={dragState.dragOverPath}
-          isDragging={dragState.isDragging}
-          deepestStickyFolder={deepestStickyFolder}
-          editingValue={editingValue}
-          onEditingValueChange={setEditingValue}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          onClick={handleFileClick}
-          onDoubleClick={handleFileDoubleClick}
-          onContextMenu={handleContextMenu}
-          onKeyDown={handleKeyDown}
-          onBlur={handleBlur}
-          getGitStatusColor={getGitStatusColor}
-          renderChildren={renderFileTree}
-        />
-      ));
-    },
-    [
-      activePath,
-      dragState.dragOverPath,
-      dragState.isDragging,
-      deepestStickyFolder,
-      editingValue,
-      handleMouseDown,
-      handleMouseMove,
-      handleMouseUp,
-      handleMouseLeave,
-      handleFileClick,
-      handleFileDoubleClick,
-      handleKeyDown,
-      handleBlur,
-      getGitStatusColor,
-    ],
-  );
+  // No recursive render; rows are virtualized
 
   const handleRootDrop = async (e: React.DragEvent) => {
     e.preventDefault();
@@ -559,22 +525,128 @@ function FileTreeComponent({
       )}
       ref={containerRef}
       style={{ scrollBehavior: "auto", overscrollBehavior: "contain" }}
+      role="tree"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        // Let inputs handle their own keys
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable) {
+          return;
+        }
+        const index = visibleRows.findIndex((r) => r.file.path === activePath);
+        const curIndex = index === -1 ? 0 : index;
+        const current = visibleRows[curIndex]?.file;
+        const isDir = visibleRows[curIndex]?.file.isDir;
+
+        const toggle = (path: string) => useFileTreeStore.getState().toggleFolder(path);
+
+        switch (e.key) {
+          case "ArrowDown": {
+            e.preventDefault();
+            const next = Math.min(visibleRows.length - 1, curIndex + 1);
+            const p = visibleRows[next]?.file.path;
+            if (p) {
+              updateActivePath?.(p);
+              rowVirtualizer.scrollToIndex(next);
+            }
+            break;
+          }
+          case "ArrowUp": {
+            e.preventDefault();
+            const prev = Math.max(0, curIndex - 1);
+            const p = visibleRows[prev]?.file.path;
+            if (p) {
+              updateActivePath?.(p);
+              rowVirtualizer.scrollToIndex(prev);
+            }
+            break;
+          }
+          case "Home": {
+            e.preventDefault();
+            if (visibleRows[0]) {
+              updateActivePath?.(visibleRows[0].file.path);
+              rowVirtualizer.scrollToIndex(0);
+            }
+            break;
+          }
+          case "End": {
+            e.preventDefault();
+            if (visibleRows.length) {
+              const last = visibleRows.length - 1;
+              updateActivePath?.(visibleRows[last].file.path);
+              rowVirtualizer.scrollToIndex(last);
+            }
+            break;
+          }
+          case "ArrowRight": {
+            if (!current) break;
+            e.preventDefault();
+            if (isDir) {
+              const expanded = useFileTreeStore.getState().isExpanded(current.path);
+              if (!expanded) {
+                toggle(current.path);
+              } else {
+                const child = visibleRows[curIndex + 1];
+                if (child && child.depth === visibleRows[curIndex].depth + 1) {
+                  updateActivePath?.(child.file.path);
+                  rowVirtualizer.scrollToIndex(curIndex + 1);
+                }
+              }
+            }
+            break;
+          }
+          case "ArrowLeft": {
+            if (!current) break;
+            e.preventDefault();
+            if (isDir && useFileTreeStore.getState().isExpanded(current.path)) {
+              toggle(current.path);
+            } else {
+              const sep = current.path.includes("\\") ? "\\" : "/";
+              const parentPath = current.path.split(sep).slice(0, -1).join(sep);
+              const parentIdx = visibleRows.findIndex((r) => r.file.path === parentPath);
+              if (parentIdx >= 0) {
+                updateActivePath?.(parentPath);
+                rowVirtualizer.scrollToIndex(parentIdx);
+              }
+            }
+            break;
+          }
+          case "Enter": {
+            if (!current) break;
+            e.preventDefault();
+            if (isDir) {
+              toggle(current.path);
+            } else {
+              onFileOpen?.(current.path, false);
+            }
+            break;
+          }
+          case "F2": {
+            if (!current) break;
+            e.preventDefault();
+            onRenamePath?.(current.path);
+            break;
+          }
+        }
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = dragState.draggedItem ? "move" : "copy";
       }}
       onDrop={handleRootDrop}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        updateActivePath?.("");
-      }}
+      onClick={handleContainerClick}
+      onDoubleClick={handleContainerDoubleClick}
+      onContextMenu={handleContainerContextMenu}
+      onMouseDown={handleContainerMouseDown}
+      onMouseMove={handleContainerMouseMove}
+      onMouseUp={handleContainerMouseUp}
+      onMouseLeave={handleContainerMouseLeave}
     >
       {filteredFiles.length === 0 ? (
         <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
           <button
             onClick={handleOpenFolder}
-            className="ui-font flex w-fit min-w-fit items-center justify-center gap-2 rounded border border-border bg-hover px-3 py-1.5 text-xs text-text transition-colors hover:border-accent hover:text-accent"
+            className="ui-font flex w-fit min-w-fit items-center justify-center gap-2 rounded border border-border bg-hover px-3 py-1.5 text-text text-xs transition-colors hover:border-accent hover:text-accent"
           >
             <FolderOpen size={14} />
             <span>Open Folder</span>
@@ -584,7 +656,40 @@ function FileTreeComponent({
           </button>
         </div>
       ) : (
-        <div className="w-max min-w-full">{renderFileTree(filteredFiles)}</div>
+        <div className="w-max min-w-full" style={{}}>
+          {(() => {
+            const items = rowVirtualizer.getVirtualItems();
+            const paddingTop = items.length ? items[0].start : 0;
+            const paddingBottom = items.length
+              ? rowVirtualizer.getTotalSize() - items[items.length - 1].end
+              : 0;
+            return (
+              <>
+                <div style={{ height: paddingTop }} />
+                {items.map((vi) => {
+                  const row = visibleRows[vi.index];
+                  return (
+                    <FileTreeItem
+                      key={row.file.path}
+                      file={row.file}
+                      depth={row.depth}
+                      isExpanded={row.isExpanded}
+                      activePath={activePath}
+                      dragOverPath={dragState.dragOverPath}
+                      isDragging={dragState.isDragging}
+                      editingValue={editingValue}
+                      onEditingValueChange={setEditingValue}
+                      onKeyDown={handleKeyDown}
+                      onBlur={handleBlur}
+                      getGitStatusClass={getGitStatusClass}
+                    />
+                  );
+                })}
+                <div style={{ height: paddingBottom }} />
+              </>
+            );
+          })()}
+        </div>
       )}
 
       {contextMenu &&
@@ -651,7 +756,7 @@ function FileTreeComponent({
                     }}
                   />
                 )}
-                <div className="my-1 border-t border-border" />
+                <div className="my-1 border-border border-t" />
               </>
             )}
 
@@ -706,7 +811,7 @@ function FileTreeComponent({
                     setContextMenu(null);
                   }}
                 />
-                <div className="my-1 border-t border-border" />
+                <div className="my-1 border-border border-t" />
               </>
             )}
 
@@ -766,7 +871,7 @@ function FileTreeComponent({
                 setContextMenu(null);
               }}
             />
-            <div className="my-1 border-t border-border" />
+            <div className="my-1 border-border border-t" />
             <ContextMenuItem
               icon={Trash}
               label="Delete"
@@ -800,7 +905,7 @@ function ContextMenuItem({ icon: Icon, label, onClick, className }: ContextMenuI
         onClick(e);
       }}
       className={cn(
-        "ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-text hover:bg-hover",
+        "ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover",
         className,
       )}
     >

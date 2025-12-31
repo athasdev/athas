@@ -1,5 +1,6 @@
 import type React from "react";
 import { useEffect, useRef } from "react";
+import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -60,6 +61,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
 
   const showMarkdownPreview = activeBuffer?.isMarkdownPreview || false;
   const showHtmlPreview = activeBuffer?.isHtmlPreview || false;
+  const showCsvPreview = activeBuffer?.isCsvPreview || false;
 
   // Initialize refs in store
   useEffect(() => {
@@ -283,6 +285,8 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
               <MarkdownPreview />
             ) : showHtmlPreview ? (
               <HtmlPreview />
+            ) : showCsvPreview ? (
+              <CsvPreview />
             ) : (
               <Editor
                 onMouseMove={hoverHandlers.handleHover}

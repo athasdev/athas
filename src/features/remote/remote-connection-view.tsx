@@ -20,6 +20,7 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
   const [passwordPromptConnection, setPasswordPromptConnection] = useState<RemoteConnection | null>(
     null,
   );
+  const [connectingMap, setConnectingMap] = useState<Record<string, boolean>>({});
 
   // Load connections from Tauri Store
   useEffect(() => {
@@ -123,6 +124,8 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
         // Refresh local state
         await refreshConnections();
       } else {
+        if (connectingMap[connectionId]) return;
+        setConnectingMap((prev) => ({ ...prev, [connectionId]: true }));
         // Connect - the backend will try SSH config, SSH agent, and default keys first
         // Only if all automatic auth methods fail will we prompt for password
         await invoke("ssh_connect", {
@@ -146,6 +149,7 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
         if (handleOpenRemoteProject) {
           await handleOpenRemoteProject(connectionId, connection.name);
         }
+        setConnectingMap((prev) => ({ ...prev, [connectionId]: false }));
       }
     } catch (error) {
       console.error("Connection error:", error);
@@ -158,12 +162,14 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
 
       // If auth failed and no password was provided yet, prompt for password
       if (isAuthFailure && !providedPassword && !connection.password) {
+        setConnectingMap((prev) => ({ ...prev, [connectionId]: false }));
         setPasswordPromptConnection(connection);
         return;
       }
 
       // For password prompt attempts, re-throw so the dialog can handle it
       if (providedPassword) {
+        setConnectingMap((prev) => ({ ...prev, [connectionId]: false }));
         throw error;
       }
 
@@ -176,6 +182,7 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
       } catch {
         console.error("Connection failed:", error);
       }
+      setConnectingMap((prev) => ({ ...prev, [connectionId]: false }));
     }
   };
 
@@ -217,6 +224,7 @@ const RemoteConnectionView = ({ onFileSelect }: RemoteConnectionViewProps) => {
       <ConnectionList
         connections={connections}
         onConnect={handleConnect}
+        connectingMap={connectingMap}
         onEdit={handleEditConnection}
         onDelete={handleDeleteConnection}
         onFileSelect={onFileSelect}

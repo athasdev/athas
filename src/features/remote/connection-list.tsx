@@ -1,4 +1,4 @@
-import { Edit, FolderOpen, Plus, Server, Trash2, Wifi, WifiOff } from "lucide-react";
+import { Edit, FolderOpen, Loader2, Plus, Server, Trash2, Wifi, WifiOff } from "lucide-react";
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import Button from "@/ui/button";
@@ -12,6 +12,7 @@ interface ConnectionListProps {
   onDelete: (connectionId: string) => void;
   onFileSelect?: (path: string, isDir: boolean) => void;
   onAddNew: () => void;
+  connectingMap?: Record<string, boolean>;
 }
 
 const ConnectionList = ({
@@ -21,6 +22,7 @@ const ConnectionList = ({
   onDelete,
   onFileSelect,
   onAddNew,
+  connectingMap = {},
 }: ConnectionListProps) => {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -116,7 +118,11 @@ const ConnectionList = ({
               <button
                 key={connection.id}
                 type="button"
-                onClick={() => onConnect(connection.id)}
+                onClick={() => {
+                  if (!connectingMap[connection.id]) {
+                    onConnect(connection.id);
+                  }
+                }}
                 onContextMenu={(e) => handleContextMenu(e, connection.id)}
                 className={cn(
                   "flex w-full cursor-pointer items-center gap-2",
@@ -124,7 +130,10 @@ const ConnectionList = ({
                   "ui-font text-text text-xs transition-colors",
                   "hover:bg-hover focus:outline-none",
                   connection.isConnected && "bg-selected",
+                  connectingMap[connection.id] && "cursor-not-allowed opacity-70",
                 )}
+                disabled={!!connectingMap[connection.id]}
+                aria-busy={!!connectingMap[connection.id]}
               >
                 {/* Status Indicator */}
                 <span
@@ -143,13 +152,18 @@ const ConnectionList = ({
                 </div>
 
                 {/* Status Text */}
-                <span className="shrink-0 text-[10px] text-text-lighter">
-                  {connection.isConnected
-                    ? "Connected"
-                    : connection.lastConnected
-                      ? formatLastConnected(connection.lastConnected)
-                      : ""}
-                </span>
+                {(() => {
+                  const statusText = connectingMap[connection.id]
+                    ? "Connecting…"
+                    : connection.isConnected
+                      ? "Connected"
+                      : connection.lastConnected
+                        ? formatLastConnected(connection.lastConnected)
+                        : "";
+                  return (
+                    <span className="shrink-0 text-[10px] text-text-lighter">{statusText}</span>
+                  );
+                })()}
 
                 {/* Action Buttons */}
                 <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
@@ -183,12 +197,17 @@ const ConnectionList = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onConnect(connection.id);
+                        if (!connectingMap[connection.id]) onConnect(connection.id);
                       }}
-                      className="rounded p-0.5 text-text-lighter hover:bg-hover hover:text-text"
+                      className={`rounded p-0.5 text-text-lighter hover:bg-hover hover:text-text ${connectingMap[connection.id] ? "cursor-not-allowed opacity-70" : ""}`}
+                      disabled={!!connectingMap[connection.id]}
                       aria-label="Connect"
                     >
-                      <Wifi size={12} />
+                      {connectingMap[connection.id] ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Wifi size={12} />
+                      )}
                     </button>
                   )}
                 </div>

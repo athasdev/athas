@@ -97,7 +97,7 @@ export function SearchableModelDropdown({
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "ui-font flex items-center gap-1 rounded bg-transparent px-2 py-1 text-xs transition-colors hover:bg-hover",
-          compact ? "min-w-[120px]" : "min-w-[160px]",
+          compact ? "min-w-[120px]" : "min-w-40",
         )}
       >
         <div className="min-w-0 flex-1 truncate text-left text-text">
@@ -116,7 +116,7 @@ export function SearchableModelDropdown({
       {isOpen && (
         <>
           <div
-            className="absolute top-full left-0 z-[10000] mt-1 w-[320px] rounded border border-border bg-primary-bg shadow-xl"
+            className="absolute top-full left-0 z-10000 mt-1 w-[320px] rounded border border-border bg-primary-bg shadow-xl"
             onKeyDown={handleKeyDown}
           >
             {/* Search Input */}
@@ -179,7 +179,7 @@ export function SearchableModelDropdown({
           </div>
 
           {/* Click Outside to Close */}
-          <div className="fixed inset-0 z-[9999]" onClick={() => setIsOpen(false)} />
+          <div className="fixed inset-0 z-9999" onClick={() => setIsOpen(false)} />
         </>
       )}
     </div>

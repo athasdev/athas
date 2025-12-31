@@ -94,6 +94,23 @@ export const GeneralSettings = () => {
     }
   };
 
+  const handleReportBug = async () => {
+    try {
+      const version = await getVersion();
+      const os = await import("@tauri-apps/plugin-os");
+      const plat = os.platform();
+      const ver = os.version();
+      const report = `Environment\n\n- App: Athas ${version}\n- OS: ${plat} ${ver}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
+      await writeText(report);
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      await openUrl("https://github.com/athasdev/athas/issues/new?template=bug_report.md");
+      showToast({ message: "Report template copied", type: "success" });
+    } catch (err) {
+      console.error("Failed to prepare bug report:", err);
+      showToast({ message: "Failed to prepare bug report", type: "error" });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Section title="File Management">
@@ -212,6 +229,14 @@ export const GeneralSettings = () => {
       <Section title="About">
         <SettingRow label="Version" description="Current application version">
           <span className="text-text-lighter text-xs">{appVersion || "..."}</span>
+        </SettingRow>
+        <SettingRow
+          label="Report a Bug"
+          description="Copy environment details and open the bug report page"
+        >
+          <Button onClick={handleReportBug} variant="ghost" size="xs" className="px-2 py-1">
+            Open
+          </Button>
         </SettingRow>
       </Section>
     </div>

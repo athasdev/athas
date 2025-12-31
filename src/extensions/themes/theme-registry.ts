@@ -43,8 +43,6 @@ class ThemeRegistry implements ThemeRegistryAPI {
       return;
     }
 
-    console.log(`Theme registry: Applying theme ${id}`);
-
     // Apply CSS variables to document root
     const root = document.documentElement;
 
@@ -65,7 +63,6 @@ class ThemeRegistry implements ThemeRegistryAPI {
     root.setAttribute("data-theme-type", theme.isDark ? "dark" : "light");
 
     this.currentTheme = id;
-    console.log(`Theme registry: Successfully applied theme ${id}`);
     this.notifyThemeChange(id);
   }
 

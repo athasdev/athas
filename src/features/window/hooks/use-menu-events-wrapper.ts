@@ -190,6 +190,35 @@ For more help: https://github.com/athasdev/athas`;
 
       alert(helpText);
     },
+    onReportBug: async () => {
+      try {
+        const { getVersion } = await import("@tauri-apps/api/app");
+        const version = await getVersion();
+        let osSummary = "";
+        try {
+          const os = await import("@tauri-apps/plugin-os");
+          const plat = os.platform();
+          const ver = os.version();
+          osSummary = `${plat} ${ver}`;
+        } catch {
+          osSummary = navigator.userAgent;
+        }
+
+        const text = `Environment\n\n- App: Athas ${version}\n- OS: ${osSummary}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
+        try {
+          const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+          await writeText(text);
+        } catch {
+          // Fallback to browser clipboard
+          await navigator.clipboard.writeText(text);
+        }
+
+        const { openUrl } = await import("@tauri-apps/plugin-opener");
+        await openUrl("https://github.com/athasdev/athas/issues/new?template=bug_report.md");
+      } catch (e) {
+        console.error("Failed to prepare bug report:", e);
+      }
+    },
     onAboutAthas: async () => {
       const version = await fetchRawAppVersion();
       const aboutText = `Athas Code Editor

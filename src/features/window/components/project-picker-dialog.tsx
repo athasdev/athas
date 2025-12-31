@@ -23,6 +23,8 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
   const [passwordPromptConnection, setPasswordPromptConnection] = useState<RemoteConnection | null>(
     null,
   );
+  const [connectingMap, setConnectingMap] = useState<Record<string, boolean>>({});
+  const [statusMap, setStatusMap] = useState<Record<string, "idle" | "error">>({});
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
   const { openRecentFolder, removeFromRecents } = useRecentFoldersStore();
@@ -85,6 +87,9 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
     if (!connection) return;
 
     try {
+      if (connectingMap[connectionId]) return;
+      setConnectingMap((p) => ({ ...p, [connectionId]: true }));
+      setStatusMap((p) => ({ ...p, [connectionId]: "idle" }));
       await invoke("ssh_connect", {
         connectionId,
         host: connection.host,
@@ -113,13 +118,19 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
         errorStr.includes("Authentication failed");
 
       if (isAuthFailure && !providedPassword && !connection.password) {
+        setConnectingMap((p) => ({ ...p, [connectionId]: false }));
         setPasswordPromptConnection(connection);
         return;
       }
 
       if (providedPassword) {
+        setConnectingMap((p) => ({ ...p, [connectionId]: false }));
         throw error;
       }
+
+      setStatusMap((p) => ({ ...p, [connectionId]: "error" }));
+    } finally {
+      setConnectingMap((p) => ({ ...p, [connectionId]: false }));
     }
   };
 
@@ -236,7 +247,10 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                 <div key={connection.id} className="group flex items-center hover:bg-hover">
                   <button
                     onClick={() => handleConnect(connection.id)}
-                    className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left"
+                    className={`flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left ${
+                      connectingMap[connection.id] ? "cursor-not-allowed opacity-70" : ""
+                    }`}
+                    disabled={!!connectingMap[connection.id]}
                   >
                     <span
                       className={cn(
@@ -249,7 +263,11 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                       {connection.type.toUpperCase()}
                     </span>
                     <span className="ml-auto truncate text-[10px] text-text-lighter">
-                      {connection.username}@{connection.host}
+                      {connectingMap[connection.id]
+                        ? "Connecting…"
+                        : statusMap[connection.id] === "error"
+                          ? "Connection failed"
+                          : `${connection.username}@${connection.host}`}
                     </span>
                   </button>
                   <div className="mr-2 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
