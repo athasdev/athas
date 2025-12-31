@@ -84,6 +84,13 @@ export const isImageFile = (path: string): boolean => {
 };
 
 /**
+ * Check if a file is a PDF based on its extension
+ */
+export const isPdfFile = (path: string): boolean => {
+  return path.toLowerCase().endsWith(".pdf");
+};
+
+/**
  * Extract filename from a path
  */
 export const getFilenameFromPath = (path: string): string => {

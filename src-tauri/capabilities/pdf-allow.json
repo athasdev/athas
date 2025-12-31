@@ -1,0 +1,15 @@
+{
+  "identifier": "pdf-allow",
+  "windows": ["*"],
+  "permissions": [
+    {
+      "identifier": "shell:allow-open",
+      "allow": [
+        {
+          "validator": ".*"
+        }
+      ]
+    },
+    "shell:allow-open"
+  ]
+}
