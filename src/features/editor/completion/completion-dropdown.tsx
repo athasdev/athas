@@ -8,6 +8,7 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { getAccurateCursorX } from "@/features/editor/utils/position";
+import { useZoomStore } from "@/stores/zoom-store";
 import { cn } from "@/utils/cn";
 import { highlightMatches } from "@/utils/fuzzy-matcher";
 import { useOverlayManager } from "../hooks/use-overlay-manager";
@@ -25,44 +26,49 @@ export const CompletionDropdown = memo(
     const { setIsLspCompletionVisible } = useEditorUIStore.use.actions();
 
     const cursorPosition = useEditorStateStore.use.cursorPosition();
-    const { lineHeight, gutterWidth } = useEditorLayout();
-    const fontSize = useEditorSettingsStore.use.fontSize();
+    const { gutterWidth } = useEditorLayout();
+    const baseFontSize = useEditorSettingsStore.use.fontSize();
     const fontFamily = useEditorSettingsStore.use.fontFamily();
     const tabSize = useEditorSettingsStore.use.tabSize();
     const lines = useEditorViewStore.use.lines();
+    const zoomLevel = useZoomStore.use.editorZoomLevel();
+
+    // Apply zoom to match the editor's actual font size and line height
+    const fontSize = baseFontSize * zoomLevel;
+    const lineHeight = fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER;
 
     const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
 
     // Track viewport scroll position
     const [scrollOffset, setScrollOffset] = useState({ top: 0, left: 0 });
 
-    // Listen to viewport scroll events
+    // Listen to textarea scroll events
     useEffect(() => {
-      let viewport: HTMLElement | null = null;
+      let textarea: HTMLTextAreaElement | null = null;
       let rafId: number | null = null;
 
       const setupScrollListener = () => {
-        viewport = editorAPI.getViewportRef();
+        textarea = editorAPI.getTextareaRef();
 
-        if (!viewport) {
+        if (!textarea) {
           rafId = requestAnimationFrame(setupScrollListener);
           return;
         }
 
         const handleScroll = () => {
-          if (!viewport) return;
+          if (!textarea) return;
           setScrollOffset({
-            top: viewport.scrollTop,
-            left: viewport.scrollLeft,
+            top: textarea.scrollTop,
+            left: textarea.scrollLeft,
           });
         };
 
         handleScroll();
-        viewport.addEventListener("scroll", handleScroll);
+        textarea.addEventListener("scroll", handleScroll);
 
         return () => {
-          if (viewport) {
-            viewport.removeEventListener("scroll", handleScroll);
+          if (textarea) {
+            textarea.removeEventListener("scroll", handleScroll);
           }
         };
       };
@@ -129,25 +135,49 @@ export const CompletionDropdown = memo(
       setIsLspCompletionVisible(false);
     };
 
+    // Show all completions (container will be scrollable)
+    const visibleCompletions = filteredCompletions;
+
+    // Get selected item's documentation
+    const selectedItem = visibleCompletions[selectedLspIndex]?.item;
+    const selectedDocumentation = selectedItem?.documentation
+      ? typeof selectedItem.documentation === "string"
+        ? selectedItem.documentation
+        : selectedItem.documentation.value
+      : null;
+    const selectedDetail = selectedItem?.detail;
+    const hasDocPanel = selectedDocumentation || selectedDetail;
+
     return (
       <div
-        className="absolute border border-border bg-secondary-bg shadow-md"
+        className="absolute flex"
         style={{
           left: `${x}px`,
           top: `${y}px`,
           zIndex: EDITOR_CONSTANTS.Z_INDEX.COMPLETION,
-          minWidth: `${EDITOR_CONSTANTS.DROPDOWN_MIN_WIDTH}px`,
-          maxWidth: `${EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH}px`,
         }}
       >
-        <div className="custom-scrollbar-thin max-h-[200px] overflow-y-auto">
-          {filteredCompletions.map((filtered, index: number) => {
+        {/* Main completion list */}
+        <div
+          className="overflow-y-auto border border-border bg-secondary-bg shadow-md"
+          style={{
+            minWidth: `${EDITOR_CONSTANTS.DROPDOWN_MIN_WIDTH}px`,
+            maxWidth: `${EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH}px`,
+            maxHeight: `${EDITOR_CONSTANTS.MAX_VISIBLE_COMPLETIONS * 24}px`,
+          }}
+        >
+          {visibleCompletions.map((filtered, index: number) => {
             const item = filtered.item;
             const isSelected = index === selectedLspIndex;
 
             return (
               <div
                 key={index}
+                ref={(el) => {
+                  if (isSelected && el) {
+                    el.scrollIntoView({ block: "nearest" });
+                  }
+                }}
                 className={cn(
                   "ui-font cursor-pointer px-2 py-1 text-xs",
                   isSelected ? "bg-accent text-primary-bg" : "text-text hover:bg-hover",
@@ -160,28 +190,33 @@ export const CompletionDropdown = memo(
                       ? highlightMatches(item.label, filtered.indices)
                       : item.label}
                   </span>
-                  {item.detail && (
-                    <span className={isSelected ? "opacity-80" : "text-text-lighter"}>
-                      {item.detail}
-                    </span>
-                  )}
                 </div>
-                {item.documentation && (
-                  <div
-                    className={cn(
-                      "mt-0.5 text-xs",
-                      isSelected ? "opacity-80" : "text-text-lighter",
-                    )}
-                  >
-                    {typeof item.documentation === "string"
-                      ? item.documentation
-                      : item.documentation.value}
-                  </div>
-                )}
               </div>
             );
           })}
         </div>
+
+        {/* Documentation panel (VS Code style) */}
+        {hasDocPanel && (
+          <div
+            className="ml-0.5 border border-border bg-secondary-bg p-2 shadow-md"
+            style={{
+              minWidth: "200px",
+              maxWidth: "300px",
+              maxHeight: `${EDITOR_CONSTANTS.MAX_VISIBLE_COMPLETIONS * 24 + 8}px`,
+              overflow: "auto",
+            }}
+          >
+            {selectedDetail && (
+              <div className="ui-font mb-1 font-medium text-text text-xs">{selectedDetail}</div>
+            )}
+            {selectedDocumentation && (
+              <div className="ui-font whitespace-pre-wrap text-text-lighter text-xs">
+                {selectedDocumentation}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   },

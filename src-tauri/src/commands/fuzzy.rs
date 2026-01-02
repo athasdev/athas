@@ -121,7 +121,7 @@ pub fn filter_completions(request: CompletionFilterRequest) -> Vec<FilteredCompl
       &request.context_word,
       CaseMatching::Smart,
       Normalization::Smart,
-      AtomKind::Fuzzy,
+      AtomKind::Substring,
       false,
    );
 

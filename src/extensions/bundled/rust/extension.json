@@ -21,10 +21,7 @@
   },
   "lsp": {
     "server": {
-      "default": "rust-analyzer",
-      "darwin": "./lsp/rust-analyzer-darwin",
-      "linux": "./lsp/rust-analyzer-linux",
-      "win32": "./lsp/rust-analyzer.exe"
+      "default": "rust-analyzer"
     },
     "args": [],
     "fileExtensions": [".rs"],

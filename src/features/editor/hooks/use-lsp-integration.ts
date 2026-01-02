@@ -68,8 +68,17 @@ export const useLspIntegration = ({
   // Use constant debounce for predictable completion behavior
   const completionTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
+  // Track document versions per file path for LSP sync
+  const documentVersionsRef = useRef<Map<string, number>>(new Map());
+
+  // Track which documents have been opened (to avoid sending changes before open)
+  const openedDocumentsRef = useRef<Set<string>>(new Set());
+
   // Get completion application state
   const isApplyingCompletion = useEditorUIStore.use.isApplyingCompletion();
+
+  // Track when user actually types (not just cursor movement)
+  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
 
   // Set up LSP completion handlers
   useEffect(() => {
@@ -117,10 +126,16 @@ export const useLspIntegration = ({
     const initLsp = async () => {
       try {
         console.log("LSP: Starting LSP for file", filePath, "in workspace", workspacePath);
+        // Reset document version for this file
+        // Rust sends version 1 on document open, so we start at 1
+        // First change will increment to 2
+        documentVersionsRef.current.set(filePath, 1);
         // Start LSP server for this file type
         await lspClient.startForFile(filePath, workspacePath);
         // Notify LSP about document open
         await lspClient.notifyDocumentOpen(filePath, value);
+        // Mark document as opened so changes can be sent
+        openedDocumentsRef.current.add(filePath);
         console.log("LSP: LSP started and document opened for", filePath);
       } catch (error) {
         console.error("LSP initialization error:", error);
@@ -130,10 +145,12 @@ export const useLspIntegration = ({
     initLsp();
 
     return () => {
-      // Notify LSP about document close
+      // Notify LSP about document close and clean up tracking
       lspClient.notifyDocumentClose(filePath).catch((error) => {
         console.error("LSP document close error:", error);
       });
+      documentVersionsRef.current.delete(filePath);
+      openedDocumentsRef.current.delete(filePath);
     };
   }, [filePath, isLspSupported, lspClient, rootFolderPath]);
 
@@ -141,14 +158,31 @@ export const useLspIntegration = ({
   useEffect(() => {
     if (!filePath || !isLspSupported) return;
 
-    lspClient.notifyDocumentChange(filePath, value, 1).catch((error) => {
+    // Only send changes after document is opened to avoid race condition
+    if (!openedDocumentsRef.current.has(filePath)) {
+      return;
+    }
+
+    // Increment document version for this file
+    const currentVersion = documentVersionsRef.current.get(filePath) || 1;
+    const newVersion = currentVersion + 1;
+    documentVersionsRef.current.set(filePath, newVersion);
+
+    lspClient.notifyDocumentChange(filePath, value, newVersion).catch((error) => {
       console.error("LSP document change error:", error);
     });
   }, [value, filePath, isLspSupported, lspClient]);
 
-  // Handle completion triggers - only on cursor position change (not content)
+  // Handle completion triggers - only when user types (not on cursor movement)
   useEffect(() => {
-    if (!filePath || !editorRef.current || isApplyingCompletion || !isLspSupported) {
+    // Safety: reset stuck isApplyingCompletion flag
+    // This can happen if a previous completion application didn't complete properly
+    if (isApplyingCompletion && lastInputTimestamp > 0) {
+      useEditorUIStore.getState().actions.setIsApplyingCompletion(false);
+    }
+
+    // Only trigger completions when user actually types
+    if (!filePath || !editorRef.current || !isLspSupported || lastInputTimestamp === 0) {
       if (completionTimerRef.current) {
         clearTimeout(completionTimerRef.current);
       }
@@ -174,14 +208,8 @@ export const useLspIntegration = ({
         clearTimeout(completionTimerRef.current);
       }
     };
-  }, [
-    cursorPosition, // Only trigger on cursor change, not content
-    filePath,
-    lspActions,
-    isApplyingCompletion,
-    isLspSupported,
-    editorRef,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cursorPosition and isApplyingCompletion are read at render time, not as triggers
+  }, [lastInputTimestamp, filePath, lspActions, isLspSupported, editorRef]);
 
   return {
     lspClient,
