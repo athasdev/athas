@@ -6,6 +6,7 @@
 import { logger } from "@/features/editor/utils/logger";
 
 // Import bundled extension manifests
+import rustManifest from "../bundled/rust/extension.json";
 import typescriptManifest from "../bundled/typescript/extension.json";
 import type {
   BundledExtension,
@@ -59,7 +60,10 @@ class ExtensionRegistry {
    * Load all bundled extensions
    */
   private async loadBundledExtensions() {
-    const bundledManifests: ExtensionManifest[] = [typescriptManifest as ExtensionManifest];
+    const bundledManifests: ExtensionManifest[] = [
+      rustManifest as ExtensionManifest,
+      typescriptManifest as ExtensionManifest,
+    ];
 
     // Get absolute path to bundled extensions
     let basePath = "";

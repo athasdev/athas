@@ -22,9 +22,9 @@ function getSnippetCompletions(filePath: string, prefix: string): CompletionItem
 
   const snippets = extensionRegistry.getSnippetsForLanguage(languageId);
 
-  // Filter by prefix if provided
+  // Filter by prefix using substring matching (anywhere in the string)
   const matchingSnippets = prefix
-    ? snippets.filter((snippet) => snippet.prefix.toLowerCase().startsWith(prefix.toLowerCase()))
+    ? snippets.filter((snippet) => snippet.prefix.toLowerCase().includes(prefix.toLowerCase()))
     : snippets;
 
   // Convert to LSP CompletionItem format
@@ -216,6 +216,7 @@ export const useLspStore = createSelectors(
 
       requestCompletion: async ({ filePath, cursorPos, value, editorRef }) => {
         const { actions } = get();
+        logger.debug("LSP", "requestCompletion called", { filePath, cursorPos });
         // Debouncing is handled by use-lsp-integration, execute immediately
         await actions.performCompletionRequest({ filePath, cursorPos, value, editorRef });
       },
@@ -329,6 +330,13 @@ export const useLspStore = createSelectors(
           const snippetCompletions = getSnippetCompletions(filePath, prefix);
           const completions = [...snippetCompletions, ...lspCompletions];
 
+          logger.debug("LSP", "Got completions", {
+            lspCount: lspCompletions.length,
+            snippetCount: snippetCompletions.length,
+            prefix,
+            prefixLength: prefix.length,
+          });
+
           if (completions.length > 0) {
             // Cache the results (cache LSP completions separately)
             const { completionCache: currentCache } = get();
@@ -352,6 +360,11 @@ export const useLspStore = createSelectors(
             // Filter completions using fuzzy matching if we have a prefix
             if (prefix.length > 0) {
               const context = detectCompletionContext(value, cursorPos);
+              logger.debug("LSP", "Filtering completions", {
+                prefix,
+                context,
+                totalCompletions: completions.length,
+              });
               const filtered = await filterCompletions({
                 pattern: prefix,
                 completions,
@@ -359,15 +372,20 @@ export const useLspStore = createSelectors(
                 context_type: context,
               });
 
+              logger.debug("LSP", "Filtered results", { filteredCount: filtered.length, prefix });
+
               if (filtered.length > 0) {
                 actions.cancelHideCompletion(); // Cancel any pending hide
                 completionActions.setFilteredCompletions(filtered);
                 completionActions.setIsLspCompletionVisible(true);
                 completionActions.setSelectedLspIndex(0);
+                logger.debug("LSP", "Set completion visible");
               } else {
+                logger.debug("LSP", "No filtered results, hiding");
                 actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
               }
             } else {
+              logger.debug("LSP", "No prefix, hiding completions");
               actions.scheduleHideCompletion(); // Delayed hide to prevent flicker
             }
           } else {
