@@ -194,8 +194,10 @@ export function Editor({
         setCursorPosition(position);
       }
 
-      // Tokenization is handled by the debounced useEffect that watches buffer content
-      // This avoids double tokenization and provides better performance when typing
+      // Signal that user typed something (for completion triggering)
+      const timestamp = Date.now();
+      console.log("handleInput: setting lastInputTimestamp", timestamp);
+      useEditorUIStore.getState().actions.setLastInputTimestamp(timestamp);
     },
     [bufferId, updateBufferContent, setCursorPosition, content, foldTransform, onChange],
   );
@@ -429,19 +431,17 @@ export function Editor({
       }
 
       if (isLspCompletionVisible && filteredCompletions.length > 0) {
+        const maxIndex = filteredCompletions.length;
+
         if (e.key === "ArrowDown") {
           e.preventDefault();
-          setSelectedLspIndex(
-            selectedLspIndex < filteredCompletions.length - 1 ? selectedLspIndex + 1 : 0,
-          );
+          setSelectedLspIndex(selectedLspIndex < maxIndex - 1 ? selectedLspIndex + 1 : 0);
           return;
         }
 
         if (e.key === "ArrowUp") {
           e.preventDefault();
-          setSelectedLspIndex(
-            selectedLspIndex > 0 ? selectedLspIndex - 1 : filteredCompletions.length - 1,
-          );
+          setSelectedLspIndex(selectedLspIndex > 0 ? selectedLspIndex - 1 : maxIndex - 1);
           return;
         }
 
@@ -463,6 +463,12 @@ export function Editor({
             textarea.selectionStart = textarea.selectionEnd = result.newCursorPos;
 
             handleInput(result.newValue);
+
+            // Reset the applying flag after completion is applied
+            // Use setTimeout to ensure it happens after the input handling cycle
+            setTimeout(() => {
+              useEditorUIStore.getState().actions.setIsApplyingCompletion(false);
+            }, 0);
           }
           return;
         }

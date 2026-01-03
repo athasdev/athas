@@ -40,14 +40,20 @@ const GitBlameLayerComponent = ({
   const lines = useMemo(() => splitLines(visualContent), [visualContent]);
   const currentLineContent = lines[visualCursorLine] || "";
 
+  // Reset width when file changes to prevent stale positioning during file switches
+  useLayoutEffect(() => {
+    setLineContentWidth(0);
+  }, [filePath]);
+
   // Measure the actual rendered width using a hidden element
   useLayoutEffect(() => {
     if (measureRef.current) {
       setLineContentWidth(measureRef.current.offsetWidth);
     }
-  }, [currentLineContent, fontSize, fontFamily, tabSize]);
+  }, [currentLineContent, fontSize, fontFamily, tabSize, filePath]);
 
-  if (!blameLine) return null;
+  // Calculate position only when we have valid data
+  const shouldShowBlame = blameLine && lineContentWidth > 0;
 
   // Calculate scroll ratio to compensate for browser rendering differences
   // (same approach as gutter component)
@@ -78,7 +84,7 @@ const GitBlameLayerComponent = ({
         lineHeight: `${lineHeight}px`,
       }}
     >
-      {/* Hidden element to measure actual text width */}
+      {/* Hidden element to measure actual text width - always rendered */}
       <span
         ref={measureRef}
         aria-hidden="true"
@@ -92,16 +98,18 @@ const GitBlameLayerComponent = ({
         {currentLineContent}
       </span>
 
-      <div
-        className="pointer-events-auto absolute flex items-center"
-        style={{
-          top: `${top}px`,
-          left: `${left}px`,
-          height: `${lineHeight}px`,
-        }}
-      >
-        <InlineGitBlame blameLine={blameLine} />
-      </div>
+      {shouldShowBlame && (
+        <div
+          className="pointer-events-auto absolute flex items-center"
+          style={{
+            top: `${top}px`,
+            left: `${left}px`,
+            height: `${lineHeight}px`,
+          }}
+        >
+          <InlineGitBlame blameLine={blameLine} />
+        </div>
+      )}
     </div>
   );
 };

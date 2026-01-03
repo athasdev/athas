@@ -36,12 +36,51 @@ export async function fuzzyMatch(request: FuzzyMatchRequest): Promise<FuzzyMatch
 }
 
 /**
+ * Sanitize a CompletionItem for the Rust backend
+ * The Rust struct expects simple types, but LSP types can have complex objects
+ */
+function sanitizeCompletionForRust(item: CompletionItem): CompletionItem {
+  let documentation: string | undefined;
+  if (typeof item.documentation === "string") {
+    documentation = item.documentation;
+  } else if (
+    item.documentation &&
+    typeof item.documentation === "object" &&
+    "value" in item.documentation
+  ) {
+    // MarkupContent has a 'value' field with the actual content
+    documentation = item.documentation.value;
+  }
+
+  return {
+    ...item,
+    documentation,
+    // Ensure other fields are simple types
+    detail: typeof item.detail === "string" ? item.detail : undefined,
+  };
+}
+
+/**
  * Filter and sort LSP completions based on fuzzy matching
  */
 export async function filterCompletions(
   request: CompletionFilterRequest,
 ): Promise<FilteredCompletion[]> {
-  return invoke<FilteredCompletion[]>("filter_completions", { request });
+  try {
+    // Sanitize completions to ensure they're compatible with Rust structs
+    const sanitizedRequest = {
+      ...request,
+      completions: request.completions.map(sanitizeCompletionForRust),
+    };
+
+    const result = await invoke<FilteredCompletion[]>("filter_completions", {
+      request: sanitizedRequest,
+    });
+    return result;
+  } catch (error) {
+    console.error("filterCompletions: error from Rust backend", error);
+    return [];
+  }
 }
 
 /**
