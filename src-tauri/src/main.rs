@@ -272,6 +272,7 @@ fn main() {
       .manage(Arc::new(TerminalManager::new()))
       .invoke_handler(tauri::generate_handler![
          // File system commands
+         open_file_external,
          move_file,
          rename_file,
          get_symlink_info,

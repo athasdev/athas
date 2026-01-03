@@ -27,6 +27,7 @@
     "dialog:allow-open",
     "dialog:allow-message",
     "dialog:allow-confirm",
+    "dialog:allow-ask",
     "fs:default",
     {
       "identifier": "fs:scope",
@@ -62,8 +63,14 @@
     "http:allow-fetch",
     "process:allow-restart",
     "process:allow-exit",
-    "shell:default",
-    "shell:allow-open",
+    {
+      "identifier": "shell:allow-open",
+      "allow": [
+        {
+          "validator": "^(https?://|file://|mailto:).*"
+        }
+      ]
+    },
     {
       "identifier": "shell:allow-execute",
       "allow": [

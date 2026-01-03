@@ -3,6 +3,32 @@ use std::{fs, path::Path};
 use tauri::command;
 use walkdir::WalkDir;
 
+#[command]
+pub fn open_file_external(path: String) -> Result<(), String> {
+   #[cfg(target_os = "macos")]
+   {
+      std::process::Command::new("open")
+         .arg(&path)
+         .spawn()
+         .map_err(|e| e.to_string())?;
+   }
+   #[cfg(target_os = "windows")]
+   {
+      std::process::Command::new("cmd")
+         .args(["/C", "start", "", &path])
+         .spawn()
+         .map_err(|e| e.to_string())?;
+   }
+   #[cfg(target_os = "linux")]
+   {
+      std::process::Command::new("xdg-open")
+         .arg(&path)
+         .spawn()
+         .map_err(|e| e.to_string())?;
+   }
+   Ok(())
+}
+
 #[derive(Serialize)]
 pub struct SymlinkInfo {
    is_symlink: bool,
