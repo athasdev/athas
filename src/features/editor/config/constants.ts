@@ -64,6 +64,7 @@ export const EDITOR_CONSTANTS = {
   COMPLETION_CACHE_TTL_MS: 5000,
   MAX_COMPLETION_CACHE_SIZE: 100,
   MAX_POSITION_CACHE_SIZE: 50,
+  MAX_VISIBLE_COMPLETIONS: 5, // Max number of completions shown in dropdown
 
   // Hover Tooltip
   HOVER_TOOLTIP_DELAY: 300,

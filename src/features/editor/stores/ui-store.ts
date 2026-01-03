@@ -32,6 +32,7 @@ interface EditorUIState {
   isHovering: boolean;
   isApplyingCompletion: boolean;
   aiCompletion: boolean;
+  lastInputTimestamp: number;
 
   // Search state
   searchQuery: string;
@@ -54,6 +55,7 @@ interface EditorUIActions {
   setIsHovering: (hovering: boolean) => void;
   setIsApplyingCompletion: (applying: boolean) => void;
   setAiCompletion: (enabled: boolean) => void;
+  setLastInputTimestamp: (timestamp: number) => void;
 
   // Search actions
   setSearchQuery: (query: string) => void;
@@ -77,6 +79,7 @@ export const useEditorUIStore = createSelectors(
     isHovering: false,
     isApplyingCompletion: false,
     aiCompletion: false,
+    lastInputTimestamp: 0,
 
     // Search state
     searchQuery: "",
@@ -96,6 +99,7 @@ export const useEditorUIStore = createSelectors(
       setIsHovering: (hovering) => set({ isHovering: hovering }),
       setIsApplyingCompletion: (applying) => set({ isApplyingCompletion: applying }),
       setAiCompletion: (enabled) => set({ aiCompletion: enabled }),
+      setLastInputTimestamp: (timestamp) => set({ lastInputTimestamp: timestamp }),
 
       // Search actions
       setSearchQuery: (query) => set({ searchQuery: query }),
