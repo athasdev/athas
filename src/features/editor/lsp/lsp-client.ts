@@ -221,21 +221,7 @@ export class LspClient {
         }
       }
 
-      logger.info("LSPClient", `Invoking lsp_start_for_file with:`, {
-        filePath,
-        workspacePath,
-        serverPath,
-        serverArgs,
-      });
-
-      await invoke<void>("lsp_start_for_file", {
-        filePath,
-        workspacePath,
-        serverPath,
-        serverArgs,
-      });
-
-      // Track this language server
+      // Track this language server BEFORE invoking backend to prevent race conditions
       if (languageId) {
         const serverKey = `${workspacePath}:${languageId}`;
         this.activeLanguageServers.add(serverKey);
@@ -244,6 +230,32 @@ export class LspClient {
         this.activeLanguages.add(displayName);
         // Update status store
         this.updateLspStatus();
+      }
+
+      logger.info("LSPClient", `Invoking lsp_start_for_file with:`, {
+        filePath,
+        workspacePath,
+        serverPath,
+        serverArgs,
+      });
+
+      try {
+        await invoke<void>("lsp_start_for_file", {
+          filePath,
+          workspacePath,
+          serverPath,
+          serverArgs,
+        });
+      } catch (error) {
+        // If backend call fails, remove from tracking
+        if (languageId) {
+          const serverKey = `${workspacePath}:${languageId}`;
+          this.activeLanguageServers.delete(serverKey);
+          const displayName = this.getLanguageDisplayName(languageId);
+          this.activeLanguages.delete(displayName);
+          this.updateLspStatus();
+        }
+        throw error;
       }
 
       logger.debug("LSPClient", "LSP started successfully for file:", filePath);
