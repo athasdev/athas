@@ -27,6 +27,7 @@
     "dialog:allow-open",
     "dialog:allow-message",
     "dialog:allow-confirm",
+    "dialog:allow-ask",
     "fs:default",
     {
       "identifier": "fs:scope",
@@ -66,7 +67,7 @@
       "identifier": "shell:allow-open",
       "allow": [
         {
-          "validator": ".*"
+          "validator": "^(https?://|file://|mailto:).*"
         }
       ]
     },
