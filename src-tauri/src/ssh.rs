@@ -345,7 +345,7 @@ pub async fn ssh_write_file(
          .channel_session()
          .map_err(|e| format!("Failed to create channel: {}", e))?;
 
-      let command = format!("cat > '{}'", file_path.replace("'", "\\'"));
+      let command = format!("cat > '{}'", file_path.replace("'", "'\\''"));
       channel
          .exec(&command)
          .map_err(|e| format!("Failed to execute command: {}", e))?;
@@ -426,7 +426,7 @@ pub async fn ssh_read_directory(
          .channel_session()
          .map_err(|e| format!("Failed to create channel: {}", e))?;
 
-      let command = format!("ls -la '{}'", dir_path.replace("'", "\\'"));
+      let command = format!("ls -la '{}'", dir_path.replace("'", "'\\''"));
       channel
          .exec(&command)
          .map_err(|e| format!("Failed to execute command: {}", e))?;
@@ -500,7 +500,7 @@ pub async fn ssh_read_file(connection_id: String, file_path: String) -> Result<S
          .channel_session()
          .map_err(|e| format!("Failed to create channel: {}", e))?;
 
-      let command = format!("cat '{}'", file_path.replace("'", "\\'"));
+      let command = format!("cat '{}'", file_path.replace("'", "'\\''"));
       channel
          .exec(&command)
          .map_err(|e| format!("Failed to execute command: {}", e))?;
