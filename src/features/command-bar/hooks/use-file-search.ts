@@ -6,7 +6,6 @@ import {
   MAX_OTHER_FILES_SHOWN,
   MAX_RECENT_FILES_NO_QUERY,
   MAX_RESULTS,
-  MAX_SEARCH_FILES,
 } from "../constants/limits";
 import type { CategorizedFiles, FileItem } from "../types/command-bar";
 import { fuzzyScore } from "../utils/fuzzy-search";
@@ -68,10 +67,8 @@ export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
       };
     }
 
-    // With search query - use fuzzy search with performance optimizations
-    const maxSearchFiles = Math.min(MAX_SEARCH_FILES, files.length);
+    // With search query - fuzzy search all files, results are limited at the end
     const scoredFiles = files
-      .slice(0, maxSearchFiles)
       .map((file) => {
         const nameScore = fuzzyScore(file.name, debouncedQuery);
         const pathScore = fuzzyScore(file.path, debouncedQuery);
