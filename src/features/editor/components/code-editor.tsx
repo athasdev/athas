@@ -232,21 +232,32 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
     };
   }, [searchQuery, value, setSearchMatches, setCurrentMatchIndex]);
 
-  // Effect to handle search navigation
+  // Effect to handle search navigation - scroll to current match
   useEffect(() => {
     if (searchMatches.length > 0 && currentMatchIndex >= 0) {
       const match = searchMatches[currentMatchIndex];
-      if (match) {
-        if (editorRef.current) {
-          const editor = editorRef.current;
-          const textarea = editor.querySelector('[contenteditable="true"]') as HTMLDivElement;
-          if (textarea) {
-            textarea.focus();
+      if (match && editorRef.current) {
+        // Find the textarea within the editor
+        const textarea = editorRef.current.querySelector("textarea") as HTMLTextAreaElement;
+        if (textarea) {
+          // Convert match offset to line number
+          let line = 0;
+          for (let i = 0; i < match.start && i < value.length; i++) {
+            if (value[i] === "\n") line++;
           }
+
+          // Calculate scroll position to center the match in viewport
+          const { fontSize } = useEditorSettingsStore.getState();
+          const lineHeight = Math.ceil(1.5 * fontSize);
+          const targetScrollTop = line * lineHeight;
+          const viewportHeight = textarea.clientHeight;
+          const centeredScrollTop = Math.max(0, targetScrollTop - viewportHeight / 2 + lineHeight);
+
+          textarea.scrollTop = centeredScrollTop;
         }
       }
     }
-  }, [currentMatchIndex, searchMatches]);
+  }, [currentMatchIndex, searchMatches, value]);
 
   if (!activeBuffer || isFileTreeLoading) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;
