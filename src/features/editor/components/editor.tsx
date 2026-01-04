@@ -31,6 +31,7 @@ import { GitBlameLayer } from "./layers/git-blame-layer";
 import { HighlightLayer } from "./layers/highlight-layer";
 import { InputLayer } from "./layers/input-layer";
 import { MultiCursorLayer } from "./layers/multi-cursor-layer";
+import { SearchHighlightLayer } from "./layers/search-highlight-layer";
 
 interface EditorProps {
   className?: string;
@@ -50,6 +51,7 @@ export function Editor({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const multiCursorRef = useRef<HTMLDivElement>(null);
+  const searchHighlightRef = useRef<HTMLDivElement>(null);
 
   // Track buffer changes to handle cursor positioning correctly
   const prevBufferIdRef = useRef<string | null>(null);
@@ -318,6 +320,8 @@ export function Editor({
   const filteredCompletions = useEditorUIStore.use.filteredCompletions();
   const selectedLspIndex = useEditorUIStore.use.selectedLspIndex();
   const { setSelectedLspIndex, setIsLspCompletionVisible } = useEditorUIStore.use.actions();
+  const searchMatches = useEditorUIStore.use.searchMatches();
+  const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
   const lspActions = useLspStore.use.actions();
 
   const handleKeyDown = useCallback(
@@ -574,6 +578,11 @@ export function Editor({
             multiCursorRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
+          // Update search highlight layer transform for visual sync
+          if (searchHighlightRef.current) {
+            searchHighlightRef.current.style.transform = `translate(-${left}px, -${top}px)`;
+          }
+
           // Update state store with captured buffer ID to avoid race condition
           useEditorStateStore.getState().actions.setScrollForBuffer(currentBufferId, top, left);
 
@@ -827,6 +836,18 @@ export function Editor({
             ref={multiCursorRef}
             cursors={multiCursorState.cursors}
             primaryCursorId={multiCursorState.primaryCursorId}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            lineHeight={lineHeight}
+            content={displayContent}
+          />
+        )}
+
+        {searchMatches.length > 0 && (
+          <SearchHighlightLayer
+            ref={searchHighlightRef}
+            searchMatches={searchMatches}
+            currentMatchIndex={currentMatchIndex}
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
