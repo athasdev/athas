@@ -18,6 +18,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import PRViewer from "@/features/github/components/pr-viewer";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { ImageViewer } from "@/features/image-viewer/components/image-viewer";
+import { PdfViewer } from "@/features/pdf-viewer/components/pdf-viewer";
 import { useSettingsStore } from "@/features/settings/store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import DiffViewer from "@/features/version-control/diff-viewer/components/diff-viewer";
@@ -274,6 +275,14 @@ export function MainLayout() {
                 } else if (activeBuffer.isImage) {
                   return (
                     <ImageViewer
+                      filePath={activeBuffer.path}
+                      fileName={activeBuffer.name}
+                      bufferId={activeBuffer.id}
+                    />
+                  );
+                } else if (activeBuffer.isPdf) {
+                  return (
+                    <PdfViewer
                       filePath={activeBuffer.path}
                       fileName={activeBuffer.name}
                       bufferId={activeBuffer.id}

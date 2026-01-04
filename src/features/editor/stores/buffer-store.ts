@@ -31,6 +31,7 @@ export interface Buffer {
   isExternalEditor: boolean;
   isWebViewer: boolean;
   isPullRequest: boolean;
+  isPdf: boolean;
   isActive: boolean;
   language?: string; // File language for syntax highlighting and formatting
   // For diff buffers, store the parsed diff data (single or multi-file)
@@ -88,6 +89,7 @@ interface BufferActions {
     isCsvPreview?: boolean,
     sourceFilePath?: string,
     isPreview?: boolean,
+    isPdf?: boolean,
   ) => string;
   convertPreviewToDefinite: (bufferId: string) => void;
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
@@ -157,7 +159,8 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
           !b.isCsvPreview &&
           !b.isExternalEditor &&
           !b.isWebViewer &&
-          !b.isPullRequest,
+          !b.isPullRequest &&
+          !b.isPdf,
       )
       .map((b) => ({
         path: b.path,
@@ -178,7 +181,8 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
       !activeBuffer.isCsvPreview &&
       !activeBuffer.isExternalEditor &&
       !activeBuffer.isWebViewer &&
-      !activeBuffer.isPullRequest
+      !activeBuffer.isPullRequest &&
+      !activeBuffer.isPdf
         ? activeBuffer.path
         : null;
 
@@ -209,6 +213,7 @@ export const useBufferStore = createSelectors(
           isCsvPreview = false,
           sourceFilePath?: string,
           isPreview = true,
+          isPdf = false,
         ) => {
           const { buffers, maxOpenTabs } = get();
 
@@ -221,7 +226,8 @@ export const useBufferStore = createSelectors(
             !isVirtual &&
             !isMarkdownPreview &&
             !isHtmlPreview &&
-            !isCsvPreview;
+            !isCsvPreview &&
+            !isPdf;
 
           // Check if already open
           const existing = buffers.find((b) => b.path === path);
@@ -274,6 +280,7 @@ export const useBufferStore = createSelectors(
             isExternalEditor: false,
             isWebViewer: false,
             isPullRequest: false,
+            isPdf: isPdf,
             isActive: true,
             language: detectLanguageFromFileName(name),
             diffData,
@@ -290,11 +297,11 @@ export const useBufferStore = createSelectors(
           if (
             !isVirtual &&
             !isDiff &&
+            !isHtmlPreview &&
+            !isCsvPreview &&
             !isImage &&
             !isSQLite &&
-            !isMarkdownPreview &&
-            !isHtmlPreview &&
-            !isCsvPreview
+            !isPdf
           ) {
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
 
@@ -440,6 +447,7 @@ export const useBufferStore = createSelectors(
             isExternalEditor: true,
             isWebViewer: false,
             isPullRequest: false,
+            isPdf: false,
             isActive: true,
             language: detectLanguageFromFileName(name),
             terminalConnectionId,
@@ -514,6 +522,7 @@ export const useBufferStore = createSelectors(
             isExternalEditor: false,
             isWebViewer: true,
             isPullRequest: false,
+            isPdf: false,
             isActive: true,
             webViewerUrl: url,
             tokens: [],
@@ -572,6 +581,7 @@ export const useBufferStore = createSelectors(
             isExternalEditor: false,
             isWebViewer: false,
             isPullRequest: true,
+            isPdf: false,
             prNumber,
             isActive: true,
             tokens: [],
@@ -630,7 +640,8 @@ export const useBufferStore = createSelectors(
             !closedBuffer.isHtmlPreview &&
             !closedBuffer.isCsvPreview &&
             !closedBuffer.isExternalEditor &&
-            !closedBuffer.isWebViewer
+            !closedBuffer.isWebViewer &&
+            !closedBuffer.isPdf
           ) {
             // Stop LSP for this file in background (don't block buffer closing)
             import("@/features/editor/lsp/lsp-client")
