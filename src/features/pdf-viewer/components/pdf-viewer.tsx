@@ -1,4 +1,4 @@
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { readFile } from "@tauri-apps/plugin-fs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -13,6 +13,7 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { ImageZoomControls } from "@/features/image-viewer/components/image-zoom-controls";
 import { useImageZoom } from "@/features/image-viewer/hooks/use-image-zoom";
+import { useResizeObserver } from "@/hooks/use-resize-observer";
 import Button from "@/ui/button";
 import { getRelativePath } from "@/utils/path-helpers";
 import { PdfViewerFooter } from "./pdf-viewer-footer";
@@ -25,7 +26,7 @@ interface PdfViewerProps {
   bufferId: string;
 }
 
-export function PdfViewer({ filePath, fileName, bufferId }: PdfViewerProps) {
+export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
   const [fileData, setFileData] = useState<Uint8Array | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [pageDimensions, setPageDimensions] = useState<{ width: number; height: number } | null>(
@@ -37,6 +38,8 @@ export function PdfViewer({ filePath, fileName, bufferId }: PdfViewerProps) {
     minZoom: 0.5,
   });
   const containerRef = useRef<HTMLDivElement>(null);
+  const { width: containerWidth } = useResizeObserver(containerRef);
+  const [isFitted, setIsFitted] = useState(true);
   const { rootFolderPath } = useFileSystemStore();
   const relativePath = getRelativePath(filePath, rootFolderPath);
   const [currentPage, setCurrentPage] = useState(1);
@@ -130,7 +133,7 @@ export function PdfViewer({ filePath, fileName, bufferId }: PdfViewerProps) {
   const handleLinkClick = async (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     const anchor = target.closest("a");
-    if (anchor && anchor.href) {
+    if (anchor?.href) {
       e.preventDefault();
       // External links start with http etc.
       if (anchor.href.startsWith("http")) {
@@ -156,15 +159,15 @@ export function PdfViewer({ filePath, fileName, bufferId }: PdfViewerProps) {
   };
 
   return (
-    <div className="flex h-full flex-col bg-primary-bg">
+    <div className="relative h-full w-full overflow-hidden bg-primary-bg">
       {/* Header / Toolbar */}
-      <div className="flex items-center justify-between border-b border-border bg-secondary-bg px-4 py-2 shrink-0 h-10">
-        <div className="flex items-center gap-2 min-w-0 flex-1 mr-4">
-          <span className="text-xs text-text font-medium truncate" title={fileName}>
+      <div className="absolute inset-x-0 top-0 z-10 flex h-10 items-center justify-between border-border border-b bg-secondary-bg px-4 py-2 transition-opacity hover:opacity-100">
+        <div className="mr-4 flex min-w-0 flex-1 items-center gap-2">
+          <span className="truncate font-medium text-text text-xs" title={fileName}>
             {fileName}
           </span>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             variant="ghost"
             size="xs"
@@ -174,11 +177,23 @@ export function PdfViewer({ filePath, fileName, bufferId }: PdfViewerProps) {
             <ExternalLink size={14} className="text-text" />
           </Button>
           <div className="mx-1 h-4 w-px bg-border" />
+          <div className="mx-1 h-4 w-px bg-border" />
           <ImageZoomControls
             zoom={zoom}
-            onZoomIn={zoomIn}
-            onZoomOut={zoomOut}
-            onResetZoom={resetZoom}
+            onZoomIn={() => {
+              setIsFitted(false);
+              zoomIn();
+            }}
+            onZoomOut={() => {
+              setIsFitted(false);
+              zoomOut();
+            }}
+            onResetZoom={() => {
+              setIsFitted(true);
+              // We don't need to reset generic zoom state if we are switching to fitted mode
+              // because fitted mode ignores the zoom number for the 'width' prop in react-pdf
+              resetZoom(); // Reset to 1.0 just for cleanliness
+            }}
           />
         </div>
       </div>
@@ -186,7 +201,7 @@ export function PdfViewer({ filePath, fileName, bufferId }: PdfViewerProps) {
       {/* Main Content */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto bg-[var(--editor-bg)] p-8 flex justify-center"
+        className="absolute inset-x-0 top-10 bottom-9 flex justify-center overflow-auto bg-[var(--editor-bg)] p-8"
         onClick={handleLinkClick}
       >
         {error ? (
@@ -197,13 +212,13 @@ export function PdfViewer({ filePath, fileName, bufferId }: PdfViewerProps) {
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
             loading={
-              <div className="flex flex-col items-center gap-2 text-text-lighter mt-20">
+              <div className="mt-20 flex flex-col items-center gap-2 text-text-lighter">
                 <Loader2 className="animate-spin" size={24} />
                 <span>Loading PDF...</span>
               </div>
             }
             error={
-              <div className="flex flex-col items-center gap-2 text-error mt-20">
+              <div className="mt-20 flex flex-col items-center gap-2 text-error">
                 <span>Failed to load PDF document.</span>
               </div>
             }
@@ -212,12 +227,13 @@ export function PdfViewer({ filePath, fileName, bufferId }: PdfViewerProps) {
             {Array.from(new Array(numPages), (_el, index) => (
               <div
                 key={`page_${index + 1}`}
-                className="pdf-page-container shadow-lg bg-white"
+                className="pdf-page-container bg-white shadow-lg"
                 data-page-number={index + 1}
               >
                 <Page
                   pageNumber={index + 1}
-                  scale={zoom}
+                  scale={isFitted ? undefined : zoom}
+                  width={isFitted && containerWidth ? containerWidth - 64 : undefined}
                   onLoadSuccess={(page) => {
                     if (index === 0) {
                       setPageDimensions({
@@ -244,7 +260,7 @@ export function PdfViewer({ filePath, fileName, bufferId }: PdfViewerProps) {
             ))}
           </Document>
         ) : (
-          <div className="flex flex-col items-center gap-2 text-text-lighter mt-20">
+          <div className="mt-20 flex flex-col items-center gap-2 text-text-lighter">
             <Loader2 className="animate-spin" size={24} />
             <span>Reading file...</span>
           </div>
@@ -252,15 +268,17 @@ export function PdfViewer({ filePath, fileName, bufferId }: PdfViewerProps) {
       </div>
 
       {/* Footer */}
-      <PdfViewerFooter
-        zoom={zoom}
-        currentPage={currentPage}
-        totalPages={numPages}
-        pageWidth={pageDimensions?.width}
-        pageHeight={pageDimensions?.height}
-        fileSize={fileData?.byteLength || 0}
-        filePath={relativePath || filePath}
-      />
+      <div className="absolute inset-x-0 bottom-0 z-10 h-9">
+        <PdfViewerFooter
+          zoom={zoom}
+          currentPage={currentPage}
+          totalPages={numPages}
+          pageWidth={pageDimensions?.width}
+          pageHeight={pageDimensions?.height}
+          fileSize={fileData?.byteLength || 0}
+          filePath={relativePath || filePath}
+        />
+      </div>
     </div>
   );
 }

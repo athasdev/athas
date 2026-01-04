@@ -12,6 +12,7 @@ import {
   getDataURLSize,
   saveImageToFile,
 } from "@/features/image-editor/utils/image-file-utils";
+import { useResizeObserver } from "@/hooks/use-resize-observer";
 import Button from "@/ui/button";
 import UnsavedChangesDialog from "@/ui/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";
@@ -29,7 +30,7 @@ interface ImageViewerProps {
 }
 
 export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageViewerProps) {
-  const { zoom, zoomIn, zoomOut, resetZoom, handleWheel } = useImageZoom({ maxZoom: 5 });
+  const { zoom, zoomIn, zoomOut, setZoom, handleWheel } = useImageZoom({ maxZoom: 5 });
   const [initialImageSrc, setInitialImageSrc] = useState<string>("");
   const [showResizeDialog, setShowResizeDialog] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -40,7 +41,10 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
   const [currentSize, setCurrentSize] = useState(0);
   const { rootFolderPath } = useFileSystemStore();
   const { markBufferDirty } = useBufferStore.use.actions();
+
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const { width: containerWidth, height: containerHeight } = useResizeObserver(imageContainerRef);
+  const [isFitted, setIsFitted] = useState(true);
 
   const fileExt = fileName.split(".").pop()?.toUpperCase() || "";
   const relativePath = getRelativePath(filePath, rootFolderPath);
@@ -75,6 +79,9 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
         // Get initial dimensions and size
         const dims = await getImageDimensions(dataURL);
         setImageDimensions(dims);
+
+        // Initial zoom calculation will be handled by the effect below
+        // once container dimensions and image dimensions are both available
 
         const size = getDataURLSize(dataURL);
         setOriginalSize(size);
@@ -116,15 +123,55 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
     markBufferDirty(bufferId, imageOperations.hasChanges);
   }, [imageOperations.hasChanges, bufferId, markBufferDirty]);
 
-  // Attach wheel event listener for trackpad/mouse zoom
+  // Calculate fit zoom
+  useEffect(() => {
+    if (
+      !isFitted ||
+      !containerWidth ||
+      !containerHeight ||
+      !imageDimensions.width ||
+      !imageDimensions.height
+    ) {
+      return;
+    }
+
+    const widthRatio = (containerWidth - 32) / imageDimensions.width;
+    const heightRatio = (containerHeight - 32) / imageDimensions.height;
+    const fitZoom = Math.min(widthRatio, heightRatio, 1);
+
+    setZoom(fitZoom);
+  }, [containerWidth, containerHeight, imageDimensions, isFitted, setZoom]);
+
+  // Wrap manual zoom handlers to disable auto-fit
+  const handleManualZoomIn = () => {
+    setIsFitted(false);
+    zoomIn();
+  };
+
+  const handleManualZoomOut = () => {
+    setIsFitted(false);
+    zoomOut();
+  };
+
+  const handleManualReset = () => {
+    setIsFitted(true);
+    // The effect will trigger and set the zoom
+  };
+
+  const handleManualWheel = (e: WheelEvent) => {
+    setIsFitted(false);
+    handleWheel(e);
+  };
+
+  // Attach wheel event listener using our wrapper
   useEffect(() => {
     const container = imageContainerRef.current;
     if (!container) return;
 
-    container.addEventListener("wheel", handleWheel, { passive: false });
+    container.addEventListener("wheel", handleManualWheel, { passive: false });
 
     return () => {
-      container.removeEventListener("wheel", handleWheel);
+      container.removeEventListener("wheel", handleManualWheel);
     };
   }, [handleWheel]);
 
@@ -141,7 +188,6 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
 
     const success = await saveImageToFile(displayImageSrc, fileName);
     if (success) {
-      console.log("Image saved successfully");
       // Reset to the new saved state
       imageOperations.reset();
       // Clear buffer dirty flag
@@ -179,21 +225,20 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
   };
 
   return (
-    <div className="flex h-full select-none flex-col bg-primary-bg">
+    <div className="relative h-full w-full select-none overflow-hidden bg-primary-bg">
       {/* Header */}
       <div
         className={cn(
-          "flex items-center justify-between border-border",
-          "border-b bg-secondary-bg px-4 py-2",
+          "absolute inset-x-0 top-0 z-10 flex h-10 items-center justify-between border-border border-b bg-secondary-bg px-4 py-2",
         )}
       >
-        <div className="flex items-center gap-2">
-          <FileIcon size={14} className="text-text" />
-          <span className="ui-font text-text text-xs">
+        <div className="mr-4 flex min-w-0 flex-1 items-center gap-2">
+          <FileIcon size={14} className="shrink-0 text-text" />
+          <span className="ui-font truncate text-text text-xs" title={fileName}>
             {fileName} {fileExt && <>• {fileExt}</>}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {initialImageSrc && (
             <>
               <ImageEditorToolbar
@@ -217,9 +262,9 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
           )}
           <ImageZoomControls
             zoom={zoom}
-            onZoomIn={zoomIn}
-            onZoomOut={zoomOut}
-            onResetZoom={resetZoom}
+            onZoomIn={handleManualZoomIn}
+            onZoomOut={handleManualZoomOut}
+            onResetZoom={handleManualReset}
           />
           {onClose && (
             <Button onClick={handleClose} variant="ghost" size="xs" title="Close image viewer">
@@ -233,7 +278,8 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
       <div
         ref={imageContainerRef}
         className={cn(
-          "flex flex-1 items-center justify-center",
+          "absolute inset-x-0 top-10 bottom-9",
+          "flex items-center justify-center",
           "overflow-auto bg-[var(--editor-bg)] p-4",
         )}
         onContextMenu={handleContextMenu}
@@ -243,8 +289,8 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
             src={displayImageSrc}
             alt={fileName}
             style={{
-              transform: `scale(${zoom})`,
-              transition: "transform 0.1s ease-out",
+              width: imageDimensions.width ? imageDimensions.width * zoom : "auto",
+              height: imageDimensions.height ? imageDimensions.height * zoom : "auto",
               maxWidth: "none",
               maxHeight: "none",
             }}
@@ -258,33 +304,35 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
       </div>
 
       {/* Footer */}
-      <ImageViewerFooter
-        zoom={zoom}
-        fileType={fileExt}
-        additionalInfo={
-          <>
-            <span>
-              {imageDimensions.width} × {imageDimensions.height}px
-            </span>
-            <span className="flex items-center gap-1">
-              Size: {formatFileSize(currentSize)}
-              {imageOperations.hasChanges && originalSize !== currentSize && (
-                <span className="flex items-center gap-0.5 text-accent">
-                  (
-                  {currentSize < originalSize ? (
-                    <ArrowDown size={10} className="inline" />
-                  ) : (
-                    <ArrowUp size={10} className="inline" />
-                  )}
-                  {Math.abs(Math.round(((currentSize - originalSize) / originalSize) * 100))}
-                  %)
-                </span>
-              )}
-            </span>
-            <span>Path: {relativePath}</span>
-          </>
-        }
-      />
+      <div className="absolute inset-x-0 bottom-0 z-10 h-9">
+        <ImageViewerFooter
+          zoom={zoom}
+          fileType={fileExt}
+          additionalInfo={
+            <>
+              <span>
+                {imageDimensions.width} × {imageDimensions.height}px
+              </span>
+              <span className="flex items-center gap-1">
+                Size: {formatFileSize(currentSize)}
+                {imageOperations.hasChanges && originalSize !== currentSize && (
+                  <span className="flex items-center gap-0.5 text-accent">
+                    (
+                    {currentSize < originalSize ? (
+                      <ArrowDown size={10} className="inline" />
+                    ) : (
+                      <ArrowUp size={10} className="inline" />
+                    )}
+                    {Math.abs(Math.round(((currentSize - originalSize) / originalSize) * 100))}
+                    %)
+                  </span>
+                )}
+              </span>
+              <span>Path: {relativePath}</span>
+            </>
+          }
+        />
+      </div>
 
       {/* Resize Dialog */}
       <ImageResizeDialog
