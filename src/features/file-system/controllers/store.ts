@@ -39,7 +39,7 @@ import {
   sortFileEntries,
   updateFileInTree,
 } from "./file-tree-utils";
-import { getFilenameFromPath, isImageFile, isSQLiteFile } from "./file-utils";
+import { getFilenameFromPath, isImageFile, isPdfFile, isSQLiteFile } from "./file-utils";
 import { useFileWatcherStore } from "./file-watcher-store";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
@@ -417,6 +417,23 @@ export const useFileSystemStore = createSelectors(
           openBuffer(path, fileName, "", false, true, false, false);
         } else if (isImageFile(resolvedPath)) {
           openBuffer(path, fileName, "", true, false, false, false);
+        } else if (isPdfFile(resolvedPath)) {
+          openBuffer(
+            path,
+            fileName,
+            "",
+            false,
+            false,
+            false,
+            false,
+            undefined,
+            false,
+            false,
+            false,
+            undefined,
+            isPreview,
+            true,
+          );
         } else {
           // Check if external editor is enabled for text files
           const { settings } = useSettingsStore.getState();
@@ -869,25 +886,25 @@ export const useFileSystemStore = createSelectors(
       refreshDirectory: async (directoryPath: string) => {
         const dirNode = findFileInTree(get().files, directoryPath);
 
-        // If directory is not in the tree or not expanded, skip refresh
         if (!dirNode || !dirNode.isDir) {
           return;
         }
 
-        // Only refresh if the directory is expanded (visible in the tree)
-        if (!dirNode.expanded) {
+        // Check if directory is expanded using the file tree store
+        // Root folder is always considered expanded since it's always visible
+        const isRoot = directoryPath === get().rootFolderPath;
+        const isExpanded = isRoot || useFileTreeStore.getState().isExpanded(directoryPath);
+
+        if (!isExpanded) {
           return;
         }
 
-        // Read the directory contents
         const entries = await readDirectory(directoryPath);
 
         set((state) => {
-          // Update the directory contents while preserving all states
           const updated = updateDirectoryContents(state.files, directoryPath, entries as any[]);
 
           if (updated) {
-            // Successfully updated
             state.filesVersion++;
           }
         });

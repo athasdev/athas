@@ -88,7 +88,6 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           "yaml",
           "toml",
           "bash",
-          "rust",
           "tsx", // Also used for typescript and javascript
         ]);
 

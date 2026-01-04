@@ -304,32 +304,67 @@ impl LspManager {
 
    pub fn get_client_for_file(&self, file_path: &str) -> Option<LspClient> {
       let path = PathBuf::from(file_path);
+      let file_ext = path.extension().and_then(|e| e.to_str());
       let clients = self.workspace_clients.lock().unwrap();
 
-      // Find workspace that contains this file (match any server in that workspace)
-      // Since servers are now managed by frontend extension registry, we just need
-      // to find a client whose workspace contains this file
-      for ((workspace_path, _server_name), instance) in clients.iter() {
+      log::debug!(
+         "get_client_for_file: looking for client for {} (ext: {:?})",
+         file_path,
+         file_ext
+      );
+
+      // First pass: find a server that has opened a file with the same extension
+      // This ensures we route to the correct server (e.g., TypeScript for .tsx files)
+      for ((workspace_path, server_name), instance) in clients.iter() {
          if path.starts_with(workspace_path) {
-            // Check if this server handles this file type
-            if instance
+            let has_matching_ext = instance
                .files
                .iter()
-               .any(|f| f.extension() == path.extension())
-               || instance.files.is_empty()
-            {
+               .any(|f| f.extension() == path.extension());
+
+            log::debug!(
+               "  checking server '{}': has_matching_ext={}",
+               server_name,
+               has_matching_ext
+            );
+
+            if has_matching_ext {
+               log::info!(
+                  "get_client_for_file: selected server '{}' for {} (matched extension)",
+                  server_name,
+                  file_path
+               );
                return Some(instance.client.clone());
             }
          }
       }
 
-      // Fallback: try to find any server in a workspace containing this file
-      for ((workspace_path, _), instance) in clients.iter() {
-         if path.starts_with(workspace_path) {
+      // Second pass: check if this exact file is tracked by any server
+      for ((workspace_path, server_name), instance) in clients.iter() {
+         if path.starts_with(workspace_path) && instance.files.contains(&path) {
+            log::info!(
+               "get_client_for_file: selected server '{}' for {} (exact file match)",
+               server_name,
+               file_path
+            );
             return Some(instance.client.clone());
          }
       }
 
+      // Third pass: fallback - find any server in the workspace
+      // This handles the case where a file is being opened for the first time
+      for ((workspace_path, server_name), instance) in clients.iter() {
+         if path.starts_with(workspace_path) {
+            log::warn!(
+               "get_client_for_file: fallback to server '{}' for {} (no extension match)",
+               server_name,
+               file_path
+            );
+            return Some(instance.client.clone());
+         }
+      }
+
+      log::warn!("get_client_for_file: no client found for {}", file_path);
       None
    }
 

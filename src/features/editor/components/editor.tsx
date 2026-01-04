@@ -31,6 +31,7 @@ import { GitBlameLayer } from "./layers/git-blame-layer";
 import { HighlightLayer } from "./layers/highlight-layer";
 import { InputLayer } from "./layers/input-layer";
 import { MultiCursorLayer } from "./layers/multi-cursor-layer";
+import { SearchHighlightLayer } from "./layers/search-highlight-layer";
 
 interface EditorProps {
   className?: string;
@@ -50,6 +51,7 @@ export function Editor({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const multiCursorRef = useRef<HTMLDivElement>(null);
+  const searchHighlightRef = useRef<HTMLDivElement>(null);
 
   // Track buffer changes to handle cursor positioning correctly
   const prevBufferIdRef = useRef<string | null>(null);
@@ -194,8 +196,10 @@ export function Editor({
         setCursorPosition(position);
       }
 
-      // Tokenization is handled by the debounced useEffect that watches buffer content
-      // This avoids double tokenization and provides better performance when typing
+      // Signal that user typed something (for completion triggering)
+      const timestamp = Date.now();
+      console.log("handleInput: setting lastInputTimestamp", timestamp);
+      useEditorUIStore.getState().actions.setLastInputTimestamp(timestamp);
     },
     [bufferId, updateBufferContent, setCursorPosition, content, foldTransform, onChange],
   );
@@ -316,6 +320,8 @@ export function Editor({
   const filteredCompletions = useEditorUIStore.use.filteredCompletions();
   const selectedLspIndex = useEditorUIStore.use.selectedLspIndex();
   const { setSelectedLspIndex, setIsLspCompletionVisible } = useEditorUIStore.use.actions();
+  const searchMatches = useEditorUIStore.use.searchMatches();
+  const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
   const lspActions = useLspStore.use.actions();
 
   const handleKeyDown = useCallback(
@@ -429,19 +435,17 @@ export function Editor({
       }
 
       if (isLspCompletionVisible && filteredCompletions.length > 0) {
+        const maxIndex = filteredCompletions.length;
+
         if (e.key === "ArrowDown") {
           e.preventDefault();
-          setSelectedLspIndex(
-            selectedLspIndex < filteredCompletions.length - 1 ? selectedLspIndex + 1 : 0,
-          );
+          setSelectedLspIndex(selectedLspIndex < maxIndex - 1 ? selectedLspIndex + 1 : 0);
           return;
         }
 
         if (e.key === "ArrowUp") {
           e.preventDefault();
-          setSelectedLspIndex(
-            selectedLspIndex > 0 ? selectedLspIndex - 1 : filteredCompletions.length - 1,
-          );
+          setSelectedLspIndex(selectedLspIndex > 0 ? selectedLspIndex - 1 : maxIndex - 1);
           return;
         }
 
@@ -463,6 +467,12 @@ export function Editor({
             textarea.selectionStart = textarea.selectionEnd = result.newCursorPos;
 
             handleInput(result.newValue);
+
+            // Reset the applying flag after completion is applied
+            // Use setTimeout to ensure it happens after the input handling cycle
+            setTimeout(() => {
+              useEditorUIStore.getState().actions.setIsApplyingCompletion(false);
+            }, 0);
           }
           return;
         }
@@ -566,6 +576,11 @@ export function Editor({
           // Update multi-cursor layer transform for visual sync
           if (multiCursorRef.current) {
             multiCursorRef.current.style.transform = `translate(-${left}px, -${top}px)`;
+          }
+
+          // Update search highlight layer transform for visual sync
+          if (searchHighlightRef.current) {
+            searchHighlightRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
           // Update state store with captured buffer ID to avoid race condition
@@ -821,6 +836,18 @@ export function Editor({
             ref={multiCursorRef}
             cursors={multiCursorState.cursors}
             primaryCursorId={multiCursorState.primaryCursorId}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            lineHeight={lineHeight}
+            content={displayContent}
+          />
+        )}
+
+        {searchMatches.length > 0 && (
+          <SearchHighlightLayer
+            ref={searchHighlightRef}
+            searchMatches={searchMatches}
+            currentMatchIndex={currentMatchIndex}
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}

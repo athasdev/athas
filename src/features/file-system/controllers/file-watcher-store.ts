@@ -1,13 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { dirname } from "@tauri-apps/api/path";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useFileSystemStore } from "./store";
 
 interface FileChangeEvent {
   path: string;
-  event_type: "created" | "modified" | "deleted";
+  event_type: "opened" | "reloaded" | "deleted";
 }
 
 // Store the unlisten function outside of the store to prevent re-renders
@@ -115,6 +117,23 @@ export const useFileWatcherStore = create(
   })),
 );
 
+// Debounce map for directory refreshes
+const pendingRefreshes = new Map<string, ReturnType<typeof setTimeout>>();
+const REFRESH_DEBOUNCE_MS = 300;
+
+function scheduleDirectoryRefresh(dirPath: string) {
+  const existing = pendingRefreshes.get(dirPath);
+  if (existing) clearTimeout(existing);
+
+  pendingRefreshes.set(
+    dirPath,
+    setTimeout(async () => {
+      pendingRefreshes.delete(dirPath);
+      await useFileSystemStore.getState().refreshDirectory(dirPath);
+    }, REFRESH_DEBOUNCE_MS),
+  );
+}
+
 // Initialize event listener (called only once)
 export async function initializeFileWatcherListener() {
   // Clean up existing listener first
@@ -123,12 +142,21 @@ export async function initializeFileWatcherListener() {
   // Listen for file changes
   unlistenFileChanged = await listen<FileChangeEvent>("file-changed", async (event) => {
     const { path, event_type } = event.payload;
+    const parentDir = await dirname(path);
 
-    // Skip if file was deleted
+    // Handle deleted files - refresh parent directory
     if (event_type === "deleted") {
+      scheduleDirectoryRefresh(parentDir);
       return;
     }
 
+    // Handle new files created externally - refresh parent directory
+    if (event_type === "opened") {
+      scheduleDirectoryRefresh(parentDir);
+      return;
+    }
+
+    // Handle reloaded files (content changed externally)
     // Check if this file has a pending save
     const { pendingSaves } = useFileWatcherStore.getState();
     if (pendingSaves.has(path)) {

@@ -13,7 +13,6 @@ import { markdownLanguage } from "./markdown-extension";
 import { phpLanguage } from "./php-extension";
 import { pythonLanguage } from "./python-extension";
 import { rubyLanguage } from "./ruby-extension";
-import { rustLanguage } from "./rust-extension";
 import { tomlLanguage } from "./toml-extension";
 import { typescriptLanguage } from "./typescript-extension";
 import { yamlLanguage } from "./yaml-extension";
@@ -22,7 +21,6 @@ export const allLanguages: LanguageExtension[] = [
   javascriptLanguage,
   typescriptLanguage,
   pythonLanguage,
-  rustLanguage,
   goLanguage,
   javaLanguage,
   cLanguage,
