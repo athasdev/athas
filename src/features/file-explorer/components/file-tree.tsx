@@ -682,6 +682,14 @@ function FileTreeComponent({
                       onKeyDown={handleKeyDown}
                       onBlur={handleBlur}
                       getGitStatusClass={getGitStatusClass}
+                      isRoot={vi.index === 0 && row.depth === 0}
+                      onCollapseAll={() => {
+                        const store = useFileTreeStore.getState();
+                        store.collapseAll();
+                        if (row.file.path) {
+                          store.toggleFolder(row.file.path);
+                        }
+                      }}
                     />
                   );
                 })}

@@ -1,3 +1,4 @@
+import { Minus } from "lucide-react";
 import type React from "react";
 import { memo } from "react";
 import type { FileEntry } from "@/features/file-system/types/app";
@@ -13,10 +14,11 @@ interface FileTreeItemProps {
   isDragging: boolean;
   editingValue: string;
   onEditingValueChange: (value: string) => void;
-  // Row events now delegated at container level
   onKeyDown: (e: React.KeyboardEvent, file: FileEntry) => void;
   onBlur: (file: FileEntry) => void;
   getGitStatusClass: (file: FileEntry) => string;
+  isRoot?: boolean;
+  onCollapseAll?: () => void;
 }
 
 function FileTreeItemComponent({
@@ -31,6 +33,8 @@ function FileTreeItemComponent({
   onKeyDown,
   onBlur,
   getGitStatusClass,
+  isRoot,
+  onCollapseAll,
 }: FileTreeItemProps) {
   const paddingLeft = 14 + depth * 20;
 
@@ -117,9 +121,31 @@ function FileTreeItemComponent({
           isSymlink={file.isSymlink}
           className="shrink-0 text-text-lighter"
         />
-        <span className={cn("select-none whitespace-nowrap", getGitStatusClass(file))}>
+        <span className={cn("flex-1 select-none whitespace-nowrap", getGitStatusClass(file))}>
           {file.name}
         </span>
+        {isRoot && onCollapseAll && (
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label="Collapse all folders"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onCollapseAll();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                onCollapseAll();
+              }
+            }}
+            className="ml-auto shrink-0 rounded p-0.5 opacity-60 transition-opacity hover:bg-hover hover:opacity-100"
+          >
+            <Minus size={12} />
+          </span>
+        )}
       </button>
     </div>
   );
