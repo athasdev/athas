@@ -7,7 +7,8 @@ import type { ExtensionManifest } from "../types/extension-manifest";
 
 // CDN base URL for downloading WASM parsers and highlight queries
 // Can be configured via environment variable
-const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
+const CDN_BASE_URL =
+  import.meta.env.VITE_PARSER_CDN_URL || "https://tree-sitter-cdn-production.up.railway.app";
 
 // Old manifest format from JSON files
 interface LanguageManifestFile {

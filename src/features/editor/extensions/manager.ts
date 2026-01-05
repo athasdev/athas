@@ -378,6 +378,10 @@ class ExtensionManager {
       logger.error("Editor", `Error deactivating language extension ${extensionId}:`, error);
     }
 
+    // Clear in-memory parser to free memory
+    const { wasmParserLoader } = await import("../lib/wasm-parser/loader");
+    wasmParserLoader.unloadParser(extension.languageId);
+
     // Remove language providers
     this.languageProviders.delete(extension.languageId);
     for (const ext of extension.extensions) {

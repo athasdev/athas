@@ -405,10 +405,15 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               );
 
               if (matchesLanguage) {
-                const { setSyntaxHighlightingFilePath } = await import(
-                  "@/features/editor/extensions/builtin/syntax-highlighting"
+                // Clear cached tokens first so re-highlighting fetches fresh
+                bufferState.actions.updateBufferTokens(activeBuffer.id, []);
+
+                // Dispatch event to trigger editor re-tokenization
+                window.dispatchEvent(
+                  new CustomEvent("extension-installed", {
+                    detail: { extensionId, filePath: activeBuffer.path },
+                  }),
                 );
-                setSyntaxHighlightingFilePath(activeBuffer.path);
               }
             }
           } else {
@@ -461,6 +466,10 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             // Uninstall using extension installer (removes from IndexedDB)
             await extensionInstaller.uninstallLanguage(languageId);
 
+            // Clear in-memory parser from wasmParserLoader
+            const { wasmParserLoader } = await import("@/features/editor/lib/wasm-parser/loader");
+            wasmParserLoader.unloadParser(languageId);
+
             // Also unload from extension manager if loaded
             const { extensionManager } = await import("@/features/editor/extensions/manager");
             try {
@@ -480,6 +489,30 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               // Create new Map reference to trigger React re-render
               state.availableExtensions = new Map(state.availableExtensions);
             });
+
+            // Trigger re-highlighting to clear syntax highlighting for open files
+            const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
+            const bufferState = useBufferStore.getState();
+            const activeBuffer = bufferState.buffers.find((b) => b.isActive);
+
+            if (activeBuffer && extension.manifest.languages) {
+              const fileExt = `.${activeBuffer.path.split(".").pop()?.toLowerCase()}`;
+              const matchesLanguage = extension.manifest.languages.some((lang) =>
+                lang.extensions.includes(fileExt),
+              );
+
+              if (matchesLanguage) {
+                // Clear cached tokens first so re-highlighting fetches fresh
+                bufferState.actions.updateBufferTokens(activeBuffer.id, []);
+
+                // Dispatch event to trigger editor re-tokenization (will fail and clear tokens)
+                window.dispatchEvent(
+                  new CustomEvent("extension-installed", {
+                    detail: { extensionId, filePath: activeBuffer.path },
+                  }),
+                );
+              }
+            }
           } else {
             // Non-language extension - use backend uninstall
             await invoke("uninstall_extension_new", { extensionId });
