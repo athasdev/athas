@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { MAX_FILES_TO_PROCESS } from "../constants/limits";
+import { useSettingsStore } from "@/features/settings/store";
 import type { FileItem } from "../types/command-bar";
 import { shouldIgnoreFile } from "../utils/file-filtering";
 
 export const useFileLoader = (isVisible: boolean) => {
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const commandBarFileLimit = useSettingsStore((state) => state.settings.commandBarFileLimit);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [isIndexing, setIsIndexing] = useState(false);
@@ -25,7 +26,6 @@ export const useFileLoader = (isVisible: boolean) => {
 
         const allFiles = await getAllProjectFiles();
         const filteredFiles = allFiles
-          .slice(0, MAX_FILES_TO_PROCESS)
           .filter((file) => !file.isDir && !shouldIgnoreFile(file.path))
           .map((file) => ({
             name: file.name,
@@ -43,7 +43,7 @@ export const useFileLoader = (isVisible: boolean) => {
     };
 
     loadFiles();
-  }, [getAllProjectFiles, isVisible]);
+  }, [getAllProjectFiles, isVisible, commandBarFileLimit]);
 
   return { files, isLoadingFiles, isIndexing, rootFolderPath };
 };
