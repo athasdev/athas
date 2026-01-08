@@ -77,9 +77,13 @@ export const createVimEditing = (): VimEditingCommands => {
   };
 
   // Update textarea cursor position
-  const updateTextareaCursor = (newPosition: any) => {
+  const updateTextareaCursor = (newPosition: any, shouldFocus = false) => {
     const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
     if (textarea) {
+      // Focus first if requested - setting selection on blurred textarea may not persist
+      if (shouldFocus && document.activeElement !== textarea) {
+        textarea.focus();
+      }
       textarea.selectionStart = textarea.selectionEnd = newPosition.offset;
       textarea.dispatchEvent(new Event("select"));
     }
@@ -397,7 +401,8 @@ export const createVimEditing = (): VimEditingCommands => {
       const newOffset = calculateOffsetFromPosition(currentPos.line, targetColumn, lines);
       const newPosition = { line: currentPos.line, column: targetColumn, offset: newOffset };
       setCursorPosition(newPosition);
-      updateTextareaCursor(newPosition);
+      // Focus before setting selection - called before entering insert mode
+      updateTextareaCursor(newPosition, true);
     },
 
     insertAtLineStart: () => {
@@ -418,7 +423,8 @@ export const createVimEditing = (): VimEditingCommands => {
       const newOffset = calculateOffsetFromPosition(currentPos.line, targetColumn, lines);
       const newPosition = { line: currentPos.line, column: targetColumn, offset: newOffset };
       setCursorPosition(newPosition);
-      updateTextareaCursor(newPosition);
+      // Focus before setting selection - called before entering insert mode
+      updateTextareaCursor(newPosition, true);
     },
 
     deleteVisualSelection: (startOffset: number, endOffset: number) => {
