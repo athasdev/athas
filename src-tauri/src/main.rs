@@ -402,6 +402,7 @@ fn main() {
          lsp_stop_for_file,
          lsp_get_completions,
          lsp_get_hover,
+         lsp_get_definition,
          lsp_document_open,
          lsp_document_change,
          lsp_document_close,
