@@ -22,8 +22,6 @@ interface UseGoToDefinitionProps {
   isLanguageSupported?: (filePath: string) => boolean;
   filePath: string;
   fontSize: number;
-  lineNumbers: boolean;
-  gutterWidth: number;
   charWidth: number;
 }
 
@@ -32,8 +30,6 @@ export const useGoToDefinition = ({
   isLanguageSupported,
   filePath,
   fontSize,
-  lineNumbers,
-  gutterWidth,
   charWidth,
 }: UseGoToDefinitionProps) => {
   const handleClick = useCallback(
@@ -56,14 +52,19 @@ export const useGoToDefinition = ({
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
+      // Get scroll from textarea (the actual scrollable element)
+      const textarea = editor.querySelector("textarea");
+      const scrollTop = textarea?.scrollTop ?? 0;
+      const scrollLeft = textarea?.scrollLeft ?? 0;
+
       const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
-      const contentOffsetX = lineNumbers
-        ? gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN
-        : EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
+      // Always use EDITOR_PADDING_LEFT since mouse events are captured on the
+      // overlay-editor-container which is positioned AFTER the gutter
+      const contentOffsetX = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
       const paddingTop = EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
 
-      const line = Math.floor((y - paddingTop + editor.scrollTop) / lineHeight);
-      const character = Math.floor((x - contentOffsetX + editor.scrollLeft) / charWidth);
+      const line = Math.floor((y - paddingTop + scrollTop) / lineHeight);
+      const character = Math.floor((x - contentOffsetX + scrollLeft) / charWidth);
 
       if (line >= 0 && character >= 0) {
         try {
@@ -114,7 +115,7 @@ export const useGoToDefinition = ({
         }
       }
     },
-    [getDefinition, isLanguageSupported, filePath, fontSize, lineNumbers, gutterWidth, charWidth],
+    [getDefinition, isLanguageSupported, filePath, fontSize, charWidth],
   );
 
   return {

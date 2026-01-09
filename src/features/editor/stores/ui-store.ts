@@ -20,6 +20,12 @@ type SearchMatch = {
   end: number;
 };
 
+type DefinitionLinkRange = {
+  line: number;
+  startColumn: number;
+  endColumn: number;
+};
+
 interface EditorUIState {
   // Completion state
   lspCompletions: CompletionItem[];
@@ -38,6 +44,9 @@ interface EditorUIState {
   searchQuery: string;
   searchMatches: SearchMatch[];
   currentMatchIndex: number;
+
+  // Definition link state (for Cmd+hover highlighting)
+  definitionLinkRange: DefinitionLinkRange | null;
 
   // Actions
   actions: EditorUIActions;
@@ -64,6 +73,9 @@ interface EditorUIActions {
   clearSearch: () => void;
   searchNext: () => void;
   searchPrevious: () => void;
+
+  // Definition link actions
+  setDefinitionLinkRange: (range: DefinitionLinkRange | null) => void;
 }
 
 export const useEditorUIStore = createSelectors(
@@ -85,6 +97,9 @@ export const useEditorUIStore = createSelectors(
     searchQuery: "",
     searchMatches: [],
     currentMatchIndex: -1,
+
+    // Definition link state
+    definitionLinkRange: null,
 
     // Actions
     actions: {
@@ -126,6 +141,9 @@ export const useEditorUIStore = createSelectors(
           set({ currentMatchIndex: prevIndex });
         }
       },
+
+      // Definition link actions
+      setDefinitionLinkRange: (range) => set({ definitionLinkRange: range }),
     },
   })),
 );

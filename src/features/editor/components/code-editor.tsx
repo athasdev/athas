@@ -54,6 +54,9 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const isFileTreeLoading = useFileSystemStore((state) => state.isFileTreeLoading);
   const { settings } = useSettingsStore();
 
+  // Apply zoom to font size for position calculations (must match editor.tsx)
+  const zoomedFontSize = settings.fontSize * zoomLevel;
+
   // Extract values from active buffer or use defaults
   const value = activeBuffer?.content || "";
   const filePath = activeBuffer?.path || "";
@@ -113,14 +116,26 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const cursorPosition = useEditorStateStore.use.cursorPosition();
 
   // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
-  const { hoverHandlers, goToDefinitionHandlers } = useLspIntegration({
+  const { hoverHandlers, goToDefinitionHandlers, definitionLinkHandlers } = useLspIntegration({
     filePath,
     value,
     cursorPosition,
     editorRef,
-    fontSize: settings.fontSize,
+    fontSize: zoomedFontSize,
     lineNumbers: settings.lineNumbers,
   });
+
+  // Combine mouse move handlers for hover and definition link
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    hoverHandlers.handleHover(e);
+    definitionLinkHandlers.handleMouseMove(e);
+  };
+
+  // Combine mouse leave handlers
+  const handleMouseLeave = () => {
+    hoverHandlers.handleMouseLeave();
+    definitionLinkHandlers.handleMouseLeave();
+  };
 
   // Scroll management
   useEditorScroll(editorRef, null);
@@ -300,8 +315,8 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
               <CsvPreview />
             ) : (
               <Editor
-                onMouseMove={hoverHandlers.handleHover}
-                onMouseLeave={hoverHandlers.handleMouseLeave}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
                 onMouseEnter={hoverHandlers.handleMouseEnter}
                 onClick={goToDefinitionHandlers.handleClick}
               />

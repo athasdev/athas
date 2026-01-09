@@ -173,6 +173,7 @@ impl TerminalConnection {
 
       thread::spawn(move || {
          let mut buffer = vec![0u8; 65536]; // 64KB buffer for better performance
+         let mut incomplete_utf8: Vec<u8> = Vec::new();
 
          loop {
             match reader.read(&mut buffer) {
@@ -182,12 +183,33 @@ impl TerminalConnection {
                   break;
                }
                Ok(n) => {
-                  // Send raw bytes to frontend
-                  let data = String::from_utf8_lossy(&buffer[..n]).to_string();
-                  let _ = app_handle.emit(
-                     &format!("pty-output-{}", id),
-                     serde_json::json!({ "data": data }),
-                  );
+                  // Prepend any incomplete UTF-8 bytes from previous read
+                  let mut data_to_process = if incomplete_utf8.is_empty() {
+                     buffer[..n].to_vec()
+                  } else {
+                     let mut combined = std::mem::take(&mut incomplete_utf8);
+                     combined.extend_from_slice(&buffer[..n]);
+                     combined
+                  };
+
+                  // Find the last valid UTF-8 boundary
+                  let valid_up_to = Self::find_utf8_boundary(&data_to_process);
+
+                  // Save incomplete bytes for next iteration
+                  if valid_up_to < data_to_process.len() {
+                     incomplete_utf8 = data_to_process[valid_up_to..].to_vec();
+                     data_to_process.truncate(valid_up_to);
+                  }
+
+                  // Only emit if we have valid data
+                  if !data_to_process.is_empty() {
+                     // Safe to use from_utf8 since we validated the boundary
+                     let data = String::from_utf8_lossy(&data_to_process).to_string();
+                     let _ = app_handle.emit(
+                        &format!("pty-output-{}", id),
+                        serde_json::json!({ "data": data }),
+                     );
+                  }
                }
                Err(e) => {
                   eprintln!("Error reading from PTY: {}", e);
@@ -200,6 +222,54 @@ impl TerminalConnection {
             }
          }
       });
+   }
+
+   /// Find the last valid UTF-8 boundary in a byte slice.
+   /// Returns the index up to which the bytes form valid UTF-8.
+   fn find_utf8_boundary(bytes: &[u8]) -> usize {
+      if bytes.is_empty() {
+         return 0;
+      }
+
+      // Check from the end for incomplete multi-byte sequences
+      let len = bytes.len();
+
+      // Check the last 1-4 bytes for incomplete sequences
+      for i in 1..=4.min(len) {
+         let check_from = len - i;
+         let byte = bytes[check_from];
+
+         // Check if this is a leading byte of a multi-byte sequence
+         if byte & 0b1000_0000 == 0 {
+            // ASCII byte - valid boundary after this
+            return len;
+         } else if byte & 0b1100_0000 == 0b1100_0000 {
+            // This is a leading byte (starts with 11)
+            let expected_len = if byte & 0b1111_0000 == 0b1111_0000 {
+               4
+            } else if byte & 0b1110_0000 == 0b1110_0000 {
+               3
+            } else {
+               2
+            };
+
+            let actual_len = i;
+            if actual_len >= expected_len {
+               // Complete sequence
+               return len;
+            } else {
+               // Incomplete sequence - boundary is before this byte
+               return check_from;
+            }
+         }
+         // Continuation byte (10xxxxxx) - keep looking for the leading byte
+      }
+
+      // If we get here, try to validate the whole thing
+      match std::str::from_utf8(bytes) {
+         Ok(_) => len,
+         Err(e) => e.valid_up_to(),
+      }
    }
 
    pub fn write(&self, data: &str) -> Result<()> {

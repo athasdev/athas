@@ -420,6 +420,13 @@ impl LspClient {
       self.request::<request::HoverRequest>(params).await
    }
 
+   pub async fn text_document_definition(
+      &self,
+      params: GotoDefinitionParams,
+   ) -> Result<Option<GotoDefinitionResponse>> {
+      self.request::<request::GotoDefinition>(params).await
+   }
+
    pub fn text_document_did_open(&self, params: DidOpenTextDocumentParams) -> Result<()> {
       self.notify::<notification::DidOpenTextDocument>(params)
    }

@@ -449,6 +449,32 @@ impl LspManager {
       client.text_document_hover(params).await
    }
 
+   pub async fn get_definition(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Option<GotoDefinitionResponse>> {
+      let client = self
+         .get_client_for_file(file_path)
+         .context("No LSP client for this file")?;
+
+      let text_document = TextDocumentIdentifier {
+         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+      };
+
+      let params = GotoDefinitionParams {
+         text_document_position_params: TextDocumentPositionParams {
+            text_document,
+            position: Position { line, character },
+         },
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      client.text_document_definition(params).await
+   }
+
    pub fn notify_document_open(&self, file_path: &str, content: String) -> Result<()> {
       let path = PathBuf::from(file_path);
       let _extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");

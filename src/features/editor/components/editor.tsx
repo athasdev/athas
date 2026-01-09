@@ -29,6 +29,7 @@ import { calculateCursorPosition } from "../utils/position";
 import { scrollLogger } from "../utils/scroll-logger";
 import { InlineDiff } from "./diff/inline-diff";
 import { Gutter } from "./gutter/gutter";
+import { DefinitionLinkLayer } from "./layers/definition-link-layer";
 import { GitBlameLayer } from "./layers/git-blame-layer";
 import { HighlightLayer } from "./layers/highlight-layer";
 import { InputLayer } from "./layers/input-layer";
@@ -273,7 +274,9 @@ export function Editor({
     (e: React.MouseEvent<HTMLTextAreaElement>) => {
       if (!bufferId || !inputRef.current) return;
 
-      if (e.metaKey || e.ctrlKey) {
+      // Alt+click (Option+click on Mac) for multi-cursor (like VS Code)
+      // Cmd+click is reserved for go-to-definition
+      if (e.altKey) {
         e.preventDefault();
 
         const selectionStart = inputRef.current.selectionStart;
@@ -877,6 +880,14 @@ export function Editor({
             content={displayContent}
           />
         )}
+
+        <DefinitionLinkLayer
+          fontSize={fontSize}
+          fontFamily={fontFamily}
+          lineHeight={lineHeight}
+          content={displayContent}
+          textareaRef={inputRef}
+        />
 
         {filePath && (
           <GitBlameLayer
