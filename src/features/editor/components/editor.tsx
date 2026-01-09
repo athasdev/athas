@@ -139,7 +139,7 @@ export function Editor({
     lineHeight,
   });
 
-  const { tokens, tokenize, forceFullTokenize } = useTokenizer({
+  const { tokens, tokenizedContent, tokenize, forceFullTokenize } = useTokenizer({
     filePath,
     bufferId: bufferId || undefined,
     incremental: true,
@@ -820,7 +820,7 @@ export function Editor({
         {hasSyntaxHighlighting && (
           <HighlightLayer
             ref={highlightRef}
-            content={displayContent}
+            content={tokenizedContent || displayContent}
             tokens={tokens}
             fontSize={fontSize}
             fontFamily={fontFamily}

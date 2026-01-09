@@ -174,6 +174,30 @@ function FileTreeComponent({
     return () => clearTimeout(debounceTimer);
   }, [rootFolderPath, files]);
 
+  useEffect(() => {
+    if (!rootFolderPath) return;
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const handleGitStatusUpdated = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(async () => {
+        try {
+          const status = await getGitStatus(rootFolderPath);
+          setGitStatus(status);
+        } catch {
+          // Silently ignore errors
+        }
+      }, GIT_STATUS_DEBOUNCE_MS);
+    };
+
+    window.addEventListener("git-status-updated", handleGitStatusUpdated);
+    return () => {
+      window.removeEventListener("git-status-updated", handleGitStatusUpdated);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [rootFolderPath]);
+
   const isGitIgnored = useCallback(
     (fullPath: string, isDir: boolean): boolean => {
       if (!gitIgnore || !rootFolderPath) return false;
