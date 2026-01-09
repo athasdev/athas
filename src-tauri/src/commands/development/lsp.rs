@@ -1,5 +1,5 @@
 use crate::lsp::{LspManager, types::LspResult};
-use lsp_types::{CompletionItem, Hover};
+use lsp_types::{CompletionItem, GotoDefinitionResponse, Hover, Location};
 use std::path::PathBuf;
 use tauri::State;
 
@@ -102,6 +102,34 @@ pub async fn lsp_get_hover(
       .get_hover(&file_path, line, character)
       .await
       .map_err(Into::into)
+}
+
+#[tauri::command]
+pub async fn lsp_get_definition(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+   line: u32,
+   character: u32,
+) -> LspResult<Option<Vec<Location>>> {
+   let response = lsp_manager
+      .get_definition(&file_path, line, character)
+      .await;
+
+   match response {
+      Ok(Some(GotoDefinitionResponse::Scalar(loc))) => Ok(Some(vec![loc])),
+      Ok(Some(GotoDefinitionResponse::Array(locs))) => Ok(Some(locs)),
+      Ok(Some(GotoDefinitionResponse::Link(links))) => Ok(Some(
+         links
+            .into_iter()
+            .map(|link| Location {
+               uri: link.target_uri,
+               range: link.target_selection_range,
+            })
+            .collect(),
+      )),
+      Ok(None) => Ok(None),
+      Err(e) => Err(e.into()),
+   }
 }
 
 #[tauri::command]
