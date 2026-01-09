@@ -82,6 +82,8 @@ interface Settings {
   //// File tree
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
+  //// Command Bar
+  commandBarFileLimit: number;
 }
 
 const defaultSettings: Settings = {
@@ -159,6 +161,8 @@ const defaultSettings: Settings = {
   //// File tree
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
+  //// Command Bar
+  commandBarFileLimit: 2000,
 };
 
 // Theme class constants

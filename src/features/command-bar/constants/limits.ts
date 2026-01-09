@@ -1,5 +1,5 @@
 // Performance limits for file processing
-export const MAX_FILES_TO_PROCESS = 2000;
+// removed the hardcoded limit
 export const MAX_OTHER_FILES_NO_QUERY = 200;
 
 // Result limits

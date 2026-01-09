@@ -122,11 +122,13 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
       document.body.classList.add(`vim-mode-${vimModeAttr}`);
 
       if (mode === "insert") {
+        // Only set cursor position if textarea doesn't have focus
+        // If it has focus, a vim command (like I, A, o, O) already positioned it
         if (document.activeElement !== textarea) {
           textarea.focus();
+          const cursor = useEditorStateStore.getState().cursorPosition;
+          textarea.selectionStart = textarea.selectionEnd = cursor.offset;
         }
-        const cursor = useEditorStateStore.getState().cursorPosition;
-        textarea.selectionStart = textarea.selectionEnd = cursor.offset;
         textarea.style.caretColor = "";
       } else if (mode === "visual") {
         if (document.activeElement !== textarea) {
@@ -497,6 +499,22 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
+
+        // Move cursor back one position (vim behavior)
+        const currentPos = getCursorPosition();
+        if (currentPos.column > 0) {
+          const lines = getLines();
+          const newColumn = currentPos.column - 1;
+          const newOffset = calculateOffsetFromPosition(currentPos.line, newColumn, lines);
+          const newPosition = { line: currentPos.line, column: newColumn, offset: newOffset };
+          setCursorPosition(newPosition);
+
+          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.selectionStart = textarea.selectionEnd = newOffset;
+          }
+        }
+
         setMode("normal");
         return true;
       }
