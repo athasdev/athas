@@ -10,7 +10,7 @@ export function ImageViewerFooter({ zoom, fileType, additionalInfo }: ImageViewe
   return (
     <div
       className={cn(
-        "flex items-center gap-4 border-border border-t",
+        "flex items-center gap-4 border-border border-t h-9",
         "bg-secondary-bg px-4 py-2 text-text-lighter text-xs",
       )}
     >
