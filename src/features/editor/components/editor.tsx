@@ -1,7 +1,9 @@
 import "../styles/overlay-editor.css";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useSettingsStore } from "@/features/settings/store";
 import { useGitGutter } from "@/features/version-control/git/controllers/use-gutter";
+import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/stores/zoom-store";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
@@ -33,6 +35,7 @@ import { HighlightLayer } from "./layers/highlight-layer";
 import { InputLayer } from "./layers/input-layer";
 import { MultiCursorLayer } from "./layers/multi-cursor-layer";
 import { SearchHighlightLayer } from "./layers/search-highlight-layer";
+import { VimCursorLayer } from "./layers/vim-cursor-layer";
 
 interface EditorProps {
   className?: string;
@@ -53,6 +56,7 @@ export function Editor({
   const highlightRef = useRef<HTMLDivElement>(null);
   const multiCursorRef = useRef<HTMLDivElement>(null);
   const searchHighlightRef = useRef<HTMLDivElement>(null);
+  const vimCursorRef = useRef<HTMLDivElement>(null);
 
   // Track buffer changes to handle cursor positioning correctly
   const prevBufferIdRef = useRef<string | null>(null);
@@ -76,6 +80,8 @@ export function Editor({
   const baseFontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
+  const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
+  const vimMode = useVimStore.use.mode();
 
   // Apply zoom by scaling font size instead of CSS transform
   // This ensures text and positioned elements use the same rendering path
@@ -586,6 +592,11 @@ export function Editor({
             searchHighlightRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
+          // Update vim cursor layer transform for visual sync
+          if (vimCursorRef.current) {
+            vimCursorRef.current.style.transform = `translate(-${left}px, -${top}px)`;
+          }
+
           // Update state store with captured buffer ID to avoid race condition
           useEditorStateStore.getState().actions.setScrollForBuffer(currentBufferId, top, left);
 
@@ -843,6 +854,18 @@ export function Editor({
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             content={displayContent}
+          />
+        )}
+
+        {vimModeEnabled && (
+          <VimCursorLayer
+            ref={vimCursorRef}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            lineHeight={lineHeight}
+            tabSize={tabSize}
+            content={displayContent}
+            vimMode={vimMode}
           />
         )}
 
