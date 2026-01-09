@@ -986,14 +986,14 @@ export const useFileSystemStore = createSelectors(
           try {
             const allFiles: FileEntry[] = [];
             let processedFiles = 0;
-            const MAX_FILES = 5000; // Limit total files processed for performance
+            const maxFiles = useSettingsStore.getState().settings.commandBarFileLimit;
 
             const scanDirectory = async (
               directoryPath: string,
               depth: number = 0,
             ): Promise<boolean> => {
               // Prevent infinite recursion and very deep scanning
-              if (depth > 8 || processedFiles > MAX_FILES) {
+              if (depth > 8 || processedFiles > maxFiles) {
                 return false; // Signal to stop scanning
               }
 
@@ -1001,7 +1001,7 @@ export const useFileSystemStore = createSelectors(
                 const entries = await readDirectory(directoryPath);
 
                 for (const entry of entries as any[]) {
-                  if (processedFiles > MAX_FILES) break;
+                  if (processedFiles > maxFiles) break;
 
                   const name = entry.name || "Unknown";
                   const isDir = entry.is_dir || false;

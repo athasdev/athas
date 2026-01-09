@@ -6,6 +6,7 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
+import NumberInput from "@/ui/number-input";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
 
@@ -119,6 +120,19 @@ export const GeneralSettings = () => {
             checked={settings.autoSave}
             onChange={(checked) => updateSetting("autoSave", checked)}
             size="sm"
+          />
+        </SettingRow>
+        <SettingRow
+          label="Command Bar File Limit"
+          description="Maximum files to index for quick file search (⌘P). Increase for large monorepos."
+        >
+          <NumberInput
+            value={settings.commandBarFileLimit}
+            onChange={(value) => updateSetting("commandBarFileLimit", value)}
+            min={1000}
+            max={100000}
+            step={1000}
+            className="w-24"
           />
         </SettingRow>
       </Section>
