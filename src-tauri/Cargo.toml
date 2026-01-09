@@ -31,7 +31,7 @@ log = "0.4.27"
 lsp-types = { version = "0.95", features = ["proposed"] }
 notify = "8.1.0"
 notify-debouncer-mini = "0.6.0"
-portable-pty = "0.8"
+portable-pty = "0.9"
 regex = "1.10"
 reqwest = "0.12"
 rusqlite = { version = "0.29.0", features = ["bundled"] }
