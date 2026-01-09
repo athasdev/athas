@@ -11,6 +11,7 @@ import { useEditorLayout } from "@/features/editor/hooks/use-layout";
 import { useSnippetCompletion } from "@/features/editor/hooks/use-snippet-completion";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
+import { useDefinitionLink } from "@/features/editor/lsp/use-definition-link";
 import { useGoToDefinition } from "@/features/editor/lsp/use-go-to-definition";
 import { useHover } from "@/features/editor/lsp/use-hover";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -104,9 +105,17 @@ export const useLspIntegration = ({
     isLanguageSupported: (fp) => isFileSupported(fp),
     filePath: filePath || "",
     fontSize,
-    lineNumbers,
-    gutterWidth,
     charWidth,
+  });
+
+  // Set up definition link highlighting (Cmd+hover)
+  const definitionLinkHandlers = useDefinitionLink({
+    filePath: filePath || "",
+    content: value,
+    fontSize,
+    charWidth,
+    isLanguageSupported: isLspSupported,
+    getDefinition: lspClient.getDefinition.bind(lspClient),
   });
 
   // Handle document lifecycle (open/close)
@@ -217,5 +226,6 @@ export const useLspIntegration = ({
     snippetCompletion,
     hoverHandlers,
     goToDefinitionHandlers,
+    definitionLinkHandlers,
   };
 };
