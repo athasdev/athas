@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { editorAPI } from "@/features/editor/extensions/api";
+import { useCenterCursor } from "@/features/editor/hooks/use-center-cursor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { logger } from "../utils/logger";
@@ -32,6 +33,8 @@ export const useGoToDefinition = ({
   fontSize,
   charWidth,
 }: UseGoToDefinitionProps) => {
+  const { centerCursorInViewport } = useCenterCursor();
+
   const handleClick = useCallback(
     async (e: React.MouseEvent<HTMLDivElement>) => {
       // Only handle Cmd+Click (Mac) or Ctrl+Click (Windows/Linux)
@@ -102,6 +105,10 @@ export const useGoToDefinition = ({
                 offset,
               });
 
+              requestAnimationFrame(() => {
+                centerCursorInViewport(target.range.start.line);
+              });
+
               logger.info(
                 "Editor",
                 `Jumped to ${targetFilePath}:${target.range.start.line}:${target.range.start.character}`,
@@ -115,7 +122,7 @@ export const useGoToDefinition = ({
         }
       }
     },
-    [getDefinition, isLanguageSupported, filePath, fontSize, charWidth],
+    [getDefinition, isLanguageSupported, filePath, fontSize, charWidth, centerCursorInViewport],
   );
 
   return {
