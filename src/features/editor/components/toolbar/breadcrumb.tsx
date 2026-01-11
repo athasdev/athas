@@ -1,10 +1,12 @@
-import { ArrowLeft, ChevronRight, Eye, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronRight, Eye, Search, Sparkles } from "lucide-react";
 import { type RefObject, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { logger } from "@/features/editor/utils/logger";
 import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import { readDirectory } from "@/features/file-system/controllers/platform";
@@ -29,6 +31,42 @@ export default function Breadcrumb() {
   const { isFindVisible, setIsFindVisible } = useUIState();
   const { toggle: toggleInlineEditToolbar } = useInlineEditToolbarStore.use.actions();
   const selection = useEditorStateStore.use.selection?.();
+
+  const jumpListActions = useJumpListStore.use.actions();
+  const canGoBack = jumpListActions.canGoBack();
+  const canGoForward = jumpListActions.canGoForward();
+
+  const handleJumpBack = async () => {
+    const bufferStore = useBufferStore.getState();
+    const editorState = useEditorStateStore.getState();
+    const activeBufferId = bufferStore.activeBufferId;
+    const activeBuffer = bufferStore.buffers.find((b) => b.id === activeBufferId);
+
+    const currentPosition =
+      activeBufferId && activeBuffer?.path
+        ? {
+            bufferId: activeBufferId,
+            filePath: activeBuffer.path,
+            line: editorState.cursorPosition.line,
+            column: editorState.cursorPosition.column,
+            offset: editorState.cursorPosition.offset,
+            scrollTop: editorState.scrollTop,
+            scrollLeft: editorState.scrollLeft,
+          }
+        : undefined;
+
+    const entry = jumpListActions.goBack(currentPosition);
+    if (entry) {
+      await navigateToJumpEntry(entry);
+    }
+  };
+
+  const handleJumpForward = async () => {
+    const entry = jumpListActions.goForward();
+    if (entry) {
+      await navigateToJumpEntry(entry);
+    }
+  };
 
   const handleNavigate = async (path: string) => {
     try {
@@ -249,6 +287,26 @@ export default function Breadcrumb() {
     <>
       <div className="flex min-h-7 select-none items-center justify-between border-border border-b bg-terniary-bg px-3 py-1">
         <div className="ui-font flex items-center gap-0.5 overflow-hidden text-text-lighter text-xs">
+          <div className="mr-1 flex items-center gap-0.5">
+            <button
+              onClick={handleJumpBack}
+              disabled={!canGoBack}
+              className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+              title="Go Back (Ctrl+-)"
+              aria-label="Go back to previous location"
+            >
+              <ArrowLeft size={12} />
+            </button>
+            <button
+              onClick={handleJumpForward}
+              disabled={!canGoForward}
+              className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+              title="Go Forward (Ctrl+Shift+-)"
+              aria-label="Go forward to next location"
+            >
+              <ArrowRight size={12} />
+            </button>
+          </div>
           {segments.map((segment, index) => (
             <div key={index} className="flex min-w-0 items-center gap-0.5">
               {index > 0 && (
