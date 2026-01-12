@@ -78,6 +78,8 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "cmd+9", command: "workbench.switchToTab9", source: "default" },
   { key: "F12", command: "editor.goToDefinition", source: "default", when: "editorFocus" },
   { key: "shift+F12", command: "editor.goToReferences", source: "default", when: "editorFocus" },
+  { key: "ctrl+-", command: "navigation.goBack", source: "default" },
+  { key: "ctrl+shift+-", command: "navigation.goForward", source: "default" },
 
   // Additional view commands
   { key: "cmd+p", command: "file.quickOpen", source: "default" },

@@ -1,7 +1,10 @@
 import { useCallback } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { editorAPI } from "@/features/editor/extensions/api";
+import { useCenterCursor } from "@/features/editor/hooks/use-center-cursor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { logger } from "../utils/logger";
 
@@ -32,6 +35,8 @@ export const useGoToDefinition = ({
   fontSize,
   charWidth,
 }: UseGoToDefinitionProps) => {
+  const { centerCursorInViewport } = useCenterCursor();
+
   const handleClick = useCallback(
     async (e: React.MouseEvent<HTMLDivElement>) => {
       // Only handle Cmd+Click (Mac) or Ctrl+Click (Windows/Linux)
@@ -76,6 +81,21 @@ export const useGoToDefinition = ({
             const targetFilePath = target.uri.replace("file://", "");
 
             const bufferStore = useBufferStore.getState();
+
+            // Push current position to jump list before navigating
+            const activeBufferId = bufferStore.activeBufferId;
+            if (activeBufferId && filePath) {
+              const editorState = useEditorStateStore.getState();
+              useJumpListStore.getState().actions.pushEntry({
+                bufferId: activeBufferId,
+                filePath,
+                line: editorState.cursorPosition.line,
+                column: editorState.cursorPosition.column,
+                offset: editorState.cursorPosition.offset,
+                scrollTop: editorState.scrollTop,
+                scrollLeft: editorState.scrollLeft,
+              });
+            }
             const existingBuffer = bufferStore.buffers.find((b) => b.path === targetFilePath);
 
             if (existingBuffer) {
@@ -102,6 +122,10 @@ export const useGoToDefinition = ({
                 offset,
               });
 
+              requestAnimationFrame(() => {
+                centerCursorInViewport(target.range.start.line);
+              });
+
               logger.info(
                 "Editor",
                 `Jumped to ${targetFilePath}:${target.range.start.line}:${target.range.start.character}`,
@@ -115,7 +139,7 @@ export const useGoToDefinition = ({
         }
       }
     },
-    [getDefinition, isLanguageSupported, filePath, fontSize, charWidth],
+    [getDefinition, isLanguageSupported, filePath, fontSize, charWidth, centerCursorInViewport],
   );
 
   return {

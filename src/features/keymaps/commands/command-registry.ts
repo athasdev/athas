@@ -1,6 +1,8 @@
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { isMac } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
@@ -448,7 +450,8 @@ const navigationCommands: Command[] = [
       const lspClient = LspClient.getInstance();
       const bufferStore = useBufferStore.getState();
       const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
-      const cursorPosition = useEditorStateStore.getState().cursorPosition;
+      const editorState = useEditorStateStore.getState();
+      const cursorPosition = editorState.cursorPosition;
 
       if (!activeBuffer?.path) return;
 
@@ -459,6 +462,17 @@ const navigationCommands: Command[] = [
       );
 
       if (definition && definition.length > 0) {
+        // Push current position to jump list before navigating
+        useJumpListStore.getState().actions.pushEntry({
+          bufferId: activeBuffer.id,
+          filePath: activeBuffer.path,
+          line: cursorPosition.line,
+          column: cursorPosition.column,
+          offset: cursorPosition.offset,
+          scrollTop: editorState.scrollTop,
+          scrollLeft: editorState.scrollLeft,
+        });
+
         const target = definition[0];
         const filePath = target.uri.replace("file://", "");
         const existingBuffer = bufferStore.buffers.find((b) => b.path === filePath);
@@ -512,6 +526,48 @@ const navigationCommands: Command[] = [
 
       if (references && references.length > 0) {
         console.log(`Found ${references.length} references:`, references);
+      }
+    },
+  },
+  {
+    id: "navigation.goBack",
+    title: "Go Back",
+    category: "Navigation",
+    keybinding: "ctrl+-",
+    execute: async () => {
+      const bufferStore = useBufferStore.getState();
+      const editorState = useEditorStateStore.getState();
+      const activeBufferId = bufferStore.activeBufferId;
+      const activeBuffer = bufferStore.buffers.find((b) => b.id === activeBufferId);
+
+      const currentPosition =
+        activeBufferId && activeBuffer?.path
+          ? {
+              bufferId: activeBufferId,
+              filePath: activeBuffer.path,
+              line: editorState.cursorPosition.line,
+              column: editorState.cursorPosition.column,
+              offset: editorState.cursorPosition.offset,
+              scrollTop: editorState.scrollTop,
+              scrollLeft: editorState.scrollLeft,
+            }
+          : undefined;
+
+      const entry = useJumpListStore.getState().actions.goBack(currentPosition);
+      if (entry) {
+        await navigateToJumpEntry(entry);
+      }
+    },
+  },
+  {
+    id: "navigation.goForward",
+    title: "Go Forward",
+    category: "Navigation",
+    keybinding: "ctrl+shift+-",
+    execute: async () => {
+      const entry = useJumpListStore.getState().actions.goForward();
+      if (entry) {
+        await navigateToJumpEntry(entry);
       }
     },
   },

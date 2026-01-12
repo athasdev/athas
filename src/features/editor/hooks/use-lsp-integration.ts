@@ -69,6 +69,12 @@ export const useLspIntegration = ({
   // Use constant debounce for predictable completion behavior
   const completionTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
+  // Track cursor position where completions were triggered (to hide on cursor movement)
+  const completionTriggerOffsetRef = useRef<number | null>(null);
+
+  // Track which file the last input was for (to avoid triggering completions on buffer switch)
+  const lastInputFilePathRef = useRef<string | null>(null);
+
   // Track document versions per file path for LSP sync
   const documentVersionsRef = useRef<Map<string, number>>(new Map());
 
@@ -198,11 +204,21 @@ export const useLspIntegration = ({
       return;
     }
 
+    // Skip if this is a buffer switch (filePath changed but typing happened in a different file)
+    // This prevents completions from appearing when switching to a buffer where user didn't just type
+    if (lastInputFilePathRef.current !== null && lastInputFilePathRef.current !== filePath) {
+      return;
+    }
+
     // Debounce completion trigger with fixed delay for predictable behavior
     completionTimerRef.current = setTimeout(() => {
       // Get latest value at trigger time (not from effect deps)
       const buffer = useBufferStore.getState().buffers.find((b) => b.path === filePath);
       if (!buffer) return;
+
+      // Store the cursor offset and file path where completion was triggered
+      completionTriggerOffsetRef.current = cursorPosition.offset;
+      lastInputFilePathRef.current = filePath;
 
       lspActions.requestCompletion({
         filePath,
@@ -219,6 +235,32 @@ export const useLspIntegration = ({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cursorPosition and isApplyingCompletion are read at render time, not as triggers
   }, [lastInputTimestamp, filePath, lspActions, isLspSupported, editorRef]);
+
+  // Hide completions when cursor moves via navigation (not typing)
+  // Navigation = cursor moves but lastInputTimestamp doesn't change
+  const prevInputTimestampRef = useRef<number>(0);
+
+  useEffect(() => {
+    const { isLspCompletionVisible } = useEditorUIStore.getState();
+
+    // Only check if completions are visible
+    if (!isLspCompletionVisible) {
+      prevInputTimestampRef.current = lastInputTimestamp;
+      return;
+    }
+
+    // If lastInputTimestamp changed, this cursor movement was caused by typing
+    // Don't hide completions in this case
+    if (lastInputTimestamp !== prevInputTimestampRef.current) {
+      prevInputTimestampRef.current = lastInputTimestamp;
+      return;
+    }
+
+    // lastInputTimestamp didn't change, so this is navigation (arrow keys, click, etc.)
+    // Hide completions
+    useEditorUIStore.getState().actions.setIsLspCompletionVisible(false);
+    completionTriggerOffsetRef.current = null;
+  }, [cursorPosition.offset, lastInputTimestamp]);
 
   return {
     lspClient,

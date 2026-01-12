@@ -743,7 +743,13 @@ export function Editor({
             inputRef.current.selectionStart = safeOffset;
             inputRef.current.selectionEnd = safeOffset;
           }
-          inputRef.current.focus();
+          // Save scroll before focus (focus can scroll to show cursor)
+          const scrollTop = inputRef.current.scrollTop;
+          const scrollLeft = inputRef.current.scrollLeft;
+          inputRef.current.focus({ preventScroll: true });
+          // Restore scroll in case focus changed it
+          inputRef.current.scrollTop = scrollTop;
+          inputRef.current.scrollLeft = scrollLeft;
           // Clear the buffer switch flag after cursor is positioned
           isBufferSwitchRef.current = false;
         }

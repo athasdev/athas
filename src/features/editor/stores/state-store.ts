@@ -218,6 +218,7 @@ export const useEditorStateStore = createSelectors(
         clearPositionCache: (bufferId) => viewStateCache.clear(bufferId),
         restorePositionForFile: (bufferId) => {
           const cachedState = viewStateCache.get(bufferId);
+          console.log("[restorePositionForFile]", bufferId, "cached:", cachedState);
           if (cachedState) {
             // Restore cursor position and scroll offset together
             set({
@@ -230,6 +231,7 @@ export const useEditorStateStore = createSelectors(
             const textarea = document.querySelector(
               ".editor-textarea",
             ) as HTMLTextAreaElement | null;
+            console.log("[restorePositionForFile] setting scroll to", cachedState.scrollTop);
             if (viewport) {
               viewport.scrollTop = cachedState.scrollTop;
               viewport.scrollLeft = cachedState.scrollLeft;
@@ -237,6 +239,10 @@ export const useEditorStateStore = createSelectors(
             if (textarea) {
               textarea.scrollTop = cachedState.scrollTop;
               textarea.scrollLeft = cachedState.scrollLeft;
+              console.log(
+                "[restorePositionForFile] textarea scroll after set:",
+                textarea.scrollTop,
+              );
             }
             return true;
           }
