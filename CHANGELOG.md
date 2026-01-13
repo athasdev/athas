@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2025-01-13
+
+### Added
+- Native PDF viewer with external open support
+- CSV viewer as built-in extension
+- HTML/CSS live preview with asset protocol support
+- Preview mode for file tabs
+- Auto-refresh for externally created/deleted files
+- In-app report a bug button
+- Drag and drop to open folders as projects and files as buffers
+- Test connection button and feedback for SSH connections
+- Configurable command bar file limit and improved fuzzy search
+- Cmd+hover definition link highlighting
+- Jump list navigation
+- Performance monitoring system
+
+### Changed
+- Virtualize file tree for better performance
+- Optimize editor rendering
+- Improve PDF and image zoom controls
+- Improve autocompletion behavior and LSP completion
+- Remove Rust from bundled registry
+
+### Fixed
+- Fix scroll position bugs in editor
+- Fix file tree git status not updating on save
+- Fix nvim cursor in normal and insert mode
+- Fix terminal corruption with multi-byte UTF-8 characters
+- Fix search highlighting in editor
+- Fix command palette not finding all files
+- Prevent command injection in SSH fallback commands
+- Fix git blame not appearing after file switch
+- Fix duplicate LSP server creation due to race condition
+- Fix gap between sticky headers in file tree
+- Preserve scroll position when switching between buffers
+- Fix window resize on Linux
+- Disable problematic DMABUF renderer on Linux
+- Fix stored XSS in markdown parser by sanitizing HTML output
+- Bundle FreeType in Linux AppImage for older distro compatibility
+- Fix incorrect bundled LSP path on Linux
+- Fix git blame not showing after scrolling
+- Fix tokenization lag and visual flashing during typing
+
 ## [0.3.1] - 2025-12-22
 
 ### Fixed
@@ -190,6 +233,9 @@ Initial release
 
 ---
 
+[0.3.2]: https://github.com/athasdev/athas/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/athasdev/athas/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/athasdev/athas/compare/v0.2.6...v0.3.0
 [0.2.6]: https://github.com/athasdev/athas/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/athasdev/athas/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/athasdev/athas/compare/v0.2.2...v0.2.4
