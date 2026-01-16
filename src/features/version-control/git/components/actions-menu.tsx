@@ -1,5 +1,4 @@
 import {
-  Archive,
   Download,
   GitPullRequest,
   RefreshCw,
@@ -27,7 +26,6 @@ interface GitActionsMenuProps {
   hasGitRepo: boolean;
   repoPath?: string;
   onRefresh?: () => void;
-  onOpenStashManager?: () => void;
   onOpenRemoteManager?: () => void;
   onOpenTagManager?: () => void;
 }
@@ -39,7 +37,6 @@ const GitActionsMenu = ({
   hasGitRepo,
   repoPath,
   onRefresh,
-  onOpenStashManager,
   onOpenRemoteManager,
   onOpenTagManager,
 }: GitActionsMenuProps) => {
@@ -90,11 +87,6 @@ const GitActionsMenu = ({
   const handleRefresh = async () => {
     // The parent component (git-view) will handle the refreshing state through the store
     await onRefresh?.();
-  };
-
-  const handleStashManager = () => {
-    onOpenStashManager?.();
-    onClose();
   };
 
   const handleRemoteManager = () => {
@@ -179,21 +171,6 @@ const GitActionsMenu = ({
           <div className="my-1 border-border border-t"></div>
 
           {/* Advanced Operations */}
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleStashManager();
-            }}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "ui-font text-left text-text text-xs hover:bg-hover",
-            )}
-          >
-            <Archive size={12} />
-            Manage Stashes
-          </button>
-
           <button
             onMouseDown={(e) => {
               e.preventDefault();
