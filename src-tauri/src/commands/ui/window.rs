@@ -284,3 +284,32 @@ pub async fn set_webview_visible(
    }
    Ok(())
 }
+
+#[command]
+pub async fn open_webview_devtools(
+   app: tauri::AppHandle,
+   webview_label: String,
+) -> Result<(), String> {
+   if let Some(webview) = app.get_webview(&webview_label) {
+      webview.open_devtools();
+      Ok(())
+   } else {
+      Err(format!("Webview not found: {webview_label}"))
+   }
+}
+
+#[command]
+pub async fn set_webview_zoom(
+   app: tauri::AppHandle,
+   webview_label: String,
+   zoom_level: f64,
+) -> Result<(), String> {
+   if let Some(webview) = app.get_webview(&webview_label) {
+      webview
+         .set_zoom(zoom_level)
+         .map_err(|e| format!("Failed to set zoom: {e}"))?;
+      Ok(())
+   } else {
+      Err(format!("Webview not found: {webview_label}"))
+   }
+}

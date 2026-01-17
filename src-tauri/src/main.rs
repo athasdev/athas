@@ -343,6 +343,8 @@ fn main() {
          navigate_embedded_webview,
          resize_embedded_webview,
          set_webview_visible,
+         open_webview_devtools,
+         set_webview_zoom,
          // File watcher commands
          start_watching,
          stop_watching,
@@ -435,6 +437,14 @@ fn main() {
          ensure_runtime,
          get_runtime_status,
          get_runtime_version,
+         get_js_runtime,
+         get_all_runtime_statuses,
+         // Tool commands
+         install_language_tools,
+         install_tool,
+         get_language_tool_status,
+         get_tool_path,
+         get_available_tools,
          // Menu commands
          menu::toggle_menu_bar,
          menu::rebuild_menu_themes,

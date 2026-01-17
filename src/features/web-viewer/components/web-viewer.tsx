@@ -1,5 +1,21 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ArrowLeft, ArrowRight, ExternalLink, Globe, RefreshCw } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Code2,
+  Copy,
+  ExternalLink,
+  Globe,
+  Home,
+  Lock,
+  Minus,
+  Plus,
+  RefreshCw,
+  Shield,
+  ShieldAlert,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface WebViewerProps {
@@ -14,11 +30,15 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
   const [webviewLabel, setWebviewLabel] = useState<string | null>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const historyRef = useRef<string[]>([initialUrl]);
   const historyIndexRef = useRef(0);
 
-  // Create the embedded webview when component mounts
+  const isSecure = currentUrl.startsWith("https://");
+  const isLocalhost = currentUrl.includes("localhost") || currentUrl.includes("127.0.0.1");
+
   useEffect(() => {
     let mounted = true;
     let currentLabel: string | null = null;
@@ -42,7 +62,6 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
           setWebviewLabel(label);
           setIsLoading(false);
         } else {
-          // Component unmounted before webview was created, clean up
           await invoke("close_embedded_webview", { webviewLabel: label });
         }
       } catch (error) {
@@ -59,9 +78,8 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
         invoke("close_embedded_webview", { webviewLabel: currentLabel }).catch(console.error);
       }
     };
-  }, [bufferId]); // Only recreate on buffer change, not URL changes
+  }, [bufferId]);
 
-  // Update webview position/size when container resizes
   useEffect(() => {
     if (!webviewLabel || !containerRef.current) return;
 
@@ -85,7 +103,6 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
     const resizeObserver = new ResizeObserver(updatePosition);
     resizeObserver.observe(containerRef.current);
 
-    // Also update on window resize
     window.addEventListener("resize", updatePosition);
 
     return () => {
@@ -94,7 +111,6 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
     };
   }, [webviewLabel]);
 
-  // Hide webview when this tab is not active
   useEffect(() => {
     if (!webviewLabel) return;
 
@@ -111,12 +127,11 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
 
       let normalizedUrl = url.trim();
 
-      // Add protocol if missing (HTTP for localhost, HTTPS for external)
       if (normalizedUrl && !normalizedUrl.match(/^https?:\/\//)) {
-        const isLocalhost =
+        const isLocal =
           normalizedUrl.toLowerCase().startsWith("localhost") ||
           normalizedUrl.toLowerCase().startsWith("127.0.0.1");
-        normalizedUrl = isLocalhost ? `http://${normalizedUrl}` : `https://${normalizedUrl}`;
+        normalizedUrl = isLocal ? `http://${normalizedUrl}` : `https://${normalizedUrl}`;
       }
 
       if (!normalizedUrl) return;
@@ -137,7 +152,6 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
       setIsLoading(false);
 
       if (addToHistory) {
-        // Remove forward history when navigating to new URL
         historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
         historyRef.current.push(normalizedUrl);
         historyIndexRef.current = historyRef.current.length - 1;
@@ -169,6 +183,10 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
     navigateTo(currentUrl, false);
   }, [currentUrl, navigateTo]);
 
+  const handleHome = useCallback(() => {
+    navigateTo(initialUrl);
+  }, [initialUrl, navigateTo]);
+
   const handleUrlSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -186,74 +204,225 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
     }
   }, [currentUrl]);
 
+  const handleOpenDevTools = useCallback(async () => {
+    if (!webviewLabel) return;
+    try {
+      await invoke("open_webview_devtools", { webviewLabel });
+    } catch (error) {
+      console.error("Failed to open devtools:", error);
+    }
+  }, [webviewLabel]);
+
+  const handleZoomIn = useCallback(async () => {
+    if (!webviewLabel) return;
+    const newZoom = Math.min(zoomLevel + 0.1, 3);
+    setZoomLevel(newZoom);
+    try {
+      await invoke("set_webview_zoom", { webviewLabel, zoomLevel: newZoom });
+    } catch (error) {
+      console.error("Failed to zoom in:", error);
+    }
+  }, [webviewLabel, zoomLevel]);
+
+  const handleZoomOut = useCallback(async () => {
+    if (!webviewLabel) return;
+    const newZoom = Math.max(zoomLevel - 0.1, 0.25);
+    setZoomLevel(newZoom);
+    try {
+      await invoke("set_webview_zoom", { webviewLabel, zoomLevel: newZoom });
+    } catch (error) {
+      console.error("Failed to zoom out:", error);
+    }
+  }, [webviewLabel, zoomLevel]);
+
+  const handleResetZoom = useCallback(async () => {
+    if (!webviewLabel) return;
+    setZoomLevel(1);
+    try {
+      await invoke("set_webview_zoom", { webviewLabel, zoomLevel: 1 });
+    } catch (error) {
+      console.error("Failed to reset zoom:", error);
+    }
+  }, [webviewLabel]);
+
+  const handleCopyUrl = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(currentUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy URL:", error);
+    }
+  }, [currentUrl]);
+
+  const handleStopLoading = useCallback(() => {
+    setIsLoading(false);
+  }, []);
+
+  const SecurityIcon = isLocalhost ? Shield : isSecure ? Lock : ShieldAlert;
+  const securityColor = isLocalhost ? "text-info" : isSecure ? "text-success" : "text-warning";
+  const securityTooltip = isLocalhost
+    ? "Local development server"
+    : isSecure
+      ? "Secure connection (HTTPS)"
+      : "Not secure (HTTP)";
+
   return (
     <div className="flex h-full flex-col bg-primary-bg">
-      {/* Toolbar */}
-      <div className="flex h-10 shrink-0 items-center gap-1 border-border border-b bg-secondary-bg px-2">
-        {/* Navigation buttons */}
-        <button
-          type="button"
-          onClick={handleGoBack}
-          disabled={!canGoBack}
-          className="rounded p-1.5 text-text-light transition-colors hover:bg-hover disabled:opacity-30 disabled:hover:bg-transparent"
-          title="Go back"
-        >
-          <ArrowLeft size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={handleGoForward}
-          disabled={!canGoForward}
-          className="rounded p-1.5 text-text-light transition-colors hover:bg-hover disabled:opacity-30 disabled:hover:bg-transparent"
-          title="Go forward"
-        >
-          <ArrowRight size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          className="rounded p-1.5 text-text-light transition-colors hover:bg-hover"
-          title="Refresh"
-        >
-          <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-        </button>
+      <div className="flex h-11 shrink-0 items-center gap-0.5 border-border border-b bg-secondary-bg px-2">
+        <div className="flex items-center gap-0.5">
+          <ToolbarButton
+            onClick={handleGoBack}
+            disabled={!canGoBack}
+            title="Go back"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={15} />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={handleGoForward}
+            disabled={!canGoForward}
+            title="Go forward"
+            aria-label="Go forward"
+          >
+            <ArrowRight size={15} />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={isLoading ? handleStopLoading : handleRefresh}
+            title={isLoading ? "Stop loading" : "Refresh"}
+            aria-label={isLoading ? "Stop loading" : "Refresh"}
+          >
+            {isLoading ? <X size={15} /> : <RefreshCw size={15} />}
+          </ToolbarButton>
+          <ToolbarButton onClick={handleHome} title="Go to home" aria-label="Go to home">
+            <Home size={15} />
+          </ToolbarButton>
+        </div>
 
-        {/* URL input */}
-        <form onSubmit={handleUrlSubmit} className="mx-2 flex flex-1 items-center">
+        <div className="mx-1.5 h-5 w-px bg-border" />
+
+        <form onSubmit={handleUrlSubmit} className="flex flex-1 items-center">
           <div className="relative flex flex-1 items-center">
-            <Globe size={14} className="absolute left-2 text-text-lighter" />
+            <div
+              className={`absolute left-2.5 flex items-center ${securityColor}`}
+              title={securityTooltip}
+            >
+              <SecurityIcon size={14} />
+            </div>
             <input
               type="text"
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
-              placeholder="Enter URL..."
-              className="h-7 w-full rounded border border-border bg-primary-bg pr-2 pl-7 text-sm text-text placeholder:text-text-lighter focus:border-accent focus:outline-none"
+              placeholder="Enter URL or search..."
+              className="h-7 w-full rounded-md border border-border bg-primary-bg pr-8 pl-8 text-[13px] text-text placeholder:text-text-lighter focus:border-accent focus:outline-none"
             />
+            <button
+              type="button"
+              onClick={handleCopyUrl}
+              className="absolute right-2 flex items-center text-text-lighter transition-colors hover:text-text"
+              title="Copy URL"
+              aria-label="Copy URL"
+            >
+              {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+            </button>
           </div>
         </form>
 
-        {/* Open in browser */}
-        <button
-          type="button"
-          onClick={handleOpenExternal}
-          className="rounded p-1.5 text-text-light transition-colors hover:bg-hover"
-          title="Open in browser"
-        >
-          <ExternalLink size={16} />
-        </button>
+        <div className="mx-1.5 h-5 w-px bg-border" />
+
+        <div className="flex items-center gap-0.5">
+          <ToolbarButton
+            onClick={handleZoomOut}
+            disabled={zoomLevel <= 0.25}
+            title="Zoom out"
+            aria-label="Zoom out"
+          >
+            <Minus size={15} />
+          </ToolbarButton>
+          <button
+            type="button"
+            onClick={handleResetZoom}
+            className="flex h-7 min-w-[44px] items-center justify-center rounded px-1.5 text-[11px] text-text-light transition-colors hover:bg-hover"
+            title="Reset zoom (click to reset)"
+            aria-label="Reset zoom"
+          >
+            {Math.round(zoomLevel * 100)}%
+          </button>
+          <ToolbarButton
+            onClick={handleZoomIn}
+            disabled={zoomLevel >= 3}
+            title="Zoom in"
+            aria-label="Zoom in"
+          >
+            <Plus size={15} />
+          </ToolbarButton>
+        </div>
+
+        <div className="mx-1.5 h-5 w-px bg-border" />
+
+        <div className="flex items-center gap-0.5">
+          <ToolbarButton
+            onClick={handleOpenDevTools}
+            title="Open Developer Tools"
+            aria-label="Open Developer Tools"
+          >
+            <Code2 size={15} />
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={handleOpenExternal}
+            title="Open in browser"
+            aria-label="Open in browser"
+          >
+            <ExternalLink size={15} />
+          </ToolbarButton>
+        </div>
       </div>
 
-      {/* Content area - the native webview will be positioned here */}
       <div ref={containerRef} className="relative flex-1">
         {isLoading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary-bg">
-            <div className="flex items-center gap-2 text-text-light">
-              <RefreshCw size={20} className="animate-spin" />
-              <span>Loading...</span>
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-primary-bg">
+            <div className="relative">
+              <Globe size={32} className="text-text-lighter" />
+              <div className="-right-1 -bottom-1 absolute rounded-full bg-primary-bg p-0.5">
+                <RefreshCw size={14} className="animate-spin text-accent" />
+              </div>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-sm text-text-light">Loading page...</span>
+              <span className="max-w-[300px] truncate text-text-lighter text-xs">{currentUrl}</span>
             </div>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+interface ToolbarButtonProps {
+  onClick: () => void;
+  disabled?: boolean;
+  title: string;
+  children: React.ReactNode;
+  "aria-label": string;
+}
+
+function ToolbarButton({
+  onClick,
+  disabled,
+  title,
+  children,
+  "aria-label": ariaLabel,
+}: ToolbarButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex h-7 w-7 items-center justify-center rounded text-text-light transition-colors hover:bg-hover hover:text-text disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-light"
+      title={title}
+      aria-label={ariaLabel}
+    >
+      {children}
+    </button>
   );
 }
