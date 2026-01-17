@@ -3,6 +3,7 @@ import { type MouseEvent, memo, useCallback, useEffect, useMemo, useRef, useStat
 import { createPortal } from "react-dom";
 import { getCommitDiff } from "@/features/version-control/git/controllers/git";
 import { useGitStore } from "@/features/version-control/git/controllers/store";
+import { cn } from "@/utils/cn";
 
 interface GitCommitHistoryProps {
   onViewCommitDiff?: (commitHash: string, filePath?: string) => void;
@@ -262,7 +263,7 @@ const FileItem = memo(({ file, onFileClick }: FileItemProps) => {
 
 const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps) => {
   const { commits, hasMoreCommits, isLoadingMoreCommits, actions } = useGitStore();
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [commitFiles, setCommitFiles] = useState<Record<string, any[]>>({});
   const [loadingCommits, setLoadingCommits] = useState<Set<string>>(new Set());
   const [copiedHashes, setCopiedHashes] = useState<Set<string>>(new Set());
@@ -508,9 +509,14 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
   }
 
   return (
-    <div className="border-border border-b">
+    <div
+      className={cn(
+        "border-border border-b transition-[flex-grow] duration-200",
+        !isCollapsed ? "flex min-h-0 flex-1 flex-col" : "flex-none",
+      )}
+    >
       <div
-        className="flex cursor-pointer items-center gap-2 bg-secondary-bg px-3 py-1 text-text-lighter hover:bg-hover"
+        className="flex shrink-0 cursor-pointer items-center gap-2 bg-secondary-bg px-3 py-1 text-text-lighter hover:bg-hover"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
         {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
@@ -519,8 +525,8 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
       </div>
 
       {!isCollapsed && (
-        <div className="relative">
-          <div ref={scrollContainerRef} className="max-h-60 overflow-y-auto bg-primary-bg">
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto bg-primary-bg">
             {commits.map((commit) => (
               <CommitItem
                 key={commit.hash}

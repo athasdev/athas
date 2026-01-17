@@ -1,4 +1,4 @@
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Archive, Minus, Plus, Trash2 } from "lucide-react";
 import type { MouseEvent } from "react";
 import { cn } from "@/utils/cn";
 import type { GitFile } from "../types/git";
@@ -11,6 +11,7 @@ interface GitFileItemProps {
   onStage?: () => void;
   onUnstage?: () => void;
   onDiscard?: () => void;
+  onStash?: () => void;
   disabled?: boolean;
 }
 
@@ -21,6 +22,7 @@ export const GitFileItem = ({
   onStage,
   onUnstage,
   onDiscard,
+  onStash,
   disabled,
 }: GitFileItemProps) => {
   const fileName = file.path.split("/").pop() || file.path;
@@ -63,6 +65,18 @@ export const GitFileItem = ({
               aria-label="Stage file"
             >
               <Plus size={10} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onStash?.();
+              }}
+              disabled={disabled}
+              className="p-0.5 text-text-lighter hover:text-text disabled:opacity-50"
+              title="Stash file"
+              aria-label="Stash file"
+            >
+              <Archive size={10} />
             </button>
             {file.status !== "untracked" && (
               <button

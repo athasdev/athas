@@ -7,6 +7,7 @@ import {
   getFileDiff,
   getGitLog,
   getGitStatus,
+  getStashes,
 } from "@/features/version-control/git/controllers/git";
 import { useGitStore } from "@/features/version-control/git/controllers/store";
 import { cn } from "@/utils/cn";
@@ -18,7 +19,7 @@ import GitBranchManager from "./branch-manager";
 import GitCommitHistory from "./commit-history";
 import GitCommitPanel from "./commit-panel";
 import GitRemoteManager from "./remote-manager";
-import GitStashManager from "./stash-manager";
+import GitStashPanel from "./stash-panel";
 import GitStatusPanel from "./status-panel";
 import GitTagManager from "./tag-manager";
 
@@ -39,7 +40,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   } | null>(null);
 
   // Modal states
-  const [showStashManager, setShowStashManager] = useState(false);
   const [showRemoteManager, setShowRemoteManager] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
 
@@ -52,16 +52,18 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
     setIsLoadingGitData(true);
     try {
-      const [status, commits, branches] = await Promise.all([
+      const [status, commits, branches, stashes] = await Promise.all([
         getGitStatus(repoPath),
         getGitLog(repoPath, 50, 0),
         getBranches(repoPath),
+        getStashes(repoPath),
       ]);
 
       actions.loadFreshGitData({
         gitStatus: status,
         commits,
         branches,
+        stashes,
         repoPath,
       });
     } catch (error) {
@@ -472,16 +474,20 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         </div>
 
         {/* Content */}
-        <div className="scrollbar-hidden flex-1 overflow-y-auto">
-          <GitStatusPanel
-            files={gitStatus.files}
-            onFileSelect={handleViewFileDiff}
-            onOpenFile={handleOpenOriginalFile}
-            onRefresh={handleManualRefresh}
-            repoPath={repoPath}
-          />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="max-h-[50%] flex-none overflow-y-auto border-border border-b">
+            <GitStatusPanel
+              files={gitStatus.files}
+              onFileSelect={handleViewFileDiff}
+              onOpenFile={handleOpenOriginalFile}
+              onRefresh={handleManualRefresh}
+              repoPath={repoPath}
+            />
+          </div>
 
           <GitCommitHistory onViewCommitDiff={handleViewCommitDiff} repoPath={repoPath} />
+
+          <GitStashPanel repoPath={repoPath} onRefresh={handleManualRefresh} />
         </div>
 
         {/* Commit Panel */}
@@ -503,16 +509,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         hasGitRepo={!!gitStatus}
         repoPath={repoPath}
         onRefresh={handleManualRefresh}
-        onOpenStashManager={() => setShowStashManager(true)}
         onOpenRemoteManager={() => setShowRemoteManager(true)}
         onOpenTagManager={() => setShowTagManager(true)}
-      />
-
-      <GitStashManager
-        isOpen={showStashManager}
-        onClose={() => setShowStashManager(false)}
-        repoPath={repoPath}
-        onRefresh={handleManualRefresh}
       />
 
       <GitRemoteManager

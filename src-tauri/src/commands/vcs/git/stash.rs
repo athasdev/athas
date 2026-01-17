@@ -49,14 +49,16 @@ pub fn git_create_stash(
    repo_path: String,
    message: Option<String>,
    include_untracked: bool,
+   files: Option<Vec<String>>,
 ) -> Result<(), String> {
-   _git_create_stash(repo_path, message, include_untracked).into_string_error()
+   _git_create_stash(repo_path, message, include_untracked, files).into_string_error()
 }
 
 fn _git_create_stash(
    repo_path: String,
    message: Option<String>,
    include_untracked: bool,
+   files: Option<Vec<String>>,
 ) -> Result<()> {
    let repo_dir = Path::new(&repo_path);
    let mut args = vec!["stash", "push"];
@@ -66,6 +68,15 @@ fn _git_create_stash(
    if let Some(msg) = &message {
       args.push("-m");
       args.push(msg);
+   }
+
+   if let Some(ref file_list) = files {
+      if !file_list.is_empty() {
+         args.push("--");
+         for file in file_list {
+            args.push(file);
+         }
+      }
    }
 
    let output = Command::new("git")

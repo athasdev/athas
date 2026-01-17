@@ -1,12 +1,13 @@
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
-import type { GitCommit, GitStatus } from "../types/git";
-import { getGitLog } from "./git";
+import type { GitCommit, GitStash, GitStatus } from "../types/git";
+import { getGitLog, getStashes } from "./git";
 
 interface GitState {
   // Data
   gitStatus: GitStatus | null;
   commits: GitCommit[];
+  stashes: GitStash[];
   branches: string[];
 
   // Loading states
@@ -25,6 +26,7 @@ interface GitState {
 const initialState: GitState = {
   gitStatus: null,
   commits: [],
+  stashes: [],
   branches: [],
   isLoadingGitData: false,
   isRefreshing: false,
@@ -47,12 +49,14 @@ export const useGitStore = create(
       updateGitData: (data: {
         gitStatus: GitStatus | null;
         commits: GitCommit[];
+        stashes: GitStash[];
         branches: string[];
       }) => {
         const state = get();
         set({
           gitStatus: data.gitStatus,
           commits: data.commits,
+          stashes: data.stashes,
           branches: data.branches,
           hasMoreCommits: data.commits.length >= state.commitPageSize,
         });
@@ -61,6 +65,7 @@ export const useGitStore = create(
       loadFreshGitData: (data: {
         gitStatus: GitStatus | null;
         commits: GitCommit[];
+        stashes: GitStash[];
         branches: string[];
         repoPath?: string;
       }) => {
@@ -68,6 +73,7 @@ export const useGitStore = create(
         set({
           gitStatus: data.gitStatus,
           commits: data.commits,
+          stashes: data.stashes,
           branches: data.branches,
           hasMoreCommits: data.commits.length >= state.commitPageSize,
           isLoadingMoreCommits: false,
@@ -82,12 +88,22 @@ export const useGitStore = create(
         repoPath: string;
       }) => {
         const state = get();
+        const currentRepoPath = state.currentRepoPath;
+        const repoChanged = currentRepoPath !== data.repoPath;
 
-        // If repo path changed, reset everything
-        if (state.currentRepoPath !== data.repoPath) {
+        let stashes: GitStash[] = [];
+        try {
+          stashes = await getStashes(data.repoPath);
+        } catch (e) {
+          console.error("Failed to fetch stashes during refresh", e);
+          stashes = [];
+        }
+
+        if (repoChanged) {
           set({
             gitStatus: data.gitStatus,
             branches: data.branches,
+            stashes: stashes,
             commits: [],
             hasMoreCommits: true,
             currentRepoPath: data.repoPath,
@@ -108,6 +124,7 @@ export const useGitStore = create(
             set({
               gitStatus: data.gitStatus,
               branches: data.branches,
+              stashes: stashes,
               commits: [],
               hasMoreCommits: false,
             });
@@ -122,6 +139,7 @@ export const useGitStore = create(
             set({
               gitStatus: data.gitStatus,
               branches: data.branches,
+              stashes: stashes,
               commits: initialCommits,
               hasMoreCommits: initialCommits.length >= state.commitPageSize,
             });
@@ -138,6 +156,7 @@ export const useGitStore = create(
             set({
               gitStatus: data.gitStatus,
               branches: data.branches,
+              stashes: stashes,
               commits: updatedCommits,
             });
             // Dispatch event for git gutter updates
@@ -149,6 +168,7 @@ export const useGitStore = create(
             set({
               gitStatus: data.gitStatus,
               branches: data.branches,
+              stashes: stashes,
             });
             // Dispatch event for git gutter updates
             window.dispatchEvent(
@@ -157,10 +177,10 @@ export const useGitStore = create(
           }
         } catch (error) {
           console.error("Failed to refresh git data:", error);
-          // Fall back to just updating status and branches
           set({
             gitStatus: data.gitStatus,
             branches: data.branches,
+            stashes: stashes,
           });
           // Dispatch event for git gutter updates
           window.dispatchEvent(
@@ -175,6 +195,7 @@ export const useGitStore = create(
         set({
           gitStatus: null,
           commits: [],
+          stashes: [],
           branches: [],
           currentRepoPath: null,
           hasMoreCommits: true,
