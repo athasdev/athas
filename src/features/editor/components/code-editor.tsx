@@ -7,6 +7,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAppStore } from "@/stores/app-store";
@@ -50,6 +51,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
   const searchQuery = useEditorUIStore.use.searchQuery();
   const searchMatches = useEditorUIStore.use.searchMatches();
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
+  const searchOptions = useEditorUIStore.use.searchOptions();
   const { setSearchMatches, setCurrentMatchIndex } = useEditorUIStore.use.actions();
   const isFileTreeLoading = useFileSystemStore((state) => state.isFileTreeLoading);
   const { settings } = useSettingsStore();
@@ -219,23 +221,14 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
 
     // Debounce the expensive regex matching
     searchTimerRef.current = setTimeout(() => {
-      const matches: { start: number; end: number }[] = [];
-      const regex = new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
-      let match: RegExpExecArray | null;
-
-      match = regex.exec(value);
-      while (match !== null) {
-        matches.push({
-          start: match.index,
-          end: match.index + match[0].length,
-        });
-        // Prevent infinite loop on zero-width matches
-        if (match.index === regex.lastIndex) {
-          regex.lastIndex++;
-        }
-        match = regex.exec(value);
+      const regex = buildSearchRegex(searchQuery, searchOptions);
+      if (!regex) {
+        setSearchMatches([]);
+        setCurrentMatchIndex(-1);
+        return;
       }
 
+      const matches = findAllMatches(value, regex);
       setSearchMatches(matches);
       setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
     }, SEARCH_DEBOUNCE_MS);
@@ -245,7 +238,7 @@ const CodeEditor = ({ className }: CodeEditorProps) => {
         clearTimeout(searchTimerRef.current);
       }
     };
-  }, [searchQuery, value, setSearchMatches, setCurrentMatchIndex]);
+  }, [searchQuery, searchOptions, value, setSearchMatches, setCurrentMatchIndex]);
 
   // Effect to handle search navigation - scroll to current match
   useEffect(() => {

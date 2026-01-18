@@ -1,5 +1,5 @@
 import "../styles/overlay-editor.css";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSettingsStore } from "@/features/settings/store";
 import { useGitGutter } from "@/features/version-control/git/controllers/use-gutter";
@@ -18,10 +18,11 @@ import { useLspStore } from "../lsp/lsp-store";
 import { useBufferStore } from "../stores/buffer-store";
 import { useEditorDecorationsStore } from "../stores/decorations-store";
 import { useFoldStore } from "../stores/fold-store";
+import { useMinimapStore } from "../stores/minimap-store";
 import { useEditorSettingsStore } from "../stores/settings-store";
 import { useEditorStateStore } from "../stores/state-store";
 import { useEditorUIStore } from "../stores/ui-store";
-import type { Decoration } from "../types/editor";
+import type { Decoration, Position, Range } from "../types/editor";
 import { applyVirtualEdit, calculateActualOffset } from "../utils/fold-transformer";
 import { calculateLineHeight, calculateLineOffset, splitLines } from "../utils/lines";
 import { applyMultiCursorBackspace, applyMultiCursorEdit } from "../utils/multi-cursor";
@@ -36,6 +37,7 @@ import { InputLayer } from "./layers/input-layer";
 import { MultiCursorLayer } from "./layers/multi-cursor-layer";
 import { SearchHighlightLayer } from "./layers/search-highlight-layer";
 import { VimCursorLayer } from "./layers/vim-cursor-layer";
+import { Minimap } from "./minimap/minimap";
 
 interface EditorProps {
   className?: string;
@@ -57,6 +59,10 @@ export function Editor({
   const multiCursorRef = useRef<HTMLDivElement>(null);
   const searchHighlightRef = useRef<HTMLDivElement>(null);
   const vimCursorRef = useRef<HTMLDivElement>(null);
+
+  // Track scroll position for minimap
+  const [editorScrollTop, setEditorScrollTop] = useState(0);
+  const [editorViewportHeight, setEditorViewportHeight] = useState(0);
 
   // Track buffer changes to handle cursor positioning correctly
   const prevBufferIdRef = useRef<string | null>(null);
@@ -100,6 +106,11 @@ export function Editor({
   });
 
   const foldActions = useFoldStore.use.actions();
+
+  // Minimap state
+  const minimapEnabled = useMinimapStore.use.isEnabled();
+  const minimapScale = useMinimapStore.use.scale();
+  const minimapWidth = useMinimapStore.use.width();
 
   useEffect(() => {
     if (filePath && content) {
@@ -379,6 +390,144 @@ export function Editor({
         return;
       }
 
+      // Cmd+Shift+[ to fold, Cmd+Shift+] to unfold at cursor
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "[" || e.key === "]")) {
+        e.preventDefault();
+        const foldStoreActions = useFoldStore.getState().actions;
+        if (!filePath) return;
+
+        if (e.key === "[") {
+          // Fold at current line if foldable
+          if (foldStoreActions.isFoldable(filePath, cursorPosition.line)) {
+            foldStoreActions.toggleFold(filePath, cursorPosition.line);
+          }
+        } else {
+          // Unfold at current line if collapsed
+          if (foldStoreActions.isCollapsed(filePath, cursorPosition.line)) {
+            foldStoreActions.toggleFold(filePath, cursorPosition.line);
+          }
+        }
+        return;
+      }
+
+      // Shift+Alt+Down/Up for column cursors (add cursor above/below current line)
+      if (e.shiftKey && e.altKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+        e.preventDefault();
+
+        const contentLines = splitLines(content);
+        const targetLine =
+          e.key === "ArrowDown" ? cursorPosition.line + 1 : cursorPosition.line - 1;
+
+        // Bounds check
+        if (targetLine < 0 || targetLine >= contentLines.length) return;
+
+        // Calculate column (use same column or end of line if shorter)
+        const targetLineText = contentLines[targetLine] || "";
+        const targetColumn = Math.min(cursorPosition.column, targetLineText.length);
+
+        // Calculate offset for the new position
+        let offset = 0;
+        for (let i = 0; i < targetLine; i++) {
+          offset += (contentLines[i]?.length || 0) + 1;
+        }
+        offset += targetColumn;
+
+        const newPosition: Position = {
+          line: targetLine,
+          column: targetColumn,
+          offset,
+        };
+
+        if (!multiCursorState) {
+          enableMultiCursor();
+        }
+        addCursor(newPosition);
+        return;
+      }
+
+      // Cmd+D to select next occurrence
+      if ((e.metaKey || e.ctrlKey) && e.key === "d") {
+        e.preventDefault();
+
+        // Get current selection text or word under cursor
+        let searchText = "";
+        let selectionStart = inputRef.current?.selectionStart || 0;
+        let selectionEnd = inputRef.current?.selectionEnd || 0;
+
+        if (selectionStart !== selectionEnd) {
+          // Use selected text
+          searchText = content.substring(selectionStart, selectionEnd);
+        } else {
+          // Select word under cursor
+          const contentLines = splitLines(content);
+          const lineText = contentLines[cursorPosition.line] || "";
+          const wordRegex = /[a-zA-Z0-9_]+/g;
+          let match: RegExpExecArray | null;
+
+          match = wordRegex.exec(lineText);
+          while (match !== null) {
+            const wordStart = match.index;
+            const wordEnd = match.index + match[0].length;
+            if (cursorPosition.column >= wordStart && cursorPosition.column <= wordEnd) {
+              searchText = match[0];
+              // Calculate offsets for this word
+              let lineOffset = 0;
+              for (let i = 0; i < cursorPosition.line; i++) {
+                lineOffset += (contentLines[i]?.length || 0) + 1;
+              }
+              selectionStart = lineOffset + wordStart;
+              selectionEnd = lineOffset + wordEnd;
+              break;
+            }
+            match = wordRegex.exec(lineText);
+          }
+        }
+
+        if (!searchText) return;
+
+        // Find next occurrence
+        const searchIndex = content.indexOf(searchText, selectionEnd);
+        if (searchIndex === -1) return;
+
+        // Calculate position from offset
+        const contentLines = splitLines(content);
+        let line = 0;
+        let currentOffset = 0;
+        for (let i = 0; i < contentLines.length; i++) {
+          const lineLen = contentLines[i].length + 1;
+          if (currentOffset + lineLen > searchIndex) {
+            line = i;
+            break;
+          }
+          currentOffset += lineLen;
+        }
+        const column = searchIndex - currentOffset;
+        const endColumn = column + searchText.length;
+
+        const newPosition: Position = {
+          line,
+          column: endColumn,
+          offset: searchIndex + searchText.length,
+        };
+
+        const newSelection: Range = {
+          start: { line, column, offset: searchIndex },
+          end: { line, column: endColumn, offset: searchIndex + searchText.length },
+        };
+
+        // Enable multi-cursor if not already
+        if (!multiCursorState) {
+          enableMultiCursor();
+          // Select the current word/selection for the primary cursor
+          if (inputRef.current) {
+            inputRef.current.selectionStart = selectionStart;
+            inputRef.current.selectionEnd = selectionEnd;
+          }
+        }
+        addCursor(newPosition, newSelection);
+        return;
+      }
+
       if (multiCursorState && multiCursorState.cursors.length > 1) {
         if (e.key === "Backspace") {
           e.preventDefault();
@@ -577,6 +726,9 @@ export function Editor({
         scrollRafRef.current = requestAnimationFrame(() => {
           const { top, left } = lastScrollRef.current;
 
+          // Update scroll state for minimap
+          setEditorScrollTop(top);
+
           // Update highlight layer transform for visual sync
           if (highlightRef.current) {
             highlightRef.current.style.transform = `translate(-${left}px, -${top}px)`;
@@ -671,6 +823,7 @@ export function Editor({
       const height = textarea.clientHeight;
       if (height > 0) {
         useEditorStateStore.getState().actions.setViewportHeight(height);
+        setEditorViewportHeight(height);
       }
     };
 
@@ -922,6 +1075,26 @@ export function Editor({
           />
         )}
       </div>
+
+      {/* Minimap */}
+      {minimapEnabled && (
+        <Minimap
+          content={displayContent}
+          tokens={tokens}
+          scrollTop={editorScrollTop}
+          viewportHeight={editorViewportHeight}
+          totalHeight={lines.length * lineHeight}
+          lineHeight={lineHeight}
+          scale={minimapScale}
+          width={minimapWidth}
+          onScrollTo={(scrollTop) => {
+            if (inputRef.current) {
+              inputRef.current.scrollTop = scrollTop;
+            }
+          }}
+        />
+      )}
+
       {contextMenu.state.isOpen &&
         createPortal(
           <EditorContextMenu
