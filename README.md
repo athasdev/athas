@@ -28,7 +28,7 @@ Contributions are welcome! See the [contributing guide](CONTRIBUTING.md).
 
 - [Issues](https://github.com/athasdev/athas/issues)
 - [Discussions](https://github.com/athasdev/athas/discussions)
-- [Discord](https://discord.gg/55nmWmQwKw)
+- [Discord](https://discord.gg/DD8F38wFMv)
 
 ## License
 
