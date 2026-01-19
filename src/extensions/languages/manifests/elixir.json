@@ -10,8 +10,8 @@
       "id": "elixir",
       "extensions": ["ex", "exs"],
       "aliases": ["elixir"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-elixir.wasm",
-      "highlightQuery": "/tree-sitter/queries/elixir/highlights.scm"
+      "wasmPath": "/extensions/elixir/parser.wasm",
+      "highlightQuery": "/extensions/elixir/highlights.scm"
     }
   }
 }

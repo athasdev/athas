@@ -10,8 +10,8 @@
       "id": "ocaml",
       "extensions": ["ml", "mli"],
       "aliases": ["ocaml"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-ocaml.wasm",
-      "highlightQuery": "/tree-sitter/queries/ocaml/highlights.scm"
+      "wasmPath": "/extensions/ocaml/parser.wasm",
+      "highlightQuery": "/extensions/ocaml/highlights.scm"
     }
   }
 }

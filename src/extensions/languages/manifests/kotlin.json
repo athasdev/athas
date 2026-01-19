@@ -10,8 +10,8 @@
       "id": "kotlin",
       "extensions": ["kt", "kts"],
       "aliases": ["kotlin"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-kotlin.wasm",
-      "highlightQuery": "/tree-sitter/queries/kotlin/highlights.scm"
+      "wasmPath": "/extensions/kotlin/parser.wasm",
+      "highlightQuery": "/extensions/kotlin/highlights.scm"
     }
   }
 }

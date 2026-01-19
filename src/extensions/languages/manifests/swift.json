@@ -10,8 +10,8 @@
       "id": "swift",
       "extensions": ["swift"],
       "aliases": ["swift"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-swift.wasm",
-      "highlightQuery": "/tree-sitter/queries/swift/highlights.scm"
+      "wasmPath": "/extensions/swift/parser.wasm",
+      "highlightQuery": "/extensions/swift/highlights.scm"
     }
   }
 }

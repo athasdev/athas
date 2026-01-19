@@ -10,8 +10,8 @@
       "id": "html",
       "extensions": ["html", "htm"],
       "aliases": ["html"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-html.wasm",
-      "highlightQuery": "/tree-sitter/queries/html/highlights.scm"
+      "wasmPath": "/extensions/html/parser.wasm",
+      "highlightQuery": "/extensions/html/highlights.scm"
     }
   }
 }

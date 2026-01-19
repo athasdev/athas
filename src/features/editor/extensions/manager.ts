@@ -400,7 +400,7 @@ class ExtensionManager {
 
   /**
    * Ensure a language provider is loaded for the given file extension or language ID
-   * Loads the language extension on-demand if not already loaded
+   * Languages are only available after being installed via the extension store
    */
   async ensureLanguageProvider(fileExtOrLanguageId: string): Promise<LanguageProvider | undefined> {
     // Check if already loaded
@@ -409,51 +409,17 @@ class ExtensionManager {
       return existing;
     }
 
-    // Try to load from allLanguages FIRST (these have proper ParserConfig for syntax highlighting)
-    try {
-      const { allLanguages } = await import("@/extensions/languages/language-registry");
-
-      const languageExt = allLanguages.find((lang) => {
-        return (
-          lang.languageId === fileExtOrLanguageId ||
-          lang.extensions.includes(fileExtOrLanguageId) ||
-          lang.extensions.some((ext) => ext === `.${fileExtOrLanguageId}`) ||
-          lang.aliases?.includes(fileExtOrLanguageId)
-        );
-      });
-
-      if (languageExt) {
-        if (!this.languageExtensions.has(languageExt.id)) {
-          logger.info(
-            "ExtensionManager",
-            `Lazy loading language extension: ${languageExt.displayName}`,
-          );
-          await this.loadLanguageExtension(languageExt);
-        }
-        const provider = this.languageProviders.get(fileExtOrLanguageId);
-        if (provider) {
-          return provider;
-        }
-      }
-    } catch (error) {
-      logger.error(
-        "ExtensionManager",
-        `Failed to load from allLanguages for ${fileExtOrLanguageId}:`,
-        error,
-      );
-    }
-
-    // Fallback: wait for bundled extensions to finish loading
+    // Wait for installed extensions to finish loading
     try {
       const { extensionLoader } = await import("@/extensions/loader/extension-loader");
       await extensionLoader.waitForInitialization();
 
-      const afterBundled = this.languageProviders.get(fileExtOrLanguageId);
-      if (afterBundled) {
-        return afterBundled;
+      const provider = this.languageProviders.get(fileExtOrLanguageId);
+      if (provider) {
+        return provider;
       }
     } catch (error) {
-      logger.debug("ExtensionManager", "Failed to wait for bundled extensions:", error);
+      logger.debug("ExtensionManager", "Failed to wait for extensions:", error);
     }
 
     logger.debug("ExtensionManager", `No language provider found for: ${fileExtOrLanguageId}`);

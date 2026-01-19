@@ -10,8 +10,8 @@
       "id": "dart",
       "extensions": ["dart"],
       "aliases": ["dart"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-dart.wasm",
-      "highlightQuery": "/tree-sitter/queries/dart/highlights.scm"
+      "wasmPath": "/extensions/dart/parser.wasm",
+      "highlightQuery": "/extensions/dart/highlights.scm"
     }
   }
 }

@@ -10,8 +10,8 @@
       "id": "toml",
       "extensions": ["toml"],
       "aliases": ["toml"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-toml.wasm",
-      "highlightQuery": "/tree-sitter/queries/toml/highlights.scm"
+      "wasmPath": "/extensions/toml/parser.wasm",
+      "highlightQuery": "/extensions/toml/highlights.scm"
     }
   }
 }

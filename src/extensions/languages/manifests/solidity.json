@@ -10,8 +10,8 @@
       "id": "solidity",
       "extensions": ["sol"],
       "aliases": ["solidity"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-solidity.wasm",
-      "highlightQuery": "/tree-sitter/queries/solidity/highlights.scm"
+      "wasmPath": "/extensions/solidity/parser.wasm",
+      "highlightQuery": "/extensions/solidity/highlights.scm"
     }
   }
 }

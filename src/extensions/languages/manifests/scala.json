@@ -10,8 +10,8 @@
       "id": "scala",
       "extensions": ["scala", "sc"],
       "aliases": ["scala"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-scala.wasm",
-      "highlightQuery": "/tree-sitter/queries/scala/highlights.scm"
+      "wasmPath": "/extensions/scala/parser.wasm",
+      "highlightQuery": "/extensions/scala/highlights.scm"
     }
   }
 }

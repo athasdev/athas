@@ -10,8 +10,8 @@
       "id": "vue",
       "extensions": ["vue"],
       "aliases": ["vue"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-vue.wasm",
-      "highlightQuery": "/tree-sitter/queries/vue/highlights.scm"
+      "wasmPath": "/extensions/vue/parser.wasm",
+      "highlightQuery": "/extensions/vue/highlights.scm"
     }
   }
 }

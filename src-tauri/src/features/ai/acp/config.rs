@@ -71,17 +71,9 @@ impl AgentRegistry {
       self.agents.values().cloned().collect()
    }
 
-   /// Detect which agents are installed on the system
    pub fn detect_installed(&mut self) {
       for config in self.agents.values_mut() {
          config.installed = which::which(&config.binary_name).is_ok();
-         if config.installed {
-            log::info!(
-               "Agent '{}' detected: binary '{}' found",
-               config.name,
-               config.binary_name
-            );
-         }
       }
    }
 }

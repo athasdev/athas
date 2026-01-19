@@ -10,8 +10,8 @@
       "id": "zig",
       "extensions": ["zig"],
       "aliases": ["zig"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-zig.wasm",
-      "highlightQuery": "/tree-sitter/queries/zig/highlights.scm"
+      "wasmPath": "/extensions/zig/parser.wasm",
+      "highlightQuery": "/extensions/zig/highlights.scm"
     }
   }
 }
