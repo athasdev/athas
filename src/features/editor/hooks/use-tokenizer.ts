@@ -96,22 +96,6 @@ export function getLanguageId(filePath: string): string | null {
 }
 
 /**
- * Map language IDs to their local WASM paths
- * TypeScript and JavaScript use the tsx parser
- */
-function getLocalWasmPath(languageId: string): string {
-  // TypeScript and JavaScript both use tsx parser
-  if (languageId === "typescript" || languageId === "javascript") {
-    return "/tree-sitter/parsers/tree-sitter-tsx.wasm";
-  }
-  // Special case for markdown as the file is named tree-sitter.wasm in public folder
-  if (languageId === "markdown") {
-    return "/tree-sitter/tree-sitter.wasm";
-  }
-  return `/tree-sitter/parsers/tree-sitter-${languageId}.wasm`;
-}
-
-/**
  * Get the query folder for a language ID
  */
 function getQueryFolder(languageId: string): string {
@@ -167,55 +151,52 @@ export function useTokenizer({
 
       setLoading(true);
       try {
+        // Check if language extension is installed before trying to load parser
+        const { extensionManager } = await import("@/features/editor/extensions/manager");
+        const ext = getExtension(filePath);
+        const provider = await extensionManager.ensureLanguageProvider(ext);
+        if (!provider) {
+          logger.debug("Editor", `[Tokenizer] No installed provider for ${languageId}`);
+          setTokens([]);
+          setLoading(false);
+          return;
+        }
+
         // Check if parser is in IndexedDB cache
         const cached = await indexedDBParserCache.get(languageId);
+        if (!cached) {
+          // Parser should be in cache after extension installation
+          logger.warn(
+            "Editor",
+            `[Tokenizer] Extension installed but parser not in cache for ${languageId}`,
+          );
+          setTokens([]);
+          setLoading(false);
+          return;
+        }
 
         // Normalize line endings before tokenizing
         const normalizedText = normalizeLineEndings(text);
         startMeasure(`tokenizeFull (len: ${normalizedText.length})`);
 
-        let wasmPath: string;
-        let highlightQuery: string | undefined;
+        // Use cached config
+        const wasmPath = cached.sourceUrl;
+        let highlightQuery = cached.highlightQuery;
 
-        if (cached) {
-          // Use cached config
-          wasmPath = cached.sourceUrl || getLocalWasmPath(languageId);
-          highlightQuery = cached.highlightQuery;
-
-          // Try to load highlight query if not cached
-          if (!highlightQuery || highlightQuery.trim().length === 0) {
-            const queryFolder = getQueryFolder(languageId);
-            const queryPath = `/tree-sitter/queries/${queryFolder}/highlights.scm`;
-            try {
-              const response = await fetch(queryPath);
-              if (response.ok) {
-                highlightQuery = await response.text();
-                // Update cache with the loaded query
-                await indexedDBParserCache.set({
-                  ...cached,
-                  highlightQuery,
-                });
-                logger.info("Editor", `[Tokenizer] Loaded highlight query from ${queryPath}`);
-              }
-            } catch {
-              logger.warn("Editor", `[Tokenizer] Failed to load highlight query from ${queryPath}`);
-            }
-          }
-        } else {
-          // Parser not in IndexedDB - try to load from local path
-          logger.info(
-            "Editor",
-            `[Tokenizer] Parser for ${languageId} not in cache, loading from local path`,
-          );
-          wasmPath = getLocalWasmPath(languageId);
-
-          // Load highlight query from local path
+        // Try to load highlight query if not cached
+        if (!highlightQuery || highlightQuery.trim().length === 0) {
           const queryFolder = getQueryFolder(languageId);
-          const queryPath = `/tree-sitter/queries/${queryFolder}/highlights.scm`;
+          const queryPath = `/extensions/${queryFolder}/highlights.scm`;
           try {
             const response = await fetch(queryPath);
             if (response.ok) {
               highlightQuery = await response.text();
+              // Update cache with the loaded query
+              await indexedDBParserCache.set({
+                ...cached,
+                highlightQuery,
+              });
+              logger.info("Editor", `[Tokenizer] Loaded highlight query from ${queryPath}`);
             }
           } catch {
             logger.warn("Editor", `[Tokenizer] Failed to load highlight query from ${queryPath}`);
@@ -285,46 +266,47 @@ export function useTokenizer({
 
       setLoading(true);
       try {
+        // Check if language extension is installed before trying to load parser
+        const { extensionManager } = await import("@/features/editor/extensions/manager");
+        const ext = getExtension(filePath);
+        const provider = await extensionManager.ensureLanguageProvider(ext);
+        if (!provider) {
+          logger.debug("Editor", `[Tokenizer] No installed provider for ${languageId}`);
+          setTokens([]);
+          setLoading(false);
+          return;
+        }
+
         // Check if parser is in IndexedDB cache
         const cached = await indexedDBParserCache.get(languageId);
+        if (!cached) {
+          // Parser should be in cache after extension installation
+          logger.warn(
+            "Editor",
+            `[Tokenizer] Extension installed but parser not in cache for ${languageId}`,
+          );
+          setTokens([]);
+          setLoading(false);
+          return;
+        }
 
-        let wasmPath: string;
-        let highlightQuery: string | undefined;
+        // Use cached config
+        const wasmPath = cached.sourceUrl;
+        let highlightQuery = cached.highlightQuery;
 
-        if (cached) {
-          // Use cached config
-          wasmPath = cached.sourceUrl || getLocalWasmPath(languageId);
-          highlightQuery = cached.highlightQuery;
-
-          // Try to load highlight query if not cached
-          if (!highlightQuery || highlightQuery.trim().length === 0) {
-            const queryFolder = getQueryFolder(languageId);
-            const queryPath = `/tree-sitter/queries/${queryFolder}/highlights.scm`;
-            try {
-              const response = await fetch(queryPath);
-              if (response.ok) {
-                highlightQuery = await response.text();
-                // Update cache with the loaded query
-                await indexedDBParserCache.set({
-                  ...cached,
-                  highlightQuery,
-                });
-              }
-            } catch {
-              logger.warn("Editor", `[Tokenizer] Failed to load highlight query from ${queryPath}`);
-            }
-          }
-        } else {
-          // Parser not in IndexedDB - try to load from local path
-          wasmPath = getLocalWasmPath(languageId);
-
-          // Load highlight query from local path
+        // Try to load highlight query if not cached
+        if (!highlightQuery || highlightQuery.trim().length === 0) {
           const queryFolder = getQueryFolder(languageId);
-          const queryPath = `/tree-sitter/queries/${queryFolder}/highlights.scm`;
+          const queryPath = `/extensions/${queryFolder}/highlights.scm`;
           try {
             const response = await fetch(queryPath);
             if (response.ok) {
               highlightQuery = await response.text();
+              // Update cache with the loaded query
+              await indexedDBParserCache.set({
+                ...cached,
+                highlightQuery,
+              });
             }
           } catch {
             logger.warn("Editor", `[Tokenizer] Failed to load highlight query from ${queryPath}`);
