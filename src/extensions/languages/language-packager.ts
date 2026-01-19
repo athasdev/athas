@@ -118,12 +118,12 @@ export function getLanguageExtensionByFileExt(fileExt: string): ExtensionManifes
  * Get WASM download URL for a language
  */
 export function getWasmUrlForLanguage(languageId: string): string {
-  return `${CDN_BASE_URL}/parsers/tree-sitter-${languageId}.wasm`;
+  return `${CDN_BASE_URL}/${languageId}/parser.wasm`;
 }
 
 /**
  * Get highlight query URL for a language
  */
 export function getHighlightQueryUrl(languageId: string): string {
-  return `${CDN_BASE_URL}/queries/${languageId}/highlights.scm`;
+  return `${CDN_BASE_URL}/${languageId}/highlights.scm`;
 }

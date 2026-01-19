@@ -6,6 +6,9 @@ import type {
 import { convertToEditorTokens, tokenizeCode } from "@/features/editor/lib/wasm-parser";
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 
+// CDN base URL for downloading WASM parsers and highlight queries
+const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
+
 export interface LanguageConfig {
   id: string;
   displayName: string;
@@ -39,9 +42,9 @@ export abstract class BaseLanguageProvider implements LanguageExtension {
     this.aliases = config.aliases;
     this.filenames = config.filenames;
     this.description = config.description;
-    this.wasmPath = config.wasmPath || `/tree-sitter/parsers/tree-sitter-${config.id}.wasm`;
+    this.wasmPath = config.wasmPath || `${CDN_BASE_URL}/${config.id}/parser.wasm`;
     this.highlightQueryPath =
-      config.highlightQueryPath || `/tree-sitter/queries/${config.id}/highlights.scm`;
+      config.highlightQueryPath || `${CDN_BASE_URL}/${config.id}/highlights.scm`;
   }
 
   async activate(context: ExtensionContext): Promise<void> {

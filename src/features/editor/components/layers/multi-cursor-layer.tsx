@@ -4,6 +4,7 @@
  * This layer renders additional cursors when in multi-cursor mode
  */
 
+import type React from "react";
 import { forwardRef, memo, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import type { Cursor } from "../../types/editor";
@@ -59,20 +60,67 @@ const MultiCursorLayerComponent = forwardRef<HTMLDivElement, MultiCursorLayerPro
         {secondaryCursors.map((cursor) => {
           const { top, left } = getCursorPosition(cursor.position.line, cursor.position.column);
 
+          // Render multi-line selections correctly with separate boxes per line
+          const renderSelection = () => {
+            if (!cursor.selection) return null;
+
+            const { start, end } = cursor.selection;
+            const startLine = Math.min(start.line, end.line);
+            const endLine = Math.max(start.line, end.line);
+            const isReversed =
+              start.line > end.line || (start.line === end.line && start.column > end.column);
+            const actualStart = isReversed ? end : start;
+            const actualEnd = isReversed ? start : end;
+
+            const boxes: React.ReactNode[] = [];
+
+            for (let line = startLine; line <= endLine; line++) {
+              const lineText = lines[line] || "";
+              let startCol: number;
+              let endCol: number;
+
+              if (startLine === endLine) {
+                // Single line selection
+                startCol = Math.min(actualStart.column, actualEnd.column);
+                endCol = Math.max(actualStart.column, actualEnd.column);
+              } else if (line === startLine) {
+                // First line: from start column to end of line
+                startCol = actualStart.column;
+                endCol = lineText.length;
+              } else if (line === endLine) {
+                // Last line: from beginning to end column
+                startCol = 0;
+                endCol = actualEnd.column;
+              } else {
+                // Middle lines: entire line
+                startCol = 0;
+                endCol = lineText.length;
+              }
+
+              const leftPos = getCursorPosition(line, startCol).left;
+              const rightPos = getCursorPosition(line, endCol).left;
+
+              boxes.push(
+                <div
+                  key={`${cursor.id}-selection-${line}`}
+                  className="absolute bg-selection-bg"
+                  style={{
+                    top: `${line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP}px`,
+                    left: `${leftPos}px`,
+                    height: `${lineHeight}px`,
+                    width: `${Math.max(rightPos - leftPos, 2)}px`,
+                  }}
+                />,
+              );
+            }
+
+            return boxes;
+          };
+
           return (
             <div key={cursor.id}>
               {/* Render selection if exists */}
-              {cursor.selection && (
-                <div
-                  className="absolute bg-selection-bg"
-                  style={{
-                    top: `${cursor.selection.start.line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP}px`,
-                    left: `${getCursorPosition(cursor.selection.start.line, cursor.selection.start.column).left}px`,
-                    height: `${(cursor.selection.end.line - cursor.selection.start.line + 1) * lineHeight}px`,
-                    width: `${getCursorPosition(cursor.selection.end.line, cursor.selection.end.column).left - getCursorPosition(cursor.selection.start.line, cursor.selection.start.column).left}px`,
-                  }}
-                />
-              )}
+              {renderSelection()}
 
               {/* Render cursor */}
               <div
