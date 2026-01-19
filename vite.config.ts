@@ -41,5 +41,11 @@ export default defineConfig(async () => ({
       // 3. tell vite to ignore watching `src-tauri` and `interceptor`
       ignored: ["**/src-tauri/**", "**/interceptor/**"],
     },
+    proxy: {
+      "/extensions": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+      },
+    },
   },
 }));

@@ -10,8 +10,8 @@
       "id": "css",
       "extensions": ["css"],
       "aliases": ["css"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-css.wasm",
-      "highlightQuery": "/tree-sitter/queries/css/highlights.scm"
+      "wasmPath": "/extensions/css/parser.wasm",
+      "highlightQuery": "/extensions/css/highlights.scm"
     }
   }
 }

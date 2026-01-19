@@ -1,0 +1,17 @@
+{
+  "id": "language.markdown",
+  "name": "Markdown",
+  "version": "1.0.0",
+  "description": "Markdown language support with syntax highlighting",
+  "category": "language",
+  "author": "Athas Team",
+  "capabilities": {
+    "languageProvider": {
+      "id": "markdown",
+      "extensions": ["md", "markdown", "mdx"],
+      "aliases": ["markdown", "md"],
+      "wasmPath": "/extensions/markdown/parser.wasm",
+      "highlightQuery": "/extensions/markdown/highlights.scm"
+    }
+  }
+}

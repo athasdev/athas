@@ -10,8 +10,8 @@
       "id": "python",
       "extensions": ["py", "pyw"],
       "aliases": ["py", "python"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-python.wasm",
-      "highlightQuery": "/tree-sitter/queries/python/highlights.scm"
+      "wasmPath": "/extensions/python/parser.wasm",
+      "highlightQuery": "/extensions/python/highlights.scm"
     }
   }
 }

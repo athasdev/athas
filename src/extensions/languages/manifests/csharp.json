@@ -10,8 +10,8 @@
       "id": "csharp",
       "extensions": ["cs", "csx"],
       "aliases": ["csharp", "cs"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-c_sharp.wasm",
-      "highlightQuery": "/tree-sitter/queries/csharp/highlights.scm"
+      "wasmPath": "/extensions/c_sharp/parser.wasm",
+      "highlightQuery": "/extensions/c_sharp/highlights.scm"
     }
   }
 }

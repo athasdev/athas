@@ -110,16 +110,11 @@ class UnifiedExtensionRegistry {
 
   /**
    * Load bundled extensions from the bundled/ directory
+   * Note: Language extensions are NOT bundled - they are fetched from the extensions server
    */
   private async loadBundledExtensions(): Promise<void> {
     try {
       // Import all bundled extension manifests
-      // Languages
-      const languageManifests = import.meta.glob<{ default: ExtensionManifest }>(
-        "../bundled/languages/*/extension.json",
-        { eager: true },
-      );
-
       // Themes
       const themeManifests = import.meta.glob<{ default: ExtensionManifest }>(
         "../bundled/themes/*/extension.json",
@@ -131,14 +126,6 @@ class UnifiedExtensionRegistry {
         "../bundled/icon-themes/*/extension.json",
         { eager: true },
       );
-
-      // Register language extensions
-      for (const module of Object.values(languageManifests)) {
-        const manifest = module.default;
-        manifest.bundled = true;
-        this.extensions.set(manifest.id, manifest);
-        logger.info("ExtensionRegistry", `Loaded bundled language: ${manifest.displayName}`);
-      }
 
       // Register theme extensions
       for (const module of Object.values(themeManifests)) {

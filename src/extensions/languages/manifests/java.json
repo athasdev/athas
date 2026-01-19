@@ -10,8 +10,8 @@
       "id": "java",
       "extensions": ["java"],
       "aliases": ["java"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-java.wasm",
-      "highlightQuery": "/tree-sitter/queries/java/highlights.scm"
+      "wasmPath": "/extensions/java/parser.wasm",
+      "highlightQuery": "/extensions/java/highlights.scm"
     }
   }
 }

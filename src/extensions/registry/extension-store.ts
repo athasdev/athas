@@ -78,65 +78,34 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           state.isLoadingRegistry = true;
         });
 
-        // Built-in language IDs that are always available (syntax highlighting only, no LSP)
-        // These have local parsers in public/tree-sitter/parsers/
-        const BUILTIN_LANGUAGE_IDS = new Set([
-          "html",
-          "css",
-          "markdown",
-          "json",
-          "yaml",
-          "toml",
-          "bash",
-          "tsx", // Also used for typescript and javascript
-        ]);
-
         try {
-          // Load language extensions from packager (installable)
+          // Load language extensions from packager (all installable from server)
           const extensions: ExtensionManifest[] = getPackagedLanguageExtensions();
 
-          // Also load bundled extensions from extension registry
+          // Also load bundled extensions from extension registry (themes, icons only)
           const bundledExtensions = extensionRegistry.getAllExtensions();
 
           // Check which extensions are installed
           const installed = get().installedExtensions;
 
           set((state) => {
-            // Add installable extensions
+            // Add all language extensions as installable
             for (const manifest of extensions) {
-              // Check if this is a built-in language (by checking its language IDs)
-              const isBuiltIn = manifest.languages?.some((lang) =>
-                BUILTIN_LANGUAGE_IDS.has(lang.id),
-              );
-
-              if (isBuiltIn) {
-                // Built-in languages: remove installation metadata and mark as installed
-                const builtInManifest = { ...manifest };
-                delete builtInManifest.installation;
-                state.availableExtensions.set(manifest.id, {
-                  manifest: builtInManifest,
-                  isInstalled: true,
-                  isInstalling: false,
-                });
-              } else {
-                // Marketplace extensions: keep installation metadata
-                state.availableExtensions.set(manifest.id, {
-                  manifest,
-                  isInstalled: installed.has(manifest.id),
-                  isInstalling: false,
-                });
-              }
+              state.availableExtensions.set(manifest.id, {
+                manifest,
+                isInstalled: installed.has(manifest.id),
+                isInstalling: false,
+              });
             }
 
-            // Add bundled extensions (always installed)
+            // Add bundled extensions (themes, icons - always installed)
             for (const bundled of bundledExtensions) {
               state.availableExtensions.set(bundled.manifest.id, {
                 manifest: bundled.manifest,
-                isInstalled: true, // Bundled extensions are always installed
+                isInstalled: true,
                 isInstalling: false,
               });
 
-              // Also add to installed map if not present
               if (!state.installedExtensions.has(bundled.manifest.id)) {
                 state.installedExtensions.set(bundled.manifest.id, {
                   id: bundled.manifest.id,
@@ -151,8 +120,6 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             // Add full extensions (with LSP, formatters, etc.)
             const fullExts = getFullExtensions();
             for (const manifest of fullExts) {
-              // Skip if this extension ID was already added as a simple language extension
-              // Full extensions take precedence
               state.availableExtensions.set(manifest.id, {
                 manifest,
                 isInstalled: installed.has(manifest.id),

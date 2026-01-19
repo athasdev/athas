@@ -10,8 +10,8 @@
       "id": "lua",
       "extensions": ["lua"],
       "aliases": ["lua"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-lua.wasm",
-      "highlightQuery": "/tree-sitter/queries/lua/highlights.scm"
+      "wasmPath": "/extensions/lua/parser.wasm",
+      "highlightQuery": "/extensions/lua/highlights.scm"
     }
   }
 }

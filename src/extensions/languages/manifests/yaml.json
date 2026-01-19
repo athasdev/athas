@@ -10,8 +10,8 @@
       "id": "yaml",
       "extensions": ["yaml", "yml"],
       "aliases": ["yaml", "yml"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-yaml.wasm",
-      "highlightQuery": "/tree-sitter/queries/yaml/highlights.scm"
+      "wasmPath": "/extensions/yaml/parser.wasm",
+      "highlightQuery": "/extensions/yaml/highlights.scm"
     }
   }
 }

@@ -10,8 +10,8 @@
       "id": "rust",
       "extensions": ["rs"],
       "aliases": ["rust"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-rust.wasm",
-      "highlightQuery": "/tree-sitter/queries/rust/highlights.scm"
+      "wasmPath": "/extensions/rust/parser.wasm",
+      "highlightQuery": "/extensions/rust/highlights.scm"
     }
   }
 }

@@ -10,8 +10,8 @@
       "id": "cpp",
       "extensions": ["cpp", "hpp", "cc", "cxx", "hh"],
       "aliases": ["cpp"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-cpp.wasm",
-      "highlightQuery": "/tree-sitter/queries/cpp/highlights.scm"
+      "wasmPath": "/extensions/cpp/parser.wasm",
+      "highlightQuery": "/extensions/cpp/highlights.scm"
     }
   }
 }

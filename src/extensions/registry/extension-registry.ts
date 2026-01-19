@@ -1,12 +1,11 @@
 /**
  * Extension Registry
  * Manages bundled and user-installed extensions
+ * Note: Language extensions are NOT bundled - they are fetched from the extensions server
  */
 
 import { logger } from "@/features/editor/utils/logger";
 
-// Import bundled extension manifests
-import typescriptManifest from "../bundled/typescript/extension.json";
 import type {
   BundledExtension,
   ExtensionManifest,
@@ -57,9 +56,10 @@ class ExtensionRegistry {
 
   /**
    * Load all bundled extensions
+   * Note: Language extensions are fetched from the server, not bundled
    */
   private async loadBundledExtensions() {
-    const bundledManifests: ExtensionManifest[] = [typescriptManifest as ExtensionManifest];
+    const bundledManifests: ExtensionManifest[] = [];
 
     // Get absolute path to bundled extensions
     let basePath = "";

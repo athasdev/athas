@@ -28,7 +28,7 @@ function success(message: string) {
 }
 
 function info(message: string) {
-  log(`ℹ️  ${message}`, "cyan");
+  log(`${message}`, "cyan");
 }
 
 // Parse semver version

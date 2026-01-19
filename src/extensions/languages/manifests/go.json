@@ -10,8 +10,8 @@
       "id": "go",
       "extensions": ["go"],
       "aliases": ["go"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-go.wasm",
-      "highlightQuery": "/tree-sitter/queries/go/highlights.scm"
+      "wasmPath": "/extensions/go/parser.wasm",
+      "highlightQuery": "/extensions/go/highlights.scm"
     }
   }
 }

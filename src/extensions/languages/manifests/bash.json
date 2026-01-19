@@ -10,8 +10,8 @@
       "id": "bash",
       "extensions": ["bash"],
       "aliases": ["bash"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-bash.wasm",
-      "highlightQuery": "/tree-sitter/queries/bash/highlights.scm"
+      "wasmPath": "/extensions/bash/parser.wasm",
+      "highlightQuery": "/extensions/bash/highlights.scm"
     }
   }
 }

@@ -10,8 +10,8 @@
       "id": "ruby",
       "extensions": ["rb", "erb", "rake", "gemspec"],
       "aliases": ["ruby", "erb"],
-      "wasmPath": "/tree-sitter/parsers/tree-sitter-ruby.wasm",
-      "highlightQuery": "/tree-sitter/queries/ruby/highlights.scm"
+      "wasmPath": "/extensions/ruby/parser.wasm",
+      "highlightQuery": "/extensions/ruby/highlights.scm"
     }
   }
 }

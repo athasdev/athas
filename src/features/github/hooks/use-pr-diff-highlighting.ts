@@ -74,9 +74,9 @@ function getLanguageId(filePath: string): string | null {
 
 function getLocalWasmPath(languageId: string): string {
   if (languageId === "typescript" || languageId === "javascript") {
-    return "/tree-sitter/parsers/tree-sitter-tsx.wasm";
+    return "/extensions/tsx/parser.wasm";
   }
-  return `/tree-sitter/parsers/tree-sitter-${languageId}.wasm`;
+  return `/extensions/${languageId}/parser.wasm`;
 }
 
 function getQueryFolder(languageId: string): string {
@@ -211,7 +211,7 @@ export function usePRDiffHighlighting(
 
         if (!highlightQuery || highlightQuery.trim().length === 0) {
           const queryFolder = getQueryFolder(lang);
-          const queryPath = `/tree-sitter/queries/${queryFolder}/highlights.scm`;
+          const queryPath = `/extensions/${queryFolder}/highlights.scm`;
           try {
             const response = await fetch(queryPath);
             if (response.ok) {

@@ -158,7 +158,7 @@ class WasmParserLoader {
     // TypeScript and JavaScript both use tsx queries
     const queryFolder =
       languageId === "typescript" || languageId === "javascript" ? "tsx" : languageId;
-    const localPath = `/tree-sitter/queries/${queryFolder}/highlights.scm`;
+    const localPath = `/extensions/${queryFolder}/highlights.scm`;
     try {
       const response = await fetch(localPath);
       if (response.ok) {
