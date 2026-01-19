@@ -149,7 +149,7 @@ const IconThemeSelector = ({
   };
 
   return (
-    <Command isVisible={isVisible}>
+    <Command isVisible={isVisible} onClose={handleClose}>
       <CommandHeader onClose={handleClose}>
         <div className="flex w-full items-center gap-2">
           <CommandInput
