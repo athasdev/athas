@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { AgentTab } from "@/features/ai/components/agent-tab";
 import AIChat from "@/features/ai/components/chat/ai-chat";
 import GitHubCopilotSettings from "@/features/ai/components/github-copilot-settings";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
@@ -20,7 +21,9 @@ import ContentGlobalSearch from "@/features/global-search/components/content-glo
 import { ImageViewer } from "@/features/image-viewer/components/image-viewer";
 import { PdfViewer } from "@/features/pdf-viewer/components/pdf-viewer";
 import { useSettingsStore } from "@/features/settings/store";
+import { GlobalNewTabMenu } from "@/features/tabs/components/global-new-tab-menu";
 import TabBar from "@/features/tabs/components/tab-bar";
+import { TerminalTab } from "@/features/terminal/components/terminal-tab";
 import DiffViewer from "@/features/version-control/diff-viewer/components/diff-viewer";
 import { stageHunk, unstageHunk } from "@/features/version-control/git/controllers/git";
 import type { GitHunk } from "@/features/version-control/git/types/git";
@@ -35,6 +38,7 @@ import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
+import { EmptyEditorState } from "./empty-editor-state";
 import EditorFooter from "./footer/editor-footer";
 import { ResizablePane } from "./resizable-pane";
 import { MainSidebar } from "./sidebar/main-sidebar";
@@ -262,49 +266,93 @@ export function MainLayout() {
           <div className="flex min-h-0 flex-1 flex-col">
             <TabBar />
             <div className="relative min-h-0 flex-1 overflow-hidden">
-              {(() => {
-                if (!activeBuffer) {
-                  return <div className="flex h-full items-center justify-center"></div>;
-                }
-                if (activeBuffer.isDiff) {
-                  return (
-                    <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />
-                  );
-                } else if (activeBuffer.isPullRequest && activeBuffer.prNumber) {
-                  return <PRViewer prNumber={activeBuffer.prNumber} />;
-                } else if (activeBuffer.isImage) {
-                  return (
-                    <ImageViewer
-                      filePath={activeBuffer.path}
-                      fileName={activeBuffer.name}
-                      bufferId={activeBuffer.id}
+              {/* Empty state when no buffer */}
+              {!activeBuffer && <EmptyEditorState />}
+
+              {/* Persist terminal tabs - render all but hide inactive */}
+              {buffers
+                .filter((b) => b.isTerminal && b.terminalSessionId)
+                .map((buffer) => (
+                  <div
+                    key={buffer.id}
+                    className={buffer.id === activeBufferId ? "h-full" : "hidden"}
+                  >
+                    <TerminalTab
+                      sessionId={buffer.terminalSessionId!}
+                      bufferId={buffer.id}
+                      initialCommand={buffer.terminalInitialCommand}
+                      isActive={buffer.id === activeBufferId}
                     />
-                  );
-                } else if (activeBuffer.isPdf) {
-                  return (
-                    <PdfViewer
-                      filePath={activeBuffer.path}
-                      fileName={activeBuffer.name}
-                      bufferId={activeBuffer.id}
-                    />
-                  );
-                } else if (activeBuffer.isSQLite) {
-                  return <SQLiteViewer databasePath={activeBuffer.path} />;
-                } else if (activeBuffer.isExternalEditor && activeBuffer.terminalConnectionId) {
-                  return (
-                    <ExternalEditorTerminal
-                      filePath={activeBuffer.path}
-                      fileName={activeBuffer.name}
-                      terminalConnectionId={activeBuffer.terminalConnectionId}
-                      onEditorExit={handleExternalEditorExit}
-                    />
-                  );
-                } else if (activeBuffer.isWebViewer && activeBuffer.webViewerUrl) {
-                  return <WebViewer url={activeBuffer.webViewerUrl} bufferId={activeBuffer.id} />;
-                } else {
-                  return <CodeEditor />;
-                }
-              })()}
+                  </div>
+                ))}
+
+              {/* Persist web viewer tabs - render all but hide inactive */}
+              {buffers
+                .filter((b) => b.isWebViewer && b.webViewerUrl)
+                .map((buffer) => (
+                  <div
+                    key={buffer.id}
+                    className={buffer.id === activeBufferId ? "h-full" : "hidden"}
+                  >
+                    <WebViewer url={buffer.webViewerUrl!} bufferId={buffer.id} />
+                  </div>
+                ))}
+
+              {/* Persist agent tabs - render all but hide inactive */}
+              {buffers
+                .filter((b) => b.isAgent)
+                .map((buffer) => (
+                  <div
+                    key={buffer.id}
+                    className={buffer.id === activeBufferId ? "h-full" : "hidden"}
+                  >
+                    <AgentTab />
+                  </div>
+                ))}
+
+              {/* Non-persistent content - only render active */}
+              {activeBuffer &&
+                !activeBuffer.isTerminal &&
+                !activeBuffer.isWebViewer &&
+                !activeBuffer.isAgent &&
+                (() => {
+                  if (activeBuffer.isDiff) {
+                    return (
+                      <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />
+                    );
+                  } else if (activeBuffer.isPullRequest && activeBuffer.prNumber) {
+                    return <PRViewer prNumber={activeBuffer.prNumber} />;
+                  } else if (activeBuffer.isImage) {
+                    return (
+                      <ImageViewer
+                        filePath={activeBuffer.path}
+                        fileName={activeBuffer.name}
+                        bufferId={activeBuffer.id}
+                      />
+                    );
+                  } else if (activeBuffer.isPdf) {
+                    return (
+                      <PdfViewer
+                        filePath={activeBuffer.path}
+                        fileName={activeBuffer.name}
+                        bufferId={activeBuffer.id}
+                      />
+                    );
+                  } else if (activeBuffer.isSQLite) {
+                    return <SQLiteViewer databasePath={activeBuffer.path} />;
+                  } else if (activeBuffer.isExternalEditor && activeBuffer.terminalConnectionId) {
+                    return (
+                      <ExternalEditorTerminal
+                        filePath={activeBuffer.path}
+                        fileName={activeBuffer.name}
+                        terminalConnectionId={activeBuffer.terminalConnectionId}
+                        onEditorExit={handleExternalEditorExit}
+                      />
+                    );
+                  } else {
+                    return <CodeEditor />;
+                  }
+                })()}
             </div>
             <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
           </div>
@@ -334,6 +382,7 @@ export function MainLayout() {
       <CommandPalette />
       <GitHubCopilotSettings />
       <ProjectNameMenu />
+      <GlobalNewTabMenu />
 
       {/* Dialog components */}
       <ThemeSelector

@@ -10,6 +10,7 @@ import { useAppStore } from "@/stores/app-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import UnsavedChangesDialog from "@/ui/unsaved-changes-dialog";
 import { calculateDisplayNames } from "../utils/path-shortener";
+import { NewTabMenu } from "./new-tab-menu";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
 import TabDragPreview from "./tab-drag-preview";
@@ -33,7 +34,6 @@ const TabBar = ({ paneId }: TabBarProps) => {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const pendingClose = useBufferStore.use.pendingClose();
-  const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
   const {
     handleTabClick,
     handleTabClose,
@@ -580,8 +580,8 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
 
-  // Only hide tab bar if there's no project open at all
-  if (buffers.length === 0 && !rootFolderPath && !isSwitchingProject) {
+  // Hide tab bar when no buffers are open
+  if (buffers.length === 0) {
     return null;
   }
 
@@ -635,6 +635,10 @@ const TabBar = ({ paneId }: TabBarProps) => {
               <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
             </div>
           )}
+
+          <div className="flex shrink-0 items-center px-1">
+            <NewTabMenu />
+          </div>
         </div>
 
         {isDragging &&
