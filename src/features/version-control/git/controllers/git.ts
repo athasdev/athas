@@ -344,12 +344,14 @@ export const createStash = async (
   repoPath: string,
   message?: string,
   includeUntracked: boolean = false,
+  files?: string[],
 ): Promise<boolean> => {
   try {
     await tauriInvoke("git_create_stash", {
       repoPath,
       message,
       includeUntracked,
+      files,
     });
     return true;
   } catch (error) {

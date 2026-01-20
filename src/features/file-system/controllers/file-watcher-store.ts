@@ -144,6 +144,12 @@ export async function initializeFileWatcherListener() {
     const { path, event_type } = event.payload;
     const parentDir = await dirname(path);
 
+    window.dispatchEvent(
+      new CustomEvent("file-external-change", {
+        detail: { path, event_type },
+      }),
+    );
+
     // Handle deleted files - refresh parent directory
     if (event_type === "deleted") {
       scheduleDirectoryRefresh(parentDir);

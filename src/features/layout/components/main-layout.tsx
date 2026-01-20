@@ -256,10 +256,12 @@ export function MainLayout() {
                   <AIChat mode="chat" />
                 </ResizablePane>
               )
-            : isSidebarVisible && (
-                <ResizablePane position="left" widthKey="sidebarWidth">
-                  <MainSidebar />
-                </ResizablePane>
+            : sidebarPosition === "left" && (
+                <div className={!isSidebarVisible ? "hidden" : undefined}>
+                  <ResizablePane position="left" widthKey="sidebarWidth">
+                    <MainSidebar />
+                  </ResizablePane>
+                </div>
               )}
 
           {/* Main content area */}
@@ -358,17 +360,19 @@ export function MainLayout() {
           </div>
 
           {/* Right sidebar or AI chat based on settings */}
-          {sidebarPosition === "right"
-            ? isSidebarVisible && (
-                <ResizablePane position="right" widthKey="sidebarWidth">
-                  <MainSidebar />
-                </ResizablePane>
-              )
-            : settings.isAIChatVisible && (
-                <ResizablePane position="right" widthKey="aiChatWidth">
-                  <AIChat mode="chat" />
-                </ResizablePane>
-              )}
+          {sidebarPosition === "right" ? (
+            <div className={!isSidebarVisible ? "hidden" : undefined}>
+              <ResizablePane position="right" widthKey="sidebarWidth">
+                <MainSidebar />
+              </ResizablePane>
+            </div>
+          ) : (
+            settings.isAIChatVisible && (
+              <ResizablePane position="right" widthKey="aiChatWidth">
+                <AIChat mode="chat" />
+              </ResizablePane>
+            )
+          )}
         </div>
       </div>
 

@@ -67,10 +67,6 @@ export const MainSidebar = memo(() => {
     if (searchViewRef.current) {
       setSearchViewRef(searchViewRef.current);
     }
-
-    return () => {
-      setSearchViewRef(null);
-    };
   }, [setSearchViewRef]);
 
   // Additional effect to ensure ref is registered when search becomes active
