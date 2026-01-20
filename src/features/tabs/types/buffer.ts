@@ -14,6 +14,13 @@ export interface Buffer {
   language?: string; // File language for syntax highlighting and formatting
   isWebViewer?: boolean; // Web viewer tab
   webViewerUrl?: string; // URL for web viewer
+  webViewerTitle?: string; // Page title for web viewer
+  webViewerFavicon?: string; // Favicon URL for web viewer
   isPullRequest?: boolean; // GitHub PR view
   prNumber?: number; // PR number for GitHub PR view
+  isTerminal?: boolean; // Terminal tab
+  terminalSessionId?: string; // Terminal session ID
+  terminalInitialCommand?: string; // Command to run on terminal start
+  isAgent?: boolean; // AI agent tab
+  agentSessionId?: string; // Agent session ID
 }

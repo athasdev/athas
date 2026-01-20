@@ -6,7 +6,6 @@ import {
   Code2,
   Copy,
   ExternalLink,
-  Globe,
   Home,
   Lock,
   Minus,
@@ -17,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 
 interface WebViewerProps {
   url: string;
@@ -24,22 +24,71 @@ interface WebViewerProps {
 }
 
 export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
-  const [currentUrl, setCurrentUrl] = useState(initialUrl);
-  const [inputUrl, setInputUrl] = useState(initialUrl);
-  const [isLoading, setIsLoading] = useState(true);
+  const isNewTab = initialUrl === "https://" || initialUrl === "http://" || !initialUrl;
+  const [currentUrl, setCurrentUrl] = useState(isNewTab ? "" : initialUrl);
+  const [inputUrl, setInputUrl] = useState(isNewTab ? "" : initialUrl);
+  const [isLoading, setIsLoading] = useState(!isNewTab);
   const [webviewLabel, setWebviewLabel] = useState<string | null>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const historyRef = useRef<string[]>([initialUrl]);
-  const historyIndexRef = useRef(0);
+  const urlInputRef = useRef<HTMLInputElement>(null);
+  const historyRef = useRef<string[]>(isNewTab ? [] : [initialUrl]);
+  const historyIndexRef = useRef(isNewTab ? -1 : 0);
 
   const isSecure = currentUrl.startsWith("https://");
   const isLocalhost = currentUrl.includes("localhost") || currentUrl.includes("127.0.0.1");
 
+  const { updateBuffer } = useBufferStore.use.actions();
+  const buffers = useBufferStore.use.buffers();
+
+  // Update buffer with title and favicon when URL changes
   useEffect(() => {
+    if (!currentUrl || !bufferId) return;
+
+    const buffer = buffers.find((b) => b.id === bufferId);
+    if (!buffer) return;
+
+    try {
+      const urlObj = new URL(currentUrl);
+      const hostname = urlObj.hostname;
+
+      // Truncate hostname for display (max 30 chars)
+      let title = hostname;
+      if (title.length > 30) {
+        title = `${title.substring(0, 27)}...`;
+      }
+
+      // Try to get favicon
+      const faviconUrl = `${urlObj.origin}/favicon.ico`;
+
+      // Update buffer with new title and favicon
+      updateBuffer({
+        ...buffer,
+        name: title,
+        webViewerTitle: hostname,
+        webViewerFavicon: faviconUrl,
+        webViewerUrl: currentUrl,
+      });
+    } catch {
+      // Invalid URL, ignore
+    }
+  }, [currentUrl, bufferId, buffers, updateBuffer]);
+
+  // Auto-focus URL input for new tabs
+  useEffect(() => {
+    if (isNewTab && urlInputRef.current) {
+      urlInputRef.current.focus();
+      urlInputRef.current.select();
+    }
+  }, [isNewTab]);
+
+  useEffect(() => {
+    // Don't create webview if no URL
+    if (!currentUrl) return;
+
     let mounted = true;
     let currentLabel: string | null = null;
 
@@ -78,7 +127,7 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
         invoke("close_embedded_webview", { webviewLabel: currentLabel }).catch(console.error);
       }
     };
-  }, [bufferId]);
+  }, [bufferId, currentUrl]);
 
   useEffect(() => {
     if (!webviewLabel || !containerRef.current) return;
@@ -190,9 +239,30 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
   const handleUrlSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
+
+      let normalizedUrl = inputUrl.trim();
+      if (!normalizedUrl) return;
+
+      if (!normalizedUrl.match(/^https?:\/\//)) {
+        const isLocal =
+          normalizedUrl.toLowerCase().startsWith("localhost") ||
+          normalizedUrl.toLowerCase().startsWith("127.0.0.1");
+        normalizedUrl = isLocal ? `http://${normalizedUrl}` : `https://${normalizedUrl}`;
+      }
+
+      // If no webview exists yet, set currentUrl to trigger webview creation
+      if (!webviewLabel) {
+        setCurrentUrl(normalizedUrl);
+        setInputUrl(normalizedUrl);
+        setIsLoading(true);
+        historyRef.current = [normalizedUrl];
+        historyIndexRef.current = 0;
+        return;
+      }
+
       navigateTo(inputUrl);
     },
-    [inputUrl, navigateTo],
+    [inputUrl, navigateTo, webviewLabel],
   );
 
   const handleOpenExternal = useCallback(async () => {
@@ -310,10 +380,11 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
               <SecurityIcon size={14} />
             </div>
             <input
+              ref={urlInputRef}
               type="text"
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
-              placeholder="Enter URL or search..."
+              placeholder="Enter URL..."
               className="h-7 w-full rounded-md border border-border bg-primary-bg pr-8 pl-8 text-[13px] text-text placeholder:text-text-lighter focus:border-accent focus:outline-none"
             />
             <button
@@ -380,17 +451,8 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
 
       <div ref={containerRef} className="relative flex-1">
         {isLoading && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-primary-bg">
-            <div className="relative">
-              <Globe size={32} className="text-text-lighter" />
-              <div className="-right-1 -bottom-1 absolute rounded-full bg-primary-bg p-0.5">
-                <RefreshCw size={14} className="animate-spin text-accent" />
-              </div>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-sm text-text-light">Loading page...</span>
-              <span className="max-w-[300px] truncate text-text-lighter text-xs">{currentUrl}</span>
-            </div>
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary-bg">
+            <RefreshCw size={16} className="animate-spin text-text-lighter" />
           </div>
         )}
       </div>

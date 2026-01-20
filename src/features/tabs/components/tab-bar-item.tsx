@@ -1,5 +1,5 @@
-import { Database, Package, Pin, X } from "lucide-react";
-import { memo, useCallback } from "react";
+import { Database, Globe, Package, Pin, Sparkles, Terminal, X } from "lucide-react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import { cn } from "@/utils/cn";
@@ -38,6 +38,13 @@ const TabBarItem = memo(function TabBarItem({
   handleTabClose,
   handleTabPin,
 }: TabBarItemProps) {
+  const [faviconError, setFaviconError] = useState(false);
+
+  // Reset favicon error when favicon URL changes
+  useEffect(() => {
+    setFaviconError(false);
+  }, [buffer.webViewerFavicon]);
+
   const handleAuxClick = useCallback(
     (e: React.MouseEvent) => {
       // Only handle middle click here
@@ -80,7 +87,22 @@ const TabBarItem = memo(function TabBarItem({
         {isActive && <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-accent" />}
         <div className="grid size-3 max-h-3 max-w-3 shrink-0 place-content-center py-3">
           {buffer.path === "extensions://marketplace" ? (
-            <Package size={12} className="text-accent" />
+            <Package size={12} className="text-text-lighter" />
+          ) : buffer.isTerminal ? (
+            <Terminal size={12} className="text-text-lighter" />
+          ) : buffer.isAgent ? (
+            <Sparkles size={12} className="text-text-lighter" />
+          ) : buffer.isWebViewer ? (
+            buffer.webViewerFavicon && !faviconError ? (
+              <img
+                src={buffer.webViewerFavicon}
+                alt=""
+                className="size-3 object-contain"
+                onError={() => setFaviconError(true)}
+              />
+            ) : (
+              <Globe size={12} className="text-text-lighter" />
+            )
           ) : buffer.isSQLite ? (
             <Database size={12} className="text-text-lighter" />
           ) : (

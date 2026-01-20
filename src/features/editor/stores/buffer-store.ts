@@ -42,8 +42,17 @@ export interface Buffer {
   terminalConnectionId?: string;
   // For web viewer buffers, store the URL
   webViewerUrl?: string;
+  webViewerTitle?: string;
+  webViewerFavicon?: string;
   // For PR buffers, store the PR number
   prNumber?: number;
+  // For terminal tab buffers
+  isTerminal?: boolean;
+  terminalSessionId?: string;
+  terminalInitialCommand?: string;
+  // For agent tab buffers
+  isAgent?: boolean;
+  agentSessionId?: string;
   // Cached syntax highlighting tokens
   tokens: {
     start: number;
@@ -95,10 +104,13 @@ interface BufferActions {
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
   openWebViewerBuffer: (url: string) => string;
   openPRBuffer: (prNumber: number) => string;
+  openTerminalBuffer: (options?: { name?: string; command?: string }) => string;
+  openAgentBuffer: (sessionId?: string) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
   closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
   setActiveBuffer: (bufferId: string) => void;
+  showNewTabView: () => void;
   updateBufferContent: (
     bufferId: string,
     content: string,
@@ -146,7 +158,7 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
 
     if (!rootFolderPath) return;
 
-    // Only save real files, not virtual/diff/image/sqlite/external editor/web viewer/PR buffers
+    // Only save real files, not virtual/diff/image/sqlite/external editor/web viewer/PR/terminal/agent buffers
     const persistableBuffers = buffers
       .filter(
         (b) =>
@@ -160,7 +172,9 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
           !b.isExternalEditor &&
           !b.isWebViewer &&
           !b.isPullRequest &&
-          !b.isPdf,
+          !b.isPdf &&
+          !b.isTerminal &&
+          !b.isAgent,
       )
       .map((b) => ({
         path: b.path,
@@ -182,7 +196,9 @@ const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) =>
       !activeBuffer.isExternalEditor &&
       !activeBuffer.isWebViewer &&
       !activeBuffer.isPullRequest &&
-      !activeBuffer.isPdf
+      !activeBuffer.isPdf &&
+      !activeBuffer.isTerminal &&
+      !activeBuffer.isAgent
         ? activeBuffer.path
         : null;
 
@@ -595,6 +611,126 @@ export const useBufferStore = createSelectors(
           return newBuffer.id;
         },
 
+        openTerminalBuffer: (options?: { name?: string; command?: string }): string => {
+          const { buffers, maxOpenTabs } = get();
+
+          // Count existing terminal buffers to generate next number
+          const terminalCount = buffers.filter((b) => b.isTerminal).length;
+          const terminalNumber = terminalCount + 1;
+          const sessionId = `terminal-tab-${Date.now()}`;
+          const path = `terminal://${sessionId}`;
+          const displayName = options?.name || `Terminal ${terminalNumber}`;
+
+          // Handle max tabs limit
+          let newBuffers = [...buffers];
+          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+            const lruBuffer = unpinnedBuffers[0];
+            newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+          }
+
+          const newBuffer: Buffer = {
+            id: generateBufferId(path),
+            path,
+            name: displayName,
+            content: "",
+            savedContent: "",
+            isDirty: false,
+            isVirtual: true,
+            isPinned: false,
+            isPreview: false,
+            isImage: false,
+            isSQLite: false,
+            isDiff: false,
+            isMarkdownPreview: false,
+            isHtmlPreview: false,
+            isCsvPreview: false,
+            isExternalEditor: false,
+            isWebViewer: false,
+            isPullRequest: false,
+            isPdf: false,
+            isTerminal: true,
+            terminalSessionId: sessionId,
+            terminalInitialCommand: options?.command,
+            isActive: true,
+            tokens: [],
+          };
+
+          set((state) => {
+            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+            state.activeBufferId = newBuffer.id;
+          });
+
+          return newBuffer.id;
+        },
+
+        openAgentBuffer: (sessionId?: string): string => {
+          const { buffers, maxOpenTabs } = get();
+
+          // If sessionId provided, check if already open
+          if (sessionId) {
+            const existing = buffers.find((b) => b.isAgent && b.agentSessionId === sessionId);
+            if (existing) {
+              set((state) => {
+                state.activeBufferId = existing.id;
+                state.buffers = state.buffers.map((b) => ({
+                  ...b,
+                  isActive: b.id === existing.id,
+                }));
+              });
+              return existing.id;
+            }
+          }
+
+          // Count existing agent buffers to generate next number
+          const agentCount = buffers.filter((b) => b.isAgent).length;
+          const agentNumber = agentCount + 1;
+          const agentSessionId = sessionId || `agent-tab-${Date.now()}`;
+          const path = `agent://${agentSessionId}`;
+          const displayName = `Agent ${agentNumber}`;
+
+          // Handle max tabs limit
+          let newBuffers = [...buffers];
+          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+            const lruBuffer = unpinnedBuffers[0];
+            newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+          }
+
+          const newBuffer: Buffer = {
+            id: generateBufferId(path),
+            path,
+            name: displayName,
+            content: "",
+            savedContent: "",
+            isDirty: false,
+            isVirtual: true,
+            isPinned: false,
+            isPreview: false,
+            isImage: false,
+            isSQLite: false,
+            isDiff: false,
+            isMarkdownPreview: false,
+            isHtmlPreview: false,
+            isCsvPreview: false,
+            isExternalEditor: false,
+            isWebViewer: false,
+            isPullRequest: false,
+            isPdf: false,
+            isAgent: true,
+            agentSessionId,
+            isActive: true,
+            tokens: [],
+          };
+
+          set((state) => {
+            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+            state.activeBufferId = newBuffer.id;
+          });
+
+          return newBuffer.id;
+        },
+
         closeBuffer: (bufferId: string) => {
           const buffer = get().buffers.find((b) => b.id === bufferId);
 
@@ -627,6 +763,20 @@ export const useBufferStore = createSelectors(
           if (closedBuffer.isExternalEditor && closedBuffer.terminalConnectionId) {
             invoke("close_terminal", { id: closedBuffer.terminalConnectionId }).catch((e) => {
               logger.error("BufferStore", "Failed to close external editor terminal:", e);
+            });
+          }
+
+          // Close terminal session for terminal tab buffers
+          if (closedBuffer.isTerminal && closedBuffer.terminalSessionId) {
+            import("@/features/terminal/stores/terminal-store").then(({ useTerminalStore }) => {
+              const session = useTerminalStore
+                .getState()
+                .getSession(closedBuffer.terminalSessionId!);
+              if (session?.connectionId) {
+                invoke("close_terminal", { id: session.connectionId }).catch((e) => {
+                  logger.error("BufferStore", "Failed to close terminal tab session:", e);
+                });
+              }
             });
           }
 
@@ -724,6 +874,16 @@ export const useBufferStore = createSelectors(
             state.buffers = state.buffers.map((b) => ({
               ...b,
               isActive: b.id === bufferId,
+            }));
+          });
+        },
+
+        showNewTabView: () => {
+          set((state) => {
+            state.activeBufferId = null;
+            state.buffers = state.buffers.map((b) => ({
+              ...b,
+              isActive: false,
             }));
           });
         },

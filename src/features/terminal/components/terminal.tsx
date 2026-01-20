@@ -27,6 +27,7 @@ interface XtermTerminalProps {
   onReady?: () => void;
   onTerminalRef?: (ref: { focus: () => void; terminal: Terminal }) => void;
   onTerminalExit?: (sessionId: string) => void;
+  initialCommand?: string;
 }
 
 export const XtermTerminal: React.FC<XtermTerminalProps> = ({
@@ -35,6 +36,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   onReady,
   onTerminalRef,
   onTerminalExit,
+  initialCommand,
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
@@ -228,6 +230,15 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
           detail: { terminalId: sessionId, connectionId },
         }),
       );
+
+      // Run initial command if provided (with a small delay to ensure shell is ready)
+      if (initialCommand) {
+        setTimeout(() => {
+          invoke("terminal_write", { id: connectionId, data: `${initialCommand}\n` }).catch((e) => {
+            console.error("Failed to run initial command:", e);
+          });
+        }, 300);
+      }
 
       onTerminalRef?.({ focus: () => terminal.focus(), terminal });
       onReady?.();
@@ -525,7 +536,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   );
 
   return (
-    <div className="relative h-full w-full bg-primary-bg">
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-primary-bg">
       <TerminalSearch
         isVisible={isSearchVisible}
         onSearch={handleSearch}
@@ -538,7 +549,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       <div
         ref={terminalRef}
         id={`terminal-${sessionId}`}
-        className={`xterm-container h-full w-full text-text ${!isActive && "opacity-60"}`}
+        className={`xterm-container min-h-0 flex-1 text-text ${!isActive && "opacity-60"}`}
       />
     </div>
   );
