@@ -305,6 +305,7 @@ fn main() {
          git_apply_stash,
          git_pop_stash,
          git_drop_stash,
+         git_stash_diff,
          git_get_tags,
          git_create_tag,
          git_delete_tag,

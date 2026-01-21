@@ -7,8 +7,8 @@ import { detectLanguageFromFileName } from "@/features/editor/utils/language-det
 import { logger } from "@/features/editor/utils/logger";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
-import type { MultiFileDiff } from "@/features/version-control/diff-viewer/types/diff";
-import type { GitDiff } from "@/features/version-control/git/types/git";
+import type { MultiFileDiff } from "@/features/git/types/diff";
+import type { GitDiff } from "@/features/git/types/git";
 import { useSessionStore } from "@/stores/session-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
