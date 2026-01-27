@@ -21,9 +21,11 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 interface WebViewerProps {
   url: string;
   bufferId: string;
+  paneId?: string;
+  isActive?: boolean;
 }
 
-export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
+export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebViewerProps) {
   const isNewTab = initialUrl === "https://" || initialUrl === "http://" || !initialUrl;
   const [currentUrl, setCurrentUrl] = useState(isNewTab ? "" : initialUrl);
   const [inputUrl, setInputUrl] = useState(isNewTab ? "" : initialUrl);
@@ -163,12 +165,8 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
   useEffect(() => {
     if (!webviewLabel) return;
 
-    invoke("set_webview_visible", { webviewLabel, visible: true }).catch(console.error);
-
-    return () => {
-      invoke("set_webview_visible", { webviewLabel, visible: false }).catch(console.error);
-    };
-  }, [webviewLabel]);
+    invoke("set_webview_visible", { webviewLabel, visible: isActive }).catch(console.error);
+  }, [webviewLabel, isActive]);
 
   const navigateTo = useCallback(
     async (url: string, addToHistory = true) => {

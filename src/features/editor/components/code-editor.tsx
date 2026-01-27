@@ -28,6 +28,8 @@ interface CodeEditorProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  paneId?: string;
+  bufferId?: string;
 }
 
 export interface CodeEditorRef {
@@ -37,14 +39,15 @@ export interface CodeEditorRef {
 
 const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
 
-const CodeEditor = ({ className }: CodeEditorProps) => {
+const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { setRefs, setContent, setFileInfo } = useEditorStateStore.use.actions();
   const { setDisabled } = useEditorSettingsStore.use.actions();
 
   const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
+  const globalActiveBufferId = useBufferStore.use.activeBufferId();
+  const activeBufferId = propBufferId ?? globalActiveBufferId;
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { handleContentChange } = useAppStore.use.actions();
