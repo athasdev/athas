@@ -26,9 +26,9 @@ import { findFileInTree } from "@/features/file-system/controllers/file-tree-uti
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { ContextMenuState, FileEntry } from "@/features/file-system/types/app";
+import { getGitStatus } from "@/features/git/api/status";
+import type { GitFile, GitStatus } from "@/features/git/types/git";
 import { useSettingsStore } from "@/features/settings/store";
-import { getGitStatus } from "@/features/version-control/git/controllers/git";
-import type { GitFile, GitStatus } from "@/features/version-control/git/types/git";
 import { useIsMac } from "@/hooks/use-platform";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";

@@ -16,6 +16,9 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { stageHunk, unstageHunk } from "@/features/git/api/status";
+import DiffViewer from "@/features/git/components/diff/viewer";
+import type { GitHunk } from "@/features/git/types/git";
 import PRViewer from "@/features/github/components/pr-viewer";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { ImageViewer } from "@/features/image-viewer/components/image-viewer";
@@ -24,9 +27,6 @@ import { useSettingsStore } from "@/features/settings/store";
 import { GlobalNewTabMenu } from "@/features/tabs/components/global-new-tab-menu";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { TerminalTab } from "@/features/terminal/components/terminal-tab";
-import DiffViewer from "@/features/version-control/diff-viewer/components/diff-viewer";
-import { stageHunk, unstageHunk } from "@/features/version-control/git/controllers/git";
-import type { GitHunk } from "@/features/version-control/git/types/git";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
@@ -256,10 +256,12 @@ export function MainLayout() {
                   <AIChat mode="chat" />
                 </ResizablePane>
               )
-            : isSidebarVisible && (
-                <ResizablePane position="left" widthKey="sidebarWidth">
-                  <MainSidebar />
-                </ResizablePane>
+            : sidebarPosition === "left" && (
+                <div className={!isSidebarVisible ? "hidden" : undefined}>
+                  <ResizablePane position="left" widthKey="sidebarWidth">
+                    <MainSidebar />
+                  </ResizablePane>
+                </div>
               )}
 
           {/* Main content area */}
@@ -358,17 +360,19 @@ export function MainLayout() {
           </div>
 
           {/* Right sidebar or AI chat based on settings */}
-          {sidebarPosition === "right"
-            ? isSidebarVisible && (
-                <ResizablePane position="right" widthKey="sidebarWidth">
-                  <MainSidebar />
-                </ResizablePane>
-              )
-            : settings.isAIChatVisible && (
-                <ResizablePane position="right" widthKey="aiChatWidth">
-                  <AIChat mode="chat" />
-                </ResizablePane>
-              )}
+          {sidebarPosition === "right" ? (
+            <div className={!isSidebarVisible ? "hidden" : undefined}>
+              <ResizablePane position="right" widthKey="sidebarWidth">
+                <MainSidebar />
+              </ResizablePane>
+            </div>
+          ) : (
+            settings.isAIChatVisible && (
+              <ResizablePane position="right" widthKey="aiChatWidth">
+                <AIChat mode="chat" />
+              </ResizablePane>
+            )
+          )}
         </div>
       </div>
 

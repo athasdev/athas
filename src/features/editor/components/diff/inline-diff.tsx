@@ -1,6 +1,6 @@
 import type React from "react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import type { GitDiffLine } from "@/features/version-control/git/types/git";
+import type { GitDiffLine } from "@/features/git/types/git";
 
 interface InlineDiffProps {
   lineNumber: number;

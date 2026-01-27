@@ -2,9 +2,9 @@ import { memo, useEffect, useMemo, useRef } from "react";
 import { FileTree } from "@/features/file-explorer/components/file-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
+import GitView from "@/features/git/components/view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { useSettingsStore } from "@/features/settings/store";
-import GitView from "@/features/version-control/git/components/view";
 import { useSearchViewStore } from "@/stores/search-view-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useUIState } from "@/stores/ui-state-store";
@@ -67,10 +67,6 @@ export const MainSidebar = memo(() => {
     if (searchViewRef.current) {
       setSearchViewRef(searchViewRef.current);
     }
-
-    return () => {
-      setSearchViewRef(null);
-    };
   }, [setSearchViewRef]);
 
   // Additional effect to ensure ref is registered when search becomes active

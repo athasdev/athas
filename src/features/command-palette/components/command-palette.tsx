@@ -4,18 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { commitChanges } from "@/features/git/api/commits";
+import { fetchChanges, pullChanges, pushChanges } from "@/features/git/api/remotes";
+import { discardAllChanges, stageAllFiles, unstageAllFiles } from "@/features/git/api/status";
+import { useGitStore } from "@/features/git/stores/git-store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
-import {
-  commitChanges,
-  discardAllChanges,
-  fetchChanges,
-  pullChanges,
-  pushChanges,
-  stageAllFiles,
-  unstageAllFiles,
-} from "@/features/version-control/git/controllers/git";
-import { useGitStore } from "@/features/version-control/git/controllers/store";
 import { vimCommands } from "@/features/vim/stores/vim-commands";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useAppStore } from "@/stores/app-store";

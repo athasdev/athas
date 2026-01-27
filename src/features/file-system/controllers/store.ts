@@ -8,15 +8,12 @@ import { immer } from "zustand/middleware/immer";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-tree-store";
+import { getGitStatus } from "@/features/git/api/status";
+import { useGitBlameStore } from "@/features/git/stores/blame-store";
+import { useGitStore } from "@/features/git/stores/git-store";
+import { gitDiffCache } from "@/features/git/utils/diff-cache";
+import { isDiffFile, parseRawDiffContent } from "@/features/git/utils/diff-parser";
 import { useSettingsStore } from "@/features/settings/store";
-import { gitDiffCache } from "@/features/version-control/git/controllers/diff-cache";
-import {
-  isDiffFile,
-  parseRawDiffContent,
-} from "@/features/version-control/git/controllers/diff-parser";
-import { getGitStatus } from "@/features/version-control/git/controllers/git";
-import { useGitStore } from "@/features/version-control/git/controllers/store";
-import { useGitBlameStore } from "@/stores/git-blame-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
 import { useSessionStore } from "@/stores/session-store";
@@ -162,7 +159,7 @@ export const useFileSystemStore = createSelectors(
 
         // Reset git store completely
         const { actions: gitActions } = useGitStore.getState();
-        gitActions.resetGitState();
+        gitActions.reset();
 
         // Clear git diff cache
         gitDiffCache.clear();
@@ -1380,7 +1377,7 @@ export const useFileSystemStore = createSelectors(
           // Clear git state
           const gitActions = useGitStore.getState().actions;
           gitActions.setGitStatus(null);
-          gitActions.resetCommits();
+          gitActions.setCommits([]);
 
           // Clear project store
           const { setRootFolderPath, setProjectName } = useProjectStore.getState();
