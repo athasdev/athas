@@ -28,6 +28,7 @@ interface XtermTerminalProps {
   onTerminalRef?: (ref: { focus: () => void; terminal: Terminal }) => void;
   onTerminalExit?: (sessionId: string) => void;
   initialCommand?: string;
+  workingDirectory?: string;
 }
 
 export const XtermTerminal: React.FC<XtermTerminalProps> = ({
@@ -37,6 +38,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   onTerminalRef,
   onTerminalExit,
   initialCommand,
+  workingDirectory,
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
@@ -136,7 +138,8 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
       const connectionId = await invoke<string>("create_terminal", {
         config: {
-          working_directory: existingSession?.currentDirectory || rootFolderPath || undefined,
+          working_directory:
+            workingDirectory || existingSession?.currentDirectory || rootFolderPath || undefined,
           shell: existingSession?.shell || undefined,
           rows: terminal.rows,
           cols: terminal.cols,

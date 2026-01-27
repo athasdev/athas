@@ -6,6 +6,7 @@ interface TerminalTabProps {
   sessionId: string;
   bufferId: string;
   initialCommand?: string;
+  workingDirectory?: string;
   isActive?: boolean;
 }
 
@@ -13,6 +14,7 @@ export function TerminalTab({
   sessionId,
   bufferId,
   initialCommand,
+  workingDirectory,
   isActive = true,
 }: TerminalTabProps) {
   const { closeBufferForce } = useBufferStore.use.actions();
@@ -28,6 +30,7 @@ export function TerminalTab({
         isActive={isActive}
         onTerminalExit={handleTerminalExit}
         initialCommand={initialCommand}
+        workingDirectory={workingDirectory}
       />
     </div>
   );

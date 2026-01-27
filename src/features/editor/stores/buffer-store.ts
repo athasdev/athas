@@ -69,6 +69,7 @@ export interface Buffer {
   isTerminal?: boolean;
   terminalSessionId?: string;
   terminalInitialCommand?: string;
+  terminalWorkingDirectory?: string;
   // For agent tab buffers
   isAgent?: boolean;
   agentSessionId?: string;
@@ -123,7 +124,11 @@ interface BufferActions {
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
   openWebViewerBuffer: (url: string) => string;
   openPRBuffer: (prNumber: number) => string;
-  openTerminalBuffer: (options?: { name?: string; command?: string }) => string;
+  openTerminalBuffer: (options?: {
+    name?: string;
+    command?: string;
+    workingDirectory?: string;
+  }) => string;
   openAgentBuffer: (sessionId?: string) => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
@@ -642,7 +647,11 @@ export const useBufferStore = createSelectors(
           return newBuffer.id;
         },
 
-        openTerminalBuffer: (options?: { name?: string; command?: string }): string => {
+        openTerminalBuffer: (options?: {
+          name?: string;
+          command?: string;
+          workingDirectory?: string;
+        }): string => {
           const { buffers, maxOpenTabs } = get();
 
           // Count existing terminal buffers to generate next number
@@ -683,6 +692,7 @@ export const useBufferStore = createSelectors(
             isTerminal: true,
             terminalSessionId: sessionId,
             terminalInitialCommand: options?.command,
+            terminalWorkingDirectory: options?.workingDirectory,
             isActive: true,
             tokens: [],
           };

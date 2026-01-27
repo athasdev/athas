@@ -1,5 +1,6 @@
-import { Columns2, Copy, FolderOpen, Pin, PinOff, RotateCcw, Rows2 } from "lucide-react";
+import { Columns2, Copy, FolderOpen, Pin, PinOff, RotateCcw, Rows2, Terminal } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import KeybindingBadge from "@/ui/keybinding-badge";
 
@@ -196,6 +197,25 @@ const TabContextMenu = ({
         <FolderOpen size={11} />
         Reveal in Finder
       </button>
+
+      {!buffer.isVirtual && !buffer.path.includes("://") && (
+        <button
+          className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+          onClick={() => {
+            const dirPath = buffer.path.substring(0, buffer.path.lastIndexOf("/"));
+            const dirName = dirPath.split("/").pop() || "terminal";
+            const { openTerminalBuffer } = useBufferStore.getState().actions;
+            openTerminalBuffer({
+              name: dirName,
+              workingDirectory: dirPath,
+            });
+            onClose();
+          }}
+        >
+          <Terminal size={11} />
+          Open in Terminal
+        </button>
+      )}
 
       {buffer.path !== "extensions://marketplace" && (
         <button

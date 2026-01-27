@@ -353,6 +353,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                 sessionId={buffer.terminalSessionId!}
                 bufferId={buffer.id}
                 initialCommand={buffer.terminalInitialCommand}
+                workingDirectory={buffer.terminalWorkingDirectory}
                 isActive={buffer.id === pane.activeBufferId && isActivePane}
               />
             </div>
