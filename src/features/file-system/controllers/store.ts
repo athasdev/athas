@@ -1055,8 +1055,6 @@ export const useFileSystemStore = createSelectors(
                 timestamp: now,
               };
             });
-
-            console.log(`Indexed ${allFiles.length} files for command palette`);
           } catch (error) {
             console.error("Failed to index project files:", error);
           }

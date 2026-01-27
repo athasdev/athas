@@ -388,8 +388,6 @@ details: ${errorDetails || mainError}
                 return "session_complete";
               case "content_chunk":
                 return "content_chunk";
-              default:
-                return event.type;
             }
           };
           setAcpEvents((prev) => [
