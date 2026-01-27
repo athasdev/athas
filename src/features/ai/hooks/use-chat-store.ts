@@ -25,6 +25,7 @@ export function useChatActions() {
     setIsTyping: useAIChatStore((state) => state.setIsTyping),
     setStreamingMessageId: useAIChatStore((state) => state.setStreamingMessageId),
     createNewChat: useAIChatStore((state) => state.createNewChat),
+    ensureChatForAgent: useAIChatStore((state) => state.ensureChatForAgent),
     deleteChat: useAIChatStore((state) => state.deleteChat),
     updateChatTitle: useAIChatStore((state) => state.updateChatTitle),
     addMessage: useAIChatStore((state) => state.addMessage),

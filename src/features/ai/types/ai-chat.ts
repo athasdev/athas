@@ -132,6 +132,6 @@ export interface MarkdownRendererProps {
 export interface AIChatInputBarProps {
   buffers: Buffer[];
   allProjectFiles: FileEntry[];
-  onSendMessage: () => Promise<void>;
+  onSendMessage: (message: string) => Promise<void>;
   onStopStreaming: () => void;
 }

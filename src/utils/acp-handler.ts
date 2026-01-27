@@ -12,7 +12,8 @@ interface AcpHandlers {
   onNewMessage?: () => void;
   onToolUse?: (toolName: string, toolInput?: unknown) => void;
   onToolComplete?: (toolName: string) => void;
-  onPermissionRequest?: (requestId: string, description: string) => void;
+  onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
+  onEvent?: (event: AcpEvent) => void;
 }
 
 interface AcpListeners {
@@ -20,12 +21,14 @@ interface AcpListeners {
 }
 
 export class AcpStreamHandler {
+  private static activeHandler: AcpStreamHandler | null = null;
   private listeners: AcpListeners = {};
   private timeout?: NodeJS.Timeout;
   private lastActivityTime = Date.now();
-  private isFirstMessage = true;
   private currentToolName: string | null = null;
   private sessionComplete = false;
+  private pendingNewMessage = false;
+  private cancelled = false;
 
   constructor(
     private agentId: string,
@@ -34,6 +37,7 @@ export class AcpStreamHandler {
 
   async start(userMessage: string, context: ContextInfo): Promise<void> {
     try {
+      AcpStreamHandler.activeHandler = this;
       await this.ensureAgentRunning();
       const fullMessage = this.buildMessage(userMessage, context);
       await this.setupListeners();
@@ -90,7 +94,11 @@ export class AcpStreamHandler {
   }
 
   private handleAcpEvent(event: AcpEvent): void {
+    if (this.cancelled) return;
     console.log("ACP event:", event.type);
+    if (this.handlers.onEvent) {
+      this.handlers.onEvent(event);
+    }
 
     this.lastActivityTime = Date.now();
 
@@ -151,8 +159,10 @@ export class AcpStreamHandler {
       // User cancelled the prompt
       this.cleanup();
       this.handlers.onComplete();
+      return;
     }
-    // Other stop reasons (end_turn, max_tokens, etc.) are handled by session_complete
+    // Treat all other stop reasons as completion in case no session_complete arrives
+    this.handleSessionComplete();
   }
 
   private handleSessionModeUpdate(event: Extract<AcpEvent, { type: "session_mode_update" }>): void {
@@ -169,11 +179,10 @@ export class AcpStreamHandler {
 
   private handleContentChunk(event: Extract<AcpEvent, { type: "content_chunk" }>): void {
     if (event.content.type === "text") {
-      // If this is not the first message chunk and we're starting new content
-      if (!this.isFirstMessage && this.handlers.onNewMessage) {
+      if (this.pendingNewMessage && this.handlers.onNewMessage) {
         this.handlers.onNewMessage();
       }
-      this.isFirstMessage = false;
+      this.pendingNewMessage = false;
 
       this.handlers.onChunk(event.content.text);
     }
@@ -196,6 +205,7 @@ export class AcpStreamHandler {
       this.handlers.onToolComplete(this.currentToolName);
     }
     this.currentToolName = null;
+    this.pendingNewMessage = true;
 
     if (!event.success) {
       console.warn("Tool call failed:", event.toolId);
@@ -204,27 +214,26 @@ export class AcpStreamHandler {
 
   private handlePermissionRequest(event: Extract<AcpEvent, { type: "permission_request" }>): void {
     if (this.handlers.onPermissionRequest) {
-      this.handlers.onPermissionRequest(event.requestId, event.description);
+      this.handlers.onPermissionRequest(event);
     } else {
       // Auto-approve if no handler (for now)
       // In production, this should show a dialog
       console.warn("Permission request received but no handler set, auto-approving");
-      invoke("respond_acp_permission", {
-        requestId: event.requestId,
-        approved: true,
-      }).catch(console.error);
+      AcpStreamHandler.respondToPermission(event.requestId, true).catch(console.error);
     }
   }
 
   private handleSessionComplete(): void {
     console.log("Session complete");
     this.sessionComplete = true;
+    this.pendingNewMessage = false;
     this.cleanup();
     this.handlers.onComplete();
   }
 
   private handleError(event: Extract<AcpEvent, { type: "error" }>): void {
     console.error("ACP error:", event.error);
+    this.pendingNewMessage = false;
     this.cleanup();
     this.handlers.onError(event.error);
   }
@@ -269,16 +278,33 @@ export class AcpStreamHandler {
       clearTimeout(this.timeout);
       this.timeout = undefined;
     }
+    this.pendingNewMessage = false;
 
     if (this.listeners.event) {
       this.listeners.event();
       this.listeners.event = undefined;
     }
+
+    if (AcpStreamHandler.activeHandler === this) {
+      AcpStreamHandler.activeHandler = null;
+    }
+  }
+
+  private forceStop(): void {
+    if (this.sessionComplete || this.cancelled) return;
+    this.cancelled = true;
+    this.pendingNewMessage = false;
+    this.cleanup();
+    this.handlers.onComplete();
   }
 
   // Static method to respond to permission requests
-  static async respondToPermission(requestId: string, approved: boolean): Promise<void> {
-    await invoke("respond_acp_permission", { requestId, approved });
+  static async respondToPermission(
+    requestId: string,
+    approved: boolean,
+    cancelled = false,
+  ): Promise<void> {
+    await invoke("respond_acp_permission", { args: { requestId, approved, cancelled } });
   }
 
   // Static method to get available agents
@@ -301,5 +327,6 @@ export class AcpStreamHandler {
   // Static method to cancel the current prompt turn
   static async cancelPrompt(): Promise<void> {
     await invoke("cancel_acp_prompt");
+    AcpStreamHandler.activeHandler?.forceStop();
   }
 }

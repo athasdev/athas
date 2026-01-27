@@ -69,6 +69,7 @@ export interface AIChatActions {
   // Agent selection
   setSelectedAgentId: (agentId: AgentType) => void;
   getCurrentAgentId: () => AgentType; // Gets agent for current chat or selected agent
+  changeCurrentChatAgent: (agentId: AgentType) => void; // Change agent for current chat
 
   // Chat mode actions
   setMode: (mode: ChatMode) => void;
@@ -96,6 +97,7 @@ export interface AIChatActions {
 
   // Chat actions
   createNewChat: (agentId?: AgentType) => string;
+  ensureChatForAgent: (agentId: AgentType) => string;
   switchToChat: (chatId: string) => void;
   deleteChat: (chatId: string) => void;
   updateChatTitle: (chatId: string, title: string) => void;
