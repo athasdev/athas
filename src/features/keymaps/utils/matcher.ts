@@ -7,6 +7,24 @@ import type { ParsedKey } from "./parser";
 import { parseKeybinding } from "./parser";
 
 /**
+ * Map of event.code to logical key name for special keys
+ * This helps handle keys that might report "Dead" or other values for event.key
+ */
+const CODE_TO_KEY: Record<string, string> = {
+  Backquote: "`",
+  Minus: "-",
+  Equal: "=",
+  BracketLeft: "[",
+  BracketRight: "]",
+  Backslash: "\\",
+  Semicolon: ";",
+  Quote: "'",
+  Comma: ",",
+  Period: ".",
+  Slash: "/",
+};
+
+/**
  * Convert KeyboardEvent to ParsedKey format
  */
 export function eventToKey(event: KeyboardEvent): ParsedKey {
@@ -19,9 +37,16 @@ export function eventToKey(event: KeyboardEvent): ParsedKey {
 
   modifiers.sort();
 
+  // Use event.key by default, but fall back to code mapping for special keys
+  // This handles cases where event.key returns "Dead" or other non-character values
+  let key = event.key;
+  if (key === "Dead" || key === "Unidentified") {
+    key = CODE_TO_KEY[event.code] || event.code;
+  }
+
   return {
     modifiers,
-    key: event.key,
+    key,
   };
 }
 
