@@ -3,6 +3,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAppStore } from "@/stores/app-store";
 import { useUIState } from "@/stores/ui-state-store";
@@ -16,7 +17,7 @@ export function useMenuEventsWrapper() {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
-  const { closeBuffer, switchToNextBuffer, switchToPreviousBuffer } = useBufferStore.use.actions();
+  const { closeBuffer } = useBufferStore.use.actions();
   const { handleSave } = useAppStore.use.actions();
 
   // Get current window for window operations (currently unused but kept for future functionality)
@@ -76,8 +77,13 @@ export function useMenuEventsWrapper() {
         return;
       }
 
-      if (activeBuffer) {
-        closeBuffer(activeBuffer.id);
+      // Use the active pane's active buffer instead of global activeBuffer
+      const paneStore = usePaneStore.getState();
+      const activePane = paneStore.actions.getActivePane();
+      const bufferIdToClose = activePane?.activeBufferId || activeBuffer?.id;
+
+      if (bufferIdToClose) {
+        closeBuffer(bufferIdToClose);
       }
     },
     onUndo: () => {
@@ -113,12 +119,11 @@ export function useMenuEventsWrapper() {
     },
     onToggleAiChat: () => updateSetting("isAIChatVisible", !settings.isAIChatVisible),
     onSplitEditor: () => {
-      // For now, we'll show a notification about split editor functionality
-      console.log("Split Editor - would split the current editor view");
-      alert(
-        "Split Editor functionality is coming soon!\n\nThis will allow you to view multiple files side by side.",
-      );
-      // In a full implementation, this would create a split view in the editor
+      const paneStore = usePaneStore.getState();
+      const activePane = paneStore.actions.getActivePane();
+      if (activePane?.activeBufferId) {
+        paneStore.actions.splitPane(activePane.id, "horizontal", activePane.activeBufferId);
+      }
     },
     onToggleVim: () => {
       // For now, we'll show a notification about vim mode
@@ -144,8 +149,24 @@ export function useMenuEventsWrapper() {
         // In a full implementation, this would scroll to the specified line in the active editor
       }
     },
-    onNextTab: switchToNextBuffer,
-    onPrevTab: switchToPreviousBuffer,
+    onNextTab: () => {
+      const paneStore = usePaneStore.getState();
+      paneStore.actions.switchToNextBufferInPane();
+      // Sync buffer store
+      const activePane = paneStore.actions.getActivePane();
+      if (activePane?.activeBufferId) {
+        useBufferStore.getState().actions.setActiveBuffer(activePane.activeBufferId);
+      }
+    },
+    onPrevTab: () => {
+      const paneStore = usePaneStore.getState();
+      paneStore.actions.switchToPreviousBufferInPane();
+      // Sync buffer store
+      const activePane = paneStore.actions.getActivePane();
+      if (activePane?.activeBufferId) {
+        useBufferStore.getState().actions.setActiveBuffer(activePane.activeBufferId);
+      }
+    },
     onThemeChange: (theme: string) => updateSetting("theme", theme),
     onAbout: async () => {
       const version = await fetchRawAppVersion();

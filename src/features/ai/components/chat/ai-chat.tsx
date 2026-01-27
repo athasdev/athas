@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import ApiKeyModal from "@/features/ai/components/api-key-modal";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
@@ -9,7 +9,6 @@ import { AcpStreamHandler } from "@/utils/acp-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/utils/ai-chat";
 import type { ContextInfo } from "@/utils/types";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
-import { useAIChatStore } from "../../store/store";
 import ChatHistorySidebar from "../history/sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
@@ -31,6 +30,10 @@ const AIChat = memo(function AIChat({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [permissionQueue, setPermissionQueue] = useState<
+    Array<{ requestId: string; description: string; permissionType: string; resource: string }>
+  >([]);
+  const [acpEvents, setAcpEvents] = useState<Array<{ id: string; text: string }>>([]);
 
   useEffect(() => {
     if (activeBuffer) {
@@ -115,6 +118,14 @@ const AIChat = memo(function AIChat({
     if (isAcpAgent(currentAgentId)) {
       try {
         await AcpStreamHandler.cancelPrompt();
+        if (permissionQueue.length > 0) {
+          await Promise.all(
+            permissionQueue.map((item) =>
+              AcpStreamHandler.respondToPermission(item.requestId, false, true),
+            ),
+          );
+          setPermissionQueue([]);
+        }
       } catch (error) {
         console.error("Failed to cancel ACP prompt:", error);
       }
@@ -129,13 +140,17 @@ const AIChat = memo(function AIChat({
   };
 
   const processMessage = async (messageContent: string) => {
-    if (!messageContent.trim() || !chatState.hasApiKey) return;
+    const currentAgentId = chatActions.getCurrentAgentId();
+    const isAcp = isAcpAgent(currentAgentId);
+    // For ACP agents (Claude Code, etc.), we don't need an API key
+    // For Custom API, we need an API key to be set
+    if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
 
     // Agents are started automatically by AcpStreamHandler when needed
 
     let chatId = chatState.currentChatId;
     if (!chatId) {
-      chatId = chatActions.createNewChat();
+      chatId = chatActions.ensureChatForAgent(chatActions.getCurrentAgentId());
     }
 
     const { processedMessage } = await parseMentionsAndLoadFiles(
@@ -190,6 +205,9 @@ const AIChat = memo(function AIChat({
       const enhancedMessage = processedMessage;
       let currentAssistantMessageId = assistantMessageId;
       const currentAgentId = chatActions.getCurrentAgentId();
+      if (isAcp) {
+        setAcpEvents([]);
+      }
 
       await getChatCompletionStream(
         currentAgentId,
@@ -333,6 +351,50 @@ details: ${errorDetails || mainError}
             ),
           });
         },
+        (event) => {
+          setPermissionQueue((prev) => [
+            ...prev,
+            {
+              requestId: event.requestId,
+              description: event.description,
+              permissionType: event.permissionType,
+              resource: event.resource,
+            },
+          ]);
+        },
+        (event) => {
+          if (!isAcpAgent(currentAgentId)) return;
+          const format = () => {
+            switch (event.type) {
+              case "tool_start":
+                return `tool_start ${event.toolName}`;
+              case "tool_complete":
+                return `tool_complete ${event.toolId}`;
+              case "permission_request":
+                return `permission ${event.permissionType}: ${event.description}`;
+              case "prompt_complete":
+                return `prompt_complete ${event.stopReason}`;
+              case "session_mode_update":
+                return `mode_state ${event.modeState.currentModeId ?? "none"}`;
+              case "current_mode_update":
+                return `mode ${event.currentModeId}`;
+              case "slash_commands_update":
+                return `slash_commands ${event.commands.length}`;
+              case "status_changed":
+                return `status running=${event.status.running}`;
+              case "error":
+                return `error ${event.error}`;
+              case "session_complete":
+                return "session_complete";
+              case "content_chunk":
+                return "content_chunk";
+            }
+          };
+          setAcpEvents((prev) => [
+            ...prev.slice(-199),
+            { id: `${Date.now()}-${event.type}`, text: format() },
+          ]);
+        },
         chatState.mode,
         chatState.outputStyle,
       );
@@ -363,7 +425,10 @@ details: ${errorDetails || mainError}
 
   const sendMessage = useCallback(
     async (messageContent: string) => {
-      if (!messageContent.trim() || !chatState.hasApiKey) return;
+      const currentAgentId = chatActions.getCurrentAgentId();
+      const isAcp = isAcpAgent(currentAgentId);
+      // For ACP agents (Claude Code, etc.), we don't need an API key
+      if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
 
       chatActions.setInput("");
 
@@ -380,13 +445,33 @@ details: ${errorDetails || mainError}
       chatState.streamingMessageId,
       chatActions.setInput,
       chatActions.addMessageToQueue,
+      chatActions.getCurrentAgentId,
     ],
   );
 
-  const handleSendMessage = useCallback(async () => {
-    const currentInput = useAIChatStore.getState().input;
-    await sendMessage(currentInput);
-  }, [sendMessage]);
+  const handleSendMessage = useCallback(
+    async (messageContent: string) => {
+      await sendMessage(messageContent);
+    },
+    [sendMessage],
+  );
+
+  const currentPermission = permissionQueue[0];
+  const handlePermission = async (approved: boolean) => {
+    if (!currentPermission) return;
+    try {
+      setAcpEvents((prev) => [
+        ...prev.slice(-199),
+        {
+          id: `${Date.now()}-permission-response`,
+          text: `permission_response ${approved ? "allow" : "deny"}`,
+        },
+      ]);
+      await AcpStreamHandler.respondToPermission(currentPermission.requestId, approved);
+    } finally {
+      setPermissionQueue((prev) => prev.slice(1));
+    }
+  };
 
   return (
     <div
@@ -395,8 +480,38 @@ details: ${errorDetails || mainError}
       <ChatHeader />
 
       <div className="scrollbar-hidden flex-1 overflow-y-auto">
-        <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} />
+        <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} acpEvents={acpEvents} />
       </div>
+
+      {currentPermission && (
+        <div className="border-border border-t bg-secondary-bg px-3 py-2 text-xs">
+          <div className="flex items-center gap-2 font-mono">
+            <span className="text-text-lighter">permission:</span>
+            <span
+              className="min-w-0 flex-1 truncate text-text"
+              title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
+            >
+              {currentPermission.description}
+            </span>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => handlePermission(false)}
+                className="rounded border border-border bg-primary-bg px-2 py-1 text-text-lighter hover:bg-hover"
+              >
+                deny
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePermission(true)}
+                className="rounded border border-border bg-primary-bg px-2 py-1 text-text hover:bg-hover"
+              >
+                allow
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AIChatInputBar
         buffers={buffers}

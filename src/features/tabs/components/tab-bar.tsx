@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/store";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import { useAppStore } from "@/stores/app-store";
@@ -16,7 +18,8 @@ import TabContextMenu from "./tab-context-menu";
 import TabDragPreview from "./tab-drag-preview";
 
 interface TabBarProps {
-  paneId?: string; // For split view panes (future feature)
+  paneId?: string;
+  onTabClick?: (bufferId: string) => void;
 }
 
 const DRAG_THRESHOLD = 5;
@@ -29,11 +32,18 @@ interface TabPosition {
   center: number;
 }
 
-const TabBar = ({ paneId }: TabBarProps) => {
+const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   // Get everything from stores
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
+  const allBuffers = useBufferStore.use.buffers();
+  const globalActiveBufferId = useBufferStore.use.activeBufferId();
   const pendingClose = useBufferStore.use.pendingClose();
+  const paneRoot = usePaneStore.use.root();
+  const { moveBufferToPane, addBufferToPane, setActivePane } = usePaneStore.use.actions();
+
+  // Filter buffers by paneId if provided
+  const pane = paneId ? findPaneGroup(paneRoot, paneId) : null;
+  const buffers = pane ? allBuffers.filter((b) => pane.bufferIds.includes(b.id)) : allBuffers;
+  const activeBufferId = pane ? pane.activeBufferId : globalActiveBufferId;
   const {
     handleTabClick,
     handleTabClose,
@@ -77,6 +87,8 @@ const TabBar = ({ paneId }: TabBarProps) => {
     position: { x: number; y: number };
     buffer: Buffer | null;
   }>({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
+
+  const [isDropTarget, setIsDropTarget] = useState(false);
 
   const [srAnnouncement, setSrAnnouncement] = useState<string>("");
 
@@ -299,7 +311,11 @@ const TabBar = ({ paneId }: TabBarProps) => {
         return;
       }
       const buffer = sortedBuffers[index];
-      handleTabClick(buffer.id);
+      if (externalTabClick) {
+        externalTabClick(buffer.id);
+      } else {
+        handleTabClick(buffer.id);
+      }
       updateActivePath(buffer.path);
 
       // Announce tab switch to screen readers
@@ -317,7 +333,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
         dragDirection: null,
       });
     },
-    [handleTabClick, sortedBuffers, updateActivePath],
+    [handleTabClick, externalTabClick, sortedBuffers, updateActivePath],
   );
 
   const handleDoubleClick = useCallback(
@@ -382,6 +398,53 @@ const TabBar = ({ paneId }: TabBarProps) => {
   );
 
   const handleDragEnd = useCallback(() => {}, []);
+
+  // Handle drag over for cross-pane drops
+  const handleTabBarDragOver = useCallback(
+    (e: React.DragEvent) => {
+      const tabDataString = e.dataTransfer.types.includes("application/tab-data");
+      if (tabDataString && paneId) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setIsDropTarget(true);
+      }
+    },
+    [paneId],
+  );
+
+  const handleTabBarDragLeave = useCallback(() => {
+    setIsDropTarget(false);
+  }, []);
+
+  // Handle drop for cross-pane tab movement
+  const handleTabBarDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDropTarget(false);
+
+      if (!paneId) return;
+
+      const tabDataString = e.dataTransfer.getData("application/tab-data");
+      if (tabDataString) {
+        try {
+          const tabData = JSON.parse(tabDataString);
+          const { bufferId, paneId: sourcePaneId } = tabData;
+
+          if (sourcePaneId && sourcePaneId !== paneId) {
+            // Move buffer from source pane to this pane
+            setActivePane(paneId);
+            moveBufferToPane(bufferId, sourcePaneId, paneId);
+          } else if (!sourcePaneId) {
+            // Tab from legacy source, just add to this pane
+            addBufferToPane(paneId, bufferId, true);
+          }
+        } catch {
+          // Invalid tab data
+        }
+      }
+    },
+    [paneId, setActivePane, moveBufferToPane, addBufferToPane],
+  );
 
   const handleCopyPath = useCallback(
     async (path: string) => {
@@ -589,13 +652,18 @@ const TabBar = ({ paneId }: TabBarProps) => {
 
   return (
     <>
-      <div className="relative shrink-0 border-border border-b">
+      <div
+        className={`relative shrink-0 border-border border-b ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
+      >
         <div
           ref={tabBarRef}
           className="flex overflow-x-auto overflow-y-hidden bg-secondary-bg [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
+          onDragOver={handleTabBarDragOver}
+          onDragLeave={handleTabBarDragLeave}
+          onDrop={handleTabBarDrop}
         >
           {sortedBuffers.map((buffer, index) => {
             const isActive = buffer.id === activeBufferId;
@@ -658,6 +726,7 @@ const TabBar = ({ paneId }: TabBarProps) => {
         isOpen={contextMenu.isOpen}
         position={contextMenu.position}
         buffer={contextMenu.buffer}
+        paneId={paneId}
         onClose={closeContextMenu}
         onPin={handleTabPin}
         onCloseTab={(bufferId) => {
@@ -672,16 +741,12 @@ const TabBar = ({ paneId }: TabBarProps) => {
         onCopyPath={handleCopyPath}
         onCopyRelativePath={handleCopyRelativePath}
         onReload={(bufferId: string) => {
-          // Reload the buffer by closing and reopening it
           const buffer = buffers.find((b) => b.id === bufferId);
           if (buffer && buffer.path !== "extensions://marketplace") {
             const { closeBuffer, openBuffer } = useBufferStore.getState().actions;
             closeBuffer(bufferId);
-            // Re-read the file and open it again
             setTimeout(async () => {
               try {
-                // This would need to use the file reading utility
-                // For now, just reopen with current content
                 openBuffer(
                   buffer.path,
                   buffer.name,
@@ -697,6 +762,22 @@ const TabBar = ({ paneId }: TabBarProps) => {
           }
         }}
         onRevealInFinder={handleRevealInFolder}
+        onSplitRight={
+          paneId
+            ? (targetPaneId, bufferId) => {
+                const { splitPane } = usePaneStore.getState().actions;
+                splitPane(targetPaneId, "horizontal", bufferId);
+              }
+            : undefined
+        }
+        onSplitDown={
+          paneId
+            ? (targetPaneId, bufferId) => {
+                const { splitPane } = usePaneStore.getState().actions;
+                splitPane(targetPaneId, "vertical", bufferId);
+              }
+            : undefined
+        }
       />
 
       {pendingClose && (

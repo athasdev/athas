@@ -3,6 +3,7 @@ import { memo, useCallback, useState } from "react";
 import type { Message } from "@/features/ai/types/ai-chat";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import Tooltip from "@/ui/tooltip";
+import { isAcpAgent } from "@/utils/ai-chat";
 import { useAIChatStore } from "../../store/store";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import ToolCallDisplay from "../messages/tool-call-display";
@@ -25,6 +26,7 @@ export const ChatMessage = memo(function ChatMessage({
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const currentChatId = useAIChatStore((state) => state.currentChatId);
   const getCurrentChat = useAIChatStore((state) => state.getCurrentChat);
+  const currentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
   const regenerateResponse = useAIChatStore((state) => state.regenerateResponse);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
 
@@ -123,6 +125,28 @@ export const ChatMessage = memo(function ChatMessage({
           />
         ))}
       </>
+    );
+  }
+
+  if (
+    message.role === "assistant" &&
+    message.isStreaming &&
+    (!message.content || message.content.trim().length === 0) &&
+    (!message.toolCalls || message.toolCalls.length === 0)
+  ) {
+    if (isAcpAgent(currentAgentId())) {
+      return null;
+    }
+
+    return (
+      <div className="flex items-center gap-2 font-mono text-text-lighter text-xs">
+        <span className="flex items-center gap-1">
+          <span className="inline-block size-1.5 animate-pulse rounded-full bg-text-lighter/70" />
+          <span className="inline-block size-1.5 animate-pulse rounded-full bg-text-lighter/70 [animation-delay:150ms]" />
+          <span className="inline-block size-1.5 animate-pulse rounded-full bg-text-lighter/70 [animation-delay:300ms]" />
+        </span>
+        <span>thinking...</span>
+      </div>
     );
   }
 

@@ -10,4 +10,9 @@ interface Window {
       openPath: (path: string) => Promise<string>;
     };
   };
+  __fileDragData?: {
+    path: string;
+    name: string;
+    isDir: boolean;
+  };
 }

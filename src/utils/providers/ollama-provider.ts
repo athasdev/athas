@@ -30,9 +30,11 @@ export class OllamaProvider extends AIProvider {
 
   async getModels(): Promise<any[]> {
     try {
-      const response = await fetch("http://localhost:11434/api/tags");
+      const response = await fetch("http://localhost:11434/api/tags", {
+        signal: AbortSignal.timeout(2000), // 2 second timeout
+      });
       if (!response.ok) {
-        throw new Error("Failed to fetch models");
+        return [];
       }
       const data = await response.json();
       return data.models.map((model: any) => ({
@@ -40,8 +42,8 @@ export class OllamaProvider extends AIProvider {
         name: model.name,
         maxTokens: 4096, // Default for now as Ollama doesn't always provide this
       }));
-    } catch (error) {
-      console.error("Failed to fetch Ollama models:", error);
+    } catch {
+      // Silent fail - Ollama is likely not running
       return [];
     }
   }
