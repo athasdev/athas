@@ -1,6 +1,7 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
+import type { AcpEvent } from "@/features/ai/types/acp";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { getModelById, getProviderById } from "@/features/ai/types/providers";
@@ -39,6 +40,8 @@ export const getChatCompletionStream = async (
   onNewMessage?: () => void,
   onToolUse?: (toolName: string, toolInput?: any) => void,
   onToolComplete?: (toolName: string) => void,
+  onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void,
+  onAcpEvent?: (event: AcpEvent) => void,
   mode: ChatMode = "chat",
   outputStyle: OutputStyle = "default",
 ): Promise<void> => {
@@ -52,6 +55,8 @@ export const getChatCompletionStream = async (
         onNewMessage,
         onToolUse,
         onToolComplete,
+        onPermissionRequest,
+        onEvent: onAcpEvent,
       });
       await handler.start(userMessage, context);
       return;

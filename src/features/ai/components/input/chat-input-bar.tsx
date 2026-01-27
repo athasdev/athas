@@ -547,15 +547,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
     // Reset animation after the flying animation completes
     setTimeout(() => setIsSendAnimating(false), 800);
 
-    // Send the message first
-    await onSendMessage();
-
-    // Clear input after message is sent
+    // Clear input immediately after send is triggered
     setInput("");
     setHasInputText(false);
     if (inputRef.current) {
       inputRef.current.innerHTML = "";
     }
+
+    // Send the captured message
+    await onSendMessage(currentInput);
   };
 
   // Get available slash commands

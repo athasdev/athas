@@ -154,6 +154,13 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
     selectedElement?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selectedIndex]);
 
+  const handleClose = useCallback(() => {
+    if (initialTheme) {
+      onThemeChange(initialTheme);
+    }
+    onClose();
+  }, [initialTheme, onThemeChange, onClose]);
+
   const handleUploadTheme = async () => {
     // Create file input element
     const input = document.createElement("input");
@@ -181,15 +188,8 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
 
   if (!isVisible) return null;
 
-  const handleClose = () => {
-    if (initialTheme) {
-      onThemeChange(initialTheme);
-    }
-    onClose();
-  };
-
   return (
-    <Command isVisible={isVisible}>
+    <Command isVisible={isVisible} onClose={handleClose}>
       <CommandHeader onClose={handleClose}>
         <div className="flex w-full items-center gap-2">
           <CommandInput

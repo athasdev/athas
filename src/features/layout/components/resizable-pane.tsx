@@ -34,16 +34,18 @@ export function ResizablePane({ children, position, widthKey, className }: Resiz
 
   const getMaxWidth = useCallback(() => {
     const windowWidth = window.innerWidth;
+    const MIN_MAIN_CONTENT_WIDTH = 200; // Ensure main content area has minimum space
 
-    // Only subtract the opposite pane's width - main view can shrink to 0
+    // Calculate available space accounting for both sidebars and minimum main content
     if (widthKey === "sidebarWidth" && settings.isAIChatVisible) {
-      return windowWidth - settings.aiChatWidth;
+      return Math.max(MIN_PANE_WIDTH, windowWidth - settings.aiChatWidth - MIN_MAIN_CONTENT_WIDTH);
     }
     if (widthKey === "aiChatWidth" && isSidebarVisible) {
-      return windowWidth - settings.sidebarWidth;
+      return Math.max(MIN_PANE_WIDTH, windowWidth - settings.sidebarWidth - MIN_MAIN_CONTENT_WIDTH);
     }
 
-    return windowWidth;
+    // Single sidebar case - leave room for main content
+    return Math.max(MIN_PANE_WIDTH, windowWidth - MIN_MAIN_CONTENT_WIDTH);
   }, [
     widthKey,
     settings.isAIChatVisible,
@@ -101,11 +103,20 @@ export function ResizablePane({ children, position, widthKey, className }: Resiz
       <div
         onMouseDown={handleMouseDown}
         className={cn(
-          "absolute top-0 z-50 h-full w-1 cursor-col-resize transition-colors duration-150 hover:bg-accent/30",
+          "absolute top-0 z-50 h-full w-1.5 cursor-col-resize transition-colors duration-150",
+          "hover:bg-accent/30 active:bg-accent/50",
           handlePosition,
           isResizing && "bg-accent/50",
         )}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+        aria-valuenow={Math.round(width)}
+        aria-valuemin={MIN_PANE_WIDTH}
+        aria-valuemax={Math.round(getMaxWidth())}
+        tabIndex={0}
       />
+      {isResizing && <div className="pointer-events-none fixed inset-0 z-40 cursor-col-resize" />}
       {children}
     </div>
   );

@@ -133,7 +133,7 @@ const ModelProviderSelector = ({
                     ? "border-blue-500/20 bg-blue-500/10"
                     : agent.installed && "hover:bg-hover",
                 )}
-                onClick={() => agent.installed && handleAgentSelect(agent.id)}
+                onClick={() => handleAgentSelect(agent.id)}
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">

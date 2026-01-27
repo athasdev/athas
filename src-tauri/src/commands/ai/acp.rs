@@ -1,9 +1,19 @@
 use crate::features::ai::{AcpAgentBridge, AcpAgentStatus, AgentConfig};
+use serde::Deserialize;
 use std::sync::Arc;
 use tauri::State;
 use tokio::sync::Mutex;
 
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
+
+#[derive(Deserialize)]
+pub struct PermissionResponseArgs {
+   #[serde(alias = "requestId")]
+   request_id: String,
+   approved: bool,
+   #[serde(default)]
+   cancelled: bool,
+}
 
 #[tauri::command]
 pub async fn get_available_agents(
@@ -51,12 +61,11 @@ pub async fn get_acp_status(bridge: State<'_, AcpBridgeState>) -> Result<AcpAgen
 #[tauri::command]
 pub async fn respond_acp_permission(
    bridge: State<'_, AcpBridgeState>,
-   request_id: String,
-   approved: bool,
+   args: PermissionResponseArgs,
 ) -> Result<(), String> {
    let bridge = bridge.lock().await;
    bridge
-      .respond_to_permission(request_id, approved)
+      .respond_to_permission(args.request_id, args.approved, args.cancelled)
       .await
       .map_err(|e| e.to_string())
 }

@@ -87,7 +87,14 @@ function App() {
       {/* Linux window resize handles (must be outside zoom container) */}
       <WindowResizeBorder />
 
-      <div className="h-screen w-screen overflow-hidden bg-transparent" style={{ zoom: zoomLevel }}>
+      <div
+        className="overflow-hidden bg-transparent"
+        style={{
+          zoom: zoomLevel,
+          width: `${100 / zoomLevel}vw`,
+          height: `${100 / zoomLevel}vh`,
+        }}
+      >
         <FontStyleInjector />
         <div className="window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg">
           <MainLayout />
