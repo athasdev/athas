@@ -139,14 +139,14 @@ const IconThemeSelector = ({
     selectedElement?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selectedIndex]);
 
-  if (!isVisible) return null;
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (initialTheme) {
       onThemeChange(initialTheme);
     }
     onClose();
-  };
+  }, [initialTheme, onThemeChange, onClose]);
+
+  if (!isVisible) return null;
 
   return (
     <Command isVisible={isVisible} onClose={handleClose}>

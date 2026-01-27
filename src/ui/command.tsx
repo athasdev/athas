@@ -18,14 +18,14 @@ const Command = ({ isVisible, children, className, onClose }: CommandProps) => {
       {/* Backdrop - click to close */}
       <button
         type="button"
-        className="absolute inset-0 cursor-default bg-black/20"
+        className="absolute inset-0 z-0 cursor-default bg-black/20"
         onClick={onClose}
         aria-label="Close command palette"
         tabIndex={-1}
       />
       <div
         className={cn(
-          "relative flex max-h-80 w-[520px] flex-col overflow-hidden",
+          "relative z-10 flex max-h-80 w-[520px] flex-col overflow-hidden",
           "rounded-md border border-border bg-primary-bg shadow-2xl",
           className,
         )}
