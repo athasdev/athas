@@ -1,0 +1,4 @@
+#!/bin/bash
+# Simple wrapper that preserves LD_LIBRARY_PATH from hooks
+cd "$(dirname "$0")"
+exec ./usr/bin/athas-code "$@"
