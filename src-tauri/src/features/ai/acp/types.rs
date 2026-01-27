@@ -119,9 +119,18 @@ pub struct AcpAgentStatus {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AcpContentBlock {
-   Text { text: String },
-   Image { data: String, media_type: String },
-   Resource { uri: String, name: Option<String> },
+   Text {
+      text: String,
+   },
+   Image {
+      data: String,
+      #[serde(rename = "mediaType")]
+      media_type: String,
+   },
+   Resource {
+      uri: String,
+      name: Option<String>,
+   },
 }
 
 /// Events emitted to the frontend via Tauri
@@ -129,12 +138,14 @@ pub enum AcpContentBlock {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AcpEvent {
    /// Agent message content chunk
+   #[serde(rename_all = "camelCase")]
    ContentChunk {
       session_id: String,
       content: AcpContentBlock,
       is_complete: bool,
    },
    /// Tool use started
+   #[serde(rename_all = "camelCase")]
    ToolStart {
       session_id: String,
       tool_name: String,
@@ -142,12 +153,14 @@ pub enum AcpEvent {
       input: serde_json::Value,
    },
    /// Tool use completed
+   #[serde(rename_all = "camelCase")]
    ToolComplete {
       session_id: String,
       tool_id: String,
       success: bool,
    },
    /// Permission request from agent
+   #[serde(rename_all = "camelCase")]
    PermissionRequest {
       request_id: String,
       permission_type: String,
@@ -155,30 +168,37 @@ pub enum AcpEvent {
       description: String,
    },
    /// Session completed
+   #[serde(rename_all = "camelCase")]
    SessionComplete { session_id: String },
    /// Error occurred
+   #[serde(rename_all = "camelCase")]
    Error {
       session_id: Option<String>,
       error: String,
    },
    /// Agent status changed
+   #[serde(rename_all = "camelCase")]
    StatusChanged { status: AcpAgentStatus },
    /// Available slash commands updated
+   #[serde(rename_all = "camelCase")]
    SlashCommandsUpdate {
       session_id: String,
       commands: Vec<SlashCommand>,
    },
    /// Session mode state updated (full state with available modes)
+   #[serde(rename_all = "camelCase")]
    SessionModeUpdate {
       session_id: String,
       mode_state: SessionModeState,
    },
    /// Current session mode changed (only the current mode id)
+   #[serde(rename_all = "camelCase")]
    CurrentModeUpdate {
       session_id: String,
       current_mode_id: String,
    },
    /// Prompt turn completed with a stop reason
+   #[serde(rename_all = "camelCase")]
    PromptComplete {
       session_id: String,
       stop_reason: StopReason,

@@ -89,7 +89,7 @@ fn process_streaming_response(
    StatusCode,
    HeaderMap,
 ) {
-   debug!("🌊 Processing STREAMING response for {}", request_id);
+   debug!("Processing STREAMING response for {}", request_id);
    let status = response.status();
    let response_headers = response.headers().clone();
    let (tx, rx) = mpsc::channel::<Result<Bytes, axum::Error>>(100);

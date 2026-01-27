@@ -1,5 +1,4 @@
-// todo: we should make a context menu component that can be used for other things too
-import { Copy, FolderOpen, Pin, PinOff, RotateCcw } from "lucide-react";
+import { Columns2, Copy, FolderOpen, Pin, PinOff, RotateCcw, Rows2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import KeybindingBadge from "@/ui/keybinding-badge";
@@ -8,6 +7,7 @@ interface TabContextMenuProps {
   isOpen: boolean;
   position: { x: number; y: number };
   buffer: Buffer | null;
+  paneId?: string;
   onClose: () => void;
   onPin: (bufferId: string) => void;
   onCloseTab: (bufferId: string) => void;
@@ -18,12 +18,15 @@ interface TabContextMenuProps {
   onCopyRelativePath?: (path: string) => void;
   onReload?: (bufferId: string) => void;
   onRevealInFinder?: (path: string) => void;
+  onSplitRight?: (paneId: string, bufferId: string) => void;
+  onSplitDown?: (paneId: string, bufferId: string) => void;
 }
 
 const TabContextMenu = ({
   isOpen,
   position,
   buffer,
+  paneId,
   onClose,
   onPin,
   onCloseTab,
@@ -34,6 +37,8 @@ const TabContextMenu = ({
   onCopyRelativePath,
   onReload,
   onRevealInFinder,
+  onSplitRight,
+  onSplitDown,
 }: TabContextMenuProps) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -120,6 +125,34 @@ const TabContextMenu = ({
       </button>
 
       <div className="my-0.5 border-border border-t" />
+
+      {paneId && onSplitRight && (
+        <button
+          className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+          onClick={() => {
+            onSplitRight(paneId, buffer.id);
+            onClose();
+          }}
+        >
+          <Columns2 size={11} />
+          Split Right
+        </button>
+      )}
+
+      {paneId && onSplitDown && (
+        <button
+          className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+          onClick={() => {
+            onSplitDown(paneId, buffer.id);
+            onClose();
+          }}
+        >
+          <Rows2 size={11} />
+          Split Down
+        </button>
+      )}
+
+      {paneId && (onSplitRight || onSplitDown) && <div className="my-0.5 border-border border-t" />}
 
       <button
         className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"

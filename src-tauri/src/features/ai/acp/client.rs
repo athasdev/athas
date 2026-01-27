@@ -9,6 +9,7 @@ use tokio::sync::{Mutex, mpsc};
 pub struct PermissionResponse {
    pub request_id: String,
    pub approved: bool,
+   pub cancelled: bool,
 }
 
 /// Athas ACP Client implementation
@@ -91,11 +92,25 @@ impl acp::Client for AthasAcpClient {
       .await
       {
          Ok(Some(response)) => {
+            if response.cancelled {
+               return Ok(acp::RequestPermissionResponse::new(
+                  acp::RequestPermissionOutcome::Cancelled,
+               ));
+            }
+
             if response.approved {
-               // Find the first option that allows the action (if any)
+               // Prefer allow-once/allow-always options if available
                let selected_option = args
                   .options
-                  .first()
+                  .iter()
+                  .find(|opt| {
+                     matches!(
+                        opt.kind,
+                        acp::PermissionOptionKind::AllowOnce
+                           | acp::PermissionOptionKind::AllowAlways
+                     )
+                  })
+                  .or_else(|| args.options.first())
                   .map(|opt| acp::SelectedPermissionOutcome::new(opt.option_id.clone()));
 
                if let Some(selected) = selected_option {
@@ -108,9 +123,29 @@ impl acp::Client for AthasAcpClient {
                   ))
                }
             } else {
-               Ok(acp::RequestPermissionResponse::new(
-                  acp::RequestPermissionOutcome::Cancelled,
-               ))
+               // Prefer reject-once/reject-always options if available
+               let selected_option = args
+                  .options
+                  .iter()
+                  .find(|opt| {
+                     matches!(
+                        opt.kind,
+                        acp::PermissionOptionKind::RejectOnce
+                           | acp::PermissionOptionKind::RejectAlways
+                     )
+                  })
+                  .or_else(|| args.options.first())
+                  .map(|opt| acp::SelectedPermissionOutcome::new(opt.option_id.clone()));
+
+               if let Some(selected) = selected_option {
+                  Ok(acp::RequestPermissionResponse::new(
+                     acp::RequestPermissionOutcome::Selected(selected),
+                  ))
+               } else {
+                  Ok(acp::RequestPermissionResponse::new(
+                     acp::RequestPermissionOutcome::Cancelled,
+                  ))
+               }
             }
          }
          _ => Ok(acp::RequestPermissionResponse::new(

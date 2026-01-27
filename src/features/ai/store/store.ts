@@ -88,6 +88,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           return state.selectedAgentId;
         },
 
+        changeCurrentChatAgent: (agentId) => {
+          // When changing agent, create a new chat with the new agent
+          // This preserves the behavior that each chat belongs to a specific agent
+          get().createNewChat(agentId);
+        },
+
         // Chat mode actions
         setMode: (mode) =>
           set((state) => {
@@ -222,6 +228,36 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             console.error("Failed to save new chat to database:", err),
           );
           return newChat.id;
+        },
+        ensureChatForAgent: (agentId: AgentType) => {
+          const state = get();
+
+          if (state.currentChatId) {
+            const current = state.chats.find((c) => c.id === state.currentChatId);
+            if (current) {
+              return current.id;
+            }
+          }
+
+          const matchingChat = state.chats.find((c) => c.agentId === agentId);
+          if (matchingChat) {
+            set((state) => {
+              state.currentChatId = matchingChat.id;
+              state.isChatHistoryVisible = false;
+            });
+            return matchingChat.id;
+          }
+
+          if (state.chats.length > 0) {
+            const fallback = state.chats[0];
+            set((state) => {
+              state.currentChatId = fallback.id;
+              state.isChatHistoryVisible = false;
+            });
+            return fallback.id;
+          }
+
+          return get().createNewChat(agentId);
         },
 
         switchToChat: (chatId) => {

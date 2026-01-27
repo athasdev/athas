@@ -21,9 +21,11 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 interface WebViewerProps {
   url: string;
   bufferId: string;
+  paneId?: string;
+  isActive?: boolean;
 }
 
-export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
+export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebViewerProps) {
   const isNewTab = initialUrl === "https://" || initialUrl === "http://" || !initialUrl;
   const [currentUrl, setCurrentUrl] = useState(isNewTab ? "" : initialUrl);
   const [inputUrl, setInputUrl] = useState(isNewTab ? "" : initialUrl);
@@ -163,12 +165,8 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
   useEffect(() => {
     if (!webviewLabel) return;
 
-    invoke("set_webview_visible", { webviewLabel, visible: true }).catch(console.error);
-
-    return () => {
-      invoke("set_webview_visible", { webviewLabel, visible: false }).catch(console.error);
-    };
-  }, [webviewLabel]);
+    invoke("set_webview_visible", { webviewLabel, visible: isActive }).catch(console.error);
+  }, [webviewLabel, isActive]);
 
   const navigateTo = useCallback(
     async (url: string, addToHistory = true) => {
@@ -328,6 +326,133 @@ export function WebViewer({ url: initialUrl, bufferId }: WebViewerProps) {
   const handleStopLoading = useCallback(() => {
     setIsLoading(false);
   }, []);
+
+  const handleFocusUrlBar = useCallback(() => {
+    if (urlInputRef.current) {
+      urlInputRef.current.focus();
+      urlInputRef.current.select();
+    }
+  }, []);
+
+  // Keyboard shortcuts for the web viewer (when main app has focus)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey;
+
+      // Cmd+L - Focus URL bar
+      if (isMod && e.key === "l") {
+        e.preventDefault();
+        handleFocusUrlBar();
+        return;
+      }
+
+      // Cmd+R - Refresh (only when not in URL input)
+      if (isMod && e.key === "r" && document.activeElement !== urlInputRef.current) {
+        e.preventDefault();
+        if (isLoading) {
+          handleStopLoading();
+        } else {
+          handleRefresh();
+        }
+        return;
+      }
+
+      // Cmd+[ - Go back
+      if (isMod && e.key === "[") {
+        e.preventDefault();
+        handleGoBack();
+        return;
+      }
+
+      // Cmd+] - Go forward
+      if (isMod && e.key === "]") {
+        e.preventDefault();
+        handleGoForward();
+        return;
+      }
+
+      // Escape - Blur URL input and return focus to main app
+      if (e.key === "Escape") {
+        if (document.activeElement === urlInputRef.current) {
+          urlInputRef.current?.blur();
+        }
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    handleFocusUrlBar,
+    handleRefresh,
+    handleStopLoading,
+    handleGoBack,
+    handleGoForward,
+    isLoading,
+  ]);
+
+  // Poll for shortcuts from the embedded webview
+  useEffect(() => {
+    if (!webviewLabel) return;
+
+    const pollShortcuts = async () => {
+      try {
+        const shortcut = await invoke<string | null>("poll_webview_shortcut", {
+          webviewLabel,
+        });
+
+        if (shortcut) {
+          switch (shortcut) {
+            case "focus-url":
+              handleFocusUrlBar();
+              break;
+            case "refresh":
+              if (isLoading) {
+                handleStopLoading();
+              } else {
+                handleRefresh();
+              }
+              break;
+            case "go-back":
+              handleGoBack();
+              break;
+            case "go-forward":
+              handleGoForward();
+              break;
+            case "zoom-in":
+              handleZoomIn();
+              break;
+            case "zoom-out":
+              handleZoomOut();
+              break;
+            case "zoom-reset":
+              handleResetZoom();
+              break;
+            case "escape":
+              // Return focus to main app by focusing the URL bar then blurring
+              handleFocusUrlBar();
+              break;
+          }
+        }
+      } catch {
+        // Webview might not be ready or was closed
+      }
+    };
+
+    const interval = setInterval(pollShortcuts, 100);
+    return () => clearInterval(interval);
+  }, [
+    webviewLabel,
+    handleFocusUrlBar,
+    handleRefresh,
+    handleStopLoading,
+    handleGoBack,
+    handleGoForward,
+    handleZoomIn,
+    handleZoomOut,
+    handleResetZoom,
+    isLoading,
+  ]);
 
   const SecurityIcon = isLocalhost ? Shield : isSecure ? Lock : ShieldAlert;
   const securityColor = isLocalhost ? "text-info" : isSecure ? "text-success" : "text-warning";

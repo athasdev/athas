@@ -15,14 +15,14 @@ import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-s
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { getGitStatus } from "@/features/git/api/status";
+import GitBranchManager from "@/features/git/components/branch-manager";
+import { useGitStore } from "@/features/git/stores/git-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "../../../../stores/ui-state-store";
 import { getFilenameFromPath } from "../../../file-system/controllers/file-utils";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
-import GitBranchManager from "../../../version-control/git/components/branch-manager";
-import { getGitStatus } from "../../../version-control/git/controllers/git";
-import { useGitStore } from "../../../version-control/git/controllers/store";
 import VimStatusIndicator from "../../../vim/components/vim-status-indicator";
 
 // LSP Status Indicator Component

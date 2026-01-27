@@ -305,6 +305,7 @@ fn main() {
          git_apply_stash,
          git_pop_stash,
          git_drop_stash,
+         git_stash_diff,
          git_get_tags,
          git_create_tag,
          git_delete_tag,
@@ -345,6 +346,7 @@ fn main() {
          set_webview_visible,
          open_webview_devtools,
          set_webview_zoom,
+         poll_webview_shortcut,
          // File watcher commands
          start_watching,
          stop_watching,

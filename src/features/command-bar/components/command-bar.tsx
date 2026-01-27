@@ -33,7 +33,7 @@ const CommandBar = () => {
   const totalResults = openBufferFiles.length + recentFilesInResults.length + otherFiles.length;
 
   return (
-    <Command isVisible={isVisible} className="max-h-80">
+    <Command isVisible={isVisible} onClose={onClose} className="max-h-80">
       <CommandHeader onClose={onClose}>
         <CommandInput
           ref={inputRef}

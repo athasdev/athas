@@ -76,7 +76,10 @@ impl AcpWorker {
       self.stop().await?;
 
       if !config.installed {
-         bail!("Agent {} is not installed", config.name);
+         log::warn!(
+            "Agent '{}' not marked as installed; attempting to start anyway",
+            config.name
+         );
       }
 
       log::info!(
@@ -517,13 +520,19 @@ impl AcpAgentBridge {
    }
 
    /// Respond to a permission request
-   pub async fn respond_to_permission(&self, request_id: String, approved: bool) -> Result<()> {
+   pub async fn respond_to_permission(
+      &self,
+      request_id: String,
+      approved: bool,
+      cancelled: bool,
+   ) -> Result<()> {
       let tx = self.permission_tx.lock().await;
       if let Some(ref sender) = *tx {
          sender
             .send(PermissionResponse {
                request_id,
                approved,
+               cancelled,
             })
             .await
             .ok();

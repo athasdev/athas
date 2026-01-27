@@ -50,8 +50,8 @@ export function ModelSelectorDropdown({
             if (models.length > 0) {
               setDynamicModels(provider.id, models);
             }
-          } catch (error) {
-            console.error(`Failed to fetch models for ${provider.id}:`, error);
+          } catch {
+            // Silent fail for dynamic model fetching (e.g., Ollama not running)
           }
         }
       }

@@ -141,7 +141,7 @@ const VimCommandBar = () => {
   }
 
   return (
-    <Command isVisible={isCommandMode} className="max-h-80">
+    <Command isVisible={isCommandMode} onClose={exitCommandMode} className="max-h-80">
       <CommandHeader onClose={exitCommandMode}>
         <span className="ui-font text-accent text-sm">:</span>
         <CommandInput

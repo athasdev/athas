@@ -13,11 +13,6 @@ import { LspClient } from "@/features/editor/lsp/lsp-client";
 export function useLspInitialization() {
   useEffect(() => {
     // Initialize LspClient singleton - this triggers the diagnostics listener setup
-    const client = LspClient.getInstance();
-    console.log("[useLspInitialization] LspClient initialized:", !!client);
-
-    return () => {
-      // Cleanup is handled by the singleton
-    };
+    LspClient.getInstance();
   }, []);
 }

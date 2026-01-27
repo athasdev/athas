@@ -25,10 +25,10 @@ export function PdfViewerFooter({
       className={cn(
         "flex items-center gap-4 border-border border-t",
         "bg-secondary-bg px-4 py-2 text-text-lighter text-xs",
-        "whitespace-nowrap overflow-hidden shrink-0 h-9",
+        "h-9 shrink-0 overflow-hidden whitespace-nowrap",
       )}
     >
-      <div className="flex items-center gap-4 shrink-0">
+      <div className="flex shrink-0 items-center gap-4">
         <span className="shrink-0">Zoom: {Math.round(zoom * 100)}%</span>
         <span className="shrink-0">
           Page: {currentPage}/{totalPages}
@@ -40,7 +40,7 @@ export function PdfViewerFooter({
         )}
         <span className="shrink-0">Type: PDF</span>
       </div>
-      <div className="flex items-center gap-4 min-w-0 flex-1 justify-end">
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-4">
         <span className="shrink-0">Size: {formatFileSize(fileSize)}</span>
         <span className="truncate" title={filePath}>
           Path: {filePath}

@@ -1,6 +1,6 @@
 import type ignore from "ignore";
 import type { FileEntry } from "@/features/file-system/types/app";
-import type { GitFile, GitStatus } from "@/features/version-control/git/types/git";
+import type { GitFile, GitStatus } from "@/features/git/types/git";
 import { getRelativePath } from "@/utils/path-helpers";
 
 export function filterHiddenFiles(

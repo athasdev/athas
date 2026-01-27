@@ -90,6 +90,54 @@ pub async fn create_remote_window(
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
 
+/// Keyboard shortcut interceptor for web viewer
+/// Captures app-level shortcuts and stores them for polling
+const SHORTCUT_INTERCEPTOR_SCRIPT: &str = r#"
+(function() {
+  if (window.__ATHAS_SHORTCUTS_LOADED__) return;
+  window.__ATHAS_SHORTCUTS_LOADED__ = true;
+
+  window.__ATHAS_PENDING_SHORTCUT__ = null;
+
+  document.addEventListener('keydown', function(e) {
+    const isMod = e.metaKey || e.ctrlKey;
+    let shortcut = null;
+
+    // Web viewer specific shortcuts
+    if (isMod && e.key === 'l') {
+      shortcut = 'focus-url';
+    } else if (isMod && e.key === 'r' && !e.shiftKey) {
+      shortcut = 'refresh';
+    } else if (isMod && e.key === '[') {
+      shortcut = 'go-back';
+    } else if (isMod && e.key === ']') {
+      shortcut = 'go-forward';
+    } else if (isMod && e.key === '=') {
+      shortcut = 'zoom-in';
+    } else if (isMod && e.key === '-') {
+      shortcut = 'zoom-out';
+    } else if (isMod && e.key === '0') {
+      shortcut = 'zoom-reset';
+    } else if (e.key === 'Escape') {
+      shortcut = 'escape';
+    }
+
+    if (shortcut) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.__ATHAS_PENDING_SHORTCUT__ = shortcut;
+    }
+  }, true);
+
+  // Helper to get and clear pending shortcut
+  window.__ATHAS_GET_SHORTCUT__ = function() {
+    const s = window.__ATHAS_PENDING_SHORTCUT__;
+    window.__ATHAS_PENDING_SHORTCUT__ = null;
+    return s;
+  };
+})();
+"#;
+
 /// React Grab script loader for localhost development URLs
 /// Includes both the main react-grab script and the Claude Code client
 const REACT_GRAB_SCRIPT: &str = r#"
@@ -174,6 +222,9 @@ pub async fn create_embedded_webview(
             .map_err(|e| format!("Invalid URL: {e}"))?,
       ),
    );
+
+   // Inject shortcut interceptor script
+   webview_builder = webview_builder.initialization_script(SHORTCUT_INTERCEPTOR_SCRIPT);
 
    // Always inject react-grab script for web viewer
    webview_builder = webview_builder.initialization_script(REACT_GRAB_SCRIPT);
@@ -309,6 +360,51 @@ pub async fn set_webview_zoom(
          .set_zoom(zoom_level)
          .map_err(|e| format!("Failed to set zoom: {e}"))?;
       Ok(())
+   } else {
+      Err(format!("Webview not found: {webview_label}"))
+   }
+}
+
+#[command]
+pub async fn poll_webview_shortcut(
+   app: tauri::AppHandle,
+   webview_label: String,
+) -> Result<Option<String>, String> {
+   if let Some(webview) = app.get_webview(&webview_label) {
+      // Check if there's a pending shortcut and move it to the URL hash
+      webview
+         .eval(
+            r#"
+            (function() {
+               var s = window.__ATHAS_PENDING_SHORTCUT__;
+               if (s) {
+                  window.__ATHAS_PENDING_SHORTCUT__ = null;
+                  window.location.hash = '__athas_shortcut=' + s;
+               }
+            })();
+            "#,
+         )
+         .map_err(|e| format!("Failed to check shortcut: {e}"))?;
+
+      // Small delay to allow the hash change to take effect
+      tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+      // Get the URL and check for shortcut in hash
+      let url = webview
+         .url()
+         .map_err(|e| format!("Failed to get URL: {e}"))?;
+      let hash = url.fragment().unwrap_or("");
+
+      if let Some(shortcut) = hash.strip_prefix("__athas_shortcut=") {
+         // Clear the hash
+         webview
+            .eval("window.location.hash = '';")
+            .map_err(|e| format!("Failed to clear hash: {e}"))?;
+
+         return Ok(Some(shortcut.to_string()));
+      }
+
+      Ok(None)
    } else {
       Err(format!("Webview not found: {webview_label}"))
    }
