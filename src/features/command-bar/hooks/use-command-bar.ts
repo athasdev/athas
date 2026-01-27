@@ -67,21 +67,6 @@ export const useCommandBar = () => {
     }
   }, [isCommandBarVisible]);
 
-  // Handle click outside
-  useEffect(() => {
-    if (!isCommandBarVisible) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Element;
-      if (!target.closest("[data-command-bar]")) {
-        onClose();
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isCommandBarVisible, onClose]);
-
   return {
     isVisible: isCommandBarVisible,
     query,

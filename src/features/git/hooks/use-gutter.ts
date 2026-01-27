@@ -179,7 +179,6 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
         }
 
         if (!diff || diff.is_binary || diff.is_image) {
-          console.log(`[GitGutter] Clearing decorations - no diff or binary/image file`);
           const decorationsStore = useEditorDecorationsStore.getState();
           if (gitDecorationIdsRef.current.length > 0) {
             decorationsStore.removeDecorations(gitDecorationIdsRef.current);

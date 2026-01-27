@@ -99,7 +99,6 @@ export const useFontStore = createSelectors(
             // Use cached data if available and not forcing refresh
             // But only if we have more than just the web fonts
             if (!forceRefresh && current.availableFonts.length > 1) {
-              console.log("Using already loaded fonts");
               return;
             }
 

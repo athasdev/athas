@@ -112,7 +112,29 @@ export function useDragDrop(
       }
     };
 
-    const handleMouseUp = async () => {
+    const handleMouseUp = async (e: MouseEvent) => {
+      // Check if dropping on a pane container (outside file tree)
+      const elementUnder = document.elementFromPoint(e.clientX, e.clientY);
+      const isOverPane = elementUnder?.closest("[data-pane-container]") !== null;
+      const isOverFileTree = elementUnder?.closest(".file-tree-container") !== null;
+
+      // If dropping on a pane (not in file tree), dispatch event for pane to handle
+      if (isOverPane && !isOverFileTree && dragState.draggedItem && !dragState.draggedItem.isDir) {
+        window.dispatchEvent(
+          new CustomEvent("file-tree-drop-on-pane", {
+            detail: {
+              path: dragState.draggedItem.path,
+              name: dragState.draggedItem.name,
+              isDir: dragState.draggedItem.isDir,
+              x: e.clientX,
+              y: e.clientY,
+            },
+          }),
+        );
+        setDragState(initialDragState);
+        return;
+      }
+
       if (dragState.dragOverPath && dragState.draggedItem) {
         const { path: sourcePath, name: sourceName } = dragState.draggedItem;
         let targetPath = dragState.dragOverPath;
@@ -168,7 +190,21 @@ export function useDragDrop(
       dragOverIsDir: false,
       mousePosition: { x: e.clientX, y: e.clientY },
     });
+
+    // Store drag data globally for pane containers to access
+    window.__fileDragData = {
+      path: file.path,
+      name: file.name,
+      isDir: file.isDir,
+    };
   }, []);
+
+  // Clean up global drag data on drag end
+  useEffect(() => {
+    if (!dragState.isDragging) {
+      delete window.__fileDragData;
+    }
+  }, [dragState.isDragging]);
 
   return { dragState, startDrag };
 }

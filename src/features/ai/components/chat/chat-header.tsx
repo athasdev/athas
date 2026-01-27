@@ -13,7 +13,7 @@ const AGENT_INSTALL_HINTS: Record<
   string,
   { package?: string; command?: string; type?: "npm" | "pip" | "shell" }
 > = {
-  "claude-code": { package: "@anthropic-ai/claude-code", type: "npm" },
+  "claude-code": { package: "@zed-industries/claude-code-acp", type: "npm" },
   "codex-cli": { package: "@openai/codex", type: "npm" },
   "gemini-cli": { package: "@google/gemini-cli", type: "npm" },
   "kimi-cli": { package: "kimi-cli", type: "npm" },
@@ -113,9 +113,12 @@ export function ChatHeader() {
   const isChatHistoryVisible = useAIChatStore((state) => state.isChatHistoryVisible);
   const setIsChatHistoryVisible = useAIChatStore((state) => state.setIsChatHistoryVisible);
   const createNewChat = useAIChatStore((state) => state.createNewChat);
+  const setSelectedAgentId = useAIChatStore((state) => state.setSelectedAgentId);
+  const changeCurrentChatAgent = useAIChatStore((state) => state.changeCurrentChatAgent);
   const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
 
   const [isNewChatMenuOpen, setIsNewChatMenuOpen] = useState(false);
+  const [isAgentSelectorOpen, setIsAgentSelectorOpen] = useState(false);
   const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set(["custom"]));
   const [packageManager, setPackageManager] = useState<PackageManager>("bun");
   const [pmDropdownAgent, setPmDropdownAgent] = useState<string | null>(null);
@@ -144,9 +147,8 @@ export function ChatHeader() {
   }, []);
 
   const handleNewChat = async (agentId: AgentType) => {
-    if (!installedAgents.has(agentId) && agentId !== "custom") return;
-
     setIsNewChatMenuOpen(false);
+    setSelectedAgentId(agentId);
 
     // Stop any running ACP agent before starting a new chat
     if (currentAgent?.isAcp) {
@@ -159,6 +161,28 @@ export function ChatHeader() {
 
     const newChatId = createNewChat(agentId);
     return newChatId;
+  };
+
+  const handleAgentChange = async (agentId: AgentType) => {
+    if (agentId === currentAgentId) {
+      setIsAgentSelectorOpen(false);
+      return;
+    }
+
+    setIsAgentSelectorOpen(false);
+    setSelectedAgentId(agentId);
+
+    // Stop any running ACP agent before switching
+    if (currentAgent?.isAcp) {
+      try {
+        await invoke("stop_acp_agent");
+      } catch (error) {
+        console.error("Failed to stop current agent:", error);
+      }
+    }
+
+    // Create a new chat with the selected agent
+    changeCurrentChatAgent(agentId);
   };
 
   const handleInstall = (agentId: string, agentName: string, e: React.MouseEvent) => {
@@ -195,10 +219,59 @@ export function ChatHeader() {
 
   return (
     <div className="flex items-center gap-2 border-border border-b bg-secondary-bg px-1.5 py-0.5">
-      {/* Agent indicator */}
-      <div className="flex items-center gap-1 rounded bg-primary-bg px-1.5 py-0.5 text-xs">
-        <Terminal size={10} className="text-text-lighter" />
-        <span className="text-text-light">{currentAgent?.name || "Custom"}</span>
+      {/* Agent selector - clickable to switch agents */}
+      <div className="relative">
+        <Tooltip content="Click to switch agent (starts new chat)" side="bottom">
+          <button
+            onClick={() => setIsAgentSelectorOpen(!isAgentSelectorOpen)}
+            className="flex items-center gap-1 rounded bg-primary-bg px-1.5 py-0.5 text-xs transition-colors hover:bg-hover"
+            aria-label="Switch agent"
+          >
+            <Terminal size={10} className="text-text-lighter" />
+            <span className="text-text-light">{currentAgent?.name || "Custom"}</span>
+            <ChevronDown size={8} className="text-text-lighter" />
+          </button>
+        </Tooltip>
+
+        {isAgentSelectorOpen && (
+          <>
+            <div className="fixed inset-0 z-9998" onClick={() => setIsAgentSelectorOpen(false)} />
+            <div className="absolute top-full left-0 z-9999 mt-1 w-[220px] rounded-lg border border-border bg-primary-bg py-1 shadow-xl">
+              <div className="px-3 py-1.5 text-text-lighter text-xs">Switch to...</div>
+              {AGENT_OPTIONS.map((agent) => {
+                const isInstalled = installedAgents.has(agent.id);
+                const isCurrentAgent = agent.id === currentAgentId;
+                const canSelect = true;
+
+                return (
+                  <button
+                    key={agent.id}
+                    onClick={() => handleAgentChange(agent.id)}
+                    disabled={!canSelect}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors",
+                      isInstalled || agent.id === "custom"
+                        ? "hover:bg-hover"
+                        : "cursor-pointer opacity-80",
+                      isCurrentAgent && "bg-hover",
+                    )}
+                  >
+                    <Terminal size={10} className="text-text-lighter" />
+                    <span className="flex-1 text-text">{agent.name}</span>
+                    {isCurrentAgent && <Check size={10} className="text-accent" />}
+                    {!isCurrentAgent && isInstalled && agent.id !== "custom" && (
+                      <Check size={10} className="text-green-500" />
+                    )}
+                  </button>
+                );
+              })}
+              <div className="mx-2 my-1 border-border border-t" />
+              <div className="px-3 py-1 text-[10px] text-text-lighter">
+                Switching creates a new chat
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {currentChatId ? (
@@ -246,17 +319,18 @@ export function ChatHeader() {
                 const isPmOpen = pmDropdownAgent === agent.id;
                 const showPmDropdown =
                   !isInstalled && agent.id !== "custom" && installHint?.type === "npm";
+                const canSelect = true;
 
                 return (
                   <div key={agent.id} className="relative">
                     <button
                       onClick={() => handleNewChat(agent.id)}
-                      disabled={!isInstalled && agent.id !== "custom"}
+                      disabled={!canSelect}
                       className={cn(
                         "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors",
                         isInstalled || agent.id === "custom"
                           ? "hover:bg-hover"
-                          : "cursor-default opacity-60",
+                          : "cursor-pointer opacity-80",
                       )}
                     >
                       <Terminal size={10} className="text-text-lighter" />
