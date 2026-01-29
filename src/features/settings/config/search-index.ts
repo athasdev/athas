@@ -120,6 +120,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["line", "numbers", "gutter", "display"],
   },
   {
+    id: "editor-show-minimap",
+    tab: "editor",
+    section: "Display",
+    label: "Show Minimap",
+    description: "Show a minimap overview of the code on the right side of the editor",
+    keywords: ["minimap", "overview", "code", "preview", "display"],
+  },
+  {
     id: "editor-relative-line-numbers",
     tab: "editor",
     section: "Display",

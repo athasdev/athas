@@ -108,7 +108,7 @@ export function Editor({
   const foldActions = useFoldStore.use.actions();
 
   // Minimap state
-  const minimapEnabled = useMinimapStore.use.isEnabled();
+  const minimapEnabled = useSettingsStore((state) => state.settings.showMinimap);
   const minimapScale = useMinimapStore.use.scale();
   const minimapWidth = useMinimapStore.use.width();
 

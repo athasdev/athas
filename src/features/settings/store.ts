@@ -22,6 +22,7 @@ interface Settings {
   tabSize: number;
   wordWrap: boolean;
   lineNumbers: boolean;
+  showMinimap: boolean;
   // Terminal
   terminalFontFamily: string;
   terminalFontSize: number;
@@ -98,6 +99,7 @@ const defaultSettings: Settings = {
   tabSize: 2,
   wordWrap: true,
   lineNumbers: true,
+  showMinimap: false,
   // Terminal
   terminalFontFamily: "Menlo, Consolas, Liberation Mono, monospace",
   terminalFontSize: 14,

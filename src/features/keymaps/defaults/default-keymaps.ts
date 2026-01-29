@@ -85,6 +85,7 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "cmd+p", command: "file.quickOpen", source: "default" },
   { key: "cmd+shift+p", command: "workbench.commandPalette", source: "default" },
   { key: "cmd+r", command: "workbench.toggleAIChat", source: "default" },
+  { key: "cmd+shift+m", command: "workbench.toggleMinimap", source: "default" },
   { key: "cmd+k cmd+s", command: "workbench.openKeyboardShortcuts", source: "default" },
 
   // Window Operations

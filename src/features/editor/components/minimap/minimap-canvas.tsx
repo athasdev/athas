@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef } from "react";
+import { useEditorSettingsStore } from "../../stores/settings-store";
 import type { Token } from "../../utils/html";
 
 interface MinimapCanvasProps {
@@ -10,23 +11,34 @@ interface MinimapCanvasProps {
   lineHeight: number;
 }
 
-const TOKEN_COLORS: Record<string, string> = {
-  "token-keyword": "#569cd6",
-  "token-string": "#ce9178",
-  "token-comment": "#6a9955",
-  "token-number": "#b5cea8",
-  "token-function": "#dcdcaa",
-  "token-variable": "#9cdcfe",
-  "token-type": "#4ec9b0",
-  "token-property": "#9cdcfe",
-  "token-punctuation": "#d4d4d4",
-  "token-operator": "#d4d4d4",
-  "token-constant": "#4fc1ff",
-  "token-tag": "#569cd6",
-  "token-attribute": "#9cdcfe",
+const CSS_VAR_MAP: Record<string, string> = {
+  "token-keyword": "--syntax-keyword",
+  "token-string": "--syntax-string",
+  "token-comment": "--syntax-comment",
+  "token-number": "--syntax-number",
+  "token-function": "--syntax-function",
+  "token-variable": "--syntax-variable",
+  "token-type": "--syntax-type",
+  "token-property": "--syntax-property",
+  "token-punctuation": "--syntax-punctuation",
+  "token-operator": "--syntax-punctuation",
+  "token-constant": "--syntax-constant",
+  "token-tag": "--syntax-tag",
+  "token-attribute": "--syntax-attribute",
 };
 
-const DEFAULT_COLOR = "#d4d4d4";
+function resolveTokenColors(): Record<string, string> {
+  const style = getComputedStyle(document.documentElement);
+  const colors: Record<string, string> = {};
+  for (const [tokenClass, cssVar] of Object.entries(CSS_VAR_MAP)) {
+    colors[tokenClass] = style.getPropertyValue(cssVar).trim() || "#d4d4d4";
+  }
+  return colors;
+}
+
+function resolveDefaultColor(): string {
+  return getComputedStyle(document.documentElement).getPropertyValue("--text").trim() || "#d4d4d4";
+}
 
 function MinimapCanvasComponent({
   content,
@@ -37,6 +49,7 @@ function MinimapCanvasComponent({
   lineHeight,
 }: MinimapCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const theme = useEditorSettingsStore.use.theme();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -44,6 +57,9 @@ function MinimapCanvasComponent({
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    const tokenColors = resolveTokenColors();
+    const defaultColor = resolveDefaultColor();
 
     // Set canvas size with device pixel ratio for sharp rendering
     const dpr = window.devicePixelRatio || 1;
@@ -104,7 +120,7 @@ function MinimapCanvasComponent({
           const x = tokenStartInLine * charWidth * scale;
           const tokenWidth = (tokenEndInLine - tokenStartInLine) * charWidth * scale;
 
-          ctx.fillStyle = TOKEN_COLORS[token.class_name] || DEFAULT_COLOR;
+          ctx.fillStyle = tokenColors[token.class_name] || defaultColor;
           ctx.fillRect(x, y, Math.max(tokenWidth, 1), Math.max(scaledLineHeight - 1, 1));
         }
       } else if (line.trim().length > 0) {
@@ -114,13 +130,13 @@ function MinimapCanvasComponent({
         const x = trimStart * charWidth * scale;
         const lineWidth = (trimEnd - trimStart) * charWidth * scale;
 
-        ctx.fillStyle = DEFAULT_COLOR;
+        ctx.fillStyle = defaultColor;
         ctx.globalAlpha = 0.5;
         ctx.fillRect(x, y, Math.max(lineWidth, 1), Math.max(scaledLineHeight - 1, 1));
         ctx.globalAlpha = 1;
       }
     }
-  }, [content, tokens, width, height, scale, lineHeight]);
+  }, [content, tokens, width, height, scale, lineHeight, theme]);
 
   return (
     <canvas

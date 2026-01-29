@@ -344,6 +344,16 @@ const viewCommands: Command[] = [
     },
   },
   {
+    id: "workbench.toggleMinimap",
+    title: "Toggle Minimap",
+    category: "View",
+    keybinding: "cmd+shift+m",
+    execute: () => {
+      const { settings, updateSetting } = useSettingsStore.getState();
+      updateSetting("showMinimap", !settings.showMinimap);
+    },
+  },
+  {
     id: "workbench.zoomIn",
     title: "Zoom In",
     category: "View",

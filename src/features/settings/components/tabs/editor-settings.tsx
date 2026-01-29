@@ -72,6 +72,17 @@ export const EditorSettings = () => {
             disabled={!settings.lineNumbers}
           />
         </SettingRow>
+
+        <SettingRow
+          label="Show Minimap"
+          description="Show a minimap overview on the right side of the editor"
+        >
+          <Switch
+            checked={settings.showMinimap}
+            onChange={(checked) => updateSetting("showMinimap", checked)}
+            size="sm"
+          />
+        </SettingRow>
       </Section>
 
       <Section title="Input">
