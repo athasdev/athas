@@ -1030,14 +1030,16 @@ textarea::-webkit-scrollbar-thumb:hover {
 
 /* Zoom system styles */
 [style*="zoom"] {
-  transition: zoom 150ms cubic-bezier(0.4, 0, 0.2, 1);
-
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 
   image-rendering: crisp-edges;
   image-rendering: -webkit-optimize-contrast;
+}
+
+.zoom-transitioning {
+  transition: zoom 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* AI Chat Error Blocks */

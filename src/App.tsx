@@ -12,6 +12,7 @@ import { useContextMenuPrevention } from "@/features/window/hooks/use-context-me
 import { useFontLoading } from "@/features/window/hooks/use-font-loading";
 import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
 import { useScroll } from "@/features/window/hooks/use-scroll";
+import { cn } from "@/utils/cn";
 import { initializeIconThemes } from "./extensions/icon-themes/icon-theme-initializer";
 import { initializeThemeSystem } from "./extensions/themes/theme-initializer";
 import {
@@ -48,6 +49,7 @@ function App() {
   enableMapSet();
 
   const zoomLevel = useZoomStore.use.windowZoomLevel();
+  const showZoomIndicator = useZoomStore.use.showZoomIndicator();
 
   // Auto-update check
   const {
@@ -88,7 +90,7 @@ function App() {
       <WindowResizeBorder />
 
       <div
-        className="overflow-hidden bg-transparent"
+        className={cn("overflow-hidden bg-transparent", showZoomIndicator && "zoom-transitioning")}
         style={{
           zoom: zoomLevel,
           width: `${100 / zoomLevel}vw`,

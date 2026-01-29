@@ -194,7 +194,7 @@ export function MainLayout() {
           )}
 
           {/* Main content area with split view */}
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div className="relative min-h-0 flex-1 overflow-hidden">
               <SplitViewRoot />
             </div>
