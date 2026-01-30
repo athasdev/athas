@@ -3,13 +3,13 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
-import { isMac } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAppStore } from "@/stores/app-store";
 import { useSearchViewStore } from "@/stores/search-view-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { useZoomStore } from "@/stores/zoom-store";
+import { isMac } from "@/utils/platform";
 import type { Command } from "../types";
 import { keymapRegistry } from "../utils/registry";
 

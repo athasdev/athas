@@ -5,6 +5,7 @@
  */
 
 import { logger } from "@/features/editor/utils/logger";
+import { NODE_PLATFORM } from "@/utils/platform";
 
 import type {
   BundledExtension,
@@ -20,7 +21,7 @@ class ExtensionRegistry {
   private initPromise: Promise<void>;
 
   constructor() {
-    this.platform = this.detectPlatform();
+    this.platform = NODE_PLATFORM;
     this.initPromise = this.loadBundledExtensions().catch((error) => {
       logger.error("ExtensionRegistry", "Failed to load bundled extensions:", error);
     });
@@ -31,27 +32,6 @@ class ExtensionRegistry {
    */
   async ensureInitialized(): Promise<void> {
     await this.initPromise;
-  }
-
-  /**
-   * Detect current platform
-   */
-  private detectPlatform(): Platform {
-    const platform = window.navigator.platform.toLowerCase();
-
-    if (platform.includes("mac")) {
-      return "darwin";
-    }
-    if (platform.includes("linux")) {
-      return "linux";
-    }
-    if (platform.includes("win")) {
-      return "win32";
-    }
-
-    // Default to linux for unknown platforms
-    logger.warn("ExtensionRegistry", `Unknown platform: ${platform}, defaulting to linux`);
-    return "linux";
   }
 
   /**

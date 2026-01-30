@@ -3,10 +3,10 @@ import { CircleUser, Maximize2, MenuIcon, Minimize2, Minus, X } from "lucide-rea
 import { useEffect, useState } from "react";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
-import { useIsLinux, useIsMac } from "@/hooks/use-platform";
 import { useUIState } from "@/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
+import { IS_LINUX, IS_MAC } from "@/utils/platform";
 import ProjectTabs from "./components/project-tabs";
 import CustomMenuBar from "./menu-bar";
 
@@ -22,8 +22,8 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
 
-  const isMacOS = useIsMac();
-  const isLinux = useIsLinux();
+  const isMacOS = IS_MAC;
+  const isLinux = IS_LINUX;
 
   useEffect(() => {
     const initWindow = async () => {
@@ -249,8 +249,7 @@ const CustomTitleBarWithSettings = (props: CustomTitleBarProps) => {
   // Handle Cmd+, (Mac) or Ctrl+, (Windows/Linux) to open settings
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const isMac = navigator.platform.includes("Mac");
-      const isSettingsShortcut = event.key === "," && (isMac ? event.metaKey : event.ctrlKey);
+      const isSettingsShortcut = event.key === "," && (IS_MAC ? event.metaKey : event.ctrlKey);
 
       if (isSettingsShortcut) {
         event.preventDefault();

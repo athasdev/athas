@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { normalizeKey } from "@/utils/platform";
 import { useKeymapStore } from "../stores/store";
-import { normalizeKey } from "../utils/platform";
 
 interface RecorderState {
   keys: string[];

@@ -1,9 +1,8 @@
 import { Terminal } from "lucide-react";
 import type { Action } from "@/features/command-palette/models/action.types";
+import { IS_MAC } from "@/utils/platform";
 import type { Command } from "../types";
 import { parseKeybinding } from "./parser";
-
-const isMac = typeof navigator !== "undefined" && navigator.platform.includes("Mac");
 
 /**
  * Convert a keybinding string to display format
@@ -17,14 +16,14 @@ export function keybindingToDisplay(keybinding: string): string[] {
   for (const part of parsed.parts) {
     // Add modifiers
     for (const mod of part.modifiers) {
-      if (mod === "cmd" && isMac) {
+      if (mod === "cmd" && IS_MAC) {
         keys.push("⌘");
       } else if (mod === "cmd") {
         keys.push("Ctrl");
       } else if (mod === "ctrl") {
         keys.push("Ctrl");
       } else if (mod === "alt") {
-        keys.push(isMac ? "⌥" : "Alt");
+        keys.push(IS_MAC ? "⌥" : "Alt");
       } else if (mod === "shift") {
         keys.push("⇧");
       }

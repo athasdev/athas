@@ -32,9 +32,9 @@ import type { ContextMenuState, FileEntry } from "@/features/file-system/types/a
 import { getGitStatus } from "@/features/git/api/status";
 import type { GitFile, GitStatus } from "@/features/git/types/git";
 import { useSettingsStore } from "@/features/settings/store";
-import { useIsMac } from "@/hooks/use-platform";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
+import { IS_MAC } from "@/utils/platform";
 import { useDragDrop } from "../hooks/use-drag-drop";
 import { FileTreeItem } from "./file-tree-item";
 import "../styles/file-tree.css";
@@ -93,7 +93,7 @@ function FileTreeComponent({
 
   const { settings } = useSettingsStore();
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
-  const isMac = useIsMac();
+  const isMac = IS_MAC;
 
   const clipboardActions = useFileClipboardStore.getState().actions;
   const clipboard = useFileClipboardStore((s) => s.clipboard);

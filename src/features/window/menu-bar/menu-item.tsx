@@ -1,5 +1,5 @@
 import { type ReactNode, useMemo } from "react";
-import { usePlatform } from "@/hooks/use-platform";
+import { currentPlatform } from "@/utils/platform";
 
 interface Props {
   children?: ReactNode;
@@ -9,8 +9,6 @@ interface Props {
 }
 
 const MenuItem = ({ children, shortcut, onClick, separator }: Props) => {
-  const currentPlatform = usePlatform();
-
   // Convert shortcut to user's OS
   const shortcutOsSpecific = useMemo(() => {
     if (currentPlatform !== "macos" || !shortcut) return shortcut;

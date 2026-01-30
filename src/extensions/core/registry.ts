@@ -6,6 +6,7 @@
  */
 
 import { logger } from "@/features/editor/utils/logger";
+import { NODE_PLATFORM, PLATFORM_ARCH } from "@/utils/platform";
 import type {
   ExtensionCategory,
   ExtensionManifest,
@@ -21,45 +22,6 @@ import type {
 // CDN URL for extension registry
 const REGISTRY_URL =
   import.meta.env.VITE_EXTENSION_REGISTRY_URL || "https://athas.dev/extensions/registry.json";
-
-// Platform detection
-function detectPlatform(): Platform {
-  const platform = window.navigator.platform.toLowerCase();
-
-  if (platform.includes("mac")) {
-    return "darwin";
-  }
-  if (platform.includes("linux")) {
-    return "linux";
-  }
-  if (platform.includes("win")) {
-    return "win32";
-  }
-
-  logger.warn("ExtensionRegistry", `Unknown platform: ${platform}, defaulting to linux`);
-  return "linux";
-}
-
-function detectPlatformArch(): PlatformArch {
-  const platform = detectPlatform();
-
-  // Try to detect architecture
-  // Note: This is best-effort as browser APIs don't reliably expose architecture
-  const userAgent = window.navigator.userAgent.toLowerCase();
-  const isArm =
-    userAgent.includes("arm") ||
-    userAgent.includes("aarch64") ||
-    // Mac Apple Silicon detection
-    (platform === "darwin" && !userAgent.includes("intel"));
-
-  if (platform === "darwin") {
-    return isArm ? "darwin-arm64" : "darwin-x64";
-  }
-  if (platform === "linux") {
-    return isArm ? "linux-arm64" : "linux-x64";
-  }
-  return "win32-x64";
-}
 
 /**
  * Unified Extension Registry
@@ -83,8 +45,8 @@ class UnifiedExtensionRegistry {
   private changeListeners = new Set<() => void>();
 
   constructor() {
-    this.platform = detectPlatform();
-    this.platformArch = detectPlatformArch();
+    this.platform = NODE_PLATFORM;
+    this.platformArch = PLATFORM_ARCH;
   }
 
   /**
