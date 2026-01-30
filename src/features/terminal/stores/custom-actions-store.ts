@@ -56,6 +56,12 @@ const useCustomActionsStoreBase = create<CustomActionsState>()(
     }),
     {
       name: "terminal-custom-actions",
+      partialize: (state) => ({ actions: state.actions }),
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...(persistedState as Partial<CustomActionsState>),
+        storeActions: currentState.storeActions,
+      }),
     },
   ),
 );
