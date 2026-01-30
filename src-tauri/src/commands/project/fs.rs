@@ -173,7 +173,7 @@ pub fn move_file(source_path: String, target_path: String) -> Result<(), String>
 }
 
 // Helper function to recursively copy a directory
-fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), String> {
+pub(super) fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), String> {
    // Create the destination directory
    fs::create_dir_all(dst).map_err(|e| format!("Failed to create directory: {}", e))?;
 
@@ -201,6 +201,6 @@ fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), String> {
 }
 
 // Helper function to recursively remove a directory
-fn remove_dir_all(path: &Path) -> Result<(), String> {
+pub(super) fn remove_dir_all(path: &Path) -> Result<(), String> {
    fs::remove_dir_all(path).map_err(|e| format!("Failed to remove directory: {}", e))
 }

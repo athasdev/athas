@@ -1,5 +1,6 @@
 import type React from "react";
 import { memo } from "react";
+import { useFileClipboardStore } from "@/features/file-explorer/stores/file-clipboard-store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import { cn } from "@/utils/cn";
 import { FileIcon } from "./file-icon";
@@ -32,6 +33,10 @@ function FileTreeItemComponent({
   onBlur,
   getGitStatusClass,
 }: FileTreeItemProps) {
+  const isCut = useFileClipboardStore(
+    (s) =>
+      s.clipboard?.operation === "cut" && s.clipboard.entries.some((e) => e.path === file.path),
+  );
   const paddingLeft = 14 + depth * 20;
 
   if (file.isEditing || file.isRenaming) {
@@ -101,6 +106,7 @@ function FileTreeItemComponent({
             "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-20",
           isDragging && "cursor-move",
           file.ignored && "opacity-50",
+          isCut && "opacity-40 italic",
         )}
         style={
           {

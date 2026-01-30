@@ -16,6 +16,10 @@ import { cn } from "@/utils/cn";
 import { initializeIconThemes } from "./extensions/icon-themes/icon-theme-initializer";
 import { initializeThemeSystem } from "./extensions/themes/theme-initializer";
 import {
+  cleanupFileClipboardListener,
+  initializeFileClipboardListener,
+} from "./features/file-explorer/stores/file-clipboard-listener";
+import {
   cleanupFileWatcherListener,
   initializeFileWatcherListener,
 } from "./features/file-system/controllers/file-watcher-store";
@@ -81,6 +85,14 @@ function App() {
     initializeFileWatcherListener();
     return () => {
       cleanupFileWatcherListener();
+    };
+  }, []);
+
+  // File clipboard cross-window sync
+  useEffect(() => {
+    initializeFileClipboardListener();
+    return () => {
+      cleanupFileClipboardListener();
     };
   }, []);
 

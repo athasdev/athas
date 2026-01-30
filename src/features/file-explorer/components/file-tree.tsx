@@ -1,5 +1,6 @@
 import ignore from "ignore";
 import {
+  Clipboard,
   Copy,
   Edit,
   Eye,
@@ -22,6 +23,7 @@ import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useFileClipboardStore } from "@/features/file-explorer/stores/file-clipboard-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-tree-store";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
@@ -52,8 +54,6 @@ interface FileTreeProps {
   onDeletePath?: (path: string, isDir: boolean) => void;
   onGenerateImage?: (directoryPath: string) => void;
   onUpdateFiles?: (files: FileEntry[]) => void;
-  onCopyPath?: (path: string) => void;
-  onCutPath?: (path: string) => void;
   onRenamePath?: (path: string, newName?: string) => void;
   onDuplicatePath?: (path: string) => void;
   onRefreshDirectory?: (path: string) => void;
@@ -74,7 +74,6 @@ function FileTreeComponent({
   onDeletePath,
   onGenerateImage,
   onUpdateFiles,
-  onCutPath,
   onRenamePath,
   onDuplicatePath,
   onRefreshDirectory,
@@ -95,6 +94,9 @@ function FileTreeComponent({
   const { settings } = useSettingsStore();
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const isMac = useIsMac();
+
+  const clipboardActions = useFileClipboardStore.getState().actions;
+  const clipboard = useFileClipboardStore((s) => s.clipboard);
 
   const { dragState, startDrag } = useDragDrop(rootFolderPath, onFileMove);
 
@@ -565,6 +567,31 @@ function FileTreeComponent({
 
         const toggle = (path: string) => useFileTreeStore.getState().toggleFolder(path);
 
+        const mod = e.metaKey || e.ctrlKey;
+        if (mod && current) {
+          if (e.key === "c") {
+            e.preventDefault();
+            clipboardActions.copy([{ path: current.path, is_dir: !!isDir }]);
+            return;
+          }
+          if (e.key === "x") {
+            e.preventDefault();
+            clipboardActions.cut([{ path: current.path, is_dir: !!isDir }]);
+            return;
+          }
+          if (e.key === "v") {
+            e.preventDefault();
+            const sep = current.path.includes("\\") ? "\\" : "/";
+            const targetDir = isDir ? current.path : current.path.split(sep).slice(0, -1).join(sep);
+            if (targetDir) {
+              clipboardActions.paste(targetDir).then(() => {
+                onRefreshDirectory?.(targetDir);
+              });
+            }
+            return;
+          }
+        }
+
         switch (e.key) {
           case "ArrowDown": {
             e.preventDefault();
@@ -870,13 +897,33 @@ function FileTreeComponent({
               }}
             />
             <ContextMenuItem
-              icon={Scissors}
-              label="Cut"
+              icon={Copy}
+              label="Copy"
               onClick={() => {
-                onCutPath?.(contextMenu.path);
+                clipboardActions.copy([{ path: contextMenu.path, is_dir: contextMenu.isDir }]);
                 setContextMenu(null);
               }}
             />
+            <ContextMenuItem
+              icon={Scissors}
+              label="Cut"
+              onClick={() => {
+                clipboardActions.cut([{ path: contextMenu.path, is_dir: contextMenu.isDir }]);
+                setContextMenu(null);
+              }}
+            />
+            {clipboard && contextMenu.isDir && (
+              <ContextMenuItem
+                icon={Clipboard}
+                label="Paste"
+                onClick={() => {
+                  clipboardActions.paste(contextMenu.path).then(() => {
+                    onRefreshDirectory?.(contextMenu.path);
+                  });
+                  setContextMenu(null);
+                }}
+              />
+            )}
             <ContextMenuItem
               icon={Edit}
               label="Rename"

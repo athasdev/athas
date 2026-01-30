@@ -13,8 +13,6 @@ export interface FileTreeProps {
   onDeletePath?: (path: string, isDir: boolean) => void;
   onGenerateImage?: (directoryPath: string) => void;
   onUpdateFiles?: (files: FileEntry[]) => void;
-  onCopyPath?: (path: string) => void;
-  onCutPath?: (path: string) => void;
   onRenamePath?: (path: string, newName?: string) => void;
   onDuplicatePath?: (path: string) => void;
   onRefreshDirectory?: (path: string) => void;

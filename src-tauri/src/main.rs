@@ -87,6 +87,9 @@ fn main() {
          // Set up theme cache
          app.manage(ThemeCache::new(std::collections::HashMap::new()));
 
+         // Set up file clipboard
+         app.manage(FileClipboard::new(None));
+
          // Auto-start interceptor on app launch
          {
             let claude_bridge_clone = claude_bridge.clone();
@@ -276,6 +279,11 @@ fn main() {
          move_file,
          rename_file,
          get_symlink_info,
+         // Clipboard commands
+         clipboard_set,
+         clipboard_get,
+         clipboard_clear,
+         clipboard_paste,
          // Git commands
          git_status,
          git_add,
