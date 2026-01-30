@@ -342,7 +342,10 @@ pub async fn open_webview_devtools(
    webview_label: String,
 ) -> Result<(), String> {
    if let Some(webview) = app.get_webview(&webview_label) {
+      #[cfg(debug_assertions)]
       webview.open_devtools();
+      #[cfg(not(debug_assertions))]
+      let _ = &webview;
       Ok(())
    } else {
       Err(format!("Webview not found: {webview_label}"))

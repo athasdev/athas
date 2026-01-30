@@ -1,11 +1,14 @@
 import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { useEffect } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { toast } from "@/stores/toast-store";
 
 /**
  * Hook to handle deep link URLs
- * Supports: athas://extension/install/{extensionId}
+ * Supports:
+ *   athas://extension/install/{extensionId}
+ *   athas://auth/callback?token={token}
  */
 export function useDeepLink() {
   useEffect(() => {
@@ -35,6 +38,11 @@ function handleDeepLink(url: string) {
     if (segments[0] === "extension" && segments[1] === "install" && segments[2]) {
       const extensionId = segments[2];
       installExtensionFromDeepLink(extensionId);
+    } else if (segments[0] === "auth" && segments[1] === "callback") {
+      const tokenParam = parsed.searchParams.get("token");
+      if (tokenParam) {
+        handleAuthCallback(tokenParam);
+      }
     }
   } catch (error) {
     console.error("Failed to parse deep link:", error);
@@ -64,5 +72,14 @@ async function installExtensionFromDeepLink(extensionId: string) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     toast.error(`Failed to install extension: ${message}`);
+  }
+}
+
+async function handleAuthCallback(token: string) {
+  try {
+    await useAuthStore.getState().handleAuthCallback(token);
+    toast.success("Signed in successfully!");
+  } catch {
+    toast.error("Authentication failed. Please try again.");
   }
 }
