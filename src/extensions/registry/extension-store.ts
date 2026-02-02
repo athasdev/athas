@@ -488,8 +488,21 @@ export const useExtensionStore = createSelectors(useExtensionStoreBase);
 
 // Setup progress listener
 let progressListenerInitialized = false;
+let extensionStoreInitPromise: Promise<void> | null = null;
 
-export const initializeExtensionStore = async () => {
+export async function waitForExtensionStoreInitialization(): Promise<void> {
+  if (extensionStoreInitPromise) {
+    await extensionStoreInitPromise;
+  }
+}
+
+export const initializeExtensionStore = (): Promise<void> => {
+  if (extensionStoreInitPromise) return extensionStoreInitPromise;
+  extensionStoreInitPromise = initializeExtensionStoreImpl();
+  return extensionStoreInitPromise;
+};
+
+async function initializeExtensionStoreImpl(): Promise<void> {
   if (!progressListenerInitialized) {
     // Listen for installation progress events
     await listen<{
@@ -523,4 +536,4 @@ export const initializeExtensionStore = async () => {
 
   await loadAvailableExtensions();
   await loadInstalledExtensions();
-};
+}
