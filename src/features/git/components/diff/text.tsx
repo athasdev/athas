@@ -40,25 +40,15 @@ const TextDiffViewer = memo(
               onUnstageHunk={onUnstageHunk}
               isInMultiFileView={isInMultiFileView}
             />
-            {hunk.lines.map((line, lineIndex) => {
-              const diffIndex = diff.lines.findIndex(
-                (l) =>
-                  l.content === line.content &&
-                  l.line_type === line.line_type &&
-                  l.old_line_number === line.old_line_number &&
-                  l.new_line_number === line.new_line_number,
-              );
-
-              return (
-                <DiffLine
-                  key={`${hunk.id}-${lineIndex}`}
-                  line={line}
-                  viewMode={viewMode}
-                  showWhitespace={showWhitespace}
-                  tokens={tokenMap.get(diffIndex)}
-                />
-              );
-            })}
+            {hunk.lines.map((line, lineIndex) => (
+              <DiffLine
+                key={`${hunk.id}-${lineIndex}`}
+                line={line}
+                viewMode={viewMode}
+                showWhitespace={showWhitespace}
+                tokens={tokenMap.get(line.diffIndex)}
+              />
+            ))}
           </div>
         ))}
       </div>

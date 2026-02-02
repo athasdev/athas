@@ -68,16 +68,7 @@ export const useDiffData = (): UseDiffDataReturn => {
         if (newDiff && newDiff.lines.length > 0) {
           useBufferStore
             .getState()
-            .actions.openBuffer(
-              newVirtualPath,
-              displayName,
-              JSON.stringify(newDiff),
-              false,
-              false,
-              true,
-              true,
-              newDiff,
-            );
+            .actions.openBuffer(newVirtualPath, displayName, "", false, false, true, true, newDiff);
         }
       });
     },
@@ -97,12 +88,7 @@ export const useDiffData = (): UseDiffDataReturn => {
       const currentViewDiff = await getFileDiff(rootFolderPath, filePath, isStaged);
 
       if (currentViewDiff && currentViewDiff.lines.length > 0) {
-        updateBufferContent(
-          activeBuffer.id,
-          JSON.stringify(currentViewDiff),
-          false,
-          currentViewDiff,
-        );
+        updateBufferContent(activeBuffer.id, "", false, currentViewDiff);
       } else {
         const otherViewDiff = await getFileDiff(rootFolderPath, filePath, !isStaged);
 

@@ -6,9 +6,13 @@ export interface DiffViewerProps {
   onUnstageHunk?: (hunk: GitHunk) => void;
 }
 
+export interface DiffLineWithIndex extends GitDiffLine {
+  diffIndex: number;
+}
+
 export interface ParsedHunk {
   header: GitDiffLine;
-  lines: GitDiffLine[];
+  lines: DiffLineWithIndex[];
   id: number;
 }
 

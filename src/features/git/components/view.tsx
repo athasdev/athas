@@ -10,6 +10,7 @@ import { getGitStatus } from "../api/status";
 import { useGitStore } from "../stores/git-store";
 import type { MultiFileDiff } from "../types/diff";
 import type { GitFile } from "../types/git";
+import { countDiffStats } from "../utils/diff-helpers";
 import GitActionsMenu from "./actions-menu";
 import GitBranchManager from "./branch-manager";
 import GitCommitHistory from "./commit-history";
@@ -218,16 +219,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
         useBufferStore
           .getState()
-          .actions.openBuffer(
-            virtualPath,
-            displayName,
-            JSON.stringify(diff),
-            false,
-            false,
-            true,
-            true,
-            diff,
-          );
+          .actions.openBuffer(virtualPath, displayName, "", false, false, true, true, diff);
       } else {
         handleOpenOriginalFile(actualFilePath);
       }
@@ -251,32 +243,16 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
           useBufferStore
             .getState()
-            .actions.openBuffer(
-              virtualPath,
-              diffFileName,
-              JSON.stringify(diff),
-              false,
-              false,
-              true,
-              true,
-              diff,
-            );
+            .actions.openBuffer(virtualPath, diffFileName, "", false, false, true, true, diff);
         } else {
-          const totalAdditions = diffs.reduce(
-            (sum, diff) => sum + diff.lines.filter((line) => line.line_type === "added").length,
-            0,
-          );
-          const totalDeletions = diffs.reduce(
-            (sum, diff) => sum + diff.lines.filter((line) => line.line_type === "removed").length,
-            0,
-          );
+          const { additions, deletions } = countDiffStats(diffs);
 
           const multiDiff: MultiFileDiff = {
             commitHash,
             files: diffs,
             totalFiles: diffs.length,
-            totalAdditions,
-            totalDeletions,
+            totalAdditions: additions,
+            totalDeletions: deletions,
           };
 
           const virtualPath = `diff://commit/${commitHash}/all-files`;
@@ -284,16 +260,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
           useBufferStore
             .getState()
-            .actions.openBuffer(
-              virtualPath,
-              displayName,
-              JSON.stringify(multiDiff),
-              false,
-              false,
-              true,
-              true,
-              multiDiff,
-            );
+            .actions.openBuffer(virtualPath, displayName, "", false, false, true, true, multiDiff);
         }
       } else {
         alert(`No changes in this commit${filePath ? ` for file ${filePath}` : ""}.`);
@@ -311,21 +278,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       const diffs = await getStashDiff(repoPath, stashIndex);
 
       if (diffs && diffs.length > 0) {
-        const totalAdditions = diffs.reduce(
-          (sum, diff) => sum + diff.lines.filter((line) => line.line_type === "added").length,
-          0,
-        );
-        const totalDeletions = diffs.reduce(
-          (sum, diff) => sum + diff.lines.filter((line) => line.line_type === "removed").length,
-          0,
-        );
+        const { additions, deletions } = countDiffStats(diffs);
 
         const multiDiff: MultiFileDiff = {
           commitHash: `stash@{${stashIndex}}`,
           files: diffs,
           totalFiles: diffs.length,
-          totalAdditions,
-          totalDeletions,
+          totalAdditions: additions,
+          totalDeletions: deletions,
         };
 
         const virtualPath = `diff://stash/${stashIndex}/all-files`;
@@ -333,16 +293,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
         useBufferStore
           .getState()
-          .actions.openBuffer(
-            virtualPath,
-            displayName,
-            JSON.stringify(multiDiff),
-            false,
-            false,
-            true,
-            true,
-            multiDiff,
-          );
+          .actions.openBuffer(virtualPath, displayName, "", false, false, true, true, multiDiff);
       } else {
         alert("No changes in this stash.");
       }

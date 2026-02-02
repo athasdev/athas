@@ -33,8 +33,12 @@ const DiffHeader = memo(
     const renderStats = () => {
       if (!diff) return null;
 
-      const additions = diff.lines.filter((l) => l.line_type === "added").length;
-      const deletions = diff.lines.filter((l) => l.line_type === "removed").length;
+      let additions = 0;
+      let deletions = 0;
+      for (const l of diff.lines) {
+        if (l.line_type === "added") additions++;
+        else if (l.line_type === "removed") deletions++;
+      }
 
       return (
         <>

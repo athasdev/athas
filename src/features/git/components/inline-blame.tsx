@@ -15,6 +15,7 @@ import { getCommitDiff } from "../api/diff";
 import { useGitBlameStore } from "../stores/blame-store";
 import type { MultiFileDiff } from "../types/diff";
 import type { GitBlameLine } from "../types/git";
+import { countDiffStats } from "../utils/diff-helpers";
 
 interface InlineGitBlameProps {
   blameLine: GitBlameLine;
@@ -123,21 +124,14 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
       const diffs = await getCommitDiff(repoPath, blameLine.commit_hash);
 
       if (diffs && diffs.length > 0) {
-        const totalAdditions = diffs.reduce(
-          (sum, diff) => sum + diff.lines.filter((line) => line.line_type === "added").length,
-          0,
-        );
-        const totalDeletions = diffs.reduce(
-          (sum, diff) => sum + diff.lines.filter((line) => line.line_type === "removed").length,
-          0,
-        );
+        const { additions, deletions } = countDiffStats(diffs);
 
         const multiDiff: MultiFileDiff = {
           commitHash: blameLine.commit_hash,
           files: diffs,
           totalFiles: diffs.length,
-          totalAdditions,
-          totalDeletions,
+          totalAdditions: additions,
+          totalDeletions: deletions,
         };
 
         const virtualPath = `diff://commit/${blameLine.commit_hash}/all-files`;
@@ -145,16 +139,7 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
 
         useBufferStore
           .getState()
-          .actions.openBuffer(
-            virtualPath,
-            displayName,
-            JSON.stringify(multiDiff),
-            false,
-            false,
-            true,
-            true,
-            multiDiff,
-          );
+          .actions.openBuffer(virtualPath, displayName, "", false, false, true, true, multiDiff);
       }
     } catch (error) {
       console.error("Error getting commit diff:", error);
