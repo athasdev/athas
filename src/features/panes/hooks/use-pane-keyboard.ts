@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { IS_MAC } from "@/utils/platform";
 import { usePaneStore } from "../stores/pane-store";
 
 export function usePaneKeyboard() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-      const modKey = isMac ? e.metaKey : e.ctrlKey;
+      const modKey = IS_MAC ? e.metaKey : e.ctrlKey;
 
       if (!modKey) return;
 

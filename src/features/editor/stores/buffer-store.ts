@@ -358,7 +358,16 @@ export const useBufferStore = createSelectors(
                 return extensionLoader.waitForInitialization();
               })
               .then(() => {
-                logger.debug("BufferStore", "Extension loader initialized, importing store...");
+                logger.debug(
+                  "BufferStore",
+                  "Extension loader initialized, waiting for extension store...",
+                );
+                return import("@/extensions/registry/extension-store").then(
+                  ({ waitForExtensionStoreInitialization }) =>
+                    waitForExtensionStoreInitialization(),
+                );
+              })
+              .then(() => {
                 return import("@/extensions/registry/extension-store");
               })
               .then(({ useExtensionStore }) => {

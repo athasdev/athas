@@ -1,5 +1,6 @@
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronDown, ChevronRight, FileText } from "lucide-react";
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
 import { useDiffViewState } from "../../hooks/use-diff-view";
 import type { FileDiffSummary, MultiFileDiffViewerProps } from "../../types/diff";
@@ -102,9 +103,12 @@ const MultiFileDiffViewer = memo(({ multiDiff, onClose }: MultiFileDiffViewerPro
 
   const fileSummaries: FileDiffSummary[] = useMemo(() => {
     return multiDiff.files.map((diff) => {
-      const additions = diff.lines.filter((l) => l.line_type === "added").length;
-      const deletions = diff.lines.filter((l) => l.line_type === "removed").length;
-      const totalLines = additions + deletions;
+      let additions = 0;
+      let deletions = 0;
+      for (const line of diff.lines) {
+        if (line.line_type === "added") additions++;
+        else if (line.line_type === "removed") deletions++;
+      }
 
       return {
         fileName: diff.file_path.split("/").pop() || diff.file_path,
@@ -112,12 +116,13 @@ const MultiFileDiffViewer = memo(({ multiDiff, onClose }: MultiFileDiffViewerPro
         status: getFileStatus(diff) as "added" | "deleted" | "modified" | "renamed",
         additions,
         deletions,
-        shouldAutoCollapse: totalLines > LARGE_DIFF_THRESHOLD,
+        shouldAutoCollapse: additions + deletions > LARGE_DIFF_THRESHOLD,
       };
     });
   }, [multiDiff.files]);
 
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(() => {
+    if (multiDiff.files.length > 50) return new Set<string>();
     const initialExpanded = new Set<string>();
     fileSummaries.forEach((summary) => {
       if (!summary.shouldAutoCollapse) {
@@ -147,6 +152,20 @@ const MultiFileDiffViewer = memo(({ multiDiff, onClose }: MultiFileDiffViewerPro
     setExpandedFiles(new Set());
   }, []);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: multiDiff.files.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (index) => {
+      const isExpanded = expandedFiles.has(multiDiff.files[index].file_path);
+      if (!isExpanded) return 30;
+      const lineCount = multiDiff.files[index].lines.length;
+      return 30 + Math.min(lineCount * 20, 2000);
+    },
+    overscan: 5,
+  });
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
       <DiffHeader
@@ -161,19 +180,42 @@ const MultiFileDiffViewer = memo(({ multiDiff, onClose }: MultiFileDiffViewerPro
         onClose={onClose}
       />
 
-      <div className="flex-1 overflow-auto">
-        {multiDiff.files.map((diff, index) => (
-          <FileDiffSection
-            key={diff.file_path}
-            diff={diff}
-            summary={fileSummaries[index]}
-            isExpanded={expandedFiles.has(diff.file_path)}
-            onToggle={() => toggleFile(diff.file_path)}
-            viewMode={viewMode}
-            showWhitespace={showWhitespace}
-            commitHash={multiDiff.commitHash}
-          />
-        ))}
+      <div ref={scrollRef} className="flex-1 overflow-auto">
+        <div
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            position: "relative",
+          }}
+        >
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const diff = multiDiff.files[virtualItem.index];
+            const summary = fileSummaries[virtualItem.index];
+            return (
+              <div
+                key={diff.file_path}
+                ref={virtualizer.measureElement}
+                data-index={virtualItem.index}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              >
+                <FileDiffSection
+                  diff={diff}
+                  summary={summary}
+                  isExpanded={expandedFiles.has(diff.file_path)}
+                  onToggle={() => toggleFile(diff.file_path)}
+                  viewMode={viewMode}
+                  showWhitespace={showWhitespace}
+                  commitHash={multiDiff.commitHash}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="flex items-center justify-between border-border border-t bg-secondary-bg px-3 py-1 text-[10px] text-text-lighter">

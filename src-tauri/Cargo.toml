@@ -22,6 +22,7 @@ chrono = { version = "0.4.41", features = ["serde"] }
 colored = "3.0.0"
 crossbeam-channel = "0.5"
 dirs = "5.0"
+ec4rs = "1.2"
 env_logger = "0.11.8"
 futures-util = "0.3"
 git2 = { version = "0.18", features = ["vendored-openssl"] }

@@ -4,37 +4,12 @@
  * that need to be downloaded as platform-specific packages.
  */
 
-import type { ExtensionManifest, PlatformArch } from "../types/extension-manifest";
+import { PLATFORM_ARCH } from "@/utils/platform";
+
+import type { ExtensionManifest } from "../types/extension-manifest";
 
 // CDN base URL for extensions
 const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
-
-/**
- * Get the current platform+architecture identifier
- */
-export function getCurrentPlatformArch(): PlatformArch {
-  const platform = navigator.platform.toLowerCase();
-  const userAgent = navigator.userAgent.toLowerCase();
-
-  // Detect architecture from user agent (for Apple Silicon detection)
-  const isArm64 =
-    userAgent.includes("arm64") ||
-    userAgent.includes("aarch64") ||
-    // Safari on M1+ Macs doesn't include architecture, but we can check other ways
-    (platform.includes("mac") && !userAgent.includes("intel"));
-
-  if (platform.includes("mac") || platform.includes("darwin")) {
-    return isArm64 ? "darwin-arm64" : "darwin-x64";
-  } else if (platform.includes("win")) {
-    return "win32-x64";
-  } else if (platform.includes("linux")) {
-    // Most Linux is x64, but check for ARM
-    return isArm64 ? "linux-arm64" : "linux-x64";
-  }
-
-  // Default to linux-x64
-  return "linux-x64";
-}
 
 /**
  * Full extension manifests for languages with LSP support
@@ -149,7 +124,7 @@ export function getDownloadInfoForPlatform(manifest: ExtensionManifest): {
     return null;
   }
 
-  const platformArch = getCurrentPlatformArch();
+  const platformArch = PLATFORM_ARCH;
 
   // Check for platform+arch specific package
   if (manifest.installation.platformArch?.[platformArch]) {

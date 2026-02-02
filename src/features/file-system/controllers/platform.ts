@@ -8,11 +8,6 @@ import {
   remove,
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
-import { isMac } from "@/utils/platform";
-
-// Re-export isMac for convenience
-export { isMac };
-
 /**
  * Read a text file from the filesystem
  * @param path The path to the file to read

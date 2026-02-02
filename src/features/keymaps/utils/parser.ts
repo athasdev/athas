@@ -3,7 +3,7 @@
  * Examples: "cmd+s", "ctrl+shift+p", "cmd+k cmd+t"
  */
 
-import { normalizeKey } from "./platform";
+import { normalizeKey } from "@/utils/platform";
 
 export interface ParsedKey {
   modifiers: string[];

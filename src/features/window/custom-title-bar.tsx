@@ -1,12 +1,13 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { CircleUser, Maximize2, MenuIcon, Minimize2, Minus, X } from "lucide-react";
+import { Maximize2, MenuIcon, Minimize2, Minus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
-import { useIsLinux, useIsMac } from "@/hooks/use-platform";
 import { useUIState } from "@/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
+import { IS_LINUX, IS_MAC } from "@/utils/platform";
+import { AccountMenu } from "./components/account-menu";
 import ProjectTabs from "./components/project-tabs";
 import CustomMenuBar from "./menu-bar";
 
@@ -22,8 +23,8 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
 
-  const isMacOS = useIsMac();
-  const isLinux = useIsLinux();
+  const isMacOS = IS_MAC;
+  const isLinux = IS_LINUX;
 
   useEffect(() => {
     const initWindow = async () => {
@@ -133,19 +134,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           <ProjectTabs />
         </div>
 
-        {/* Account dropdown placeholder */}
-        <div className="flex items-center gap-0.5">
-          <Tooltip content="Account" side="bottom">
-            <button
-              className={cn(
-                "mr-4 flex items-center justify-center rounded p-1",
-                "text-text-lighter transition-colors hover:bg-hover hover:text-text",
-              )}
-              style={{ minHeight: 0, minWidth: 0 }}
-            >
-              <CircleUser size={14} />
-            </button>
-          </Tooltip>
+        {/* Account menu */}
+        <div className="flex items-center gap-0.5 mr-4">
+          <AccountMenu iconSize={14} />
         </div>
       </div>
     );
@@ -191,18 +182,8 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
 
       {/* Right side */}
       <div className="z-20 flex items-center gap-0.5">
-        {/* Account dropdown placeholder */}
-        <Tooltip content="Account" side="bottom">
-          <button
-            className={cn(
-              "mr-2 flex items-center justify-center rounded px-1 py-0.5",
-              "text-text-lighter transition-colors hover:bg-hover hover:text-text",
-            )}
-            style={{ minHeight: 0, minWidth: 0 }}
-          >
-            <CircleUser size={12} />
-          </button>
-        </Tooltip>
+        {/* Account menu */}
+        <AccountMenu iconSize={12} className="mr-2 px-1 py-0.5" />
 
         {/* Window controls - only show on Linux */}
         {isLinux && (
@@ -249,8 +230,7 @@ const CustomTitleBarWithSettings = (props: CustomTitleBarProps) => {
   // Handle Cmd+, (Mac) or Ctrl+, (Windows/Linux) to open settings
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const isMac = navigator.platform.includes("Mac");
-      const isSettingsShortcut = event.key === "," && (isMac ? event.metaKey : event.ctrlKey);
+      const isSettingsShortcut = event.key === "," && (IS_MAC ? event.metaKey : event.ctrlKey);
 
       if (isSettingsShortcut) {
         event.preventDefault();

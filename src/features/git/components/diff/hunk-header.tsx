@@ -43,8 +43,12 @@ const DiffHunkHeader = memo(
       [rootFolderPath, filePath, hunk, isStaged, onStageHunk, onUnstageHunk],
     );
 
-    const additions = hunk.lines.filter((l) => l.line_type === "added").length;
-    const deletions = hunk.lines.filter((l) => l.line_type === "removed").length;
+    let additions = 0;
+    let deletions = 0;
+    for (const l of hunk.lines) {
+      if (l.line_type === "added") additions++;
+      else if (l.line_type === "removed") deletions++;
+    }
 
     const parseHunkHeader = (content: string) => {
       const match = content.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)/);

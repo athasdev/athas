@@ -53,6 +53,9 @@
       "identifier": "http:default",
       "allow": [
         {
+          "url": "https://athas.dev/**"
+        },
+        {
           "url": "https://generativelanguage.googleapis.com/**"
         },
         {

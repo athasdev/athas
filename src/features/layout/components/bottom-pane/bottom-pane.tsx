@@ -1,8 +1,9 @@
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
+import { IS_MAC } from "@/utils/platform";
 import { useProjectStore } from "../../../../stores/project-store";
 import { useUIState } from "../../../../stores/ui-state-store";
 import DiagnosticsPane, { type Diagnostic } from "../../../diagnostics/diagnostics-pane";
@@ -18,16 +19,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
   const { settings } = useSettingsStore();
   const [height, setHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
-  const [isMacOS, setIsMacOS] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
-
-  useEffect(() => {
-    const checkPlatform = () => {
-      const userAgent = navigator.userAgent.toLowerCase();
-      setIsMacOS(userAgent.includes("mac"));
-    };
-    checkPlatform();
-  }, []);
 
   // Resize logic
   const handleMouseDown = useCallback(
@@ -60,7 +52,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
     [height],
   );
 
-  const titleBarHeight = isMacOS ? 44 : 28; // h-11 for macOS, h-7 for Windows/Linux
+  const titleBarHeight = IS_MAC ? 44 : 28; // h-11 for macOS, h-7 for Windows/Linux
   const footerHeight = 32; // Footer height matches min-h-[32px] from editor-footer
   const _totalReservedHeight = titleBarHeight + footerHeight;
 

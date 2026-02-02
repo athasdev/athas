@@ -1,4 +1,4 @@
-import type { ParsedHunk } from "../types/diff";
+import type { DiffLineWithIndex, ParsedHunk } from "../types/diff";
 import type { GitDiff, GitDiffLine, GitHunk } from "../types/git";
 
 export const createGitHunk = (
@@ -21,11 +21,12 @@ export function getFileStatus(diff: GitDiff): string {
 
 export function groupLinesIntoHunks(lines: GitDiffLine[]): ParsedHunk[] {
   const hunks: ParsedHunk[] = [];
-  let currentHunk: GitDiffLine[] = [];
+  let currentHunk: DiffLineWithIndex[] = [];
   let hunkHeader: GitDiffLine | null = null;
   let hunkId = 0;
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (line.line_type === "header") {
       if (hunkHeader && currentHunk.length > 0) {
         hunks.push({
@@ -37,7 +38,7 @@ export function groupLinesIntoHunks(lines: GitDiffLine[]): ParsedHunk[] {
       hunkHeader = line;
       currentHunk = [];
     } else {
-      currentHunk.push(line);
+      currentHunk.push({ ...line, diffIndex: i });
     }
   }
 
@@ -50,6 +51,18 @@ export function groupLinesIntoHunks(lines: GitDiffLine[]): ParsedHunk[] {
   }
 
   return hunks;
+}
+
+export function countDiffStats(diffs: GitDiff[]): { additions: number; deletions: number } {
+  let additions = 0;
+  let deletions = 0;
+  for (const diff of diffs) {
+    for (const line of diff.lines) {
+      if (line.line_type === "added") additions++;
+      else if (line.line_type === "removed") deletions++;
+    }
+  }
+  return { additions, deletions };
 }
 
 export function copyLineContent(content: string) {

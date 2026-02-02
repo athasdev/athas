@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { isMac } from "@/features/file-system/controllers/platform";
 import { useAppStore } from "@/stores/app-store";
+import { isMac } from "@/utils/platform";
 
 export function usePlatformSetup() {
   const { cleanup } = useAppStore.use.actions();

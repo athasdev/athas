@@ -43,6 +43,7 @@ import { initializeWasmTokenizer } from "./features/editor/lib/wasm-parser";
 import { initializeKeymaps } from "./features/keymaps/init";
 import { WindowResizeBorder } from "./features/window/window-resize-border";
 import { useDeepLink } from "./hooks/use-deep-link";
+import { useAuthStore } from "./stores/auth-store";
 
 initializeWasmTokenizer().catch(console.error);
 extensionLoader.initialize().catch(console.error);
@@ -79,6 +80,11 @@ function App() {
   useRemoteWindowClose();
   useContextMenuPrevention();
   useLspInitialization();
+
+  // Auth initialization
+  useEffect(() => {
+    useAuthStore.getState().initialize();
+  }, []);
 
   // File watcher setup
   useEffect(() => {

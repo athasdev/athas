@@ -1,0 +1,199 @@
+@theme {
+  --font-sans:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+}
+
+@theme inline {
+  --color-primary-bg: var(--primary-bg);
+  --color-secondary-bg: var(--secondary-bg);
+  --color-text: var(--text);
+  --color-text-light: var(--text-light);
+  --color-text-lighter: var(--text-lighter);
+  --color-border: var(--border);
+  --color-hover: var(--hover);
+  --color-selected: var(--selected);
+  --color-selection-bg: var(--selection-bg);
+
+  --color-accent: var(--accent);
+
+  --color-cursor: var(--cursor);
+  --color-cursor-vim-normal: var(--cursor-vim-normal);
+  --color-cursor-vim-insert: var(--cursor-vim-insert);
+
+  --color-error: var(--error);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  --color-git-modified: var(--git-modified);
+  --color-git-modified-staged: var(--git-modified-staged);
+  --color-git-added: var(--git-added);
+  --color-git-deleted: var(--git-deleted);
+  --color-git-untracked: var(--git-untracked);
+  --color-git-renamed: var(--git-renamed);
+
+  --color-syntax-comment: var(--syntax-comment);
+  --color-syntax-keyword: var(--syntax-keyword);
+  --color-syntax-string: var(--syntax-string);
+  --color-syntax-number: var(--syntax-number);
+  --color-syntax-function: var(--syntax-function);
+  --color-syntax-variable: var(--syntax-variable);
+  --color-syntax-tag: var(--syntax-tag);
+  --color-syntax-attribute: var(--syntax-attribute);
+  --color-syntax-punctuation: var(--syntax-punctuation);
+  --color-syntax-constant: var(--syntax-constant);
+  --color-syntax-property: var(--syntax-property);
+  --color-syntax-type: var(--syntax-type);
+  --color-syntax-operator: var(--syntax-operator);
+  --color-syntax-boolean: var(--syntax-boolean);
+  --color-syntax-null: var(--syntax-null);
+  --color-syntax-regex: var(--syntax-regex);
+  --color-syntax-jsx: var(--syntax-jsx);
+  --color-syntax-jsx-attribute: var(--syntax-jsx-attribute);
+
+  --color-terminal-black: var(--terminal-black);
+  --color-terminal-red: var(--terminal-red);
+  --color-terminal-green: var(--terminal-green);
+  --color-terminal-yellow: var(--terminal-yellow);
+  --color-terminal-blue: var(--terminal-blue);
+  --color-terminal-magenta: var(--terminal-magenta);
+  --color-terminal-cyan: var(--terminal-cyan);
+  --color-terminal-white: var(--terminal-white);
+  --color-terminal-bright-black: var(--terminal-bright-black);
+  --color-terminal-bright-red: var(--terminal-bright-red);
+  --color-terminal-bright-green: var(--terminal-bright-green);
+  --color-terminal-bright-yellow: var(--terminal-bright-yellow);
+  --color-terminal-bright-blue: var(--terminal-bright-blue);
+  --color-terminal-bright-magenta: var(--terminal-bright-magenta);
+  --color-terminal-bright-cyan: var(--terminal-bright-cyan);
+  --color-terminal-bright-white: var(--terminal-bright-white);
+}
+
+@layer base {
+  :root {
+    --app-font-family: var(--font-sans);
+    --editor-font-family: var(--font-mono);
+
+    --primary-bg: #ffffff;
+    --secondary-bg: #f8f8f8;
+    --text: #333333;
+    --text-light: #666666;
+    --text-lighter: #999999;
+    --border: #e0e0e0;
+    --hover: #f0f0f0;
+    --selected: #e8e8e8;
+    --selection-bg: rgba(173, 214, 255, 0.4);
+
+    --accent: #3b82f6;
+
+    --cursor: #1a1a1a;
+    --cursor-vim-normal: #3b82f6a6;
+    --cursor-vim-insert: #22c55e;
+
+    --error: #c53030;
+    --success: #10b981;
+    --warning: #d69e2e;
+    --info: #3182ce;
+
+    --git-modified: #d69e2e;
+    --git-modified-staged: #e67e22;
+    --git-added: #28a745;
+    --git-deleted: #dc3545;
+    --git-untracked: #17a2b8;
+    --git-renamed: #6f42c1;
+
+    --syntax-comment: #6a737d;
+    --syntax-keyword: #d73a49;
+    --syntax-string: #032f62;
+    --syntax-number: #005cc5;
+    --syntax-function: #6f42c1;
+    --syntax-variable: #e36209;
+    --syntax-tag: #22863a;
+    --syntax-attribute: #6f42c1;
+    --syntax-punctuation: #24292e;
+
+    --terminal-black: #24292e;
+    --terminal-red: #d73a49;
+    --terminal-green: #22863a;
+    --terminal-yellow: #e36209;
+    --terminal-blue: #005cc5;
+    --terminal-magenta: #6f42c1;
+    --terminal-cyan: #032f62;
+    --terminal-white: #666666;
+    --terminal-bright-black: #6a737d;
+    --terminal-bright-red: #c53030;
+    --terminal-bright-green: #28a745;
+    --terminal-bright-yellow: #d69e2e;
+    --terminal-bright-blue: #3182ce;
+    --terminal-bright-magenta: #8b5cf6;
+    --terminal-bright-cyan: #0891b2;
+    --terminal-bright-white: #333333;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary-bg: #1a1a1a;
+      --secondary-bg: #2a2a2a;
+      --text: #e5e5e5;
+      --text-light: #b3b3b3;
+      --text-lighter: #808080;
+      --border: #404040;
+      --hover: #333333;
+      --selected: #404040;
+      --selection-bg: rgba(38, 79, 120, 0.6);
+
+      --accent: #60a5fa;
+
+      --cursor: #e5e5e5;
+      --cursor-vim-normal: #3b82f6a6;
+      --cursor-vim-insert: #22c55e;
+
+      --error: #f87171;
+      --success: #10b981;
+      --warning: #fbbf24;
+      --info: #60a5fa;
+
+      --git-modified: #fbbf24;
+      --git-modified-staged: #f59e0b;
+      --git-added: #10b981;
+      --git-deleted: #ef4444;
+      --git-untracked: #06b6d4;
+      --git-renamed: #8b5cf6;
+
+      --syntax-comment: #8b949e;
+      --syntax-keyword: #ff7b72;
+      --syntax-string: #a5d6ff;
+      --syntax-number: #79c0ff;
+      --syntax-function: #d2a8ff;
+      --syntax-variable: #ffa657;
+      --syntax-tag: #7ee787;
+      --syntax-attribute: #d2a8ff;
+      --syntax-punctuation: #b3b3b3;
+
+      --terminal-black: #1a1a1a;
+      --terminal-red: #ff7b72;
+      --terminal-green: #7ee787;
+      --terminal-yellow: #ffa657;
+      --terminal-blue: #79c0ff;
+      --terminal-magenta: #d2a8ff;
+      --terminal-cyan: #a5d6ff;
+      --terminal-white: #b3b3b3;
+      --terminal-bright-black: #8b949e;
+      --terminal-bright-red: #f87171;
+      --terminal-bright-green: #86efac;
+      --terminal-bright-yellow: #fbbf24;
+      --terminal-bright-blue: #60a5fa;
+      --terminal-bright-magenta: #c084fc;
+      --terminal-bright-cyan: #67e8f9;
+      --terminal-bright-white: #e5e5e5;
+    }
+  }
+
+  html {
+    font-family: var(--app-font-family);
+  }
+}

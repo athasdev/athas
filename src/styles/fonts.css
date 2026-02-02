@@ -1,0 +1,30 @@
+.editor-font {
+  font-family: var(--editor-font-family);
+}
+
+.ui-font {
+  font-family: var(--app-font-family);
+}
+
+.editor-container,
+.monaco-editor,
+.editor-input,
+.line-numbers,
+.hover-tooltip,
+.editor-wrapper,
+.editor-line-wrapper,
+.editor-line-content-wrapper,
+.editor-content-new,
+.editor-line,
+.editor-line-content,
+.editor-viewport,
+.editor-content,
+.virtual-editor-container,
+.editor-textarea,
+.code-editor-content {
+  font-family: var(--editor-font-family);
+}
+
+.markdown-preview {
+  font-family: var(--app-font-family);
+}

@@ -337,6 +337,10 @@ fn main() {
          store_ai_provider_token,
          get_ai_provider_token,
          remove_ai_provider_token,
+         // Auth token commands
+         store_auth_token,
+         get_auth_token,
+         remove_auth_token,
          // Chat history commands
          init_chat_database,
          save_chat,
@@ -434,6 +438,8 @@ fn main() {
          filter_completions,
          // Search commands
          search_files_content,
+         // EditorConfig commands
+         get_editorconfig_properties,
          // Format commands
          format_code,
          // Lint commands
