@@ -1,6 +1,8 @@
 import { MessageSquare } from "lucide-react";
 import { forwardRef, memo, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
+import { cn } from "@/utils/cn";
 import { getRelativeTime } from "../../lib/formatting";
 import { useAIChatStore } from "../../store/store";
 import { AGENT_OPTIONS } from "../../types/ai-chat";
@@ -109,14 +111,15 @@ export const ChatMessages = memo(
             prevMessage.toolCalls.length > 0 &&
             (!prevMessage.content || prevMessage.content.trim().length === 0);
 
-          const className = isToolOnlyMessage
-            ? previousMessageIsToolOnly
-              ? "px-3"
-              : "px-3 pt-1"
-            : "p-3";
+          const isPlanMessage = message.role === "assistant" && hasPlanBlock(message.content);
+
+          const messageClassName = cn(
+            isToolOnlyMessage ? (previousMessageIsToolOnly ? "px-3" : "px-3 pt-1") : "p-3",
+            isPlanMessage && "border-l-2 border-accent/40",
+          );
 
           return (
-            <div key={message.id} className={className}>
+            <div key={message.id} className={messageClassName}>
               <ChatMessage
                 message={message}
                 isLastMessage={index === messages.length - 1}

@@ -149,10 +149,30 @@ export const buildSystemPrompt = (
 PLAN MODE: You are currently in Plan Mode. This means:
 - NEVER execute or modify code directly
 - Focus on analysis, planning, and providing detailed explanations
-- Create step-by-step plans for implementation
 - Identify potential issues and considerations
 - Provide comprehensive analysis without making changes
-- Use planning language like "would", "could", "should" instead of "will"`;
+- Use planning language like "would", "could", "should" instead of "will"
+
+When creating implementation plans, you MUST use this structured format:
+
+[PLAN_BLOCK]
+[STEP] Step title here
+Description of what this step involves. Can be multiple lines.
+Include specific file paths, code changes, or commands needed.
+[/STEP]
+[STEP] Another step title
+Description for this step.
+[/STEP]
+[/PLAN_BLOCK]
+
+Rules for plans:
+- Include text before the PLAN_BLOCK for context and analysis
+- Include text after the PLAN_BLOCK for additional notes if needed
+- Each STEP must have a clear, concise title on the first line after [STEP]
+- Follow the title with a detailed description on subsequent lines
+- Use 3-8 steps for most plans
+- Each step should be independently executable
+- Always wrap your plan in [PLAN_BLOCK] tags`;
   } else {
     basePrompt += `
 

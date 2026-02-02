@@ -1,11 +1,14 @@
 import { Check, Copy, RefreshCw, RotateCcw, Undo2 } from "lucide-react";
 import { memo, useCallback, useState } from "react";
+import type { PlanStep } from "@/features/ai/lib/plan-parser";
+import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message } from "@/features/ai/types/ai-chat";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import Tooltip from "@/ui/tooltip";
 import { isAcpAgent } from "@/utils/ai-chat";
 import { useAIChatStore } from "../../store/store";
 import MarkdownRenderer from "../messages/markdown-renderer";
+import { PlanBlockDisplay } from "../messages/plan-block-display";
 import ToolCallDisplay from "../messages/tool-call-display";
 
 interface ChatMessageProps {
@@ -90,6 +93,14 @@ export const ChatMessage = memo(function ChatMessage({
     }
   }, [regenerateResponse]);
 
+  const handleExecuteStep = useCallback((step: PlanStep, stepIndex: number) => {
+    const { setMode, addMessageToQueue } = useAIChatStore.getState();
+    setMode("chat");
+    addMessageToQueue(
+      `Execute step ${stepIndex + 1} of the plan: ${step.title}\n\n${step.description}`,
+    );
+  }, []);
+
   if (message.role === "user") {
     return (
       <div className="w-full">
@@ -171,7 +182,15 @@ export const ChatMessage = memo(function ChatMessage({
       {message.content && (
         <>
           <div className="pr-1 leading-relaxed">
-            <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
+            {hasPlanBlock(message.content) ? (
+              <PlanBlockDisplay
+                plan={parsePlan(message.content)!}
+                isStreaming={message.isStreaming}
+                onExecuteStep={handleExecuteStep}
+              />
+            ) : (
+              <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
+            )}
           </div>
 
           <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
