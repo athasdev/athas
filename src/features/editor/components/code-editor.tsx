@@ -7,6 +7,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
@@ -243,14 +244,17 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
     };
   }, [searchQuery, searchOptions, value, setSearchMatches, setCurrentMatchIndex]);
 
-  // Effect to handle search navigation - scroll to current match
+  // Effect to handle search navigation - scroll to current match and move cursor
   useEffect(() => {
     if (searchMatches.length > 0 && currentMatchIndex >= 0) {
       const match = searchMatches[currentMatchIndex];
       if (match && editorRef.current) {
-        // Find the textarea within the editor
         const textarea = editorRef.current.querySelector("textarea") as HTMLTextAreaElement;
         if (textarea) {
+          // Move cursor to select the match
+          textarea.selectionStart = match.start;
+          textarea.selectionEnd = match.end;
+
           // Convert match offset to line number
           let line = 0;
           for (let i = 0; i < match.start && i < value.length; i++) {
@@ -258,8 +262,7 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
           }
 
           // Calculate scroll position to center the match in viewport
-          const { fontSize } = useEditorSettingsStore.getState();
-          const lineHeight = Math.ceil(1.5 * fontSize);
+          const lineHeight = calculateLineHeight(zoomedFontSize);
           const targetScrollTop = line * lineHeight;
           const viewportHeight = textarea.clientHeight;
           const centeredScrollTop = Math.max(0, targetScrollTop - viewportHeight / 2 + lineHeight);
@@ -268,7 +271,7 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
         }
       }
     }
-  }, [currentMatchIndex, searchMatches, value]);
+  }, [currentMatchIndex, searchMatches, value, zoomedFontSize]);
 
   if (!activeBuffer || isFileTreeLoading) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;

@@ -1,9 +1,12 @@
 /**
  * Search Highlight Layer - Renders search match highlights
  * Shows all matches with yellow background, current match with orange
+ *
+ * Uses the same single-div + manual padding + in-component measurement span
+ * pattern as VimCursorLayer for consistent, accurate font metrics.
  */
 
-import { forwardRef, memo, useMemo } from "react";
+import { forwardRef, memo, useEffect, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 
 interface SearchMatch {
@@ -17,6 +20,7 @@ interface SearchHighlightLayerProps {
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
+  tabSize: number;
   content: string;
 }
 
@@ -44,38 +48,31 @@ function offsetToLineColumn(content: string, offset: number): { line: number; co
 }
 
 const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlightLayerProps>(
-  ({ searchMatches, currentMatchIndex, fontSize, fontFamily, lineHeight, content }, ref) => {
+  (
+    { searchMatches, currentMatchIndex, fontSize, fontFamily, lineHeight, tabSize, content },
+    ref,
+  ) => {
     const lines = useMemo(() => content.split("\n"), [content]);
+    const measureRef = useRef<HTMLSpanElement>(null);
+    const [highlightBoxes, setHighlightBoxes] = useState<HighlightBox[]>([]);
 
-    // Convert matches to highlight boxes
-    const highlightBoxes = useMemo((): HighlightBox[] => {
+    // Compute highlight boxes in useEffect so measureRef is available
+    useEffect(() => {
+      if (!measureRef.current) return;
+
+      const measure = measureRef.current;
       const boxes: HighlightBox[] = [];
 
-      // Create a hidden element for measuring text width with the actual font
-      const measureElement = document.createElement("span");
-      measureElement.style.cssText = `
-        position: absolute;
-        visibility: hidden;
-        white-space: pre;
-        font-family: ${fontFamily};
-        font-size: ${fontSize}px;
-      `;
-      document.body.appendChild(measureElement);
-
-      // Calculate text width using DOM measurement (more accurate than canvas for custom fonts)
       const getTextWidth = (text: string): number => {
-        measureElement.textContent = text;
-        return measureElement.getBoundingClientRect().width;
+        measure.textContent = text;
+        return measure.getBoundingClientRect().width;
       };
 
-      // Calculate pixel position for a given line and column
       const getPosition = (line: number, column: number): { top: number; left: number } => {
         const top = line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
-
         const lineText = lines[line] || "";
         const textBeforeColumn = lineText.substring(0, column);
         const width = getTextWidth(textBeforeColumn);
-
         return { top, left: width + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT };
       };
 
@@ -85,7 +82,6 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
         const isCurrent = matchIndex === currentMatchIndex;
 
         if (startPos.line === endPos.line) {
-          // Single line match
           const { top, left } = getPosition(startPos.line, startPos.column);
           const lineText = lines[startPos.line] || "";
           const matchText = lineText.substring(startPos.column, endPos.column);
@@ -99,7 +95,6 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
             isCurrent,
           });
         } else {
-          // Multi-line match: render a box for each line
           for (let line = startPos.line; line <= endPos.line; line++) {
             const lineText = lines[line] || "";
             let startCol: number;
@@ -133,11 +128,17 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
         }
       });
 
-      // Cleanup measurement element
-      document.body.removeChild(measureElement);
-
-      return boxes;
-    }, [searchMatches, currentMatchIndex, content, lines, lineHeight, fontSize, fontFamily]);
+      setHighlightBoxes(boxes);
+    }, [
+      searchMatches,
+      currentMatchIndex,
+      content,
+      lines,
+      lineHeight,
+      fontSize,
+      fontFamily,
+      tabSize,
+    ]);
 
     if (searchMatches.length === 0) return null;
 
@@ -147,6 +148,19 @@ const SearchHighlightLayerComponent = forwardRef<HTMLDivElement, SearchHighlight
         className="search-highlight-layer pointer-events-none absolute inset-0 z-10"
         style={{ willChange: "transform" }}
       >
+        {/* Hidden measurement span — lives in the editor DOM for accurate font metrics */}
+        <span
+          ref={measureRef}
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            visibility: "hidden",
+            whiteSpace: "pre",
+            fontSize: `${fontSize}px`,
+            fontFamily,
+            tabSize,
+          }}
+        />
         {highlightBoxes.map((box, index) => (
           <div
             key={index}
@@ -174,6 +188,7 @@ export const SearchHighlightLayer = memo(SearchHighlightLayerComponent, (prev, n
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
+    prev.tabSize === next.tabSize &&
     prev.content === next.content
   );
 });

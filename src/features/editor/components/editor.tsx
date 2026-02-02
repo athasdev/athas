@@ -1039,6 +1039,7 @@ export function Editor({
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
+            tabSize={tabSize}
             content={displayContent}
           />
         )}

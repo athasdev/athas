@@ -26,8 +26,8 @@
   overflow: hidden;
   pointer-events: none;
   z-index: 1;
-  padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
-    var(--editor-padding-left);
+  padding: var(--editor-padding-top) var(--editor-padding-right)
+    var(--editor-padding-bottom) var(--editor-padding-left);
   white-space: pre;
   word-wrap: break-word;
   user-select: none;
@@ -49,8 +49,8 @@
   inset: 0;
   overflow: auto;
   z-index: 2;
-  padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
-    var(--editor-padding-left);
+  padding: var(--editor-padding-top) var(--editor-padding-right)
+    var(--editor-padding-bottom) var(--editor-padding-left);
   background: transparent;
   border: none;
   outline: none;
@@ -100,14 +100,14 @@
 
 /* Multi-cursor layer */
 .multi-cursor-layer {
-  padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
-    var(--editor-padding-left);
+  padding: var(--editor-padding-top) var(--editor-padding-right)
+    var(--editor-padding-bottom) var(--editor-padding-left);
 }
 
 /* Git blame layer */
 .git-blame-layer {
-  padding: var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom)
-    var(--editor-padding-left);
+  padding: var(--editor-padding-top) var(--editor-padding-right)
+    var(--editor-padding-bottom) var(--editor-padding-left);
 }
 
 /* Cursor blink animation */
