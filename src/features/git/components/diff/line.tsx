@@ -180,16 +180,7 @@ const DiffLine = memo(({ line, viewMode, showWhitespace, tokens }: DiffLineProps
       >
         {line.new_line_number}
       </div>
-      <div
-        className={cn(
-          "w-4 shrink-0 select-none text-center",
-          "editor-font text-xs",
-          line.line_type === "added" && "text-git-added",
-          line.line_type === "removed" && "text-git-deleted",
-        )}
-      >
-        {line.line_type === "added" ? "+" : line.line_type === "removed" ? "-" : " "}
-      </div>
+
       <pre
         className={cn(
           "editor-font flex-1 whitespace-pre-wrap px-2 text-xs",

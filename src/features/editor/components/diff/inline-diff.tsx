@@ -167,28 +167,6 @@ function InlineDiffComponent({
     }
   };
 
-  const getLineColor = (lineType: GitDiffLine["line_type"]) => {
-    switch (lineType) {
-      case "added":
-        return "var(--git-added, #2ea043)";
-      case "removed":
-        return "var(--git-deleted, #f85149)";
-      default:
-        return "var(--text-light, rgba(255, 255, 255, 0.5))";
-    }
-  };
-
-  const getPrefix = (lineType: GitDiffLine["line_type"]) => {
-    switch (lineType) {
-      case "added":
-        return "+";
-      case "removed":
-        return "-";
-      default:
-        return " ";
-    }
-  };
-
   const topPosition = (lineNumber + 1) * lineHeight + 8;
 
   const handleRevert = () => {
@@ -228,17 +206,6 @@ function InlineDiffComponent({
               paddingLeft: "1rem",
             }}
           >
-            <span
-              style={{
-                color: getLineColor(line.line_type),
-                fontWeight: 600,
-                width: "16px",
-                flexShrink: 0,
-                opacity: 0.8,
-              }}
-            >
-              {getPrefix(line.line_type)}
-            </span>
             <span
               style={{
                 color: "var(--text, #d4d4d4)",
