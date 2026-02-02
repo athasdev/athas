@@ -1,7 +1,7 @@
 import { EDITOR_CONSTANTS } from "../config/constants";
 
 export function splitLines(content: string): string[] {
-  return content.split("\n");
+  return content.split(/\r?\n/);
 }
 
 export function calculateLineHeight(fontSize: number): number {
