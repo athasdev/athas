@@ -438,6 +438,8 @@ fn main() {
          filter_completions,
          // Search commands
          search_files_content,
+         // EditorConfig commands
+         get_editorconfig_properties,
          // Format commands
          format_code,
          // Lint commands

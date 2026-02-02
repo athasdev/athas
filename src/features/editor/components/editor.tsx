@@ -12,6 +12,7 @@ import { useEditorOperations } from "../hooks/use-editor-operations";
 import { useFoldTransform } from "../hooks/use-fold-transform";
 import { useInlineDiff } from "../hooks/use-inline-diff";
 import { usePerformanceMonitor } from "../hooks/use-performance";
+import { useResolvedEditorSettings } from "../hooks/use-resolved-settings";
 import { getLanguageId, useTokenizer } from "../hooks/use-tokenizer";
 import { useViewportLines } from "../hooks/use-viewport-lines";
 import { useLspStore } from "../lsp/lsp-store";
@@ -93,11 +94,13 @@ export function Editor({
   // This ensures text and positioned elements use the same rendering path
   const fontSize = baseFontSize * zoomLevel;
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
-  const tabSize = useEditorSettingsStore.use.tabSize();
 
   const buffer = buffers.find((b) => b.id === bufferId);
   const content = buffer?.content || "";
   const filePath = buffer?.path;
+
+  const resolvedSettings = useResolvedEditorSettings(filePath ?? null);
+  const tabSize = resolvedSettings.tabSize;
 
   useGitGutter({
     filePath: filePath || "",
