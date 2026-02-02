@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { getFileDiff } from "../api/diff";
+import type { MultiFileDiff } from "../types/diff";
 import type { GitDiff } from "../types/git";
 
 interface UseDiffDataReturn {
   diff: GitDiff | null;
+  rawDiffData: GitDiff | MultiFileDiff | null;
   filePath: string | null;
   isStaged: boolean;
   isLoading: boolean;
@@ -26,24 +28,33 @@ export const useDiffData = (): UseDiffDataReturn => {
 
   const isRefreshing = useRef(false);
 
-  const diffData =
+  const rawDiffData: GitDiff | MultiFileDiff | null =
     activeBuffer?.diffData ||
     (activeBuffer?.isDiff && activeBuffer.content
       ? (() => {
           try {
-            return JSON.parse(activeBuffer.content) as GitDiff;
+            return JSON.parse(activeBuffer.content) as GitDiff | MultiFileDiff;
           } catch {
             return null;
           }
         })()
       : null);
 
-  const diff = diffData && "file_path" in diffData ? diffData : null;
+  const diff = rawDiffData && "file_path" in rawDiffData ? rawDiffData : null;
 
-  const pathMatch = activeBuffer?.path.match(/^diff:\/\/(staged|unstaged)\/(.+)$/);
-  const isStaged = pathMatch?.[1] === "staged";
-  const encodedFilePath = pathMatch?.[2];
-  const filePath = encodedFilePath ? decodeURIComponent(encodedFilePath) : null;
+  const stagedMatch = activeBuffer?.path.match(/^diff:\/\/(staged|unstaged)\/(.+)$/);
+  const commitMatch = activeBuffer?.path.match(/^diff:\/\/commit\/[^/]+\/(.+?)(?:\.diff)?$/);
+  const stashMatch = activeBuffer?.path.match(/^diff:\/\/stash\/\d+\/(.+)$/);
+
+  const isStaged = stagedMatch?.[1] === "staged";
+  const encodedFilePath = stagedMatch?.[2];
+  const filePath = encodedFilePath
+    ? decodeURIComponent(encodedFilePath)
+    : commitMatch?.[1] && commitMatch[1] !== "all-files"
+      ? decodeURIComponent(commitMatch[1])
+      : stashMatch?.[1] && stashMatch[1] !== "all-files"
+        ? decodeURIComponent(stashMatch[1])
+        : null;
 
   const switchToView = useCallback(
     (viewType: "staged" | "unstaged") => {
@@ -140,6 +151,7 @@ export const useDiffData = (): UseDiffDataReturn => {
 
   return {
     diff,
+    rawDiffData,
     filePath,
     isStaged,
     isLoading,

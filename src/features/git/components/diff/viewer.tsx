@@ -12,7 +12,7 @@ function isMultiFileDiff(data: any): data is MultiFileDiff {
 }
 
 const DiffViewer = memo(({ onStageHunk, onUnstageHunk }: DiffViewerProps) => {
-  const { diff, filePath, isStaged, isLoading, error } = useDiffData();
+  const { diff, rawDiffData, filePath, isStaged, isLoading, error } = useDiffData();
   const { viewMode, showWhitespace, setViewMode, setShowWhitespace } = useDiffViewState();
 
   const handleShowWhitespaceChange = useCallback(
@@ -23,11 +23,11 @@ const DiffViewer = memo(({ onStageHunk, onUnstageHunk }: DiffViewerProps) => {
   );
 
   const multiFileDiff = useMemo(() => {
-    if (diff && isMultiFileDiff(diff)) {
-      return diff as MultiFileDiff;
+    if (rawDiffData && isMultiFileDiff(rawDiffData)) {
+      return rawDiffData;
     }
     return null;
-  }, [diff]);
+  }, [rawDiffData]);
 
   if (multiFileDiff) {
     return <MultiFileDiffViewer multiDiff={multiFileDiff} onClose={() => {}} />;
