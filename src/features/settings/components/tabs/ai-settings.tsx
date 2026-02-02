@@ -476,6 +476,16 @@ export const AISettings = () => {
 
       <Section title="Behavior">
         <SettingRow
+          label="AI Completion"
+          description="Enable AI-powered code completions while typing"
+        >
+          <Switch
+            checked={settings.aiCompletion}
+            onChange={(checked) => updateSetting("aiCompletion", checked)}
+            size="sm"
+          />
+        </SettingRow>
+        <SettingRow
           label="Auto Open Read Files"
           description="Automatically open files in the editor when AI reads them"
         >

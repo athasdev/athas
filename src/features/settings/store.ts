@@ -330,6 +330,16 @@ export const useSettingsStore = create(
           });
         },
 
+        // Reset all settings to defaults
+        resetToDefaults: async () => {
+          set((state) => {
+            state.settings = { ...defaultSettings };
+          });
+
+          applyTheme(defaultSettings.theme);
+          await saveSettingsToStore(defaultSettings);
+        },
+
         // Update individual setting
         updateSetting: async <K extends keyof Settings>(key: K, value: Settings[K]) => {
           console.log(`Updating setting ${key} to:`, value);

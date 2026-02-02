@@ -137,7 +137,10 @@ export const GeneralSettings = () => {
         </SettingRow>
       </Section>
 
-      <Section title="Updates">
+      <Section title="About">
+        <SettingRow label="Version" description="Current application version">
+          <span className="text-text-lighter text-xs">{appVersion || "..."}</span>
+        </SettingRow>
         <SettingRow
           label="Check for Updates"
           description={
@@ -189,6 +192,15 @@ export const GeneralSettings = () => {
         )}
 
         {error && <div className="mt-2 px-3 text-error text-xs">{error}</div>}
+
+        <SettingRow
+          label="Report a Bug"
+          description="Copy environment details and open the bug report page"
+        >
+          <Button onClick={handleReportBug} variant="ghost" size="xs" className="px-2 py-1">
+            Open
+          </Button>
+        </SettingRow>
       </Section>
 
       <Section title="CLI Command">
@@ -237,20 +249,6 @@ export const GeneralSettings = () => {
               </>
             )}
           </div>
-        </SettingRow>
-      </Section>
-
-      <Section title="About">
-        <SettingRow label="Version" description="Current application version">
-          <span className="text-text-lighter text-xs">{appVersion || "..."}</span>
-        </SettingRow>
-        <SettingRow
-          label="Report a Bug"
-          description="Copy environment details and open the bug report page"
-        >
-          <Button onClick={handleReportBug} variant="ghost" size="xs" className="px-2 py-1">
-            Open
-          </Button>
         </SettingRow>
       </Section>
     </div>

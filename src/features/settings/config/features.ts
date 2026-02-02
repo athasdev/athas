@@ -2,6 +2,7 @@ import {
   Brain,
   Bug,
   GitBranch,
+  Github,
   MessageSquare,
   Navigation,
   Search,
@@ -17,6 +18,13 @@ export const createCoreFeaturesList = (coreFeatures: any): CoreFeature[] => [
     description: "Source control management with Git repositories",
     icon: GitBranch,
     enabled: coreFeatures.git,
+  },
+  {
+    id: "github",
+    name: "GitHub Integration",
+    description: "Pull requests, issues, and GitHub features",
+    icon: Github,
+    enabled: coreFeatures.github,
   },
   {
     id: "remote",
