@@ -1,0 +1,62 @@
+@layer base, utilities;
+
+* {
+  box-sizing: border-box;
+  overscroll-behavior: none;
+}
+
+#root {
+  background: transparent;
+  overscroll-behavior: none;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow: hidden;
+  overscroll-behavior: none !important;
+  background: transparent;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none !important;
+  background: transparent;
+}
+
+button {
+  cursor: pointer;
+}
+
+textarea {
+  scrollbar-width: thin;
+  scrollbar-color: #ccc #f5f5f5;
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none !important;
+}
+
+textarea::-webkit-scrollbar {
+  width: 12px;
+}
+
+textarea::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+textarea::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 6px;
+}
+
+textarea::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+[class*="overflow-auto"],
+.overflow-auto {
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none !important;
+}
