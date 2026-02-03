@@ -339,6 +339,10 @@ class ExtensionManager {
         // Also map file extensions to language ID
         for (const ext of language.extensions) {
           this.languageProviders.set(ext, provider);
+          // Also map without the dot (e.g., "rb" in addition to ".rb")
+          if (ext.startsWith(".")) {
+            this.languageProviders.set(ext.slice(1), provider);
+          }
         }
 
         // Map aliases to language ID
@@ -382,6 +386,10 @@ class ExtensionManager {
     this.languageProviders.delete(extension.languageId);
     for (const ext of extension.extensions) {
       this.languageProviders.delete(ext);
+      // Also remove without the dot
+      if (ext.startsWith(".")) {
+        this.languageProviders.delete(ext.slice(1));
+      }
     }
     if (extension.aliases) {
       for (const alias of extension.aliases) {

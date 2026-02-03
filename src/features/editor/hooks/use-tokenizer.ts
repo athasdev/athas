@@ -34,14 +34,14 @@ interface TokenCache {
  * Map file extensions to Tree-sitter language IDs
  */
 const EXTENSION_TO_LANGUAGE: Record<string, string> = {
-  js: "javascript",
-  jsx: "javascript",
-  mjs: "javascript",
-  cjs: "javascript",
-  ts: "typescript",
-  tsx: "typescript",
-  mts: "typescript",
-  cts: "typescript",
+  js: "tsx",
+  jsx: "tsx",
+  mjs: "tsx",
+  cjs: "tsx",
+  ts: "tsx",
+  tsx: "tsx",
+  mts: "tsx",
+  cts: "tsx",
   py: "python",
   rs: "rust",
   go: "go",

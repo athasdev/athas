@@ -11,6 +11,7 @@ const STORE_NAME = "parsers";
 
 export interface ParserCacheEntry {
   languageId: string; // Primary key
+  extensionId?: string; // Full extension ID from manifest (e.g., "language.typescript")
   wasmBlob: Blob; // Legacy: Raw WASM bytes as Blob (deprecated, use wasmData)
   wasmData?: ArrayBuffer; // Raw WASM bytes as ArrayBuffer (preferred)
   highlightQuery: string; // Highlight query text

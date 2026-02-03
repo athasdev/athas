@@ -142,12 +142,13 @@ export class ExtensionInstaller {
     wasmUrl: string,
     highlightQueryUrl: string,
     options: {
+      extensionId?: string; // Full extension ID from manifest (e.g., "language.typescript")
       version?: string;
       checksum?: string;
       onProgress?: (progress: DownloadProgress) => void;
     } = {},
   ): Promise<void> {
-    const { version = "1.0.0", checksum = "", onProgress } = options;
+    const { extensionId, version = "1.0.0", checksum = "", onProgress } = options;
 
     logger.info("ExtensionInstaller", `Installing language extension: ${languageId}`);
 
@@ -210,6 +211,7 @@ export class ExtensionInstaller {
       // Store in IndexedDB cache
       const cacheEntry: ParserCacheEntry = {
         languageId,
+        extensionId, // Store the full extension ID from manifest
         wasmBlob: new Blob([wasmData]), // Legacy compatibility
         wasmData: wasmData, // Preferred: ArrayBuffer avoids WebKit blob issues
         highlightQuery,
@@ -276,11 +278,18 @@ export class ExtensionInstaller {
    * List all installed languages
    */
   async listInstalled(): Promise<
-    Array<{ languageId: string; version: string; size: number; downloadedAt?: number }>
+    Array<{
+      languageId: string;
+      extensionId?: string;
+      version: string;
+      size: number;
+      downloadedAt?: number;
+    }>
   > {
     const entries = await indexedDBParserCache.list();
     return entries.map((entry) => ({
       languageId: entry.languageId,
+      extensionId: entry.extensionId,
       version: entry.version,
       size: entry.size,
       downloadedAt: entry.downloadedAt,

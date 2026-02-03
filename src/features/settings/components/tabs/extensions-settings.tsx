@@ -40,11 +40,15 @@ const getCategoryLabel = (category: UnifiedExtension["category"]) => {
 const ExtensionRow = ({
   extension,
   onToggle,
+  onUpdate,
   isInstalling,
+  hasUpdate,
 }: {
   extension: UnifiedExtension;
   onToggle: () => void;
+  onUpdate?: () => void;
   isInstalling?: boolean;
+  hasUpdate?: boolean;
 }) => {
   return (
     <div className="flex items-center justify-between gap-4 border-border/50 border-b px-1 py-3 last:border-b-0">
@@ -82,13 +86,24 @@ const ExtensionRow = ({
           <span className="text-xs">Installing</span>
         </div>
       ) : extension.isInstalled ? (
-        <button
-          onClick={onToggle}
-          className="shrink-0 text-text-lighter text-xs transition-colors hover:text-red-500"
-          title="Uninstall"
-        >
-          Uninstall
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {hasUpdate && onUpdate && (
+            <button
+              onClick={onUpdate}
+              className="text-accent text-xs transition-colors hover:text-accent/80"
+              title="Update available"
+            >
+              Update
+            </button>
+          )}
+          <button
+            onClick={onToggle}
+            className="text-text-lighter text-xs transition-colors hover:text-red-500"
+            title="Uninstall"
+          >
+            Uninstall
+          </button>
+        </div>
       ) : (
         <button
           onClick={onToggle}
@@ -110,7 +125,8 @@ export const ExtensionsSettings = () => {
 
   // Get extension store state
   const availableExtensions = useExtensionStore.use.availableExtensions();
-  const { installExtension, uninstallExtension } = useExtensionStore.use.actions();
+  const extensionsWithUpdates = useExtensionStore.use.extensionsWithUpdates();
+  const { installExtension, uninstallExtension, updateExtension } = useExtensionStore.use.actions();
 
   const loadAllExtensions = useCallback(() => {
     const allExtensions: UnifiedExtension[] = [];
@@ -184,6 +200,24 @@ export const ExtensionsSettings = () => {
   useEffect(() => {
     loadAllExtensions();
   }, [settings.theme, settings.iconTheme, loadAllExtensions]);
+
+  const handleUpdate = async (extension: UnifiedExtension) => {
+    try {
+      await updateExtension(extension.id);
+      showToast({
+        message: `${extension.name} updated successfully`,
+        type: "success",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error(`Failed to update ${extension.name}:`, error);
+      showToast({
+        message: `Failed to update ${extension.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        type: "error",
+        duration: 5000,
+      });
+    }
+  };
 
   const handleToggle = async (extension: UnifiedExtension) => {
     if (extension.isMarketplace) {
@@ -340,13 +374,16 @@ export const ExtensionsSettings = () => {
             {filteredExtensions.map((extension) => {
               const extensionFromStore = availableExtensions.get(extension.id);
               const isInstalling = extensionFromStore?.isInstalling || false;
+              const hasUpdate = extensionsWithUpdates.has(extension.id);
 
               return (
                 <ExtensionRow
                   key={extension.id}
                   extension={extension}
                   onToggle={() => handleToggle(extension)}
+                  onUpdate={() => handleUpdate(extension)}
                   isInstalling={isInstalling}
+                  hasUpdate={hasUpdate}
                 />
               );
             })}

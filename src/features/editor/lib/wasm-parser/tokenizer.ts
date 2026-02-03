@@ -131,12 +131,25 @@ export async function tokenizeCodeWithTree(
     let loadedParser: LoadedParser;
     if (config) {
       loadedParser = await wasmParserLoader.loadParser(config);
-    } else {
-      // Try to get already loaded parser
-      if (!wasmParserLoader.isLoaded(languageId)) {
-        throw new Error(`Parser for ${languageId} is not loaded and no config provided`);
-      }
+    } else if (wasmParserLoader.isLoaded(languageId)) {
+      // Use already loaded parser
       loadedParser = wasmParserLoader.getParser(languageId);
+    } else {
+      // Try to load from IndexedDB cache
+      const { indexedDBParserCache } = await import("./cache-indexeddb");
+      const cached = await indexedDBParserCache.get(languageId);
+
+      if (cached) {
+        // Load parser from cache
+        logger.debug("WasmTokenizer", `Loading ${languageId} from IndexedDB cache`);
+        loadedParser = await wasmParserLoader.loadParser({
+          languageId,
+          wasmPath: cached.sourceUrl || `indexeddb://${languageId}`, // wasmPath not used when cached
+          highlightQuery: cached.highlightQuery,
+        });
+      } else {
+        throw new Error(`Parser for ${languageId} is not loaded and not found in cache`);
+      }
     }
 
     const { parser, highlightQuery } = loadedParser;

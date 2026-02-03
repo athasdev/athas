@@ -31,46 +31,86 @@ export interface AvailableExtension {
 }
 
 interface ExtensionStoreState {
-  // Available extensions (from registry)
   availableExtensions: Map<string, AvailableExtension>;
-
-  // Installed extensions metadata
   installedExtensions: Map<string, ExtensionInstallationMetadata>;
-
-  // Loading states
+  extensionsWithUpdates: Set<string>;
   isLoadingRegistry: boolean;
   isLoadingInstalled: boolean;
-
+  isCheckingUpdates: boolean;
   actions: {
-    // Load available extensions from registry
     loadAvailableExtensions: () => Promise<void>;
-
-    // Load installed extensions
     loadInstalledExtensions: () => Promise<void>;
-
-    // Check if extension is installed
     isExtensionInstalled: (extensionId: string) => boolean;
-
-    // Get extension for file
     getExtensionForFile: (filePath: string) => AvailableExtension | undefined;
-
-    // Install extension
     installExtension: (extensionId: string) => Promise<void>;
-
-    // Uninstall extension
     uninstallExtension: (extensionId: string) => Promise<void>;
-
-    // Update installation progress
+    updateExtension: (extensionId: string) => Promise<void>;
+    checkForUpdates: () => Promise<string[]>;
     updateInstallProgress: (extensionId: string, progress: number, error?: string) => void;
   };
+}
+
+/**
+ * Helper function to register a language provider with the ExtensionManager.
+ * This consolidates the registration logic used in both loadInstalledExtensions and installExtension.
+ */
+async function registerLanguageProvider(params: {
+  extensionId: string;
+  languageId: string;
+  displayName: string;
+  version: string;
+  extensions: string[];
+  aliases?: string[];
+}): Promise<void> {
+  const { extensionId, languageId, displayName, version, extensions, aliases } = params;
+  const { extensionManager } = await import("@/features/editor/extensions/manager");
+
+  if (extensionManager.isExtensionLoaded(extensionId)) {
+    return;
+  }
+
+  const { tokenizeCode, convertToEditorTokens } = await import("@/features/editor/lib/wasm-parser");
+
+  const languageExtension = {
+    id: extensionId,
+    displayName,
+    version,
+    category: "language",
+    languageId,
+    extensions,
+    aliases,
+
+    activate: async (context: {
+      registerLanguage: (lang: { id: string; extensions: string[]; aliases?: string[] }) => void;
+    }) => {
+      context.registerLanguage({
+        id: languageId,
+        extensions,
+        aliases,
+      });
+    },
+
+    deactivate: async () => {
+      // Cleanup if needed
+    },
+
+    getTokens: async (content: string) => {
+      const highlightTokens = await tokenizeCode(content, languageId);
+      return convertToEditorTokens(highlightTokens);
+    },
+  };
+
+  await extensionManager.loadLanguageExtension(languageExtension);
 }
 
 const useExtensionStoreBase = create<ExtensionStoreState>()(
   immer((set, get) => ({
     availableExtensions: new Map(),
     installedExtensions: new Map(),
+    extensionsWithUpdates: new Set(),
     isLoadingRegistry: false,
     isLoadingInstalled: false,
+    isCheckingUpdates: false,
 
     actions: {
       loadAvailableExtensions: async () => {
@@ -156,14 +196,44 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           // Also check IndexedDB for installed language parsers
           const indexedDBInstalled = await extensionInstaller.listInstalled();
 
+          // Register language extensions with the ExtensionManager
+          // This is critical for syntax highlighting to work on app restart
+          // Register language extensions with the ExtensionManager
+          for (const installed of indexedDBInstalled) {
+            const languageId = installed.languageId;
+            // Use stored extensionId if available, otherwise fallback to constructed ID
+            const extensionId = installed.extensionId || `language.${languageId}`;
+
+            // Get language config from available extensions if loaded
+            const ext = get().availableExtensions.get(extensionId);
+            const langConfig = ext?.manifest.languages?.[0];
+
+            // Default extensions if manifest not available yet
+            const extensions = langConfig?.extensions || [`.${languageId}`];
+            const aliases = langConfig?.aliases;
+
+            try {
+              await registerLanguageProvider({
+                extensionId,
+                languageId,
+                displayName: ext?.manifest.displayName || languageId,
+                version: installed.version,
+                extensions,
+                aliases,
+              });
+            } catch (error) {
+              console.debug(`Could not load language extension ${languageId}:`, error);
+            }
+          }
+
           set((state) => {
             // Start with backend installed extensions
             state.installedExtensions = new Map(backendInstalled.map((ext) => [ext.id, ext]));
 
             // Add language extensions from IndexedDB
             for (const installed of indexedDBInstalled) {
-              // Map languageId to extension ID (e.g., "css" -> "language.css")
-              const extensionId = `language.${installed.languageId}`;
+              // Use stored extensionId if available, otherwise fallback to constructed ID
+              const extensionId = installed.extensionId || `language.${installed.languageId}`;
 
               if (!state.installedExtensions.has(extensionId)) {
                 // Get manifest info if available, but always add to installedExtensions
@@ -327,6 +397,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
             // Install using extension installer
             await extensionInstaller.installLanguage(languageId, wasmUrl, highlightQueryUrl, {
+              extensionId: extensionId, // Pass the manifest ID for proper tracking
               version: extension.manifest.version,
               checksum: extension.manifest.installation.checksum || "",
               onProgress: (progress) => {
@@ -358,6 +429,17 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               }
               // Create new Map reference to trigger React re-render
               state.availableExtensions = new Map(state.availableExtensions);
+            });
+
+            // Register the language provider with the ExtensionManager
+            const langConfig = extension.manifest.languages[0];
+            await registerLanguageProvider({
+              extensionId,
+              languageId,
+              displayName: extension.manifest.displayName,
+              version: extension.manifest.version,
+              extensions: langConfig.extensions,
+              aliases: langConfig.aliases,
             });
 
             // Trigger re-highlighting for open files that match this language
@@ -479,6 +561,74 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           }
         });
       },
+
+      checkForUpdates: async () => {
+        set((state) => {
+          state.isCheckingUpdates = true;
+        });
+
+        try {
+          const installed = await extensionInstaller.listInstalled();
+          const updates: string[] = [];
+
+          for (const ext of installed) {
+            const extensionId = ext.extensionId || `language.${ext.languageId}`;
+            const available = get().availableExtensions.get(extensionId);
+            if (available && available.manifest.version !== ext.version) {
+              updates.push(extensionId);
+            }
+          }
+
+          set((state) => {
+            state.extensionsWithUpdates = new Set(updates);
+            state.isCheckingUpdates = false;
+          });
+
+          return updates;
+        } catch (error) {
+          console.error("Failed to check for extension updates:", error);
+          set((state) => {
+            state.isCheckingUpdates = false;
+          });
+          return [];
+        }
+      },
+
+      updateExtension: async (extensionId: string) => {
+        const extension = get().availableExtensions.get(extensionId);
+        if (!extension?.manifest.languages?.[0]) {
+          throw new Error(`Extension ${extensionId} not found or has no languages`);
+        }
+
+        const languageId = extension.manifest.languages[0].id;
+
+        // Unload from memory
+        const { extensionManager } = await import("@/features/editor/extensions/manager");
+        try {
+          await extensionManager.unloadLanguageExtension(extensionId);
+        } catch {
+          // May not be loaded
+        }
+
+        // Unload parser from memory
+        wasmParserLoader.unloadParser(languageId);
+
+        // Delete from IndexedDB
+        await extensionInstaller.uninstallLanguage(languageId);
+
+        // Remove from updates set
+        set((state) => {
+          state.extensionsWithUpdates.delete(extensionId);
+          state.installedExtensions.delete(extensionId);
+          const ext = state.availableExtensions.get(extensionId);
+          if (ext) {
+            ext.isInstalled = false;
+          }
+        });
+
+        // Reinstall
+        await get().actions.installExtension(extensionId);
+      },
     },
   })),
 );
@@ -531,9 +681,10 @@ async function initializeExtensionStoreImpl(): Promise<void> {
 
   // Load available extensions first, then installed extensions
   // (installed extensions check needs available extensions to be loaded first)
-  const { loadAvailableExtensions, loadInstalledExtensions } =
+  const { loadAvailableExtensions, loadInstalledExtensions, checkForUpdates } =
     useExtensionStoreBase.getState().actions;
 
   await loadAvailableExtensions();
   await loadInstalledExtensions();
+  await checkForUpdates();
 }
