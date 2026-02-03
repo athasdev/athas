@@ -180,7 +180,7 @@ export default function ToolCallDisplay({
     <div className="leading-tight">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="group flex w-full items-center gap-1 text-left text-xs opacity-60 transition-all duration-200 hover:opacity-80"
+        className="group flex w-full items-center gap-1 text-left text-xs opacity-75 transition-all duration-200 hover:opacity-100"
       >
         <Icon
           size={10}
@@ -191,13 +191,13 @@ export default function ToolCallDisplay({
           )}
         />
         <span className="font-medium">{toolName}</span>
-        <span className="opacity-40">·</span>
-        <span className="truncate opacity-40">{formatInput(input)}</span>
+        <span className="opacity-50">·</span>
+        <span className="truncate opacity-50">{formatInput(input)}</span>
         {isStreaming && <Clock size={8} className="ml-1 animate-spin opacity-30" />}
         {!isStreaming && !error && output && (
-          <CheckCircle size={8} className="ml-1 text-green-400 opacity-40" />
+          <CheckCircle size={8} className="ml-1 text-green-400 opacity-60" />
         )}
-        {error && <AlertCircle size={8} className="ml-1 text-red-400 opacity-40" />}
+        {error && <AlertCircle size={8} className="ml-1 text-red-400 opacity-60" />}
         {toolName === "Read" && input?.file_path && !isStreaming && !error && (
           <button
             onClick={(e) => {
@@ -226,7 +226,7 @@ export default function ToolCallDisplay({
           <div>
             <div className="mb-1 font-medium opacity-60">Input:</div>
             <pre
-              className="overflow-x-auto rounded-sm bg-black/10 p-2 text-xs"
+              className="overflow-x-auto rounded-sm bg-secondary-bg p-2 text-xs"
               style={{
                 fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, monospace",
               }}
@@ -240,7 +240,7 @@ export default function ToolCallDisplay({
             <div>
               <div className="mb-1 font-medium opacity-60">Output:</div>
               <pre
-                className="max-h-48 overflow-x-auto rounded-sm bg-black/10 p-2 text-xs"
+                className="max-h-48 overflow-x-auto rounded-sm bg-secondary-bg p-2 text-xs"
                 style={{
                   fontFamily:
                     "ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, monospace",

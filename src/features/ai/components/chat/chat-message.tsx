@@ -104,7 +104,7 @@ export const ChatMessage = memo(function ChatMessage({
   if (message.role === "user") {
     return (
       <div className="w-full">
-        <div className="relative rounded bg-hover px-2 py-1.5">
+        <div className="relative rounded-md bg-hover px-2.5 py-2">
           <div className="whitespace-pre-wrap break-words pr-6">{message.content}</div>
           <Tooltip content="Restore to this point" side="top">
             <button
