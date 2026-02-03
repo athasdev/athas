@@ -1,0 +1,46 @@
+---
+title: Extension Development
+description: Build extensions for Athas
+---
+
+Athas supports extensions to add new functionality.
+
+## Extension Types
+
+- **Language Extensions**: Add syntax highlighting and language support
+- **Theme Extensions**: Custom color themes
+
+## Language Extension Structure
+
+```
+my-language/
+├── package.json
+├── syntaxes/
+│   └── my-language.tmLanguage.json
+└── language-configuration.json
+```
+
+## Package.json
+
+```json
+{
+  "name": "my-language",
+  "version": "1.0.0",
+  "contributes": {
+    "languages": [{
+      "id": "my-language",
+      "extensions": [".mylang"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "my-language",
+      "scopeName": "source.mylang",
+      "path": "./syntaxes/my-language.tmLanguage.json"
+    }]
+  }
+}
+```
+
+## Publishing
+
+Extensions can be published to the Athas extension registry (coming soon).

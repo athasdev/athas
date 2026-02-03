@@ -1,0 +1,43 @@
+---
+title: AI Providers
+description: Configure AI providers and API keys
+---
+
+Athas supports multiple AI providers.
+
+## Cloud Providers
+
+### OpenAI
+
+1. Get an API key from [OpenAI](https://platform.openai.com/api-keys)
+2. Go to **Settings > AI > API Keys**
+3. Click "Set API Key" next to OpenAI
+4. Paste your key and save
+
+### Anthropic
+
+1. Get an API key from [Anthropic](https://console.anthropic.com/)
+2. Go to **Settings > AI > API Keys**
+3. Click "Set API Key" next to Anthropic
+4. Paste your key and save
+
+## Local Providers
+
+### Ollama
+
+Run AI models locally using [Ollama](https://ollama.ai/):
+
+1. Install Ollama on your system
+2. Pull a model: `ollama pull codellama`
+3. Select "Ollama" as your provider in Athas settings
+4. Available models will be detected automatically
+
+Popular models:
+- **CodeLlama**: Optimized for code generation
+- **Llama 3**: General purpose
+- **Mistral**: Fast and capable
+
+## Model Parameters
+
+- **Temperature**: 0 = deterministic, 2 = creative
+- **Max Tokens**: Limits response length

@@ -1,0 +1,58 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("https://fonts.gstatic.com/s/spacegrotesk/v16/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2")
+    format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+
+  /* Light mode - clean neutral with Athas blue accent (#3b82f6) */
+  --color-fd-background: hsl(0, 0%, 100%);
+  --color-fd-foreground: hsl(0, 0%, 13%);
+  --color-fd-muted: hsl(0, 0%, 97%);
+  --color-fd-muted-foreground: hsl(0, 0%, 40%);
+  --color-fd-border: hsl(0, 0%, 88%);
+  --color-fd-primary: hsl(217, 91%, 60%);
+  --color-fd-primary-foreground: hsl(0, 0%, 100%);
+  --color-fd-accent: hsl(217, 91%, 97%);
+  --color-fd-accent-foreground: hsl(217, 91%, 45%);
+  --color-fd-ring: hsl(217, 91%, 60%);
+  --color-fd-card: hsl(0, 0%, 100%);
+  --color-fd-card-foreground: hsl(0, 0%, 13%);
+  --color-fd-popover: hsl(0, 0%, 100%);
+  --color-fd-popover-foreground: hsl(0, 0%, 13%);
+  --color-fd-secondary: hsl(0, 0%, 96%);
+  --color-fd-secondary-foreground: hsl(0, 0%, 13%);
+}
+
+.dark {
+  /* Dark mode - Athas dark with blue accent (#60a5fa) */
+  --color-fd-background: hsl(0, 0%, 10%);
+  --color-fd-foreground: hsl(0, 0%, 90%);
+  --color-fd-muted: hsl(0, 0%, 16%);
+  --color-fd-muted-foreground: hsl(0, 0%, 50%);
+  --color-fd-border: hsl(0, 0%, 25%);
+  --color-fd-primary: hsl(213, 94%, 68%);
+  --color-fd-primary-foreground: hsl(0, 0%, 10%);
+  --color-fd-accent: hsl(213, 50%, 15%);
+  --color-fd-accent-foreground: hsl(213, 94%, 75%);
+  --color-fd-ring: hsl(213, 94%, 68%);
+  --color-fd-card: hsl(0, 0%, 13%);
+  --color-fd-card-foreground: hsl(0, 0%, 90%);
+  --color-fd-popover: hsl(0, 0%, 13%);
+  --color-fd-popover-foreground: hsl(0, 0%, 90%);
+  --color-fd-secondary: hsl(0, 0%, 18%);
+  --color-fd-secondary-foreground: hsl(0, 0%, 90%);
+}
+
+body {
+  font-family: var(--font-sans);
+}
