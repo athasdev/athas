@@ -10,7 +10,7 @@ workspace = true
 anyhow = "1.0"
 axum = { version = "0.7", features = ["ws"] }
 bon = "3.6.4"
-bytes = "1.8"
+bytes = "1.11"
 chrono = { version = "0.4", features = ["serde"] }
 dashmap = "6.1"
 futures = "0.3"
