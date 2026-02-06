@@ -70,6 +70,7 @@ export function parseMarkdown(content: string): string {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const trimmedLine = line.trim();
 
     if (line.match(/^```/)) {
       if (inCodeBlock) {
@@ -107,6 +108,12 @@ export function parseMarkdown(content: string): string {
     if (inBlockquote && !line.match(/^>\s/)) {
       processedLines.push("</blockquote>");
       inBlockquote = false;
+    }
+
+    // Preserve raw HTML blocks (e.g., <details>, <summary>, <table>) as-is
+    if (trimmedLine.startsWith("<") && trimmedLine.endsWith(">")) {
+      processedLines.push(trimmedLine);
+      continue;
     }
 
     if (line.match(/^######\s/)) {
@@ -168,7 +175,7 @@ export function parseMarkdown(content: string): string {
       }
       processedLines.push(processTable(tableLines, footnotes));
       i = j - 1;
-    } else if (line.trim() === "") {
+    } else if (trimmedLine === "") {
       processedLines.push("<br />");
     } else {
       processedLines.push(`<p>${processInline(line, footnotes)}</p>`);

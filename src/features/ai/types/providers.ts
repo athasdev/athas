@@ -73,26 +73,55 @@ export const AI_PROVIDERS: ModelProvider[] = [
     apiUrl: "https://api.openai.com/v1/chat/completions",
     requiresApiKey: true,
     models: [
-      // Latest flagship models
       {
-        id: "gpt-5-pro",
-        name: "GPT-5 Pro",
-        maxTokens: 128000,
+        id: "gpt-5.2",
+        name: "GPT-5.2",
+        maxTokens: 400000,
+      },
+      {
+        id: "gpt-5.1",
+        name: "GPT-5.1",
+        maxTokens: 400000,
       },
       {
         id: "gpt-5",
         name: "GPT-5",
-        maxTokens: 1048576,
+        maxTokens: 400000,
       },
       {
         id: "gpt-5-mini",
         name: "GPT-5 Mini",
-        maxTokens: 1048576,
+        maxTokens: 400000,
       },
       {
         id: "gpt-5-nano",
         name: "GPT-5 Nano",
-        maxTokens: 1048576,
+        maxTokens: 400000,
+      },
+      {
+        id: "gpt-4.1",
+        name: "GPT-4.1",
+        maxTokens: 1047576,
+      },
+      {
+        id: "gpt-4.1-mini",
+        name: "GPT-4.1 Mini",
+        maxTokens: 1047576,
+      },
+      {
+        id: "gpt-4.1-nano",
+        name: "GPT-4.1 Nano",
+        maxTokens: 1047576,
+      },
+      {
+        id: "gpt-4o",
+        name: "GPT-4o",
+        maxTokens: 128000,
+      },
+      {
+        id: "gpt-4o-mini",
+        name: "GPT-4o Mini",
+        maxTokens: 128000,
       },
       {
         id: "o3",
@@ -110,48 +139,13 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 200000,
       },
       {
-        id: "gpt-4.1",
-        name: "GPT-4.1",
-        maxTokens: 1048576,
-      },
-      {
-        id: "gpt-4.1-mini",
-        name: "GPT-4.1 Mini",
-        maxTokens: 1048576,
-      },
-      {
-        id: "gpt-4.1-nano",
-        name: "GPT-4.1 Nano",
-        maxTokens: 1048576,
-      },
-      {
-        id: "gpt-4o",
-        name: "GPT-4o",
-        maxTokens: 128000,
-      },
-      {
-        id: "gpt-4o-mini",
-        name: "GPT-4o Mini",
-        maxTokens: 128000,
-      },
-      {
         id: "o1",
         name: "o1",
         maxTokens: 200000,
       },
       {
-        id: "o1-preview",
-        name: "o1 Preview",
-        maxTokens: 128000,
-      },
-      {
         id: "o1-mini",
         name: "o1 Mini",
-        maxTokens: 128000,
-      },
-      {
-        id: "gpt-4-turbo",
-        name: "GPT-4 Turbo",
         maxTokens: 128000,
       },
     ],
@@ -162,80 +156,69 @@ export const AI_PROVIDERS: ModelProvider[] = [
     apiUrl: "https://openrouter.ai/api/v1/chat/completions",
     requiresApiKey: true,
     models: [
-      // Top Weekly Models (Updated January 2025)
+      {
+        id: "openai/gpt-5.2",
+        name: "GPT-5.2",
+        maxTokens: 400000,
+      },
+      {
+        id: "openai/gpt-5-mini",
+        name: "GPT-5 Mini",
+        maxTokens: 400000,
+      },
+      {
+        id: "openai/gpt-5-nano",
+        name: "GPT-5 Nano",
+        maxTokens: 400000,
+      },
+      {
+        id: "anthropic/claude-opus-4.6",
+        name: "Claude Opus 4.6",
+        maxTokens: 200000,
+      },
+      {
+        id: "anthropic/claude-sonnet-4.5",
+        name: "Claude Sonnet 4.5",
+        maxTokens: 200000,
+      },
+      {
+        id: "anthropic/claude-haiku-4.5",
+        name: "Claude Haiku 4.5",
+        maxTokens: 200000,
+      },
       {
         id: "google/gemini-3-pro-preview",
         name: "Gemini 3 Pro Preview",
         maxTokens: 1048576,
       },
       {
-        id: "openai/gpt-4o-mini",
-        name: "GPT-4o Mini",
-        maxTokens: 128000,
+        id: "google/gemini-3-flash-preview",
+        name: "Gemini 3 Flash Preview",
+        maxTokens: 1048576,
       },
       {
-        id: "google/gemini-2.0-flash-exp:free",
-        name: "Gemini 2.0 Flash (Free)",
-        maxTokens: 1000000,
+        id: "google/gemini-2.5-pro",
+        name: "Gemini 2.5 Pro",
+        maxTokens: 1048576,
       },
       {
-        id: "anthropic/claude-sonnet-4-20250514",
-        name: "Claude Sonnet 4",
-        maxTokens: 200000,
+        id: "google/gemini-2.5-flash",
+        name: "Gemini 2.5 Flash",
+        maxTokens: 1048576,
       },
       {
-        id: "google/gemini-2.0-flash-thinking-exp:free",
-        name: "Gemini 2.0 Flash Thinking (Free)",
-        maxTokens: 1000000,
+        id: "deepseek/deepseek-v3.2",
+        name: "DeepSeek V3.2",
+        maxTokens: 163840,
       },
       {
-        id: "google/gemini-exp-1206:free",
-        name: "Gemini Exp 1206 (Free)",
-        maxTokens: 1000000,
+        id: "x-ai/grok-4",
+        name: "Grok 4",
+        maxTokens: 256000,
       },
       {
-        id: "anthropic/claude-3.7-sonnet",
-        name: "Claude 3.7 Sonnet",
-        maxTokens: 200000,
-      },
-      {
-        id: "deepseek/deepseek-chat",
-        name: "DeepSeek Chat",
-        maxTokens: 164000,
-      },
-      {
-        id: "x-ai/grok-2-1212",
-        name: "Grok 2",
-        maxTokens: 131072,
-      },
-      {
-        id: "deepseek/deepseek-r1:free",
-        name: "DeepSeek R1 (Free)",
-        maxTokens: 164000,
-      },
-      {
-        id: "openai/gpt-4o",
-        name: "GPT-4o",
-        maxTokens: 128000,
-      },
-      {
-        id: "anthropic/claude-3.5-sonnet",
-        name: "Claude 3.5 Sonnet",
-        maxTokens: 200000,
-      },
-      {
-        id: "meta-llama/llama-3.3-70b-instruct",
-        name: "Llama 3.3 70B",
-        maxTokens: 131072,
-      },
-      {
-        id: "anthropic/claude-3-opus",
-        name: "Claude 3 Opus",
-        maxTokens: 200000,
-      },
-      {
-        id: "google/gemini-pro-1.5",
-        name: "Gemini Pro 1.5",
+        id: "x-ai/grok-4-fast",
+        name: "Grok 4 Fast",
         maxTokens: 2000000,
       },
     ],
@@ -276,11 +259,6 @@ export const AI_PROVIDERS: ModelProvider[] = [
         name: "Gemini 2.0 Flash",
         maxTokens: 1048576,
       },
-      {
-        id: "gemini-2.0-flash-lite",
-        name: "Gemini 2.0 Flash Lite",
-        maxTokens: 1048576,
-      },
     ],
   },
   {
@@ -290,53 +268,18 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "claude-sonnet-4-5-20250929",
+        id: "claude-opus-4-6",
+        name: "Claude Opus 4.6",
+        maxTokens: 200000,
+      },
+      {
+        id: "claude-sonnet-4-5",
         name: "Claude Sonnet 4.5",
         maxTokens: 200000,
       },
       {
-        id: "claude-haiku-4-5-20251001",
+        id: "claude-haiku-4-5",
         name: "Claude Haiku 4.5",
-        maxTokens: 200000,
-      },
-      {
-        id: "claude-opus-4-1-20250805",
-        name: "Claude Opus 4.1",
-        maxTokens: 200000,
-      },
-      {
-        id: "claude-opus-4",
-        name: "Claude Opus 4",
-        maxTokens: 200000,
-      },
-      {
-        id: "claude-sonnet-4",
-        name: "Claude Sonnet 4",
-        maxTokens: 200000,
-      },
-      {
-        id: "claude-3-7-sonnet",
-        name: "Claude 3.7 Sonnet",
-        maxTokens: 200000,
-      },
-      {
-        id: "claude-3-5-sonnet-20241022",
-        name: "Claude 3.5 Sonnet",
-        maxTokens: 200000,
-      },
-      {
-        id: "claude-3-5-haiku-20241022",
-        name: "Claude 3.5 Haiku",
-        maxTokens: 200000,
-      },
-      {
-        id: "claude-3-opus-20240229",
-        name: "Claude 3 Opus",
-        maxTokens: 200000,
-      },
-      {
-        id: "claude-3-haiku-20240307",
-        name: "Claude 3 Haiku",
         maxTokens: 200000,
       },
     ],
@@ -348,6 +291,16 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
+        id: "grok-4-1-fast-reasoning",
+        name: "Grok 4.1 Fast Reasoning",
+        maxTokens: 2000000,
+      },
+      {
+        id: "grok-4-1-fast-non-reasoning",
+        name: "Grok 4.1 Fast Non-Reasoning",
+        maxTokens: 2000000,
+      },
+      {
         id: "grok-4-fast-reasoning",
         name: "Grok 4 Fast Reasoning",
         maxTokens: 2000000,
@@ -358,28 +311,13 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 2000000,
       },
       {
-        id: "grok-4-0709",
-        name: "Grok 4 (0709)",
+        id: "grok-code-fast-1",
+        name: "Grok Code Fast 1",
         maxTokens: 256000,
       },
       {
-        id: "grok-3",
-        name: "Grok 3",
-        maxTokens: 131072,
-      },
-      {
-        id: "grok-3-mini",
-        name: "Grok 3 Mini",
-        maxTokens: 131072,
-      },
-      {
-        id: "grok-2-vision-1212",
-        name: "Grok 2 Vision (1212)",
-        maxTokens: 32768,
-      },
-      {
-        id: "grok-code-fast-1",
-        name: "Grok Code Fast 1",
+        id: "grok-4",
+        name: "Grok 4",
         maxTokens: 256000,
       },
     ],

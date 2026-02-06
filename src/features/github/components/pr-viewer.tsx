@@ -259,7 +259,9 @@ const CommitItem = memo(({ commit }: CommitItemProps) => {
       <div className="min-w-0 flex-1">
         <p className="text-sm text-text">{commit.messageHeadline}</p>
         {commit.messageBody && (
-          <p className="mt-1 text-text-lighter text-xs">{commit.messageBody}</p>
+          <div className="mt-1">
+            <GitHubMarkdown content={commit.messageBody} className="text-xs text-text-lighter" />
+          </div>
         )}
         <div className="mt-1.5 flex items-center gap-2 text-text-lighter text-xs">
           <span className="font-medium">{authorName}</span>
