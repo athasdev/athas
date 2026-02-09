@@ -1,0 +1,41 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.python",
+  "name": "Python",
+  "displayName": "Python",
+  "version": "1.0.0",
+  "description": "Python language support with syntax highlighting, LSP, and tooling",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "python",
+      "extensions": [".py", ".pyw", ".pyi"],
+      "aliases": ["Python", "python3"]
+    }
+  ],
+  "capabilities": {
+    "grammar": {
+      "wasmPath": "parser.wasm",
+      "highlightQuery": "highlights.scm"
+    },
+    "lsp": {
+      "name": "pyright",
+      "runtime": "bun",
+      "package": "pyright",
+      "args": ["--stdio"]
+    },
+    "formatter": {
+      "name": "black",
+      "runtime": "python",
+      "package": "black",
+      "args": ["--stdin-filename", "${file}", "-"]
+    },
+    "linter": {
+      "name": "ruff",
+      "runtime": "python",
+      "package": "ruff",
+      "args": ["check", "--stdin-filename", "${file}", "--output-format", "json", "-"]
+    }
+  }
+}

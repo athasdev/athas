@@ -1,12 +1,16 @@
-name: Sync Docs and Releases to Website
+name: Sync Website Content
 
 on:
-  release:
-    types: [published]
+  push:
+    branches: [main, master]
+    paths:
+      - "CHANGELOG.md"
+      - "ROADMAP.md"
+      - ".github/workflows/sync-docs.yml"
   workflow_dispatch:
 
 jobs:
-  sync-docs:
+  sync-website-content:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout athas repo
@@ -21,30 +25,11 @@ jobs:
           token: ${{ secrets.WWW_REPO_TOKEN }}
           path: www
 
-      - name: Sync docs and roadmap
+      - name: Sync changelog and roadmap
         run: |
-          rsync -av --delete --exclude='contributing/' athas/docs/ www/docs/
-          cp athas/ROADMAP.md www/ROADMAP.md
-
-      - name: Sync releases data
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p www/data
-          gh api repos/athasdev/athas/releases --paginate | jq '[.[] | {
-            version: .tag_name,
-            name: .name,
-            body: .body,
-            published_at: .published_at,
-            html_url: .html_url,
-            draft: .draft,
-            prerelease: .prerelease,
-            assets: [.assets[] | {
-              name: .name,
-              download_url: .browser_download_url,
-              size: .size
-            }]
-          }]' > www/data/releases.json
+          mkdir -p www/src/content
+          cp athas/CHANGELOG.md www/src/content/changelog.md
+          cp athas/ROADMAP.md www/src/content/roadmap.md
 
       - name: Commit and push changes
         working-directory: www
@@ -56,6 +41,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Sync docs and releases from athas ${{ github.event.release.tag_name || 'manual' }}"
+            git commit -m "Sync changelog and roadmap from athas"
             git push
           fi

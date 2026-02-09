@@ -1,0 +1,23 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.ocaml",
+  "name": "OCaml",
+  "displayName": "OCaml",
+  "version": "1.0.0",
+  "description": "OCaml language support with syntax highlighting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "ocaml",
+      "extensions": [".ml", ".mli"],
+      "aliases": ["OCaml"]
+    }
+  ],
+  "capabilities": {
+    "grammar": {
+      "wasmPath": "parser.wasm",
+      "highlightQuery": "highlights.scm"
+    }
+  }
+}

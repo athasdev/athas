@@ -1,0 +1,24 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.ruby",
+  "name": "Ruby",
+  "displayName": "Ruby",
+  "version": "1.0.0",
+  "description": "Ruby language support with syntax highlighting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "ruby",
+      "extensions": [".rb", ".rake", ".gemspec"],
+      "aliases": ["Ruby", "rb"],
+      "filenames": ["Rakefile", "Gemfile"]
+    }
+  ],
+  "capabilities": {
+    "grammar": {
+      "wasmPath": "parser.wasm",
+      "highlightQuery": "highlights.scm"
+    }
+  }
+}

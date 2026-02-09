@@ -1,0 +1,390 @@
+{
+  "PHP Opening Tag": {
+    "prefix": "php",
+    "body": ["<?php", "", "$1", ""],
+    "description": "PHP opening tag"
+  },
+  "Class": {
+    "prefix": "class",
+    "body": [
+      "class ${1:ClassName}",
+      "{",
+      "\tpublic function __construct(${2})",
+      "\t{",
+      "\t\t$3",
+      "\t}",
+      "}"
+    ],
+    "description": "PHP class declaration"
+  },
+  "Interface": {
+    "prefix": "interface",
+    "body": [
+      "interface ${1:InterfaceName}",
+      "{",
+      "\t$2",
+      "}"
+    ],
+    "description": "PHP interface declaration"
+  },
+  "Trait": {
+    "prefix": "trait",
+    "body": [
+      "trait ${1:TraitName}",
+      "{",
+      "\t$2",
+      "}"
+    ],
+    "description": "PHP trait declaration"
+  },
+  "Enum": {
+    "prefix": "enum",
+    "body": [
+      "enum ${1:EnumName}: ${2:string}",
+      "{",
+      "\tcase ${3:Case1} = '${4:value1}';",
+      "}"
+    ],
+    "description": "PHP enum declaration (PHP 8.1+)"
+  },
+  "Function": {
+    "prefix": "func",
+    "body": [
+      "function ${1:name}(${2}): ${3:void}",
+      "{",
+      "\t$4",
+      "}"
+    ],
+    "description": "PHP function declaration"
+  },
+  "Public Method": {
+    "prefix": "pubf",
+    "body": [
+      "public function ${1:name}(${2}): ${3:void}",
+      "{",
+      "\t$4",
+      "}"
+    ],
+    "description": "PHP public method"
+  },
+  "Private Method": {
+    "prefix": "prif",
+    "body": [
+      "private function ${1:name}(${2}): ${3:void}",
+      "{",
+      "\t$4",
+      "}"
+    ],
+    "description": "PHP private method"
+  },
+  "Protected Method": {
+    "prefix": "prof",
+    "body": [
+      "protected function ${1:name}(${2}): ${3:void}",
+      "{",
+      "\t$4",
+      "}"
+    ],
+    "description": "PHP protected method"
+  },
+  "Static Method": {
+    "prefix": "statf",
+    "body": [
+      "public static function ${1:name}(${2}): ${3:void}",
+      "{",
+      "\t$4",
+      "}"
+    ],
+    "description": "PHP static method"
+  },
+  "Constructor": {
+    "prefix": "construct",
+    "body": [
+      "public function __construct(${1})",
+      "{",
+      "\t$2",
+      "}"
+    ],
+    "description": "PHP constructor"
+  },
+  "Constructor Property Promotion": {
+    "prefix": "constructp",
+    "body": [
+      "public function __construct(",
+      "\tpublic ${1:type} \\$${2:property},",
+      ") {",
+      "\t$3",
+      "}"
+    ],
+    "description": "PHP constructor with property promotion (PHP 8.0+)"
+  },
+  "Destructor": {
+    "prefix": "destruct",
+    "body": [
+      "public function __destruct()",
+      "{",
+      "\t$1",
+      "}"
+    ],
+    "description": "PHP destructor"
+  },
+  "Getter": {
+    "prefix": "getter",
+    "body": [
+      "public function get${1:Property}(): ${2:mixed}",
+      "{",
+      "\treturn \\$this->${3:property};",
+      "}"
+    ],
+    "description": "PHP getter method"
+  },
+  "Setter": {
+    "prefix": "setter",
+    "body": [
+      "public function set${1:Property}(${2:mixed} \\$${3:value}): void",
+      "{",
+      "\t\\$this->${4:property} = \\$${3:value};",
+      "}"
+    ],
+    "description": "PHP setter method"
+  },
+  "Try Catch": {
+    "prefix": "try",
+    "body": [
+      "try {",
+      "\t$1",
+      "} catch (${2:\\Exception} \\$e) {",
+      "\t$3",
+      "}"
+    ],
+    "description": "Try-catch block"
+  },
+  "Try Catch Finally": {
+    "prefix": "trycf",
+    "body": [
+      "try {",
+      "\t$1",
+      "} catch (${2:\\Exception} \\$e) {",
+      "\t$3",
+      "} finally {",
+      "\t$4",
+      "}"
+    ],
+    "description": "Try-catch-finally block"
+  },
+  "For Loop": {
+    "prefix": "for",
+    "body": [
+      "for (\\$${1:i} = 0; \\$${1:i} < ${2:count}; \\$${1:i}++) {",
+      "\t$3",
+      "}"
+    ],
+    "description": "For loop"
+  },
+  "Foreach": {
+    "prefix": "foreach",
+    "body": [
+      "foreach (${1:\\$array} as ${2:\\$item}) {",
+      "\t$3",
+      "}"
+    ],
+    "description": "Foreach loop"
+  },
+  "Foreach Key Value": {
+    "prefix": "forek",
+    "body": [
+      "foreach (${1:\\$array} as ${2:\\$key} => ${3:\\$value}) {",
+      "\t$4",
+      "}"
+    ],
+    "description": "Foreach loop with key"
+  },
+  "While": {
+    "prefix": "while",
+    "body": [
+      "while (${1:condition}) {",
+      "\t$2",
+      "}"
+    ],
+    "description": "While loop"
+  },
+  "Do While": {
+    "prefix": "dowhile",
+    "body": [
+      "do {",
+      "\t$1",
+      "} while (${2:condition});"
+    ],
+    "description": "Do-while loop"
+  },
+  "If": {
+    "prefix": "if",
+    "body": [
+      "if (${1:condition}) {",
+      "\t$2",
+      "}"
+    ],
+    "description": "If statement"
+  },
+  "If Else": {
+    "prefix": "ife",
+    "body": [
+      "if (${1:condition}) {",
+      "\t$2",
+      "} else {",
+      "\t$3",
+      "}"
+    ],
+    "description": "If-else statement"
+  },
+  "If Elseif Else": {
+    "prefix": "ifeif",
+    "body": [
+      "if (${1:condition}) {",
+      "\t$2",
+      "} elseif (${3:condition}) {",
+      "\t$4",
+      "} else {",
+      "\t$5",
+      "}"
+    ],
+    "description": "If-elseif-else statement"
+  },
+  "Switch": {
+    "prefix": "switch",
+    "body": [
+      "switch (${1:\\$variable}) {",
+      "\tcase ${2:value}:",
+      "\t\t$3",
+      "\t\tbreak;",
+      "\tdefault:",
+      "\t\t$4",
+      "\t\tbreak;",
+      "}"
+    ],
+    "description": "Switch statement"
+  },
+  "Match": {
+    "prefix": "match",
+    "body": [
+      "\\$result = match (${1:\\$value}) {",
+      "\t${2:'case1'} => ${3:'result1'},",
+      "\t${4:'case2'} => ${5:'result2'},",
+      "\tdefault => ${6:'default'},",
+      "};"
+    ],
+    "description": "Match expression (PHP 8.0+)"
+  },
+  "Namespace": {
+    "prefix": "namespace",
+    "body": ["namespace ${1:App\\\\${2:Namespace}};", ""],
+    "description": "PHP namespace declaration"
+  },
+  "Use": {
+    "prefix": "use",
+    "body": "use ${1:App\\\\${2:Class}};",
+    "description": "PHP use statement"
+  },
+  "Arrow Function": {
+    "prefix": "fn",
+    "body": "fn(${1}) => ${2}",
+    "description": "Arrow function (PHP 7.4+)"
+  },
+  "Closure": {
+    "prefix": "closure",
+    "body": [
+      "function (${1}) use (${2}) {",
+      "\t$3",
+      "}"
+    ],
+    "description": "Closure/anonymous function"
+  },
+  "Array": {
+    "prefix": "arr",
+    "body": "[${1}]",
+    "description": "Array literal"
+  },
+  "Array Map": {
+    "prefix": "arrmap",
+    "body": "array_map(fn(\\$${1:item}) => ${2}, ${3:\\$array})",
+    "description": "Array map with arrow function"
+  },
+  "Array Filter": {
+    "prefix": "arrfilter",
+    "body": "array_filter(${1:\\$array}, fn(\\$${2:item}) => ${3})",
+    "description": "Array filter with arrow function"
+  },
+  "Array Reduce": {
+    "prefix": "arrreduce",
+    "body": "array_reduce(${1:\\$array}, fn(\\$${2:carry}, \\$${3:item}) => ${4}, ${5:initial})",
+    "description": "Array reduce with arrow function"
+  },
+  "Error Log": {
+    "prefix": "log",
+    "body": "error_log(${1});",
+    "description": "Log to error log"
+  },
+  "Var Dump": {
+    "prefix": "dump",
+    "body": "var_dump(${1});",
+    "description": "Dump variable"
+  },
+  "Dump and Die": {
+    "prefix": "dd",
+    "body": ["var_dump(${1});", "die();"],
+    "description": "Dump and die"
+  },
+  "Print R": {
+    "prefix": "pr",
+    "body": "print_r(${1}, true);",
+    "description": "Print readable"
+  },
+  "Echo": {
+    "prefix": "echo",
+    "body": "echo ${1};",
+    "description": "Echo statement"
+  },
+  "Return": {
+    "prefix": "ret",
+    "body": "return ${1};",
+    "description": "Return statement"
+  },
+  "Throw Exception": {
+    "prefix": "throw",
+    "body": "throw new ${1:\\Exception}('${2:message}');",
+    "description": "Throw exception"
+  },
+  "PHPDoc Class": {
+    "prefix": "docclass",
+    "body": [
+      "/**",
+      " * ${1:Class description}",
+      " *",
+      " * @package ${2:Package}",
+      " * @author ${3:Author}",
+      " */"
+    ],
+    "description": "PHPDoc for class"
+  },
+  "PHPDoc Method": {
+    "prefix": "docmethod",
+    "body": [
+      "/**",
+      " * ${1:Method description}",
+      " *",
+      " * @param ${2:type} \\$${3:param}",
+      " * @return ${4:type}",
+      " */"
+    ],
+    "description": "PHPDoc for method"
+  },
+  "PHPDoc Property": {
+    "prefix": "docprop",
+    "body": [
+      "/**",
+      " * @var ${1:type}",
+      " */"
+    ],
+    "description": "PHPDoc for property"
+  }
+}

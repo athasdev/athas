@@ -91,7 +91,7 @@ export async function GET(
             fontSize: "20px",
           }}
         >
-          docs.athas.dev
+          athas.dev/docs
         </div>
       </div>
     ),

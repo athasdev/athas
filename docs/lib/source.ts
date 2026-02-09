@@ -4,7 +4,7 @@ import { icons } from "lucide-react";
 import { createElement } from "react";
 
 export const source = loader({
-  baseUrl: "/docs",
+  baseUrl: "/",
   source: docs.toFumadocsSource(),
   icon(icon) {
     if (!icon) return undefined;
@@ -17,5 +17,5 @@ export const source = loader({
 
 export function getOgImageUrl(page: InferPageType<typeof source>) {
   const segments = [...page.slugs, "image.png"];
-  return `/og/docs/${segments.join("/")}`;
+  return `/docs/og/docs/${segments.join("/")}`;
 }

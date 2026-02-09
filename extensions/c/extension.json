@@ -1,0 +1,23 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.c",
+  "name": "C",
+  "displayName": "C",
+  "version": "1.0.0",
+  "description": "C language support with syntax highlighting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "c",
+      "extensions": [".c", ".h"],
+      "aliases": ["C"]
+    }
+  ],
+  "capabilities": {
+    "grammar": {
+      "wasmPath": "parser.wasm",
+      "highlightQuery": "highlights.scm"
+    }
+  }
+}

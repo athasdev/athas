@@ -1,0 +1,74 @@
+{
+  "id": "athas.rust-full",
+  "name": "Rust Tools",
+  "displayName": "Rust Tools",
+  "description": "rust-analyzer, rustfmt, and clippy packaged for Athas",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "license": "MIT",
+  "category": "language",
+  "icon": "https://athas.dev/extensions/packages/rust/icon.svg",
+  "capabilities": {
+    "type": "language",
+    "languageId": "rust",
+    "fileExtensions": ["rs"],
+    "aliases": ["Rust", "rs"],
+    "lsp": {
+      "server": {
+        "darwin-arm64": "lsp/rust-analyzer-darwin",
+        "darwin-x64": "lsp/rust-analyzer-darwin",
+        "linux-x64": "lsp/rust-analyzer-linux",
+        "win32-x64": "lsp/rust-analyzer.exe"
+      },
+      "args": [],
+      "fileExtensions": [".rs"],
+      "languageIds": ["rust"]
+    },
+    "formatter": {
+      "command": {
+        "darwin-arm64": "lsp/rustfmt-darwin",
+        "darwin-x64": "lsp/rustfmt-darwin",
+        "linux-x64": "lsp/rustfmt-linux",
+        "win32-x64": "lsp/rustfmt.exe"
+      },
+      "args": [],
+      "inputMethod": "stdin",
+      "outputMethod": "stdout"
+    },
+    "linter": {
+      "command": {
+        "darwin-arm64": "lsp/cargo-darwin",
+        "darwin-x64": "lsp/cargo-darwin",
+        "linux-x64": "lsp/cargo-linux",
+        "win32-x64": "lsp/cargo.exe"
+      },
+      "args": ["clippy", "--message-format", "json"],
+      "diagnosticFormat": "regex"
+    }
+  },
+  "installation": {
+    "minVersion": "0.3.0",
+    "platforms": {
+      "darwin-arm64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/rust/rust-darwin-arm64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      },
+      "darwin-x64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/rust/rust-darwin-x64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      },
+      "linux-x64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/rust/rust-linux-x64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      },
+      "win32-x64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/rust/rust-win32-x64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      }
+    }
+  }
+}

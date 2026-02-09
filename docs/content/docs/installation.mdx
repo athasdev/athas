@@ -3,7 +3,9 @@ title: Installation
 description: Download and install Athas on your platform
 ---
 
-Download and install Athas on your platform.
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+Get the latest installer from GitHub Releases and follow the steps for your OS.
 
 ## Download
 
@@ -11,38 +13,36 @@ Download the latest version from GitHub releases:
 
 **[Download from GitHub Releases](https://github.com/athasdev/athas/releases)**
 
-## macOS
+<Tabs items={["macOS", "Windows", "Linux"]}>
+  <Tab value="macOS">
+    1. Download the `.dmg` file from [releases](https://github.com/athasdev/athas/releases)
+    2. Open the downloaded file
+    3. Drag Athas to your Applications folder
+    4. Open Athas from Applications
+  </Tab>
+  <Tab value="Windows">
+    1. Download the installer from [releases](https://github.com/athasdev/athas/releases)
+    2. Run the installer
+    3. Follow the installation wizard
+    4. Launch Athas from the Start Menu
+  </Tab>
+  <Tab value="Linux">
+    Download the appropriate package for your distribution:
 
-1. Download the `.dmg` file from [releases](https://github.com/athasdev/athas/releases)
-2. Open the downloaded file
-3. Drag Athas to your Applications folder
-4. Open Athas from Applications
+    **Debian/Ubuntu (.deb):**
+    ```bash
+    sudo dpkg -i athas_*.deb
+    ```
 
-**Note**: On first launch, you may need to right-click and select "Open" to bypass Gatekeeper.
+    **Fedora/RHEL (.rpm):**
+    ```bash
+    sudo rpm -i athas-*.rpm
+    ```
 
-## Windows
-
-1. Download the installer from [releases](https://github.com/athasdev/athas/releases)
-2. Run the installer
-3. Follow the installation wizard
-4. Launch Athas from the Start Menu
-
-## Linux
-
-Download the appropriate package for your distribution:
-
-**Debian/Ubuntu (.deb):**
-```bash
-sudo dpkg -i athas_*.deb
-```
-
-**Fedora/RHEL (.rpm):**
-```bash
-sudo rpm -i athas-*.rpm
-```
-
-**AppImage:**
-```bash
-chmod +x Athas-*.AppImage
-./Athas-*.AppImage
-```
+    **AppImage:**
+    ```bash
+    chmod +x Athas-*.AppImage
+    ./Athas-*.AppImage
+    ```
+  </Tab>
+</Tabs>

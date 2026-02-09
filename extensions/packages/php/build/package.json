@@ -1,0 +1,28 @@
+{
+  "name": "intelephense-standalone",
+  "version": "1.0.0",
+  "description": "Standalone Intelephense PHP Language Server",
+  "main": "index.js",
+  "bin": "index.js",
+  "scripts": {
+    "build": "npm run build:all",
+    "build:all": "npm run build:darwin-arm64 && npm run build:darwin-x64 && npm run build:linux-x64 && npm run build:win32-x64",
+    "build:darwin-arm64": "pkg . --target node18-macos-arm64 --output ../lsp/intelephense-darwin-arm64",
+    "build:darwin-x64": "pkg . --target node18-macos-x64 --output ../lsp/intelephense-darwin-x64",
+    "build:linux-x64": "pkg . --target node18-linux-x64 --output ../lsp/intelephense-linux-x64",
+    "build:win32-x64": "pkg . --target node18-win-x64 --output ../lsp/intelephense-win32-x64.exe"
+  },
+  "pkg": {
+    "scripts": [],
+    "assets": [
+      "node_modules/intelephense/**/*"
+    ],
+    "outputPath": "../lsp"
+  },
+  "dependencies": {
+    "intelephense": "^1.10.4"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^5.12.0"
+  }
+}

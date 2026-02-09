@@ -3,39 +3,67 @@ title: AI Providers
 description: Configure AI providers and API keys
 ---
 
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
 Athas supports multiple AI providers.
 
-## Cloud Providers
+<Tabs items={["Cloud", "Local"]}>
+  <Tab value="Cloud">
+    ### OpenAI
 
-### OpenAI
+    1. Get an API key from [OpenAI](https://platform.openai.com/api-keys)
+    2. Go to **Settings > AI > API Keys**
+    3. Click "Set API Key" next to OpenAI
+    4. Paste your key and save
 
-1. Get an API key from [OpenAI](https://platform.openai.com/api-keys)
-2. Go to **Settings > AI > API Keys**
-3. Click "Set API Key" next to OpenAI
-4. Paste your key and save
+    ### Anthropic
 
-### Anthropic
+    1. Get an API key from [Anthropic](https://console.anthropic.com/)
+    2. Go to **Settings > AI > API Keys**
+    3. Click "Set API Key" next to Anthropic
+    4. Paste your key and save
 
-1. Get an API key from [Anthropic](https://console.anthropic.com/)
-2. Go to **Settings > AI > API Keys**
-3. Click "Set API Key" next to Anthropic
-4. Paste your key and save
+    ### OpenRouter
 
-## Local Providers
+    1. Get an API key from [OpenRouter](https://openrouter.ai/keys)
+    2. Go to **Settings > AI > API Keys**
+    3. Click "Set API Key" next to OpenRouter
+    4. Paste your key and save
 
-### Ollama
+    ### Gemini
 
-Run AI models locally using [Ollama](https://ollama.ai/):
+    1. Get an API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+    2. Go to **Settings > AI > API Keys**
+    3. Click "Set API Key" next to Gemini
+    4. Paste your key and save
 
-1. Install Ollama on your system
-2. Pull a model: `ollama pull codellama`
-3. Select "Ollama" as your provider in Athas settings
-4. Available models will be detected automatically
+    ### xAI Grok
 
-Popular models:
-- **CodeLlama**: Optimized for code generation
-- **Llama 3**: General purpose
-- **Mistral**: Fast and capable
+    1. Get an API key from [xAI Console](https://console.x.ai/)
+    2. Go to **Settings > AI > API Keys**
+    3. Click "Set API Key" next to xAI Grok
+    4. Paste your key and save
+  </Tab>
+  <Tab value="Local">
+    ### Ollama
+
+    Run AI models locally using [Ollama](https://ollama.ai/):
+
+    1. Install Ollama on your system
+    2. Pull a model: `ollama pull codellama`
+    3. Select "Ollama" as your provider in Athas settings
+    4. Available models will be detected automatically
+
+    <Callout type="info">
+      Ollama must be running locally for model detection and requests to work.
+    </Callout>
+
+    Popular models:
+    - **CodeLlama**: Optimized for code generation
+    - **Llama 3**: General purpose
+    - **Mistral**: Fast and capable
+  </Tab>
+</Tabs>
 
 ## Model Parameters
 

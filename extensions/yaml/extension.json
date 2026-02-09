@@ -1,0 +1,35 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.yaml",
+  "name": "YAML",
+  "displayName": "YAML",
+  "version": "1.0.0",
+  "description": "YAML language support with syntax highlighting, LSP, and formatting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "yaml",
+      "extensions": [".yaml", ".yml"],
+      "aliases": ["YAML"]
+    }
+  ],
+  "capabilities": {
+    "grammar": {
+      "wasmPath": "parser.wasm",
+      "highlightQuery": "highlights.scm"
+    },
+    "lsp": {
+      "name": "yaml-language-server",
+      "runtime": "bun",
+      "package": "yaml-language-server",
+      "args": ["--stdio"]
+    },
+    "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": ["--stdin-filepath", "${file}"]
+    }
+  }
+}

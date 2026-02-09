@@ -1,0 +1,30 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.bash",
+  "name": "Bash",
+  "displayName": "Bash",
+  "version": "1.0.0",
+  "description": "Bash/Shell script support with syntax highlighting and LSP",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "bash",
+      "extensions": [".sh", ".bash", ".zsh"],
+      "aliases": ["Bash", "Shell", "sh"],
+      "filenames": [".bashrc", ".zshrc", ".bash_profile", ".profile"]
+    }
+  ],
+  "capabilities": {
+    "grammar": {
+      "wasmPath": "parser.wasm",
+      "highlightQuery": "highlights.scm"
+    },
+    "lsp": {
+      "name": "bash-language-server",
+      "runtime": "bun",
+      "package": "bash-language-server",
+      "args": ["start"]
+    }
+  }
+}

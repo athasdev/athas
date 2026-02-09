@@ -3,26 +3,29 @@ title: AI Assistant
 description: Built-in AI chat and code assistance
 ---
 
+import { Steps, Step } from "fumadocs-ui/components/steps";
+
 Athas includes a built-in AI assistant for coding help.
 
 ## Features
 
 - **Chat Interface**: Conversational AI for coding questions
-- **Code Completion**: AI-powered code suggestions
-- **Multiple Providers**: OpenAI, Anthropic, Ollama, and more
-- **Context Awareness**: AI understands your project files
+- **Multiple Providers**: OpenAI, Anthropic, OpenRouter, Gemini, Grok, Ollama, and more
+- **Context Awareness**: AI can use files you reference
 
 ## Getting Started
 
-1. Open the AI panel from the sidebar (or `Cmd+Shift+A` / `Ctrl+Shift+A`)
-2. Configure your AI provider in **Settings > AI**
-3. Start chatting or asking questions about your code
-
-## Supported Providers
-
-- **OpenAI**: GPT-4, GPT-4 Turbo, GPT-3.5 Turbo
-- **Anthropic**: Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku
-- **Ollama**: Local models (Llama, CodeLlama, Mistral, etc.)
+<Steps>
+  <Step>
+    Open the AI panel from the sidebar (or `Cmd+Shift+A` / `Ctrl+Shift+A`)
+  </Step>
+  <Step>
+    Configure your AI provider in **Settings > AI**
+  </Step>
+  <Step>
+    Start chatting or asking questions about your code
+  </Step>
+</Steps>
 
 ## Configuration
 

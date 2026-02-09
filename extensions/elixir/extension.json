@@ -1,0 +1,23 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.elixir",
+  "name": "Elixir",
+  "displayName": "Elixir",
+  "version": "1.0.0",
+  "description": "Elixir language support with syntax highlighting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "elixir",
+      "extensions": [".ex", ".exs"],
+      "aliases": ["Elixir"]
+    }
+  ],
+  "capabilities": {
+    "grammar": {
+      "wasmPath": "parser.wasm",
+      "highlightQuery": "highlights.scm"
+    }
+  }
+}

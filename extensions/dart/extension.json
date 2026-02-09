@@ -1,0 +1,23 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.dart",
+  "name": "Dart",
+  "displayName": "Dart",
+  "version": "1.0.0",
+  "description": "Dart language support with syntax highlighting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "dart",
+      "extensions": [".dart"],
+      "aliases": ["Dart"]
+    }
+  ],
+  "capabilities": {
+    "grammar": {
+      "wasmPath": "parser.wasm",
+      "highlightQuery": "highlights.scm"
+    }
+  }
+}

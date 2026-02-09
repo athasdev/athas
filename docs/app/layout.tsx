@@ -4,7 +4,9 @@ import "./global.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://docs.athas.dev";
+const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://athas.dev";
+const basePath = "/docs";
+const docsUrl = `${siteUrl}${basePath}`;
 
 export const metadata: Metadata = {
   title: {
@@ -12,15 +14,15 @@ export const metadata: Metadata = {
     template: "%s | Athas Docs",
   },
   description: "Documentation for Athas - A lightweight, cross-platform code editor built with Tauri",
-  metadataBase: new URL(baseUrl),
+  metadataBase: new URL(siteUrl),
   icons: {
-    icon: "/icon.png",
-    apple: "/icon.png",
+    icon: `${basePath}/icon.png`,
+    apple: `${basePath}/icon.png`,
   },
   openGraph: {
     title: "Athas Documentation",
     description: "Documentation for Athas - A lightweight, cross-platform code editor built with Tauri",
-    url: baseUrl,
+    url: docsUrl,
     siteName: "Athas Docs",
     type: "website",
   },

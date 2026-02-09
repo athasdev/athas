@@ -22,6 +22,7 @@
     "dev:app": "WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev",
     "dev:scan": "WEBKIT_DISABLE_DMABUF_RENDERER=1 VITE_REACT_SCAN=true tauri dev",
     "dev:docs": "bun --cwd docs dev",
+    "extensions:index": "bun scripts/build-extensions-index.ts",
     "pre-release": "bun scripts/pre-release-check.ts",
     "release": "bun scripts/release.ts",
     "release:patch": "bun scripts/release.ts patch",

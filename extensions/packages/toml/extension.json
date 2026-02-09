@@ -1,0 +1,64 @@
+{
+  "id": "athas.toml-full",
+  "name": "TOML Tools",
+  "displayName": "TOML Tools",
+  "description": "Taplo LSP and formatter packaged for Athas",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "license": "MIT",
+  "category": "language",
+  "capabilities": {
+    "type": "language",
+    "languageId": "toml",
+    "fileExtensions": ["toml"],
+    "aliases": ["TOML", "toml"],
+    "lsp": {
+      "server": {
+        "darwin-arm64": "lsp/taplo-darwin",
+        "darwin-x64": "lsp/taplo-darwin",
+        "linux-x64": "lsp/taplo-linux",
+        "win32-x64": "lsp/taplo.exe"
+      },
+      "args": ["lsp", "stdio"],
+      "fileExtensions": [".toml"],
+      "languageIds": ["toml"]
+    },
+    "formatter": {
+      "command": {
+        "darwin-arm64": "lsp/taplo-darwin",
+        "darwin-x64": "lsp/taplo-darwin",
+        "linux-x64": "lsp/taplo-linux",
+        "win32-x64": "lsp/taplo.exe"
+      },
+      "args": ["fmt", "-"],
+      "inputMethod": "stdin",
+      "outputMethod": "stdout"
+    }
+  },
+  "installation": {
+    "minVersion": "0.3.0",
+    "platforms": {
+      "darwin-arm64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/toml/toml-darwin-arm64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      },
+      "darwin-x64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/toml/toml-darwin-x64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      },
+      "linux-x64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/toml/toml-linux-x64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      },
+      "win32-x64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/toml/toml-win32-x64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      }
+    }
+  }
+}
+

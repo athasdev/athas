@@ -1,0 +1,23 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.elisp",
+  "name": "EmacsLisp",
+  "displayName": "Emacs Lisp",
+  "version": "1.0.0",
+  "description": "Emacs Lisp language support with syntax highlighting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "elisp",
+      "extensions": [".el", ".emacs"],
+      "aliases": ["Emacs Lisp", "elisp"]
+    }
+  ],
+  "capabilities": {
+    "grammar": {
+      "wasmPath": "parser.wasm",
+      "highlightQuery": "highlights.scm"
+    }
+  }
+}

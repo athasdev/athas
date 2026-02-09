@@ -3,6 +3,8 @@ title: Keymaps
 description: Customize keyboard shortcuts
 ---
 
+import { Accordions, Accordion } from "fumadocs-ui/components/accordion";
+
 Athas allows you to customize keyboard shortcuts to match your workflow.
 
 ## Viewing Keymaps
@@ -13,26 +15,29 @@ Athas allows you to customize keyboard shortcuts to match your workflow.
 
 ## Customizing Keymaps
 
-Click on any shortcut to change it:
+Click any shortcut to change it:
 1. Press the new key combination
 2. The shortcut updates immediately
 
 ## Default Shortcuts
 
-### File Operations
-- `Cmd/Ctrl+S` - Save file
-- `Cmd/Ctrl+Shift+S` - Save all files
-- `Cmd/Ctrl+W` - Close file
-- `Cmd/Ctrl+N` - New file
-
-### Navigation
-- `Cmd/Ctrl+P` - Quick open file
-- `Cmd/Ctrl+Shift+P` - Command palette
-- `Cmd/Ctrl+G` - Go to line
-- `Cmd/Ctrl+Shift+O` - Go to symbol
-
-### Editing
-- `Cmd/Ctrl+Z` - Undo
-- `Cmd/Ctrl+Shift+Z` - Redo
-- `Cmd/Ctrl+D` - Select word / next occurrence
-- `Cmd/Ctrl+/` - Toggle comment
+<Accordions type="multiple">
+  <Accordion title="File Operations">
+    - `Cmd/Ctrl+S` - Save file
+    - `Cmd/Ctrl+Shift+S` - Save all files
+    - `Cmd/Ctrl+W` - Close file
+    - `Cmd/Ctrl+N` - New file
+  </Accordion>
+  <Accordion title="Navigation">
+    - `Cmd/Ctrl+P` - Quick open file
+    - `Cmd/Ctrl+Shift+P` - Command palette
+    - `Cmd/Ctrl+G` - Go to line
+    - `Cmd/Ctrl+Shift+O` - Go to symbol
+  </Accordion>
+  <Accordion title="Editing">
+    - `Cmd/Ctrl+Z` - Undo
+    - `Cmd/Ctrl+Shift+Z` - Redo
+    - `Cmd/Ctrl+D` - Select word / next occurrence
+    - `Cmd/Ctrl+/` - Toggle comment
+  </Accordion>
+</Accordions>

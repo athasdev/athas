@@ -1,0 +1,29 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.php",
+  "name": "PHP",
+  "displayName": "PHP",
+  "version": "1.0.0",
+  "description": "PHP language support with syntax highlighting and LSP",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "php",
+      "extensions": [".php", ".phtml", ".php3", ".php4", ".php5"],
+      "aliases": ["PHP"]
+    }
+  ],
+  "capabilities": {
+    "grammar": {
+      "wasmPath": "parser.wasm",
+      "highlightQuery": "highlights.scm"
+    },
+    "lsp": {
+      "name": "intelephense",
+      "runtime": "bun",
+      "package": "intelephense",
+      "args": ["--stdio"]
+    }
+  }
+}

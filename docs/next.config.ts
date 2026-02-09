@@ -4,4 +4,5 @@ const withMDX = createMDX();
 
 export default withMDX({
   reactStrictMode: true,
+  basePath: "/docs",
 });

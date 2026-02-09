@@ -1,0 +1,64 @@
+{
+  "id": "athas.html",
+  "name": "HTML",
+  "displayName": "HTML Language Support",
+  "description": "HTML language support with IntelliSense, formatting, and snippets",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "license": "MIT",
+  "category": "language",
+  "icon": "https://athas.dev/extensions/packages/html/icon.svg",
+  "capabilities": {
+    "type": "language",
+    "languageId": "html",
+    "fileExtensions": ["html", "htm"],
+    "aliases": ["HTML", "html"],
+    "grammar": {
+      "wasmPath": "parsers/tree-sitter-html.wasm",
+      "highlightQuery": "queries/html/highlights.scm",
+      "scopeName": "text.html.basic"
+    },
+    "lsp": {
+      "server": {
+        "darwin-arm64": "lsp/node_modules/vscode-html-languageserver-bin/htmlServerMain.js",
+        "darwin-x64": "lsp/node_modules/vscode-html-languageserver-bin/htmlServerMain.js",
+        "linux-x64": "lsp/node_modules/vscode-html-languageserver-bin/htmlServerMain.js",
+        "linux-arm64": "lsp/node_modules/vscode-html-languageserver-bin/htmlServerMain.js",
+        "win32-x64": "lsp/node_modules/vscode-html-languageserver-bin/htmlServerMain.js"
+      },
+      "args": ["--stdio"],
+      "fileExtensions": [".html", ".htm"],
+      "languageIds": ["html"]
+    }
+  },
+  "installation": {
+    "minVersion": "0.3.0",
+    "platforms": {
+      "darwin-arm64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/html/html-darwin-arm64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      },
+      "darwin-x64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/html/html-darwin-x64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      },
+      "linux-x64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/html/html-linux-x64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      },
+      "linux-arm64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/html/html-linux-arm64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      },
+      "win32-x64": {
+        "downloadUrl": "https://athas.dev/extensions/packages/html/html-win32-x64.tar.gz",
+        "size": 0,
+        "checksum": ""
+      }
+    }
+  }
+}
