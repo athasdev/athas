@@ -384,7 +384,7 @@ details: ${errorDetails || mainError}
           chatActions.setStreamingMessageId(newMessageId);
           requestAnimationFrame(scrollToBottom);
         },
-        (toolName: string, toolInput?: any, toolId?: string, event) => {
+        (toolName: string, toolInput?: any, toolId?: string, event?: any) => {
           if (activeStreamRunIdRef.current !== streamRunId) return;
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
@@ -428,7 +428,7 @@ details: ${errorDetails || mainError}
             toolCalls: appended,
           });
         },
-        (toolName: string, event) => {
+        (toolName: string, event?: any) => {
           if (activeStreamRunIdRef.current !== streamRunId) return;
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
