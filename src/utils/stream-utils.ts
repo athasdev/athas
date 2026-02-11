@@ -13,7 +13,6 @@ interface StreamParserOptions {
   textMode?: "snapshot" | "delta";
 }
 
-// TODO(delete-debug): Remove temporary SSE parser debug logs after chat-stream regression is resolved.
 const KAIRO_SSE_DEBUG_LOGS = false;
 
 const logSseDebug = (message: string, data?: unknown): void => {
@@ -21,10 +20,10 @@ const logSseDebug = (message: string, data?: unknown): void => {
     return;
   }
   if (data === undefined) {
-    console.debug(`[delete-me][kairo-sse-debug] ${message}`);
+    console.debug(`[kairo-sse-debug] ${message}`);
     return;
   }
-  console.debug(`[delete-me][kairo-sse-debug] ${message}`, data);
+  console.debug(`[kairo-sse-debug] ${message}`, data);
 };
 
 interface SSEPart {

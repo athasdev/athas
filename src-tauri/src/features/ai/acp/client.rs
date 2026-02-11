@@ -71,17 +71,6 @@ impl AthasAcpClient {
       path.to_string()
    }
 
-   fn log_kairo_tool_event(&self, phase: &str, tool_name: &str, tool_id: &str) {
-      if self.agent_id == "kairo-code" {
-         log::info!(
-            "[delete-me][kairo-acp-tool] phase={} tool={} toolId={}",
-            phase,
-            tool_name,
-            tool_id
-         );
-      }
-   }
-
    fn map_tool_status(status: acp::ToolCallStatus) -> AcpToolStatus {
       match status {
          acp::ToolCallStatus::Pending => AcpToolStatus::Pending,
@@ -263,7 +252,6 @@ impl acp::Client for AthasAcpClient {
                   },
                );
             }
-            self.log_kairo_tool_event("start", &tool_call.title, &tool_id);
             self.emit_event(AcpEvent::ToolStart {
                session_id,
                tool_name: tool_call.title.clone(),
@@ -334,7 +322,6 @@ impl acp::Client for AthasAcpClient {
                Self::extract_error(&output).or_else(|| Some("Tool execution failed".to_string()))
             };
 
-            self.log_kairo_tool_event("complete", &tool_name, &tool_id);
             self.emit_event(AcpEvent::ToolComplete {
                session_id,
                tool_id,

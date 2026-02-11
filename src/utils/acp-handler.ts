@@ -127,8 +127,6 @@ export class AcpStreamHandler {
     // Keep this hard-coded for now to avoid accidental silent downgrade.
     const enableKairoTools = true;
 
-    console.info(`[delete-me][kairo-acp-debug] env_tools_enabled=${enableKairoTools ? "1" : "0"}`);
-
     return {
       KAIRO_ACCESS_TOKEN: accessToken,
       COLINE_KAIRO_ACCESS_TOKEN: accessToken,
