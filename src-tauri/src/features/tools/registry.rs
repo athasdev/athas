@@ -354,8 +354,8 @@ impl ToolRegistry {
       };
 
       format!(
-            "https://github.com/rust-lang/rust-analyzer/releases/latest/download/rust-analyzer-{}-{}.{}",
-            arch, os, ext
-        )
+         "https://github.com/rust-lang/rust-analyzer/releases/latest/download/rust-analyzer-{}-{}.{}",
+         arch, os, ext
+      )
    }
 }

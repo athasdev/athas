@@ -71,8 +71,7 @@ impl fmt::Display for RuntimeError {
    }
 }
 
-impl std::error::Error for RuntimeError {
-}
+impl std::error::Error for RuntimeError {}
 
 impl From<std::io::Error> for RuntimeError {
    fn from(err: std::io::Error) -> Self {
