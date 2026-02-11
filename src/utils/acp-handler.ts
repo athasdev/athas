@@ -17,8 +17,13 @@ interface AcpHandlers {
   onComplete: () => void;
   onError: (error: string) => void;
   onNewMessage?: () => void;
-  onToolUse?: (toolName: string, toolInput?: unknown) => void;
-  onToolComplete?: (toolName: string) => void;
+  onToolUse?: (
+    toolName: string,
+    toolInput?: unknown,
+    toolId?: string,
+    event?: Extract<AcpEvent, { type: "tool_start" }>,
+  ) => void;
+  onToolComplete?: (toolName: string, event?: Extract<AcpEvent, { type: "tool_complete" }>) => void;
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
   onEvent?: (event: AcpEvent) => void;
 }
@@ -236,13 +241,13 @@ export class AcpStreamHandler {
   private handleToolStart(event: Extract<AcpEvent, { type: "tool_start" }>): void {
     this.currentToolName = event.toolName;
     if (this.handlers.onToolUse) {
-      this.handlers.onToolUse(event.toolName, event.input);
+      this.handlers.onToolUse(event.toolName, event.input, event.toolId, event);
     }
   }
 
   private handleToolComplete(event: Extract<AcpEvent, { type: "tool_complete" }>): void {
-    if (this.currentToolName && this.handlers.onToolComplete) {
-      this.handlers.onToolComplete(this.currentToolName);
+    if (this.handlers.onToolComplete) {
+      this.handlers.onToolComplete(event.toolName || this.currentToolName || "unknown", event);
     }
     this.currentToolName = null;
     this.pendingNewMessage = true;

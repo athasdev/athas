@@ -338,43 +338,100 @@ details: ${errorDetails || mainError}
           chatActions.setStreamingMessageId(newMessageId);
           requestAnimationFrame(scrollToBottom);
         },
-        (toolName: string, toolInput?: any) => {
+        (toolName: string, toolInput?: any, toolId?: string, event) => {
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
+          const existing = currentMsg?.toolCalls || [];
+          const nextToolCalls = toolId
+            ? existing.map((tc) =>
+                tc.toolId === toolId
+                  ? {
+                      ...tc,
+                      name: toolName,
+                      input: toolInput,
+                      kind: event?.kind,
+                      status: event?.status,
+                      content: event?.content,
+                      locations: event?.locations,
+                    }
+                  : tc,
+              )
+            : existing;
+
+          const hasExistingById = Boolean(toolId && existing.some((tc) => tc.toolId === toolId));
+          const appended = hasExistingById
+            ? nextToolCalls
+            : [
+                ...nextToolCalls,
+                {
+                  toolId,
+                  name: toolName,
+                  input: toolInput,
+                  kind: event?.kind,
+                  status: event?.status,
+                  content: event?.content,
+                  locations: event?.locations,
+                  timestamp: new Date(),
+                },
+              ];
+
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
             isToolUse: true,
             toolName,
-            toolCalls: [
-              ...(currentMsg?.toolCalls || []),
-              {
-                name: toolName,
-                input: toolInput,
-                timestamp: new Date(),
-              },
-            ],
+            toolCalls: appended,
           });
         },
-        (toolName: string) => {
+        (toolName: string, event) => {
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
 
+          const normalizeTool = (value: string) => value.trim().toLowerCase();
+          const isReadTool = (value: string) => {
+            const normalized = normalizeTool(value);
+            return (
+              normalized === "read" ||
+              normalized === "read_file" ||
+              normalized === "readfile" ||
+              normalized.includes("read")
+            );
+          };
+
           // Find the tool call that just completed
           const completedToolCall = currentMsg?.toolCalls?.find(
-            (tc) => tc.name === toolName && !tc.isComplete,
+            (tc) =>
+              (event?.toolId
+                ? tc.toolId === event.toolId
+                : normalizeTool(tc.name) === normalizeTool(toolName)) && !tc.isComplete,
           );
 
           // Auto-open Read files if setting is enabled
-          if (toolName === "Read" && completedToolCall?.input?.file_path) {
+          const readPath =
+            completedToolCall?.input?.file_path || completedToolCall?.input?.path || undefined;
+          if (isReadTool(toolName) && readPath) {
             const { settings } = useSettingsStore.getState();
             if (settings.aiAutoOpenReadFiles) {
               const { handleFileSelect } = useFileSystemStore.getState();
-              handleFileSelect(completedToolCall.input.file_path, false);
+              handleFileSelect(readPath, false);
             }
           }
 
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
             toolCalls: currentMsg?.toolCalls?.map((tc) =>
-              tc.name === toolName && !tc.isComplete ? { ...tc, isComplete: true } : tc,
+              (event?.toolId
+                ? tc.toolId === event.toolId
+                : normalizeTool(tc.name) === normalizeTool(toolName)) && !tc.isComplete
+                ? {
+                    ...tc,
+                    isComplete: true,
+                    status: event?.status || (event?.success === false ? "failed" : "completed"),
+                    output: event?.output ?? tc.output,
+                    error: event?.error ?? tc.error,
+                    input: event?.input ?? tc.input,
+                    kind: event?.kind ?? tc.kind,
+                    content: event?.content ?? tc.content,
+                    locations: event?.locations ?? tc.locations,
+                  }
+                : tc,
             ),
           });
         },

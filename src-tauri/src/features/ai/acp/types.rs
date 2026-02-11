@@ -115,6 +115,16 @@ pub struct AcpAgentStatus {
    pub initialized: bool,
 }
 
+/// Tool execution status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AcpToolStatus {
+   Pending,
+   InProgress,
+   Completed,
+   Failed,
+}
+
 /// Content block types in ACP messages
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -151,6 +161,14 @@ pub enum AcpEvent {
       tool_name: String,
       tool_id: String,
       input: serde_json::Value,
+      #[serde(skip_serializing_if = "Option::is_none")]
+      status: Option<AcpToolStatus>,
+      #[serde(skip_serializing_if = "Option::is_none")]
+      kind: Option<String>,
+      #[serde(skip_serializing_if = "Option::is_none")]
+      content: Option<serde_json::Value>,
+      #[serde(skip_serializing_if = "Option::is_none")]
+      locations: Option<serde_json::Value>,
    },
    /// Tool use completed
    #[serde(rename_all = "camelCase")]
@@ -158,6 +176,22 @@ pub enum AcpEvent {
       session_id: String,
       tool_id: String,
       success: bool,
+      #[serde(skip_serializing_if = "Option::is_none")]
+      tool_name: Option<String>,
+      #[serde(skip_serializing_if = "Option::is_none")]
+      input: Option<serde_json::Value>,
+      #[serde(skip_serializing_if = "Option::is_none")]
+      output: Option<serde_json::Value>,
+      #[serde(skip_serializing_if = "Option::is_none")]
+      error: Option<String>,
+      #[serde(skip_serializing_if = "Option::is_none")]
+      status: Option<AcpToolStatus>,
+      #[serde(skip_serializing_if = "Option::is_none")]
+      kind: Option<String>,
+      #[serde(skip_serializing_if = "Option::is_none")]
+      content: Option<serde_json::Value>,
+      #[serde(skip_serializing_if = "Option::is_none")]
+      locations: Option<serde_json::Value>,
    },
    /// Permission request from agent
    #[serde(rename_all = "camelCase")]

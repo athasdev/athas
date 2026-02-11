@@ -3,10 +3,15 @@ import type { FileEntry } from "@/features/file-system/types/app";
 import type { Buffer } from "@/features/tabs/types/buffer";
 
 export interface ToolCall {
+  toolId?: string;
   name: string;
+  kind?: string;
+  status?: "pending" | "in_progress" | "completed" | "failed";
   input: any;
   output?: any;
   error?: string;
+  content?: unknown;
+  locations?: unknown;
   timestamp: Date;
   isComplete?: boolean;
 }

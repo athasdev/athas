@@ -3,8 +3,6 @@ import {
   CheckCircle,
   ChevronRight,
   Clock,
-  Database,
-  Edit,
   ExternalLink,
   FileText,
   FolderOpen,
@@ -14,7 +12,7 @@ import {
   Wrench,
 } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "@/utils/cn";
 
 interface ToolCallDisplayProps {
@@ -26,34 +24,220 @@ interface ToolCallDisplayProps {
   onOpenInEditor?: (filePath: string) => void;
 }
 
+type ToolStatus = "pending" | "in_progress" | "completed" | "failed";
+
 const toolIcons: Record<string, React.ElementType> = {
-  // File operations
-  Read: FileText,
-  Write: Edit,
-  Edit: Edit,
-  MultiEdit: Edit,
-
-  // Search operations
-  Grep: Search,
-  Glob: FolderOpen,
-  Search: Search,
-  Task: Search,
-
-  // System operations
-  Bash: Terminal,
-  LS: FolderOpen,
-
-  // Web operations
-  WebFetch: Globe,
-  WebSearch: Globe,
-
-  // Database operations
-  NotebookRead: Database,
-  NotebookEdit: Database,
-
-  // Default
+  read: FileText,
+  edit: FileText,
+  write: FileText,
+  multiedit: FileText,
+  delete: FileText,
+  grep: Search,
+  search: Search,
+  glob: FolderOpen,
+  list_dir: FolderOpen,
+  ls: FolderOpen,
+  run_terminal: Terminal,
+  bash: Terminal,
+  execute: Terminal,
+  webfetch: Globe,
+  websearch: Globe,
+  fetch: Globe,
   default: Wrench,
 };
+
+const TOOL_BLOCK_MAX_LINES = 20;
+
+function normalizeToolName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+}
+
+function pickToolIcon(toolName: string): React.ElementType {
+  const normalized = normalizeToolName(toolName);
+
+  for (const [key, icon] of Object.entries(toolIcons)) {
+    if (key !== "default" && normalized.includes(key)) {
+      return icon;
+    }
+  }
+
+  return toolIcons.default;
+}
+
+function resolveStatus(input: {
+  isStreaming?: boolean;
+  error?: string;
+  output?: unknown;
+}): ToolStatus {
+  if (input.error) return "failed";
+  if (input.isStreaming) return "in_progress";
+  if (input.output !== undefined) return "completed";
+  return "pending";
+}
+
+function statusLabel(status: ToolStatus): string {
+  switch (status) {
+    case "in_progress":
+      return "Running";
+    case "completed":
+      return "Done";
+    case "failed":
+      return "Failed";
+    default:
+      return "Pending";
+  }
+}
+
+function truncate(value: string, max = 80): string {
+  if (value.length <= max) return value;
+  return `${value.slice(0, max)}...`;
+}
+
+function extractFilePath(input?: any, output?: any): string | undefined {
+  const candidates = [
+    input?.file_path,
+    input?.path,
+    input?.target_path,
+    input?.notebook_path,
+    output?.file_path,
+    output?.path,
+  ];
+
+  return candidates.find((value) => typeof value === "string" && value.trim().length > 0);
+}
+
+function summarizeTool(toolName: string, input?: any, output?: any): string {
+  const normalized = normalizeToolName(toolName);
+  const filePath = extractFilePath(input, output);
+  if (filePath) return filePath;
+
+  if (typeof input?.command === "string") return truncate(input.command, 72);
+  if (typeof input?.pattern === "string") return `pattern: ${truncate(input.pattern, 56)}`;
+  if (typeof input?.query === "string") return truncate(input.query, 72);
+  if (typeof input?.url === "string") return truncate(input.url, 72);
+
+  if (normalized.includes("list_dir") || normalized === "ls") {
+    return input?.path || ".";
+  }
+
+  return "tool call";
+}
+
+function toLines(value: string, maxLines = TOOL_BLOCK_MAX_LINES): string[] {
+  const lines = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  if (lines.length <= maxLines) return lines;
+  return [...lines.slice(0, maxLines), `... (${lines.length - maxLines} more lines)`];
+}
+
+function renderJson(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function renderDiffLines(
+  lines: Array<{ prefix: string; text: string; kind: "add" | "remove" | "neutral" }>,
+) {
+  return (
+    <div className="overflow-hidden rounded border border-border bg-primary-bg">
+      <div className="max-h-60 overflow-auto">
+        {lines.map((line, index) => (
+          <div
+            key={`${line.prefix}-${index}`}
+            className={cn(
+              "flex font-mono text-[11px] leading-5",
+              line.kind === "add" && "bg-emerald-500/10 text-emerald-300",
+              line.kind === "remove" && "bg-red-500/10 text-red-300",
+              line.kind === "neutral" && "text-text-lighter",
+            )}
+          >
+            <span className="w-5 shrink-0 text-center opacity-70">{line.prefix}</span>
+            <span className="flex-1 whitespace-pre-wrap pr-2">{line.text || " "}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function buildEditPreview(toolName: string, input?: any, output?: any): React.ReactNode | null {
+  const normalized = normalizeToolName(toolName);
+
+  if (
+    (normalized.includes("write") || normalized.includes("create")) &&
+    typeof input?.content === "string"
+  ) {
+    const lines = toLines(input.content).map((line) => ({
+      prefix: "+",
+      text: line,
+      kind: "add" as const,
+    }));
+    return renderDiffLines(lines);
+  }
+
+  if (normalized.includes("edit") && typeof input?.old_string === "string") {
+    const removed = toLines(input.old_string).map((line) => ({
+      prefix: "-",
+      text: line,
+      kind: "remove" as const,
+    }));
+    const added = toLines(String(input?.new_string || "")).map((line) => ({
+      prefix: "+",
+      text: line,
+      kind: "add" as const,
+    }));
+    return renderDiffLines([...removed, ...added]);
+  }
+
+  if (normalized.includes("multiedit") && Array.isArray(input?.edits)) {
+    const blocks = input.edits.slice(0, 3).flatMap((edit: any) => {
+      const removed = toLines(String(edit?.old_string || "")).map((line) => ({
+        prefix: "-",
+        text: line,
+        kind: "remove" as const,
+      }));
+      const added = toLines(String(edit?.new_string || "")).map((line) => ({
+        prefix: "+",
+        text: line,
+        kind: "add" as const,
+      }));
+      return [...removed, ...added];
+    });
+
+    if (blocks.length > 0) {
+      return renderDiffLines(blocks);
+    }
+  }
+
+  if (typeof output?.old_text === "string" || typeof output?.new_text === "string") {
+    const removed = toLines(String(output?.old_text || "")).map((line) => ({
+      prefix: "-",
+      text: line,
+      kind: "remove" as const,
+    }));
+    const added = toLines(String(output?.new_text || "")).map((line) => ({
+      prefix: "+",
+      text: line,
+      kind: "add" as const,
+    }));
+    return renderDiffLines([...removed, ...added]);
+  }
+
+  return null;
+}
+
+function renderStatusIcon(status: ToolStatus) {
+  if (status === "failed") return <AlertCircle size={10} className="text-red-400" />;
+  if (status === "completed") return <CheckCircle size={10} className="text-emerald-400" />;
+  if (status === "in_progress")
+    return <Clock size={10} className="animate-spin text-text-lighter" />;
+  return <Clock size={10} className="text-text-lighter/70" />;
+}
 
 export default function ToolCallDisplay({
   toolName,
@@ -65,197 +249,86 @@ export default function ToolCallDisplay({
 }: ToolCallDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const Icon = toolIcons[toolName] || toolIcons.default;
-
-  // not sure if there are tool calls that can be just empty without any input
-  if (!input || (typeof input === "object" && Object.keys(input).length === 0)) {
-    return;
-  }
-
-  // Format input parameters for display
-  const formatInput = (input: any): string => {
-    // Handle null/undefined/empty objects
-    if (!input || (typeof input === "object" && Object.keys(input).length === 0)) {
-      return "No parameters";
-    }
-
-    if (typeof input === "string") return input;
-
-    // Extract filename helper
-    const getFilename = (path: string) => path.split("/").pop() || path;
-
-    // Truncate long strings helper
-    const truncate = (str: string, maxLength: number = 50) => {
-      if (str.length <= maxLength) return str;
-      return `${str.substring(0, maxLength)}...`;
-    };
-
-    // Special formatting for common tools
-    if (toolName === "Read" && input.file_path) {
-      return getFilename(input.file_path);
-    }
-
-    if (toolName === "Edit" && input.file_path) {
-      const filename = getFilename(input.file_path);
-      const editType = input.replace_all ? "Replace all" : "Single edit";
-      // Show a preview of what's being edited if strings are short
-      if (input.old_string && input.old_string.length < 30) {
-        return `${filename}: "${truncate(input.old_string, 20)}" → "${truncate(input.new_string || "", 20)}" (${editType})`;
-      }
-      return `${filename} (${editType})`;
-    }
-
-    if (toolName === "Write" && input.file_path) {
-      return getFilename(input.file_path);
-    }
-
-    if (toolName === "MultiEdit" && input.file_path) {
-      const filename = getFilename(input.file_path);
-      const editCount = input.edits?.length || 0;
-      return `${filename} (${editCount} edit${editCount !== 1 ? "s" : ""})`;
-    }
-
-    if ((toolName === "NotebookRead" || toolName === "NotebookEdit") && input.notebook_path) {
-      return getFilename(input.notebook_path);
-    }
-
-    if (toolName === "Bash" && input.command) {
-      return truncate(input.command, 60);
-    }
-
-    if (toolName === "Grep" && input.pattern) {
-      const pattern = truncate(input.pattern, 30);
-      return `Pattern: "${pattern}"${input.path ? ` in ${getFilename(input.path)}` : ""}`;
-    }
-
-    if (toolName === "Glob" && input.pattern) {
-      return `Pattern: ${input.pattern}${input.path ? ` in ${getFilename(input.path)}` : ""}`;
-    }
-
-    if (toolName === "LS" && input.path) {
-      return getFilename(input.path);
-    }
-
-    if (toolName === "WebSearch" && input.query) {
-      return truncate(input.query, 50);
-    }
-
-    if (toolName === "WebFetch" && input.url) {
-      return truncate(input.url, 50);
-    }
-
-    // Default: show meaningful key-value pairs, skip very long values
-    const entries = Object.entries(input)
-      .filter(([, v]) => v !== null && v !== undefined && (typeof v !== "string" || v.length < 100))
-      .slice(0, 3);
-
-    if (entries.length === 0) {
-      return "Complex parameters";
-    }
-
-    return entries
-      .map(([k, v]) => {
-        const value = typeof v === "string" ? truncate(v, 30) : JSON.stringify(v);
-        return `${k}: ${value}`;
-      })
-      .join(", ");
-  };
-
-  // Format output for display
-  const formatOutput = (output: any): string => {
-    if (!output) return "No output";
-
-    if (typeof output === "string") {
-      // Truncate long outputs
-      if (output.length > 100) {
-        return `${output.substring(0, 100)}...`;
-      }
-      return output;
-    }
-
-    return JSON.stringify(output, null, 2);
-  };
+  const status = resolveStatus({ isStreaming, error, output });
+  const Icon = useMemo(() => pickToolIcon(toolName), [toolName]);
+  const summary = useMemo(() => summarizeTool(toolName, input, output), [toolName, input, output]);
+  const filePath = useMemo(() => extractFilePath(input, output), [input, output]);
+  const editPreview = useMemo(
+    () => buildEditPreview(toolName, input, output),
+    [toolName, input, output],
+  );
 
   return (
-    <div className="leading-tight">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="group flex w-full items-center gap-1 text-left text-xs opacity-75 transition-all duration-200 hover:opacity-100"
-      >
-        <Icon
-          size={10}
-          className={cn(
-            "opacity-50",
-            error ? "text-red-400" : "text-current",
-            isStreaming && "animate-pulse",
-          )}
-        />
-        <span className="font-medium">{toolName}</span>
-        <span className="opacity-50">·</span>
-        <span className="truncate opacity-50">{formatInput(input)}</span>
-        {isStreaming && <Clock size={8} className="ml-1 animate-spin opacity-30" />}
-        {!isStreaming && !error && output && (
-          <CheckCircle size={8} className="ml-1 text-green-400 opacity-60" />
-        )}
-        {error && <AlertCircle size={8} className="ml-1 text-red-400 opacity-60" />}
-        {toolName === "Read" && input?.file_path && !isStreaming && !error && (
+    <div className="rounded border border-border/70 bg-secondary-bg/50 px-2 py-1.5">
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setIsExpanded((prev) => !prev)}
+          className="group flex min-w-0 flex-1 items-center gap-1.5 text-left"
+        >
+          <Icon size={11} className="text-text-lighter" />
+          <span className="truncate font-medium text-text text-xs">{toolName}</span>
+          <span className="truncate text-text-lighter text-xs">{summary}</span>
+
+          <span
+            className={cn(
+              "ml-auto inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px]",
+              status === "failed" && "border-red-500/40 text-red-300",
+              status === "completed" && "border-emerald-500/40 text-emerald-300",
+              status === "in_progress" && "border-border text-text-lighter",
+              status === "pending" && "border-border text-text-lighter",
+            )}
+          >
+            {renderStatusIcon(status)}
+            {statusLabel(status)}
+          </span>
+
+          <ChevronRight
+            size={10}
+            className={cn(
+              "text-text-lighter/60 transition-transform duration-150",
+              isExpanded && "rotate-90",
+            )}
+          />
+        </button>
+
+        {filePath && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenInEditor?.(input.file_path);
-            }}
-            className="ml-1 rounded p-0.5 text-text-lighter opacity-40 transition-all hover:bg-hover hover:opacity-100"
+            type="button"
+            onClick={() => onOpenInEditor?.(filePath)}
+            className="rounded p-0.5 text-text-lighter/70 hover:bg-hover hover:text-text"
             title="Open in editor"
-            aria-label="Open file in editor"
+            aria-label="Open in editor"
           >
             <ExternalLink size={10} />
           </button>
         )}
-        <ChevronRight
-          size={8}
-          className={cn(
-            "ml-auto opacity-30 transition-transform duration-200 group-hover:opacity-50",
-            isExpanded && "rotate-90",
-          )}
-        />
-      </button>
+      </div>
 
       {isExpanded && (
-        <div className="mt-1 space-y-1 pl-3 text-xs opacity-70">
-          {/* Input section */}
+        <div className="mt-2 space-y-2">
+          {editPreview}
+
           <div>
-            <div className="mb-1 font-medium opacity-60">Input:</div>
-            <pre
-              className="overflow-x-auto rounded-sm bg-secondary-bg p-2 text-xs"
-              style={{
-                fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, monospace",
-              }}
-            >
-              {JSON.stringify(input, null, 2)}
+            <div className="mb-1 text-[10px] text-text-lighter uppercase tracking-wide">Input</div>
+            <pre className="max-h-52 overflow-auto rounded border border-border bg-primary-bg p-2 font-mono text-[11px] text-text-lighter">
+              {renderJson(input ?? {})}
             </pre>
           </div>
 
-          {/* Output section */}
-          {output && (
+          {(output !== undefined || error) && (
             <div>
-              <div className="mb-1 font-medium opacity-60">Output:</div>
+              <div className="mb-1 text-[10px] text-text-lighter uppercase tracking-wide">
+                {error ? "Error" : "Output"}
+              </div>
               <pre
-                className="max-h-48 overflow-x-auto rounded-sm bg-secondary-bg p-2 text-xs"
-                style={{
-                  fontFamily:
-                    "ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, monospace",
-                }}
+                className={cn(
+                  "max-h-52 overflow-auto rounded border bg-primary-bg p-2 font-mono text-[11px]",
+                  error ? "border-red-500/40 text-red-300" : "border-border text-text-lighter",
+                )}
               >
-                {formatOutput(output)}
+                {error ? error : renderJson(output)}
               </pre>
-            </div>
-          )}
-
-          {/* Error section */}
-          {error && (
-            <div>
-              <div className="mb-1 font-medium text-red-400 opacity-80">Error:</div>
-              <div className="rounded-sm bg-red-500/10 p-2 text-red-400 opacity-80">{error}</div>
             </div>
           )}
         </div>
