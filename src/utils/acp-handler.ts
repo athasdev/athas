@@ -49,6 +49,10 @@ export class AcpStreamHandler {
 
   async start(userMessage: string, context: ContextInfo): Promise<void> {
     try {
+      if (AcpStreamHandler.activeHandler && AcpStreamHandler.activeHandler !== this) {
+        AcpStreamHandler.activeHandler.cancelled = true;
+        AcpStreamHandler.activeHandler.cleanup();
+      }
       AcpStreamHandler.activeHandler = this;
       await this.ensureAgentRunning(context);
       const fullMessage = this.buildMessage(userMessage, context);

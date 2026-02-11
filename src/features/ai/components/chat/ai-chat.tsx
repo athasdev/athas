@@ -16,6 +16,35 @@ import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
 
+function collapseExactRepeatedResponse(content: string): string {
+  if (!content || content.length < 64) return content;
+
+  const tryExact = (value: string): string => {
+    for (const repeatCount of [3, 2]) {
+      if (value.length % repeatCount !== 0) continue;
+      const unitLength = value.length / repeatCount;
+      if (unitLength < 24) continue;
+      const unit = value.slice(0, unitLength);
+      if (unit.repeat(repeatCount) === value) {
+        return unit;
+      }
+    }
+    return value;
+  };
+
+  const exact = tryExact(content);
+  if (exact !== content) return exact;
+
+  for (const separator of ["\n\n", "\r\n\r\n", "\n", "\r\n", " "]) {
+    const parts = content.split(separator);
+    if (parts.length === 2 && parts[0].length >= 24 && parts[0] === parts[1]) {
+      return parts[0];
+    }
+  }
+
+  return content;
+}
+
 const AIChat = memo(function AIChat({
   className,
   activeBuffer,
@@ -32,6 +61,7 @@ const AIChat = memo(function AIChat({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const activeStreamRunIdRef = useRef<string | null>(null);
   const processMessageRef = useRef<(messageContent: string) => Promise<void>>(async () => {});
   const [permissionQueue, setPermissionQueue] = useState<
     Array<{ requestId: string; description: string; permissionType: string; resource: string }>
@@ -137,6 +167,7 @@ const AIChat = memo(function AIChat({
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    activeStreamRunIdRef.current = null;
     chatActions.setIsTyping(false);
     chatActions.setStreamingMessageId(null);
   };
@@ -205,6 +236,8 @@ const AIChat = memo(function AIChat({
     requestAnimationFrame(scrollToBottom);
 
     abortControllerRef.current = new AbortController();
+    const streamRunId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    activeStreamRunIdRef.current = streamRunId;
 
     try {
       const conversationContext = currentMessages
@@ -225,6 +258,7 @@ const AIChat = memo(function AIChat({
         enhancedMessage,
         context,
         (chunk: string) => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
@@ -233,7 +267,16 @@ const AIChat = memo(function AIChat({
           requestAnimationFrame(scrollToBottom);
         },
         () => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
+          activeStreamRunIdRef.current = null;
+          const currentMessages = chatActions.getCurrentMessages();
+          const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
+          const nextContent =
+            isAcpAgent(currentAgentId) && currentMsg?.content
+              ? collapseExactRepeatedResponse(currentMsg.content)
+              : currentMsg?.content;
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
+            ...(typeof nextContent === "string" ? { content: nextContent } : {}),
             isStreaming: false,
           });
           chatActions.setIsTyping(false);
@@ -242,6 +285,8 @@ const AIChat = memo(function AIChat({
           processQueuedMessages();
         },
         (error: string) => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
+          activeStreamRunIdRef.current = null;
           console.error("Streaming error:", error);
 
           let errorTitle = "API Error";
@@ -324,6 +369,7 @@ details: ${errorDetails || mainError}
         },
         conversationContext,
         () => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
           const newMessageId = Date.now().toString();
           const newAssistantMessage: Message = {
             id: newMessageId,
@@ -339,6 +385,7 @@ details: ${errorDetails || mainError}
           requestAnimationFrame(scrollToBottom);
         },
         (toolName: string, toolInput?: any, toolId?: string, event) => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
           const existing = currentMsg?.toolCalls || [];
@@ -382,6 +429,7 @@ details: ${errorDetails || mainError}
           });
         },
         (toolName: string, event) => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
 
@@ -436,6 +484,7 @@ details: ${errorDetails || mainError}
           });
         },
         (event) => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
           setPermissionQueue((prev) => [
             ...prev,
             {
@@ -453,6 +502,9 @@ details: ${errorDetails || mainError}
         abortControllerRef.current?.signal,
       );
     } catch (error) {
+      if (activeStreamRunIdRef.current === streamRunId) {
+        activeStreamRunIdRef.current = null;
+      }
       console.error("Failed to start streaming:", error);
       chatActions.updateMessage(chatId, assistantMessageId, {
         content: "Error: Failed to connect to AI service. Please check your API key and try again.",
