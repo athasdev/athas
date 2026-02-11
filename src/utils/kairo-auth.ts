@@ -480,6 +480,22 @@ async function refreshKairoTokens(refreshToken: string): Promise<StoredKairoToke
   });
 }
 
+export async function refreshKairoAccessToken(): Promise<string | null> {
+  const stored = await getStoredKairoTokens();
+  if (!stored?.refreshToken || !isKairoConfigured()) {
+    return null;
+  }
+
+  try {
+    const refreshed = await refreshKairoTokens(stored.refreshToken);
+    await storeProviderApiToken(TOKEN_PROVIDER_ID, JSON.stringify(refreshed));
+    return refreshed.accessToken;
+  } catch {
+    await clearKairoTokens();
+    return null;
+  }
+}
+
 export async function hasKairoAccessToken(): Promise<boolean> {
   const tokens = await getStoredKairoTokens();
   return !!tokens?.accessToken;
@@ -500,14 +516,7 @@ export async function getValidKairoAccessToken(): Promise<string | null> {
     return null;
   }
 
-  try {
-    const refreshed = await refreshKairoTokens(stored.refreshToken);
-    await storeProviderApiToken(TOKEN_PROVIDER_ID, JSON.stringify(refreshed));
-    return refreshed.accessToken;
-  } catch {
-    await clearKairoTokens();
-    return null;
-  }
+  return refreshKairoAccessToken();
 }
 
 export async function clearKairoTokens(): Promise<void> {

@@ -74,8 +74,8 @@ export const AGENT_OPTIONS: AgentInfo[] = [
   {
     id: "kairo-code",
     name: "Kairo Code",
-    description: "Coline Kairo Code (OAuth)",
-    isAcp: false,
+    description: "Coline Kairo Code (ACP)",
+    isAcp: true,
   },
   {
     id: "qwen-code",

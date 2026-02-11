@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
@@ -5,18 +6,8 @@ import type { AcpEvent } from "@/features/ai/types/acp";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { getModelById, getProviderById } from "@/features/ai/types/providers";
-import { useSettingsStore } from "@/features/settings/store";
 import { AcpStreamHandler } from "./acp-handler";
 import { buildContextPrompt, buildSystemPrompt } from "./context-builder";
-import {
-  clearKairoTokens,
-  getValidKairoAccessToken,
-  KAIRO_BASE_URL,
-  KAIRO_CLIENT_NAME,
-  KAIRO_CLIENT_PLATFORM,
-  KAIRO_CLIENT_VERSION,
-} from "./kairo-auth";
-import { buildKairoReasoningRequest } from "./kairo-reasoning";
 import { getProvider } from "./providers";
 import { processStreamingResponse } from "./stream-utils";
 import { getProviderApiToken } from "./token-manager";
@@ -35,29 +26,81 @@ export {
   validateProviderApiKey,
 } from "./token-manager";
 
-// Re-export types and legacy functions;
+interface AvailableAcpAgent {
+  id: string;
+  installed: boolean;
+}
 
-const buildKairoPrompt = (
-  systemPrompt: string,
+let kairoAcpInstalledCache: { installed: boolean; checkedAt: number } | null = null;
+const KAIRO_ACP_CACHE_TTL_MS = 15_000;
+
+const isKairoAcpInstalled = async (): Promise<boolean> => {
+  const now = Date.now();
+  if (kairoAcpInstalledCache && now - kairoAcpInstalledCache.checkedAt < KAIRO_ACP_CACHE_TTL_MS) {
+    return kairoAcpInstalledCache.installed;
+  }
+
+  try {
+    const agents = await invoke<AvailableAcpAgent[]>("get_available_agents");
+    const installed = agents.find((agent) => agent.id === "kairo-code")?.installed === true;
+    kairoAcpInstalledCache = { installed, checkedAt: now };
+    return installed;
+  } catch {
+    // If detection fails, prefer stable behavior over hard-failing ACP startup.
+    kairoAcpInstalledCache = { installed: false, checkedAt: now };
+    return false;
+  }
+};
+
+const MAX_HISTORY_MESSAGES = 40;
+
+const isAbortError = (error: unknown): boolean => {
+  if (error instanceof DOMException) {
+    return error.name === "AbortError";
+  }
+  if (error instanceof Error) {
+    return error.name === "AbortError";
+  }
+  return false;
+};
+
+const normalizeConversationHistory = (
+  conversationHistory: AIMessage[] | undefined,
   userMessage: string,
-  conversationHistory?: AIMessage[],
-): string => {
-  const sections: string[] = [];
-
-  if (systemPrompt.trim()) {
-    sections.push(`SYSTEM INSTRUCTIONS:\n${systemPrompt}`);
+): AIMessage[] => {
+  if (!conversationHistory || conversationHistory.length === 0) {
+    return [];
   }
 
-  if (conversationHistory && conversationHistory.length > 0) {
-    const history = conversationHistory
-      .map((message) => `${message.role.toUpperCase()}:\n${message.content}`)
-      .join("\n\n");
-    sections.push(`CONVERSATION HISTORY:\n${history}`);
+  const normalized = conversationHistory
+    .filter(
+      (message) =>
+        (message.role === "system" || message.role === "user" || message.role === "assistant") &&
+        typeof message.content === "string" &&
+        message.content.trim().length > 0,
+    )
+    .map((message) => ({
+      role: message.role,
+      content: message.content,
+    })) as AIMessage[];
+
+  if (normalized.length === 0) {
+    return [];
   }
 
-  sections.push(`USER:\n${userMessage}`);
+  const trimmedUserMessage = userMessage.trim();
+  if (trimmedUserMessage) {
+    const last = normalized[normalized.length - 1];
+    if (last.role === "user" && last.content.trim() === trimmedUserMessage) {
+      normalized.pop();
+    }
+  }
 
-  return sections.join("\n\n");
+  if (normalized.length > MAX_HISTORY_MESSAGES) {
+    return normalized.slice(normalized.length - MAX_HISTORY_MESSAGES);
+  }
+
+  return normalized;
 };
 
 // Generic streaming chat completion function that works with any agent/provider
@@ -78,10 +121,29 @@ export const getChatCompletionStream = async (
   onAcpEvent?: (event: AcpEvent) => void,
   mode: ChatMode = "chat",
   outputStyle: OutputStyle = "default",
+  _sessionId?: string,
+  abortSignal?: AbortSignal,
 ): Promise<void> => {
   try {
-    // Handle ACP-based CLI agents (Claude Code, Gemini CLI, Codex CLI)
-    if (isAcpAgent(agentId)) {
+    const normalizedConversationHistory = normalizeConversationHistory(
+      conversationHistory,
+      userMessage,
+    );
+
+    // Handle ACP-based CLI agents.
+    // Kairo Code is ACP-only in Athas; do not silently degrade to HTTP mode.
+    if (agentId === "kairo-code") {
+      const installed = await isKairoAcpInstalled();
+      if (!installed) {
+        onError(
+          "Kairo Code ACP adapter is not installed. Run: bun add -g --no-cache @colineapp/kairo-code-acp",
+        );
+        return;
+      }
+    }
+
+    const shouldUseAcp = isAcpAgent(agentId);
+    if (shouldUseAcp) {
       const handler = new AcpStreamHandler(agentId, {
         onChunk,
         onComplete,
@@ -93,65 +155,6 @@ export const getChatCompletionStream = async (
         onEvent: onAcpEvent,
       });
       await handler.start(userMessage, context);
-      return;
-    }
-
-    if (agentId === "kairo-code") {
-      const accessToken = await getValidKairoAccessToken();
-      if (!accessToken) {
-        throw new Error(
-          "Kairo Code is not connected. Login in Settings > AI > Agent Authentication.",
-        );
-      }
-
-      const contextPrompt = buildContextPrompt(context);
-      const systemPrompt = buildSystemPrompt(contextPrompt, mode, outputStyle);
-      const kairoPrompt = buildKairoPrompt(systemPrompt, userMessage, conversationHistory);
-      const { aiReasoningLevel, aiThinkingEffort } = useSettingsStore.getState().settings;
-      const reasoningPayload = buildKairoReasoningRequest(
-        modelId || "gpt-5.2",
-        aiReasoningLevel,
-        aiThinkingEffort,
-      );
-
-      const response = await tauriFetch(`${KAIRO_BASE_URL}/api/kairo/code/stream`, {
-        method: "POST",
-        headers: {
-          Accept: "text/event-stream",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          "x-coline-client": KAIRO_CLIENT_NAME,
-          "x-coline-client-version": KAIRO_CLIENT_VERSION,
-          "x-coline-client-platform": KAIRO_CLIENT_PLATFORM,
-        },
-        body: JSON.stringify({
-          modelType: modelId || "gpt-5.2",
-          ...reasoningPayload,
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: kairoPrompt }],
-            },
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        if (response.status === 401 || response.status === 403) {
-          await clearKairoTokens();
-          onError(
-            "Kairo Code authorization expired. Reconnect in Settings > AI > Agent Authentication.",
-          );
-          return;
-        }
-
-        onError(`Kairo Code API error: ${response.status}|||${errorText}`);
-        return;
-      }
-
-      await processStreamingResponse(response, onChunk, onComplete, onError);
       return;
     }
 
@@ -193,8 +196,8 @@ export const getChatCompletionStream = async (
     ];
 
     // Add conversation history if provided
-    if (conversationHistory && conversationHistory.length > 0) {
-      messages.push(...conversationHistory);
+    if (normalizedConversationHistory.length > 0) {
+      messages.push(...normalizedConversationHistory);
     }
 
     // Add the current user message
@@ -229,7 +232,10 @@ export const getChatCompletionStream = async (
       method: "POST",
       headers,
       body: JSON.stringify(payload),
-    });
+      ...(providerId !== "gemini" && providerId !== "ollama" && abortSignal
+        ? { signal: abortSignal }
+        : {}),
+    } as any);
 
     if (!response.ok) {
       console.error(`${provider.name} API error:`, response.status, response.statusText);
@@ -242,6 +248,9 @@ export const getChatCompletionStream = async (
 
     await processStreamingResponse(response, onChunk, onComplete, onError);
   } catch (error: any) {
+    if (isAbortError(error)) {
+      return;
+    }
     const target = agentId === "kairo-code" ? "kairo-code" : providerId;
     console.error(`${target} streaming chat completion error:`, error);
     onError(`Failed to connect to ${target} API: ${error.message || error}`);

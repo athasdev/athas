@@ -32,10 +32,10 @@ const AIChat = memo(function AIChat({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const processMessageRef = useRef<(messageContent: string) => Promise<void>>(async () => {});
   const [permissionQueue, setPermissionQueue] = useState<
     Array<{ requestId: string; description: string; permissionType: string; resource: string }>
   >([]);
-  const [acpEvents, setAcpEvents] = useState<Array<{ id: string; text: string }>>([]);
 
   useEffect(() => {
     if (activeBuffer) {
@@ -217,9 +217,6 @@ const AIChat = memo(function AIChat({
       const enhancedMessage = processedMessage;
       let currentAssistantMessageId = assistantMessageId;
       const currentAgentId = chatActions.getCurrentAgentId();
-      if (isAcp) {
-        setAcpEvents([]);
-      }
 
       await getChatCompletionStream(
         currentAgentId,
@@ -255,11 +252,29 @@ const AIChat = memo(function AIChat({
           const parts = error.split("|||");
           const mainError = parts[0];
           if (parts.length > 1) {
-            errorDetails = parts[1];
+            errorDetails = parts.slice(1).join("|||");
+          }
+
+          if (mainError.toLowerCase().includes("workspace_unavailable")) {
+            errorTitle = "Workspace Bridge Required";
+            errorCode = "workspace_unavailable";
+            errorMessage =
+              errorDetails ||
+              "No workspace binding is available for this chat session. Connect the Athas workspace bridge and retry.";
+          } else if (
+            mainError.toLowerCase().includes("kairo acp bridge error: stream") &&
+            errorDetails.toLowerCase().includes("workspace_unavailable")
+          ) {
+            const [, workspaceMessage = ""] = errorDetails.split("|||");
+            errorTitle = "Workspace Bridge Required";
+            errorCode = "workspace_unavailable";
+            errorMessage =
+              workspaceMessage ||
+              "No workspace binding is available for this chat session. Connect the Athas workspace bridge and retry.";
           }
 
           const codeMatch = mainError.match(/error:\s*(\d+)/i);
-          if (codeMatch) {
+          if (codeMatch && !errorCode) {
             errorCode = codeMatch[1];
             if (errorCode === "429") {
               errorTitle = "Rate Limit Exceeded";
@@ -374,41 +389,11 @@ details: ${errorDetails || mainError}
             },
           ]);
         },
-        (event) => {
-          if (!isAcpAgent(currentAgentId)) return;
-          const format = () => {
-            switch (event.type) {
-              case "tool_start":
-                return `tool_start ${event.toolName}`;
-              case "tool_complete":
-                return `tool_complete ${event.toolId}`;
-              case "permission_request":
-                return `permission ${event.permissionType}: ${event.description}`;
-              case "prompt_complete":
-                return `prompt_complete ${event.stopReason}`;
-              case "session_mode_update":
-                return `mode_state ${event.modeState.currentModeId ?? "none"}`;
-              case "current_mode_update":
-                return `mode ${event.currentModeId}`;
-              case "slash_commands_update":
-                return `slash_commands ${event.commands.length}`;
-              case "status_changed":
-                return `status running=${event.status.running}`;
-              case "error":
-                return `error ${event.error}`;
-              case "session_complete":
-                return "session_complete";
-              case "content_chunk":
-                return "content_chunk";
-            }
-          };
-          setAcpEvents((prev) => [
-            ...prev.slice(-199),
-            { id: `${Date.now()}-${event.type}`, text: format() },
-          ]);
-        },
+        undefined,
         chatState.mode,
         chatState.outputStyle,
+        chatId,
+        abortControllerRef.current?.signal,
       );
     } catch (error) {
       console.error("Failed to start streaming:", error);
@@ -421,6 +406,7 @@ details: ${errorDetails || mainError}
       abortControllerRef.current = null;
     }
   };
+  processMessageRef.current = processMessage;
 
   const processQueuedMessages = useCallback(async () => {
     if (chatState.isTyping || chatState.streamingMessageId) {
@@ -431,7 +417,7 @@ details: ${errorDetails || mainError}
     if (nextMessage) {
       console.log("Processing next queued message:", nextMessage.content);
       await new Promise((resolve) => setTimeout(resolve, 500));
-      await processMessage(nextMessage.content);
+      await processMessageRef.current(nextMessage.content);
     }
   }, [chatState.isTyping, chatState.streamingMessageId, chatActions.processNextMessage]);
 
@@ -459,7 +445,7 @@ details: ${errorDetails || mainError}
         return;
       }
 
-      await processMessage(messageContent);
+      await processMessageRef.current(messageContent);
     },
     [
       chatState.hasApiKey,
@@ -482,13 +468,6 @@ details: ${errorDetails || mainError}
   const handlePermission = async (approved: boolean) => {
     if (!currentPermission) return;
     try {
-      setAcpEvents((prev) => [
-        ...prev.slice(-199),
-        {
-          id: `${Date.now()}-permission-response`,
-          text: `permission_response ${approved ? "allow" : "deny"}`,
-        },
-      ]);
       await AcpStreamHandler.respondToPermission(currentPermission.requestId, approved);
     } finally {
       setPermissionQueue((prev) => prev.slice(1));
@@ -502,7 +481,7 @@ details: ${errorDetails || mainError}
       <ChatHeader />
 
       <div className="scrollbar-hidden flex-1 overflow-y-auto">
-        <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} acpEvents={acpEvents} />
+        <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} />
       </div>
 
       {currentPermission && (

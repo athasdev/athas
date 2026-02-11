@@ -1,6 +1,7 @@
 use super::types::{AcpContentBlock, AcpEvent};
 use agent_client_protocol as acp;
 use async_trait::async_trait;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{Mutex, mpsc};
@@ -16,21 +17,25 @@ pub struct PermissionResponse {
 /// Handles requests from the agent (file access, terminals, permissions)
 pub struct AthasAcpClient {
    app_handle: AppHandle,
+   agent_id: String,
    workspace_path: Option<String>,
    permission_tx: mpsc::Sender<PermissionResponse>,
    permission_rx: Arc<Mutex<mpsc::Receiver<PermissionResponse>>>,
    current_session_id: Arc<Mutex<Option<String>>>,
+   active_tool_names: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl AthasAcpClient {
-   pub fn new(app_handle: AppHandle, workspace_path: Option<String>) -> Self {
+   pub fn new(app_handle: AppHandle, agent_id: String, workspace_path: Option<String>) -> Self {
       let (permission_tx, permission_rx) = mpsc::channel(32);
       Self {
          app_handle,
+         agent_id,
          workspace_path,
          permission_tx,
          permission_rx: Arc::new(Mutex::new(permission_rx)),
          current_session_id: Arc::new(Mutex::new(None)),
+         active_tool_names: Arc::new(Mutex::new(HashMap::new())),
       }
    }
 
@@ -57,6 +62,17 @@ impl AthasAcpClient {
          return format!("{}/{}", workspace, path);
       }
       path.to_string()
+   }
+
+   fn log_kairo_tool_event(&self, phase: &str, tool_name: &str, tool_id: &str) {
+      if self.agent_id == "kairo-code" {
+         log::info!(
+            "[delete-me][kairo-acp-tool] phase={} tool={} toolId={}",
+            phase,
+            tool_name,
+            tool_id
+         );
+      }
    }
 }
 
@@ -179,18 +195,32 @@ impl acp::Client for AthasAcpClient {
             });
          }
          acp::SessionUpdate::ToolCall(tool_call) => {
+            let tool_id = tool_call.tool_call_id.to_string();
+            {
+               let mut active_tool_names = self.active_tool_names.lock().await;
+               active_tool_names.insert(tool_id.clone(), tool_call.title.clone());
+            }
+            self.log_kairo_tool_event("start", &tool_call.title, &tool_id);
             self.emit_event(AcpEvent::ToolStart {
                session_id,
                tool_name: tool_call.title.clone(),
-               tool_id: tool_call.tool_call_id.to_string(),
+               tool_id: tool_id.clone(),
                input: serde_json::Value::Null, // Input is in content blocks now
             });
          }
          acp::SessionUpdate::ToolCallUpdate(update) => {
+            let tool_id = update.tool_call_id.to_string();
+            let tool_name = {
+               let mut active_tool_names = self.active_tool_names.lock().await;
+               active_tool_names
+                  .remove(&tool_id)
+                  .unwrap_or_else(|| "unknown".to_string())
+            };
+            self.log_kairo_tool_event("complete", &tool_name, &tool_id);
             // Check for completion via fields
             self.emit_event(AcpEvent::ToolComplete {
                session_id,
-               tool_id: update.tool_call_id.to_string(),
+               tool_id,
                success: true,
             });
          }

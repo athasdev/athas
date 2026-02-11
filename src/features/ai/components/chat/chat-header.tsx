@@ -18,6 +18,7 @@ const AGENT_INSTALL_HINTS: Record<
   "claude-code": { package: "@zed-industries/claude-code-acp", type: "npm" },
   "codex-cli": { package: "@openai/codex", type: "npm" },
   "gemini-cli": { package: "@google/gemini-cli", type: "npm" },
+  "kairo-code": { command: "bun add -g --no-cache @colineapp/kairo-code-acp", type: "shell" },
   "kimi-cli": { package: "kimi-cli", type: "npm" },
   opencode: { command: "curl -fsSL https://opencode.ai/install | bash", type: "shell" },
   "qwen-code": { command: "pip install qwen-code", type: "pip" },
@@ -26,7 +27,7 @@ const AGENT_INSTALL_HINTS: Record<
 const getInstallCommand = (pkg: string, pm: PackageManager): string => {
   switch (pm) {
     case "bun":
-      return `bun install -g ${pkg}`;
+      return `bun add -g ${pkg}`;
     case "pnpm":
       return `pnpm add -g ${pkg}`;
     case "yarn":
@@ -36,7 +37,7 @@ const getInstallCommand = (pkg: string, pm: PackageManager): string => {
   }
 };
 
-const BUILT_IN_AGENTS = new Set<string>(["custom", "kairo-code"]);
+const BUILT_IN_AGENTS = new Set<string>(["custom"]);
 
 function EditableChatTitle({
   title,

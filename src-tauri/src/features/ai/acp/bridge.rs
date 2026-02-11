@@ -22,6 +22,7 @@ enum AcpCommand {
       agent_id: String,
       workspace_path: Option<String>,
       config: Box<AgentConfig>,
+      env_vars: std::collections::HashMap<String, String>,
       app_handle: AppHandle,
       response_tx: oneshot::Sender<Result<(AcpAgentStatus, mpsc::Sender<PermissionResponse>)>>,
    },
@@ -129,6 +130,7 @@ impl AcpWorker {
       // Create ACP client
       let client = Arc::new(AthasAcpClient::new(
          app_handle.clone(),
+         agent_id.clone(),
          workspace_path.clone(),
       ));
       let permission_sender = client.permission_sender();
@@ -409,11 +411,16 @@ impl AcpAgentBridge {
                agent_id,
                workspace_path,
                config,
+               env_vars,
                app_handle,
                response_tx,
             } => {
+               let mut config = *config;
+               for (key, value) in env_vars {
+                  config.env_vars.insert(key, value);
+               }
                let result = worker
-                  .initialize(agent_id, workspace_path, *config, app_handle)
+                  .initialize(agent_id, workspace_path, config, app_handle)
                   .await;
 
                // Update shared status
@@ -468,12 +475,18 @@ impl AcpAgentBridge {
       &mut self,
       agent_id: &str,
       workspace_path: Option<String>,
+      env_vars: std::collections::HashMap<String, String>,
    ) -> Result<AcpAgentStatus> {
-      let config = self
+      let mut config = self
          .registry
          .get(agent_id)
          .context("Agent not found")?
          .clone();
+
+      // Runtime-provided env vars override static agent config.
+      for (key, value) in &env_vars {
+         config.env_vars.insert(key.clone(), value.clone());
+      }
 
       let (response_tx, response_rx) = oneshot::channel();
 
@@ -483,6 +496,7 @@ impl AcpAgentBridge {
             agent_id: agent_id.to_string(),
             workspace_path,
             config: Box::new(config),
+            env_vars,
             app_handle: self.app_handle.clone(),
             response_tx,
          })

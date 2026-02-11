@@ -1,6 +1,6 @@
 use crate::features::ai::{AcpAgentBridge, AcpAgentStatus, AgentConfig};
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tauri::State;
 use tokio::sync::Mutex;
 
@@ -28,10 +28,11 @@ pub async fn start_acp_agent(
    bridge: State<'_, AcpBridgeState>,
    agent_id: String,
    workspace_path: Option<String>,
+   env_vars: Option<HashMap<String, String>>,
 ) -> Result<AcpAgentStatus, String> {
    let mut bridge = bridge.lock().await;
    bridge
-      .start_agent(&agent_id, workspace_path)
+      .start_agent(&agent_id, workspace_path, env_vars.unwrap_or_default())
       .await
       .map_err(|e| e.to_string())
 }

@@ -31,14 +31,10 @@ const getAgentLabel = (agentId: string | undefined): string => {
 
 interface ChatMessagesProps {
   onApplyCode?: (code: string, language?: string) => void;
-  acpEvents?: Array<{ id: string; text: string }>;
 }
 
 export const ChatMessages = memo(
-  forwardRef<HTMLDivElement, ChatMessagesProps>(function ChatMessages(
-    { onApplyCode, acpEvents },
-    ref,
-  ) {
+  forwardRef<HTMLDivElement, ChatMessagesProps>(function ChatMessages({ onApplyCode }, ref) {
     const { currentChatId, chats, switchToChat } = useAIChatStore(
       useShallow((state) => ({
         currentChatId: state.currentChatId,
@@ -130,17 +126,6 @@ export const ChatMessages = memo(
             </div>
           );
         })}
-        {acpEvents && acpEvents.length > 0 && (
-          <div className="px-3 pb-2">
-            <div className="rounded border border-border bg-secondary-bg px-2 py-1 font-mono text-[11px] text-text-lighter">
-              {acpEvents.map((event) => (
-                <div key={event.id} className="truncate">
-                  {event.text}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         <div ref={ref} />
       </>
     );

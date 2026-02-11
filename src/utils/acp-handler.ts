@@ -3,6 +3,13 @@ import { listen } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
 import { buildContextPrompt } from "./context-builder";
+import {
+  getValidKairoAccessToken,
+  KAIRO_BASE_URL,
+  KAIRO_CLIENT_NAME,
+  KAIRO_CLIENT_PLATFORM,
+  KAIRO_CLIENT_VERSION,
+} from "./kairo-auth";
 import type { ContextInfo } from "./types";
 
 interface AcpHandlers {
@@ -38,7 +45,7 @@ export class AcpStreamHandler {
   async start(userMessage: string, context: ContextInfo): Promise<void> {
     try {
       AcpStreamHandler.activeHandler = this;
-      await this.ensureAgentRunning();
+      await this.ensureAgentRunning(context);
       const fullMessage = this.buildMessage(userMessage, context);
       await this.setupListeners();
       await invoke("send_acp_prompt", { prompt: fullMessage });
@@ -49,19 +56,20 @@ export class AcpStreamHandler {
     }
   }
 
-  private async ensureAgentRunning(): Promise<void> {
+  private async ensureAgentRunning(context: ContextInfo): Promise<void> {
     try {
       const status = await invoke<AcpAgentStatus>("get_acp_status");
 
       if (!status.running || status.agentId !== this.agentId) {
         console.log(`Starting agent ${this.agentId}...`);
 
-        // Get current workspace path if available
-        const workspacePath = this.getWorkspacePath();
+        const workspacePath = this.getWorkspacePath(context);
+        const envVars = await this.getAgentEnvVars();
 
         const startStatus = await invoke<AcpAgentStatus>("start_acp_agent", {
           agentId: this.agentId,
           workspacePath,
+          envVars,
         });
 
         if (!startStatus.running) {
@@ -76,10 +84,42 @@ export class AcpStreamHandler {
     }
   }
 
-  private getWorkspacePath(): string | null {
-    // Try to get workspace path from the app state
-    // This can be enhanced to read from a store or context
-    return null;
+  private getWorkspacePath(context: ContextInfo): string | null {
+    const root =
+      typeof context.projectRoot === "string" && context.projectRoot.trim().length > 0
+        ? context.projectRoot.trim()
+        : null;
+    return root;
+  }
+
+  private async getAgentEnvVars(): Promise<Record<string, string> | undefined> {
+    if (this.agentId !== "kairo-code") {
+      return undefined;
+    }
+
+    const accessToken = await getValidKairoAccessToken();
+    if (!accessToken) {
+      throw new Error(
+        "Kairo Code is not connected. Login in Settings > AI > Agent Authentication.",
+      );
+    }
+
+    // Kairo ACP in Athas is expected to run with tool-calling enabled.
+    // Keep this hard-coded for now to avoid accidental silent downgrade.
+    const enableKairoTools = true;
+
+    console.info(`[delete-me][kairo-acp-debug] env_tools_enabled=${enableKairoTools ? "1" : "0"}`);
+
+    return {
+      KAIRO_ACCESS_TOKEN: accessToken,
+      COLINE_KAIRO_ACCESS_TOKEN: accessToken,
+      KAIRO_OAUTH_ACCESS_TOKEN: accessToken,
+      KAIRO_BASE_URL,
+      KAIRO_CLIENT_NAME,
+      KAIRO_CLIENT_VERSION,
+      KAIRO_CLIENT_PLATFORM,
+      KAIRO_ENABLE_TOOLS: enableKairoTools ? "1" : "0",
+    };
   }
 
   private buildMessage(userMessage: string, context: ContextInfo): string {
