@@ -159,7 +159,7 @@ export const getChatCompletionStream = async (
         onPermissionRequest,
         onEvent: onAcpEvent,
       });
-      await handler.start(userMessage, context);
+      await handler.start(userMessage, context, { mode, outputStyle });
       return;
     }
 

@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/store/store";
+import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
 import { buildContextPrompt } from "./context-builder";
 import {
@@ -32,6 +33,11 @@ interface AcpListeners {
   event?: () => void;
 }
 
+interface AcpStartOptions {
+  mode?: ChatMode;
+  outputStyle?: OutputStyle;
+}
+
 export class AcpStreamHandler {
   private static activeHandler: AcpStreamHandler | null = null;
   private listeners: AcpListeners = {};
@@ -47,7 +53,11 @@ export class AcpStreamHandler {
     private handlers: AcpHandlers,
   ) {}
 
-  async start(userMessage: string, context: ContextInfo): Promise<void> {
+  async start(
+    userMessage: string,
+    context: ContextInfo,
+    options: AcpStartOptions = {},
+  ): Promise<void> {
     try {
       if (AcpStreamHandler.activeHandler && AcpStreamHandler.activeHandler !== this) {
         AcpStreamHandler.activeHandler.cancelled = true;
@@ -55,7 +65,7 @@ export class AcpStreamHandler {
       }
       AcpStreamHandler.activeHandler = this;
       await this.ensureAgentRunning(context);
-      const fullMessage = this.buildMessage(userMessage, context);
+      const fullMessage = this.buildMessage(userMessage, context, options);
       await this.setupListeners();
       await invoke("send_acp_prompt", { prompt: fullMessage });
       this.setupTimeout();
@@ -131,8 +141,35 @@ export class AcpStreamHandler {
     };
   }
 
-  private buildMessage(userMessage: string, context: ContextInfo): string {
+  private buildMessage(
+    userMessage: string,
+    context: ContextInfo,
+    options: AcpStartOptions,
+  ): string {
     const contextPrompt = buildContextPrompt(context);
+    const mode = options.mode ?? "chat";
+
+    if (this.agentId === "kairo-code" && mode === "plan") {
+      const planDirective = `PLAN MODE: You are in planning mode.
+- Do not execute or modify code directly.
+- Focus on analysis, step-by-step implementation planning, and risks.
+- Use conditional wording (would/could/should), not direct execution wording.
+
+When returning an implementation plan, use this exact structure:
+
+[PLAN_BLOCK]
+[STEP] Short step title
+Detailed step description with specific files/commands.
+[/STEP]
+[/PLAN_BLOCK]`;
+
+      if (!contextPrompt) {
+        return `${planDirective}\n\nUser request:\n${userMessage}`;
+      }
+
+      return `${planDirective}\n\nContext:\n${contextPrompt}\n\nUser request:\n${userMessage}`;
+    }
+
     return contextPrompt ? `${contextPrompt}\n\n${userMessage}` : userMessage;
   }
 

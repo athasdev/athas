@@ -11,6 +11,7 @@ import { getChatCompletionStream, isAcpAgent } from "@/utils/ai-chat";
 import { hasKairoAccessToken } from "@/utils/kairo-auth";
 import type { ContextInfo } from "@/utils/types";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
+import { useAIChatStore } from "../../store/store";
 import ChatHistorySidebar from "../history/sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
@@ -58,10 +59,12 @@ const AIChat = memo(function AIChat({
 
   const chatState = useChatState();
   const chatActions = useChatActions();
+  const messageQueueLength = useAIChatStore((state) => state.messageQueue.length);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeStreamRunIdRef = useRef<string | null>(null);
+  const queueDrainInFlightRef = useRef(false);
   const processMessageRef = useRef<(messageContent: string) => Promise<void>>(async () => {});
   const [permissionQueue, setPermissionQueue] = useState<
     Array<{ requestId: string; description: string; permissionType: string; resource: string }>
@@ -518,17 +521,33 @@ details: ${errorDetails || mainError}
   processMessageRef.current = processMessage;
 
   const processQueuedMessages = useCallback(async () => {
+    if (queueDrainInFlightRef.current) {
+      return;
+    }
+
     if (chatState.isTyping || chatState.streamingMessageId) {
       return;
     }
 
     const nextMessage = chatActions.processNextMessage();
     if (nextMessage) {
-      console.log("Processing next queued message:", nextMessage.content);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await processMessageRef.current(nextMessage.content);
+      queueDrainInFlightRef.current = true;
+      try {
+        console.log("Processing next queued message:", nextMessage.content);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        await processMessageRef.current(nextMessage.content);
+      } finally {
+        queueDrainInFlightRef.current = false;
+      }
     }
   }, [chatState.isTyping, chatState.streamingMessageId, chatActions.processNextMessage]);
+
+  useEffect(() => {
+    if (messageQueueLength === 0) return;
+    if (chatState.isTyping || chatState.streamingMessageId) return;
+
+    void processQueuedMessages();
+  }, [messageQueueLength, chatState.isTyping, chatState.streamingMessageId, processQueuedMessages]);
 
   const sendMessage = useCallback(
     async (messageContent: string) => {
