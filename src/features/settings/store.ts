@@ -48,6 +48,8 @@ interface Settings {
   aiAutoOpenReadFiles: boolean;
   aiTemperature: number;
   aiMaxTokens: number;
+  aiReasoningLevel: number;
+  aiThinkingEffort: "low" | "medium" | "high" | "max";
   aiDefaultOutputStyle: "default" | "explanatory" | "learning";
   aiDefaultSessionMode: string;
   // Layout
@@ -125,6 +127,8 @@ const defaultSettings: Settings = {
   aiAutoOpenReadFiles: true,
   aiTemperature: 0.7,
   aiMaxTokens: 4096,
+  aiReasoningLevel: 2,
+  aiThinkingEffort: "high",
   aiDefaultOutputStyle: "default",
   aiDefaultSessionMode: "",
   // Layout

@@ -10,10 +10,15 @@ interface StreamHandlers {
 }
 
 interface SSEData {
+  text?: string;
+  error?: string;
   choices?: Array<{
     delta?: { content?: string };
     message?: { content?: string };
   }>;
+  candidate_content?: {
+    parts?: Array<{ text?: string }>;
+  };
   candidates?: Array<{
     content?: {
       parts?: Array<{ text?: string }>;
@@ -21,9 +26,19 @@ interface SSEData {
   }>;
 }
 
+type SSEContentMode =
+  | "text"
+  | "openai_delta"
+  | "openai_message"
+  | "kairo_candidate"
+  | "gemini_candidate";
+
 class SSEStreamParser {
   private buffer = "";
   private decoder = new TextDecoder();
+  private isCompleted = false;
+  private contentMode: SSEContentMode | null = null;
+  private emittedSnapshots: Partial<Record<SSEContentMode, string>> = {};
 
   constructor(private handlers: StreamHandlers) {}
 
@@ -54,7 +69,7 @@ class SSEStreamParser {
         }
       }
 
-      this.handlers.onComplete();
+      this.completeOnce();
     } catch (streamError) {
       console.error("Streaming error:", streamError);
       this.handlers.onError("Error reading stream");
@@ -68,7 +83,7 @@ class SSEStreamParser {
 
     if (trimmedLine === "") return;
     if (trimmedLine === "data: [DONE]") {
-      this.handlers.onComplete();
+      this.completeOnce();
       return;
     }
 
@@ -77,33 +92,102 @@ class SSEStreamParser {
         const jsonStr = trimmedLine.slice(6); // Remove 'data: ' prefix
         const data = JSON.parse(jsonStr) as SSEData;
 
-        // Handle different response formats
-        let content = "";
+        if (data.error) {
+          this.handlers.onError(data.error);
+          return;
+        }
+
+        // Generic text stream payload
+        if (typeof data.text === "string") {
+          this.emitContent("text", data.text);
+          return;
+        }
 
         // OpenAI/OpenRouter format
         if (data.choices?.[0]) {
           const choice = data.choices[0];
           if (choice.delta?.content) {
-            content = choice.delta.content;
-            console.log("🔍 Delta content found:", content);
+            this.emitContent("openai_delta", choice.delta.content);
+            return;
           } else if (choice.message?.content) {
-            content = choice.message.content;
-            console.log("🔍 Message content found:", content);
+            this.emitContent("openai_message", choice.message.content);
+            return;
           }
         }
-        // Gemini format
-        else if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-          content = data.candidates[0].content.parts[0].text;
-          console.log("🔍 Gemini content found:", content);
+
+        // Kairo candidate_content format
+        if (data.candidate_content?.parts) {
+          const content = data.candidate_content.parts
+            .map((part) => part.text || "")
+            .filter(Boolean)
+            .join("");
+          this.emitContent("kairo_candidate", content);
+          return;
         }
 
-        if (content) {
-          this.handlers.onChunk(content);
+        // Gemini format
+        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+          this.emitContent("gemini_candidate", data.candidates[0].content.parts[0].text);
+          return;
         }
       } catch (parseError) {
         console.warn("Failed to parse SSE data:", parseError, "Raw data:", trimmedLine);
       }
     }
+  }
+
+  private completeOnce(): void {
+    if (this.isCompleted) return;
+    this.isCompleted = true;
+    this.handlers.onComplete();
+  }
+
+  private isSnapshotMode(mode: SSEContentMode): boolean {
+    return (
+      mode === "text" ||
+      mode === "openai_message" ||
+      mode === "kairo_candidate" ||
+      mode === "gemini_candidate"
+    );
+  }
+
+  private emitContent(mode: SSEContentMode, content: string): void {
+    if (!content) return;
+
+    // Some providers include both delta and full-content payload shapes in one stream.
+    // Lock to the first observed content mode to prevent duplicate rendering.
+    if (this.contentMode && this.contentMode !== mode) {
+      return;
+    }
+    this.contentMode = mode;
+
+    if (!this.isSnapshotMode(mode)) {
+      this.handlers.onChunk(content);
+      return;
+    }
+
+    const previousSnapshot = this.emittedSnapshots[mode] || "";
+    this.emittedSnapshots[mode] = content;
+
+    if (!previousSnapshot) {
+      this.handlers.onChunk(content);
+      return;
+    }
+
+    if (content.startsWith(previousSnapshot)) {
+      const delta = content.slice(previousSnapshot.length);
+      if (delta) {
+        this.handlers.onChunk(delta);
+      }
+      return;
+    }
+
+    // Ignore exact or suffix duplicates that can appear in terminal snapshot events.
+    if (previousSnapshot.endsWith(content)) {
+      return;
+    }
+
+    this.handlers.onChunk(content);
   }
 }
 

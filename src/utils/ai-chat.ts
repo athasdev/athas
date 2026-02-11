@@ -5,8 +5,18 @@ import type { AcpEvent } from "@/features/ai/types/acp";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { getModelById, getProviderById } from "@/features/ai/types/providers";
+import { useSettingsStore } from "@/features/settings/store";
 import { AcpStreamHandler } from "./acp-handler";
 import { buildContextPrompt, buildSystemPrompt } from "./context-builder";
+import {
+  clearKairoTokens,
+  getValidKairoAccessToken,
+  KAIRO_BASE_URL,
+  KAIRO_CLIENT_NAME,
+  KAIRO_CLIENT_PLATFORM,
+  KAIRO_CLIENT_VERSION,
+} from "./kairo-auth";
+import { buildKairoReasoningRequest } from "./kairo-reasoning";
 import { getProvider } from "./providers";
 import { processStreamingResponse } from "./stream-utils";
 import { getProviderApiToken } from "./token-manager";
@@ -24,7 +34,31 @@ export {
   storeProviderApiToken,
   validateProviderApiKey,
 } from "./token-manager";
+
 // Re-export types and legacy functions;
+
+const buildKairoPrompt = (
+  systemPrompt: string,
+  userMessage: string,
+  conversationHistory?: AIMessage[],
+): string => {
+  const sections: string[] = [];
+
+  if (systemPrompt.trim()) {
+    sections.push(`SYSTEM INSTRUCTIONS:\n${systemPrompt}`);
+  }
+
+  if (conversationHistory && conversationHistory.length > 0) {
+    const history = conversationHistory
+      .map((message) => `${message.role.toUpperCase()}:\n${message.content}`)
+      .join("\n\n");
+    sections.push(`CONVERSATION HISTORY:\n${history}`);
+  }
+
+  sections.push(`USER:\n${userMessage}`);
+
+  return sections.join("\n\n");
+};
 
 // Generic streaming chat completion function that works with any agent/provider
 export const getChatCompletionStream = async (
@@ -59,6 +93,65 @@ export const getChatCompletionStream = async (
         onEvent: onAcpEvent,
       });
       await handler.start(userMessage, context);
+      return;
+    }
+
+    if (agentId === "kairo-code") {
+      const accessToken = await getValidKairoAccessToken();
+      if (!accessToken) {
+        throw new Error(
+          "Kairo Code is not connected. Login in Settings > AI > Agent Authentication.",
+        );
+      }
+
+      const contextPrompt = buildContextPrompt(context);
+      const systemPrompt = buildSystemPrompt(contextPrompt, mode, outputStyle);
+      const kairoPrompt = buildKairoPrompt(systemPrompt, userMessage, conversationHistory);
+      const { aiReasoningLevel, aiThinkingEffort } = useSettingsStore.getState().settings;
+      const reasoningPayload = buildKairoReasoningRequest(
+        modelId || "gpt-5.2",
+        aiReasoningLevel,
+        aiThinkingEffort,
+      );
+
+      const response = await tauriFetch(`${KAIRO_BASE_URL}/api/kairo/code/stream`, {
+        method: "POST",
+        headers: {
+          Accept: "text/event-stream",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          "x-coline-client": KAIRO_CLIENT_NAME,
+          "x-coline-client-version": KAIRO_CLIENT_VERSION,
+          "x-coline-client-platform": KAIRO_CLIENT_PLATFORM,
+        },
+        body: JSON.stringify({
+          modelType: modelId || "gpt-5.2",
+          ...reasoningPayload,
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: kairoPrompt }],
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+
+        if (response.status === 401 || response.status === 403) {
+          await clearKairoTokens();
+          onError(
+            "Kairo Code authorization expired. Reconnect in Settings > AI > Agent Authentication.",
+          );
+          return;
+        }
+
+        onError(`Kairo Code API error: ${response.status}|||${errorText}`);
+        return;
+      }
+
+      await processStreamingResponse(response, onChunk, onComplete, onError);
       return;
     }
 
@@ -149,7 +242,8 @@ export const getChatCompletionStream = async (
 
     await processStreamingResponse(response, onChunk, onComplete, onError);
   } catch (error: any) {
-    console.error(`${providerId} streaming chat completion error:`, error);
-    onError(`Failed to connect to ${providerId} API: ${error.message || error}`);
+    const target = agentId === "kairo-code" ? "kairo-code" : providerId;
+    console.error(`${target} streaming chat completion error:`, error);
+    onError(`Failed to connect to ${target} API: ${error.message || error}`);
   }
 };

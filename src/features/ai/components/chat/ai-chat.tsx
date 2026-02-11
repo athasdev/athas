@@ -5,8 +5,10 @@ import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
+import { toast } from "@/stores/toast-store";
 import { AcpStreamHandler } from "@/utils/acp-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/utils/ai-chat";
+import { hasKairoAccessToken } from "@/utils/kairo-auth";
 import type { ContextInfo } from "@/utils/types";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import ChatHistorySidebar from "../history/sidebar";
@@ -141,10 +143,20 @@ const AIChat = memo(function AIChat({
 
   const processMessage = async (messageContent: string) => {
     const currentAgentId = chatActions.getCurrentAgentId();
+    if (currentAgentId === "kairo-code") {
+      const isConnected = await hasKairoAccessToken();
+      if (!isConnected) {
+        toast.error(
+          "Kairo Code requires Coline login first. Connect it in Settings > AI > Agent Authentication.",
+        );
+        return;
+      }
+    }
+
     const isAcp = isAcpAgent(currentAgentId);
-    // For ACP agents (Claude Code, etc.), we don't need an API key
-    // For Custom API, we need an API key to be set
-    if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
+    const requiresApiKey = !isAcp && currentAgentId !== "kairo-code";
+    // ACP agents don't use API keys; Kairo Code uses OAuth
+    if (!messageContent.trim() || (requiresApiKey && !chatState.hasApiKey)) return;
 
     // Agents are started automatically by AcpStreamHandler when needed
 
@@ -426,9 +438,19 @@ details: ${errorDetails || mainError}
   const sendMessage = useCallback(
     async (messageContent: string) => {
       const currentAgentId = chatActions.getCurrentAgentId();
+      if (currentAgentId === "kairo-code") {
+        const isConnected = await hasKairoAccessToken();
+        if (!isConnected) {
+          toast.error(
+            "Kairo Code requires Coline login first. Connect it in Settings > AI > Agent Authentication.",
+          );
+          return;
+        }
+      }
+
       const isAcp = isAcpAgent(currentAgentId);
-      // For ACP agents (Claude Code, etc.), we don't need an API key
-      if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
+      const requiresApiKey = !isAcp && currentAgentId !== "kairo-code";
+      if (!messageContent.trim() || (requiresApiKey && !chatState.hasApiKey)) return;
 
       chatActions.setInput("");
 

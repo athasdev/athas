@@ -20,6 +20,8 @@ const getAgentLabel = (agentId: string | undefined): string => {
       return "Gemini";
     case "codex-cli":
       return "Codex";
+    case "kairo-code":
+      return "Kairo";
     case "custom":
       return "API";
     default:

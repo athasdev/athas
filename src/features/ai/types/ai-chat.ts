@@ -29,6 +29,7 @@ export type AgentType =
   | "gemini-cli"
   | "kimi-cli"
   | "opencode"
+  | "kairo-code"
   | "qwen-code"
   | "custom";
 
@@ -69,6 +70,12 @@ export const AGENT_OPTIONS: AgentInfo[] = [
     name: "OpenCode",
     description: "SST OpenCode",
     isAcp: true,
+  },
+  {
+    id: "kairo-code",
+    name: "Kairo Code",
+    description: "Coline Kairo Code (OAuth)",
+    isAcp: false,
   },
   {
     id: "qwen-code",
