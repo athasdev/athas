@@ -117,7 +117,8 @@ impl fmt::Display for ToolError {
    }
 }
 
-impl std::error::Error for ToolError {}
+impl std::error::Error for ToolError {
+}
 
 impl From<std::io::Error> for ToolError {
    fn from(err: std::io::Error) -> Self {
