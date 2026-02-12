@@ -1,8 +1,7 @@
 use super::types::{AcpContentBlock, AcpEvent, AcpToolStatus};
 use agent_client_protocol as acp;
 use async_trait::async_trait;
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{Mutex, mpsc};
 
