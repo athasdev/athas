@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import ApiKeyModal from "@/features/ai/components/api-key-modal";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
@@ -13,6 +14,64 @@ import ChatHistorySidebar from "../history/sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
+
+interface DirectAcpUiAction {
+  kind: "open_web_viewer" | "open_terminal";
+  url?: string;
+  command?: string;
+}
+
+const stripWrappingChars = (value: string): string =>
+  value
+    .trim()
+    .replace(/^[`"'([{<\s]+/, "")
+    .replace(/[`"')\]}>.,!?;:\s]+$/, "")
+    .trim();
+
+const normalizeWebUrl = (input: string): string | null => {
+  const cleaned = stripWrappingChars(input);
+  if (!cleaned) return null;
+
+  if (/^https?:\/\//i.test(cleaned)) {
+    try {
+      return new URL(cleaned).toString();
+    } catch {
+      return null;
+    }
+  }
+
+  const hostLike = cleaned
+    .replace(/^www\./i, "www.")
+    .match(/^[a-z0-9.-]+\.[a-z]{2,}(?:\/[^\s]*)?$/i);
+  if (!hostLike) return null;
+
+  try {
+    return new URL(`https://${cleaned}`).toString();
+  } catch {
+    return null;
+  }
+};
+
+const parseDirectAcpUiAction = (message: string): DirectAcpUiAction | null => {
+  const text = message.trim();
+  if (!text) return null;
+
+  // Examples: "open linear.app on web", "open https://x.com in browser"
+  const webMatch = text.match(/\bopen\s+(.+?)\s+(?:on|in)\s+(?:web|browser|site)\b/i);
+  if (webMatch?.[1]) {
+    const url = normalizeWebUrl(webMatch[1]);
+    if (url) return { kind: "open_web_viewer", url };
+  }
+
+  // Examples: "open lazygit on terminal", "open npm run dev in terminal"
+  const terminalMatch = text.match(/\bopen\s+(.+?)\s+(?:on|in)\s+terminal\b/i);
+  if (terminalMatch?.[1]) {
+    const command = stripWrappingChars(terminalMatch[1]);
+    if (command) return { kind: "open_terminal", command };
+  }
+
+  return null;
+};
 
 const AIChat = memo(function AIChat({
   className,
@@ -58,7 +117,7 @@ const AIChat = memo(function AIChat({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const buildContext = async (): Promise<ContextInfo> => {
+  const buildContext = async (agentId: string): Promise<ContextInfo> => {
     const selectedBuffers = buffers.filter((buffer) => chatState.selectedBufferIds.has(buffer.id));
 
     // Build active buffer context, including web viewer content if applicable
@@ -81,6 +140,7 @@ const AIChat = memo(function AIChat({
       selectedProjectFiles: Array.from(chatState.selectedFilesPaths),
       projectRoot: rootFolderPath,
       providerId: settings.aiProviderId,
+      agentId,
     };
 
     if (activeBuffer && !activeBuffer.isWebViewer) {
@@ -158,7 +218,7 @@ const AIChat = memo(function AIChat({
       allProjectFiles,
     );
 
-    const context = await buildContext();
+    const context = await buildContext(currentAgentId);
     const userMessage: Message = {
       id: Date.now().toString(),
       content: messageContent.trim(),
@@ -193,8 +253,39 @@ const AIChat = memo(function AIChat({
     requestAnimationFrame(scrollToBottom);
 
     abortControllerRef.current = new AbortController();
+    let currentAssistantMessageId = assistantMessageId;
 
     try {
+      // Handle direct ACP UI intents locally so they are always reliable.
+      if (isAcp) {
+        const directAction = parseDirectAcpUiAction(messageContent);
+        if (directAction) {
+          const bufferActions = useBufferStore.getState().actions;
+          if (directAction.kind === "open_web_viewer" && directAction.url) {
+            bufferActions.openWebViewerBuffer(directAction.url);
+            chatActions.updateMessage(chatId, currentAssistantMessageId, {
+              content: `Opened ${directAction.url} in Athas web viewer.`,
+              isStreaming: false,
+            });
+          } else if (directAction.kind === "open_terminal" && directAction.command) {
+            bufferActions.openTerminalBuffer({
+              command: directAction.command,
+              name: directAction.command,
+            });
+            chatActions.updateMessage(chatId, currentAssistantMessageId, {
+              content: `Opened terminal and ran \`${directAction.command}\`.`,
+              isStreaming: false,
+            });
+          }
+
+          chatActions.setIsTyping(false);
+          chatActions.setStreamingMessageId(null);
+          abortControllerRef.current = null;
+          processQueuedMessages();
+          return;
+        }
+      }
+
       const conversationContext = currentMessages
         .filter((msg) => msg.role !== "system")
         .map((msg) => ({
@@ -203,8 +294,6 @@ const AIChat = memo(function AIChat({
         }));
 
       const enhancedMessage = processedMessage;
-      let currentAssistantMessageId = assistantMessageId;
-      const currentAgentId = chatActions.getCurrentAgentId();
       if (isAcp) {
         setAcpEvents([]);
       }
@@ -364,36 +453,43 @@ details: ${errorDetails || mainError}
         },
         (event) => {
           if (!isAcpAgent(currentAgentId)) return;
-          const format = () => {
+          // Only show meaningful events, skip noisy ones
+          if (event.type === "content_chunk" || event.type === "session_complete") {
+            return;
+          }
+          const format = (): string | null => {
             switch (event.type) {
               case "tool_start":
-                return `tool_start ${event.toolName}`;
+                return event.toolName;
               case "tool_complete":
-                return `tool_complete ${event.toolId}`;
+                return null; // Skip, tool_start already shown
               case "permission_request":
-                return `permission ${event.permissionType}: ${event.description}`;
+                return null; // Handled separately with permission UI
               case "prompt_complete":
-                return `prompt_complete ${event.stopReason}`;
+                return null; // Not useful to show
               case "session_mode_update":
-                return `mode_state ${event.modeState.currentModeId ?? "none"}`;
+                return event.modeState.currentModeId
+                  ? `Mode: ${event.modeState.currentModeId}`
+                  : null;
               case "current_mode_update":
-                return `mode ${event.currentModeId}`;
+                return `Mode: ${event.currentModeId}`;
               case "slash_commands_update":
-                return `slash_commands ${event.commands.length}`;
+                return null; // Not useful to show
               case "status_changed":
-                return `status running=${event.status.running}`;
+                return null; // Not useful to show
               case "error":
-                return `error ${event.error}`;
-              case "session_complete":
-                return "session_complete";
-              case "content_chunk":
-                return "content_chunk";
+                return `Error: ${event.error}`;
+              case "ui_action":
+                return null; // Handled by acp-handler
             }
           };
-          setAcpEvents((prev) => [
-            ...prev.slice(-199),
-            { id: `${Date.now()}-${event.type}`, text: format() },
-          ]);
+          const text = format();
+          if (text) {
+            setAcpEvents((prev) => [
+              ...prev.slice(-19),
+              { id: `${Date.now()}-${event.type}`, text },
+            ]);
+          }
         },
         chatState.mode,
         chatState.outputStyle,
@@ -479,13 +575,13 @@ details: ${errorDetails || mainError}
     >
       <ChatHeader />
 
-      <div className="scrollbar-hidden flex-1 overflow-y-auto">
+      <div className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto">
         <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} acpEvents={acpEvents} />
       </div>
 
       {currentPermission && (
-        <div className="border-border border-t bg-secondary-bg px-3 py-2 text-xs">
-          <div className="flex items-center gap-2 font-mono">
+        <div className="bg-transparent px-3 pt-2 text-xs">
+          <div className="flex items-center gap-2 rounded-2xl border border-border bg-primary-bg/90 px-3 py-2 font-mono">
             <span className="text-text-lighter">permission:</span>
             <span
               className="min-w-0 flex-1 truncate text-text"
@@ -497,14 +593,14 @@ details: ${errorDetails || mainError}
               <button
                 type="button"
                 onClick={() => handlePermission(false)}
-                className="rounded border border-border bg-primary-bg px-2 py-1 text-text-lighter hover:bg-hover"
+                className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text-lighter hover:bg-hover"
               >
                 deny
               </button>
               <button
                 type="button"
                 onClick={() => handlePermission(true)}
-                className="rounded border border-border bg-primary-bg px-2 py-1 text-text hover:bg-hover"
+                className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text hover:bg-hover"
               >
                 allow
               </button>

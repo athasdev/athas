@@ -4,6 +4,18 @@ import type { ContextInfo } from "./types";
 // Build a comprehensive context prompt for the AI
 export const buildContextPrompt = (context: ContextInfo): string => {
   let contextPrompt = "";
+  const isAcpAgent = !!context.agentId && context.agentId !== "custom";
+
+  // For ACP agents, include available extension methods
+  if (isAcpAgent) {
+    contextPrompt += `Athas ACP Extension Methods (protocol methods, NOT shell commands):
+- Call \`athas.openWebViewer\` with \`{ "url": "https://..." }\` to open websites inside Athas.
+- Call \`athas.openTerminal\` with \`{ "command": "..." }\` to open a terminal tab in Athas.
+- Do NOT run \`ext_method\` in a terminal.
+- Do NOT use shell/browser commands like \`open https://...\` for "open on web" requests; use \`athas.openWebViewer\` instead.
+
+`;
+  }
 
   // Project information
   if (context.projectRoot) {
@@ -11,7 +23,7 @@ export const buildContextPrompt = (context: ContextInfo): string => {
     contextPrompt += `Project: ${projectName}\n`;
 
     // For Claude Code, include the full project path
-    if (context.providerId === "claude-code") {
+    if (isAcpAgent) {
       contextPrompt += `Working directory: ${context.projectRoot}\n`;
     }
   }
@@ -24,7 +36,7 @@ export const buildContextPrompt = (context: ContextInfo): string => {
       if (context.activeBuffer.webViewerContent) {
         contextPrompt += `\n\nWeb page content:\n${context.activeBuffer.webViewerContent}`;
       }
-    } else if (context.providerId === "claude-code") {
+    } else if (isAcpAgent) {
       // For Claude Code, just provide the path
       contextPrompt += `\nCurrently editing: ${context.activeBuffer.path}`;
       if (context.language && context.language !== "Text") {
@@ -70,7 +82,7 @@ export const buildContextPrompt = (context: ContextInfo): string => {
     );
 
     if (otherFiles.length > 0) {
-      if (context.providerId === "claude-code") {
+      if (isAcpAgent) {
         // For Claude Code, list paths relative to project root
         const filePaths = otherFiles
           .map((buffer) => {
@@ -102,7 +114,7 @@ export const buildContextPrompt = (context: ContextInfo): string => {
 
   // Selected project files for context
   if (context.selectedProjectFiles && context.selectedProjectFiles.length > 0) {
-    if (context.providerId === "claude-code") {
+    if (isAcpAgent) {
       // For Claude Code, just list the file paths
       const filePaths = context.selectedProjectFiles
         .map((filePath) => {
@@ -141,6 +153,7 @@ export const buildSystemPrompt = (
   outputStyle: OutputStyle = "default",
 ): string => {
   let basePrompt = `You are an expert coding assistant integrated into a code editor. You have access to the user's current project context and open files.`;
+  const hasAcpExtensions = contextPrompt.includes("Athas ACP Extension Methods");
 
   // Mode-specific behavior
   if (mode === "plan") {
@@ -224,7 +237,21 @@ Guidelines:
 - Reference the user's actual code when relevant
 - Offer multiple solutions when appropriate
 - Use proper formatting for code snippets
-- Ask clarifying questions if needed
+- Ask clarifying questions if needed`;
+
+  if (hasAcpExtensions) {
+    basePrompt += `
+
+ACP extension rules:
+- Use Athas extension methods as protocol calls, not shell commands.
+- Never run \`ext_method\` in a terminal command.
+- For "open URL/web/site" requests, call \`athas.openWebViewer\` directly instead of suggesting \`open https://...\`.
+- For "open X in terminal" requests (for example lazygit), call \`athas.openTerminal\` with \`{ "command": "X" }\`.
+- Never say Athas extension methods are unavailable or require MCP exposure in this ACP session.
+- After calling an Athas extension method, confirm success and stop; do not retry with shell fallbacks unless user asks.`;
+  }
+
+  basePrompt += `
 
 Current context:
 ${contextPrompt}`;

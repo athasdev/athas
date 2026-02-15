@@ -249,12 +249,12 @@ export function ContextSelector({
   }, [handleKeyDown]);
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1">
+    <div className="flex min-w-0 flex-1 items-center gap-1.5">
       <div className="relative shrink-0" ref={dropdownRef}>
         <button
           onClick={onToggleOpen}
           className={cn(
-            "flex select-none items-center justify-center rounded p-1",
+            "flex h-8 w-8 select-none items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-1",
             "text-text-lighter text-xs transition-colors",
             "hover:bg-hover hover:text-text focus:outline-none",
           )}
@@ -269,7 +269,7 @@ export function ContextSelector({
         {isOpen && (
           <div
             className={cn(
-              "scrollbar-hidden fixed z-50 mt-1 overflow-y-auto rounded border border-border bg-secondary-bg shadow-lg",
+              "scrollbar-hidden z-[10030] mt-1 overflow-y-auto rounded-2xl border border-border bg-primary-bg/95 shadow-lg backdrop-blur-sm",
               "select-none",
             )}
             style={{
@@ -285,7 +285,7 @@ export function ContextSelector({
           >
             {/* Search input */}
             <div className="border-border border-b p-2">
-              <div className="relative">
+              <div className="relative rounded-xl border border-border bg-secondary-bg/80 px-1">
                 <Search
                   size={12}
                   className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 transform text-text-lighter"
@@ -295,7 +295,7 @@ export function ContextSelector({
                   placeholder="Search files..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-transparent py-1 pr-2 pl-6 text-text text-xs placeholder-text-lighter focus:outline-none"
+                  className="w-full bg-transparent py-1.5 pr-2 pl-6 text-text text-xs placeholder-text-lighter focus:outline-none"
                   aria-label="Search files"
                 />
               </div>
@@ -319,7 +319,7 @@ export function ContextSelector({
                       }
                     }}
                     className={cn(
-                      "group ui-font flex w-full cursor-pointer items-center gap-2 px-3 py-1 text-left text-xs transition-colors hover:bg-hover focus:outline-none focus:ring-1 focus:ring-accent/50",
+                      "group ui-font mx-1 flex w-[calc(100%-8px)] cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs transition-colors hover:bg-hover focus:outline-none focus:ring-1 focus:ring-accent/50",
                       item.isSelected && "bg-selected",
                     )}
                     aria-label={`${item.isSelected ? "Remove" : "Add"} ${item.name} ${item.isSelected ? "from" : "to"} context`}
@@ -384,11 +384,11 @@ export function ContextSelector({
       </div>
 
       {/* Selected items as compact badges with horizontal scrolling */}
-      <div className="scrollbar-hidden flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+      <div className="scrollbar-hidden flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
         {selectedItems.map((item) => (
           <div
             key={`selected-${item.type}-${item.id}`}
-            className="group flex shrink-0 select-none items-center gap-1 rounded border border-border bg-hover px-1.5 py-0.5 text-xs"
+            className="group flex shrink-0 select-none items-center gap-1 rounded-full border border-border bg-secondary-bg/80 px-2 py-1 text-xs"
           >
             {item.type === "buffer" ? (
               item.isSQLite ? (
@@ -420,7 +420,7 @@ export function ContextSelector({
                   onToggleFile(item.id);
                 }
               }}
-              className="rounded text-text-lighter opacity-0 transition-opacity hover:text-red-400 focus:opacity-100 focus:outline-none focus:ring-1 focus:ring-red-400/50 group-hover:opacity-100"
+              className="rounded-full p-0.5 text-text-lighter opacity-0 transition-all hover:bg-red-500/20 hover:text-red-400 focus:opacity-100 focus:outline-none focus:ring-1 focus:ring-red-400/50 group-hover:opacity-100"
               aria-label={`Remove ${item.name} from context`}
               tabIndex={0}
             >

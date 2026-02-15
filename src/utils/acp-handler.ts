@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { buildContextPrompt } from "./context-builder";
 import type { ContextInfo } from "./types";
 
@@ -148,6 +149,10 @@ export class AcpStreamHandler {
       case "prompt_complete":
         this.handlePromptComplete(event);
         break;
+
+      case "ui_action":
+        this.handleUiAction(event);
+        break;
     }
   }
 
@@ -175,6 +180,26 @@ export class AcpStreamHandler {
   private handleCurrentModeUpdate(event: Extract<AcpEvent, { type: "current_mode_update" }>): void {
     console.log("Current mode changed:", event.currentModeId);
     useAIChatStore.getState().setCurrentModeId(event.currentModeId);
+  }
+
+  private handleUiAction(event: Extract<AcpEvent, { type: "ui_action" }>): void {
+    const { action } = event;
+    const bufferActions = useBufferStore.getState().actions;
+
+    switch (action.action) {
+      case "open_web_viewer":
+        console.log("Opening web viewer:", action.url);
+        bufferActions.openWebViewerBuffer(action.url);
+        break;
+
+      case "open_terminal":
+        console.log("Opening terminal:", action.command);
+        bufferActions.openTerminalBuffer({
+          command: action.command ?? undefined,
+          name: action.command ?? undefined,
+        });
+        break;
+    }
   }
 
   private handleContentChunk(event: Extract<AcpEvent, { type: "content_chunk" }>): void {
@@ -326,7 +351,11 @@ export class AcpStreamHandler {
 
   // Static method to cancel the current prompt turn
   static async cancelPrompt(): Promise<void> {
-    await invoke("cancel_acp_prompt");
     AcpStreamHandler.activeHandler?.forceStop();
+    try {
+      await invoke("cancel_acp_prompt");
+    } catch (error) {
+      console.error("Failed to cancel ACP prompt on backend:", error);
+    }
   }
 }
