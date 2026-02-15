@@ -23,6 +23,8 @@ const getAgentLabel = (agentId: string | undefined): string => {
       return "Gemini";
     case "codex-cli":
       return "Codex";
+    case "kairo-code":
+      return "Kairo";
     case "custom":
       return "API";
     default:
@@ -39,6 +41,8 @@ const getAgentColor = (agentId: string | undefined): string => {
       return "bg-blue-500/20 text-blue-400 border-blue-500/30";
     case "codex-cli":
       return "bg-green-500/20 text-green-400 border-green-500/30";
+    case "kairo-code":
+      return "bg-yellow-500/20 text-yellow-300 border-yellow-500/30";
     case "kimi-cli":
       return "bg-cyan-500/20 text-cyan-400 border-cyan-500/30";
     case "opencode":

@@ -106,7 +106,7 @@ function FileTreeItemComponent({
             "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-20",
           isDragging && "cursor-move",
           file.ignored && "opacity-50",
-          isCut && "opacity-40 italic",
+          isCut && "italic opacity-40",
         )}
         style={
           {

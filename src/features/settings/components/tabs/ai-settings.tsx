@@ -6,6 +6,8 @@ import {
   Eye,
   EyeOff,
   Key,
+  LogIn,
+  LogOut,
   RefreshCw,
   Trash2,
   X,
@@ -21,6 +23,12 @@ import Section, { SettingRow } from "@/ui/section";
 import Slider from "@/ui/slider";
 import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
+import {
+  clearKairoTokens,
+  hasKairoAccessToken,
+  isKairoConfigured,
+  startKairoOAuthLogin,
+} from "@/utils/kairo-auth";
 import { getProvider } from "@/utils/providers";
 
 export const AISettings = () => {
@@ -68,6 +76,9 @@ export const AISettings = () => {
   const { dynamicModels, setDynamicModels } = useAIChatStore();
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
+  const [isKairoConnected, setIsKairoConnected] = useState(false);
+  const [isKairoAuthLoading, setIsKairoAuthLoading] = useState(false);
+  const [kairoAuthMessage, setKairoAuthMessage] = useState<string | null>(null);
 
   // API Key functions from AI chat store
   const saveApiKey = useAIChatStore((state) => state.saveApiKey);
@@ -79,6 +90,26 @@ export const AISettings = () => {
   useEffect(() => {
     checkAllProviderApiKeys();
   }, [checkAllProviderApiKeys]);
+
+  const refreshKairoAuthState = async () => {
+    try {
+      setIsKairoConnected(await hasKairoAccessToken());
+    } catch {
+      setIsKairoConnected(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      refreshKairoAuthState();
+    };
+
+    refreshKairoAuthState();
+    window.addEventListener("focus", handleWindowFocus);
+    return () => {
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, []);
 
   const providers = getAvailableProviders();
   const currentProvider = providers.find((p) => p.id === settings.aiProviderId);
@@ -137,6 +168,44 @@ export const AISettings = () => {
       if (provider.models.length > 0) {
         updateSetting("aiModelId", provider.models[0].id);
       }
+    }
+  };
+
+  const handleConnectKairo = async () => {
+    setKairoAuthMessage(null);
+    if (!isKairoConfigured()) {
+      setKairoAuthMessage("Kairo OAuth is not configured.");
+      return;
+    }
+
+    setIsKairoAuthLoading(true);
+    try {
+      setKairoAuthMessage("Complete login in your browser...");
+      const mode = await startKairoOAuthLogin();
+      if (mode === "device") {
+        await refreshKairoAuthState();
+        setKairoAuthMessage("Kairo Code connected.");
+      } else {
+        setKairoAuthMessage("Finish login in your browser, then return to Athas.");
+      }
+    } catch (error) {
+      setKairoAuthMessage(error instanceof Error ? error.message : "Failed to start Kairo login.");
+    } finally {
+      setIsKairoAuthLoading(false);
+    }
+  };
+
+  const handleDisconnectKairo = async () => {
+    setKairoAuthMessage(null);
+    setIsKairoAuthLoading(true);
+    try {
+      await clearKairoTokens();
+      await refreshKairoAuthState();
+      setKairoAuthMessage("Kairo Code disconnected.");
+    } catch {
+      setKairoAuthMessage("Failed to disconnect Kairo Code.");
+    } finally {
+      setIsKairoAuthLoading(false);
     }
   };
   const startEditing = (providerId: string) => {
@@ -386,6 +455,53 @@ export const AISettings = () => {
           ))}
         </Section>
       )}
+
+      <Section title="Agent Authentication">
+        <SettingRow
+          label="Kairo Code"
+          description="Login with Coline before using the Kairo Code agent"
+        >
+          <div className="flex w-full flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "rounded border px-2 py-1 text-xs",
+                  isKairoConnected
+                    ? "border-green-500/30 bg-green-500/20 text-green-400"
+                    : "border-yellow-500/30 bg-yellow-500/20 text-yellow-300",
+                )}
+              >
+                {isKairoConnected ? "Connected" : "Not connected"}
+              </div>
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={handleConnectKairo}
+                disabled={isKairoAuthLoading}
+                className="gap-1.5"
+              >
+                <LogIn size={12} />
+                {isKairoAuthLoading ? "Opening..." : "Login with Coline"}
+              </Button>
+              {isKairoConnected && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={handleDisconnectKairo}
+                  disabled={isKairoAuthLoading}
+                  className="gap-1.5 text-red-500 hover:bg-red-500/10"
+                >
+                  <LogOut size={12} />
+                  Disconnect
+                </Button>
+              )}
+            </div>
+            {kairoAuthMessage && (
+              <div className="text-text-lighter text-xs">{kairoAuthMessage}</div>
+            )}
+          </div>
+        </SettingRow>
+      </Section>
 
       {providersNeedingAuth.length > 0 && (
         <Section title="Authentication">

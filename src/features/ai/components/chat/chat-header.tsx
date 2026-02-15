@@ -3,8 +3,10 @@ import { Check, ChevronDown, Download, History, Plus, Terminal } from "lucide-re
 import { useEffect, useRef, useState } from "react";
 import type { AgentConfig } from "@/features/ai/types/acp";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
+import { toast } from "@/stores/toast-store";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
+import { hasKairoAccessToken } from "@/utils/kairo-auth";
 import { useAIChatStore } from "../../store/store";
 
 type PackageManager = "bun" | "npm" | "pnpm" | "yarn";
@@ -16,6 +18,7 @@ const AGENT_INSTALL_HINTS: Record<
   "claude-code": { package: "@zed-industries/claude-code-acp", type: "npm" },
   "codex-cli": { package: "@openai/codex", type: "npm" },
   "gemini-cli": { package: "@google/gemini-cli", type: "npm" },
+  "kairo-code": { command: "bun add -g --no-cache @colineapp/kairo-code-acp", type: "shell" },
   "kimi-cli": { package: "kimi-cli", type: "npm" },
   opencode: { command: "curl -fsSL https://opencode.ai/install | bash", type: "shell" },
   "qwen-code": { command: "pip install qwen-code", type: "pip" },
@@ -24,7 +27,7 @@ const AGENT_INSTALL_HINTS: Record<
 const getInstallCommand = (pkg: string, pm: PackageManager): string => {
   switch (pm) {
     case "bun":
-      return `bun install -g ${pkg}`;
+      return `bun add -g ${pkg}`;
     case "pnpm":
       return `pnpm add -g ${pkg}`;
     case "yarn":
@@ -33,6 +36,8 @@ const getInstallCommand = (pkg: string, pm: PackageManager): string => {
       return `npm install -g ${pkg}`;
   }
 };
+
+const BUILT_IN_AGENTS = new Set<string>(["custom"]);
 
 function EditableChatTitle({
   title,
@@ -119,7 +124,7 @@ export function ChatHeader() {
 
   const [isNewChatMenuOpen, setIsNewChatMenuOpen] = useState(false);
   const [isAgentSelectorOpen, setIsAgentSelectorOpen] = useState(false);
-  const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set(["custom"]));
+  const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set(BUILT_IN_AGENTS));
   const [packageManager, setPackageManager] = useState<PackageManager>("bun");
   const [pmDropdownAgent, setPmDropdownAgent] = useState<string | null>(null);
 
@@ -132,7 +137,7 @@ export function ChatHeader() {
     const detectAgents = async () => {
       try {
         const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
-        const installed = new Set<string>(["custom"]);
+        const installed = new Set<string>(BUILT_IN_AGENTS);
         for (const agent of availableAgents) {
           if (agent.installed) {
             installed.add(agent.id);
@@ -143,10 +148,30 @@ export function ChatHeader() {
         console.error("Failed to detect agents:", error);
       }
     };
+
     detectAgents();
   }, []);
 
+  const ensureKairoAuthenticated = async (): Promise<boolean> => {
+    try {
+      const connected = await hasKairoAccessToken();
+      if (connected) return true;
+    } catch (error) {
+      console.error("Failed to verify Kairo OAuth status:", error);
+    }
+
+    toast.error(
+      "Kairo Code requires Coline login first. Connect it in Settings > AI > Agent Authentication.",
+    );
+    return false;
+  };
+
   const handleNewChat = async (agentId: AgentType) => {
+    if (agentId === "kairo-code" && !(await ensureKairoAuthenticated())) {
+      setIsNewChatMenuOpen(false);
+      return;
+    }
+
     setIsNewChatMenuOpen(false);
     setSelectedAgentId(agentId);
 
@@ -165,6 +190,11 @@ export function ChatHeader() {
 
   const handleAgentChange = async (agentId: AgentType) => {
     if (agentId === currentAgentId) {
+      setIsAgentSelectorOpen(false);
+      return;
+    }
+
+    if (agentId === "kairo-code" && !(await ensureKairoAuthenticated())) {
       setIsAgentSelectorOpen(false);
       return;
     }

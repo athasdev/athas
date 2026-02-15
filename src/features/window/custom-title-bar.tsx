@@ -135,7 +135,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         </div>
 
         {/* Account menu */}
-        <div className="flex items-center gap-0.5 mr-4">
+        <div className="mr-4 flex items-center gap-0.5">
           <AccountMenu iconSize={14} />
         </div>
       </div>

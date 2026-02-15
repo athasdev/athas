@@ -8,13 +8,50 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings-store"
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
 import Button from "@/ui/button";
+import Dropdown from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
+import { type KairoModelOption, listKairoModels } from "@/utils/kairo-auth";
+import {
+  clampKairoReasoningLevel,
+  getKairoReasoningSupport,
+  type KairoThinkingEffort,
+  normalizeKairoThinkingEffort,
+} from "@/utils/kairo-reasoning";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ChatModeSelector } from "../selectors/chat-mode-selector";
 import { ContextSelector } from "../selectors/context-selector";
 import { ModelSelectorDropdown } from "../selectors/model-selector-dropdown";
 import { SessionModeSelector } from "../selectors/session-mode-selector";
+
+const KAIRO_GPT_REASONING_OPTIONS = [
+  { value: "0", label: "None" },
+  { value: "1", label: "Low" },
+  { value: "2", label: "Med" },
+  { value: "3", label: "High" },
+];
+
+const KAIRO_GPT_MINI_REASONING_OPTIONS = [
+  { value: "0", label: "Min" },
+  { value: "1", label: "Low" },
+  { value: "2", label: "Med" },
+  { value: "3", label: "High" },
+];
+
+const KAIRO_CLAUDE_OPUS_46_REASONING_OPTIONS = [
+  { value: "off", label: "Off" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Med" },
+  { value: "high", label: "High" },
+  { value: "max", label: "Max" },
+];
+
+const KAIRO_CLAUDE_BINARY_REASONING_OPTIONS = [
+  { value: "off", label: "Off" },
+  { value: "on", label: "On" },
+];
+
+const KAIRO_MODEL_DEFINED_REASONING_OPTIONS = [{ value: "auto", label: "Auto" }];
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -30,6 +67,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // Local state for input emptiness check (to avoid subscribing to full input text)
   const [hasInputText, setHasInputText] = useState(false);
+  const [kairoModels, setKairoModels] = useState<KairoModelOption[]>([]);
+  const [isLoadingKairoModels, setIsLoadingKairoModels] = useState(false);
 
   // Get state from stores with optimized selectors
   const { settings, updateSetting } = useSettingsStore();
@@ -51,9 +90,43 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // Check if current agent is "custom" (only show model selector for custom agent)
   const currentAgentId = getCurrentAgentId();
   const isCustomAgent = currentAgentId === "custom";
+  const isKairoAgent = currentAgentId === "kairo-code";
 
   // ACP agents don't need API key (they handle their own auth)
   const isInputEnabled = isCustomAgent ? hasApiKey : true;
+
+  useEffect(() => {
+    if (!isKairoAgent) {
+      return;
+    }
+
+    let cancelled = false;
+    const loadKairoModels = async () => {
+      setIsLoadingKairoModels(true);
+      try {
+        const { models, defaultModel } = await listKairoModels();
+        if (cancelled) return;
+
+        setKairoModels(models);
+
+        if (models.length > 0 && !models.some((model) => model.id === settings.aiModelId)) {
+          updateSetting("aiModelId", defaultModel);
+        }
+      } catch (error) {
+        console.error("Failed to load Kairo models:", error);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingKairoModels(false);
+        }
+      }
+    };
+
+    loadKairoModels();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isKairoAgent, updateSetting]);
 
   // Memoize action selectors
   const setInput = useAIChatStore((state) => state.setInput);
@@ -561,6 +634,83 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // Get available slash commands
   const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
   const hasSlashCommands = availableSlashCommands.length > 0;
+  const kairoModelOptions = kairoModels.map((model) => ({
+    value: model.id,
+    label: model.name,
+  }));
+  const kairoCurrentModelLabel =
+    kairoModels.find((model) => model.id === settings.aiModelId)?.name ||
+    settings.aiModelId ||
+    "Select model";
+  const kairoSelectedModelId = settings.aiModelId || "gpt-5.2";
+  const kairoSelectedModelIdNormalized = kairoSelectedModelId.toLowerCase();
+  const kairoReasoningSupport = getKairoReasoningSupport(kairoSelectedModelId);
+  const isKairoMiniReasoningModel =
+    kairoSelectedModelIdNormalized === "gpt-5-mini" ||
+    kairoSelectedModelIdNormalized === "gpt-5-nano";
+  const normalizedKairoReasoningLevel = clampKairoReasoningLevel(settings.aiReasoningLevel);
+  const normalizedKairoThinkingEffort = normalizeKairoThinkingEffort(settings.aiThinkingEffort);
+
+  const kairoReasoningDropdown = (() => {
+    switch (kairoReasoningSupport) {
+      case "gpt_reasoning_level":
+        return {
+          options: isKairoMiniReasoningModel
+            ? KAIRO_GPT_MINI_REASONING_OPTIONS
+            : KAIRO_GPT_REASONING_OPTIONS,
+          value: String(normalizedKairoReasoningLevel),
+          disabled: false,
+        };
+      case "claude_opus_46":
+        return {
+          options: KAIRO_CLAUDE_OPUS_46_REASONING_OPTIONS,
+          value: normalizedKairoReasoningLevel <= 0 ? "off" : normalizedKairoThinkingEffort,
+          disabled: false,
+        };
+      case "claude_binary":
+        return {
+          options: KAIRO_CLAUDE_BINARY_REASONING_OPTIONS,
+          value: normalizedKairoReasoningLevel <= 0 ? "off" : "on",
+          disabled: false,
+        };
+      default:
+        return {
+          options: KAIRO_MODEL_DEFINED_REASONING_OPTIONS,
+          value: "auto",
+          disabled: true,
+        };
+    }
+  })();
+
+  const kairoReasoningLabel =
+    kairoReasoningDropdown.options.find((option) => option.value === kairoReasoningDropdown.value)
+      ?.label || "Auto";
+
+  const handleKairoReasoningChange = (value: string) => {
+    switch (kairoReasoningSupport) {
+      case "gpt_reasoning_level": {
+        const parsed = Number(value);
+        if (Number.isNaN(parsed)) return;
+        updateSetting("aiReasoningLevel", clampKairoReasoningLevel(parsed));
+        return;
+      }
+      case "claude_opus_46":
+        if (value === "off") {
+          updateSetting("aiReasoningLevel", 0);
+          return;
+        }
+        if (value === "low" || value === "medium" || value === "high" || value === "max") {
+          updateSetting("aiReasoningLevel", 1);
+          updateSetting("aiThinkingEffort", value as KairoThinkingEffort);
+        }
+        return;
+      case "claude_binary":
+        updateSetting("aiReasoningLevel", value === "off" ? 0 : 1);
+        return;
+      default:
+        return;
+    }
+  };
 
   return (
     <div
@@ -618,6 +768,74 @@ const AIChatInputBar = memo(function AIChatInputBar({
               isOpen={isContextDropdownOpen}
               onToggleOpen={() => setIsContextDropdownOpen(!isContextDropdownOpen)}
             />
+
+            {isKairoAgent && (
+              <Dropdown
+                value={settings.aiModelId}
+                options={kairoModelOptions}
+                onChange={(modelId) => updateSetting("aiModelId", modelId)}
+                placeholder={isLoadingKairoModels ? "Loading..." : "Select model"}
+                size="xs"
+                className="w-[80px] sm:w-[88px] md:w-[96px]"
+                openDirection="up"
+                disabled={isLoadingKairoModels || kairoModelOptions.length === 0}
+                CustomTrigger={({ ref, onClick }) => (
+                  <button
+                    ref={ref}
+                    type="button"
+                    onClick={onClick}
+                    disabled={isLoadingKairoModels || kairoModelOptions.length === 0}
+                    className={cn(
+                      "flex h-6 w-[80px] items-center justify-between gap-1 rounded border border-border bg-primary-bg px-1.5 text-xs transition-colors sm:w-[88px] md:w-[96px]",
+                      isLoadingKairoModels || kairoModelOptions.length === 0
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-pointer hover:bg-hover",
+                    )}
+                    title={isLoadingKairoModels ? "Loading models..." : kairoCurrentModelLabel}
+                  >
+                    <span className="max-w-[50px] truncate text-text-lighter sm:max-w-[56px] md:max-w-[62px]">
+                      {isLoadingKairoModels ? "Loading..." : kairoCurrentModelLabel}
+                    </span>
+                    <span className="shrink-0 text-text-lighter">▾</span>
+                  </button>
+                )}
+              />
+            )}
+
+            {isKairoAgent && (
+              <Dropdown
+                value={kairoReasoningDropdown.value}
+                options={kairoReasoningDropdown.options}
+                onChange={handleKairoReasoningChange}
+                placeholder="Reason"
+                size="xs"
+                className="w-[66px] sm:w-[72px] md:w-[80px]"
+                openDirection="up"
+                disabled={kairoReasoningDropdown.disabled}
+                CustomTrigger={({ ref, onClick }) => (
+                  <button
+                    ref={ref}
+                    type="button"
+                    onClick={onClick}
+                    disabled={kairoReasoningDropdown.disabled}
+                    className={cn(
+                      "flex h-6 w-[66px] items-center justify-between gap-1 rounded border border-border bg-primary-bg px-1.5 text-xs transition-colors sm:w-[72px] md:w-[80px]",
+                      kairoReasoningDropdown.disabled
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-pointer hover:bg-hover",
+                    )}
+                    title={
+                      kairoReasoningDropdown.disabled ? "Model-defined reasoning" : "Reasoning"
+                    }
+                  >
+                    <span className="max-w-[38px] truncate text-text-lighter sm:max-w-[44px] md:max-w-[50px]">
+                      {kairoReasoningLabel}
+                    </span>
+                    <span className="shrink-0 text-text-lighter">▾</span>
+                  </button>
+                )}
+              />
+            )}
 
             {/* Queue indicator */}
             {queueCount > 0 && (

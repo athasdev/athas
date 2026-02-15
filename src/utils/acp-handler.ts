@@ -1,8 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/store/store";
+import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
 import { buildContextPrompt } from "./context-builder";
+import {
+  getValidKairoAccessToken,
+  KAIRO_BASE_URL,
+  KAIRO_CLIENT_NAME,
+  KAIRO_CLIENT_PLATFORM,
+  KAIRO_CLIENT_VERSION,
+} from "./kairo-auth";
 import type { ContextInfo } from "./types";
 
 interface AcpHandlers {
@@ -10,14 +18,24 @@ interface AcpHandlers {
   onComplete: () => void;
   onError: (error: string) => void;
   onNewMessage?: () => void;
-  onToolUse?: (toolName: string, toolInput?: unknown) => void;
-  onToolComplete?: (toolName: string) => void;
+  onToolUse?: (
+    toolName: string,
+    toolInput?: unknown,
+    toolId?: string,
+    event?: Extract<AcpEvent, { type: "tool_start" }>,
+  ) => void;
+  onToolComplete?: (toolName: string, event?: Extract<AcpEvent, { type: "tool_complete" }>) => void;
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
   onEvent?: (event: AcpEvent) => void;
 }
 
 interface AcpListeners {
   event?: () => void;
+}
+
+interface AcpStartOptions {
+  mode?: ChatMode;
+  outputStyle?: OutputStyle;
 }
 
 export class AcpStreamHandler {
@@ -35,11 +53,19 @@ export class AcpStreamHandler {
     private handlers: AcpHandlers,
   ) {}
 
-  async start(userMessage: string, context: ContextInfo): Promise<void> {
+  async start(
+    userMessage: string,
+    context: ContextInfo,
+    options: AcpStartOptions = {},
+  ): Promise<void> {
     try {
+      if (AcpStreamHandler.activeHandler && AcpStreamHandler.activeHandler !== this) {
+        AcpStreamHandler.activeHandler.cancelled = true;
+        AcpStreamHandler.activeHandler.cleanup();
+      }
       AcpStreamHandler.activeHandler = this;
-      await this.ensureAgentRunning();
-      const fullMessage = this.buildMessage(userMessage, context);
+      await this.ensureAgentRunning(context);
+      const fullMessage = this.buildMessage(userMessage, context, options);
       await this.setupListeners();
       await invoke("send_acp_prompt", { prompt: fullMessage });
       this.setupTimeout();
@@ -49,19 +75,20 @@ export class AcpStreamHandler {
     }
   }
 
-  private async ensureAgentRunning(): Promise<void> {
+  private async ensureAgentRunning(context: ContextInfo): Promise<void> {
     try {
       const status = await invoke<AcpAgentStatus>("get_acp_status");
 
       if (!status.running || status.agentId !== this.agentId) {
         console.log(`Starting agent ${this.agentId}...`);
 
-        // Get current workspace path if available
-        const workspacePath = this.getWorkspacePath();
+        const workspacePath = this.getWorkspacePath(context);
+        const envVars = await this.getAgentEnvVars();
 
         const startStatus = await invoke<AcpAgentStatus>("start_acp_agent", {
           agentId: this.agentId,
           workspacePath,
+          envVars,
         });
 
         if (!startStatus.running) {
@@ -76,14 +103,71 @@ export class AcpStreamHandler {
     }
   }
 
-  private getWorkspacePath(): string | null {
-    // Try to get workspace path from the app state
-    // This can be enhanced to read from a store or context
-    return null;
+  private getWorkspacePath(context: ContextInfo): string | null {
+    const root =
+      typeof context.projectRoot === "string" && context.projectRoot.trim().length > 0
+        ? context.projectRoot.trim()
+        : null;
+    return root;
   }
 
-  private buildMessage(userMessage: string, context: ContextInfo): string {
+  private async getAgentEnvVars(): Promise<Record<string, string> | undefined> {
+    if (this.agentId !== "kairo-code") {
+      return undefined;
+    }
+
+    const accessToken = await getValidKairoAccessToken();
+    if (!accessToken) {
+      throw new Error(
+        "Kairo Code is not connected. Login in Settings > AI > Agent Authentication.",
+      );
+    }
+
+    // Kairo ACP in Athas is expected to run with tool-calling enabled.
+    // Keep this hard-coded for now to avoid accidental silent downgrade.
+    const enableKairoTools = true;
+
+    return {
+      KAIRO_ACCESS_TOKEN: accessToken,
+      COLINE_KAIRO_ACCESS_TOKEN: accessToken,
+      KAIRO_OAUTH_ACCESS_TOKEN: accessToken,
+      KAIRO_BASE_URL,
+      KAIRO_CLIENT_NAME,
+      KAIRO_CLIENT_VERSION,
+      KAIRO_CLIENT_PLATFORM,
+      KAIRO_ENABLE_TOOLS: enableKairoTools ? "1" : "0",
+    };
+  }
+
+  private buildMessage(
+    userMessage: string,
+    context: ContextInfo,
+    options: AcpStartOptions,
+  ): string {
     const contextPrompt = buildContextPrompt(context);
+    const mode = options.mode ?? "chat";
+
+    if (this.agentId === "kairo-code" && mode === "plan") {
+      const planDirective = `PLAN MODE: You are in planning mode.
+- Do not execute or modify code directly.
+- Focus on analysis, step-by-step implementation planning, and risks.
+- Use conditional wording (would/could/should), not direct execution wording.
+
+When returning an implementation plan, use this exact structure:
+
+[PLAN_BLOCK]
+[STEP] Short step title
+Detailed step description with specific files/commands.
+[/STEP]
+[/PLAN_BLOCK]`;
+
+      if (!contextPrompt) {
+        return `${planDirective}\n\nUser request:\n${userMessage}`;
+      }
+
+      return `${planDirective}\n\nContext:\n${contextPrompt}\n\nUser request:\n${userMessage}`;
+    }
+
     return contextPrompt ? `${contextPrompt}\n\n${userMessage}` : userMessage;
   }
 
@@ -196,13 +280,13 @@ export class AcpStreamHandler {
   private handleToolStart(event: Extract<AcpEvent, { type: "tool_start" }>): void {
     this.currentToolName = event.toolName;
     if (this.handlers.onToolUse) {
-      this.handlers.onToolUse(event.toolName, event.input);
+      this.handlers.onToolUse(event.toolName, event.input, event.toolId, event);
     }
   }
 
   private handleToolComplete(event: Extract<AcpEvent, { type: "tool_complete" }>): void {
-    if (this.currentToolName && this.handlers.onToolComplete) {
-      this.handlers.onToolComplete(this.currentToolName);
+    if (this.handlers.onToolComplete) {
+      this.handlers.onToolComplete(event.toolName || this.currentToolName || "unknown", event);
     }
     this.currentToolName = null;
     this.pendingNewMessage = true;

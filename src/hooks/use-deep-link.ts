@@ -3,12 +3,14 @@ import { useEffect } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { toast } from "@/stores/toast-store";
+import { completeKairoOAuthCallback } from "@/utils/kairo-auth";
 
 /**
  * Hook to handle deep link URLs
  * Supports:
  *   athas://extension/install/{extensionId}
  *   athas://auth/callback?token={token}
+ *   athas://kairo/callback?code={code}&state={state}
  */
 export function useDeepLink() {
   useEffect(() => {
@@ -32,8 +34,8 @@ function handleDeepLink(url: string) {
       return;
     }
 
-    const path = parsed.pathname.replace(/^\/\//, "");
-    const segments = path.split("/").filter(Boolean);
+    const pathSegments = parsed.pathname.replace(/^\/+/, "").split("/").filter(Boolean);
+    const segments = [parsed.hostname, ...pathSegments].filter(Boolean);
 
     if (segments[0] === "extension" && segments[1] === "install" && segments[2]) {
       const extensionId = segments[2];
@@ -43,6 +45,8 @@ function handleDeepLink(url: string) {
       if (tokenParam) {
         handleAuthCallback(tokenParam);
       }
+    } else if (segments[0] === "kairo" && segments[1] === "callback") {
+      handleKairoAuthCallback(parsed.searchParams);
     }
   } catch (error) {
     console.error("Failed to parse deep link:", error);
@@ -81,5 +85,15 @@ async function handleAuthCallback(token: string) {
     toast.success("Signed in successfully!");
   } catch {
     toast.error("Authentication failed. Please try again.");
+  }
+}
+
+async function handleKairoAuthCallback(searchParams: URLSearchParams) {
+  try {
+    await completeKairoOAuthCallback(searchParams);
+    toast.success("Kairo Code connected successfully!");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Authentication failed";
+    toast.error(`Kairo Code login failed: ${message}`);
   }
 }

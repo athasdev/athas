@@ -1,7 +1,7 @@
-use super::types::{AcpContentBlock, AcpEvent};
+use super::types::{AcpContentBlock, AcpEvent, AcpToolStatus};
 use agent_client_protocol as acp;
 use async_trait::async_trait;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{Mutex, mpsc};
 
@@ -12,25 +12,36 @@ pub struct PermissionResponse {
    pub cancelled: bool,
 }
 
+#[derive(Clone)]
+struct ActiveToolState {
+   name: String,
+   input: serde_json::Value,
+   kind: Option<String>,
+}
+
 /// Athas ACP Client implementation
 /// Handles requests from the agent (file access, terminals, permissions)
 pub struct AthasAcpClient {
    app_handle: AppHandle,
+   agent_id: String,
    workspace_path: Option<String>,
    permission_tx: mpsc::Sender<PermissionResponse>,
    permission_rx: Arc<Mutex<mpsc::Receiver<PermissionResponse>>>,
    current_session_id: Arc<Mutex<Option<String>>>,
+   active_tools: Arc<Mutex<HashMap<String, ActiveToolState>>>,
 }
 
 impl AthasAcpClient {
-   pub fn new(app_handle: AppHandle, workspace_path: Option<String>) -> Self {
+   pub fn new(app_handle: AppHandle, agent_id: String, workspace_path: Option<String>) -> Self {
       let (permission_tx, permission_rx) = mpsc::channel(32);
       Self {
          app_handle,
+         agent_id,
          workspace_path,
          permission_tx,
          permission_rx: Arc::new(Mutex::new(permission_rx)),
          current_session_id: Arc::new(Mutex::new(None)),
+         active_tools: Arc::new(Mutex::new(HashMap::new())),
       }
    }
 
@@ -57,6 +68,47 @@ impl AthasAcpClient {
          return format!("{}/{}", workspace, path);
       }
       path.to_string()
+   }
+
+   fn map_tool_status(status: acp::ToolCallStatus) -> AcpToolStatus {
+      match status {
+         acp::ToolCallStatus::Pending => AcpToolStatus::Pending,
+         acp::ToolCallStatus::InProgress => AcpToolStatus::InProgress,
+         acp::ToolCallStatus::Completed => AcpToolStatus::Completed,
+         acp::ToolCallStatus::Failed => AcpToolStatus::Failed,
+         _ => AcpToolStatus::InProgress,
+      }
+   }
+
+   fn map_tool_kind(kind: acp::ToolKind) -> String {
+      match kind {
+         acp::ToolKind::Read => "read".to_string(),
+         acp::ToolKind::Edit => "edit".to_string(),
+         acp::ToolKind::Delete => "delete".to_string(),
+         acp::ToolKind::Move => "move".to_string(),
+         acp::ToolKind::Search => "search".to_string(),
+         acp::ToolKind::Execute => "execute".to_string(),
+         acp::ToolKind::Think => "think".to_string(),
+         acp::ToolKind::Fetch => "fetch".to_string(),
+         acp::ToolKind::SwitchMode => "switch_mode".to_string(),
+         _ => "other".to_string(),
+      }
+   }
+
+   fn extract_error(raw_output: &Option<serde_json::Value>) -> Option<String> {
+      let Some(raw) = raw_output else {
+         return None;
+      };
+
+      if let Some(error) = raw.get("error").and_then(|v| v.as_str()) {
+         return Some(error.to_string());
+      }
+
+      if let Some(message) = raw.get("message").and_then(|v| v.as_str()) {
+         return Some(message.to_string());
+      }
+
+      None
    }
 }
 
@@ -179,19 +231,108 @@ impl acp::Client for AthasAcpClient {
             });
          }
          acp::SessionUpdate::ToolCall(tool_call) => {
+            let tool_id = tool_call.tool_call_id.to_string();
+            let input = tool_call
+               .raw_input
+               .clone()
+               .unwrap_or(serde_json::Value::Null);
+            let kind = Some(Self::map_tool_kind(tool_call.kind));
+            let status = Some(Self::map_tool_status(tool_call.status));
+            let content = serde_json::to_value(&tool_call.content).ok();
+            let locations = serde_json::to_value(&tool_call.locations).ok();
+            {
+               let mut active_tools = self.active_tools.lock().await;
+               active_tools.insert(
+                  tool_id.clone(),
+                  ActiveToolState {
+                     name: tool_call.title.clone(),
+                     input: input.clone(),
+                     kind: kind.clone(),
+                  },
+               );
+            }
             self.emit_event(AcpEvent::ToolStart {
                session_id,
                tool_name: tool_call.title.clone(),
-               tool_id: tool_call.tool_call_id.to_string(),
-               input: serde_json::Value::Null, // Input is in content blocks now
+               tool_id: tool_id.clone(),
+               input,
+               status,
+               kind,
+               content,
+               locations,
             });
          }
          acp::SessionUpdate::ToolCallUpdate(update) => {
-            // Check for completion via fields
+            let tool_id = update.tool_call_id.to_string();
+            let fields = update.fields.clone();
+            let status_raw = fields.status.unwrap_or(acp::ToolCallStatus::Completed);
+            let status = Some(Self::map_tool_status(status_raw));
+            let success = !matches!(status_raw, acp::ToolCallStatus::Failed);
+            let kind = fields.kind.map(Self::map_tool_kind);
+            let content = fields
+               .content
+               .as_ref()
+               .and_then(|items| serde_json::to_value(items).ok());
+            let locations = fields
+               .locations
+               .as_ref()
+               .and_then(|items| serde_json::to_value(items).ok());
+
+            let (tool_name, input, fallback_kind) = {
+               let mut active_tools = self.active_tools.lock().await;
+               let previous = active_tools.get(&tool_id).cloned();
+
+               let tool_name = fields
+                  .title
+                  .clone()
+                  .or_else(|| previous.as_ref().map(|t| t.name.clone()))
+                  .unwrap_or_else(|| "unknown".to_string());
+
+               let input = fields
+                  .raw_input
+                  .clone()
+                  .or_else(|| previous.as_ref().map(|t| t.input.clone()));
+
+               let fallback_kind = previous.and_then(|t| t.kind);
+
+               if matches!(
+                  status_raw,
+                  acp::ToolCallStatus::Completed | acp::ToolCallStatus::Failed
+               ) {
+                  active_tools.remove(&tool_id);
+               } else {
+                  active_tools.insert(
+                     tool_id.clone(),
+                     ActiveToolState {
+                        name: tool_name.clone(),
+                        input: input.clone().unwrap_or(serde_json::Value::Null),
+                        kind: kind.clone().or(fallback_kind.clone()),
+                     },
+                  );
+               }
+
+               (tool_name, input, fallback_kind)
+            };
+
+            let output = fields.raw_output.clone();
+            let error = if success {
+               None
+            } else {
+               Self::extract_error(&output).or_else(|| Some("Tool execution failed".to_string()))
+            };
+
             self.emit_event(AcpEvent::ToolComplete {
                session_id,
-               tool_id: update.tool_call_id.to_string(),
-               success: true,
+               tool_id,
+               success,
+               tool_name: Some(tool_name),
+               input,
+               output,
+               error,
+               status,
+               kind: kind.or(fallback_kind),
+               content,
+               locations,
             });
          }
          acp::SessionUpdate::CurrentModeUpdate(update) => {

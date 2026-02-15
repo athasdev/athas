@@ -5,14 +5,46 @@ import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
+import { toast } from "@/stores/toast-store";
 import { AcpStreamHandler } from "@/utils/acp-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/utils/ai-chat";
+import { hasKairoAccessToken } from "@/utils/kairo-auth";
 import type { ContextInfo } from "@/utils/types";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
+import { useAIChatStore } from "../../store/store";
 import ChatHistorySidebar from "../history/sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
+
+function collapseExactRepeatedResponse(content: string): string {
+  if (!content || content.length < 64) return content;
+
+  const tryExact = (value: string): string => {
+    for (const repeatCount of [3, 2]) {
+      if (value.length % repeatCount !== 0) continue;
+      const unitLength = value.length / repeatCount;
+      if (unitLength < 24) continue;
+      const unit = value.slice(0, unitLength);
+      if (unit.repeat(repeatCount) === value) {
+        return unit;
+      }
+    }
+    return value;
+  };
+
+  const exact = tryExact(content);
+  if (exact !== content) return exact;
+
+  for (const separator of ["\n\n", "\r\n\r\n", "\n", "\r\n", " "]) {
+    const parts = content.split(separator);
+    if (parts.length === 2 && parts[0].length >= 24 && parts[0] === parts[1]) {
+      return parts[0];
+    }
+  }
+
+  return content;
+}
 
 const AIChat = memo(function AIChat({
   className,
@@ -27,13 +59,16 @@ const AIChat = memo(function AIChat({
 
   const chatState = useChatState();
   const chatActions = useChatActions();
+  const messageQueueLength = useAIChatStore((state) => state.messageQueue.length);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const activeStreamRunIdRef = useRef<string | null>(null);
+  const queueDrainInFlightRef = useRef(false);
+  const processMessageRef = useRef<(messageContent: string) => Promise<void>>(async () => {});
   const [permissionQueue, setPermissionQueue] = useState<
     Array<{ requestId: string; description: string; permissionType: string; resource: string }>
   >([]);
-  const [acpEvents, setAcpEvents] = useState<Array<{ id: string; text: string }>>([]);
 
   useEffect(() => {
     if (activeBuffer) {
@@ -135,16 +170,27 @@ const AIChat = memo(function AIChat({
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    activeStreamRunIdRef.current = null;
     chatActions.setIsTyping(false);
     chatActions.setStreamingMessageId(null);
   };
 
   const processMessage = async (messageContent: string) => {
     const currentAgentId = chatActions.getCurrentAgentId();
+    if (currentAgentId === "kairo-code") {
+      const isConnected = await hasKairoAccessToken();
+      if (!isConnected) {
+        toast.error(
+          "Kairo Code requires Coline login first. Connect it in Settings > AI > Agent Authentication.",
+        );
+        return;
+      }
+    }
+
     const isAcp = isAcpAgent(currentAgentId);
-    // For ACP agents (Claude Code, etc.), we don't need an API key
-    // For Custom API, we need an API key to be set
-    if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
+    const requiresApiKey = !isAcp && currentAgentId !== "kairo-code";
+    // ACP agents don't use API keys; Kairo Code uses OAuth
+    if (!messageContent.trim() || (requiresApiKey && !chatState.hasApiKey)) return;
 
     // Agents are started automatically by AcpStreamHandler when needed
 
@@ -193,6 +239,8 @@ const AIChat = memo(function AIChat({
     requestAnimationFrame(scrollToBottom);
 
     abortControllerRef.current = new AbortController();
+    const streamRunId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    activeStreamRunIdRef.current = streamRunId;
 
     try {
       const conversationContext = currentMessages
@@ -205,9 +253,6 @@ const AIChat = memo(function AIChat({
       const enhancedMessage = processedMessage;
       let currentAssistantMessageId = assistantMessageId;
       const currentAgentId = chatActions.getCurrentAgentId();
-      if (isAcp) {
-        setAcpEvents([]);
-      }
 
       await getChatCompletionStream(
         currentAgentId,
@@ -216,6 +261,7 @@ const AIChat = memo(function AIChat({
         enhancedMessage,
         context,
         (chunk: string) => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
@@ -224,7 +270,16 @@ const AIChat = memo(function AIChat({
           requestAnimationFrame(scrollToBottom);
         },
         () => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
+          activeStreamRunIdRef.current = null;
+          const currentMessages = chatActions.getCurrentMessages();
+          const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
+          const nextContent =
+            isAcpAgent(currentAgentId) && currentMsg?.content
+              ? collapseExactRepeatedResponse(currentMsg.content)
+              : currentMsg?.content;
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
+            ...(typeof nextContent === "string" ? { content: nextContent } : {}),
             isStreaming: false,
           });
           chatActions.setIsTyping(false);
@@ -233,6 +288,8 @@ const AIChat = memo(function AIChat({
           processQueuedMessages();
         },
         (error: string) => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
+          activeStreamRunIdRef.current = null;
           console.error("Streaming error:", error);
 
           let errorTitle = "API Error";
@@ -243,11 +300,29 @@ const AIChat = memo(function AIChat({
           const parts = error.split("|||");
           const mainError = parts[0];
           if (parts.length > 1) {
-            errorDetails = parts[1];
+            errorDetails = parts.slice(1).join("|||");
+          }
+
+          if (mainError.toLowerCase().includes("workspace_unavailable")) {
+            errorTitle = "Workspace Bridge Required";
+            errorCode = "workspace_unavailable";
+            errorMessage =
+              errorDetails ||
+              "No workspace binding is available for this chat session. Connect the Athas workspace bridge and retry.";
+          } else if (
+            mainError.toLowerCase().includes("kairo acp bridge error: stream") &&
+            errorDetails.toLowerCase().includes("workspace_unavailable")
+          ) {
+            const [, workspaceMessage = ""] = errorDetails.split("|||");
+            errorTitle = "Workspace Bridge Required";
+            errorCode = "workspace_unavailable";
+            errorMessage =
+              workspaceMessage ||
+              "No workspace binding is available for this chat session. Connect the Athas workspace bridge and retry.";
           }
 
           const codeMatch = mainError.match(/error:\s*(\d+)/i);
-          if (codeMatch) {
+          if (codeMatch && !errorCode) {
             errorCode = codeMatch[1];
             if (errorCode === "429") {
               errorTitle = "Rate Limit Exceeded";
@@ -297,6 +372,7 @@ details: ${errorDetails || mainError}
         },
         conversationContext,
         () => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
           const newMessageId = Date.now().toString();
           const newAssistantMessage: Message = {
             id: newMessageId,
@@ -311,47 +387,107 @@ details: ${errorDetails || mainError}
           chatActions.setStreamingMessageId(newMessageId);
           requestAnimationFrame(scrollToBottom);
         },
-        (toolName: string, toolInput?: any) => {
+        (toolName: string, toolInput?: any, toolId?: string, event?: any) => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
+          const existing = currentMsg?.toolCalls || [];
+          const nextToolCalls = toolId
+            ? existing.map((tc) =>
+                tc.toolId === toolId
+                  ? {
+                      ...tc,
+                      name: toolName,
+                      input: toolInput,
+                      kind: event?.kind,
+                      status: event?.status,
+                      content: event?.content,
+                      locations: event?.locations,
+                    }
+                  : tc,
+              )
+            : existing;
+
+          const hasExistingById = Boolean(toolId && existing.some((tc) => tc.toolId === toolId));
+          const appended = hasExistingById
+            ? nextToolCalls
+            : [
+                ...nextToolCalls,
+                {
+                  toolId,
+                  name: toolName,
+                  input: toolInput,
+                  kind: event?.kind,
+                  status: event?.status,
+                  content: event?.content,
+                  locations: event?.locations,
+                  timestamp: new Date(),
+                },
+              ];
+
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
             isToolUse: true,
             toolName,
-            toolCalls: [
-              ...(currentMsg?.toolCalls || []),
-              {
-                name: toolName,
-                input: toolInput,
-                timestamp: new Date(),
-              },
-            ],
+            toolCalls: appended,
           });
         },
-        (toolName: string) => {
+        (toolName: string, event?: any) => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
 
+          const normalizeTool = (value: string) => value.trim().toLowerCase();
+          const isReadTool = (value: string) => {
+            const normalized = normalizeTool(value);
+            return (
+              normalized === "read" ||
+              normalized === "read_file" ||
+              normalized === "readfile" ||
+              normalized.includes("read")
+            );
+          };
+
           // Find the tool call that just completed
           const completedToolCall = currentMsg?.toolCalls?.find(
-            (tc) => tc.name === toolName && !tc.isComplete,
+            (tc) =>
+              (event?.toolId
+                ? tc.toolId === event.toolId
+                : normalizeTool(tc.name) === normalizeTool(toolName)) && !tc.isComplete,
           );
 
           // Auto-open Read files if setting is enabled
-          if (toolName === "Read" && completedToolCall?.input?.file_path) {
+          const readPath =
+            completedToolCall?.input?.file_path || completedToolCall?.input?.path || undefined;
+          if (isReadTool(toolName) && readPath) {
             const { settings } = useSettingsStore.getState();
             if (settings.aiAutoOpenReadFiles) {
               const { handleFileSelect } = useFileSystemStore.getState();
-              handleFileSelect(completedToolCall.input.file_path, false);
+              handleFileSelect(readPath, false);
             }
           }
 
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
             toolCalls: currentMsg?.toolCalls?.map((tc) =>
-              tc.name === toolName && !tc.isComplete ? { ...tc, isComplete: true } : tc,
+              (event?.toolId
+                ? tc.toolId === event.toolId
+                : normalizeTool(tc.name) === normalizeTool(toolName)) && !tc.isComplete
+                ? {
+                    ...tc,
+                    isComplete: true,
+                    status: event?.status || (event?.success === false ? "failed" : "completed"),
+                    output: event?.output ?? tc.output,
+                    error: event?.error ?? tc.error,
+                    input: event?.input ?? tc.input,
+                    kind: event?.kind ?? tc.kind,
+                    content: event?.content ?? tc.content,
+                    locations: event?.locations ?? tc.locations,
+                  }
+                : tc,
             ),
           });
         },
         (event) => {
+          if (activeStreamRunIdRef.current !== streamRunId) return;
           setPermissionQueue((prev) => [
             ...prev,
             {
@@ -362,43 +498,16 @@ details: ${errorDetails || mainError}
             },
           ]);
         },
-        (event) => {
-          if (!isAcpAgent(currentAgentId)) return;
-          const format = () => {
-            switch (event.type) {
-              case "tool_start":
-                return `tool_start ${event.toolName}`;
-              case "tool_complete":
-                return `tool_complete ${event.toolId}`;
-              case "permission_request":
-                return `permission ${event.permissionType}: ${event.description}`;
-              case "prompt_complete":
-                return `prompt_complete ${event.stopReason}`;
-              case "session_mode_update":
-                return `mode_state ${event.modeState.currentModeId ?? "none"}`;
-              case "current_mode_update":
-                return `mode ${event.currentModeId}`;
-              case "slash_commands_update":
-                return `slash_commands ${event.commands.length}`;
-              case "status_changed":
-                return `status running=${event.status.running}`;
-              case "error":
-                return `error ${event.error}`;
-              case "session_complete":
-                return "session_complete";
-              case "content_chunk":
-                return "content_chunk";
-            }
-          };
-          setAcpEvents((prev) => [
-            ...prev.slice(-199),
-            { id: `${Date.now()}-${event.type}`, text: format() },
-          ]);
-        },
+        undefined,
         chatState.mode,
         chatState.outputStyle,
+        chatId,
+        abortControllerRef.current?.signal,
       );
     } catch (error) {
+      if (activeStreamRunIdRef.current === streamRunId) {
+        activeStreamRunIdRef.current = null;
+      }
       console.error("Failed to start streaming:", error);
       chatActions.updateMessage(chatId, assistantMessageId, {
         content: "Error: Failed to connect to AI service. Please check your API key and try again.",
@@ -409,26 +518,53 @@ details: ${errorDetails || mainError}
       abortControllerRef.current = null;
     }
   };
+  processMessageRef.current = processMessage;
 
   const processQueuedMessages = useCallback(async () => {
+    if (queueDrainInFlightRef.current) {
+      return;
+    }
+
     if (chatState.isTyping || chatState.streamingMessageId) {
       return;
     }
 
     const nextMessage = chatActions.processNextMessage();
     if (nextMessage) {
-      console.log("Processing next queued message:", nextMessage.content);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await processMessage(nextMessage.content);
+      queueDrainInFlightRef.current = true;
+      try {
+        console.log("Processing next queued message:", nextMessage.content);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        await processMessageRef.current(nextMessage.content);
+      } finally {
+        queueDrainInFlightRef.current = false;
+      }
     }
   }, [chatState.isTyping, chatState.streamingMessageId, chatActions.processNextMessage]);
+
+  useEffect(() => {
+    if (messageQueueLength === 0) return;
+    if (chatState.isTyping || chatState.streamingMessageId) return;
+
+    void processQueuedMessages();
+  }, [messageQueueLength, chatState.isTyping, chatState.streamingMessageId, processQueuedMessages]);
 
   const sendMessage = useCallback(
     async (messageContent: string) => {
       const currentAgentId = chatActions.getCurrentAgentId();
+      if (currentAgentId === "kairo-code") {
+        const isConnected = await hasKairoAccessToken();
+        if (!isConnected) {
+          toast.error(
+            "Kairo Code requires Coline login first. Connect it in Settings > AI > Agent Authentication.",
+          );
+          return;
+        }
+      }
+
       const isAcp = isAcpAgent(currentAgentId);
-      // For ACP agents (Claude Code, etc.), we don't need an API key
-      if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
+      const requiresApiKey = !isAcp && currentAgentId !== "kairo-code";
+      if (!messageContent.trim() || (requiresApiKey && !chatState.hasApiKey)) return;
 
       chatActions.setInput("");
 
@@ -437,7 +573,7 @@ details: ${errorDetails || mainError}
         return;
       }
 
-      await processMessage(messageContent);
+      await processMessageRef.current(messageContent);
     },
     [
       chatState.hasApiKey,
@@ -460,13 +596,6 @@ details: ${errorDetails || mainError}
   const handlePermission = async (approved: boolean) => {
     if (!currentPermission) return;
     try {
-      setAcpEvents((prev) => [
-        ...prev.slice(-199),
-        {
-          id: `${Date.now()}-permission-response`,
-          text: `permission_response ${approved ? "allow" : "deny"}`,
-        },
-      ]);
       await AcpStreamHandler.respondToPermission(currentPermission.requestId, approved);
     } finally {
       setPermissionQueue((prev) => prev.slice(1));
@@ -480,7 +609,7 @@ details: ${errorDetails || mainError}
       <ChatHeader />
 
       <div className="scrollbar-hidden flex-1 overflow-y-auto">
-        <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} acpEvents={acpEvents} />
+        <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} />
       </div>
 
       {currentPermission && (
