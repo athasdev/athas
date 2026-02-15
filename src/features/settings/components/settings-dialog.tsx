@@ -81,14 +81,14 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         content: "flex p-0",
       }}
     >
-      <div className="flex h-full w-full">
+      <div className="flex h-full w-full overflow-hidden bg-secondary-bg/30">
         {/* Sidebar */}
-        <div className="w-48 border-border border-r bg-secondary-bg">
+        <div className="w-52 bg-secondary-bg/30">
           <SettingsVerticalTabs activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 overflow-y-auto p-4">{renderTabContent()}</div>
+        <div className="flex-1 overflow-y-auto bg-secondary-bg/30 p-4">{renderTabContent()}</div>
       </div>
     </Dialog>
   );

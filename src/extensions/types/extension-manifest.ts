@@ -86,6 +86,7 @@ export interface LanguageContribution {
   id: string; // Language ID (e.g., "rust")
   extensions: string[]; // File extensions (e.g., [".rs"])
   aliases?: string[]; // Language aliases
+  filenames?: string[]; // Exact filenames (e.g., ["Dockerfile", ".bashrc"])
   configuration?: string; // Path to language configuration
   firstLine?: string; // First line regex match
 }

@@ -16,6 +16,32 @@ export interface LspError {
   message: string;
 }
 
+function stringifyLspError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object") {
+    const candidate = (error as { message?: unknown }).message;
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate;
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+  return String(error);
+}
+
+function isBenignHoverError(error: unknown): boolean {
+  const message = stringifyLspError(error).toLowerCase();
+  return (
+    message.includes("column is beyond end of line") ||
+    message.includes("column is beyond end of file") ||
+    message.includes("no lsp client for this file")
+  );
+}
+
 export class LspClient {
   private static instance: LspClient | null = null;
   private activeLanguageServers = new Set<string>(); // workspace:language format
@@ -212,15 +238,6 @@ export class LspClient {
 
       logger.info("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
 
-      // Check if this language server is already running for this file
-      if (serverPath && languageId) {
-        const serverKey = `${workspacePath}:${languageId}`;
-        if (this.activeLanguageServers.has(serverKey)) {
-          logger.debug("LSPClient", `LSP for ${languageId} already running for file`);
-          return;
-        }
-      }
-
       // Track this language server BEFORE invoking backend to prevent race conditions
       if (languageId) {
         const serverKey = `${workspacePath}:${languageId}`;
@@ -263,7 +280,7 @@ export class LspClient {
       logger.error("LSPClient", "Failed to start LSP for file:", error);
       // Update status to error
       const { actions } = useLspStore.getState();
-      actions.setLspError(`Failed to start LSP: ${error}`);
+      actions.setLspError(`Failed to start LSP: ${stringifyLspError(error)}`);
       throw error;
     }
   }
@@ -352,7 +369,9 @@ export class LspClient {
         character,
       });
     } catch (error) {
-      logger.error("LSPClient", "LSP hover error:", error);
+      if (!isBenignHoverError(error)) {
+        logger.error("LSPClient", "LSP hover error:", error);
+      }
       return null;
     }
   }

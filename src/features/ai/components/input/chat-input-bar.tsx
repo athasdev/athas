@@ -54,6 +54,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // ACP agents don't need API key (they handle their own auth)
   const isInputEnabled = isCustomAgent ? hasApiKey : true;
+  const isStreaming = isTyping && !!streamingMessageId;
+  const isSendDisabled = isStreaming ? false : !hasInputText || !isInputEnabled;
 
   // Memoize action selectors
   const setInput = useAIChatStore((state) => state.setInput);
@@ -565,9 +567,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
   return (
     <div
       ref={aiChatContainerRef}
-      className="ai-chat-container border-border border-t bg-terniary-bg"
+      className="ai-chat-container relative z-20 bg-transparent px-3 pt-2 pb-3"
     >
-      <div className="px-2 py-1.5">
+      <div className="rounded-[20px] border border-border bg-primary-bg/95 px-3 py-2.5 shadow-sm backdrop-blur-sm">
         {/* Input area */}
         <div
           ref={inputRef}
@@ -582,8 +584,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
               : "Configure API key to enable AI chat..."
           }
           className={cn(
-            "max-h-[120px] min-h-[60px] w-full resize-none overflow-y-auto border-none bg-transparent",
-            "p-1 text-text",
+            "max-h-[140px] min-h-[64px] w-full resize-none overflow-y-auto border-none bg-transparent",
+            "px-2 py-1.5 text-text",
             "focus:outline-none",
             !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
             // Custom styles for contentEditable placeholder
@@ -607,8 +609,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
         />
 
         {/* Bottom row: Context + Mode + Style + Model/Agent + Send */}
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1">
+        <div className="mt-2.5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
             <ContextSelector
               buffers={buffers}
               selectedBufferIds={selectedBufferIds}
@@ -621,14 +623,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
             {/* Queue indicator */}
             {queueCount > 0 && (
-              <div className="flex items-center gap-1 rounded bg-blue-500/10 px-2 py-1 text-blue-400 text-xs">
+              <div className="flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-blue-400 text-xs">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
                 <span>{queueCount}</span>
               </div>
             )}
           </div>
 
-          <div className="flex select-none items-center gap-1">
+          <div className="flex select-none items-center gap-1.5">
             {/* Chat mode selector */}
             <ChatModeSelector />
 
@@ -649,7 +651,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     showSlashCommands(position, "");
                   }
                 }}
-                className="flex h-7 items-center gap-1 rounded px-1.5 text-text-lighter text-xs hover:bg-hover hover:text-text"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
                 title="Show slash commands"
               >
                 <Slash size={12} />
@@ -684,30 +686,28 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
             <Button
               type="submit"
-              disabled={!hasInputText || !isInputEnabled}
-              onClick={isTyping && streamingMessageId ? onStopStreaming : handleSendMessage}
+              disabled={isSendDisabled}
+              onClick={isStreaming ? onStopStreaming : handleSendMessage}
               className={cn(
-                "flex h-7 w-7 items-center justify-center rounded p-0 text-text-lighter hover:bg-hover hover:text-text",
+                "flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
                 "send-button-hover button-transition focus:outline-none focus:ring-2 focus:ring-accent/50",
-                isTyping && streamingMessageId && !isSendAnimating && "button-morphing",
+                isStreaming && !isSendAnimating && "button-morphing",
                 hasInputText &&
                   isInputEnabled &&
-                  "bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500/50",
-                !hasInputText || !isInputEnabled
-                  ? "cursor-not-allowed opacity-50"
-                  : "cursor-pointer",
+                  "border-blue-500/40 bg-blue-500 text-white hover:bg-blue-600 hover:text-white focus:ring-blue-500/50",
+                isSendDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
               )}
               title={
-                isTyping && streamingMessageId
+                isStreaming
                   ? "Stop generation (Escape)"
                   : queueCount > 0
                     ? "Add to queue (Enter)"
                     : "Send message (Enter)"
               }
-              aria-label={isTyping && streamingMessageId ? "Stop generation" : "Send message"}
+              aria-label={isStreaming ? "Stop generation" : "Send message"}
               tabIndex={0}
             >
-              {isTyping && streamingMessageId && !isSendAnimating ? (
+              {isStreaming && !isSendAnimating ? (
                 <Square size={14} className="transition-all duration-300" />
               ) : (
                 <Send

@@ -41,3 +41,6 @@ jobs:
 
       - name: Run biome check
         run: bun check
+
+      - name: Validate extensions catalog
+        run: bun extensions:check

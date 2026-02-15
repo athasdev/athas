@@ -27,14 +27,14 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
   return (
     <div
       className={cn(
-        "rounded border border-border",
+        "rounded-xl border border-border bg-primary-bg/80",
         status === "current" && "border-accent/30 bg-accent/5",
       )}
     >
       <button
         type="button"
         onClick={() => step.description && setIsExpanded(!isExpanded)}
-        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs transition-colors hover:bg-hover"
+        className="flex w-full items-center gap-2 px-2.5 py-2 text-left text-xs transition-colors hover:bg-hover"
       >
         <StatusIcon size={12} className={cn("shrink-0", statusColor)} />
         <span className="min-w-0 flex-1 font-medium text-text">
@@ -51,7 +51,7 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
         )}
       </button>
       {isExpanded && step.description && (
-        <div className="border-border border-t px-3 py-2 text-text-light text-xs">
+        <div className="border-border border-t px-3 py-2.5 text-text-light text-xs">
           <MarkdownRenderer content={step.description} />
         </div>
       )}

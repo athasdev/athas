@@ -1,8 +1,32 @@
+; Preprocessor
+
+(preproc_include
+  "#include" @keyword)
+
+(system_lib_string) @string
+
 ; Functions
+
+(function_declarator
+  declarator: (identifier) @function)
+
+(function_declarator
+  declarator: (field_identifier) @function)
+
+(function_declarator
+  declarator: (qualified_identifier
+    name: (identifier) @function))
+
+(call_expression
+  function: (identifier) @function.call)
 
 (call_expression
   function: (qualified_identifier
-    name: (identifier) @function))
+    name: (identifier) @function.call))
+
+(call_expression
+  function: (field_expression
+    field: (field_identifier) @function.call))
 
 (template_function
   name: (identifier) @function)
@@ -10,68 +34,23 @@
 (template_method
   name: (field_identifier) @function)
 
-(template_function
-  name: (identifier) @function)
-
-(function_declarator
-  declarator: (qualified_identifier
-    name: (identifier) @function))
-
-(function_declarator
-  declarator: (field_identifier) @function)
-
 ; Types
 
-((namespace_identifier) @type
- (#match? @type "^[A-Z]"))
+(primitive_type) @type.builtin
+(sized_type_specifier) @type.builtin
+(auto) @type.builtin
+(type_identifier) @type
+(namespace_identifier) @type
 
-(auto) @type
-
-; Constants
+; Constants and literals
 
 (this) @variable.builtin
-(null "nullptr" @constant)
 
-; Modules
-(module_name
-  (identifier) @module)
+(number_literal) @number
 
-; Keywords
+; Strings and comments
 
-[
- "catch"
- "class"
- "co_await"
- "co_return"
- "co_yield"
- "constexpr"
- "constinit"
- "consteval"
- "delete"
- "explicit"
- "final"
- "friend"
- "mutable"
- "namespace"
- "noexcept"
- "new"
- "override"
- "private"
- "protected"
- "public"
- "template"
- "throw"
- "try"
- "typename"
- "using"
- "concept"
- "requires"
- "virtual"
- "import"
- "export"
- "module"
-] @keyword
-
-; Strings
-
+(string_literal) @string
 (raw_string_literal) @string
+(char_literal) @string
+(comment) @comment

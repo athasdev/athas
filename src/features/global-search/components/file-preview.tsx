@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import type { Token } from "@/features/editor/extensions/types";
 import type { LineToken } from "@/features/editor/types/editor";
 import { useFilePreview } from "../hooks/use-file-preview";
@@ -15,8 +15,15 @@ interface LineData {
 
 const convertTokensToLineTokens = (content: string, tokens: Token[]): LineData[] => {
   const lines = content.split("\n");
-  const lineData: LineData[] = [];
+  if (tokens.length === 0) {
+    return lines.map((line, i) => ({
+      lineNumber: i + 1,
+      content: line,
+      tokens: [],
+    }));
+  }
 
+  const lineData: LineData[] = [];
   let currentPos = 0;
   const lineStarts: number[] = [0];
 
@@ -25,38 +32,46 @@ const convertTokensToLineTokens = (content: string, tokens: Token[]): LineData[]
     lineStarts.push(currentPos);
   }
 
-  lines.forEach((line, lineIndex) => {
+  let tokenIdx = 0;
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex];
     const lineStart = lineStarts[lineIndex];
     const lineEnd = lineStart + line.length;
+    const lineTokens: LineToken[] = [];
 
-    const lineTokens: LineToken[] = tokens
-      .filter((token) => {
-        return token.start < lineEnd && token.end > lineStart;
-      })
-      .map((token) => {
+    while (tokenIdx < tokens.length && tokens[tokenIdx].end <= lineStart) {
+      tokenIdx++;
+    }
+
+    let tempIdx = tokenIdx;
+    while (tempIdx < tokens.length && tokens[tempIdx].start < lineEnd) {
+      const token = tokens[tempIdx];
+      if (token.end > lineStart) {
         const startColumn = Math.max(0, token.start - lineStart);
         const endColumn = Math.min(line.length, token.end - lineStart);
-
-        return {
-          startColumn,
-          endColumn,
-          className: token.class_name,
-        };
-      })
-      .filter((token) => token.startColumn < token.endColumn);
+        if (startColumn < endColumn) {
+          lineTokens.push({
+            startColumn,
+            endColumn,
+            className: token.class_name,
+          });
+        }
+      }
+      tempIdx++;
+    }
 
     lineData.push({
       lineNumber: lineIndex + 1,
       content: line,
       tokens: lineTokens,
     });
-  });
+  }
 
   return lineData;
 };
 
-const PreviewLine = ({ lineNumber, content, tokens }: LineData) => {
-  const renderContent = () => {
+const PreviewLine = memo(({ lineNumber, content, tokens }: LineData) => {
+  const rendered = useMemo(() => {
     if (!tokens || tokens.length === 0) {
       return <span>{content || "\u00A0"}</span>;
     }
@@ -64,45 +79,35 @@ const PreviewLine = ({ lineNumber, content, tokens }: LineData) => {
     const elements: React.ReactNode[] = [];
     let lastEnd = 0;
 
-    const sortedTokens = [...tokens].sort((a, b) => a.startColumn - b.startColumn);
-
-    sortedTokens.forEach((token, index) => {
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
       if (token.startColumn > lastEnd) {
-        elements.push(
-          <span key={`text-${index}`}>{content.slice(lastEnd, token.startColumn)}</span>,
-        );
+        elements.push(<span key={`t-${i}`}>{content.slice(lastEnd, token.startColumn)}</span>);
       }
-
-      const tokenContent = content.slice(token.startColumn, token.endColumn);
       elements.push(
-        <span key={`token-${index}`} className={token.className}>
-          {tokenContent}
+        <span key={`k-${i}`} className={token.className}>
+          {content.slice(token.startColumn, token.endColumn)}
         </span>,
       );
-
       lastEnd = token.endColumn;
-    });
-
-    if (lastEnd < content.length) {
-      elements.push(<span key="text-end">{content.slice(lastEnd)}</span>);
     }
 
-    if (elements.length === 0 && content.length === 0) {
-      elements.push(<span key="empty">{"\u00A0"}</span>);
+    if (lastEnd < content.length) {
+      elements.push(<span key="e">{content.slice(lastEnd)}</span>);
     }
 
     return <>{elements}</>;
-  };
+  }, [content, tokens]);
 
   return (
     <div className="flex font-mono text-[11px] leading-[18px]">
       <span className="mr-3 w-8 select-none text-right text-text-lighter opacity-50">
         {lineNumber}
       </span>
-      <span className="flex-1 whitespace-pre text-text">{renderContent()}</span>
+      <span className="flex-1 whitespace-pre text-text">{rendered}</span>
     </div>
   );
-};
+});
 
 export const FilePreview = ({ filePath }: FilePreviewProps) => {
   const { content, tokens, isLoading, error } = useFilePreview(filePath);

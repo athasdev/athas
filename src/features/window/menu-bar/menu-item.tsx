@@ -29,17 +29,17 @@ const MenuItem = ({ children, shortcut, onClick, separator }: Props) => {
   }, [currentPlatform, shortcut]);
 
   if (separator) {
-    return <div className="my-1 border-border border-t" />;
+    return <div className="my-1 border-border/70 border-t" />;
   }
 
   return (
     <button
       role="menuitem"
-      className="flex w-full cursor-pointer items-center justify-between px-3 py-1.5 text-text text-xs hover:bg-hover"
+      className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-text text-xs transition-colors hover:bg-hover"
       onClick={onClick}
     >
       <span>{children}</span>
-      {shortcut && <span className="ml-8 text-text-lighter text-xs">{shortcutOsSpecific}</span>}
+      {shortcut && <span className="ml-8 text-text-lighter/90 text-xs">{shortcutOsSpecific}</span>}
     </button>
   );
 };

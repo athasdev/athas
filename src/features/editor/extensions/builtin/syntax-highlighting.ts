@@ -1,11 +1,89 @@
-import { wasmParserLoader } from "../../lib/wasm-parser";
+import { convertToEditorTokens, tokenizeCode, wasmParserLoader } from "../../lib/wasm-parser";
+import { indexedDBParserCache } from "../../lib/wasm-parser/cache-indexeddb";
 import { useBufferStore } from "../../stores/buffer-store";
 import type { Change } from "../../types/editor";
 import { logger } from "../../utils/logger";
-import { extensionManager } from "../manager";
 import type { EditorAPI, EditorExtension, Token } from "../types";
 
 const DEBOUNCE_TIME_MS = 150; // Debounce for tokenization requests
+
+const EXTENSION_TO_LANGUAGE: Record<string, string> = {
+  js: "javascript",
+  mjs: "javascript",
+  cjs: "javascript",
+  jsx: "typescriptreact",
+  ts: "typescript",
+  tsx: "typescriptreact",
+  py: "python",
+  rs: "rust",
+  go: "go",
+  java: "java",
+  c: "c",
+  h: "c",
+  cpp: "cpp",
+  cc: "cpp",
+  cxx: "cpp",
+  hpp: "cpp",
+  hh: "cpp",
+  hxx: "cpp",
+  cs: "csharp",
+  rb: "ruby",
+  php: "php",
+  html: "html",
+  htm: "html",
+  css: "css",
+  scss: "css",
+  json: "json",
+  yaml: "yaml",
+  yml: "yaml",
+  toml: "toml",
+  md: "markdown",
+  markdown: "markdown",
+  sh: "bash",
+  bash: "bash",
+  zsh: "bash",
+  swift: "swift",
+  kt: "kotlin",
+  kts: "kotlin",
+  scala: "scala",
+  lua: "lua",
+  dart: "dart",
+  ex: "elixir",
+  exs: "elixir",
+  ml: "ocaml",
+  mli: "ocaml",
+  sol: "solidity",
+  zig: "zig",
+  vue: "vue",
+};
+
+const LOCAL_EXTENSION_FOLDER_BY_LANGUAGE: Record<string, string> = {
+  javascript: "tsx",
+  javascriptreact: "tsx",
+  typescript: "tsx",
+  typescriptreact: "tsx",
+  csharp: "c_sharp",
+};
+
+function getQueryFolder(languageId: string): string {
+  return LOCAL_EXTENSION_FOLDER_BY_LANGUAGE[languageId] || languageId;
+}
+
+async function resolveHighlightQuery(languageId: string, cachedQuery?: string): Promise<string> {
+  const queryPath = `/extensions/${getQueryFolder(languageId)}/highlights.scm`;
+  try {
+    const response = await fetch(queryPath);
+    if (response.ok) {
+      const latest = await response.text();
+      if (latest.trim().length > 0) {
+        return latest;
+      }
+    }
+  } catch {
+    // Ignore and fallback to cache query
+  }
+  return cachedQuery || "";
+}
 
 class SyntaxHighlighter {
   private tokens: Token[] = [];
@@ -159,20 +237,24 @@ class SyntaxHighlighter {
       // Check if aborted before proceeding
       if (signal.aborted) return;
 
-      // Ensure language provider is loaded (lazy loading)
-      const languageProvider = await extensionManager.ensureLanguageProvider(extension);
-      if (!languageProvider) {
-        logger.debug(
-          "SyntaxHighlighter",
-          "No language provider available for extension:",
-          extension,
-        );
+      const languageId = EXTENSION_TO_LANGUAGE[extension];
+      if (!languageId) {
+        logger.debug("SyntaxHighlighter", "No language mapping for extension:", extension);
         this.tokens = [];
       } else {
         try {
-          this.tokens = await languageProvider.getTokens(content);
+          const cached = await indexedDBParserCache.get(languageId);
+          const queryFolder = getQueryFolder(languageId);
+          const wasmPath = cached?.sourceUrl || `/extensions/${queryFolder}/parser.wasm`;
+          const highlightQuery = await resolveHighlightQuery(languageId, cached?.highlightQuery);
+          const highlightTokens = await tokenizeCode(content, languageId, {
+            languageId,
+            wasmPath,
+            highlightQuery,
+          });
+          this.tokens = convertToEditorTokens(highlightTokens);
         } catch (error) {
-          logger.error("SyntaxHighlighter", `Failed to tokenize with ${extension}:`, error);
+          logger.error("SyntaxHighlighter", `Failed to tokenize with ${languageId}:`, error);
           this.tokens = [];
         }
       }

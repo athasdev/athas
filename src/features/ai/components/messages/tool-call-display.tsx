@@ -180,12 +180,12 @@ export default function ToolCallDisplay({
     <div className="leading-tight">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="group flex w-full items-center gap-1 text-left text-xs opacity-75 transition-all duration-200 hover:opacity-100"
+        className="group flex w-full items-center gap-1 text-left text-xs opacity-75 transition-opacity duration-200 hover:opacity-100"
       >
         <Icon
-          size={10}
+          size={11}
           className={cn(
-            "opacity-50",
+            "opacity-60",
             error ? "text-red-400" : "text-current",
             isStreaming && "animate-pulse",
           )}
@@ -204,7 +204,7 @@ export default function ToolCallDisplay({
               e.stopPropagation();
               onOpenInEditor?.(input.file_path);
             }}
-            className="ml-1 rounded p-0.5 text-text-lighter opacity-40 transition-all hover:bg-hover hover:opacity-100"
+            className="ml-1 rounded-full p-0.5 text-text-lighter opacity-40 transition-all hover:bg-hover hover:opacity-100"
             title="Open in editor"
             aria-label="Open file in editor"
           >
@@ -221,12 +221,12 @@ export default function ToolCallDisplay({
       </button>
 
       {isExpanded && (
-        <div className="mt-1 space-y-1 pl-3 text-xs opacity-70">
+        <div className="mt-1 space-y-1 pl-3 text-xs opacity-80">
           {/* Input section */}
           <div>
             <div className="mb-1 font-medium opacity-60">Input:</div>
             <pre
-              className="overflow-x-auto rounded-sm bg-secondary-bg p-2 text-xs"
+              className="overflow-x-auto rounded-lg bg-secondary-bg/80 p-2 text-xs"
               style={{
                 fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, monospace",
               }}
@@ -240,7 +240,7 @@ export default function ToolCallDisplay({
             <div>
               <div className="mb-1 font-medium opacity-60">Output:</div>
               <pre
-                className="max-h-48 overflow-x-auto rounded-sm bg-secondary-bg p-2 text-xs"
+                className="max-h-48 overflow-x-auto rounded-lg bg-secondary-bg/80 p-2 text-xs"
                 style={{
                   fontFamily:
                     "ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, monospace",
@@ -255,7 +255,7 @@ export default function ToolCallDisplay({
           {error && (
             <div>
               <div className="mb-1 font-medium text-red-400 opacity-80">Error:</div>
-              <div className="rounded-sm bg-red-500/10 p-2 text-red-400 opacity-80">{error}</div>
+              <div className="rounded-lg bg-red-500/10 p-2 text-red-400 opacity-80">{error}</div>
             </div>
           )}
         </div>

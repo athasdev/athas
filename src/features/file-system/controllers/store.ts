@@ -60,6 +60,8 @@ const wrapWithRootFolder = (
   ];
 };
 
+let latestFileOpenRequestId = 0;
+
 export const useFileSystemStore = createSelectors(
   create<FsState & FsActions>()(
     immer((set, get) => ({
@@ -350,7 +352,7 @@ export const useFileSystemStore = createSelectors(
         line?: number,
         column?: number,
         codeEditorRef?: React.RefObject<CodeEditorRef | null>,
-        isPreview = true,
+        isPreview = false,
       ) => {
         const { updateActivePath } = useSidebarStore.getState();
 
@@ -358,6 +360,9 @@ export const useFileSystemStore = createSelectors(
           await get().toggleFolder(path);
           return;
         }
+
+        const requestId = ++latestFileOpenRequestId;
+        const isStaleRequest = () => requestId !== latestFileOpenRequestId;
 
         let resolvedPath = path;
 
@@ -386,12 +391,16 @@ export const useFileSystemStore = createSelectors(
           console.error("Failed to resolve symlink:", error);
         }
 
+        if (isStaleRequest()) return;
+
         updateActivePath(path);
         const fileName = getFilenameFromPath(path);
         const { openBuffer } = useBufferStore.getState().actions;
 
         // Handle virtual diff files
         if (path.startsWith("diff://")) {
+          if (isStaleRequest()) return;
+
           const match = path.match(/^diff:\/\/(staged|unstaged)\/(.+)$/);
           let displayName = getFilenameFromPath(path);
           if (match) {
@@ -411,10 +420,13 @@ export const useFileSystemStore = createSelectors(
 
         // Handle special file types
         if (isSQLiteFile(resolvedPath)) {
+          if (isStaleRequest()) return;
           openBuffer(path, fileName, "", false, true, false, false);
         } else if (isImageFile(resolvedPath)) {
+          if (isStaleRequest()) return;
           openBuffer(path, fileName, "", true, false, false, false);
         } else if (isPdfFile(resolvedPath)) {
+          if (isStaleRequest()) return;
           openBuffer(
             path,
             fileName,
@@ -437,6 +449,7 @@ export const useFileSystemStore = createSelectors(
           const { openExternalEditorBuffer } = useBufferStore.getState().actions;
 
           if (settings.externalEditor !== "none") {
+            if (isStaleRequest()) return;
             try {
               const { rootFolderPath } = get();
 
@@ -448,6 +461,8 @@ export const useFileSystemStore = createSelectors(
                   cols: 80,
                 },
               });
+
+              if (isStaleRequest()) return;
 
               // Open external editor buffer
               openExternalEditorBuffer(resolvedPath, fileName, connectionId);
@@ -474,6 +489,8 @@ export const useFileSystemStore = createSelectors(
           } else {
             content = await readFileContent(resolvedPath);
           }
+
+          if (isStaleRequest()) return;
 
           // Check if this is a diff file
           if (isDiffFile(path, content)) {
@@ -541,7 +558,7 @@ export const useFileSystemStore = createSelectors(
           setTimeout(() => {
             window.dispatchEvent(
               new CustomEvent("menu-go-to-line", {
-                detail: { line },
+                detail: { line, path },
               }),
             );
           }, 100);

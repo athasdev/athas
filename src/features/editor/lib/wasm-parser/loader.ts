@@ -90,8 +90,7 @@ class WasmParserLoader {
 
           return updatedParser;
         } catch (error) {
-          logger.error("WasmParser", `Failed to create highlight query for ${languageId}:`, error);
-          // Try to fetch local highlight query as fallback
+          // Try to fetch local highlight query as fallback before surfacing an error.
           const localQuery = await this.fetchLocalHighlightQuery(languageId);
           if (localQuery) {
             try {
@@ -120,10 +119,21 @@ class WasmParserLoader {
             } catch (localError) {
               logger.error(
                 "WasmParser",
+                `Failed to create highlight query for ${languageId}:`,
+                error,
+              );
+              logger.error(
+                "WasmParser",
                 `Local highlight query also failed for ${languageId}:`,
                 localError,
               );
             }
+          } else {
+            logger.error(
+              "WasmParser",
+              `Failed to create highlight query for ${languageId}:`,
+              error,
+            );
           }
         }
       }
@@ -155,9 +165,14 @@ class WasmParserLoader {
    * Fetch highlight query from local public directory
    */
   private async fetchLocalHighlightQuery(languageId: string): Promise<string | null> {
-    // TypeScript and JavaScript both use tsx queries
-    const queryFolder =
-      languageId === "typescript" || languageId === "javascript" ? "tsx" : languageId;
+    const queryFolderMap: Record<string, string> = {
+      javascript: "tsx",
+      javascriptreact: "tsx",
+      typescript: "tsx",
+      typescriptreact: "tsx",
+      csharp: "c_sharp",
+    };
+    const queryFolder = queryFolderMap[languageId] || languageId;
     const localPath = `/extensions/${queryFolder}/highlights.scm`;
     try {
       const response = await fetch(localPath);

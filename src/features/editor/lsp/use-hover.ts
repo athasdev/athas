@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { Hover, MarkedString, MarkupContent } from "vscode-languageserver-types";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorUIStore } from "../stores/ui-store";
@@ -9,8 +9,6 @@ interface UseHoverProps {
   isLanguageSupported?: (filePath: string) => boolean;
   filePath: string;
   fontSize: number;
-  lineNumbers: boolean;
-  gutterWidth: number;
   charWidth: number;
 }
 
@@ -19,13 +17,12 @@ export const useHover = ({
   isLanguageSupported,
   filePath,
   fontSize,
-  lineNumbers,
-  gutterWidth,
   charWidth,
 }: UseHoverProps) => {
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverRequestIdRef = useRef(0);
 
-  const { actions, isHovering } = useEditorUIStore();
+  const actions = useEditorUIStore.use.actions();
 
   const handleHover = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -37,27 +34,49 @@ export const useHover = ({
         clearTimeout(hoverTimeoutRef.current);
       }
 
+      const requestId = ++hoverRequestIdRef.current;
+
+      // Snapshot event values immediately (React synthetic events are not safe to read asynchronously).
+      const editor = e.currentTarget;
+      const clientX = e.clientX;
+      const clientY = e.clientY;
+
       hoverTimeoutRef.current = setTimeout(async () => {
-        const editor = e.currentTarget;
+        if (requestId !== hoverRequestIdRef.current) return;
+        if (!useEditorUIStore.getState().isHovering) return;
         if (!editor) return;
+        const textarea = editor.querySelector("textarea");
         const rect = editor.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
 
         const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
-        // Use actual gutter width + margin for content offset
-        const contentOffsetX = lineNumbers
-          ? gutterWidth + EDITOR_CONSTANTS.GUTTER_MARGIN
-          : EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
+        // Editor container is already to the right of gutter, so do not subtract gutter width again.
+        const contentOffsetX = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
         const paddingTop = EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+        const scrollTop = textarea?.scrollTop ?? 0;
+        const scrollLeft = textarea?.scrollLeft ?? 0;
+        const textLines = (textarea?.value ?? "").split("\n");
+        const totalLines = textLines.length;
 
-        const line = Math.floor((y - paddingTop + editor.scrollTop) / lineHeight);
-        const character = Math.floor((x - contentOffsetX + editor.scrollLeft) / charWidth);
+        if (totalLines === 0) return;
 
-        if (line >= 0 && character >= 0) {
+        const line = Math.floor((y - paddingTop + scrollTop) / lineHeight);
+        const clampedLine = Math.max(0, Math.min(line, totalLines - 1));
+        const lineLength = textLines[clampedLine]?.length ?? 0;
+
+        const character = Math.floor((x - contentOffsetX + scrollLeft) / charWidth);
+        const clampedCharacter = Math.max(0, Math.min(character, lineLength));
+
+        if (clampedLine >= 0 && clampedCharacter >= 0) {
           try {
-            logger.debug("Editor", `Requesting hover at ${filePath}:${line}:${character}`);
-            const hoverResult = await getHover(filePath || "", line, character);
+            logger.debug(
+              "Editor",
+              `Requesting hover at ${filePath}:${clampedLine}:${clampedCharacter}`,
+            );
+            const hoverResult = await getHover(filePath || "", clampedLine, clampedCharacter);
+            if (requestId !== hoverRequestIdRef.current) return;
+            if (!useEditorUIStore.getState().isHovering) return;
             logger.debug("Editor", `Hover result:`, hoverResult);
             if (hoverResult?.contents) {
               let content = "";
@@ -67,6 +86,11 @@ export const useHover = ({
                   return item;
                 }
                 if ("language" in item && item.language && item.value) {
+                  const singleLine = !item.value.includes("\n");
+                  // Keep single-line signatures compact in tooltip.
+                  if (singleLine && item.value.length <= 220) {
+                    return `\`${item.value}\``;
+                  }
                   return `\`\`\`${item.language}\n${item.value}\n\`\`\``;
                 }
                 if ("kind" in item && item.value) {
@@ -78,25 +102,30 @@ export const useHover = ({
               if (typeof hoverResult.contents === "string") {
                 content = hoverResult.contents;
               } else if (Array.isArray(hoverResult.contents)) {
-                content = hoverResult.contents.map(formatHoverItem).filter(Boolean).join("\n\n");
+                content = hoverResult.contents.map(formatHoverItem).filter(Boolean).join("\n");
               } else {
                 content = formatHoverItem(hoverResult.contents);
               }
+
+              content = content
+                .replace(/^\s*---+\s*$/gm, "")
+                .replace(/\n{3,}/g, "\n\n")
+                .trim();
 
               if (content.trim()) {
                 const tooltipWidth = EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH;
                 const tooltipHeight = EDITOR_CONSTANTS.HOVER_TOOLTIP_HEIGHT;
                 const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
 
-                let tooltipX = e.clientX + 15;
-                let tooltipY = e.clientY + 15;
+                let tooltipX = clientX + 15;
+                let tooltipY = clientY + 15;
 
                 if (tooltipX + tooltipWidth > window.innerWidth - margin) {
-                  tooltipX = e.clientX - tooltipWidth - 15;
+                  tooltipX = clientX - tooltipWidth - 15;
                 }
 
                 if (tooltipY + tooltipHeight > window.innerHeight - margin) {
-                  tooltipY = e.clientY - tooltipHeight - 15;
+                  tooltipY = clientY - tooltipHeight - 15;
                 }
 
                 tooltipX = Math.max(
@@ -120,33 +149,39 @@ export const useHover = ({
         }
       }, EDITOR_CONSTANTS.HOVER_TOOLTIP_DELAY);
     },
-    [
-      getHover,
-      isLanguageSupported,
-      filePath,
-      fontSize,
-      lineNumbers,
-      gutterWidth,
-      charWidth,
-      actions.setHoverInfo,
-    ],
+    [getHover, isLanguageSupported, filePath, fontSize, charWidth, actions.setHoverInfo],
   );
 
   const handleMouseLeave = useCallback(() => {
     actions.setIsHovering(false);
+    hoverRequestIdRef.current += 1;
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
     setTimeout(() => {
-      if (!isHovering) {
+      const tooltipHovered = document.querySelector(".hover-tooltip:hover") !== null;
+      if (!useEditorUIStore.getState().isHovering && !tooltipHovered) {
         actions.setHoverInfo(null);
       }
     }, 150);
-  }, [isHovering, actions.setIsHovering, actions.setHoverInfo]);
+  }, [actions.setIsHovering, actions.setHoverInfo]);
 
   const handleMouseEnter = useCallback(() => {
+    hoverRequestIdRef.current += 1;
     actions.setIsHovering(true);
   }, [actions.setIsHovering]);
+
+  // Clear hover when switching files/unmounting to avoid sticky tooltip across tabs.
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      hoverRequestIdRef.current += 1;
+      actions.setHoverInfo(null);
+      actions.setIsHovering(false);
+    };
+  }, [filePath, actions]);
 
   return {
     handleHover,

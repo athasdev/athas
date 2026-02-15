@@ -49,7 +49,7 @@ const Dialog = ({
         className={cn(
           "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-[9999]",
           "flex max-h-[90vh] flex-col overflow-hidden",
-          "rounded-lg border border-border bg-primary-bg shadow-xl",
+          "rounded-2xl border border-border bg-primary-bg shadow-2xl",
           sizeClasses[size],
           "mx-4",
           classNames?.modal,

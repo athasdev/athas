@@ -230,6 +230,17 @@ const editCommands: Command[] = [
   },
 ];
 
+const toggleTerminalPane = () => {
+  const state = useUIState.getState();
+  if (state.isBottomPaneVisible && state.bottomPaneActiveTab === "terminal") {
+    state.setIsBottomPaneVisible(false);
+  } else {
+    state.setBottomPaneActiveTab("terminal");
+    state.setIsBottomPaneVisible(true);
+    setTimeout(() => state.requestTerminalFocus(), 100);
+  }
+};
+
 const viewCommands: Command[] = [
   {
     id: "workbench.toggleSidebar",
@@ -245,17 +256,15 @@ const viewCommands: Command[] = [
     id: "workbench.toggleTerminal",
     title: "Toggle Terminal",
     category: "View",
+    keybinding: "cmd+j",
+    execute: toggleTerminalPane,
+  },
+  {
+    id: "workbench.toggleTerminalAlt",
+    title: "Toggle Terminal (Alt)",
+    category: "View",
     keybinding: "cmd+`",
-    execute: () => {
-      const state = useUIState.getState();
-      if (state.isBottomPaneVisible && state.bottomPaneActiveTab === "terminal") {
-        state.setIsBottomPaneVisible(false);
-      } else {
-        state.setBottomPaneActiveTab("terminal");
-        state.setIsBottomPaneVisible(true);
-        setTimeout(() => state.requestTerminalFocus(), 100);
-      }
-    },
+    execute: toggleTerminalPane,
   },
   {
     id: "workbench.toggleDiagnostics",
@@ -411,12 +420,26 @@ const navigationCommands: Command[] = [
     id: "workbench.nextTab",
     title: "Next Tab",
     category: "Navigation",
+    keybinding: "cmd+alt+right",
+    execute: () => useBufferStore.getState().actions.switchToNextBuffer(),
+  },
+  {
+    id: "workbench.nextTabCtrlTab",
+    title: "Next Tab (Ctrl+Tab)",
+    category: "Navigation",
     keybinding: "ctrl+tab",
     execute: () => useBufferStore.getState().actions.switchToNextBuffer(),
   },
   {
     id: "workbench.previousTab",
     title: "Previous Tab",
+    category: "Navigation",
+    keybinding: "cmd+alt+left",
+    execute: () => useBufferStore.getState().actions.switchToPreviousBuffer(),
+  },
+  {
+    id: "workbench.previousTabCtrlTab",
+    title: "Previous Tab (Ctrl+Shift+Tab)",
     category: "Navigation",
     keybinding: "ctrl+shift+tab",
     execute: () => useBufferStore.getState().actions.switchToPreviousBuffer(),

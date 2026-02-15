@@ -1,12 +1,8 @@
 name: Sync Website Content
 
 on:
-  push:
-    branches: [main, master]
-    paths:
-      - "CHANGELOG.md"
-      - "ROADMAP.md"
-      - ".github/workflows/sync-docs.yml"
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:

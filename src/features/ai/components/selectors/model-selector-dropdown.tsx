@@ -180,9 +180,9 @@ export function ModelSelectorDropdown({
       <button
         ref={triggerRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="ui-font flex items-center gap-1 rounded bg-transparent px-2 py-1 text-xs transition-colors hover:bg-hover"
+        className="ui-font flex h-8 items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
       >
-        <span className="max-w-[120px] truncate text-text-lighter">{currentModelName}</span>
+        <span className="max-w-[120px] truncate text-text">{currentModelName}</span>
         <ChevronDown
           size={12}
           className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
@@ -191,18 +191,18 @@ export function ModelSelectorDropdown({
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} />
+          <div className="fixed inset-0 z-[10020]" onClick={() => setIsOpen(false)} />
           <div
             ref={dropdownRef}
             onKeyDown={handleKeyDown}
             className={cn(
-              "absolute right-0 bottom-full z-[9999] mb-1",
+              "absolute right-0 bottom-full z-[10030] mb-2",
               "max-h-[400px] w-[280px] overflow-hidden",
-              "rounded-lg border border-border bg-primary-bg shadow-xl",
+              "rounded-2xl border border-border bg-primary-bg/95 shadow-lg backdrop-blur-sm",
             )}
           >
             <div className="border-border border-b p-2">
-              <div className="flex items-center gap-2 rounded bg-secondary-bg px-2 py-1.5">
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-secondary-bg/80 px-2 py-1.5">
                 <Search size={12} className="text-text-lighter" />
                 <input
                   ref={inputRef}
@@ -230,7 +230,7 @@ export function ModelSelectorDropdown({
                     return (
                       <div
                         key={`provider-${item.providerId}`}
-                        className="flex items-center justify-between px-2 py-1.5"
+                        className="flex items-center justify-between px-3 py-1.5"
                       >
                         <span className="font-medium text-text-lighter text-xs">
                           {item.providerName}
@@ -262,7 +262,7 @@ export function ModelSelectorDropdown({
                       }}
                       onMouseEnter={() => setSelectedIndex(selectableIndex)}
                       className={cn(
-                        "flex w-full items-center gap-2 rounded px-3 py-1.5 text-left transition-colors",
+                        "mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors",
                         isSelected ? "bg-hover" : "bg-transparent",
                         isCurrent && "bg-accent/10",
                       )}

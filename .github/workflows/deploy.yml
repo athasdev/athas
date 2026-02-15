@@ -1,8 +1,8 @@
-name: Deploy Docs
+name: Deploy Docs And Extensions CDN
 
 on:
-  push:
-    branches: [main, master]
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -16,12 +16,20 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          envs: EXTENSIONS_CDN_ROOT
           script: |
             set -e
             cd /srv/athas
             git pull
             /root/.bun/bin/bun scripts/build-extensions-index.ts
+            if [ -n "${EXTENSIONS_CDN_ROOT:-}" ]; then
+              /root/.bun/bin/bun scripts/deploy-extensions-cdn.ts
+            else
+              echo "EXTENSIONS_CDN_ROOT not set, skipping extensions CDN sync."
+            fi
             cd /srv/athas/docs
             /root/.bun/bin/bun install
             /root/.bun/bin/bun run build
             systemctl restart athas-docs
+        env:
+          EXTENSIONS_CDN_ROOT: ${{ secrets.EXTENSIONS_CDN_ROOT }}

@@ -1,4 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { isNotGitRepositoryError, resolveRepositoryPath } from "./repo";
 
 interface CheckoutResult {
   success: boolean;
@@ -8,10 +9,17 @@ interface CheckoutResult {
 
 export const getBranches = async (repoPath: string): Promise<string[]> => {
   try {
-    const branches = await tauriInvoke<string[]>("git_branches", { repoPath });
+    const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+    if (!resolvedRepoPath) {
+      return [];
+    }
+
+    const branches = await tauriInvoke<string[]>("git_branches", { repoPath: resolvedRepoPath });
     return branches;
   } catch (error) {
-    console.error("Failed to get branches:", error);
+    if (!isNotGitRepositoryError(error)) {
+      console.error("Failed to get branches:", error);
+    }
     return [];
   }
 };

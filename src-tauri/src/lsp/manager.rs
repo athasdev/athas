@@ -351,19 +351,6 @@ impl LspManager {
          }
       }
 
-      // Third pass: fallback - find any server in the workspace
-      // This handles the case where a file is being opened for the first time
-      for ((workspace_path, server_name), instance) in clients.iter() {
-         if path.starts_with(workspace_path) {
-            log::warn!(
-               "get_client_for_file: fallback to server '{}' for {} (no extension match)",
-               server_name,
-               file_path
-            );
-            return Some(instance.client.clone());
-         }
-      }
-
       log::warn!("get_client_for_file: no client found for {}", file_path);
       None
    }
@@ -430,9 +417,9 @@ impl LspManager {
       line: u32,
       character: u32,
    ) -> Result<Option<Hover>> {
-      let client = self
-         .get_client_for_file(file_path)
-         .context("No LSP client for this file")?;
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
 
       let text_document = TextDocumentIdentifier {
          uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
@@ -446,7 +433,20 @@ impl LspManager {
          work_done_progress_params: Default::default(),
       };
 
-      client.text_document_hover(params).await
+      match client.text_document_hover(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            let message = error.to_string();
+            if message.contains("-32601")
+               || message.contains("Method not found")
+               || message.contains("Unhandled method textDocument/hover")
+            {
+               log::debug!("Hover method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
    }
 
    pub async fn get_definition(
@@ -455,9 +455,9 @@ impl LspManager {
       line: u32,
       character: u32,
    ) -> Result<Option<GotoDefinitionResponse>> {
-      let client = self
-         .get_client_for_file(file_path)
-         .context("No LSP client for this file")?;
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
 
       let text_document = TextDocumentIdentifier {
          uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
@@ -472,7 +472,20 @@ impl LspManager {
          partial_result_params: Default::default(),
       };
 
-      client.text_document_definition(params).await
+      match client.text_document_definition(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            let message = error.to_string();
+            if message.contains("-32601")
+               || message.contains("Method not found")
+               || message.contains("Unhandled method textDocument/definition")
+            {
+               log::debug!("Definition method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
    }
 
    pub fn notify_document_open(&self, file_path: &str, content: String) -> Result<()> {
@@ -581,17 +594,57 @@ impl LspManager {
 
    fn get_language_id_for_file(&self, file_path: &str) -> String {
       let path = PathBuf::from(file_path);
+      let file_name = path
+         .file_name()
+         .and_then(|name| name.to_str())
+         .unwrap_or_default();
       let extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
 
-      match extension {
+      let mut language_id = match extension {
+         "sh" | "bash" | "zsh" => "bash",
+         "c" => "c",
+         "h" => "c",
+         "cpp" | "cc" | "cxx" | "hpp" | "hh" | "hxx" => "cpp",
+         "cs" => "csharp",
+         "css" => "css",
+         "dart" => "dart",
+         "el" => "elisp",
+         "ex" | "exs" => "elixir",
+         "elm" => "elm",
+         "go" => "go",
+         "html" | "htm" | "xhtml" => "html",
+         "java" => "java",
          "ts" => "typescript",
          "tsx" => "typescriptreact",
          "js" | "mjs" | "cjs" => "javascript",
          "jsx" => "javascriptreact",
+         "jsonc" => "jsonc",
          "json" => "json",
+         "kt" | "kts" => "kotlin",
+         "lua" => "lua",
+         "ml" | "mli" => "ocaml",
+         "php" | "phtml" | "php3" | "php4" | "php5" => "php",
+         "py" | "pyw" | "pyi" => "python",
+         "rb" | "rake" | "gemspec" => "ruby",
+         "rs" => "rust",
+         "scala" | "sc" => "scala",
+         "swift" => "swift",
+         "toml" => "toml",
+         "vue" => "vue",
+         "yaml" | "yml" => "yaml",
+         "zig" => "zig",
          _ => "plaintext",
       }
-      .to_string()
+      .to_string();
+
+      if language_id == "plaintext" {
+         language_id = match file_name {
+            ".bashrc" | ".zshrc" | ".bash_profile" | ".profile" => "bash".to_string(),
+            _ => language_id,
+         };
+      }
+
+      language_id
    }
 }
 

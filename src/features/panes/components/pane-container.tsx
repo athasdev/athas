@@ -328,7 +328,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     <div
       ref={containerRef}
       data-pane-container
-      className={`relative flex h-full w-full flex-col overflow-hidden ${
+      className={`relative flex h-full w-full flex-col overflow-hidden bg-primary-bg ${
         isActivePane ? "ring-1 ring-accent/30" : ""
       } ${isDragOver ? "ring-2 ring-accent" : ""}`}
       onClick={handlePaneClick}

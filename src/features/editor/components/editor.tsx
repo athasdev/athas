@@ -186,6 +186,11 @@ export function Editor({
     (newVirtualContent: string) => {
       if (!bufferId || !inputRef.current) return;
 
+      // Any actual typing/edit should dismiss hover info immediately.
+      const uiActions = useEditorUIStore.getState().actions;
+      uiActions.setHoverInfo(null);
+      uiActions.setIsHovering(false);
+
       let newActualContent: string;
       if (foldTransform.hasActiveFolds) {
         newActualContent = applyVirtualEdit(content, newVirtualContent, foldTransform.mapping);
@@ -282,6 +287,11 @@ export function Editor({
     } else {
       setSelection(undefined);
     }
+
+    // Cursor movement/navigation should hide stale hover tooltip.
+    const uiActions = useEditorUIStore.getState().actions;
+    uiActions.setHoverInfo(null);
+    uiActions.setIsHovering(false);
   }, [bufferId, lines, actualLines, setCursorPosition, setSelection, foldTransform]);
 
   const handleClick = useCallback(
@@ -651,6 +661,31 @@ export function Editor({
         return;
       }
 
+      if (e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        const textarea = e.currentTarget;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const currentContent = textarea.value;
+
+        // Preserve indentation from the current line (spaces/tabs at line start).
+        const lineStart = currentContent.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+        const currentLinePrefix = currentContent.slice(lineStart, start);
+        const indentMatch = currentLinePrefix.match(/^[\t ]*/);
+        const indent = indentMatch?.[0] ?? "";
+
+        const inserted = `\n${indent}`;
+        const newContent =
+          currentContent.substring(0, start) + inserted + currentContent.substring(end);
+        const newCursorPos = start + inserted.length;
+
+        textarea.value = newContent;
+        textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+
+        handleInput(newContent);
+        return;
+      }
+
       if (e.key === "Tab") {
         if (e.ctrlKey || e.metaKey) {
           return;
@@ -994,6 +1029,7 @@ export function Editor({
         <InputLayer
           textareaRef={inputRef}
           content={displayContent}
+          filePath={filePath}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
           onScroll={handleScroll}

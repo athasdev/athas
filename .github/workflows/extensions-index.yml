@@ -1,12 +1,8 @@
 name: Build Extensions Index
 
 on:
-  push:
-    branches: [main, master]
-    paths:
-      - "extensions/registry.json"
-      - "scripts/build-extensions-index.ts"
-      - ".github/workflows/extensions-index.yml"
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -37,6 +33,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add extensions/index.json
-          git commit -m "Update extensions index"
+          git add extensions/registry.json extensions/index.json
+          git commit -m "Update extensions catalog"
           git push

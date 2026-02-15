@@ -21,8 +21,8 @@ const Submenu = ({ title, children, disabled = false }: Props) => {
       {/* Submenu trigger */}
       <button
         className={cn(
-          "flex w-full cursor-pointer items-center justify-between px-3 py-1.5 text-text text-xs hover:bg-hover",
-          disabled && "cursor-not-allowed text-gray-500",
+          "flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-text text-xs transition-colors hover:bg-hover",
+          disabled && "cursor-not-allowed text-text-lighter",
         )}
         disabled={disabled}
       >
@@ -32,7 +32,7 @@ const Submenu = ({ title, children, disabled = false }: Props) => {
 
       {/* Submenu content */}
       {isOpen && !disabled && (
-        <div className="absolute top-0 left-full ml-1">
+        <div className="absolute top-0 left-full z-[10050] ml-1">
           <Menu>{children}</Menu>
         </div>
       )}

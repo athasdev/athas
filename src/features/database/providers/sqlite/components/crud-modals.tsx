@@ -77,14 +77,17 @@ export const CreateRowModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-[10030] flex items-center justify-center bg-black/45 backdrop-blur-sm">
       <div
         ref={modalRef}
-        className="w-full max-w-md rounded-lg border border-border bg-secondary-bg p-6 shadow-xl"
+        className="w-full max-w-md rounded-2xl border border-border/70 bg-secondary-bg/95 p-5 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.5)]"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="ui-font font-medium text-lg text-text">Add Row to {tableName}</h2>
-          <button onClick={handleClose} className="rounded-md p-1 text-text-lighter hover:bg-hover">
+          <button
+            onClick={handleClose}
+            className="rounded-full border border-transparent p-1 text-text-lighter hover:border-border/70 hover:bg-hover"
+          >
             <XIcon size="16" />
           </button>
         </div>
@@ -217,14 +220,17 @@ export const EditRowModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-[10030] flex items-center justify-center bg-black/45 backdrop-blur-sm">
       <div
         ref={editModalRef}
-        className="w-full max-w-md rounded-lg border border-border bg-secondary-bg p-6 shadow-xl"
+        className="w-full max-w-md rounded-2xl border border-border/70 bg-secondary-bg/95 p-5 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.5)]"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="ui-font font-medium text-lg text-text">Edit Row in {tableName}</h2>
-          <button onClick={handleClose} className="rounded-md p-1 text-text-lighter hover:bg-hover">
+          <button
+            onClick={handleClose}
+            className="rounded-full border border-transparent p-1 text-text-lighter hover:border-border/70 hover:bg-hover"
+          >
             <XIcon size="16" />
           </button>
         </div>
@@ -339,14 +345,17 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-[10030] flex items-center justify-center bg-black/45 backdrop-blur-sm">
       <div
         ref={createTableModalRef}
-        className="w-full max-w-lg rounded-lg border border-border bg-secondary-bg p-6 shadow-xl"
+        className="w-full max-w-lg rounded-2xl border border-border/70 bg-secondary-bg/95 p-5 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.5)]"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="ui-font font-medium text-lg text-text">Create New Table</h2>
-          <button onClick={handleClose} className="rounded-md p-1 text-text-lighter hover:bg-hover">
+          <button
+            onClick={handleClose}
+            className="rounded-full border border-transparent p-1 text-text-lighter hover:border-border/70 hover:bg-hover"
+          >
             <XIcon size="16" />
           </button>
         </div>
@@ -381,7 +390,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                 <select
                   value={column.type}
                   onChange={(e) => updateColumn(index, "type", e.target.value)}
-                  className="ui-font rounded-md border border-border bg-input px-2 py-1 text-sm text-text"
+                  className="ui-font rounded-lg border border-border bg-input px-2 py-1 text-sm text-text"
                 >
                   <option value="TEXT">TEXT</option>
                   <option value="INTEGER">INTEGER</option>
@@ -401,7 +410,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   <button
                     type="button"
                     onClick={() => removeColumn(index)}
-                    className="rounded-md p-1 text-red-400 hover:bg-hover"
+                    className="rounded-full border border-transparent p-1 text-red-400 hover:border-border/70 hover:bg-hover"
                   >
                     <XIcon size="14" />
                   </button>
@@ -412,7 +421,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
               type="button"
               onClick={addColumn}
               className={cn(
-                "flex items-center gap-1 rounded-md px-2 py-1",
+                "flex items-center gap-1 rounded-full border border-transparent px-2 py-1",
                 "ui-font text-sm text-text hover:bg-hover",
               )}
             >

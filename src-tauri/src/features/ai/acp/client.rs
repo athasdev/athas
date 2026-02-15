@@ -1,4 +1,4 @@
-use super::types::{AcpContentBlock, AcpEvent};
+use super::types::{AcpContentBlock, AcpEvent, UiAction};
 use agent_client_protocol as acp;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -58,6 +58,149 @@ impl AthasAcpClient {
       }
       path.to_string()
    }
+
+   fn extract_first_url(text: &str) -> Option<String> {
+      for scheme in ["https://", "http://"] {
+         if let Some(start) = text.find(scheme) {
+            let rest = &text[start..];
+            let end = rest
+               .find(|c: char| {
+                  c.is_whitespace()
+                     || matches!(c, '"' | '\'' | '`' | ')' | '}' | ']' | '|' | '<' | '>')
+               })
+               .unwrap_or(rest.len());
+            let url = rest[..end].trim_end_matches(['.', ',', ';']);
+            if !url.is_empty() {
+               return Some(url.to_string());
+            }
+         }
+      }
+      None
+   }
+
+   fn extract_json_string_fields(text: &str, field: &str) -> Vec<String> {
+      let mut values = Vec::new();
+      let needle = format!("\"{}\"", field);
+      let mut offset = 0usize;
+
+      while let Some(rel_idx) = text[offset..].find(&needle) {
+         let start = offset + rel_idx + needle.len();
+         let Some(colon_rel) = text[start..].find(':') else {
+            break;
+         };
+         let after_colon = start + colon_rel + 1;
+         let rest = &text[after_colon..];
+         let trimmed = rest.trim_start();
+         let ws = rest.len().saturating_sub(trimmed.len());
+         if !trimmed.starts_with('"') {
+            offset = after_colon + ws + 1;
+            continue;
+         }
+
+         let mut escaped = false;
+         let mut end = None;
+         for (i, ch) in trimmed[1..].char_indices() {
+            if escaped {
+               escaped = false;
+               continue;
+            }
+            if ch == '\\' {
+               escaped = true;
+               continue;
+            }
+            if ch == '"' {
+               end = Some(1 + i);
+               break;
+            }
+         }
+
+         if let Some(end_idx) = end {
+            let value = &trimmed[1..end_idx];
+            values.push(value.to_string());
+            offset = after_colon + ws + end_idx + 1;
+         } else {
+            break;
+         }
+      }
+
+      values
+   }
+
+   fn extract_webviewer_fallback_url(
+      tool_title: &str,
+      raw_input: Option<&serde_json::Value>,
+   ) -> Option<String> {
+      let raw_input_text = raw_input
+         .and_then(|value| serde_json::to_string(value).ok())
+         .unwrap_or_default();
+
+      let references_webviewer = tool_title.contains("athas.openWebViewer")
+         || raw_input_text.contains("athas.openWebViewer")
+         || (raw_input_text.contains("openWebViewer") && raw_input_text.contains("ext_method"));
+
+      if !references_webviewer {
+         return None;
+      }
+
+      Self::extract_first_url(tool_title).or_else(|| Self::extract_first_url(&raw_input_text))
+   }
+
+   fn extract_terminal_fallback_command(
+      tool_title: &str,
+      raw_input: Option<&serde_json::Value>,
+   ) -> Option<String> {
+      let raw_input_text = raw_input
+         .and_then(|value| serde_json::to_string(value).ok())
+         .unwrap_or_default();
+
+      let references_terminal = tool_title.contains("athas.openTerminal")
+         || raw_input_text.contains("athas.openTerminal")
+         || (raw_input_text.contains("openTerminal") && raw_input_text.contains("ext_method"));
+
+      if !references_terminal {
+         return None;
+      }
+
+      let candidates = Self::extract_json_string_fields(&raw_input_text, "command");
+      for candidate in candidates {
+         let candidate = candidate.trim();
+         if candidate.is_empty() {
+            continue;
+         }
+         if candidate.contains("ext_method") || candidate.contains("athas.openTerminal") {
+            continue;
+         }
+         return Some(candidate.to_string());
+      }
+
+      if raw_input_text.contains("lazygit") || tool_title.contains("lazygit") {
+         return Some("lazygit".to_string());
+      }
+
+      None
+   }
+
+   fn fallback_permission_response(
+      args: &acp::RequestPermissionRequest,
+   ) -> acp::RequestPermissionResponse {
+      let selected_option = args
+         .options
+         .iter()
+         .find(|opt| {
+            matches!(
+               opt.kind,
+               acp::PermissionOptionKind::RejectOnce | acp::PermissionOptionKind::RejectAlways
+            )
+         })
+         .or_else(|| args.options.first())
+         .map(|opt| acp::SelectedPermissionOutcome::new(opt.option_id.clone()));
+
+      if let Some(selected) = selected_option {
+         acp::RequestPermissionResponse::new(acp::RequestPermissionOutcome::Selected(selected))
+      } else {
+         acp::RequestPermissionResponse::new(acp::RequestPermissionOutcome::Cancelled)
+      }
+   }
 }
 
 #[async_trait(?Send)]
@@ -67,16 +210,29 @@ impl acp::Client for AthasAcpClient {
       args: acp::RequestPermissionRequest,
    ) -> acp::Result<acp::RequestPermissionResponse> {
       let request_id = uuid::Uuid::new_v4().to_string();
+      let session_id = args.session_id.to_string();
 
       // Extract tool call info for the permission request
       let tool_call_id = args.tool_call.tool_call_id.clone();
+      let tool_title = args
+         .tool_call
+         .fields
+         .title
+         .as_deref()
+         .unwrap_or("Tool call");
+      let fallback_webviewer_url =
+         Self::extract_webviewer_fallback_url(tool_title, args.tool_call.fields.raw_input.as_ref());
+      let fallback_terminal_command = Self::extract_terminal_fallback_command(
+         tool_title,
+         args.tool_call.fields.raw_input.as_ref(),
+      );
 
       // Emit permission request to frontend
       self.emit_event(AcpEvent::PermissionRequest {
          request_id: request_id.clone(),
          permission_type: "tool_call".to_string(),
          resource: tool_call_id.to_string(),
-         description: format!("Tool call: {}", tool_call_id),
+         description: format!("{} ({})", tool_title, tool_call_id),
       });
 
       // Wait for user response with timeout
@@ -99,6 +255,27 @@ impl acp::Client for AthasAcpClient {
             }
 
             if response.approved {
+               if let Some(url) = fallback_webviewer_url.clone() {
+                  // Claude Code adapters may try to invoke ext_method via shell command.
+                  // Execute the equivalent Athas UI action directly and reject the shell tool call.
+                  self.emit_event(AcpEvent::UiAction {
+                     session_id: session_id.clone(),
+                     action: UiAction::OpenWebViewer { url },
+                  });
+                  return Ok(Self::fallback_permission_response(&args));
+               }
+
+               if let Some(command) = fallback_terminal_command.clone() {
+                  // Same fallback for athas.openTerminal misuse through shell commands.
+                  self.emit_event(AcpEvent::UiAction {
+                     session_id: session_id.clone(),
+                     action: UiAction::OpenTerminal {
+                        command: Some(command),
+                     },
+                  });
+                  return Ok(Self::fallback_permission_response(&args));
+               }
+
                // Prefer allow-once/allow-always options if available
                let selected_option = args
                   .options
@@ -286,8 +463,54 @@ impl acp::Client for AthasAcpClient {
       Err(acp::Error::method_not_found())
    }
 
-   async fn ext_method(&self, _args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
-      Err(acp::Error::method_not_found())
+   async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+      let session_id = self
+         .current_session_id
+         .lock()
+         .await
+         .clone()
+         .unwrap_or_default();
+
+      // Parse params from RawValue to Value for easier access
+      let params: serde_json::Value =
+         serde_json::from_str(args.params.get()).unwrap_or(serde_json::Value::Null);
+
+      match &*args.method {
+         "athas.openWebViewer" => {
+            let url = params
+               .get("url")
+               .and_then(|v| v.as_str())
+               .unwrap_or("about:blank")
+               .to_string();
+
+            self.emit_event(AcpEvent::UiAction {
+               session_id,
+               action: UiAction::OpenWebViewer { url },
+            });
+
+            let response = serde_json::json!({ "success": true });
+            Ok(acp::ExtResponse::new(
+               serde_json::value::to_raw_value(&response).unwrap().into(),
+            ))
+         }
+         "athas.openTerminal" => {
+            let command = params
+               .get("command")
+               .and_then(|v| v.as_str())
+               .map(|s| s.to_string());
+
+            self.emit_event(AcpEvent::UiAction {
+               session_id,
+               action: UiAction::OpenTerminal { command },
+            });
+
+            let response = serde_json::json!({ "success": true });
+            Ok(acp::ExtResponse::new(
+               serde_json::value::to_raw_value(&response).unwrap().into(),
+            ))
+         }
+         _ => Err(acp::Error::method_not_found()),
+      }
    }
 
    async fn ext_notification(&self, _args: acp::ExtNotification) -> acp::Result<()> {

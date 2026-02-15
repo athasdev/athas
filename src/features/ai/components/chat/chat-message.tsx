@@ -104,12 +104,12 @@ export const ChatMessage = memo(function ChatMessage({
   if (message.role === "user") {
     return (
       <div className="w-full">
-        <div className="relative rounded-md bg-hover px-2.5 py-2">
+        <div className="relative rounded-2xl border border-border bg-primary-bg/90 px-3 py-2.5">
           <div className="whitespace-pre-wrap break-words pr-6">{message.content}</div>
           <Tooltip content="Restore to this point" side="top">
             <button
               onClick={() => handleRestoreCheckpoint(message.id)}
-              className="-translate-y-1/2 absolute top-1/2 right-1 flex size-4 items-center justify-center rounded bg-primary-bg p-0.5 text-text-lighter opacity-40 transition-opacity hover:bg-secondary-bg hover:opacity-100"
+              className="-translate-y-1/2 absolute top-1/2 right-1.5 flex size-5 items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0.5 text-text-lighter opacity-40 transition-all hover:bg-hover hover:opacity-100"
               title="Restore checkpoint"
               aria-label="Restore to this checkpoint"
             >
@@ -164,7 +164,7 @@ export const ChatMessage = memo(function ChatMessage({
   return (
     <div className="group relative w-full">
       {message.toolCalls && message.toolCalls.length > 0 && (
-        <div className="-space-y-0">
+        <div className="mb-1 space-y-1">
           {message.toolCalls!.map((toolCall, toolIndex) => (
             <ToolCallDisplay
               key={`${message.id}-tool-${toolIndex}`}
@@ -199,7 +199,7 @@ export const ChatMessage = memo(function ChatMessage({
                 <Tooltip content="Retry" side="top">
                   <button
                     onClick={handleRetryMessage}
-                    className="rounded bg-secondary-bg p-1 transition-colors hover:bg-hover"
+                    className="rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
                     title="Retry"
                     aria-label="Retry failed message"
                   >
@@ -210,7 +210,7 @@ export const ChatMessage = memo(function ChatMessage({
                 <Tooltip content="Regenerate" side="top">
                   <button
                     onClick={handleRetryMessage}
-                    className="rounded bg-secondary-bg p-1 transition-colors hover:bg-hover"
+                    className="rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
                     title="Regenerate"
                     aria-label="Regenerate response"
                   >
@@ -220,7 +220,7 @@ export const ChatMessage = memo(function ChatMessage({
               ))}
             <button
               onClick={() => handleCopyMessage(message.content, message.id)}
-              className="rounded bg-secondary-bg p-1 transition-colors hover:bg-hover"
+              className="rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
               title="Copy message"
               aria-label="Copy message"
             >

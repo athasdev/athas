@@ -89,7 +89,7 @@ function EditableChatTitle({
         onChange={(e) => setEditValue(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className="rounded border-none bg-transparent px-1 py-0.5 font-medium text-text outline-none focus:bg-hover"
+        className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 font-medium text-text outline-none focus:border-accent/40 focus:bg-hover"
         style={{ minWidth: "100px", maxWidth: "200px" }}
       />
     );
@@ -97,7 +97,7 @@ function EditableChatTitle({
 
   return (
     <span
-      className="cursor-pointer rounded px-1 py-0.5 font-medium transition-colors hover:bg-hover"
+      className="cursor-pointer rounded-full px-2 py-1 font-medium transition-colors hover:bg-hover"
       onClick={() => setIsEditing(true)}
       title="Click to rename chat"
     >
@@ -218,25 +218,28 @@ export function ChatHeader() {
   const packageManagers: PackageManager[] = ["bun", "npm", "pnpm", "yarn"];
 
   return (
-    <div className="flex items-center gap-2 border-border border-b bg-secondary-bg px-1.5 py-0.5">
+    <div className="relative z-[10020] flex items-center gap-2 border-border border-b bg-secondary-bg/70 px-3 py-2 backdrop-blur-sm">
       {/* Agent selector - clickable to switch agents */}
       <div className="relative">
         <Tooltip content="Click to switch agent (starts new chat)" side="bottom">
           <button
             onClick={() => setIsAgentSelectorOpen(!isAgentSelectorOpen)}
-            className="flex items-center gap-1 rounded bg-primary-bg px-1.5 py-0.5 text-xs transition-colors hover:bg-hover"
+            className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-primary-bg/90 px-3 text-xs transition-colors hover:bg-hover"
             aria-label="Switch agent"
           >
-            <Terminal size={10} className="text-text-lighter" />
+            <Terminal size={11} className="text-text-lighter" />
             <span className="text-text-light">{currentAgent?.name || "Custom"}</span>
-            <ChevronDown size={8} className="text-text-lighter" />
+            <ChevronDown size={10} className="text-text-lighter" />
           </button>
         </Tooltip>
 
         {isAgentSelectorOpen && (
           <>
-            <div className="fixed inset-0 z-9998" onClick={() => setIsAgentSelectorOpen(false)} />
-            <div className="absolute top-full left-0 z-9999 mt-1 w-[220px] rounded-lg border border-border bg-primary-bg py-1 shadow-xl">
+            <div
+              className="fixed inset-0 z-[10030]"
+              onClick={() => setIsAgentSelectorOpen(false)}
+            />
+            <div className="absolute top-full left-0 z-[10040] mt-2 w-[240px] rounded-2xl border border-border bg-primary-bg/95 py-1 shadow-lg backdrop-blur-sm">
               <div className="px-3 py-1.5 text-text-lighter text-xs">Switch to...</div>
               {AGENT_OPTIONS.map((agent) => {
                 const isInstalled = installedAgents.has(agent.id);
@@ -249,7 +252,7 @@ export function ChatHeader() {
                     onClick={() => handleAgentChange(agent.id)}
                     disabled={!canSelect}
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors",
+                      "mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-xl px-3 py-1.5 text-left text-xs transition-colors",
                       isInstalled || agent.id === "custom"
                         ? "hover:bg-hover"
                         : "cursor-pointer opacity-80",
@@ -288,7 +291,7 @@ export function ChatHeader() {
       <Tooltip content="Chat History" side="bottom">
         <button
           onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-          className="flex size-6 items-center justify-center rounded p-0 text-text-lighter transition-colors hover:bg-hover"
+          className="flex size-8 items-center justify-center rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
           aria-label="Toggle chat history"
         >
           <History size={14} />
@@ -300,7 +303,7 @@ export function ChatHeader() {
         <Tooltip content="New Chat" side="bottom">
           <button
             onClick={() => setIsNewChatMenuOpen(!isNewChatMenuOpen)}
-            className="flex size-6 items-center justify-center rounded p-0 text-text-lighter transition-colors hover:bg-hover"
+            className="flex size-8 items-center justify-center gap-0.5 rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             aria-label="New chat"
           >
             <Plus size={10} />
@@ -310,8 +313,8 @@ export function ChatHeader() {
 
         {isNewChatMenuOpen && (
           <>
-            <div className="fixed inset-0 z-9998" onClick={() => setIsNewChatMenuOpen(false)} />
-            <div className="absolute top-full right-0 z-9999 mt-1 w-[280px] rounded-lg border border-border bg-primary-bg py-1 shadow-xl">
+            <div className="fixed inset-0 z-[10030]" onClick={() => setIsNewChatMenuOpen(false)} />
+            <div className="absolute top-full right-0 z-[10040] mt-2 w-[300px] rounded-2xl border border-border bg-primary-bg/95 py-1 shadow-lg backdrop-blur-sm">
               <div className="px-3 py-1.5 text-text-lighter text-xs">New Chat with...</div>
               {AGENT_OPTIONS.map((agent) => {
                 const isInstalled = installedAgents.has(agent.id);
@@ -327,7 +330,7 @@ export function ChatHeader() {
                       onClick={() => handleNewChat(agent.id)}
                       disabled={!canSelect}
                       className={cn(
-                        "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors",
+                        "mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-xl px-3 py-1.5 text-left text-xs transition-colors",
                         isInstalled || agent.id === "custom"
                           ? "hover:bg-hover"
                           : "cursor-pointer opacity-80",
@@ -347,7 +350,7 @@ export function ChatHeader() {
                           onClick={(e) => handleInstall(agent.id, agent.name, e)}
                           className={cn(
                             "flex items-center gap-1 bg-accent/20 px-2 py-1 text-accent text-xs transition-colors hover:bg-accent/30",
-                            showPmDropdown ? "rounded-l" : "rounded",
+                            showPmDropdown ? "rounded-l-full" : "rounded-full",
                           )}
                           title="Install agent"
                         >
@@ -361,19 +364,19 @@ export function ChatHeader() {
                                 e.stopPropagation();
                                 setPmDropdownAgent(isPmOpen ? null : agent.id);
                               }}
-                              className="flex items-center gap-0.5 rounded-r border-accent/30 border-l bg-accent/20 px-1.5 py-1 text-accent text-xs transition-colors hover:bg-accent/30"
+                              className="ml-1 flex items-center gap-0.5 rounded-r-full border border-accent/30 bg-accent/20 px-1.5 py-1 text-accent text-xs transition-colors hover:bg-accent/30"
                             >
                               <span>{packageManager}</span>
                               <ChevronDown size={10} />
                             </button>
                             {isPmOpen && (
-                              <div className="absolute top-full right-0 z-10 mt-1 min-w-[70px] rounded border border-border bg-secondary-bg py-1 shadow-lg">
+                              <div className="absolute top-full right-0 z-[10050] mt-1 min-w-[84px] rounded-xl border border-border bg-secondary-bg py-1 shadow-lg">
                                 {packageManagers.map((pm) => (
                                   <button
                                     key={pm}
                                     onClick={(e) => handleSelectPm(pm, e)}
                                     className={cn(
-                                      "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors hover:bg-hover",
+                                      "mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs transition-colors hover:bg-hover",
                                       packageManager === pm ? "text-accent" : "text-text-light",
                                     )}
                                   >
