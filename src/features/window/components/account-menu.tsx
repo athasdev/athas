@@ -27,7 +27,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     const rect = buttonRef.current.getBoundingClientRect();
     setMenuPosition({
       x: rect.right - 190,
-      y: rect.bottom + 4,
+      y: rect.bottom + 8,
     });
     setIsOpen(true);
   };
@@ -112,7 +112,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
           ref={buttonRef}
           onClick={handleClick}
           className={cn(
-            "flex items-center justify-center rounded p-1",
+            "flex h-7 min-w-7 items-center justify-center rounded-full border border-border bg-primary-bg/70 p-1",
             "text-text-lighter transition-colors hover:bg-hover hover:text-text",
             isAuthenticated && "text-blue-400 hover:text-blue-300",
             className,

@@ -85,7 +85,7 @@ export const ContextMenu = ({ isOpen, position, items, onClose, className }: Con
     <div
       ref={menuRef}
       className={cn(
-        "fixed z-50 min-w-[190px] select-none rounded-xl border border-border bg-secondary-bg py-1 shadow-xl",
+        "fixed z-[10040] min-w-[190px] select-none rounded-xl border border-border bg-secondary-bg py-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)]",
         className,
       )}
       style={{

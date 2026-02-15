@@ -123,7 +123,7 @@ const Dropdown = ({
     return (
       <div
         ref={dropdownRef}
-        className="fixed z-9999 max-h-96 overflow-auto rounded-xl border border-border bg-primary-bg shadow-xl"
+        className="fixed z-[10040] max-h-96 overflow-auto rounded-xl border border-border bg-primary-bg shadow-xl"
         style={{
           top: dropdownPosition.top,
           left: dropdownPosition.left,

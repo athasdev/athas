@@ -110,7 +110,7 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
   return (
     <div className="flex h-full flex-col">
       {/* Search Input */}
-      <div className="border-border border-b p-2">
+      <div className="p-3">
         <div className="relative">
           <Search
             className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
@@ -121,13 +121,13 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
             placeholder="Search settings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="ui-font w-full rounded border border-border bg-primary-bg py-1 pr-6 pl-7 text-text text-xs placeholder:text-text-lighter"
+            className="ui-font w-full rounded-full border border-border bg-secondary-bg/80 py-2 pr-3 pl-7 text-text text-xs placeholder:text-text-lighter focus:border-border focus:outline-none focus:ring-1 focus:ring-accent/20"
           />
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex-1 overflow-y-auto p-1.5">
+      <div className="flex-1 space-y-1 overflow-y-auto p-2">
         {visibleTabs.length > 0 ? (
           visibleTabs.map((tab) => {
             const Icon = tab.icon;
@@ -138,10 +138,10 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded border px-2 py-1.5 text-left text-xs transition-colors",
+                  "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left font-medium text-xs transition-colors",
                   isActive
-                    ? "border-blue-500/30 bg-blue-500/20 text-blue-400"
-                    : "border-transparent text-text-lighter hover:bg-hover hover:text-text",
+                    ? "bg-accent/10 text-accent"
+                    : "text-text-lighter hover:bg-hover hover:text-text",
                 )}
               >
                 <Icon size={14} />

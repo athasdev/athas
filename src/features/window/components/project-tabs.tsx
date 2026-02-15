@@ -325,7 +325,10 @@ const ProjectTabs = () => {
 
   return (
     <>
-      <div ref={tabBarRef} className="flex items-center gap-1 px-2">
+      <div
+        ref={tabBarRef}
+        className="flex items-center gap-1.5 rounded-full border border-border bg-primary-bg/70 px-1.5 py-0.5"
+      >
         {projectTabs.map((tab: ProjectTab, index: number) => {
           const isDraggedTab = isDragging && draggedIndex === index;
           const showDropIndicatorBefore =
@@ -344,10 +347,10 @@ const ProjectTabs = () => {
                 onMouseDown={(e) => handleMouseDown(e, index, tab)}
                 onContextMenu={(e) => contextMenu.open(e, tab)}
                 className={cn(
-                  "group relative flex items-center gap-1.5 rounded px-2 py-0.5 text-xs transition-colors",
+                  "group relative flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-colors",
                   tab.isActive
-                    ? "bg-selected text-text"
-                    : "text-text-lighter hover:bg-hover hover:text-text",
+                    ? "border-border bg-secondary-bg text-text"
+                    : "border-transparent text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text",
                   isDraggedTab && "opacity-30",
                 )}
                 title={tab.path}
@@ -357,8 +360,8 @@ const ProjectTabs = () => {
                 <button
                   onClick={(e) => handleCloseTab(e, tab.id)}
                   className={cn(
-                    "close-button -translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 items-center justify-center rounded bg-selected transition-opacity",
-                    "hover:bg-primary-bg hover:text-text",
+                    "close-button -translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 items-center justify-center rounded-full border border-transparent bg-primary-bg/80 transition-opacity",
+                    "hover:border-border hover:bg-hover hover:text-text",
                     "opacity-0 group-hover:opacity-100",
                   )}
                   title="Close project"
@@ -377,7 +380,7 @@ const ProjectTabs = () => {
         )}
         <button
           onClick={handleAddProject}
-          className="flex size-6 shrink-0 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"
+          className="flex size-6 shrink-0 items-center justify-center rounded-full border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
           title="Open folder"
           aria-label="Open folder"
         >
