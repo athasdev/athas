@@ -38,6 +38,11 @@ export interface CodeEditorRef {
   textarea: HTMLDivElement | null;
 }
 
+interface GoToLineEventDetail {
+  line?: number;
+  path?: string;
+}
+
 const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
 
 const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
@@ -128,7 +133,6 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
     cursorPosition,
     editorRef,
     fontSize: zoomedFontSize,
-    lineNumbers: settings.lineNumbers,
   });
 
   // Combine mouse move handlers for hover and definition link
@@ -193,8 +197,10 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
       return true;
     };
 
-    const handleGoToLine = (event: CustomEvent<{ line: number }>) => {
+    const handleGoToLine = (event: CustomEvent<GoToLineEventDetail>) => {
       const lineNumber = event.detail?.line;
+      const targetPath = event.detail?.path;
+      if (targetPath && targetPath !== filePath) return;
       if (!lineNumber) return;
 
       // Try immediately, then retry if content not ready yet
@@ -207,7 +213,7 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
     return () => {
       window.removeEventListener("menu-go-to-line", handleGoToLine as EventListener);
     };
-  }, []);
+  }, [filePath]);
 
   // Search functionality with debouncing to prevent lag on large files
   useEffect(() => {

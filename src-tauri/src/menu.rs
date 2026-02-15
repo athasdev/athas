@@ -200,7 +200,7 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "toggle_terminal",
          "Toggle Terminal",
          true,
-         Some("CmdOrCtrl+`"),
+         Some("CmdOrCtrl+J"),
       )?)
       .item(&MenuItem::with_id(
          app,

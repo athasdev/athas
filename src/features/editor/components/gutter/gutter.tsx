@@ -134,9 +134,12 @@ function GutterComponent({
       totalLines,
       Math.floor(scrollTopRef.current / lineHeight) + visibleLines + BUFFER_LINES,
     );
+    const clampedStart = Math.min(viewportRange.startLine, Math.max(0, totalLines - 1));
+    const clampedEnd = Math.min(totalLines, Math.max(viewportRange.endLine, endLine));
+
     return {
-      startLine: viewportRange.startLine,
-      endLine: Math.max(viewportRange.endLine, endLine),
+      startLine: clampedStart,
+      endLine: clampedEnd,
     };
   }, [viewportRange, containerHeight, lineHeight, totalLines]);
 
@@ -208,6 +211,8 @@ export const Gutter = memo(GutterComponent, (prev, next) => {
     prev.totalLines === next.totalLines &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
-    prev.lineHeight === next.lineHeight
+    prev.lineHeight === next.lineHeight &&
+    prev.filePath === next.filePath &&
+    prev.foldMapping === next.foldMapping
   );
 });

@@ -1,0 +1,50 @@
+.editor-completion-dropdown {
+  filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.22));
+}
+
+.editor-completion-list,
+.editor-completion-docs {
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary-bg);
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  background: color-mix(in srgb, var(--color-secondary-bg) 96%, transparent);
+  color: var(--color-text);
+}
+
+@supports ((-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px))) {
+  .editor-completion-list,
+  .editor-completion-docs {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    background: color-mix(in srgb, var(--color-secondary-bg) 90%, transparent);
+  }
+}
+
+.editor-completion-item {
+  position: relative;
+  border-radius: 8px;
+  margin: 2px;
+  transition: background-color 0.14s ease;
+}
+
+.editor-completion-item-selected {
+  background: color-mix(in srgb, var(--color-hover) 88%, var(--color-accent) 12%);
+}
+
+.editor-completion-item-selected::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+.editor-completion-docs {
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 color-mix(in srgb, var(--color-hover) 42%, transparent);
+}

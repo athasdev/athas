@@ -1,0 +1,43 @@
+.hover-tooltip {
+  border-radius: 10px;
+  border: 1px solid var(--color-border, rgba(128, 128, 128, 0.35));
+  background-color: var(--color-primary-bg, #1b1b1f);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+@supports ((-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px))) {
+  .hover-tooltip {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    background-color: color-mix(in srgb, var(--color-primary-bg) 88%, transparent);
+  }
+}
+
+.hover-tooltip-body {
+  overflow: auto;
+  padding: 8px 10px;
+}
+
+.hover-tooltip-content {
+  font-family: var(--app-font-family);
+  font-size: 12px;
+  line-height: 1.38;
+}
+
+.hover-tooltip-content p {
+  margin: 0.2em 0;
+}
+
+.hover-tooltip-content pre {
+  border-radius: 8px;
+  margin: 0.3em 0;
+  padding: 0.45em 0.55em;
+  border-color: color-mix(in srgb, var(--color-border) 82%, transparent);
+}
+
+.hover-tooltip-content code {
+  border-radius: 5px;
+}

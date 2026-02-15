@@ -530,6 +530,108 @@ function FileTreeComponent({
   const handleContainerMouseUp = useCallback(() => setMouseDownInfo(null), []);
   const handleContainerMouseLeave = useCallback(() => setMouseDownInfo(null), []);
 
+  const openPathInTab = useCallback(
+    async (path: string) => {
+      if (onFileOpen) {
+        await Promise.resolve(onFileOpen(path, false));
+        return;
+      }
+      await Promise.resolve(onFileSelect(path, false));
+    },
+    [onFileOpen, onFileSelect],
+  );
+
+  const collectLoadedFilesInDirectory = useCallback(
+    (directoryPath: string): string[] => {
+      const directory = findFileInTree(filteredFiles, directoryPath);
+      if (!directory || !directory.isDir) return [];
+
+      const collected: string[] = [];
+      const walk = (entries?: FileEntry[]) => {
+        if (!entries) return;
+        for (const entry of entries) {
+          if (entry.isDir) {
+            walk(entry.children);
+          } else {
+            collected.push(entry.path);
+          }
+        }
+      };
+
+      walk(directory.children);
+      return collected;
+    },
+    [filteredFiles],
+  );
+
+  const collectLocalFilesInDirectory = useCallback(
+    async (directoryPath: string): Promise<string[]> => {
+      const collected: string[] = [];
+      const stack: string[] = [directoryPath];
+
+      while (stack.length > 0) {
+        const currentPath = stack.pop();
+        if (!currentPath) continue;
+
+        const entries = await readDirectory(currentPath);
+        for (const entry of entries as Array<{ path: string; is_dir?: boolean }>) {
+          if (!entry.path) continue;
+          const isDir = !!entry.is_dir;
+
+          if (isUserHidden(entry.path, isDir) || isGitIgnored(entry.path, isDir)) {
+            continue;
+          }
+
+          if (isDir) {
+            stack.push(entry.path);
+          } else {
+            collected.push(entry.path);
+          }
+        }
+      }
+
+      return collected;
+    },
+    [isUserHidden, isGitIgnored],
+  );
+
+  const handleOpenAllFilesInDirectory = useCallback(
+    async (directoryPath: string) => {
+      let filePaths: string[] = [];
+
+      if (directoryPath.startsWith("remote://")) {
+        filePaths = collectLoadedFilesInDirectory(directoryPath);
+      } else {
+        try {
+          filePaths = await collectLocalFilesInDirectory(directoryPath);
+        } catch (error) {
+          console.error(
+            "Failed to scan directory for Open All, falling back to loaded tree:",
+            error,
+          );
+          filePaths = collectLoadedFilesInDirectory(directoryPath);
+        }
+      }
+
+      const uniqueFilePaths = Array.from(new Set(filePaths));
+      if (uniqueFilePaths.length === 0) return;
+
+      if (uniqueFilePaths.length > 100) {
+        const shouldProceed = window.confirm(
+          `${uniqueFilePaths.length} files will be opened in tabs. Continue?`,
+        );
+        if (!shouldProceed) return;
+      }
+
+      for (const filePath of uniqueFilePaths) {
+        await openPathInTab(filePath);
+      }
+
+      updateActivePath?.(uniqueFilePaths[uniqueFilePaths.length - 1]);
+    },
+    [collectLoadedFilesInDirectory, collectLocalFilesInDirectory, openPathInTab, updateActivePath],
+  );
+
   // No recursive render; rows are virtualized
 
   const handleRootDrop = async (e: React.DragEvent) => {
@@ -783,6 +885,15 @@ function FileTreeComponent({
                   onClick={() => {
                     onRefreshDirectory?.(contextMenu.path);
                     setContextMenu(null);
+                  }}
+                />
+                <ContextMenuItem
+                  icon={FolderOpen}
+                  label="Open All Files"
+                  onClick={() => {
+                    const targetPath = contextMenu.path;
+                    setContextMenu(null);
+                    void handleOpenAllFilesInDirectory(targetPath);
                   }}
                 />
                 <ContextMenuItem

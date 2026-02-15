@@ -7,6 +7,7 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateTotalGutterWidth } from "@/features/editor/utils/gutter";
+import { useZoomStore } from "@/stores/zoom-store";
 
 /**
  * Measure character width using Canvas API for accurate positioning
@@ -35,9 +36,11 @@ export function useLayout() {
  * Used for accurate positioning in hover, go-to-definition, completions, etc.
  */
 export function useEditorLayout() {
-  const fontSize = useEditorSettingsStore.use.fontSize();
+  const baseFontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
   const lines = useEditorViewStore.use.lines();
+  const zoomLevel = useZoomStore.use.editorZoomLevel();
+  const fontSize = baseFontSize * zoomLevel;
 
   // Cache the canvas measurement to avoid recalculating on every render
   const charWidthCacheRef = useRef<{ fontSize: number; fontFamily: string; width: number } | null>(

@@ -1,4 +1,5 @@
-import { ClockIcon, File } from "lucide-react";
+import { ClockIcon } from "lucide-react";
+import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import { CommandItem } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
 import type { FileCategory, FileItem } from "../types/command-bar";
@@ -30,10 +31,7 @@ export const FileListItem = ({
       isSelected={isSelected}
       className="ui-font"
     >
-      <File
-        size={11}
-        className={`shrink-0 ${category === "open" ? "text-accent" : "text-text-lighter"}`}
-      />
+      <FileIcon fileName={file.name} isDir={false} size={14} className="shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs">
           <span className="text-text">{file.name}</span>
