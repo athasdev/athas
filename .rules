@@ -6,6 +6,7 @@
 - Never change the .rules file unless the user specifically asks for it
 - Avoid unnecessary comments in UI components (keep code self-explanatory)
 - Avoid unnecessary `cn(...)` calls: use it only for conditional or merged class names; do not wrap static strings
+- Always use bun.
 
 ## Zustand
 
