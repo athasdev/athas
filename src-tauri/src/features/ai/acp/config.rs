@@ -6,6 +6,7 @@ use std::{
 };
 
 /// Registry of known ACP-compatible agents
+#[derive(Clone)]
 pub struct AgentRegistry {
    agents: HashMap<String, AgentConfig>,
 }

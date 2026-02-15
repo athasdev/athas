@@ -286,6 +286,7 @@ fn main() {
          clipboard_paste,
          // Git commands
          git_status,
+         git_discover_repo,
          git_add,
          git_reset,
          git_commit,
