@@ -143,7 +143,12 @@ pub async fn get_tool_path(
       None => return Ok(None),
    };
 
-   let path = ToolInstaller::get_tool_path(&app_handle, &config).map_err(|e| e.to_string())?;
+   let path = match tool_type {
+      ToolType::Lsp => {
+         ToolInstaller::get_lsp_launch_path(&app_handle, &config).map_err(|e| e.to_string())?
+      }
+      _ => ToolInstaller::get_tool_path(&app_handle, &config).map_err(|e| e.to_string())?,
+   };
 
    if path.exists() {
       Ok(Some(path.to_string_lossy().to_string()))

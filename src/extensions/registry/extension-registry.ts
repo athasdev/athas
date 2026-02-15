@@ -68,6 +68,38 @@ class ExtensionRegistry {
   }
 
   /**
+   * Register or update an extension at runtime.
+   * Used for language extensions installed via the extension store.
+   */
+  registerExtension(
+    manifest: ExtensionManifest,
+    options: {
+      path?: string;
+      isBundled?: boolean;
+      isEnabled?: boolean;
+      state?: ExtensionState;
+    } = {},
+  ): void {
+    const existing = this.extensions.get(manifest.id);
+
+    this.extensions.set(manifest.id, {
+      manifest,
+      path: options.path ?? existing?.path ?? "",
+      isBundled: options.isBundled ?? existing?.isBundled ?? false,
+      isEnabled: options.isEnabled ?? existing?.isEnabled ?? true,
+      state: options.state ?? existing?.state ?? "installed",
+    });
+  }
+
+  /**
+   * Unregister an extension at runtime.
+   */
+  unregisterExtension(extensionId: string): void {
+    this.extensions.delete(extensionId);
+    this.activatedExtensions.delete(extensionId);
+  }
+
+  /**
    * Get all registered extensions
    */
   getAllExtensions(): BundledExtension[] {
@@ -117,12 +149,34 @@ class ExtensionRegistry {
   }
 
   /**
+   * Get extension by a full file path (checks filename and extension).
+   */
+  getExtensionForFilePath(filePath: string): BundledExtension | undefined {
+    const fileName = filePath.split("/").pop() || filePath;
+
+    for (const extension of this.extensions.values()) {
+      if (!extension.manifest.languages) continue;
+
+      for (const language of extension.manifest.languages) {
+        if (language.filenames?.includes(fileName)) {
+          return extension;
+        }
+      }
+    }
+
+    const lastDotIndex = fileName.lastIndexOf(".");
+    if (lastDotIndex === -1) {
+      return undefined;
+    }
+
+    return this.getExtensionByFileExtension(fileName.substring(lastDotIndex));
+  }
+
+  /**
    * Get LSP server path for a file
    */
   getLspServerPath(filePath: string): string | null {
-    // Extract file extension
-    const ext = filePath.substring(filePath.lastIndexOf("."));
-    const extension = this.getExtensionByFileExtension(ext);
+    const extension = this.getExtensionForFilePath(filePath);
 
     if (!extension?.manifest.lsp) {
       return null;
@@ -154,8 +208,7 @@ class ExtensionRegistry {
    * Get LSP server arguments for a file
    */
   getLspServerArgs(filePath: string): string[] {
-    const ext = filePath.substring(filePath.lastIndexOf("."));
-    const extension = this.getExtensionByFileExtension(ext);
+    const extension = this.getExtensionForFilePath(filePath);
 
     if (!extension?.manifest.lsp) {
       return [];
@@ -168,8 +221,7 @@ class ExtensionRegistry {
    * Get LSP initialization options for a file
    */
   getLspInitializationOptions(filePath: string): Record<string, any> | undefined {
-    const ext = filePath.substring(filePath.lastIndexOf("."));
-    const extension = this.getExtensionByFileExtension(ext);
+    const extension = this.getExtensionForFilePath(filePath);
 
     if (!extension?.manifest.lsp) {
       return undefined;
@@ -189,8 +241,10 @@ class ExtensionRegistry {
    * Get language ID for a file
    */
   getLanguageId(filePath: string): string | null {
-    const ext = filePath.substring(filePath.lastIndexOf("."));
-    const extension = this.getExtensionByFileExtension(ext);
+    const extension = this.getExtensionForFilePath(filePath);
+    const fileName = filePath.split("/").pop() || filePath;
+    const extIndex = fileName.lastIndexOf(".");
+    const ext = extIndex >= 0 ? fileName.substring(extIndex) : "";
 
     if (!extension?.manifest.languages) {
       return null;
@@ -199,6 +253,10 @@ class ExtensionRegistry {
     // Find the language that matches this extension
     for (const lang of extension.manifest.languages) {
       if (lang.extensions.includes(ext)) {
+        return lang.id;
+      }
+
+      if (lang.filenames?.includes(fileName)) {
         return lang.id;
       }
     }
@@ -289,8 +347,7 @@ class ExtensionRegistry {
     inputMethod?: "stdin" | "file";
     outputMethod?: "stdout" | "file";
   } | null {
-    const ext = filePath.substring(filePath.lastIndexOf("."));
-    const extension = this.getExtensionByFileExtension(ext);
+    const extension = this.getExtensionForFilePath(filePath);
 
     if (!extension?.manifest.formatter) {
       return null;
@@ -371,8 +428,7 @@ class ExtensionRegistry {
     diagnosticFormat?: "lsp" | "regex";
     diagnosticPattern?: string;
   } | null {
-    const ext = filePath.substring(filePath.lastIndexOf("."));
-    const extension = this.getExtensionByFileExtension(ext);
+    const extension = this.getExtensionForFilePath(filePath);
 
     if (!extension?.manifest.linter) {
       return null;

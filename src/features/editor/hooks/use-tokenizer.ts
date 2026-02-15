@@ -4,9 +4,10 @@
  */
 
 import { useCallback, useRef, useState } from "react";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
-import { indexedDBParserCache } from "../lib/wasm-parser/cache-indexeddb";
+import { indexedDBParserCache, type ParserCacheEntry } from "../lib/wasm-parser/cache-indexeddb";
 import {
   tokenizeCodeWithTree,
   tokenizeRange as wasmTokenizeRange,
@@ -34,14 +35,14 @@ interface TokenCache {
  * Map file extensions to Tree-sitter language IDs
  */
 const EXTENSION_TO_LANGUAGE: Record<string, string> = {
-  js: "tsx",
-  jsx: "tsx",
-  mjs: "tsx",
-  cjs: "tsx",
-  ts: "tsx",
-  tsx: "tsx",
-  mts: "tsx",
-  cts: "tsx",
+  js: "javascript",
+  mjs: "javascript",
+  cjs: "javascript",
+  jsx: "typescriptreact",
+  ts: "typescript",
+  tsx: "typescriptreact",
+  mts: "typescript",
+  cts: "typescript",
   py: "python",
   rs: "rust",
   go: "go",
@@ -53,7 +54,7 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   cxx: "cpp",
   hpp: "cpp",
   hxx: "cpp",
-  cs: "c_sharp",
+  cs: "csharp",
   rb: "ruby",
   php: "php",
   html: "html",
@@ -85,12 +86,33 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   erb: "embedded_template",
 };
 
+const FILENAME_TO_LANGUAGE: Record<string, string> = {
+  ".bashrc": "bash",
+  ".zshrc": "bash",
+  ".bash_profile": "bash",
+  ".profile": "bash",
+  "go.mod": "go",
+  "go.sum": "go",
+  "go.work": "go",
+};
+
 function getExtension(path: string): string {
   const parts = path.split(".");
   return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
 }
 
 export function getLanguageId(filePath: string): string | null {
+  const fromRegistry = extensionRegistry.getLanguageId(filePath);
+  if (fromRegistry) {
+    return fromRegistry;
+  }
+
+  const fileName = filePath.split("/").pop()?.toLowerCase() || "";
+  const fromFilename = FILENAME_TO_LANGUAGE[fileName];
+  if (fromFilename) {
+    return fromFilename;
+  }
+
   const ext = getExtension(filePath);
   return EXTENSION_TO_LANGUAGE[ext] || null;
 }
@@ -103,6 +125,55 @@ function getQueryFolder(languageId: string): string {
     return "tsx";
   }
   return languageId;
+}
+
+function shouldRefreshLegacyHighlightQuery(languageId: string, queryText: string): boolean {
+  if (!queryText.trim()) {
+    return true;
+  }
+
+  // Existing TypeScript query in old installs was too limited, refresh from local extension.
+  if (languageId === "typescript" && queryText.trim().length < 1000) {
+    return true;
+  }
+
+  return false;
+}
+
+async function resolveHighlightQueryFromCache(
+  languageId: string,
+  cached: ParserCacheEntry,
+): Promise<string> {
+  let highlightQuery = cached.highlightQuery || "";
+  if (!shouldRefreshLegacyHighlightQuery(languageId, highlightQuery)) {
+    return highlightQuery;
+  }
+
+  const queryFolder = getQueryFolder(languageId);
+  const queryPath = `/extensions/${queryFolder}/highlights.scm`;
+
+  try {
+    const response = await fetch(queryPath);
+    if (!response.ok) {
+      return highlightQuery;
+    }
+
+    const latestQuery = await response.text();
+    if (!latestQuery.trim()) {
+      return highlightQuery;
+    }
+
+    await indexedDBParserCache.set({
+      ...cached,
+      highlightQuery: latestQuery,
+    });
+    logger.info("Editor", `[Tokenizer] Refreshed highlight query from ${queryPath}`);
+    highlightQuery = latestQuery;
+  } catch {
+    logger.warn("Editor", `[Tokenizer] Failed to refresh highlight query from ${queryPath}`);
+  }
+
+  return highlightQuery;
 }
 
 /**
@@ -181,27 +252,7 @@ export function useTokenizer({
 
         // Use cached config
         const wasmPath = cached.sourceUrl;
-        let highlightQuery = cached.highlightQuery;
-
-        // Try to load highlight query if not cached
-        if (!highlightQuery || highlightQuery.trim().length === 0) {
-          const queryFolder = getQueryFolder(languageId);
-          const queryPath = `/extensions/${queryFolder}/highlights.scm`;
-          try {
-            const response = await fetch(queryPath);
-            if (response.ok) {
-              highlightQuery = await response.text();
-              // Update cache with the loaded query
-              await indexedDBParserCache.set({
-                ...cached,
-                highlightQuery,
-              });
-              logger.info("Editor", `[Tokenizer] Loaded highlight query from ${queryPath}`);
-            }
-          } catch {
-            logger.warn("Editor", `[Tokenizer] Failed to load highlight query from ${queryPath}`);
-          }
-        }
+        const highlightQuery = await resolveHighlightQueryFromCache(languageId, cached);
 
         // Always do full parse - incremental parsing disabled for now
         // The debouncing provides sufficient performance improvement
@@ -292,26 +343,7 @@ export function useTokenizer({
 
         // Use cached config
         const wasmPath = cached.sourceUrl;
-        let highlightQuery = cached.highlightQuery;
-
-        // Try to load highlight query if not cached
-        if (!highlightQuery || highlightQuery.trim().length === 0) {
-          const queryFolder = getQueryFolder(languageId);
-          const queryPath = `/extensions/${queryFolder}/highlights.scm`;
-          try {
-            const response = await fetch(queryPath);
-            if (response.ok) {
-              highlightQuery = await response.text();
-              // Update cache with the loaded query
-              await indexedDBParserCache.set({
-                ...cached,
-                highlightQuery,
-              });
-            }
-          } catch {
-            logger.warn("Editor", `[Tokenizer] Failed to load highlight query from ${queryPath}`);
-          }
-        }
+        const highlightQuery = await resolveHighlightQueryFromCache(languageId, cached);
 
         // Tokenize the viewport range
         const highlightTokens = await wasmTokenizeRange(

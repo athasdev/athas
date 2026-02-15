@@ -23,6 +23,8 @@
     "dev:scan": "WEBKIT_DISABLE_DMABUF_RENDERER=1 VITE_REACT_SCAN=true tauri dev",
     "dev:docs": "bun --cwd docs dev",
     "extensions:index": "bun scripts/build-extensions-index.ts",
+    "extensions:check": "bun scripts/build-extensions-index.ts --check",
+    "deploy:extensions:cdn": "bun scripts/deploy-extensions-cdn.ts",
     "pre-release": "bun scripts/pre-release-check.ts",
     "release": "bun scripts/release.ts",
     "release:patch": "bun scripts/release.ts patch",
@@ -30,6 +32,8 @@
     "release:major": "bun scripts/release.ts major"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.2.8",
+    "@fontsource-variable/geist-mono": "^5.2.7",
     "@tanstack/react-virtual": "^3.13.12",
     "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/plugin-clipboard-manager": "~2.3.2",
