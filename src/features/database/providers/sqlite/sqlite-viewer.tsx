@@ -163,7 +163,7 @@ export default function SQLiteViewer({ databasePath }: SQLiteViewerProps) {
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-primary-bg text-text">
+    <div className="flex h-full flex-col overflow-hidden bg-secondary-bg/30 text-text">
       <Header
         fileName={store.fileName}
         dbInfo={store.dbInfo}
@@ -178,7 +178,7 @@ export default function SQLiteViewer({ databasePath }: SQLiteViewerProps) {
         copyAsJSON={copyAsJSON}
       />
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 gap-2 p-2 pt-1.5">
         <Sidebar
           tables={store.tables}
           selectedTable={store.selectedTable}
@@ -195,7 +195,7 @@ export default function SQLiteViewer({ databasePath }: SQLiteViewerProps) {
           }}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-primary-bg/85">
           <QueryBar
             searchTerm={store.searchTerm}
             setSearchTerm={actions.setSearchTerm}
@@ -218,7 +218,7 @@ export default function SQLiteViewer({ databasePath }: SQLiteViewerProps) {
           )}
 
           {store.error && (
-            <div className="m-2 rounded-md border border-red-200 bg-red-50 p-2 text-red-600 text-xs">
+            <div className="mx-3 mb-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-300 text-xs">
               {store.error}
             </div>
           )}
@@ -360,10 +360,10 @@ function Header({
   ];
 
   return (
-    <div className="border-border border-b bg-secondary-bg px-3 py-2">
+    <div className="mx-2 mt-2 rounded-2xl bg-primary-bg/85 px-3 py-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 rounded-full bg-secondary-bg/70 px-2.5 py-1">
             <Database size={14} className="text-text-lighter" />
             <span className="text-sm">{fileName}</span>
             {dbInfo && (
@@ -372,14 +372,16 @@ function Header({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 rounded-full bg-secondary-bg/60 p-0.5">
             {tabs.map(({ mode, icon: Icon, label }) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
                 className={cn(
-                  "flex items-center gap-1 px-2 py-1 text-xs transition-colors",
-                  viewMode === mode ? "text-text" : "text-text-lighter hover:text-text",
+                  "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition-colors",
+                  viewMode === mode
+                    ? "bg-selected text-text"
+                    : "text-text-lighter hover:bg-hover hover:text-text",
                 )}
               >
                 <Icon size={12} />
@@ -392,7 +394,7 @@ function Header({
           {viewMode === "data" && !isCustomQuery && (
             <button
               onClick={() => setShowColumnTypes(!showColumnTypes)}
-              className="flex items-center gap-1 px-2 py-1 text-text-lighter text-xs hover:text-text"
+              className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
             >
               <Type size={12} />
               Types
@@ -401,7 +403,7 @@ function Header({
           {viewMode === "data" && (
             <button
               onClick={() => setIsCustomQuery(true)}
-              className="flex items-center gap-1 px-2 py-1 text-text-lighter text-xs hover:text-text"
+              className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
               disabled={isCustomQuery}
             >
               <Code size={12} />
@@ -412,14 +414,14 @@ function Header({
             <>
               <button
                 onClick={exportAsCSV}
-                className="flex items-center gap-1 px-2 py-1 text-text-lighter text-xs hover:text-text"
+                className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
               >
                 <Download size={12} />
                 Export
               </button>
               <button
                 onClick={copyAsJSON}
-                className="flex items-center gap-1 px-2 py-1 text-text-lighter text-xs hover:text-text"
+                className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
               >
                 <Copy size={12} />
                 JSON
@@ -452,7 +454,7 @@ function Sidebar({
   onSelectHistory,
 }: SidebarProps) {
   return (
-    <div className="flex w-64 flex-col border-border border-r bg-secondary-bg">
+    <div className="flex w-64 flex-col overflow-hidden rounded-2xl bg-primary-bg/75">
       <div className="group p-3 pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-text-lighter text-xs">
@@ -461,21 +463,21 @@ function Sidebar({
           </div>
           <button
             onClick={onCreateTable}
-            className="rounded px-1 py-0.5 opacity-0 hover:bg-hover group-hover:opacity-100"
+            className="rounded-full border border-transparent px-1.5 py-1 opacity-0 transition-colors hover:border-border/70 hover:bg-hover group-hover:opacity-100"
           >
             <Plus size={10} className="text-text-lighter hover:text-text" />
           </button>
         </div>
       </div>
-      <div className="custom-scrollbar flex-1 overflow-y-auto p-2">
+      <div className="custom-scrollbar flex-1 space-y-1 overflow-y-auto p-2">
         {tables.map((t) => (
           <button
             key={t.name}
             onClick={() => onSelectTable(t.name)}
             onContextMenu={(e) => onTableContextMenu(e, t.name)}
             className={cn(
-              "flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs hover:bg-hover",
-              selectedTable === t.name && "bg-selected",
+              "flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-hover",
+              selectedTable === t.name && "bg-selected text-text",
             )}
           >
             <Table size={12} className="shrink-0" />
@@ -484,16 +486,16 @@ function Sidebar({
         ))}
       </div>
       {sqlHistory.length > 0 && (
-        <div className="border-border border-t">
-          <div className="border-border border-b p-2">
+        <div className="mx-2 mb-2 rounded-xl bg-secondary-bg/50">
+          <div className="p-2">
             <div className="px-2 py-1 font-medium text-text-lighter text-xs uppercase">Recent</div>
           </div>
-          <div className="max-h-32 overflow-y-auto">
+          <div className="max-h-32 overflow-y-auto pb-1">
             {sqlHistory.map((q, i) => (
               <button
                 key={i}
                 onClick={() => onSelectHistory(q)}
-                className="w-full truncate px-3 py-1.5 text-left text-xs hover:bg-hover"
+                className="mx-1 block w-[calc(100%-0.5rem)] truncate rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-hover"
                 title={q}
               >
                 <Code size={10} className="mr-1.5 inline" />
@@ -530,11 +532,11 @@ function QueryBar({
 }: QueryBarProps) {
   if (isCustomQuery) {
     return (
-      <div className="border-border border-b bg-secondary-bg p-2">
+      <div className="px-3 py-2">
         <Textarea
           value={customQuery}
           onChange={(e) => setCustomQuery(e.target.value)}
-          className="mb-1 h-16 resize-none"
+          className="mb-1 h-20 resize-none rounded-xl border-border/70 bg-secondary-bg/60"
           placeholder="SELECT * FROM table_name"
           disabled={isLoading}
         />
@@ -558,7 +560,7 @@ function QueryBar({
   }
 
   return (
-    <div className="border-border border-b bg-secondary-bg p-2">
+    <div className="px-3 py-2">
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Input
@@ -596,10 +598,13 @@ interface ColumnFiltersProps {
 
 function ColumnFilters({ filters, columns, onUpdate, onRemove, onClear }: ColumnFiltersProps) {
   return (
-    <div className="border-border border-b bg-secondary-bg px-3 py-2">
+    <div className="mx-3 mb-2 rounded-xl bg-secondary-bg/60 px-3 py-2">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-text-lighter text-xs">{filters.length} filters</span>
-        <button onClick={onClear} className="text-text-lighter text-xs hover:text-text">
+        <button
+          onClick={onClear}
+          className="rounded-full border border-transparent px-2 py-0.5 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
+        >
           clear
         </button>
       </div>
@@ -721,11 +726,11 @@ function DataGrid({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="group flex items-center justify-between border-border border-b bg-secondary-bg px-3 py-2">
+      <div className="group flex items-center justify-between px-3 py-2">
         <span className="text-text-lighter text-xs">{queryResult.rows.length} rows</span>
         <button
           onClick={onCreateRow}
-          className="rounded px-1 py-0.5 opacity-0 hover:bg-hover group-hover:opacity-100"
+          className="rounded-full border border-transparent px-1.5 py-1 opacity-0 transition-colors hover:border-border/70 hover:bg-hover group-hover:opacity-100"
         >
           <Plus size={10} className="text-text-lighter hover:text-text" />
         </button>
@@ -733,15 +738,15 @@ function DataGrid({
       <div className="custom-scrollbar flex-1 overflow-auto">
         <table className="w-full border-collapse text-xs">
           <thead className="sticky top-0 z-10">
-            <tr className="bg-secondary-bg">
-              <th className="w-10 border border-border bg-secondary-bg px-2 py-1.5 text-left">#</th>
+            <tr className="bg-secondary-bg/90 backdrop-blur-sm">
+              <th className="w-10 border-border/60 border-b px-2 py-2 text-left">#</th>
               {queryResult.columns.map((col, i) => {
                 const info = tableMeta.find((c) => c.name === col);
                 const sorted = sortColumn === col;
                 return (
                   <th
                     key={i}
-                    className="group cursor-pointer whitespace-nowrap border border-border bg-secondary-bg px-2 py-1.5 text-left hover:bg-hover"
+                    className="group cursor-pointer whitespace-nowrap border-border/60 border-b px-2 py-2 text-left transition-colors hover:bg-hover"
                     onClick={() => onColumnSort(col)}
                   >
                     <div className="flex flex-col gap-0.5">
@@ -783,10 +788,10 @@ function DataGrid({
             {queryResult.rows.map((row, ri) => (
               <tr
                 key={ri}
-                className="cursor-pointer hover:bg-hover"
+                className="cursor-pointer border-border/50 border-b hover:bg-hover/40"
                 onContextMenu={(e) => onRowContextMenu(e, ri)}
               >
-                <td className="border border-border px-2 py-1 text-text-lighter">
+                <td className="border-border/60 border-b px-2 py-1.5 text-text-lighter">
                   {(currentPage - 1) * pageSize + ri + 1}
                 </td>
                 {(row as unknown[]).map((cell, ci) => {
@@ -799,9 +804,9 @@ function DataGrid({
                     <td
                       key={ci}
                       className={cn(
-                        "max-w-[300px] border border-border px-2 py-1",
+                        "max-w-[300px] border-border/60 border-b px-2 py-1.5",
                         !isPK && "cursor-pointer hover:bg-hover/50",
-                        isPK && "bg-amber-50/20",
+                        isPK && "bg-amber-500/10",
                       )}
                       onClick={() => !isPK && handleCellClick(ri, col, cell)}
                     >
@@ -816,7 +821,7 @@ function DataGrid({
                             if (e.key === "Escape") setEditing(null);
                           }}
                           onBlur={handleSubmit}
-                          className="w-full border-none bg-transparent p-0 text-xs outline-none"
+                          className="w-full rounded bg-secondary-bg/60 p-1 text-xs outline-none"
                         />
                       ) : cell === null ? (
                         <span className="text-text-lighter italic">NULL</span>
@@ -850,13 +855,16 @@ interface SchemaViewProps {
 function SchemaView({ tableName, columns, onAddFilter }: SchemaViewProps) {
   return (
     <div className="flex-1 overflow-auto">
-      <div className="border-border border-b bg-secondary-bg p-3">
+      <div className="px-3 py-3">
         <div className="text-sm">{tableName}</div>
         <div className="text-text-lighter text-xs">{columns.length} columns</div>
       </div>
-      <div className="divide-y divide-border">
+      <div className="mx-3 mb-3 divide-y divide-border/60 rounded-xl bg-secondary-bg/40">
         {columns.map((c) => (
-          <div key={c.name} className="flex items-center justify-between px-3 py-2 hover:bg-hover">
+          <div
+            key={c.name}
+            className="flex items-center justify-between px-3 py-2 transition-colors hover:bg-hover"
+          >
             <div className="flex min-w-0 flex-1 items-center gap-2">
               {getColumnIcon(c.type, c.primary_key)}
               <span className="truncate text-sm">{c.name}</span>
@@ -869,7 +877,7 @@ function SchemaView({ tableName, columns, onAddFilter }: SchemaViewProps) {
             </div>
             <button
               onClick={() => onAddFilter(c.name)}
-              className="px-2 py-1 text-text-lighter text-xs opacity-60 hover:text-text hover:opacity-100"
+              className="rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs opacity-60 hover:border-border/70 hover:bg-hover hover:text-text hover:opacity-100"
             >
               <Filter size={12} />
             </button>
@@ -902,8 +910,8 @@ function InfoView({
   onSelectHistory,
 }: InfoViewProps) {
   return (
-    <div className="flex-1 overflow-auto divide-y divide-border">
-      <div className="p-3">
+    <div className="flex-1 space-y-2 overflow-auto p-3">
+      <div className="rounded-xl bg-secondary-bg/40 p-3">
         <div className="mb-1 text-sm">{fileName}</div>
         <div className="flex gap-4 text-text-lighter text-xs">
           <span>{dbInfo?.tables || 0} tables</span>
@@ -913,7 +921,7 @@ function InfoView({
           {columnFilters.length > 0 && <span>{columnFilters.length} filters</span>}
         </div>
       </div>
-      <div className="p-3">
+      <div className="rounded-xl bg-secondary-bg/40 p-3">
         <div className="mb-2 text-text-lighter text-xs">tables</div>
         <div className="space-y-1">
           {tables.map((t) => (
@@ -921,7 +929,7 @@ function InfoView({
               key={t.name}
               onClick={() => onSelectTable(t.name)}
               className={cn(
-                "block w-full px-2 py-1 text-left text-xs hover:bg-hover",
+                "block w-full rounded-lg px-2 py-1 text-left text-xs hover:bg-hover",
                 selectedTable === t.name && "bg-selected",
               )}
             >
@@ -931,14 +939,14 @@ function InfoView({
         </div>
       </div>
       {sqlHistory.length > 0 && (
-        <div className="p-3">
+        <div className="rounded-xl bg-secondary-bg/40 p-3">
           <div className="mb-2 text-text-lighter text-xs">recent</div>
           <div className="max-h-32 space-y-1 overflow-y-auto">
             {sqlHistory.map((q, i) => (
               <button
                 key={i}
                 onClick={() => onSelectHistory(q)}
-                className="block w-full truncate px-2 py-1 text-left text-xs hover:bg-hover"
+                className="block w-full truncate rounded-lg px-2 py-1 text-left text-xs hover:bg-hover"
                 title={q}
               >
                 {q}
@@ -967,7 +975,7 @@ function Pagination({
   onPageSizeChange,
 }: PaginationProps) {
   return (
-    <div className="flex items-center justify-between border-border border-t bg-secondary-bg px-3 py-2">
+    <div className="flex items-center justify-between px-3 py-2">
       <div className="flex items-center gap-2">
         <Dropdown
           value={pageSize.toString()}

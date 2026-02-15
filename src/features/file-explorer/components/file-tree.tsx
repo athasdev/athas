@@ -137,7 +137,6 @@ function FileTreeComponent({
       }
 
       try {
-        await readDirectory(`${rootFolderPath}/.git`);
         const content = await readFile(`${rootFolderPath}/.gitignore`);
         const ig = ignore();
         ig.add(
