@@ -67,6 +67,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
+      # NOTE: When upgrading to Ubuntu 24.04+, add NO_STRIP=1 environment variable
+      # to the tauri-action step below. The bundled strip binary in linuxdeploy
+      # doesn't support the newer ELF .relr.dyn sections used in newer distros.
+      # See: https://github.com/linuxdeploy/linuxdeploy/issues/272
+
       - name: Install frontend dependencies
         run: bun install
 
