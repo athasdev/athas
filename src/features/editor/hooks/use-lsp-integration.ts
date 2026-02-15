@@ -156,10 +156,12 @@ export const useLspIntegration = ({
     initLsp();
 
     return () => {
-      // Notify LSP about document close and clean up tracking
-      lspClient.notifyDocumentClose(filePath).catch((error) => {
-        console.error("LSP document close error:", error);
-      });
+      // Notify LSP about document close only if open was sent successfully.
+      if (openedDocumentsRef.current.has(filePath)) {
+        lspClient.notifyDocumentClose(filePath).catch((error) => {
+          console.error("LSP document close error:", error);
+        });
+      }
       documentVersionsRef.current.delete(filePath);
       openedDocumentsRef.current.delete(filePath);
     };

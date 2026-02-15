@@ -56,14 +56,25 @@ export const useHover = ({
         const paddingTop = EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
         const scrollTop = textarea?.scrollTop ?? 0;
         const scrollLeft = textarea?.scrollLeft ?? 0;
+        const textLines = (textarea?.value ?? "").split("\n");
+        const totalLines = textLines.length;
+
+        if (totalLines === 0) return;
 
         const line = Math.floor((y - paddingTop + scrollTop) / lineHeight);
-        const character = Math.floor((x - contentOffsetX + scrollLeft) / charWidth);
+        const clampedLine = Math.max(0, Math.min(line, totalLines - 1));
+        const lineLength = textLines[clampedLine]?.length ?? 0;
 
-        if (line >= 0 && character >= 0) {
+        const character = Math.floor((x - contentOffsetX + scrollLeft) / charWidth);
+        const clampedCharacter = Math.max(0, Math.min(character, lineLength));
+
+        if (clampedLine >= 0 && clampedCharacter >= 0) {
           try {
-            logger.debug("Editor", `Requesting hover at ${filePath}:${line}:${character}`);
-            const hoverResult = await getHover(filePath || "", line, character);
+            logger.debug(
+              "Editor",
+              `Requesting hover at ${filePath}:${clampedLine}:${clampedCharacter}`,
+            );
+            const hoverResult = await getHover(filePath || "", clampedLine, clampedCharacter);
             if (requestId !== hoverRequestIdRef.current) return;
             if (!useEditorUIStore.getState().isHovering) return;
             logger.debug("Editor", `Hover result:`, hoverResult);

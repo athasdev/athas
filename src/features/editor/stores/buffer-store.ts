@@ -403,29 +403,10 @@ export const useBufferStore = createSelectors(
                   );
 
                   if (installed) {
-                    // Extension installed or bundled, start LSP
-                    logger.info("BufferStore", `Starting LSP for ${path}`);
-                    import("@/features/editor/lsp/lsp-client")
-                      .then(({ LspClient }) => {
-                        return import("@/features/file-system/controllers/store").then(
-                          ({ useFileSystemStore }) => {
-                            const lspClient = LspClient.getInstance();
-                            const workspacePath =
-                              useFileSystemStore.getState().rootFolderPath || path;
-                            logger.info(
-                              "BufferStore",
-                              `Calling lspClient.startForFile(${path}, ${workspacePath})`,
-                            );
-                            return lspClient.startForFile(path, workspacePath);
-                          },
-                        );
-                      })
-                      .then(() => {
-                        logger.info("BufferStore", `LSP started successfully for ${path}`);
-                      })
-                      .catch((error) => {
-                        logger.error("BufferStore", "Failed to start LSP:", error);
-                      });
+                    // LSP startup is handled by use-lsp-integration for the active editor buffer.
+                    // Avoid starting LSP from openBuffer to prevent background/session files from
+                    // triggering language servers unexpectedly.
+                    logger.debug("BufferStore", `Extension ready for ${path}`);
                   } else {
                     // Marketplace extension not installed, emit event for UI to handle
                     logger.info(

@@ -33,6 +33,15 @@ function stringifyLspError(error: unknown): string {
   return String(error);
 }
 
+function isBenignHoverError(error: unknown): boolean {
+  const message = stringifyLspError(error).toLowerCase();
+  return (
+    message.includes("column is beyond end of line") ||
+    message.includes("column is beyond end of file") ||
+    message.includes("no lsp client for this file")
+  );
+}
+
 export class LspClient {
   private static instance: LspClient | null = null;
   private activeLanguageServers = new Set<string>(); // workspace:language format
@@ -360,7 +369,9 @@ export class LspClient {
         character,
       });
     } catch (error) {
-      logger.error("LSPClient", "LSP hover error:", error);
+      if (!isBenignHoverError(error)) {
+        logger.error("LSPClient", "LSP hover error:", error);
+      }
       return null;
     }
   }

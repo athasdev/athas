@@ -53,6 +53,7 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   cc: "cpp",
   cxx: "cpp",
   hpp: "cpp",
+  hh: "cpp",
   hxx: "cpp",
   cs: "csharp",
   rb: "ruby",
@@ -96,6 +97,16 @@ const FILENAME_TO_LANGUAGE: Record<string, string> = {
   "go.work": "go",
 };
 
+const LOCAL_EXTENSION_FOLDER_BY_LANGUAGE: Record<string, string> = {
+  javascript: "tsx",
+  javascriptreact: "tsx",
+  typescript: "tsx",
+  typescriptreact: "tsx",
+  csharp: "c_sharp",
+};
+
+const QUERY_REFRESHED_THIS_SESSION = new Set<string>();
+
 function getExtension(path: string): string {
   const parts = path.split(".");
   return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
@@ -121,10 +132,7 @@ export function getLanguageId(filePath: string): string | null {
  * Get the query folder for a language ID
  */
 function getQueryFolder(languageId: string): string {
-  if (languageId === "typescript" || languageId === "javascript") {
-    return "tsx";
-  }
-  return languageId;
+  return LOCAL_EXTENSION_FOLDER_BY_LANGUAGE[languageId] || languageId;
 }
 
 function shouldRefreshLegacyHighlightQuery(languageId: string, queryText: string): boolean {
@@ -137,6 +145,11 @@ function shouldRefreshLegacyHighlightQuery(languageId: string, queryText: string
     return true;
   }
 
+  // Older cached C++ queries can reference nodes not present in the shipped parser.
+  if (languageId === "cpp" && queryText.includes("(module_name")) {
+    return true;
+  }
+
   return false;
 }
 
@@ -145,7 +158,11 @@ async function resolveHighlightQueryFromCache(
   cached: ParserCacheEntry,
 ): Promise<string> {
   let highlightQuery = cached.highlightQuery || "";
-  if (!shouldRefreshLegacyHighlightQuery(languageId, highlightQuery)) {
+  const shouldTryRefresh =
+    shouldRefreshLegacyHighlightQuery(languageId, highlightQuery) ||
+    !QUERY_REFRESHED_THIS_SESSION.has(languageId);
+
+  if (!shouldTryRefresh) {
     return highlightQuery;
   }
 
@@ -160,20 +177,41 @@ async function resolveHighlightQueryFromCache(
 
     const latestQuery = await response.text();
     if (!latestQuery.trim()) {
+      QUERY_REFRESHED_THIS_SESSION.add(languageId);
       return highlightQuery;
     }
 
-    await indexedDBParserCache.set({
-      ...cached,
-      highlightQuery: latestQuery,
-    });
-    logger.info("Editor", `[Tokenizer] Refreshed highlight query from ${queryPath}`);
-    highlightQuery = latestQuery;
+    if (latestQuery !== highlightQuery) {
+      await indexedDBParserCache.set({
+        ...cached,
+        highlightQuery: latestQuery,
+      });
+      logger.info("Editor", `[Tokenizer] Refreshed highlight query from ${queryPath}`);
+      highlightQuery = latestQuery;
+    }
+
+    QUERY_REFRESHED_THIS_SESSION.add(languageId);
   } catch {
     logger.warn("Editor", `[Tokenizer] Failed to refresh highlight query from ${queryPath}`);
+    QUERY_REFRESHED_THIS_SESSION.add(languageId);
   }
 
   return highlightQuery;
+}
+
+async function resolveHighlightQueryFromLocal(languageId: string): Promise<string> {
+  const queryFolder = getQueryFolder(languageId);
+  const queryPath = `/extensions/${queryFolder}/highlights.scm`;
+
+  try {
+    const response = await fetch(queryPath);
+    if (!response.ok) {
+      return "";
+    }
+    return await response.text();
+  } catch {
+    return "";
+  }
 }
 
 /**
@@ -222,37 +260,23 @@ export function useTokenizer({
 
       setLoading(true);
       try {
-        // Check if language extension is installed before trying to load parser
-        const { extensionManager } = await import("@/features/editor/extensions/manager");
-        const ext = getExtension(filePath);
-        const provider = await extensionManager.ensureLanguageProvider(ext);
-        if (!provider) {
-          logger.debug("Editor", `[Tokenizer] No installed provider for ${languageId}`);
-          setTokens([]);
-          setLoading(false);
-          return;
-        }
-
         // Check if parser is in IndexedDB cache
         const cached = await indexedDBParserCache.get(languageId);
-        if (!cached) {
-          // Parser should be in cache after extension installation
-          logger.warn(
-            "Editor",
-            `[Tokenizer] Extension installed but parser not in cache for ${languageId}`,
-          );
-          setTokens([]);
-          setLoading(false);
-          return;
-        }
 
         // Normalize line endings before tokenizing
         const normalizedText = normalizeLineEndings(text);
         startMeasure(`tokenizeFull (len: ${normalizedText.length})`);
 
-        // Use cached config
-        const wasmPath = cached.sourceUrl;
-        const highlightQuery = await resolveHighlightQueryFromCache(languageId, cached);
+        // Prefer IndexedDB cache, but fall back to local /extensions parser in dev environments.
+        const queryFolder = getQueryFolder(languageId);
+        const wasmPath = cached?.sourceUrl || `/extensions/${queryFolder}/parser.wasm`;
+        const highlightQuery = cached
+          ? await resolveHighlightQueryFromCache(languageId, cached)
+          : await resolveHighlightQueryFromLocal(languageId);
+
+        if (!cached) {
+          logger.info("Editor", `[Tokenizer] Using local parser fallback for ${languageId}`);
+        }
 
         // Always do full parse - incremental parsing disabled for now
         // The debouncing provides sufficient performance improvement
@@ -317,28 +341,14 @@ export function useTokenizer({
 
       setLoading(true);
       try {
-        // Check if language extension is installed before trying to load parser
-        const { extensionManager } = await import("@/features/editor/extensions/manager");
-        const ext = getExtension(filePath);
-        const provider = await extensionManager.ensureLanguageProvider(ext);
-        if (!provider) {
-          logger.debug("Editor", `[Tokenizer] No installed provider for ${languageId}`);
-          setTokens([]);
-          setLoading(false);
-          return;
-        }
-
         // Check if parser is in IndexedDB cache
         const cached = await indexedDBParserCache.get(languageId);
         if (!cached) {
-          // Parser should be in cache after extension installation
           logger.warn(
             "Editor",
-            `[Tokenizer] Extension installed but parser not in cache for ${languageId}`,
+            `[Tokenizer] Parser not in cache for ${languageId}, falling back to full tokenization`,
           );
-          setTokens([]);
-          setLoading(false);
-          return;
+          return tokenizeFull(text);
         }
 
         // Use cached config
