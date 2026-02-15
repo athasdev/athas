@@ -94,26 +94,26 @@ const defaultSettings: Settings = {
   mouseWheelZoom: false,
   commandBarPreview: true,
   // Editor
-  fontFamily: "Menlo, Consolas, Liberation Mono, monospace",
+  fontFamily: "Geist Mono Variable",
   fontSize: 14,
   tabSize: 2,
   wordWrap: true,
   lineNumbers: true,
   showMinimap: false,
   // Terminal
-  terminalFontFamily: "Menlo, Consolas, Liberation Mono, monospace",
+  terminalFontFamily: "Geist Mono Variable",
   terminalFontSize: 14,
   terminalLineHeight: 1.2,
   terminalLetterSpacing: 0,
   terminalCursorStyle: "block",
   terminalCursorBlink: true,
   // UI
-  uiFontFamily: "Menlo, Consolas, Liberation Mono, monospace",
+  uiFontFamily: "Geist Variable",
   // Theme
-  theme: "one-dark", // Changed from "auto" since we don't support continuous monitoring
+  theme: "vitesse-dark", // Changed from "auto" since we don't support continuous monitoring
   iconTheme: "colorful-material",
-  autoThemeLight: "one-light",
-  autoThemeDark: "one-dark",
+  autoThemeLight: "vitesse-light",
+  autoThemeDark: "vitesse-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
   // AI
@@ -168,7 +168,7 @@ const defaultSettings: Settings = {
 };
 
 // Theme class constants
-const ALL_THEME_CLASSES = ["force-one-light", "force-one-dark"];
+const ALL_THEME_CLASSES = ["force-vitesse-light", "force-vitesse-dark"];
 
 let storeInstance: Store;
 
@@ -266,11 +266,11 @@ const initializeSettings = async () => {
 
     // Detect theme if none exists
     if (!loadedSettings.theme) {
-      let detectedTheme = getSystemThemePreference() === "dark" ? "one-dark" : "one-light";
+      let detectedTheme = getSystemThemePreference() === "dark" ? "vitesse-dark" : "vitesse-light";
 
       try {
         const tauriDetectedTheme = await invoke<string>("get_system_theme");
-        detectedTheme = tauriDetectedTheme === "dark" ? "one-dark" : "one-light";
+        detectedTheme = tauriDetectedTheme === "dark" ? "vitesse-dark" : "vitesse-light";
       } catch {
         console.log("Tauri theme detection not available, using browser detection");
       }

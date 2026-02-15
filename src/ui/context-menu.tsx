@@ -85,7 +85,7 @@ export const ContextMenu = ({ isOpen, position, items, onClose, className }: Con
     <div
       ref={menuRef}
       className={cn(
-        "fixed z-50 min-w-[190px] select-none rounded-md border border-border bg-secondary-bg py-0.5 shadow-lg",
+        "fixed z-50 min-w-[190px] select-none rounded-xl border border-border bg-secondary-bg py-1 shadow-xl",
         className,
       )}
       style={{
@@ -111,7 +111,7 @@ export const ContextMenu = ({ isOpen, position, items, onClose, className }: Con
             }}
             disabled={item.disabled}
             className={cn(
-              "ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs",
+              "ui-font mx-1 flex w-[calc(100%-0.5rem)] items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text text-xs",
               item.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
             )}
           >

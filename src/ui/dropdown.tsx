@@ -123,7 +123,7 @@ const Dropdown = ({
     return (
       <div
         ref={dropdownRef}
-        className="fixed z-9999 max-h-96 overflow-auto rounded border border-border bg-primary-bg shadow-xl"
+        className="fixed z-9999 max-h-96 overflow-auto rounded-xl border border-border bg-primary-bg shadow-xl"
         style={{
           top: dropdownPosition.top,
           left: dropdownPosition.left,
@@ -185,7 +185,7 @@ const Dropdown = ({
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
           className={cn(
-            "flex w-full items-center justify-between gap-1 rounded border border-border bg-secondary-bg text-text transition-colors",
+            "flex w-full items-center justify-between gap-1 rounded-lg border border-border bg-secondary-bg text-text transition-colors",
             "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
             disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
             sizeClasses[size],

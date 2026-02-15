@@ -1,10 +1,10 @@
 @theme {
   --font-sans:
-    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
-    monospace;
+    "Geist Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono:
-    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
-    monospace;
+    "Geist Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
 }
 
 @theme inline {
@@ -90,6 +90,23 @@
 
     --accent: #3b82f6;
 
+    --color-primary-bg: var(--primary-bg);
+    --color-secondary-bg: var(--secondary-bg);
+    --color-text: var(--text);
+    --color-text-light: var(--text-light);
+    --color-text-lighter: var(--text-lighter);
+    --color-border: var(--border);
+    --color-hover: var(--hover);
+    --color-selected: var(--selected);
+    --color-accent: var(--accent);
+    --color-syntax-comment: var(--syntax-comment);
+    --color-syntax-keyword: var(--syntax-keyword);
+    --color-syntax-string: var(--syntax-string);
+    --color-syntax-number: var(--syntax-number);
+    --color-syntax-function: var(--syntax-function);
+    --color-syntax-variable: var(--syntax-variable);
+    --color-syntax-operator: var(--syntax-operator);
+
     --cursor: #1a1a1a;
     --cursor-vim-normal: #3b82f6a6;
     --cursor-vim-insert: #22c55e;
@@ -147,6 +164,23 @@
       --selection-bg: rgba(38, 79, 120, 0.6);
 
       --accent: #60a5fa;
+
+        --color-primary-bg: var(--primary-bg);
+      --color-secondary-bg: var(--secondary-bg);
+      --color-text: var(--text);
+      --color-text-light: var(--text-light);
+      --color-text-lighter: var(--text-lighter);
+      --color-border: var(--border);
+      --color-hover: var(--hover);
+      --color-selected: var(--selected);
+      --color-accent: var(--accent);
+      --color-syntax-comment: var(--syntax-comment);
+      --color-syntax-keyword: var(--syntax-keyword);
+      --color-syntax-string: var(--syntax-string);
+      --color-syntax-number: var(--syntax-number);
+      --color-syntax-function: var(--syntax-function);
+      --color-syntax-variable: var(--syntax-variable);
+      --color-syntax-operator: var(--syntax-operator);
 
       --cursor: #e5e5e5;
       --cursor-vim-normal: #3b82f6a6;

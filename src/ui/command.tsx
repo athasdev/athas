@@ -26,7 +26,7 @@ const Command = ({ isVisible, children, className, onClose }: CommandProps) => {
       <div
         className={cn(
           "relative z-10 flex max-h-80 w-[520px] flex-col overflow-hidden",
-          "rounded-md border border-border bg-primary-bg shadow-2xl",
+          "rounded-xl border border-border bg-primary-bg shadow-2xl",
           className,
         )}
       >
@@ -144,7 +144,7 @@ export const CommandItem = ({
     onMouseLeave={onMouseLeave}
     {...props}
     className={cn(
-      "mb-1 flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1 text-left transition-colors",
+      "mb-1 flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
       isSelected ? "bg-selected text-text" : "bg-transparent text-text hover:bg-hover",
       className,
     )}

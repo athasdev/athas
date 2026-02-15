@@ -165,7 +165,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           // Load persisted preferences
           const storedPrefs = localStorage.getItem("extension-preferences");
           let prefs: PersistedPreferences = {
-            activeThemeVariantId: "one-dark", // Default theme
+            activeThemeVariantId: "vitesse-dark",
             activeIconThemeId: "material", // Default icon theme
           };
 

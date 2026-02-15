@@ -91,7 +91,7 @@ export default function Tooltip({ content, children, side = "top", className }: 
           <div
             ref={tooltipRef}
             className={cn(
-              "pointer-events-none fixed z-[99999] whitespace-nowrap rounded border border-border bg-secondary-bg px-2 py-1 text-text text-xs shadow-lg",
+              "pointer-events-none fixed z-[99999] whitespace-nowrap rounded-lg border border-border bg-secondary-bg px-2.5 py-1.5 text-text text-xs shadow-lg",
               className,
             )}
             style={{

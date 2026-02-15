@@ -51,7 +51,7 @@ export default function Input({
     return (
       <input
         className={cn(
-          "rounded border border-border bg-secondary-bg text-text transition-colors",
+          "rounded-lg border border-border bg-secondary-bg text-text transition-colors",
           "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
           "disabled:cursor-not-allowed disabled:opacity-50",
           "placeholder:text-text-lighter",
@@ -74,7 +74,7 @@ export default function Input({
       )}
       <input
         className={cn(
-          "w-full rounded border border-border bg-secondary-bg text-text transition-colors",
+          "w-full rounded-lg border border-border bg-secondary-bg text-text transition-colors",
           "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
           "disabled:cursor-not-allowed disabled:opacity-50",
           "placeholder:text-text-lighter",
