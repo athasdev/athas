@@ -7,10 +7,14 @@
 
 ## Features
 
-- External editor support (Neovim, Helix, etc.)
-- Git integration
 - AI agents
-- Terminal
+- Git integration
+- Syntax highlighting
+- LSP support
+- Vim keybindings
+- Integrated terminal
+- SQLite viewer
+- External editor support
 
 ## Download
 
@@ -19,17 +23,6 @@ Get the latest version from the [releases page](https://github.com/athasdev/atha
 ## Documentation
 
 See the [documentation](https://athas.dev/docs).
-
-## Extensions Catalog and CDN
-
-- Rebuild catalog from `extensions/*/extension.json`:
-  - `bun extensions:index`
-- Validate catalog is up to date (CI check):
-  - `bun extensions:check`
-- Sync `extensions/` to CDN root (server-side):
-  - `EXTENSIONS_CDN_ROOT=/var/www/athas/extensions bun deploy:extensions:cdn`
-
-`deploy.yml` also supports CDN sync via `EXTENSIONS_CDN_ROOT` GitHub secret.
 
 ## Contributing
 
