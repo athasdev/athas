@@ -457,7 +457,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     section: "Features",
     label: "AI Assistant",
     description: "AI-powered code assistance and chat",
-    keywords: ["ai", "assistant", "chat", "copilot"],
+    keywords: ["ai", "assistant", "chat"],
   },
   {
     id: "features-breadcrumbs",

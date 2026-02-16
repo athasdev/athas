@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import AIChat from "@/features/ai/components/chat/ai-chat";
-import GitHubCopilotSettings from "@/features/ai/components/github-copilot-settings";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import CommandBar from "@/features/command-bar/components/command-bar";
 import CommandPalette from "@/features/command-palette/components/command-palette";
@@ -227,7 +226,6 @@ export function MainLayout() {
       <VimCommandBar />
       <VimSearchBar />
       <CommandPalette />
-      <GitHubCopilotSettings />
       <ProjectNameMenu />
       <GlobalNewTabMenu />
 
