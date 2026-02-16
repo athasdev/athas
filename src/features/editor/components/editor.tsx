@@ -5,6 +5,7 @@ import { useGitGutter } from "@/features/git/hooks/use-gutter";
 import { useSettingsStore } from "@/features/settings/store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/stores/zoom-store";
+import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
 import { useContextMenu } from "../hooks/use-context-menu";
@@ -144,6 +145,8 @@ export function Editor({
   // Use consistent line height for both textarea and gutter
   // This ensures they stay synchronized at all zoom levels
   const lineHeight = useMemo(() => calculateLineHeight(fontSize), [fontSize]);
+  const shouldVirtualizeRendering =
+    lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
 
   const {
     viewportRange,
@@ -1000,6 +1003,7 @@ export function Editor({
           fontFamily={fontFamily}
           lineHeight={lineHeight}
           textareaRef={inputRef}
+          virtualize={shouldVirtualizeRendering}
           filePath={filePath}
           onLineClick={handleLineClick}
           onGitIndicatorClick={inlineDiff.toggle}
@@ -1023,7 +1027,7 @@ export function Editor({
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             tabSize={tabSize}
-            viewportRange={viewportRange}
+            viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
           />
         )}
         <InputLayer
@@ -1077,6 +1081,7 @@ export function Editor({
             lineHeight={lineHeight}
             tabSize={tabSize}
             content={displayContent}
+            viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
           />
         )}
 
