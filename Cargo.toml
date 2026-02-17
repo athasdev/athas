@@ -5,3 +5,7 @@ resolver = "2"
 [workspace.lints.clippy]
 uninlined_format_args = "allow"
 new-without-default = "allow"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

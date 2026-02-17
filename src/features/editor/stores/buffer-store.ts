@@ -11,6 +11,7 @@ import type { MultiFileDiff } from "@/features/git/types/diff";
 import type { GitDiff } from "@/features/git/types/git";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { useSessionStore } from "@/stores/session-store";
+import { cleanupBufferHistoryTracking } from "@/stores/app-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 const syncBufferToPane = (bufferId: string) => {
@@ -187,7 +188,19 @@ const generateBufferId = (path: string): string => {
   return `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
 };
 
-const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) => {
+let saveSessionTimer: NodeJS.Timeout | null = null;
+const SAVE_SESSION_DEBOUNCE_MS = 300;
+
+const saveSessionToStore = (_buffers: Buffer[], _activeBufferId: string | null) => {
+  if (saveSessionTimer) clearTimeout(saveSessionTimer);
+  saveSessionTimer = setTimeout(() => {
+    const { buffers, activeBufferId } = useBufferStore.getState();
+    saveSessionToStoreImmediate(buffers, activeBufferId);
+    saveSessionTimer = null;
+  }, SAVE_SESSION_DEBOUNCE_MS);
+};
+
+const saveSessionToStoreImmediate = (buffers: Buffer[], activeBufferId: string | null) => {
   // Get the root folder path from file system store
   // We'll import this dynamically to avoid circular dependencies
   import("@/features/file-system/controllers/store").then(({ useFileSystemStore }) => {
@@ -803,6 +816,8 @@ export const useBufferStore = createSelectors(
           const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
 
           if (bufferIndex === -1) return;
+
+          cleanupBufferHistoryTracking(bufferId);
 
           // Remove from pane
           removeBufferFromPanes(bufferId);

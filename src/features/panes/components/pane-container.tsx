@@ -1,23 +1,24 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AgentTab } from "@/features/ai/components/agent-tab";
-import SQLiteViewer from "@/features/database/providers/sqlite/sqlite-viewer";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CodeEditor from "@/features/editor/components/code-editor";
-import { ExternalEditorTerminal } from "@/features/editor/components/external-editor-terminal";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { stageHunk, unstageHunk } from "@/features/git/api/status";
-import DiffViewer from "@/features/git/components/diff/viewer";
 import type { GitHunk } from "@/features/git/types/git";
-import PRViewer from "@/features/github/components/pr-viewer";
-import { ImageViewer } from "@/features/image-viewer/components/image-viewer";
-import { PdfViewer } from "@/features/pdf-viewer/components/pdf-viewer";
 import TabBar from "@/features/tabs/components/tab-bar";
-import { TerminalTab } from "@/features/terminal/components/terminal-tab";
-import { WebViewer } from "@/features/web-viewer/components/web-viewer";
 import { EmptyEditorState } from "../../layout/components/empty-editor-state";
 import { usePaneStore } from "../stores/pane-store";
 import type { PaneGroup } from "../types/pane";
+
+const AgentTab = lazy(() => import("@/features/ai/components/agent-tab").then(m => ({ default: m.AgentTab })));
+const SQLiteViewer = lazy(() => import("@/features/database/providers/sqlite/sqlite-viewer"));
+const ExternalEditorTerminal = lazy(() => import("@/features/editor/components/external-editor-terminal").then(m => ({ default: m.ExternalEditorTerminal })));
+const DiffViewer = lazy(() => import("@/features/git/components/diff/viewer"));
+const PRViewer = lazy(() => import("@/features/github/components/pr-viewer"));
+const ImageViewer = lazy(() => import("@/features/image-viewer/components/image-viewer").then(m => ({ default: m.ImageViewer })));
+const PdfViewer = lazy(() => import("@/features/pdf-viewer/components/pdf-viewer").then(m => ({ default: m.PdfViewer })));
+const TerminalTab = lazy(() => import("@/features/terminal/components/terminal-tab").then(m => ({ default: m.TerminalTab })));
+const WebViewer = lazy(() => import("@/features/web-viewer/components/web-viewer").then(m => ({ default: m.WebViewer })));
 
 interface PaneContainerProps {
   pane: PaneGroup;
@@ -342,6 +343,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {!activeBuffer && <EmptyEditorState />}
 
+        <Suspense fallback={null}>
         {paneBuffers
           .filter((b) => b.isTerminal && b.terminalSessionId)
           .map((buffer) => (
@@ -425,6 +427,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
               return <CodeEditor paneId={pane.id} bufferId={activeBuffer.id} />;
             }
           })()}
+        </Suspense>
       </div>
     </div>
   );
