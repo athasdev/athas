@@ -42,6 +42,7 @@ flate2 = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 sha2 = "0.10"
 serde_json = "1.0"
+keyring = "3.6.3"
 ssh2 = { version = "0.9", features = ["vendored-openssl"] }
 tauri = { version = "2", features = ["protocol-asset", "macos-private-api", "unstable", "test"] }
 tauri-plugin-dialog = "2"

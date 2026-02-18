@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ext_method)",
+      "Bash(/Users/mehmetozgul/Documents/Git/athasdev/athas/src-tauri/target/debug/ext_method)",
+      "Bash(printf:*)"
+    ]
+  }
+}

@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { cloneElement, isValidElement } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useSettingsStore } from "@/features/settings/store";
@@ -27,6 +28,11 @@ export function FileIcon({
   }
 
   const iconResult = iconTheme.getFileIcon(fileName, isDir, isExpanded, isSymlink);
+  const sanitizedSvg = iconResult.svg
+    ? DOMPurify.sanitize(iconResult.svg, {
+        USE_PROFILES: { svg: true, svgFilters: true },
+      })
+    : null;
 
   const renderIcon = () => {
     if (iconResult.component) {
@@ -38,7 +44,7 @@ export function FileIcon({
       return <span className={className}>{iconResult.component}</span>;
     }
 
-    if (iconResult.svg) {
+    if (sanitizedSvg) {
       return (
         <span
           className={className}
@@ -48,7 +54,7 @@ export function FileIcon({
             display: "inline-block",
             lineHeight: 0,
           }}
-          dangerouslySetInnerHTML={{ __html: iconResult.svg }}
+          dangerouslySetInnerHTML={{ __html: sanitizedSvg }}
         />
       );
     }

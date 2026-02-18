@@ -3,12 +3,17 @@ use std::{
    collections::HashMap,
    env, fs,
    path::{Path, PathBuf},
+   time::Instant,
 };
+
+/// Cache duration for binary detection (60 seconds)
+const DETECTION_CACHE_SECONDS: u64 = 60;
 
 /// Registry of known ACP-compatible agents
 #[derive(Clone)]
 pub struct AgentRegistry {
    agents: HashMap<String, AgentConfig>,
+   last_detection: Option<Instant>,
 }
 
 impl AgentRegistry {
@@ -65,7 +70,10 @@ impl AgentRegistry {
             .with_args(vec!["--acp"]),
       );
 
-      Self { agents }
+      Self {
+         agents,
+         last_detection: None,
+      }
    }
 
    pub fn get(&self, id: &str) -> Option<&AgentConfig> {
@@ -77,6 +85,19 @@ impl AgentRegistry {
    }
 
    pub fn detect_installed(&mut self) {
+      // Check if we should skip detection due to caching
+      if let Some(last) = self.last_detection {
+         let elapsed = last.elapsed().as_secs();
+         if elapsed < DETECTION_CACHE_SECONDS {
+            log::debug!(
+               "Skipping binary detection, cached for {}s more",
+               DETECTION_CACHE_SECONDS - elapsed
+            );
+            return;
+         }
+      }
+
+      log::debug!("Running binary detection for ACP agents");
       for config in self.agents.values_mut() {
          if let Some(path) = find_binary(&config.binary_name) {
             config.installed = true;
@@ -86,6 +107,14 @@ impl AgentRegistry {
             config.binary_path = None;
          }
       }
+
+      self.last_detection = Some(Instant::now());
+   }
+
+   /// Force re-detection regardless of cache
+   pub fn force_detect_installed(&mut self) {
+      self.last_detection = None;
+      self.detect_installed();
    }
 }
 
