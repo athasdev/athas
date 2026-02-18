@@ -459,7 +459,9 @@ export class LspClient {
   async notifyDocumentOpen(filePath: string, content: string): Promise<void> {
     try {
       logger.debug("LSPClient", `Opening document: ${filePath}`);
-      await invoke<void>("lsp_document_open", { filePath, content });
+      const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
+      const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
+      await invoke<void>("lsp_document_open", { filePath, content, languageId });
     } catch (error) {
       logger.error("LSPClient", "LSP document open error:", error);
     }

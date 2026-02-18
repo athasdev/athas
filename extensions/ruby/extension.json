@@ -4,15 +4,47 @@
   "name": "Ruby",
   "displayName": "Ruby",
   "version": "1.0.0",
-  "description": "Ruby language support with syntax highlighting",
+  "description": "Ruby language support with syntax highlighting (Ruby, ERB, and common Rails templates)",
   "publisher": "Athas",
   "categories": ["Language"],
   "languages": [
     {
       "id": "ruby",
-      "extensions": [".rb", ".rake", ".gemspec"],
-      "aliases": ["Ruby", "rb"],
-      "filenames": ["Rakefile", "Gemfile"]
+      "extensions": [
+        ".rb",
+        ".rbw",
+        ".erb",
+        ".rake",
+        ".gemspec",
+        ".ru",
+        ".builder",
+        ".jbuilder",
+        ".rxml",
+        ".rjs",
+        ".rabl",
+        ".thor",
+        ".podspec",
+        ".arb"
+      ],
+      "aliases": ["Ruby", "rb", "erb"],
+      "filenames": [
+        "Rakefile",
+        "Gemfile",
+        "Gemfile.lock",
+        "Guardfile",
+        "Capfile",
+        "Appraisals",
+        "Berksfile",
+        "Brewfile",
+        "Cheffile",
+        "Dangerfile",
+        "Fastfile",
+        "Podfile",
+        "Rantfile",
+        "Thorfile",
+        "Vagrantfile",
+        "Puppetfile"
+      ]
     }
   ],
   "capabilities": {

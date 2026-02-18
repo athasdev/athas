@@ -3,6 +3,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 import { tokenizeByLine } from "@/features/editor/lib/wasm-parser/tokenizer";
 import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
@@ -62,12 +63,32 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   erb: "embedded_template",
 };
 
+function normalizeRegistryLanguageId(languageId: string): string {
+  switch (languageId) {
+    case "typescriptreact":
+      return "typescript";
+    case "javascriptreact":
+      return "javascript";
+    case "csharp":
+      return "c_sharp";
+    case "jsonc":
+      return "json";
+    default:
+      return languageId;
+  }
+}
+
 function getExtension(path: string): string {
   const parts = path.split(".");
   return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
 }
 
 function getLanguageId(filePath: string): string | null {
+  const fromRegistry = extensionRegistry.getLanguageId(filePath);
+  if (fromRegistry) {
+    return normalizeRegistryLanguageId(fromRegistry);
+  }
+
   const ext = getExtension(filePath);
   return EXTENSION_TO_LANGUAGE[ext] || null;
 }

@@ -488,7 +488,12 @@ impl LspManager {
       }
    }
 
-   pub fn notify_document_open(&self, file_path: &str, content: String) -> Result<()> {
+   pub fn notify_document_open(
+      &self,
+      file_path: &str,
+      content: String,
+      language_id: Option<String>,
+   ) -> Result<()> {
       let path = PathBuf::from(file_path);
       let _extension = path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
 
@@ -500,7 +505,7 @@ impl LspManager {
          text_document: TextDocumentItem {
             uri: Url::from_file_path(file_path)
                .map_err(|_| anyhow::anyhow!("Invalid file path"))?,
-            language_id: self.get_language_id_for_file(file_path),
+            language_id: language_id.unwrap_or_else(|| self.get_language_id_for_file(file_path)),
             version: 1,
             text: content,
          },

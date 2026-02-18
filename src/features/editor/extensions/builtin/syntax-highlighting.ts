@@ -1,3 +1,4 @@
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { convertToEditorTokens, tokenizeCode, wasmParserLoader } from "../../lib/wasm-parser";
 import { indexedDBParserCache } from "../../lib/wasm-parser/cache-indexeddb";
 import { useBufferStore } from "../../stores/buffer-store";
@@ -237,7 +238,8 @@ class SyntaxHighlighter {
       // Check if aborted before proceeding
       if (signal.aborted) return;
 
-      const languageId = EXTENSION_TO_LANGUAGE[extension];
+      const languageId =
+        extensionRegistry.getLanguageId(targetFilePath || "") || EXTENSION_TO_LANGUAGE[extension];
       if (!languageId) {
         logger.debug("SyntaxHighlighter", "No language mapping for extension:", extension);
         this.tokens = [];
