@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "tauri": "tauri",
+    "test": "bun test",
     "type-check": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "check": "biome check",

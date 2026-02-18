@@ -137,15 +137,43 @@ export async function beginDesktopAuthSession(): Promise<{
   }
 
   const payload = (await response.json()) as DesktopAuthInitResponse;
-  const sessionId = typeof payload.sessionId === "string" ? payload.sessionId : "";
-  const pollSecret = typeof payload.pollSecret === "string" ? payload.pollSecret : "";
-  const loginUrl = typeof payload.loginUrl === "string" ? payload.loginUrl : "";
-
-  if (!sessionId || !pollSecret || !loginUrl) {
+  const parsed = parseDesktopAuthInitResponse(payload);
+  if (!parsed) {
     throw new DesktopAuthError("failed", "Invalid desktop sign-in initialization response.");
   }
 
-  return { sessionId, pollSecret, loginUrl };
+  return parsed;
+}
+
+function parseDesktopAuthInitResponse(payload: unknown): {
+  sessionId: string;
+  pollSecret: string;
+  loginUrl: string;
+} | null {
+  if (!payload || typeof payload !== "object") return null;
+  const candidate = payload as {
+    sessionId?: unknown;
+    pollSecret?: unknown;
+    loginUrl?: unknown;
+  };
+
+  if (
+    typeof candidate.sessionId !== "string" ||
+    typeof candidate.pollSecret !== "string" ||
+    typeof candidate.loginUrl !== "string"
+  ) {
+    return null;
+  }
+
+  if (!candidate.sessionId || !candidate.pollSecret || !candidate.loginUrl) {
+    return null;
+  }
+
+  return {
+    sessionId: candidate.sessionId,
+    pollSecret: candidate.pollSecret,
+    loginUrl: candidate.loginUrl,
+  };
 }
 
 function parseDesktopAuthPollResponse(payload: unknown): DesktopAuthPollResponse | null {
@@ -221,3 +249,8 @@ export async function waitForDesktopAuthToken(
 
   throw new DesktopAuthError("timeout", "Desktop sign-in timed out. Please try again.");
 }
+
+export const __test__ = {
+  parseDesktopAuthInitResponse,
+  parseDesktopAuthPollResponse,
+};
