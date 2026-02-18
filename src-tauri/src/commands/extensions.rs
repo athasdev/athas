@@ -397,4 +397,39 @@ mod tests {
          path_str
       );
    }
+
+   #[test]
+   fn test_validate_extension_id_accepts_safe_ids() {
+      assert!(validate_extension_id("language.typescript").is_ok());
+      assert!(validate_extension_id("icon-theme_material").is_ok());
+      assert!(validate_extension_id("theme-1").is_ok());
+   }
+
+   #[test]
+   fn test_validate_extension_id_rejects_unsafe_ids() {
+      assert!(validate_extension_id("../evil").is_err());
+      assert!(validate_extension_id("evil/path").is_err());
+      assert!(validate_extension_id("evil\\path").is_err());
+      assert!(validate_extension_id("evil*id").is_err());
+      assert!(validate_extension_id("").is_err());
+   }
+
+   #[test]
+   fn test_validate_extension_download_url_rejects_unsafe_schemes() {
+      assert!(validate_extension_download_url("file:///tmp/evil.tar.gz").is_err());
+      assert!(validate_extension_download_url("javascript:alert(1)").is_err());
+      assert!(validate_extension_download_url("ftp://example.com/ext.tar.gz").is_err());
+   }
+
+   #[test]
+   fn test_validate_extension_download_url_accepts_expected_hosts() {
+      assert!(validate_extension_download_url("https://athas.dev/extensions/test.tar.gz").is_ok());
+      assert!(
+         validate_extension_download_url("https://cdn.athas.dev/extensions/test.tar.gz").is_ok()
+      );
+
+      if cfg!(debug_assertions) {
+         assert!(validate_extension_download_url("http://localhost:3000/test.tar.gz").is_ok());
+      }
+   }
 }

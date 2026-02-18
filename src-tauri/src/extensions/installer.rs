@@ -302,3 +302,28 @@ impl ExtensionInstaller {
       self.extensions_dir.join(extension_id)
    }
 }
+
+#[cfg(test)]
+mod tests {
+   use super::validate_extension_id;
+
+   #[test]
+   fn validate_extension_id_accepts_safe_values() {
+      assert!(validate_extension_id("language.typescript").is_ok());
+      assert!(validate_extension_id("theme-dark_01").is_ok());
+   }
+
+   #[test]
+   fn validate_extension_id_rejects_path_traversal() {
+      assert!(validate_extension_id("../evil").is_err());
+      assert!(validate_extension_id("evil/dir").is_err());
+      assert!(validate_extension_id("evil\\dir").is_err());
+   }
+
+   #[test]
+   fn validate_extension_id_rejects_invalid_characters() {
+      assert!(validate_extension_id("evil$id").is_err());
+      assert!(validate_extension_id("").is_err());
+      assert!(validate_extension_id(&"a".repeat(129)).is_err());
+   }
+}

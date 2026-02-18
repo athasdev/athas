@@ -281,3 +281,10 @@ export function useAutocomplete({
     setAutocompleteCompletion,
   ]);
 }
+
+export const __test__ = {
+  findLeadingOverlapLength,
+  findTrailingOverlapLength,
+  normalizeCompletionText,
+  shouldTriggerForCharacter,
+};
