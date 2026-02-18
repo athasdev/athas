@@ -12,12 +12,20 @@ export interface QueuedMessage {
   timestamp: Date;
 }
 
+export interface PastedImage {
+  id: string;
+  dataUrl: string;
+  name: string;
+  size: number;
+}
+
 export interface AIChatState {
   // Single session state
   chats: Chat[];
   currentChatId: string | null;
   selectedAgentId: AgentType; // Current agent selection for new chats
   input: string;
+  pastedImages: PastedImage[];
   isTyping: boolean;
   streamingMessageId: string | null;
   selectedBufferIds: Set<string>;
@@ -82,6 +90,9 @@ export interface AIChatActions {
 
   // Input actions
   setInput: (input: string) => void;
+  addPastedImage: (image: PastedImage) => void;
+  removePastedImage: (imageId: string) => void;
+  clearPastedImages: () => void;
   setIsTyping: (isTyping: boolean) => void;
   setStreamingMessageId: (streamingMessageId: string | null) => void;
   toggleBufferSelection: (bufferId: string) => void;

@@ -72,9 +72,22 @@ impl ToolInstaller {
       if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
          let decoder = GzDecoder::new(Cursor::new(bytes));
          let mut archive = tar::Archive::new(decoder);
-         archive.unpack(target_dir).map_err(|e| {
-            ToolError::InstallationFailed(format!("Failed to unpack tar.gz: {}", e))
+         let entries = archive.entries().map_err(|e| {
+            ToolError::InstallationFailed(format!("Failed to read tar.gz entries: {}", e))
          })?;
+         for entry in entries {
+            let mut entry = entry.map_err(|e| {
+               ToolError::InstallationFailed(format!("Failed to read tar.gz entry: {}", e))
+            })?;
+            let unpacked = entry.unpack_in(target_dir).map_err(|e| {
+               ToolError::InstallationFailed(format!("Failed to unpack tar.gz entry: {}", e))
+            })?;
+            if !unpacked {
+               return Err(ToolError::InstallationFailed(
+                  "Rejected archive entry with invalid path".to_string(),
+               ));
+            }
+         }
          return Ok(());
       }
 

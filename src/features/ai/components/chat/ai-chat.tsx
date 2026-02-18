@@ -3,7 +3,6 @@ import ApiKeyModal from "@/features/ai/components/api-key-modal";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
 import { AcpStreamHandler } from "@/utils/acp-handler";
@@ -104,6 +103,11 @@ const AIChat = memo(function AIChat({
     chatActions.checkApiKey(settings.aiProviderId);
     chatActions.checkAllProviderApiKeys();
   }, [settings.aiProviderId, chatActions.checkApiKey, chatActions.checkAllProviderApiKeys]);
+
+  // Clear ACP events when switching chats
+  useEffect(() => {
+    setAcpEvents([]);
+  }, [chatState.currentChatId]);
 
   // Agent availability is now handled dynamically by the model-provider-selector component
   // No need to check Claude Code status on mount
@@ -321,7 +325,7 @@ const AIChat = memo(function AIChat({
           abortControllerRef.current = null;
           processQueuedMessages();
         },
-        (error: string) => {
+        (error: string, canReconnect?: boolean) => {
           console.error("Streaming error:", error);
 
           let errorTitle = "API Error";
@@ -364,6 +368,11 @@ const AIChat = memo(function AIChat({
                 }
               }
             }
+          }
+
+          if (canReconnect) {
+            errorTitle = "Connection Lost";
+            errorCode = "RECONNECT";
           }
 
           const formattedError = `[ERROR_BLOCK]
@@ -419,20 +428,6 @@ details: ${errorDetails || mainError}
         (toolName: string) => {
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
-
-          // Find the tool call that just completed
-          const completedToolCall = currentMsg?.toolCalls?.find(
-            (tc) => tc.name === toolName && !tc.isComplete,
-          );
-
-          // Auto-open Read files if setting is enabled
-          if (toolName === "Read" && completedToolCall?.input?.file_path) {
-            const { settings } = useSettingsStore.getState();
-            if (settings.aiAutoOpenReadFiles) {
-              const { handleFileSelect } = useFileSystemStore.getState();
-              handleFileSelect(completedToolCall.input.file_path, false);
-            }
-          }
 
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
             toolCalls: currentMsg?.toolCalls?.map((tc) =>
@@ -493,6 +488,22 @@ details: ${errorDetails || mainError}
         },
         chatState.mode,
         chatState.outputStyle,
+        (data: string, mediaType: string) => {
+          const currentMessages = chatActions.getCurrentMessages();
+          const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
+          chatActions.updateMessage(chatId, currentAssistantMessageId, {
+            images: [...(currentMsg?.images || []), { data, mediaType }],
+          });
+          requestAnimationFrame(scrollToBottom);
+        },
+        (uri: string, name: string | null) => {
+          const currentMessages = chatActions.getCurrentMessages();
+          const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
+          chatActions.updateMessage(chatId, currentAssistantMessageId, {
+            resources: [...(currentMsg?.resources || []), { uri, name }],
+          });
+          requestAnimationFrame(scrollToBottom);
+        },
       );
     } catch (error) {
       console.error("Failed to start streaming:", error);

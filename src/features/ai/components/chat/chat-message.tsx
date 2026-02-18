@@ -179,6 +179,35 @@ export const ChatMessage = memo(function ChatMessage({
         </div>
       )}
 
+      {message.images && message.images.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {message.images.map((image, index) => (
+            <img
+              key={`${message.id}-image-${index}`}
+              src={`data:${image.mediaType};base64,${image.data}`}
+              alt={`AI generated content ${index + 1}`}
+              className="max-h-64 max-w-full rounded-lg border border-border"
+            />
+          ))}
+        </div>
+      )}
+
+      {message.resources && message.resources.length > 0 && (
+        <div className="mb-2 flex flex-col gap-1">
+          {message.resources.map((resource, index) => (
+            <a
+              key={`${message.id}-resource-${index}`}
+              href={resource.uri}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded border border-border bg-primary-bg/50 px-2 py-1 text-accent text-xs hover:bg-hover"
+            >
+              <span className="truncate">{resource.name || resource.uri}</span>
+            </a>
+          ))}
+        </div>
+      )}
+
       {message.content && (
         <>
           <div className="pr-1 leading-relaxed">

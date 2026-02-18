@@ -1,11 +1,9 @@
-import { Send, Slash, Square } from "lucide-react";
+import { Send, Slash, Square, X } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
-import { getModelById } from "@/features/ai/types/providers";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
 import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -13,8 +11,7 @@ import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ChatModeSelector } from "../selectors/chat-mode-selector";
 import { ContextSelector } from "../selectors/context-selector";
-import { ModelSelectorDropdown } from "../selectors/model-selector-dropdown";
-import { SessionModeSelector } from "../selectors/session-mode-selector";
+import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -32,7 +29,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [hasInputText, setHasInputText] = useState(false);
 
   // Get state from stores with optimized selectors
-  const { settings, updateSetting } = useSettingsStore();
   const { openSettingsDialog } = useUIState();
   const { fontSize, fontFamily } = useEditorSettingsStore();
 
@@ -55,7 +51,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // ACP agents don't need API key (they handle their own auth)
   const isInputEnabled = isCustomAgent ? hasApiKey : true;
   const isStreaming = isTyping && !!streamingMessageId;
-  const isSendDisabled = isStreaming ? false : !hasInputText || !isInputEnabled;
 
   // Memoize action selectors
   const setInput = useAIChatStore((state) => state.setInput);
@@ -77,6 +72,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const selectNextSlashCommand = useAIChatStore((state) => state.selectNextSlashCommand);
   const selectPreviousSlashCommand = useAIChatStore((state) => state.selectPreviousSlashCommand);
   const getFilteredSlashCommands = useAIChatStore((state) => state.getFilteredSlashCommands);
+
+  // Pasted images state and actions
+  const pastedImages = useAIChatStore((state) => state.pastedImages);
+  const addPastedImage = useAIChatStore((state) => state.addPastedImage);
+  const removePastedImage = useAIChatStore((state) => state.removePastedImage);
+  const clearPastedImages = useAIChatStore((state) => state.clearPastedImages);
+
+  // Computed state for send button
+  const hasImages = pastedImages.length > 0;
+  const isSendDisabled = isStreaming ? false : (!hasInputText && !hasImages) || !isInputEnabled;
 
   // Highly optimized function to get plain text from contentEditable div
   const getPlainTextFromDiv = useCallback(() => {
@@ -419,6 +424,72 @@ const AIChatInputBar = memo(function AIChatInputBar({
     slashCommandState.active,
   ]);
 
+  // Handle paste - strip HTML formatting, keep only plain text. Images are added to preview.
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLDivElement>) => {
+      const clipboardData = e.clipboardData;
+      if (!clipboardData) return;
+
+      // Check for images first
+      const items = clipboardData.items;
+      let hasImage = false;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image/")) {
+          hasImage = true;
+          e.preventDefault();
+
+          const file = items[i].getAsFile();
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const dataUrl = event.target?.result as string;
+              if (dataUrl) {
+                addPastedImage({
+                  id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                  dataUrl,
+                  name: file.name || `image-${Date.now()}.png`,
+                  size: file.size,
+                });
+              }
+            };
+            reader.readAsDataURL(file);
+          }
+        }
+      }
+
+      // If there was an image, don't process text
+      if (hasImage) return;
+
+      // For text content, prevent default and insert plain text only
+      e.preventDefault();
+
+      // Get plain text from clipboard
+      const plainText = clipboardData.getData("text/plain");
+      if (!plainText) return;
+
+      // Insert plain text at cursor position
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+
+      const textNode = document.createTextNode(plainText);
+      range.insertNode(textNode);
+
+      // Move cursor to end of inserted text
+      range.setStartAfter(textNode);
+      range.setEndAfter(textNode);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      // Trigger input change handler to update state
+      handleInputChange();
+    },
+    [handleInputChange, addPastedImage],
+  );
+
   // Handle file mention selection
   const handleFileMentionSelect = useCallback(
     (file: any) => {
@@ -541,7 +612,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const handleSendMessage = async () => {
     const currentInput = useAIChatStore.getState().input;
-    if (!currentInput.trim() || !isInputEnabled) return;
+    const currentImages = useAIChatStore.getState().pastedImages;
+    const hasContent = currentInput.trim() || currentImages.length > 0;
+    if (!hasContent || !isInputEnabled) return;
 
     // Trigger send animation
     setIsSendAnimating(true);
@@ -549,14 +622,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
     // Reset animation after the flying animation completes
     setTimeout(() => setIsSendAnimating(false), 800);
 
-    // Clear input immediately after send is triggered
+    // Clear input and images immediately after send is triggered
     setInput("");
     setHasInputText(false);
+    clearPastedImages();
     if (inputRef.current) {
       inputRef.current.innerHTML = "";
     }
 
-    // Send the captured message
+    // Send the captured message (TODO: include images in message)
     await onSendMessage(currentInput);
   };
 
@@ -570,12 +644,38 @@ const AIChatInputBar = memo(function AIChatInputBar({
       className="ai-chat-container relative z-20 bg-transparent px-3 pt-2 pb-3"
     >
       <div className="rounded-[20px] border border-border bg-primary-bg/95 px-3 py-2.5 shadow-sm backdrop-blur-sm">
+        {/* Pasted images preview */}
+        {pastedImages.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {pastedImages.map((image) => (
+              <div
+                key={image.id}
+                className="group relative overflow-hidden rounded-lg border border-border bg-secondary-bg"
+              >
+                <img
+                  src={image.dataUrl}
+                  alt={image.name}
+                  className="h-16 w-auto max-w-[120px] object-cover"
+                />
+                <button
+                  onClick={() => removePastedImage(image.id)}
+                  className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity hover:bg-black/80 group-hover:opacity-100"
+                  aria-label="Remove image"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Input area */}
         <div
           ref={inputRef}
           contentEditable={isInputEnabled}
           onInput={handleInputChange}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           data-placeholder={
             isInputEnabled
               ? hasSlashCommands
@@ -658,31 +758,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
               </button>
             )}
 
-            {/* Model selector dropdown - only shown for custom agent */}
-            {isCustomAgent ? (
-              <ModelSelectorDropdown
-                currentProviderId={settings.aiProviderId}
-                currentModelId={settings.aiModelId}
-                currentModelName={(() => {
-                  const { dynamicModels } = useAIChatStore.getState();
-                  const providerModels = dynamicModels[settings.aiProviderId];
-                  const dynamicModel = providerModels?.find((m) => m.id === settings.aiModelId);
-                  if (dynamicModel) return dynamicModel.name;
-
-                  return (
-                    getModelById(settings.aiProviderId, settings.aiModelId)?.name || "Select Model"
-                  );
-                })()}
-                onSelect={(providerId, modelId) => {
-                  updateSetting("aiProviderId", providerId);
-                  updateSetting("aiModelId", modelId);
-                }}
-                onOpenSettings={() => openSettingsDialog("ai")}
-                hasApiKey={(providerId) => useAIChatStore.getState().hasProviderApiKey(providerId)}
-              />
-            ) : (
-              <SessionModeSelector />
-            )}
+            {/* Unified agent and model selector */}
+            <UnifiedAgentSelector onOpenSettings={() => openSettingsDialog("ai")} />
 
             <Button
               type="submit"
@@ -692,7 +769,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 "flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
                 "send-button-hover button-transition focus:outline-none focus:ring-2 focus:ring-accent/50",
                 isStreaming && !isSendAnimating && "button-morphing",
-                hasInputText &&
+                (hasInputText || hasImages) &&
                   isInputEnabled &&
                   "border-blue-500/40 bg-blue-500 text-white hover:bg-blue-600 hover:text-white focus:ring-blue-500/50",
                 isSendDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",

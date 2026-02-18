@@ -1,26 +1,18 @@
+use crate::secure_storage::{get_secret, remove_secret, store_secret};
 use tauri::command;
 
-/// Store an AI provider token securely
+fn provider_key(provider_id: &str) -> String {
+   format!("ai_token_{}", provider_id)
+}
+
+/// Store an AI provider token using OS keychain when available.
 #[command]
 pub async fn store_ai_provider_token(
    app: tauri::AppHandle,
    provider_id: String,
    token: String,
 ) -> Result<(), String> {
-   use tauri_plugin_store::StoreExt;
-
-   let store = app
-      .store("secure.json")
-      .map_err(|e| format!("Failed to access store: {e}"))?;
-
-   let key = format!("ai_token_{}", provider_id);
-   store.set(key, serde_json::Value::String(token));
-
-   store
-      .save()
-      .map_err(|e| format!("Failed to save store: {e}"))?;
-
-   Ok(())
+   store_secret(&app, &provider_key(&provider_id), &token)
 }
 
 /// Get an AI provider token
@@ -29,23 +21,7 @@ pub async fn get_ai_provider_token(
    app: tauri::AppHandle,
    provider_id: String,
 ) -> Result<Option<String>, String> {
-   use tauri_plugin_store::StoreExt;
-
-   let store = app
-      .store("secure.json")
-      .map_err(|e| format!("Failed to access store: {e}"))?;
-
-   let key = format!("ai_token_{}", provider_id);
-   match store.get(&key) {
-      Some(token) => {
-         if let Some(token_str) = token.as_str() {
-            Ok(Some(token_str.to_string()))
-         } else {
-            Ok(None)
-         }
-      }
-      None => Ok(None),
-   }
+   get_secret(&app, &provider_key(&provider_id))
 }
 
 /// Remove an AI provider token
@@ -54,18 +30,5 @@ pub async fn remove_ai_provider_token(
    app: tauri::AppHandle,
    provider_id: String,
 ) -> Result<(), String> {
-   use tauri_plugin_store::StoreExt;
-
-   let store = app
-      .store("secure.json")
-      .map_err(|e| format!("Failed to access store: {e}"))?;
-
-   let key = format!("ai_token_{}", provider_id);
-   let _removed = store.delete(&key);
-
-   store
-      .save()
-      .map_err(|e| format!("Failed to save store: {e}"))?;
-
-   Ok(())
+   remove_secret(&app, &provider_key(&provider_id))
 }

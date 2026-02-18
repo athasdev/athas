@@ -45,10 +45,7 @@ interface Settings {
   aiChatWidth: number;
   isAIChatVisible: boolean;
   aiCompletion: boolean;
-  aiAutoOpenReadFiles: boolean;
-  aiTemperature: number;
-  aiMaxTokens: number;
-  aiDefaultOutputStyle: "default" | "explanatory" | "learning";
+  aiAutocompleteModelId: string;
   aiDefaultSessionMode: string;
   // Layout
   sidebarWidth: number;
@@ -83,8 +80,6 @@ interface Settings {
   //// File tree
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
-  //// Command Bar
-  commandBarFileLimit: number;
 }
 
 const defaultSettings: Settings = {
@@ -122,10 +117,7 @@ const defaultSettings: Settings = {
   aiChatWidth: 400,
   isAIChatVisible: false,
   aiCompletion: true,
-  aiAutoOpenReadFiles: true,
-  aiTemperature: 0.7,
-  aiMaxTokens: 4096,
-  aiDefaultOutputStyle: "default",
+  aiAutocompleteModelId: "openai/gpt-5-nano",
   aiDefaultSessionMode: "",
   // Layout
   sidebarWidth: 220,
@@ -163,8 +155,6 @@ const defaultSettings: Settings = {
   //// File tree
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
-  //// Command Bar
-  commandBarFileLimit: 2000,
 };
 
 // Theme class constants
@@ -205,6 +195,26 @@ const saveSettingsToStore = async (settings: Partial<Settings>) => {
   } catch (error) {
     console.error("Failed to save settings to store:", error);
   }
+};
+
+// Debounced version to prevent excessive disk writes
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+let pendingSettings: Partial<Settings> = {};
+
+const debouncedSaveSettingsToStore = (settings: Partial<Settings>) => {
+  // Merge pending settings
+  pendingSettings = { ...pendingSettings, ...settings };
+
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+
+  saveTimeout = setTimeout(() => {
+    const settingsToSave = pendingSettings;
+    pendingSettings = {};
+    saveTimeout = null;
+    saveSettingsToStore(settingsToSave);
+  }, 300);
 };
 
 const applyTheme = async (theme: Theme) => {
@@ -342,14 +352,13 @@ export const useSettingsStore = create(
 
         // Update individual setting
         updateSetting: async <K extends keyof Settings>(key: K, value: Settings[K]) => {
-          console.log(`Updating setting ${key} to:`, value);
           set((state) => {
             state.settings[key] = value;
           });
 
           if (key === "theme") applyTheme(value as Theme);
 
-          await saveSettingsToStore({ [key]: value });
+          debouncedSaveSettingsToStore({ [key]: value });
         },
 
         // Search actions

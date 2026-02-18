@@ -67,7 +67,7 @@ export function ScrollDebugOverlay() {
       viewportHeight,
       visibleStartLine: Math.floor(scrollTop / lineHeight),
       visibleEndLine: Math.floor((scrollTop + viewportHeight) / lineHeight),
-      fps: Math.min(fps, 60),
+      fps,
       lastUpdate: now,
     });
   }, [enabled, scrollTop, scrollLeft, viewportHeight, fontSize, metrics.lastUpdate]);

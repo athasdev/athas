@@ -1000,7 +1000,7 @@ export const useFileSystemStore = createSelectors(
           try {
             const allFiles: FileEntry[] = [];
             let processedFiles = 0;
-            const maxFiles = useSettingsStore.getState().settings.commandBarFileLimit;
+            const maxFiles = 5000;
 
             const scanDirectory = async (
               directoryPath: string,

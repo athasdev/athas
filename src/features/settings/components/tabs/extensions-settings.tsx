@@ -1,4 +1,4 @@
-import { Languages, Package, Palette, RefreshCw, Search } from "lucide-react";
+import { Database, Languages, Package, Palette, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -358,7 +358,7 @@ export const ExtensionsSettings = () => {
           active={settings.extensionsActiveTab === "database"}
           className="flex h-6 items-center gap-1 px-2 text-[11px]"
         >
-          <Package size={11} />
+          <Database size={11} />
           Databases
         </Button>
       </div>
