@@ -21,7 +21,8 @@ jobs:
             set -e
             git config --global --add safe.directory /srv/athas
             cd /srv/athas
-            git pull
+            git stash push --include-untracked --message "auto-deploy-$(date +%s)" || true
+            git pull --ff-only
             /root/.bun/bin/bun scripts/build-extensions-index.ts
             if [ -n "${EXTENSIONS_CDN_ROOT:-}" ]; then
               /root/.bun/bin/bun scripts/deploy-extensions-cdn.ts
