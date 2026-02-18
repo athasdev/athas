@@ -6,12 +6,10 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
-import NumberInput from "@/ui/number-input";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
 
 export const GeneralSettings = () => {
-  const { settings, updateSetting } = useSettingsStore();
   const {
     available,
     checking,
@@ -24,6 +22,7 @@ export const GeneralSettings = () => {
     downloadAndInstall,
   } = useUpdater(false);
   const { showToast } = useToast();
+  const { settings, updateSetting } = useSettingsStore();
 
   const [cliInstalled, setCliInstalled] = useState<boolean>(false);
   const [cliChecking, setCliChecking] = useState(true);
@@ -114,29 +113,6 @@ export const GeneralSettings = () => {
 
   return (
     <div className="space-y-4">
-      <Section title="File Management">
-        <SettingRow label="Auto Save" description="Automatically save files when editing">
-          <Switch
-            checked={settings.autoSave}
-            onChange={(checked) => updateSetting("autoSave", checked)}
-            size="sm"
-          />
-        </SettingRow>
-        <SettingRow
-          label="Command Bar File Limit"
-          description="Maximum files to index for quick file search (⌘P). Increase for large monorepos."
-        >
-          <NumberInput
-            value={settings.commandBarFileLimit}
-            onChange={(value) => updateSetting("commandBarFileLimit", value)}
-            min={1000}
-            max={100000}
-            step={1000}
-            className="w-24"
-          />
-        </SettingRow>
-      </Section>
-
       <Section title="About">
         <SettingRow label="Version" description="Current application version">
           <span className="text-text-lighter text-xs">{appVersion || "..."}</span>
@@ -249,6 +225,16 @@ export const GeneralSettings = () => {
               </>
             )}
           </div>
+        </SettingRow>
+      </Section>
+
+      <Section title="Command Bar">
+        <SettingRow label="Command Bar Preview" description="Show file preview in command bar">
+          <Switch
+            checked={settings.commandBarPreview}
+            onChange={(checked) => updateSetting("commandBarPreview", checked)}
+            size="sm"
+          />
         </SettingRow>
       </Section>
     </div>

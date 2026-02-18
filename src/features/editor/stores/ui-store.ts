@@ -16,6 +16,11 @@ type CompletionPosition = {
   left: number;
 };
 
+type AutocompleteCompletion = {
+  text: string;
+  cursorOffset: number;
+};
+
 type SearchMatch = {
   start: number;
   end: number;
@@ -45,6 +50,7 @@ interface EditorUIState {
   isHovering: boolean;
   isApplyingCompletion: boolean;
   aiCompletion: boolean;
+  autocompleteCompletion: AutocompleteCompletion | null;
   lastInputTimestamp: number;
 
   // Search state
@@ -74,6 +80,7 @@ interface EditorUIActions {
   setIsHovering: (hovering: boolean) => void;
   setIsApplyingCompletion: (applying: boolean) => void;
   setAiCompletion: (enabled: boolean) => void;
+  setAutocompleteCompletion: (completion: AutocompleteCompletion | null) => void;
   setLastInputTimestamp: (timestamp: number) => void;
 
   // Search actions
@@ -106,6 +113,7 @@ export const useEditorUIStore = createSelectors(
     isHovering: false,
     isApplyingCompletion: false,
     aiCompletion: false,
+    autocompleteCompletion: null,
     lastInputTimestamp: 0,
 
     // Search state
@@ -136,6 +144,7 @@ export const useEditorUIStore = createSelectors(
       setIsHovering: (hovering) => set({ isHovering: hovering }),
       setIsApplyingCompletion: (applying) => set({ isApplyingCompletion: applying }),
       setAiCompletion: (enabled) => set({ aiCompletion: enabled }),
+      setAutocompleteCompletion: (completion) => set({ autocompleteCompletion: completion }),
       setLastInputTimestamp: (timestamp) => set({ lastInputTimestamp: timestamp }),
 
       // Search actions

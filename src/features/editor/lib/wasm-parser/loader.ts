@@ -3,7 +3,7 @@
  * Handles loading and initializing Tree-sitter WASM parsers
  */
 
-import { Language, Parser, type Query } from "web-tree-sitter";
+import { Language, Parser, Query } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
 import { indexedDBParserCache } from "./cache-indexeddb";
 import type { LoadedParser, ParserConfig } from "./types";
@@ -68,7 +68,7 @@ class WasmParserLoader {
 
         // Create highlight query from text
         try {
-          const query = cached.language.query(highlightQuery);
+          const query = new Query(cached.language, highlightQuery);
           const updatedParser: LoadedParser = {
             ...cached,
             highlightQuery: query,
@@ -94,7 +94,7 @@ class WasmParserLoader {
           const localQuery = await this.fetchLocalHighlightQuery(languageId);
           if (localQuery) {
             try {
-              const query = cached.language.query(localQuery);
+              const query = new Query(cached.language, localQuery);
               const updatedParser: LoadedParser = {
                 ...cached,
                 highlightQuery: query,
@@ -332,14 +332,14 @@ class WasmParserLoader {
       let query: Query | undefined;
       if (queryText) {
         try {
-          query = language.query(queryText);
+          query = new Query(language, queryText);
         } catch (error) {
           logger.warn("WasmParser", `Failed to compile highlight query for ${languageId}`, error);
           // Try to fetch local highlight query as fallback
           const localQuery = await this.fetchLocalHighlightQuery(languageId);
           if (localQuery && localQuery !== queryText) {
             try {
-              query = language.query(localQuery);
+              query = new Query(language, localQuery);
               logger.info("WasmParser", `Using local highlight query fallback for ${languageId}`);
               // Update IndexedDB cache with the correct local query
               indexedDBParserCache

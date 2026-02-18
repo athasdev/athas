@@ -59,6 +59,7 @@ export const EDITOR_CONSTANTS = {
 
   // Performance & Caching
   SMALL_FILE_THRESHOLD: 500, // Lines - always tokenize fully for small files
+  RENDER_VIRTUALIZATION_THRESHOLD: 5000, // Lines - enable render virtualization only for very large files
   UNIFIED_DEBOUNCE_MS: 100, // Single debounce for all updates
   COMPLETION_DEBOUNCE_MS: 0,
   COMPLETION_CACHE_TTL_MS: 5000,

@@ -35,7 +35,7 @@ export const getChatCompletionStream = async (
   context: ContextInfo,
   onChunk: (chunk: string) => void,
   onComplete: () => void,
-  onError: (error: string) => void,
+  onError: (error: string, canReconnect?: boolean) => void,
   conversationHistory?: AIMessage[],
   onNewMessage?: () => void,
   onToolUse?: (toolName: string, toolInput?: any) => void,
@@ -44,6 +44,8 @@ export const getChatCompletionStream = async (
   onAcpEvent?: (event: AcpEvent) => void,
   mode: ChatMode = "chat",
   outputStyle: OutputStyle = "default",
+  onImageChunk?: (data: string, mediaType: string) => void,
+  onResourceChunk?: (uri: string, name: string | null) => void,
 ): Promise<void> => {
   try {
     // Handle ACP-based CLI agents (Claude Code, Gemini CLI, Codex CLI)
@@ -57,6 +59,8 @@ export const getChatCompletionStream = async (
         onToolComplete,
         onPermissionRequest,
         onEvent: onAcpEvent,
+        onImageChunk,
+        onResourceChunk,
       });
       await handler.start(userMessage, context);
       return;

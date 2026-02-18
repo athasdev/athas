@@ -3,6 +3,7 @@ use super::{
    config::AgentRegistry,
    types::{AcpAgentStatus, AcpEvent, AgentConfig, SessionMode, SessionModeState, StopReason},
 };
+use crate::terminal::TerminalManager;
 use acp::Agent;
 use agent_client_protocol as acp;
 use anyhow::{Context, Result, bail};
@@ -24,6 +25,7 @@ enum AcpCommand {
       workspace_path: Option<String>,
       config: Box<AgentConfig>,
       app_handle: AppHandle,
+      terminal_manager: Arc<TerminalManager>,
       response_tx: oneshot::Sender<Result<(AcpAgentStatus, mpsc::Sender<PermissionResponse>)>>,
    },
    SendPrompt {
@@ -72,6 +74,7 @@ impl AcpWorker {
       workspace_path: Option<String>,
       config: AgentConfig,
       app_handle: AppHandle,
+      terminal_manager: Arc<TerminalManager>,
    ) -> Result<(AcpAgentStatus, mpsc::Sender<PermissionResponse>)> {
       // Stop any existing agent first
       self.stop().await?;
@@ -131,6 +134,7 @@ impl AcpWorker {
       let client = Arc::new(AthasAcpClient::new(
          app_handle.clone(),
          workspace_path.clone(),
+         terminal_manager,
       ));
       let permission_sender = client.permission_sender();
 
@@ -180,7 +184,7 @@ impl AcpWorker {
                .read_text_file(true)
                .write_text_file(true),
          )
-         .terminal(false)
+         .terminal(true)
          .meta(client_meta);
 
       let init_request = acp::InitializeRequest::new(acp::ProtocolVersion::LATEST)
@@ -430,10 +434,11 @@ pub struct AcpAgentBridge {
    command_tx: mpsc::Sender<AcpCommand>,
    status: Arc<Mutex<AcpAgentStatus>>,
    permission_tx: Arc<Mutex<Option<mpsc::Sender<PermissionResponse>>>>,
+   terminal_manager: Arc<TerminalManager>,
 }
 
 impl AcpAgentBridge {
-   pub fn new(app_handle: AppHandle) -> Self {
+   pub fn new(app_handle: AppHandle, terminal_manager: Arc<TerminalManager>) -> Self {
       let mut registry = AgentRegistry::new();
       registry.detect_installed();
 
@@ -457,6 +462,7 @@ impl AcpAgentBridge {
          command_tx,
          status,
          permission_tx: Arc::new(Mutex::new(None)),
+         terminal_manager,
       }
    }
 
@@ -473,10 +479,17 @@ impl AcpAgentBridge {
                workspace_path,
                config,
                app_handle,
+               terminal_manager,
                response_tx,
             } => {
                let result = worker
-                  .initialize(agent_id, workspace_path, *config, app_handle)
+                  .initialize(
+                     agent_id,
+                     workspace_path,
+                     *config,
+                     app_handle,
+                     terminal_manager,
+                  )
                   .await;
 
                // Update shared status
@@ -547,6 +560,7 @@ impl AcpAgentBridge {
             workspace_path,
             config: Box::new(config),
             app_handle: self.app_handle.clone(),
+            terminal_manager: self.terminal_manager.clone(),
             response_tx,
          })
          .await
@@ -605,6 +619,14 @@ impl AcpAgentBridge {
 
    /// Stop the active agent
    pub async fn stop_agent(&self) -> Result<()> {
+      // Get current session ID before stopping
+      let current_status = self.status.lock().await.clone();
+      let session_id = if current_status.running {
+         Some(current_status.agent_id.clone())
+      } else {
+         None
+      };
+
       let (response_tx, response_rx) = oneshot::channel();
 
       self
@@ -619,6 +641,13 @@ impl AcpAgentBridge {
       {
          let mut tx = self.permission_tx.lock().await;
          *tx = None;
+      }
+
+      // Emit SessionComplete before StatusChanged
+      if let Some(sid) = session_id {
+         let _ = self
+            .app_handle
+            .emit("acp-event", AcpEvent::SessionComplete { session_id: sid });
       }
 
       // Emit status change

@@ -83,6 +83,14 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
+
+        <SettingRow label="Mouse Wheel Zoom" description="Use Ctrl+Scroll to zoom editor">
+          <Switch
+            checked={settings.mouseWheelZoom}
+            onChange={(checked) => updateSetting("mouseWheelZoom", checked)}
+            size="sm"
+          />
+        </SettingRow>
       </Section>
 
       <Section title="Input">
@@ -90,6 +98,29 @@ export const EditorSettings = () => {
           <Switch
             checked={settings.vimMode}
             onChange={(checked) => updateSetting("vimMode", checked)}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
+
+      <Section title="Tabs">
+        <SettingRow label="Max Open Tabs" description="Maximum number of tabs before oldest closes">
+          <NumberInput
+            min="1"
+            max="50"
+            value={settings.maxOpenTabs}
+            onChange={(val) => updateSetting("maxOpenTabs", val)}
+            className="w-16"
+            size="xs"
+          />
+        </SettingRow>
+      </Section>
+
+      <Section title="Saving">
+        <SettingRow label="Auto Save" description="Automatically save files when editing">
+          <Switch
+            checked={settings.autoSave}
+            onChange={(checked) => updateSetting("autoSave", checked)}
             size="sm"
           />
         </SettingRow>

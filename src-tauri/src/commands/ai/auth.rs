@@ -1,61 +1,22 @@
+use crate::secure_storage::{get_secret, remove_secret, store_secret};
 use tauri::command;
 
-/// Store the auth token securely
+const AUTH_TOKEN_KEY: &str = "athas_auth_token";
+
+/// Store the auth token using OS keychain when available.
 #[command]
 pub async fn store_auth_token(app: tauri::AppHandle, token: String) -> Result<(), String> {
-   use tauri_plugin_store::StoreExt;
-
-   let store = app
-      .store("secure.json")
-      .map_err(|e| format!("Failed to access store: {e}"))?;
-
-   store.set(
-      "athas_auth_token".to_string(),
-      serde_json::Value::String(token),
-   );
-
-   store
-      .save()
-      .map_err(|e| format!("Failed to save store: {e}"))?;
-
-   Ok(())
+   store_secret(&app, AUTH_TOKEN_KEY, &token)
 }
 
 /// Get the stored auth token
 #[command]
 pub async fn get_auth_token(app: tauri::AppHandle) -> Result<Option<String>, String> {
-   use tauri_plugin_store::StoreExt;
-
-   let store = app
-      .store("secure.json")
-      .map_err(|e| format!("Failed to access store: {e}"))?;
-
-   match store.get("athas_auth_token") {
-      Some(token) => {
-         if let Some(token_str) = token.as_str() {
-            Ok(Some(token_str.to_string()))
-         } else {
-            Ok(None)
-         }
-      }
-      None => Ok(None),
-   }
+   get_secret(&app, AUTH_TOKEN_KEY)
 }
 
 /// Remove the auth token
 #[command]
 pub async fn remove_auth_token(app: tauri::AppHandle) -> Result<(), String> {
-   use tauri_plugin_store::StoreExt;
-
-   let store = app
-      .store("secure.json")
-      .map_err(|e| format!("Failed to access store: {e}"))?;
-
-   let _removed = store.delete("athas_auth_token");
-
-   store
-      .save()
-      .map_err(|e| format!("Failed to save store: {e}"))?;
-
-   Ok(())
+   remove_secret(&app, AUTH_TOKEN_KEY)
 }

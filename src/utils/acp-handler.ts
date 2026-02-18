@@ -9,12 +9,14 @@ import type { ContextInfo } from "./types";
 interface AcpHandlers {
   onChunk: (chunk: string) => void;
   onComplete: () => void;
-  onError: (error: string) => void;
+  onError: (error: string, canReconnect?: boolean) => void;
   onNewMessage?: () => void;
   onToolUse?: (toolName: string, toolInput?: unknown) => void;
   onToolComplete?: (toolName: string) => void;
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
   onEvent?: (event: AcpEvent) => void;
+  onImageChunk?: (data: string, mediaType: string) => void;
+  onResourceChunk?: (uri: string, name: string | null) => void;
 }
 
 interface AcpListeners {
@@ -30,6 +32,7 @@ export class AcpStreamHandler {
   private sessionComplete = false;
   private pendingNewMessage = false;
   private cancelled = false;
+  private wasRunning = false;
 
   constructor(
     private agentId: string,
@@ -69,8 +72,12 @@ export class AcpStreamHandler {
           throw new Error(`${this.agentId} failed to start`);
         }
 
+        this.wasRunning = true;
+
         // Wait for initialization
         await new Promise((resolve) => setTimeout(resolve, 1000));
+      } else {
+        this.wasRunning = true;
       }
     } catch (error) {
       throw new Error(`${this.agentId} is currently unavailable: ${error}`);
@@ -78,9 +85,9 @@ export class AcpStreamHandler {
   }
 
   private getWorkspacePath(): string | null {
-    // Try to get workspace path from the app state
-    // This can be enhanced to read from a store or context
-    return null;
+    // Get workspace path from the project store
+    const { useProjectStore } = require("@/stores/project-store");
+    return useProjectStore.getState().rootFolderPath ?? null;
   }
 
   private buildMessage(userMessage: string, context: ContextInfo): string {
@@ -129,8 +136,7 @@ export class AcpStreamHandler {
         break;
 
       case "status_changed":
-        // Status changes are informational
-        console.log("Agent status changed:", event.status);
+        this.handleStatusChanged(event);
         break;
 
       case "session_mode_update":
@@ -182,6 +188,18 @@ export class AcpStreamHandler {
     useAIChatStore.getState().setCurrentModeId(event.currentModeId);
   }
 
+  private handleStatusChanged(event: Extract<AcpEvent, { type: "status_changed" }>): void {
+    console.log("Agent status changed:", event.status);
+
+    // Detect unexpected agent crash: was running but now stopped without user action
+    if (this.wasRunning && !event.status.running && !this.sessionComplete && !this.cancelled) {
+      console.warn("Agent crashed unexpectedly");
+      this.cleanup();
+      // Pass canReconnect=true to indicate the error is recoverable
+      this.handlers.onError("Agent disconnected unexpectedly. Click retry to restart.", true);
+    }
+  }
+
   private handleUiAction(event: Extract<AcpEvent, { type: "ui_action" }>): void {
     const { action } = event;
     const bufferActions = useBufferStore.getState().actions;
@@ -203,13 +221,21 @@ export class AcpStreamHandler {
   }
 
   private handleContentChunk(event: Extract<AcpEvent, { type: "content_chunk" }>): void {
-    if (event.content.type === "text") {
-      if (this.pendingNewMessage && this.handlers.onNewMessage) {
-        this.handlers.onNewMessage();
-      }
-      this.pendingNewMessage = false;
+    if (this.pendingNewMessage && this.handlers.onNewMessage) {
+      this.handlers.onNewMessage();
+    }
+    this.pendingNewMessage = false;
 
+    if (event.content.type === "text") {
       this.handlers.onChunk(event.content.text);
+    } else if (event.content.type === "image") {
+      if (this.handlers.onImageChunk) {
+        this.handlers.onImageChunk(event.content.data, event.content.mediaType);
+      }
+    } else if (event.content.type === "resource") {
+      if (this.handlers.onResourceChunk) {
+        this.handlers.onResourceChunk(event.content.uri, event.content.name);
+      }
     }
 
     if (event.isComplete) {
@@ -241,10 +267,12 @@ export class AcpStreamHandler {
     if (this.handlers.onPermissionRequest) {
       this.handlers.onPermissionRequest(event);
     } else {
-      // Auto-approve if no handler (for now)
-      // In production, this should show a dialog
-      console.warn("Permission request received but no handler set, auto-approving");
-      AcpStreamHandler.respondToPermission(event.requestId, true).catch(console.error);
+      // Auto-reject if no handler for safety - prevents unintended actions
+      console.error(
+        "Permission request received but no handler set, auto-rejecting for safety:",
+        event.description,
+      );
+      AcpStreamHandler.respondToPermission(event.requestId, false).catch(console.error);
     }
   }
 
