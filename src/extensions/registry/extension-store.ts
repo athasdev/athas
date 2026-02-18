@@ -6,6 +6,7 @@ import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { extensionInstaller } from "../installer/extension-installer";
 import {
+  getHighlightQueryUrl,
   getHighlightQueryUrlForExtension,
   getLanguageExtensionById,
   getPackagedLanguageExtensions,
@@ -50,6 +51,50 @@ interface ExtensionStoreState {
   };
 }
 
+const HIDDEN_MARKETPLACE_EXTENSION_IDS = new Set(["athas.tsx"]);
+
+function mergeMarketplaceLanguageExtensions(extensions: ExtensionManifest[]): ExtensionManifest[] {
+  const visibleExtensions = extensions.filter(
+    (manifest) => !HIDDEN_MARKETPLACE_EXTENSION_IDS.has(manifest.id),
+  );
+
+  const typescript = visibleExtensions.find((manifest) => manifest.id === "athas.typescript");
+  const tsx = extensions.find((manifest) => manifest.id === "athas.tsx");
+
+  if (!typescript || !tsx?.languages?.length) {
+    return visibleExtensions;
+  }
+
+  const mergedLanguages = [...(typescript.languages || [])];
+  const existingLanguageIds = new Set(mergedLanguages.map((lang) => lang.id));
+
+  for (const language of tsx.languages) {
+    if (!existingLanguageIds.has(language.id)) {
+      mergedLanguages.push({
+        ...language,
+        extensions: [...language.extensions],
+        aliases: language.aliases ? [...language.aliases] : undefined,
+        filenames: language.filenames ? [...language.filenames] : undefined,
+      });
+      existingLanguageIds.add(language.id);
+    }
+  }
+
+  const mergedActivationEvents = Array.from(
+    new Set([...(typescript.activationEvents || []), ...(tsx.activationEvents || [])]),
+  );
+
+  return visibleExtensions.map((manifest) =>
+    manifest.id === typescript.id
+      ? {
+          ...manifest,
+          languages: mergedLanguages,
+          activationEvents: mergedActivationEvents,
+        }
+      : manifest,
+  );
+}
+
 /**
  * Helper function to register a language provider with the ExtensionManager.
  * This consolidates the registration logic used in both loadInstalledExtensions and installExtension.
@@ -64,15 +109,16 @@ async function registerLanguageProvider(params: {
 }): Promise<void> {
   const { extensionId, languageId, displayName, version, extensions, aliases } = params;
   const { extensionManager } = await import("@/features/editor/extensions/manager");
+  const runtimeExtensionId = `${extensionId}:${languageId}`;
 
-  if (extensionManager.isExtensionLoaded(extensionId)) {
+  if (extensionManager.isExtensionLoaded(runtimeExtensionId)) {
     return;
   }
 
   const { tokenizeCode, convertToEditorTokens } = await import("@/features/editor/lib/wasm-parser");
 
   const languageExtension = {
-    id: extensionId,
+    id: runtimeExtensionId,
     displayName,
     version,
     category: "language",
@@ -249,7 +295,9 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
         try {
           // Load language extensions from packager (all installable from server)
-          const extensions: ExtensionManifest[] = getPackagedLanguageExtensions();
+          const extensions: ExtensionManifest[] = mergeMarketplaceLanguageExtensions(
+            getPackagedLanguageExtensions(),
+          );
 
           // Check which extensions are installed
           const installed = get().installedExtensions;
@@ -445,30 +493,38 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
         try {
           if (extension.manifest.languages && extension.manifest.languages.length > 0) {
-            const languageConfig = extension.manifest.languages[0];
-            const languageId = languageConfig.id;
+            const languageConfigs = extension.manifest.languages;
+            const languageCount = languageConfigs.length;
 
-            const wasmUrl =
-              extension.manifest.installation.downloadUrl || getWasmUrlForLanguage(languageId);
-            const highlightQueryUrl =
-              getHighlightQueryUrlForExtension(extension.manifest) ||
-              `${wasmUrl.replace(/parser\.wasm$/, "highlights.scm")}`;
+            for (const [index, languageConfig] of languageConfigs.entries()) {
+              const languageId = languageConfig.id;
+              const wasmUrl = getWasmUrlForLanguage(languageId);
+              const highlightQueryUrl =
+                getHighlightQueryUrl(languageId) ||
+                getHighlightQueryUrlForExtension(extension.manifest) ||
+                `${wasmUrl.replace(/parser\.wasm$/, "highlights.scm")}`;
 
-            await extensionInstaller.installLanguage(languageId, wasmUrl, highlightQueryUrl, {
-              extensionId,
-              version: extension.manifest.version,
-              checksum: extension.manifest.installation.checksum || "",
-              onProgress: (progress) => {
-                set((state) => {
-                  const ext = state.availableExtensions.get(extensionId);
-                  if (ext) {
-                    ext.installProgress = progress.percentage;
-                  }
-                });
-              },
-            });
+              await extensionInstaller.installLanguage(languageId, wasmUrl, highlightQueryUrl, {
+                extensionId,
+                version: extension.manifest.version,
+                checksum: extension.manifest.installation.checksum || "",
+                onProgress: (progress) => {
+                  const completedLanguages = index * 100;
+                  const normalizedProgress =
+                    (completedLanguages + progress.percentage) / languageCount;
 
-            const toolPaths = await resolveToolPaths(languageId, { ensureInstalled: true });
+                  set((state) => {
+                    const ext = state.availableExtensions.get(extensionId);
+                    if (ext) {
+                      ext.installProgress = normalizedProgress;
+                    }
+                  });
+                },
+              });
+            }
+
+            const primaryLanguageId = languageConfigs[0].id;
+            const toolPaths = await resolveToolPaths(primaryLanguageId, { ensureInstalled: true });
             const runtimeManifest = buildRuntimeManifest(extension.manifest, toolPaths);
             extensionRegistry.registerExtension(runtimeManifest, {
               isBundled: false,
@@ -495,14 +551,16 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               state.availableExtensions = new Map(state.availableExtensions);
             });
 
-            await registerLanguageProvider({
-              extensionId,
-              languageId,
-              displayName: extension.manifest.displayName,
-              version: extension.manifest.version,
-              extensions: languageConfig.extensions,
-              aliases: languageConfig.aliases,
-            });
+            for (const languageConfig of languageConfigs) {
+              await registerLanguageProvider({
+                extensionId,
+                languageId: languageConfig.id,
+                displayName: extension.manifest.displayName,
+                version: extension.manifest.version,
+                extensions: languageConfig.extensions,
+                aliases: languageConfig.aliases,
+              });
+            }
 
             const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
             const bufferState = useBufferStore.getState();
@@ -566,14 +624,25 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         try {
           // Check if this is a language extension
           if (extension.manifest.languages && extension.manifest.languages.length > 0) {
-            const languageId = extension.manifest.languages[0].id;
+            const languageIds = extension.manifest.languages.map((language) => language.id);
 
-            // Uninstall using extension installer (removes from IndexedDB)
-            await extensionInstaller.uninstallLanguage(languageId);
+            // Uninstall all languages for this extension (removes from IndexedDB)
+            await Promise.all(
+              languageIds.map(async (languageId) => {
+                wasmParserLoader.unloadParser(languageId);
+                await extensionInstaller.uninstallLanguage(languageId);
+              }),
+            );
 
             // Also unload from extension manager if loaded
             const { extensionManager } = await import("@/features/editor/extensions/manager");
             try {
+              await Promise.all(
+                languageIds.map((languageId) =>
+                  extensionManager.unloadLanguageExtension(`${extensionId}:${languageId}`),
+                ),
+              );
+              // Backward compatibility for previously loaded single-id providers.
               await extensionManager.unloadLanguageExtension(extensionId);
             } catch (error) {
               console.warn(`Failed to unload language extension ${extensionId}:`, error);
@@ -663,21 +732,29 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           throw new Error(`Extension ${extensionId} not found or has no languages`);
         }
 
-        const languageId = extension.manifest.languages[0].id;
+        const languageIds = extension.manifest.languages.map((language) => language.id);
 
         // Unload from memory
         const { extensionManager } = await import("@/features/editor/extensions/manager");
         try {
+          await Promise.all(
+            languageIds.map((languageId) =>
+              extensionManager.unloadLanguageExtension(`${extensionId}:${languageId}`),
+            ),
+          );
+          // Backward compatibility for previously loaded single-id providers.
           await extensionManager.unloadLanguageExtension(extensionId);
         } catch {
           // May not be loaded
         }
 
-        // Unload parser from memory
-        wasmParserLoader.unloadParser(languageId);
-
-        // Delete from IndexedDB
-        await extensionInstaller.uninstallLanguage(languageId);
+        // Unload parsers from memory and delete from IndexedDB
+        await Promise.all(
+          languageIds.map(async (languageId) => {
+            wasmParserLoader.unloadParser(languageId);
+            await extensionInstaller.uninstallLanguage(languageId);
+          }),
+        );
         extensionRegistry.unregisterExtension(extensionId);
 
         // Remove from updates set

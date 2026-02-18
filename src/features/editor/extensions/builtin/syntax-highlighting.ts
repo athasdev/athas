@@ -11,7 +11,7 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   js: "javascript",
   mjs: "javascript",
   cjs: "javascript",
-  jsx: "typescriptreact",
+  jsx: "javascript",
   ts: "typescript",
   tsx: "typescriptreact",
   py: "python",
