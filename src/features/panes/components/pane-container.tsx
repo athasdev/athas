@@ -10,15 +10,31 @@ import { EmptyEditorState } from "../../layout/components/empty-editor-state";
 import { usePaneStore } from "../stores/pane-store";
 import type { PaneGroup } from "../types/pane";
 
-const AgentTab = lazy(() => import("@/features/ai/components/agent-tab").then(m => ({ default: m.AgentTab })));
+const AgentTab = lazy(() =>
+  import("@/features/ai/components/agent-tab").then((m) => ({ default: m.AgentTab })),
+);
 const SQLiteViewer = lazy(() => import("@/features/database/providers/sqlite/sqlite-viewer"));
-const ExternalEditorTerminal = lazy(() => import("@/features/editor/components/external-editor-terminal").then(m => ({ default: m.ExternalEditorTerminal })));
+const ExternalEditorTerminal = lazy(() =>
+  import("@/features/editor/components/external-editor-terminal").then((m) => ({
+    default: m.ExternalEditorTerminal,
+  })),
+);
 const DiffViewer = lazy(() => import("@/features/git/components/diff/viewer"));
 const PRViewer = lazy(() => import("@/features/github/components/pr-viewer"));
-const ImageViewer = lazy(() => import("@/features/image-viewer/components/image-viewer").then(m => ({ default: m.ImageViewer })));
-const PdfViewer = lazy(() => import("@/features/pdf-viewer/components/pdf-viewer").then(m => ({ default: m.PdfViewer })));
-const TerminalTab = lazy(() => import("@/features/terminal/components/terminal-tab").then(m => ({ default: m.TerminalTab })));
-const WebViewer = lazy(() => import("@/features/web-viewer/components/web-viewer").then(m => ({ default: m.WebViewer })));
+const ImageViewer = lazy(() =>
+  import("@/features/image-viewer/components/image-viewer").then((m) => ({
+    default: m.ImageViewer,
+  })),
+);
+const PdfViewer = lazy(() =>
+  import("@/features/pdf-viewer/components/pdf-viewer").then((m) => ({ default: m.PdfViewer })),
+);
+const TerminalTab = lazy(() =>
+  import("@/features/terminal/components/terminal-tab").then((m) => ({ default: m.TerminalTab })),
+);
+const WebViewer = lazy(() =>
+  import("@/features/web-viewer/components/web-viewer").then((m) => ({ default: m.WebViewer })),
+);
 
 interface PaneContainerProps {
   pane: PaneGroup;
@@ -344,89 +360,91 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         {!activeBuffer && <EmptyEditorState />}
 
         <Suspense fallback={null}>
-        {paneBuffers
-          .filter((b) => b.isTerminal && b.terminalSessionId)
-          .map((buffer) => (
-            <div
-              key={buffer.id}
-              className={buffer.id === pane.activeBufferId ? "h-full" : "hidden"}
-            >
-              <TerminalTab
-                sessionId={buffer.terminalSessionId!}
-                bufferId={buffer.id}
-                initialCommand={buffer.terminalInitialCommand}
-                workingDirectory={buffer.terminalWorkingDirectory}
-                isActive={buffer.id === pane.activeBufferId && isActivePane}
-              />
-            </div>
-          ))}
-
-        {paneBuffers
-          .filter((b) => b.isWebViewer && b.webViewerUrl)
-          .map((buffer) => (
-            <div
-              key={buffer.id}
-              className={buffer.id === pane.activeBufferId ? "h-full" : "hidden"}
-            >
-              <WebViewer
-                url={buffer.webViewerUrl!}
-                bufferId={buffer.id}
-                isActive={buffer.id === pane.activeBufferId && isActivePane}
-              />
-            </div>
-          ))}
-
-        {paneBuffers
-          .filter((b) => b.isAgent)
-          .map((buffer) => (
-            <div
-              key={buffer.id}
-              className={buffer.id === pane.activeBufferId ? "h-full" : "hidden"}
-            >
-              <AgentTab />
-            </div>
-          ))}
-
-        {activeBuffer &&
-          !activeBuffer.isTerminal &&
-          !activeBuffer.isWebViewer &&
-          !activeBuffer.isAgent &&
-          (() => {
-            if (activeBuffer.isDiff) {
-              return <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />;
-            } else if (activeBuffer.isPullRequest && activeBuffer.prNumber) {
-              return <PRViewer prNumber={activeBuffer.prNumber} />;
-            } else if (activeBuffer.isImage) {
-              return (
-                <ImageViewer
-                  filePath={activeBuffer.path}
-                  fileName={activeBuffer.name}
-                  bufferId={activeBuffer.id}
+          {paneBuffers
+            .filter((b) => b.isTerminal && b.terminalSessionId)
+            .map((buffer) => (
+              <div
+                key={buffer.id}
+                className={buffer.id === pane.activeBufferId ? "h-full" : "hidden"}
+              >
+                <TerminalTab
+                  sessionId={buffer.terminalSessionId!}
+                  bufferId={buffer.id}
+                  initialCommand={buffer.terminalInitialCommand}
+                  workingDirectory={buffer.terminalWorkingDirectory}
+                  isActive={buffer.id === pane.activeBufferId && isActivePane}
                 />
-              );
-            } else if (activeBuffer.isPdf) {
-              return (
-                <PdfViewer
-                  filePath={activeBuffer.path}
-                  fileName={activeBuffer.name}
-                  bufferId={activeBuffer.id}
+              </div>
+            ))}
+
+          {paneBuffers
+            .filter((b) => b.isWebViewer && b.webViewerUrl)
+            .map((buffer) => (
+              <div
+                key={buffer.id}
+                className={buffer.id === pane.activeBufferId ? "h-full" : "hidden"}
+              >
+                <WebViewer
+                  url={buffer.webViewerUrl!}
+                  bufferId={buffer.id}
+                  isActive={buffer.id === pane.activeBufferId && isActivePane}
                 />
-              );
-            } else if (activeBuffer.isSQLite) {
-              return <SQLiteViewer databasePath={activeBuffer.path} />;
-            } else if (activeBuffer.isExternalEditor && activeBuffer.terminalConnectionId) {
-              return (
-                <ExternalEditorTerminal
-                  filePath={activeBuffer.path}
-                  fileName={activeBuffer.name}
-                  terminalConnectionId={activeBuffer.terminalConnectionId}
-                  onEditorExit={handleExternalEditorExit}
-                />
-              );
-            } else {
-              return <CodeEditor paneId={pane.id} bufferId={activeBuffer.id} />;
-            }
-          })()}
+              </div>
+            ))}
+
+          {paneBuffers
+            .filter((b) => b.isAgent)
+            .map((buffer) => (
+              <div
+                key={buffer.id}
+                className={buffer.id === pane.activeBufferId ? "h-full" : "hidden"}
+              >
+                <AgentTab />
+              </div>
+            ))}
+
+          {activeBuffer &&
+            !activeBuffer.isTerminal &&
+            !activeBuffer.isWebViewer &&
+            !activeBuffer.isAgent &&
+            (() => {
+              if (activeBuffer.isDiff) {
+                return (
+                  <DiffViewer onStageHunk={handleStageHunk} onUnstageHunk={handleUnstageHunk} />
+                );
+              } else if (activeBuffer.isPullRequest && activeBuffer.prNumber) {
+                return <PRViewer prNumber={activeBuffer.prNumber} />;
+              } else if (activeBuffer.isImage) {
+                return (
+                  <ImageViewer
+                    filePath={activeBuffer.path}
+                    fileName={activeBuffer.name}
+                    bufferId={activeBuffer.id}
+                  />
+                );
+              } else if (activeBuffer.isPdf) {
+                return (
+                  <PdfViewer
+                    filePath={activeBuffer.path}
+                    fileName={activeBuffer.name}
+                    bufferId={activeBuffer.id}
+                  />
+                );
+              } else if (activeBuffer.isSQLite) {
+                return <SQLiteViewer databasePath={activeBuffer.path} />;
+              } else if (activeBuffer.isExternalEditor && activeBuffer.terminalConnectionId) {
+                return (
+                  <ExternalEditorTerminal
+                    filePath={activeBuffer.path}
+                    fileName={activeBuffer.name}
+                    terminalConnectionId={activeBuffer.terminalConnectionId}
+                    onEditorExit={handleExternalEditorExit}
+                  />
+                );
+              } else {
+                return <CodeEditor paneId={pane.id} bufferId={activeBuffer.id} />;
+              }
+            })()}
         </Suspense>
       </div>
     </div>

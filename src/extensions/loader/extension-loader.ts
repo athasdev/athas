@@ -248,9 +248,7 @@ class ExtensionLoader {
     // Load all extensions from registry
     const extensions = extensionRegistry.getAllExtensions();
 
-    const results = await Promise.allSettled(
-      extensions.map((ext) => this.loadExtension(ext)),
-    );
+    const results = await Promise.allSettled(extensions.map((ext) => this.loadExtension(ext)));
 
     for (let i = 0; i < results.length; i++) {
       const result = results[i];

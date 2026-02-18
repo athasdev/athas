@@ -9,6 +9,7 @@ import { FontStyleInjector } from "@/features/settings/components/font-style-inj
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 
 const UpdateDialog = lazy(() => import("@/features/settings/components/update-dialog"));
+
 import { useContextMenuPrevention } from "@/features/window/hooks/use-context-menu-prevention";
 import { useFontLoading } from "@/features/window/hooks/use-font-loading";
 import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
