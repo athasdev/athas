@@ -19,6 +19,7 @@ jobs:
           envs: EXTENSIONS_CDN_ROOT
           script: |
             set -e
+            git config --global --add safe.directory /srv/athas
             cd /srv/athas
             git pull
             /root/.bun/bin/bun scripts/build-extensions-index.ts
