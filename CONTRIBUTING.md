@@ -31,6 +31,9 @@ bun tauri dev
 3. App runs: `bun tauri dev`
 4. Rebase on master: `git rebase origin/master`
 5. Squash commits into logical units
+6. Review and agree to the [Code of Conduct](CODE_OF_CONDUCT.md)
+7. Review and agree to the
+   [Contributor License and Feedback Agreement](CONTRIBUTOR_LICENSE_AND_FEEDBACK_AGREEMENT.md)
 
 ## Guidelines
 
