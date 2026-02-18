@@ -28,6 +28,7 @@ futures-util = "0.3"
 git2 = { version = "0.20", features = ["vendored-openssl"] }
 interceptor = { path = "./packages/interceptor" }
 lazy_static = "1.4"
+mimalloc = { version = "0.1", default-features = false }
 log = "0.4.27"
 lsp-types = { version = "0.95", features = ["proposed"] }
 notify = "8.1.0"

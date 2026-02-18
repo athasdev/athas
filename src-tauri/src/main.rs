@@ -1,6 +1,9 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 use commands::*;
 use features::{AcpAgentBridge, ClaudeCodeBridge, FileWatcher};
 use log::{debug, info};
