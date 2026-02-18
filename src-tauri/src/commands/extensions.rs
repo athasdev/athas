@@ -7,6 +7,42 @@ use std::{
    path::{Path, PathBuf},
 };
 use tauri::{AppHandle, Runtime, command};
+use url::Url;
+
+fn validate_extension_id(extension_id: &str) -> Result<(), String> {
+   if extension_id.is_empty() || extension_id.len() > 128 {
+      return Err("Invalid extension id length".to_string());
+   }
+   if extension_id.contains("..") || extension_id.contains('/') || extension_id.contains('\\') {
+      return Err("Invalid extension id path characters".to_string());
+   }
+   if !extension_id
+      .chars()
+      .all(|ch| ch.is_ascii_alphanumeric() || ch == '.' || ch == '_' || ch == '-')
+   {
+      return Err("Invalid extension id characters".to_string());
+   }
+   Ok(())
+}
+
+fn validate_extension_download_url(input: &str) -> Result<(), String> {
+   let parsed = Url::parse(input).map_err(|_| "Invalid extension download URL".to_string())?;
+   let host = parsed.host_str().unwrap_or_default();
+   match parsed.scheme() {
+      "https" => {
+         if !cfg!(debug_assertions) && !host.ends_with("athas.dev") {
+            return Err("Extension download host is not allowed".to_string());
+         }
+      }
+      "http" if cfg!(debug_assertions) => {
+         if host != "localhost" && host != "127.0.0.1" {
+            return Err("Insecure extension download URL is not allowed".to_string());
+         }
+      }
+      _ => return Err("Extension download URL must use HTTPS".to_string()),
+   }
+   Ok(())
+}
 
 #[command]
 pub async fn download_extension(
@@ -14,6 +50,9 @@ pub async fn download_extension(
    extension_id: String,
    checksum: String,
 ) -> Result<String, String> {
+   validate_extension_id(&extension_id)?;
+   validate_extension_download_url(&url)?;
+
    // Get extensions directory
    let extensions_dir = get_extensions_dir()?;
    let download_dir = extensions_dir.join("downloads");
@@ -68,13 +107,18 @@ pub async fn download_extension(
 
 #[command]
 pub fn install_extension(extension_id: String, package_path: String) -> Result<(), String> {
+   validate_extension_id(&extension_id)?;
+
    // Get extensions directory
    let extensions_dir = get_extensions_dir()?;
    let installed_dir = extensions_dir.join("installed");
+   let download_dir = extensions_dir.join("downloads");
 
    // Create installed directory if it doesn't exist
    fs::create_dir_all(&installed_dir)
       .map_err(|e| format!("Failed to create installed directory: {}", e))?;
+   fs::create_dir_all(&download_dir)
+      .map_err(|e| format!("Failed to create downloads directory: {}", e))?;
 
    // Create extension directory
    let extension_dir = installed_dir.join(&extension_id);
@@ -83,19 +127,28 @@ pub fn install_extension(extension_id: String, package_path: String) -> Result<(
 
    // Copy WASM file to installed directory
    let source_path = Path::new(&package_path);
+   let canonical_source = fs::canonicalize(source_path)
+      .map_err(|e| format!("Failed to resolve extension package path: {}", e))?;
+   let canonical_download_dir = fs::canonicalize(&download_dir)
+      .map_err(|e| format!("Failed to resolve downloads directory: {}", e))?;
+   if !canonical_source.starts_with(&canonical_download_dir) {
+      return Err("Extension package path is outside the downloads directory".to_string());
+   }
    let target_path = extension_dir.join("extension.wasm");
 
-   fs::copy(source_path, &target_path)
+   fs::copy(&canonical_source, &target_path)
       .map_err(|e| format!("Failed to copy extension file: {}", e))?;
 
    // Clean up download
-   fs::remove_file(source_path).ok();
+   fs::remove_file(&canonical_source).ok();
 
    Ok(())
 }
 
 #[command]
 pub fn uninstall_extension(extension_id: String) -> Result<(), String> {
+   validate_extension_id(&extension_id)?;
+
    // Get extensions directory
    let extensions_dir = get_extensions_dir()?;
    let installed_dir = extensions_dir.join("installed");
@@ -206,6 +259,9 @@ pub async fn install_extension_from_url(
    checksum: String,
    size: u64,
 ) -> Result<(), String> {
+   validate_extension_id(&extension_id)?;
+   validate_extension_download_url(&url)?;
+
    log::info!("Installing extension {} from {}", extension_id, url);
 
    let installer = ExtensionInstaller::new(app_handle)
@@ -225,6 +281,8 @@ pub async fn install_extension_from_url(
 
 #[command]
 pub fn uninstall_extension_new(app_handle: AppHandle, extension_id: String) -> Result<(), String> {
+   validate_extension_id(&extension_id)?;
+
    log::info!("Uninstalling extension {}", extension_id);
 
    let installer = ExtensionInstaller::new(app_handle)
@@ -249,6 +307,8 @@ pub fn list_installed_extensions_new(
 
 #[command]
 pub fn get_extension_path(app_handle: AppHandle, extension_id: String) -> Result<String, String> {
+   validate_extension_id(&extension_id)?;
+
    log::info!("Getting path for extension {}", extension_id);
 
    let installer = ExtensionInstaller::new(app_handle)
@@ -336,5 +396,40 @@ mod tests {
          "Debug path should have structure .../src/extensions/bundled, got: {}",
          path_str
       );
+   }
+
+   #[test]
+   fn test_validate_extension_id_accepts_safe_ids() {
+      assert!(validate_extension_id("language.typescript").is_ok());
+      assert!(validate_extension_id("icon-theme_material").is_ok());
+      assert!(validate_extension_id("theme-1").is_ok());
+   }
+
+   #[test]
+   fn test_validate_extension_id_rejects_unsafe_ids() {
+      assert!(validate_extension_id("../evil").is_err());
+      assert!(validate_extension_id("evil/path").is_err());
+      assert!(validate_extension_id("evil\\path").is_err());
+      assert!(validate_extension_id("evil*id").is_err());
+      assert!(validate_extension_id("").is_err());
+   }
+
+   #[test]
+   fn test_validate_extension_download_url_rejects_unsafe_schemes() {
+      assert!(validate_extension_download_url("file:///tmp/evil.tar.gz").is_err());
+      assert!(validate_extension_download_url("javascript:alert(1)").is_err());
+      assert!(validate_extension_download_url("ftp://example.com/ext.tar.gz").is_err());
+   }
+
+   #[test]
+   fn test_validate_extension_download_url_accepts_expected_hosts() {
+      assert!(validate_extension_download_url("https://athas.dev/extensions/test.tar.gz").is_ok());
+      assert!(
+         validate_extension_download_url("https://cdn.athas.dev/extensions/test.tar.gz").is_ok()
+      );
+
+      if cfg!(debug_assertions) {
+         assert!(validate_extension_download_url("http://localhost:3000/test.tar.gz").is_ok());
+      }
    }
 }

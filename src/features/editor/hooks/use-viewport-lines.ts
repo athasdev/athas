@@ -17,6 +17,9 @@ interface UseViewportLinesOptions {
   bufferLines?: number;
 }
 
+const LARGE_FILE_VIEWPORT_THRESHOLD = 20000;
+const LARGE_FILE_SIGNIFICANT_LINE_DIFF = 40;
+
 export function useViewportLines(options: UseViewportLinesOptions) {
   const { lineHeight, bufferLines = EDITOR_CONSTANTS.VIEWPORT_BUFFER_LINES } = options;
 
@@ -62,10 +65,14 @@ export function useViewportLines(options: UseViewportLinesOptions) {
       setViewportRange((prev) => {
         const startLineDiff = Math.abs(newRange.startLine - prev.startLine);
         const endLineDiff = Math.abs(newRange.endLine - prev.endLine);
+        const significantDiffThreshold =
+          totalLines >= LARGE_FILE_VIEWPORT_THRESHOLD
+            ? LARGE_FILE_SIGNIFICANT_LINE_DIFF
+            : EDITOR_CONSTANTS.SIGNIFICANT_LINE_DIFF;
 
         if (
-          startLineDiff > EDITOR_CONSTANTS.SIGNIFICANT_LINE_DIFF ||
-          endLineDiff > EDITOR_CONSTANTS.SIGNIFICANT_LINE_DIFF ||
+          startLineDiff > significantDiffThreshold ||
+          endLineDiff > significantDiffThreshold ||
           newRange.totalLines !== prev.totalLines
         ) {
           return newRange;

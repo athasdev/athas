@@ -2,6 +2,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://athas.dev";
+const DESKTOP_AUTH_POLL_INTERVAL_MS = 1500;
+const DESKTOP_AUTH_TIMEOUT_MS = 5 * 60 * 1000;
+const DESKTOP_SESSION_SECRET_HEADER = "X-Desktop-Session-Secret";
 
 export interface AuthUser {
   id: number;
@@ -23,6 +26,30 @@ export interface SubscriptionInfo {
     trial_ends_at: string | null;
   } | null;
 }
+
+type DesktopAuthPollResponse =
+  | { status: "pending" }
+  | { status: "ready"; token: string }
+  | { status: "expired" }
+  | { status: "missing" };
+
+type DesktopAuthInitResponse = {
+  sessionId?: unknown;
+  pollSecret?: unknown;
+  loginUrl?: unknown;
+};
+
+export class DesktopAuthError extends Error {
+  code: "endpoint_unavailable" | "expired" | "timeout" | "failed";
+
+  constructor(code: DesktopAuthError["code"], message: string) {
+    super(message);
+    this.name = "DesktopAuthError";
+    this.code = code;
+  }
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Secure token storage via Rust backend
 export const getAuthToken = async (): Promise<string | null> => {
@@ -83,6 +110,147 @@ export async function logoutFromServer(): Promise<void> {
   }
 }
 
-export function getDesktopLoginUrl(): string {
-  return `${API_BASE}/auth/desktop`;
+export async function beginDesktopAuthSession(): Promise<{
+  sessionId: string;
+  pollSecret: string;
+  loginUrl: string;
+}> {
+  const response = await tauriFetch(`${API_BASE}/api/auth/desktop/session/init`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (response.status === 404) {
+    throw new DesktopAuthError(
+      "endpoint_unavailable",
+      "Desktop auth session endpoint is unavailable on this server.",
+    );
+  }
+
+  if (!response.ok) {
+    throw new DesktopAuthError(
+      "failed",
+      `Failed to initialize desktop sign-in (${response.status}).`,
+    );
+  }
+
+  const payload = (await response.json()) as DesktopAuthInitResponse;
+  const parsed = parseDesktopAuthInitResponse(payload);
+  if (!parsed) {
+    throw new DesktopAuthError("failed", "Invalid desktop sign-in initialization response.");
+  }
+
+  return parsed;
 }
+
+function parseDesktopAuthInitResponse(payload: unknown): {
+  sessionId: string;
+  pollSecret: string;
+  loginUrl: string;
+} | null {
+  if (!payload || typeof payload !== "object") return null;
+  const candidate = payload as {
+    sessionId?: unknown;
+    pollSecret?: unknown;
+    loginUrl?: unknown;
+  };
+
+  if (
+    typeof candidate.sessionId !== "string" ||
+    typeof candidate.pollSecret !== "string" ||
+    typeof candidate.loginUrl !== "string"
+  ) {
+    return null;
+  }
+
+  if (!candidate.sessionId || !candidate.pollSecret || !candidate.loginUrl) {
+    return null;
+  }
+
+  return {
+    sessionId: candidate.sessionId,
+    pollSecret: candidate.pollSecret,
+    loginUrl: candidate.loginUrl,
+  };
+}
+
+function parseDesktopAuthPollResponse(payload: unknown): DesktopAuthPollResponse | null {
+  if (!payload || typeof payload !== "object") return null;
+  const status = (payload as { status?: unknown }).status;
+  if (status === "pending" || status === "expired" || status === "missing") {
+    return { status };
+  }
+  if (status === "ready") {
+    const token = (payload as { token?: unknown }).token;
+    if (typeof token === "string" && token.length > 0) {
+      return { status: "ready", token };
+    }
+  }
+  return null;
+}
+
+export async function waitForDesktopAuthToken(
+  sessionId: string,
+  pollSecret: string,
+  timeoutMs = DESKTOP_AUTH_TIMEOUT_MS,
+): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const url = `${API_BASE}/api/auth/desktop/session?session=${encodeURIComponent(sessionId)}`;
+    const response = await tauriFetch(url, {
+      method: "GET",
+      headers: {
+        [DESKTOP_SESSION_SECRET_HEADER]: pollSecret,
+      },
+    });
+
+    if (response.status === 404) {
+      throw new DesktopAuthError(
+        "endpoint_unavailable",
+        "Desktop auth session endpoint is unavailable on this server.",
+      );
+    }
+
+    if (response.status === 410) {
+      throw new DesktopAuthError("expired", "Desktop sign-in session expired.");
+    }
+
+    if (!response.ok) {
+      throw new DesktopAuthError("failed", `Desktop sign-in failed (${response.status}).`);
+    }
+
+    const payload = await response.json();
+    const parsed = parseDesktopAuthPollResponse(payload);
+
+    if (!parsed) {
+      throw new DesktopAuthError("failed", "Invalid desktop sign-in response.");
+    }
+
+    if (parsed.status === "ready") {
+      return parsed.token;
+    }
+
+    if (parsed.status === "expired") {
+      throw new DesktopAuthError("expired", "Desktop sign-in session is no longer valid.");
+    }
+
+    if (parsed.status === "missing") {
+      throw new DesktopAuthError(
+        "failed",
+        "Desktop sign-in session credentials are invalid or the session has expired.",
+      );
+    }
+
+    await sleep(DESKTOP_AUTH_POLL_INTERVAL_MS);
+  }
+
+  throw new DesktopAuthError("timeout", "Desktop sign-in timed out. Please try again.");
+}
+
+export const __test__ = {
+  parseDesktopAuthInitResponse,
+  parseDesktopAuthPollResponse,
+};

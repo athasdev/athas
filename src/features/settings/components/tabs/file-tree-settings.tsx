@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
-import Section from "@/ui/section";
+import Section, { SettingRow } from "@/ui/section";
 import Textarea from "@/ui/textarea";
 
 export const FileTreeSettings = () => {
@@ -47,38 +47,40 @@ export const FileTreeSettings = () => {
 
   return (
     <div className="space-y-4">
-      <Section title="Hidden File Patterns" description="Comma-separated glob patterns">
-        <div className="flex flex-col gap-2">
+      <Section title="File Tree Settings">
+        <SettingRow
+          label="Hidden File Patterns"
+          description="Files matching these glob patterns will be hidden from the file tree"
+          className="flex-col items-start gap-2"
+        >
           <Textarea
             id="hiddenFilePatterns"
-            rows={4}
+            rows={3}
             value={filePatternsInput}
             onChange={handleFilePatternsChange}
             onBlur={handleFilePatternsBlur}
             placeholder="e.g., *.log, *.tmp, **/*.bak"
             size="sm"
+            className="w-full"
           />
-          <p className="text-text-lighter text-xs">
-            Files matching these glob patterns will be hidden from the file tree.
-          </p>
-        </div>
-      </Section>
+        </SettingRow>
 
-      <Section title="Hidden Directory Patterns" description="Comma-separated glob patterns">
-        <div className="flex flex-col gap-2">
+        <SettingRow
+          label="Hidden Directory Patterns"
+          description="Directories matching these glob patterns will be hidden from the file tree"
+          className="flex-col items-start gap-2"
+        >
           <Textarea
             id="hiddenDirectoryPatterns"
-            rows={4}
+            rows={3}
             value={directoryPatternsInput}
             onChange={handleDirectoryPatternsChange}
             onBlur={handleDirectoryPatternsBlur}
             placeholder="e.g., node_modules, .git, build/"
             size="sm"
+            className="w-full"
           />
-          <p className="text-text-lighter text-xs">
-            Directories matching these glob patterns will be hidden from the file tree.
-          </p>
-        </div>
+        </SettingRow>
       </Section>
     </div>
   );

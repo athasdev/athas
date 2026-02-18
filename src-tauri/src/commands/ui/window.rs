@@ -138,46 +138,6 @@ const SHORTCUT_INTERCEPTOR_SCRIPT: &str = r#"
 })();
 "#;
 
-/// React Grab script loader for localhost development URLs
-/// Includes both the main react-grab script and the Claude Code client
-const REACT_GRAB_SCRIPT: &str = r#"
-(function() {
-  if (window.__REACT_GRAB_LOADED__) return;
-  window.__REACT_GRAB_LOADED__ = true;
-
-  function loadScripts() {
-    var script1 = document.createElement('script');
-    script1.src = 'https://unpkg.com/react-grab/dist/index.global.js';
-    script1.crossOrigin = 'anonymous';
-
-    var script2 = document.createElement('script');
-    script2.src = 'https://unpkg.com/@react-grab/claude-code/dist/client.global.js';
-    script2.crossOrigin = 'anonymous';
-
-    // Load Claude Code client after main script loads
-    script1.onload = function() {
-      document.head.appendChild(script2);
-    };
-
-    document.head.appendChild(script1);
-  }
-
-  // Inject as early as possible
-  if (document.head) {
-    loadScripts();
-  } else {
-    // Wait for head to be available
-    var observer = new MutationObserver(function(mutations, obs) {
-      if (document.head) {
-        obs.disconnect();
-        loadScripts();
-      }
-    });
-    observer.observe(document.documentElement || document, { childList: true, subtree: true });
-  }
-})();
-"#;
-
 #[command]
 pub async fn create_embedded_webview(
    app: tauri::AppHandle,
@@ -225,9 +185,6 @@ pub async fn create_embedded_webview(
 
    // Inject shortcut interceptor script
    webview_builder = webview_builder.initialization_script(SHORTCUT_INTERCEPTOR_SCRIPT);
-
-   // Always inject react-grab script for web viewer
-   webview_builder = webview_builder.initialization_script(REACT_GRAB_SCRIPT);
 
    // Create embedded webview within the main window
    let webview = main_window

@@ -27,6 +27,7 @@ mod features;
 mod logger;
 mod lsp;
 mod menu;
+mod secure_storage;
 mod ssh;
 mod terminal;
 
@@ -76,12 +77,19 @@ fn main() {
          // Set up the file watcher
          app.manage(Arc::new(FileWatcher::new(app.handle().clone())));
 
+         // Set up terminal manager (shared between ACP and direct terminal usage)
+         let terminal_manager = Arc::new(TerminalManager::new());
+         app.manage(terminal_manager.clone());
+
          // Set up Claude bridge (legacy, kept for rollback)
          let claude_bridge = Arc::new(Mutex::new(ClaudeCodeBridge::new(app.handle().clone())));
          app.manage(claude_bridge.clone());
 
          // Set up ACP agent bridge (new implementation)
-         let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(app.handle().clone())));
+         let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(
+            app.handle().clone(),
+            terminal_manager,
+         )));
          app.manage(acp_bridge);
 
          // Set up LSP manager
@@ -275,7 +283,6 @@ fn main() {
 
          Ok(())
       })
-      .manage(Arc::new(TerminalManager::new()))
       .invoke_handler(tauri::generate_handler![
          // File system commands
          open_file_external,

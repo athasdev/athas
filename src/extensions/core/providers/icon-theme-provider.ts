@@ -24,6 +24,14 @@ class IconThemeProvider {
   private iconCache = new Map<string, string>(); // Cache loaded SVG content
   private changeListeners = new Set<() => void>();
 
+  private isSafeRelativeIconPath(iconPath: string): boolean {
+    if (!iconPath) return false;
+    if (iconPath.includes("..")) return false;
+    if (iconPath.startsWith("/") || iconPath.startsWith("\\")) return false;
+    if (iconPath.includes("://")) return false;
+    return true;
+  }
+
   /**
    * Set the active icon theme
    */
@@ -129,6 +137,11 @@ class IconThemeProvider {
     }
 
     if (!this.currentTheme) {
+      return null;
+    }
+
+    if (!this.isSafeRelativeIconPath(iconPath)) {
+      logger.warn("IconThemeProvider", `Rejected unsafe icon path: ${iconPath}`);
       return null;
     }
 

@@ -31,6 +31,13 @@ interface TokenCache {
   previousContent: string;
 }
 
+interface TextMetricsCache {
+  text: string;
+  normalizedText: string;
+  lineOffsets: number[];
+  lineCount: number;
+}
+
 /**
  * Map file extensions to Tree-sitter language IDs
  */
@@ -226,6 +233,7 @@ function convertToToken(highlightToken: HighlightToken): Token {
 }
 
 const FULL_TOKENIZE_INTERVAL = 30000; // Re-tokenize full document every 30 seconds
+const LARGE_FILE_LINE_THRESHOLD = 20000; // Use viewport-only strategy for very large files
 
 export function useTokenizer({
   filePath,
@@ -241,8 +249,27 @@ export function useTokenizer({
     lastFullTokenizeTime: 0,
     previousContent: "",
   });
+  const textMetricsRef = useRef<TextMetricsCache | null>(null);
   const treeCacheActions = useTreeCacheStore.use.actions();
   const { startMeasure, endMeasure } = usePerformanceMonitor("Tokenizer");
+
+  const getTextMetrics = useCallback((text: string): TextMetricsCache => {
+    const cached = textMetricsRef.current;
+    if (cached && cached.text === text) {
+      return cached;
+    }
+
+    const normalizedText = normalizeLineEndings(text);
+    const lineOffsets = buildLineOffsetMap(text);
+    const nextMetrics: TextMetricsCache = {
+      text,
+      normalizedText,
+      lineOffsets,
+      lineCount: lineOffsets.length,
+    };
+    textMetricsRef.current = nextMetrics;
+    return nextMetrics;
+  }, []);
 
   /**
    * Tokenize the full document using WASM parser
@@ -326,11 +353,60 @@ export function useTokenizer({
 
       startMeasure("tokenizeRangeInternal");
 
-      const lineCount = text.split("\n").length;
+      const { normalizedText, lineOffsets, lineCount } = getTextMetrics(text);
 
       // For small files, always tokenize fully
       if (lineCount < EDITOR_CONSTANTS.SMALL_FILE_THRESHOLD) {
         return tokenizeFull(text);
+      }
+
+      // For very large files, keep tokenization strictly viewport-scoped to avoid
+      // repeatedly merging/sorting huge token arrays while scrolling.
+      if (lineCount >= LARGE_FILE_LINE_THRESHOLD) {
+        setLoading(true);
+        try {
+          const cached = await indexedDBParserCache.get(languageId);
+          const queryFolder = getQueryFolder(languageId);
+          const wasmPath = cached?.sourceUrl || `/extensions/${queryFolder}/parser.wasm`;
+          const highlightQuery = cached
+            ? await resolveHighlightQueryFromCache(languageId, cached)
+            : await resolveHighlightQueryFromLocal(languageId);
+
+          const clampedStartLine = Math.max(0, Math.min(viewportRange.startLine, lineCount - 1));
+          const clampedEndLine = Math.max(
+            clampedStartLine + 1,
+            Math.min(viewportRange.endLine, lineCount),
+          );
+
+          const highlightTokens = await wasmTokenizeRange(
+            text,
+            languageId,
+            clampedStartLine,
+            clampedEndLine,
+            {
+              languageId,
+              wasmPath,
+              highlightQuery,
+            },
+          );
+
+          const rangeTokens = highlightTokens.map(convertToToken);
+          setTokens(rangeTokens);
+          setTokenizedContent(normalizedText);
+          cacheRef.current = {
+            fullTokens: rangeTokens,
+            lastFullTokenizeTime: Date.now(),
+            previousContent: normalizedText,
+          };
+        } catch (error) {
+          logger.warn("Editor", "[Tokenizer] Large-file viewport tokenization failed:", error);
+          setTokens([]);
+          setTokenizedContent(normalizedText);
+        } finally {
+          setLoading(false);
+          endMeasure("tokenizeRangeInternal");
+        }
+        return;
       }
 
       // Check if we need a full re-tokenize (periodic refresh)
@@ -373,8 +449,6 @@ export function useTokenizer({
         // Merge with cached tokens from outside the viewport
         const { fullTokens } = cacheRef.current;
 
-        // Use cached line offset map for O(1) lookups instead of O(n) reduce
-        const lineOffsets = buildLineOffsetMap(text);
         const rangeStartOffset = lineOffsets[viewportRange.startLine] || 0;
         const rangeEndOffset = lineOffsets[viewportRange.endLine] || text.length;
 
@@ -388,7 +462,6 @@ export function useTokenizer({
           (a, b) => a.start - b.start,
         );
 
-        const normalizedText = normalizeLineEndings(text);
         setTokens(mergedTokens);
         setTokenizedContent(normalizedText);
 
@@ -407,7 +480,7 @@ export function useTokenizer({
         endMeasure("tokenizeRangeInternal");
       }
     },
-    [enabled, filePath, tokenizeFull],
+    [enabled, filePath, getTextMetrics, tokenizeFull],
   );
 
   /**

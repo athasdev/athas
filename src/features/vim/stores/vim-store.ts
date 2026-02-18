@@ -130,6 +130,21 @@ const useVimStoreBase = create(
           });
         },
 
+        enterVisualMode: (
+          visualMode: "char" | "line",
+          anchor: { line: number; column: number },
+        ) => {
+          set((state) => {
+            state.mode = "visual";
+            state.isCommandMode = false;
+            state.commandInput = "";
+            state.keyBuffer = [];
+            state.visualMode = visualMode;
+            state.visualSelection.start = anchor;
+            state.visualSelection.end = anchor;
+          });
+        },
+
         setLastKey: (key: string | null) => {
           set((state) => {
             state.lastKey = key;

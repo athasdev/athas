@@ -2,9 +2,14 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { CircleUser, CreditCard, ExternalLink, LogIn, LogOut } from "lucide-react";
 import { useRef, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
+import { toast } from "@/stores/toast-store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Tooltip from "@/ui/tooltip";
-import { getDesktopLoginUrl } from "@/utils/auth-api";
+import {
+  beginDesktopAuthSession,
+  DesktopAuthError,
+  waitForDesktopAuthToken,
+} from "@/utils/auth-api";
 import { cn } from "@/utils/cn";
 
 interface AccountMenuProps {
@@ -17,6 +22,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const subscription = useAuthStore((s) => s.subscription);
   const logout = useAuthStore((s) => s.logout);
+  const handleAuthCallback = useAuthStore((s) => s.handleAuthCallback);
 
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -33,7 +39,28 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
   };
 
   const handleSignIn = async () => {
-    await openUrl(getDesktopLoginUrl());
+    try {
+      const { sessionId, pollSecret, loginUrl } = await beginDesktopAuthSession();
+      if (import.meta.env.DEV) {
+        console.log("[Auth] Opening desktop login URL:", loginUrl);
+      }
+      await openUrl(loginUrl);
+      toast.info("Complete sign-in in your browser. Waiting for confirmation...");
+
+      const token = await waitForDesktopAuthToken(sessionId, pollSecret);
+      await handleAuthCallback(token);
+      toast.success("Signed in successfully!");
+    } catch (error) {
+      if (error instanceof DesktopAuthError && error.code === "endpoint_unavailable") {
+        toast.error(
+          "Desktop sign-in endpoint is unavailable on this server. Please use the local dev www server.",
+        );
+        return;
+      }
+
+      const message = error instanceof Error ? error.message : "Authentication failed.";
+      toast.error(message);
+    }
   };
 
   const handleSignOut = async () => {

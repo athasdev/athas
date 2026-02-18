@@ -4,6 +4,7 @@ import { KeybindingRow } from "@/features/keymaps/components/keybinding-row";
 import { useKeymapStore } from "@/features/keymaps/stores/store";
 import type { Keybinding } from "@/features/keymaps/types";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
+import { useToast } from "@/features/layout/contexts/toast-context";
 import Button from "@/ui/button";
 import Input from "@/ui/input";
 import { TableHeadCell, TableHeader } from "@/ui/table";
@@ -13,6 +14,7 @@ type FilterType = "all" | "user" | "default" | "extension";
 export const KeyboardSettings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
+  const { showToast } = useToast();
 
   const userKeybindings = useKeymapStore.use.keybindings();
   const { resetToDefaults } = useKeymapStore.use.actions();
@@ -52,6 +54,7 @@ export const KeyboardSettings = () => {
   const handleResetAll = () => {
     if (confirm("Are you sure you want to reset all keybindings to defaults?")) {
       resetToDefaults();
+      showToast({ message: "Keybindings reset to defaults", type: "success" });
     }
   };
 
@@ -80,7 +83,7 @@ export const KeyboardSettings = () => {
         const imported = JSON.parse(text) as Keybinding[];
 
         if (!Array.isArray(imported)) {
-          alert("Invalid keybindings file format");
+          showToast({ message: "Invalid keybindings file format", type: "error" });
           return;
         }
 
@@ -89,9 +92,9 @@ export const KeyboardSettings = () => {
           addKeybinding(binding);
         }
 
-        alert(`Imported ${imported.length} keybindings`);
+        showToast({ message: `Imported ${imported.length} keybindings`, type: "success" });
       } catch (error) {
-        alert(`Failed to import keybindings: ${error}`);
+        showToast({ message: `Failed to import keybindings: ${error}`, type: "error" });
       }
     };
     input.click();
