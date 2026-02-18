@@ -69,7 +69,22 @@ function getQueryFolder(languageId: string): string {
   return LOCAL_EXTENSION_FOLDER_BY_LANGUAGE[languageId] || languageId;
 }
 
-async function resolveHighlightQuery(languageId: string, cachedQuery?: string): Promise<string> {
+function getRemoteHighlightQueryUrl(sourceUrl?: string): string | null {
+  if (!sourceUrl) return null;
+
+  const cleanUrl = sourceUrl.split("?")[0];
+  if (!cleanUrl.endsWith("parser.wasm")) {
+    return null;
+  }
+
+  return cleanUrl.replace(/parser\.wasm$/, "highlights.scm");
+}
+
+async function resolveHighlightQuery(
+  languageId: string,
+  cachedQuery?: string,
+  sourceUrl?: string,
+): Promise<string> {
   const queryPath = `/extensions/${getQueryFolder(languageId)}/highlights.scm`;
   try {
     const response = await fetch(queryPath);
@@ -82,6 +97,22 @@ async function resolveHighlightQuery(languageId: string, cachedQuery?: string): 
   } catch {
     // Ignore and fallback to cache query
   }
+
+  const remoteQueryUrl = getRemoteHighlightQueryUrl(sourceUrl);
+  if (remoteQueryUrl) {
+    try {
+      const response = await fetch(remoteQueryUrl);
+      if (response.ok) {
+        const latest = await response.text();
+        if (latest.trim().length > 0) {
+          return latest;
+        }
+      }
+    } catch {
+      // Ignore and fallback to cache query
+    }
+  }
+
   return cachedQuery || "";
 }
 
@@ -246,7 +277,11 @@ class SyntaxHighlighter {
           const cached = await indexedDBParserCache.get(languageId);
           const queryFolder = getQueryFolder(languageId);
           const wasmPath = cached?.sourceUrl || `/extensions/${queryFolder}/parser.wasm`;
-          const highlightQuery = await resolveHighlightQuery(languageId, cached?.highlightQuery);
+          const highlightQuery = await resolveHighlightQuery(
+            languageId,
+            cached?.highlightQuery,
+            cached?.sourceUrl,
+          );
           const highlightTokens = await tokenizeCode(content, languageId, {
             languageId,
             wasmPath,
