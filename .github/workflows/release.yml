@@ -35,6 +35,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Free disk space (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          echo "Disk usage before cleanup:"
+          df -h
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
+          sudo docker system prune -af || true
+          sudo apt-get clean
+          echo "Disk usage after cleanup:"
+          df -h
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:

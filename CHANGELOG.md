@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-19
+
+### Added
+- Add authentication
+- Add split view editor panes and new tab view
+- Add planning mode in the AI agent pane
+- Add runtime language catalog with CDN deploy pipeline
+- Add .editorconfig integration
+- Add file copy/cut/paste with cross-window clipboard sharing
+- Add minimap toggle setting with keyboard shortcut
+- Add keyboard shortcuts for web viewer
+- Add find/replace, minimap, and multi-cursor improvements
+- Add Lua and Rust language support with runtime tooling infrastructure
+
+### Changed
+- Revamp Git interface and refactor git module internals
+- Merge TSX into TypeScript extension flow in marketplace and installer
+- Drive Ruby/ERB detection from extension metadata
+- Refresh theme system and align terminal and UI styling
+- Improve AI chat UI and ACP protocol integration
+- Modularize editor styles into feature-based modules
+- Move docs to Fumadocs and refresh documentation workflows
+- Remove bundled language extensions in favor of manifest-driven installs
+- Remove GitHub Copilot integration
+
+### Fixed
+- Fix memory leaks, reduce I/O overhead, and improve editor/runtime performance
+- Fix deploy workflow safe.directory handling and dirty worktree pull behavior
+- Fix editor view reset when switching to uncached files
+- Fix tab sync, hover lifecycle, and open-file reliability
+- Fix language extension installation and update flow
+- Fix find-in-file navigation and highlight positioning
+- Fix extension store persistence for installed extensions
+- Fix app freeze on large commit diffs
+- Fix terminal toggle keybinding on macOS
+- Fix viewport behavior with zoom-level adjustments
+- Fix right sidebar slow open when terminal is active
+- Fix tokenizer bypass by validating extension installation state
+- Fix broken links on docs index
+
+### Security
+- Apply desktop auth and autocomplete security hardening with additional tests
+
 ## [0.3.2] - 2026-01-13
 
 ### Added
@@ -233,6 +276,7 @@ Initial release
 
 ---
 
+[0.4.0]: https://github.com/athasdev/athas/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/athasdev/athas/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/athasdev/athas/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/athasdev/athas/compare/v0.2.6...v0.3.0

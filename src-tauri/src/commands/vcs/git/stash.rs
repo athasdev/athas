@@ -73,12 +73,12 @@ fn _git_create_stash(
       args.push(msg);
    }
 
-   if let Some(ref file_list) = files {
-      if !file_list.is_empty() {
-         args.push("--");
-         for file in file_list {
-            args.push(file);
-         }
+   if let Some(ref file_list) = files
+      && !file_list.is_empty()
+   {
+      args.push("--");
+      for file in file_list {
+         args.push(file);
       }
    }
 

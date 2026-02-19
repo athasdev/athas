@@ -1,6 +1,10 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { convertToEditorTokens, tokenizeCode, wasmParserLoader } from "../../lib/wasm-parser";
 import { indexedDBParserCache } from "../../lib/wasm-parser/cache-indexeddb";
+import {
+  fetchHighlightQuery,
+  getDefaultParserWasmUrl,
+} from "../../lib/wasm-parser/extension-assets";
 import { useBufferStore } from "../../stores/buffer-store";
 import type { Change } from "../../types/editor";
 import { logger } from "../../utils/logger";
@@ -58,32 +62,16 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   vue: "vue",
 };
 
-const LOCAL_EXTENSION_FOLDER_BY_LANGUAGE: Record<string, string> = {
-  javascript: "tsx",
-  javascriptreact: "tsx",
-  typescript: "tsx",
-  typescriptreact: "tsx",
-  csharp: "c_sharp",
-};
-
-function getQueryFolder(languageId: string): string {
-  return LOCAL_EXTENSION_FOLDER_BY_LANGUAGE[languageId] || languageId;
-}
-
-async function resolveHighlightQuery(languageId: string, cachedQuery?: string): Promise<string> {
-  const queryPath = `/extensions/${getQueryFolder(languageId)}/highlights.scm`;
-  try {
-    const response = await fetch(queryPath);
-    if (response.ok) {
-      const latest = await response.text();
-      if (latest.trim().length > 0) {
-        return latest;
-      }
-    }
-  } catch {
-    // Ignore and fallback to cache query
-  }
-  return cachedQuery || "";
+async function resolveHighlightQuery(
+  languageId: string,
+  options: { cachedQuery?: string; wasmUrl?: string },
+): Promise<string> {
+  const { cachedQuery, wasmUrl } = options;
+  const { query } = await fetchHighlightQuery(languageId, {
+    wasmUrl,
+    cacheMode: "no-store",
+  });
+  return query || cachedQuery || "";
 }
 
 class SyntaxHighlighter {
@@ -246,9 +234,11 @@ class SyntaxHighlighter {
       } else {
         try {
           const cached = await indexedDBParserCache.get(languageId);
-          const queryFolder = getQueryFolder(languageId);
-          const wasmPath = cached?.sourceUrl || `/extensions/${queryFolder}/parser.wasm`;
-          const highlightQuery = await resolveHighlightQuery(languageId, cached?.highlightQuery);
+          const wasmPath = cached?.sourceUrl || getDefaultParserWasmUrl(languageId);
+          const highlightQuery = await resolveHighlightQuery(languageId, {
+            cachedQuery: cached?.highlightQuery,
+            wasmUrl: cached?.sourceUrl || wasmPath,
+          });
           const highlightTokens = await tokenizeCode(content, languageId, {
             languageId,
             wasmPath,

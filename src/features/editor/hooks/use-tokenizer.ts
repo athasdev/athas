@@ -8,6 +8,7 @@ import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
 import { indexedDBParserCache, type ParserCacheEntry } from "../lib/wasm-parser/cache-indexeddb";
+import { fetchHighlightQuery, getDefaultParserWasmUrl } from "../lib/wasm-parser/extension-assets";
 import {
   tokenizeCodeWithTree,
   tokenizeRange as wasmTokenizeRange,
@@ -104,14 +105,6 @@ const FILENAME_TO_LANGUAGE: Record<string, string> = {
   "go.work": "go",
 };
 
-const LOCAL_EXTENSION_FOLDER_BY_LANGUAGE: Record<string, string> = {
-  javascript: "tsx",
-  javascriptreact: "tsx",
-  typescript: "tsx",
-  typescriptreact: "tsx",
-  csharp: "c_sharp",
-};
-
 const QUERY_REFRESHED_THIS_SESSION = new Set<string>();
 
 function getExtension(path: string): string {
@@ -135,13 +128,6 @@ export function getLanguageId(filePath: string): string | null {
   return EXTENSION_TO_LANGUAGE[ext] || null;
 }
 
-/**
- * Get the query folder for a language ID
- */
-function getQueryFolder(languageId: string): string {
-  return LOCAL_EXTENSION_FOLDER_BY_LANGUAGE[languageId] || languageId;
-}
-
 function shouldRefreshLegacyHighlightQuery(languageId: string, queryText: string): boolean {
   if (!queryText.trim()) {
     return true;
@@ -160,65 +146,52 @@ function shouldRefreshLegacyHighlightQuery(languageId: string, queryText: string
   return false;
 }
 
-async function resolveHighlightQueryFromCache(
+async function resolveHighlightQuery(
   languageId: string,
-  cached: ParserCacheEntry,
+  cached?: ParserCacheEntry,
 ): Promise<string> {
-  let highlightQuery = cached.highlightQuery || "";
+  let highlightQuery = cached?.highlightQuery || "";
   const shouldTryRefresh =
     shouldRefreshLegacyHighlightQuery(languageId, highlightQuery) ||
-    !QUERY_REFRESHED_THIS_SESSION.has(languageId);
+    !QUERY_REFRESHED_THIS_SESSION.has(languageId) ||
+    !highlightQuery.trim();
 
   if (!shouldTryRefresh) {
     return highlightQuery;
   }
 
-  const queryFolder = getQueryFolder(languageId);
-  const queryPath = `/extensions/${queryFolder}/highlights.scm`;
-
   try {
-    const response = await fetch(queryPath);
-    if (!response.ok) {
-      return highlightQuery;
-    }
+    const { query: latestQuery, sourceUrl } = await fetchHighlightQuery(languageId, {
+      wasmUrl: cached?.sourceUrl,
+      cacheMode: "no-store",
+    });
 
-    const latestQuery = await response.text();
     if (!latestQuery.trim()) {
       QUERY_REFRESHED_THIS_SESSION.add(languageId);
       return highlightQuery;
     }
 
-    if (latestQuery !== highlightQuery) {
+    if (cached && latestQuery !== highlightQuery) {
       await indexedDBParserCache.set({
         ...cached,
         highlightQuery: latestQuery,
       });
-      logger.info("Editor", `[Tokenizer] Refreshed highlight query from ${queryPath}`);
+      logger.info(
+        "Editor",
+        `[Tokenizer] Refreshed highlight query from ${sourceUrl || "fallback source"}`,
+      );
+      highlightQuery = latestQuery;
+    } else if (!cached) {
       highlightQuery = latestQuery;
     }
 
     QUERY_REFRESHED_THIS_SESSION.add(languageId);
   } catch {
-    logger.warn("Editor", `[Tokenizer] Failed to refresh highlight query from ${queryPath}`);
+    logger.warn("Editor", `[Tokenizer] Failed to refresh highlight query for ${languageId}`);
     QUERY_REFRESHED_THIS_SESSION.add(languageId);
   }
 
   return highlightQuery;
-}
-
-async function resolveHighlightQueryFromLocal(languageId: string): Promise<string> {
-  const queryFolder = getQueryFolder(languageId);
-  const queryPath = `/extensions/${queryFolder}/highlights.scm`;
-
-  try {
-    const response = await fetch(queryPath);
-    if (!response.ok) {
-      return "";
-    }
-    return await response.text();
-  } catch {
-    return "";
-  }
 }
 
 /**
@@ -294,15 +267,11 @@ export function useTokenizer({
         const normalizedText = normalizeLineEndings(text);
         startMeasure(`tokenizeFull (len: ${normalizedText.length})`);
 
-        // Prefer IndexedDB cache, but fall back to local /extensions parser in dev environments.
-        const queryFolder = getQueryFolder(languageId);
-        const wasmPath = cached?.sourceUrl || `/extensions/${queryFolder}/parser.wasm`;
-        const highlightQuery = cached
-          ? await resolveHighlightQueryFromCache(languageId, cached)
-          : await resolveHighlightQueryFromLocal(languageId);
+        const wasmPath = cached?.sourceUrl || getDefaultParserWasmUrl(languageId);
+        const highlightQuery = await resolveHighlightQuery(languageId, cached || undefined);
 
         if (!cached) {
-          logger.info("Editor", `[Tokenizer] Using local parser fallback for ${languageId}`);
+          logger.info("Editor", `[Tokenizer] Using remote parser source for ${languageId}`);
         }
 
         // Always do full parse - incremental parsing disabled for now
@@ -366,11 +335,8 @@ export function useTokenizer({
         setLoading(true);
         try {
           const cached = await indexedDBParserCache.get(languageId);
-          const queryFolder = getQueryFolder(languageId);
-          const wasmPath = cached?.sourceUrl || `/extensions/${queryFolder}/parser.wasm`;
-          const highlightQuery = cached
-            ? await resolveHighlightQueryFromCache(languageId, cached)
-            : await resolveHighlightQueryFromLocal(languageId);
+          const wasmPath = cached?.sourceUrl || getDefaultParserWasmUrl(languageId);
+          const highlightQuery = await resolveHighlightQuery(languageId, cached || undefined);
 
           const clampedStartLine = Math.max(0, Math.min(viewportRange.startLine, lineCount - 1));
           const clampedEndLine = Math.max(
@@ -429,7 +395,7 @@ export function useTokenizer({
 
         // Use cached config
         const wasmPath = cached.sourceUrl;
-        const highlightQuery = await resolveHighlightQueryFromCache(languageId, cached);
+        const highlightQuery = await resolveHighlightQuery(languageId, cached);
 
         // Tokenize the viewport range
         const highlightTokens = await wasmTokenizeRange(

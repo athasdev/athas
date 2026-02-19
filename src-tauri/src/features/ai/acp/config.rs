@@ -110,12 +110,6 @@ impl AgentRegistry {
 
       self.last_detection = Some(Instant::now());
    }
-
-   /// Force re-detection regardless of cache
-   pub fn force_detect_installed(&mut self) {
-      self.last_detection = None;
-      self.detect_installed();
-   }
 }
 
 impl Default for AgentRegistry {

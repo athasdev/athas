@@ -620,14 +620,12 @@ impl acp::Client for AthasAcpClient {
             let terminal_id_clone = terminal_id.clone();
             self.app_handle.listen(output_event, move |event| {
                let payload = event.payload();
-               if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload) {
-                  if let Some(data) = parsed.get("data").and_then(|d| d.as_str()) {
-                     if let Ok(mut states) = states_clone.lock() {
-                        if let Some(state) = states.get_mut(&terminal_id_clone) {
-                           state.append_output(data);
-                        }
-                     }
-                  }
+               if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload)
+                  && let Some(data) = parsed.get("data").and_then(|d| d.as_str())
+                  && let Ok(mut states) = states_clone.lock()
+                  && let Some(state) = states.get_mut(&terminal_id_clone)
+               {
+                  state.append_output(data);
                }
             });
 
@@ -636,10 +634,10 @@ impl acp::Client for AthasAcpClient {
             let states_clone = self.terminal_states.clone();
             let terminal_id_clone = terminal_id.clone();
             self.app_handle.listen(close_event, move |_| {
-               if let Ok(mut states) = states_clone.lock() {
-                  if let Some(state) = states.get_mut(&terminal_id_clone) {
-                     state.set_exit_status(Some(0), None);
-                  }
+               if let Ok(mut states) = states_clone.lock()
+                  && let Some(state) = states.get_mut(&terminal_id_clone)
+               {
+                  state.set_exit_status(Some(0), None);
                }
             });
 
@@ -690,13 +688,12 @@ impl acp::Client for AthasAcpClient {
          states.remove(&terminal_id)
       };
 
-      if let Some(state) = removed_state {
-         if let Err(e) = self
+      if let Some(state) = removed_state
+         && let Err(e) = self
             .terminal_manager
             .close_terminal(&state.athas_terminal_id)
-         {
-            log::warn!("Failed to close terminal {}: {}", terminal_id, e);
-         }
+      {
+         log::warn!("Failed to close terminal {}: {}", terminal_id, e);
       }
 
       Ok(acp::ReleaseTerminalResponse::new())
@@ -751,10 +748,10 @@ impl acp::Client for AthasAcpClient {
             .map(|s| s.athas_terminal_id.clone())
       };
 
-      if let Some(athas_terminal_id) = athas_id {
-         if let Err(e) = self.terminal_manager.close_terminal(&athas_terminal_id) {
-            log::warn!("Failed to kill terminal {}: {}", terminal_id, e);
-         }
+      if let Some(athas_terminal_id) = athas_id
+         && let Err(e) = self.terminal_manager.close_terminal(&athas_terminal_id)
+      {
+         log::warn!("Failed to kill terminal {}: {}", terminal_id, e);
       }
 
       Ok(acp::KillTerminalCommandResponse::new())

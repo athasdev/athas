@@ -13,11 +13,11 @@ import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
  */
 const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   js: "javascript",
-  jsx: "javascript",
+  jsx: "javascriptreact",
   mjs: "javascript",
   cjs: "javascript",
   ts: "typescript",
-  tsx: "typescript",
+  tsx: "typescriptreact",
   mts: "typescript",
   cts: "typescript",
   py: "python",
@@ -65,10 +65,6 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
 
 function normalizeRegistryLanguageId(languageId: string): string {
   switch (languageId) {
-    case "typescriptreact":
-      return "typescript";
-    case "javascriptreact":
-      return "javascript";
     case "csharp":
       return "c_sharp";
     case "jsonc":
@@ -94,14 +90,14 @@ function getLanguageId(filePath: string): string | null {
 }
 
 function getLocalWasmPath(languageId: string): string {
-  if (languageId === "typescript" || languageId === "javascript") {
+  if (languageId === "typescriptreact" || languageId === "javascriptreact") {
     return "/extensions/tsx/parser.wasm";
   }
   return `/extensions/${languageId}/parser.wasm`;
 }
 
 function getQueryFolder(languageId: string): string {
-  if (languageId === "typescript" || languageId === "javascript") {
+  if (languageId === "typescriptreact" || languageId === "javascriptreact") {
     return "tsx";
   }
   return languageId;
