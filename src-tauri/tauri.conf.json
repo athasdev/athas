@@ -70,11 +70,7 @@
     },
     "linux": {
       "appimage": {
-        "files": {
-          "/usr/lib/x86_64-linux-gnu/libfreetype.so.6": "/usr/lib/",
-          "/apprun-hooks/linuxdeploy-plugin-gtk.sh": "appimage-hooks/linuxdeploy-plugin-gtk.sh",
-          "/AppRun.wrapped": "appimage-hooks/AppRun.wrapped"
-        }
+        "files": {}
       }
     }
   },
