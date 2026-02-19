@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-02-15T13:36:03.626Z",
+  "lastUpdated": "2026-02-19T15:45:04.480Z",
   "extensions": [
     {
       "id": "athas.bash",
@@ -253,7 +253,7 @@
       "id": "athas.ruby",
       "name": "Ruby",
       "displayName": "Ruby Language Support",
-      "description": "Ruby language support with syntax highlighting",
+      "description": "Ruby language support with syntax highlighting (Ruby, ERB, and common Rails templates)",
       "version": "1.0.0",
       "publisher": "Athas",
       "category": "language",

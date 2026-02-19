@@ -230,7 +230,7 @@
   {
     "id": "athas.ruby",
     "name": "Ruby Language Support",
-    "description": "Ruby language support with syntax highlighting",
+    "description": "Ruby language support with syntax highlighting (Ruby, ERB, and common Rails templates)",
     "version": "1.0.0",
     "author": "Athas",
     "category": "Languages",
