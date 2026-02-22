@@ -141,6 +141,8 @@ fn find_binary(binary_name: &str) -> Option<PathBuf> {
       candidates.push(home.join(".pnpm"));
       candidates.push(home.join("Library/pnpm"));
       candidates.push(home.join("Library/pnpm/bin"));
+      candidates.push(home.join(".cargo/bin"));
+      candidates.push(home.join("go/bin"));
       candidates.push(home.join(".asdf/shims"));
       candidates.push(home.join(".local/share/mise/shims"));
 
@@ -208,6 +210,15 @@ fn find_binary(binary_name: &str) -> Option<PathBuf> {
             candidates.push(entry.path().join("bin"));
          }
       }
+   }
+   if let Some(dir) = env::var_os("GOPATH") {
+      candidates.push(PathBuf::from(dir).join("bin"));
+   }
+   if let Some(dir) = env::var_os("GOBIN") {
+      candidates.push(PathBuf::from(dir));
+   }
+   if let Some(dir) = env::var_os("CARGO_HOME") {
+      candidates.push(PathBuf::from(dir).join("bin"));
    }
 
    for dir in candidates {
