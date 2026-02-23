@@ -11,6 +11,7 @@ import {
   getLanguageExtensionById,
   getPackagedLanguageExtensions,
   getWasmUrlForLanguage,
+  initializeLanguagePackager,
 } from "../languages/language-packager";
 import { extensionRegistry } from "../registry/extension-registry";
 import type { ExtensionManifest } from "../types/extension-manifest";
@@ -819,6 +820,9 @@ async function initializeExtensionStoreImpl(): Promise<void> {
   } catch (error) {
     console.error("Failed to initialize WASM parser loader:", error);
   }
+
+  // Fetch extension manifests from CDN before loading available extensions
+  await initializeLanguagePackager();
 
   // Load available extensions first, then installed extensions
   // (installed extensions check needs available extensions to be loaded first)

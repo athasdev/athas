@@ -1,6 +1,6 @@
 /**
  * Language Extension Packager
- * Converts extension manifests from /extensions/* to internal ExtensionManifest format.
+ * Fetches extension manifests from the CDN and converts them to internal ExtensionManifest format.
  */
 
 import type {
@@ -13,6 +13,7 @@ import type {
 } from "../types/extension-manifest";
 
 const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
+const MANIFESTS_URL = `${CDN_BASE_URL}/manifests.json`;
 
 interface ExternalLanguageContribution {
   id: string;
@@ -186,38 +187,69 @@ function convertLanguageManifest(
   };
 }
 
-const manifestModules = import.meta.glob<ExternalLanguageManifest>(
-  "../../../extensions/*/extension.json",
-  {
-    eager: true,
-    import: "default",
-  },
-);
-
-const packagedEntries: PackagedLanguageEntry[] = [];
+let packagedEntries: PackagedLanguageEntry[] = [];
 const manifestByLanguageId = new Map<string, ExtensionManifest>();
 const wasmUrlByLanguageId = new Map<string, string>();
 const highlightUrlByLanguageId = new Map<string, string>();
 const highlightUrlByExtensionId = new Map<string, string>();
+let packagedExtensions: ExtensionManifest[] = [];
+let initialized = false;
+let initPromise: Promise<void> | null = null;
 
-for (const [path, manifest] of Object.entries(manifestModules)) {
-  try {
-    const entry = convertLanguageManifest(path, manifest);
-    packagedEntries.push(entry);
+function processManifests(manifests: Record<string, ExternalLanguageManifest>) {
+  packagedEntries = [];
+  manifestByLanguageId.clear();
+  wasmUrlByLanguageId.clear();
+  highlightUrlByLanguageId.clear();
+  highlightUrlByExtensionId.clear();
 
-    highlightUrlByExtensionId.set(entry.manifest.id, entry.highlightQueryUrl);
+  for (const [folder, manifest] of Object.entries(manifests)) {
+    try {
+      const syntheticPath = `/extensions/${folder}/extension.json`;
+      const entry = convertLanguageManifest(syntheticPath, manifest);
+      packagedEntries.push(entry);
 
-    for (const languageId of entry.languageIds) {
-      manifestByLanguageId.set(languageId, entry.manifest);
-      wasmUrlByLanguageId.set(languageId, entry.wasmUrl);
-      highlightUrlByLanguageId.set(languageId, entry.highlightQueryUrl);
+      highlightUrlByExtensionId.set(entry.manifest.id, entry.highlightQueryUrl);
+
+      for (const languageId of entry.languageIds) {
+        manifestByLanguageId.set(languageId, entry.manifest);
+        wasmUrlByLanguageId.set(languageId, entry.wasmUrl);
+        highlightUrlByLanguageId.set(languageId, entry.highlightQueryUrl);
+      }
+    } catch (error) {
+      console.error(`Failed to convert language manifest for ${folder}:`, error);
     }
-  } catch (error) {
-    console.error(`Failed to convert language manifest at ${path}:`, error);
   }
+
+  packagedExtensions = packagedEntries.map((entry) => entry.manifest);
+  initialized = true;
 }
 
-const packagedExtensions = packagedEntries.map((entry) => entry.manifest);
+/**
+ * Initialize the language packager by fetching manifests from the CDN.
+ * Must be called before using any getter functions.
+ */
+export async function initializeLanguagePackager(): Promise<void> {
+  if (initialized) return;
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    try {
+      const response = await fetch(MANIFESTS_URL);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch manifests: ${response.status} ${response.statusText}`);
+      }
+      const manifests: Record<string, ExternalLanguageManifest> = await response.json();
+      processManifests(manifests);
+    } catch (error) {
+      console.error("Failed to load extension manifests from CDN:", error);
+      // Initialize with empty state so the editor can still function
+      initialized = true;
+    }
+  })();
+
+  return initPromise;
+}
 
 export function getPackagedLanguageExtensions(): ExtensionManifest[] {
   return packagedExtensions;

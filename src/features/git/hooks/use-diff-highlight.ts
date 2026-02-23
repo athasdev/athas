@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  getHighlightQueryUrl,
+  getWasmUrlForLanguage,
+} from "@/extensions/languages/language-packager";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 import { tokenizeByLine } from "@/features/editor/lib/wasm-parser/tokenizer";
@@ -83,18 +87,18 @@ function getLanguageId(filePath: string): string | null {
   return EXTENSION_TO_LANGUAGE[ext] || null;
 }
 
-function getLocalWasmPath(languageId: string): string {
+function getWasmPath(languageId: string): string {
   if (languageId === "typescriptreact" || languageId === "javascriptreact") {
-    return "/extensions/tsx/parser.wasm";
+    return getWasmUrlForLanguage("tsx");
   }
-  return `/extensions/${languageId}/parser.wasm`;
+  return getWasmUrlForLanguage(languageId);
 }
 
-function getQueryFolder(languageId: string): string {
+function getHighlightQueryPath(languageId: string): string {
   if (languageId === "typescriptreact" || languageId === "javascriptreact") {
-    return "tsx";
+    return getHighlightQueryUrl("tsx");
   }
-  return languageId;
+  return getHighlightQueryUrl(languageId);
 }
 
 interface ReconstructedContent {
@@ -178,7 +182,7 @@ export function useDiffHighlighting(
       try {
         const cached = await indexedDBParserCache.get(lang);
 
-        let wasmPath = getLocalWasmPath(lang);
+        let wasmPath = getWasmPath(lang);
         let highlightQuery: string | undefined;
 
         if (cached) {
@@ -187,8 +191,7 @@ export function useDiffHighlighting(
         }
 
         if (!highlightQuery || highlightQuery.trim().length === 0) {
-          const queryFolder = getQueryFolder(lang);
-          const queryPath = `/extensions/${queryFolder}/highlights.scm`;
+          const queryPath = getHighlightQueryPath(lang);
           try {
             const response = await fetch(queryPath);
             if (response.ok) {
