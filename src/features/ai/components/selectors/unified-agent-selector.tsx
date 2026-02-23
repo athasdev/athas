@@ -10,10 +10,14 @@ import { cn } from "@/utils/cn";
 import { getProvider } from "@/utils/providers";
 
 interface UnifiedAgentSelectorProps {
-  onOpenSettings: () => void;
+  variant?: "header" | "input";
+  onOpenSettings?: () => void;
 }
 
-export function UnifiedAgentSelector({ onOpenSettings }: UnifiedAgentSelectorProps) {
+export function UnifiedAgentSelector({
+  variant = "header",
+  onOpenSettings,
+}: UnifiedAgentSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -208,15 +212,21 @@ export function UnifiedAgentSelector({ onOpenSettings }: UnifiedAgentSelectorPro
 
   const handleAgentChange = useCallback(
     async (agentId: AgentType) => {
-      if (agentId === currentAgentId) {
+      if (variant !== "header" && agentId === currentAgentId) {
         setIsOpen(false);
+        return;
+      }
+
+      // In header variant, selecting Custom API should show models tab
+      if (variant === "header" && agentId === "custom") {
+        setSelectedAgentId(agentId);
+        setActiveSection("models");
         return;
       }
 
       setIsOpen(false);
       setSelectedAgentId(agentId);
 
-      // Stop any running ACP agent
       const currentAgentInfo = AGENT_OPTIONS.find((a) => a.id === currentAgentId);
       if (currentAgentInfo?.isAcp) {
         try {
@@ -226,9 +236,13 @@ export function UnifiedAgentSelector({ onOpenSettings }: UnifiedAgentSelectorPro
         }
       }
 
-      changeCurrentChatAgent(agentId);
+      if (variant === "header") {
+        createNewChat(agentId);
+      } else {
+        changeCurrentChatAgent(agentId);
+      }
     },
-    [currentAgentId, setSelectedAgentId, changeCurrentChatAgent],
+    [variant, currentAgentId, setSelectedAgentId, changeCurrentChatAgent, createNewChat],
   );
 
   const handleModelSelect = useCallback(
@@ -236,8 +250,11 @@ export function UnifiedAgentSelector({ onOpenSettings }: UnifiedAgentSelectorPro
       updateSetting("aiProviderId", providerId);
       updateSetting("aiModelId", modelId);
       setIsOpen(false);
+      if (variant === "header") {
+        createNewChat();
+      }
     },
-    [updateSetting],
+    [updateSetting, variant, createNewChat],
   );
 
   const handleKeyDown = useCallback(
@@ -279,46 +296,39 @@ export function UnifiedAgentSelector({ onOpenSettings }: UnifiedAgentSelectorPro
     [isOpen, selectableItems, selectedIndex, handleAgentChange, handleModelSelect, isCustomAgent],
   );
 
-  const handleNewChat = useCallback(
-    async (agentId: AgentType) => {
-      setIsOpen(false);
-      setSelectedAgentId(agentId);
-
-      const currentAgentInfo = AGENT_OPTIONS.find((a) => a.id === currentAgentId);
-      if (currentAgentInfo?.isAcp) {
-        try {
-          await invoke("stop_acp_agent");
-        } catch {
-          // Silent fail
-        }
-      }
-
-      createNewChat(agentId);
-    },
-    [currentAgentId, setSelectedAgentId, createNewChat],
-  );
-
   let selectableIndex = -1;
 
   return (
     <div className="relative">
-      <button
-        ref={triggerRef}
-        onClick={() => setIsOpen(!isOpen)}
-        className="ui-font flex h-8 items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
-      >
-        <Terminal size={11} className="text-text-lighter" />
-        <span className="max-w-[140px] truncate text-text">
-          {currentAgent?.name || "Custom"}
-          {isCustomAgent && currentModelName && (
-            <span className="text-text-lighter"> / {currentModelName}</span>
-          )}
-        </span>
-        <ChevronDown
-          size={12}
-          className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
-        />
-      </button>
+      {variant === "header" ? (
+        <button
+          ref={triggerRef}
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex h-8 items-center gap-1 rounded-full border border-border bg-primary-bg/80 pl-2 pr-1.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+          aria-label="New chat"
+        >
+          <Plus size={14} />
+          <ChevronDown size={10} className={cn("transition-transform", isOpen && "rotate-180")} />
+        </button>
+      ) : (
+        <button
+          ref={triggerRef}
+          onClick={() => setIsOpen(!isOpen)}
+          className="ui-font flex h-8 items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
+        >
+          <Terminal size={11} className="text-text-lighter" />
+          <span className="max-w-[140px] truncate text-text">
+            {currentAgent?.name || "Custom"}
+            {isCustomAgent && currentModelName && (
+              <span className="text-text-lighter"> / {currentModelName}</span>
+            )}
+          </span>
+          <ChevronDown
+            size={12}
+            className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
+          />
+        </button>
+      )}
 
       {isOpen && (
         <>
@@ -327,7 +337,9 @@ export function UnifiedAgentSelector({ onOpenSettings }: UnifiedAgentSelectorPro
             ref={dropdownRef}
             onKeyDown={handleKeyDown}
             className={cn(
-              "absolute right-0 bottom-full z-[10030] mb-2",
+              variant === "header"
+                ? "absolute right-0 top-full z-[10030] mt-2"
+                : "absolute right-0 bottom-full z-[10030] mb-2",
               "max-h-[450px] w-[300px] overflow-hidden",
               "rounded-2xl border border-border bg-primary-bg/95 shadow-lg backdrop-blur-sm",
             )}
@@ -401,7 +413,7 @@ export function UnifiedAgentSelector({ onOpenSettings }: UnifiedAgentSelectorPro
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              onOpenSettings();
+                              onOpenSettings?.();
                               setIsOpen(false);
                             }}
                             className="flex items-center gap-1 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] text-red-400 transition-colors hover:bg-red-500/30"
@@ -416,52 +428,40 @@ export function UnifiedAgentSelector({ onOpenSettings }: UnifiedAgentSelectorPro
 
                   if (item.type === "agent") {
                     selectableIndex++;
-                    const isSelected = selectableIndex === selectedIndex;
+                    const itemIndex = selectableIndex;
+                    const isSelected = itemIndex === selectedIndex;
 
                     return (
-                      <div key={item.id} className="group relative">
-                        <button
-                          onClick={() => handleAgentChange(item.id as AgentType)}
-                          onMouseEnter={() => setSelectedIndex(selectableIndex)}
-                          className={cn(
-                            "mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-xl px-3 py-1.5 text-left transition-colors",
-                            isSelected ? "bg-hover" : "bg-transparent",
-                            item.isCurrent && "bg-accent/10",
-                          )}
-                        >
-                          <Terminal size={10} className="text-text-lighter" />
-                          <span className="flex-1 truncate text-text text-xs">{item.name}</span>
-                          {item.isCurrent && <Check size={10} className="text-accent" />}
-                          {!item.isCurrent && item.isInstalled && item.id !== "custom" && (
-                            <Check size={10} className="text-green-500" />
-                          )}
-                        </button>
-                        {/* New chat button on hover */}
-                        {!item.isCurrent && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleNewChat(item.id as AgentType);
-                            }}
-                            className="-translate-y-1/2 absolute top-1/2 right-2 flex items-center gap-1 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] text-accent opacity-0 transition-opacity hover:bg-accent/30 group-hover:opacity-100"
-                          >
-                            <Plus size={10} />
-                            New
-                          </button>
+                      <button
+                        key={item.id}
+                        onClick={() => handleAgentChange(item.id as AgentType)}
+                        onMouseEnter={() => setSelectedIndex(itemIndex)}
+                        className={cn(
+                          "mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-xl px-3 py-1.5 text-left transition-colors",
+                          isSelected ? "bg-hover" : "bg-transparent",
+                          item.isCurrent && "bg-accent/10",
                         )}
-                      </div>
+                      >
+                        <Terminal size={10} className="text-text-lighter" />
+                        <span className="flex-1 truncate text-text text-xs">{item.name}</span>
+                        {item.isCurrent && <Check size={10} className="text-accent" />}
+                        {!item.isCurrent && item.isInstalled && item.id !== "custom" && (
+                          <Check size={10} className="text-green-500" />
+                        )}
+                      </button>
                     );
                   }
 
                   if (item.type === "model") {
                     selectableIndex++;
-                    const isSelected = selectableIndex === selectedIndex;
+                    const itemIndex = selectableIndex;
+                    const isSelected = itemIndex === selectedIndex;
 
                     return (
                       <button
                         key={`${item.providerId}-${item.id}`}
                         onClick={() => handleModelSelect(item.providerId!, item.id)}
-                        onMouseEnter={() => setSelectedIndex(selectableIndex)}
+                        onMouseEnter={() => setSelectedIndex(itemIndex)}
                         className={cn(
                           "mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors",
                           isSelected ? "bg-hover" : "bg-transparent",

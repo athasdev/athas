@@ -4,14 +4,12 @@ import { useAIChatStore } from "@/features/ai/store/store";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useUIState } from "@/stores/ui-state-store";
 import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { ChatModeSelector } from "../selectors/chat-mode-selector";
 import { ContextSelector } from "../selectors/context-selector";
-import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -29,7 +27,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [hasInputText, setHasInputText] = useState(false);
 
   // Get state from stores with optimized selectors
-  const { openSettingsDialog } = useUIState();
   const { fontSize, fontFamily } = useEditorSettingsStore();
 
   // Get state from store - DO NOT subscribe to 'input' to avoid re-renders on every keystroke
@@ -757,9 +754,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 <Slash size={12} />
               </button>
             )}
-
-            {/* Unified agent and model selector */}
-            <UnifiedAgentSelector onOpenSettings={() => openSettingsDialog("ai")} />
 
             <Button
               type="submit"

@@ -1,7 +1,9 @@
-import { History, Plus } from "lucide-react";
+import { History } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useUIState } from "@/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";
 import { useAIChatStore } from "../../store/store";
+import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
 
 function EditableChatTitle({
   title,
@@ -80,14 +82,10 @@ export function ChatHeader() {
   const getCurrentChat = useAIChatStore((state) => state.getCurrentChat);
   const isChatHistoryVisible = useAIChatStore((state) => state.isChatHistoryVisible);
   const setIsChatHistoryVisible = useAIChatStore((state) => state.setIsChatHistoryVisible);
-  const createNewChat = useAIChatStore((state) => state.createNewChat);
   const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
 
+  const { openSettingsDialog } = useUIState();
   const currentChat = getCurrentChat();
-
-  const handleNewChat = () => {
-    createNewChat();
-  };
 
   return (
     <div className="relative z-[10020] flex items-center gap-2 border-border border-b bg-secondary-bg/70 px-3 py-2 backdrop-blur-sm">
@@ -112,15 +110,7 @@ export function ChatHeader() {
         </button>
       </Tooltip>
 
-      <Tooltip content="New Chat" side="bottom">
-        <button
-          onClick={handleNewChat}
-          className="flex size-8 items-center justify-center rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-          aria-label="New chat"
-        >
-          <Plus size={14} />
-        </button>
-      </Tooltip>
+      <UnifiedAgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />
     </div>
   );
 }
