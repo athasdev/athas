@@ -32,10 +32,12 @@ mod ssh;
 mod terminal;
 
 #[cfg(target_os = "macos")]
+#[allow(unexpected_cfgs)]
 fn disable_macos_autofill_heuristics() {
    use objc::{
       class, msg_send,
       runtime::{NO, Object},
+      sel, sel_impl,
    };
    use std::ffi::CString;
 
