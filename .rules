@@ -60,32 +60,6 @@ src/
         └── types.ts             # Theme interfaces
 ```
 
-### Available CSS Variables
-
-**UI Colors:**
-- `--primary-bg`, `--secondary-bg`
-- `--text`, `--text-light`, `--text-lighter`
-- `--border`, `--hover`, `--selected`
-- `--accent`
-
-**Editor:**
-- `--cursor`, `--cursor-vim-normal`, `--cursor-vim-insert`
-
-**Semantic Colors:**
-- `--error`, `--warning`, `--success`, `--info`
-
-**Git Status:**
-- `--git-modified`, `--git-added`, `--git-deleted`, `--git-untracked`, `--git-renamed`
-
-**Syntax Highlighting:**
-- `--syntax-comment`, `--syntax-keyword`, `--syntax-string`, `--syntax-number`
-- `--syntax-function`, `--syntax-variable`, `--syntax-tag`, `--syntax-attribute`
-- `--syntax-punctuation`, `--syntax-constant`, `--syntax-property`, `--syntax-type`
-
-**Terminal Colors:**
-- `--terminal-{color}` for black, red, green, yellow, blue, magenta, cyan, white
-- `--terminal-bright-{color}` for bright variants
-
 ### Best Practices
 
 1. **Consistency**: Use Tailwind utilities for all standard component styling
