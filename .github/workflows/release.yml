@@ -19,24 +19,37 @@ jobs:
       matrix:
         include:
           - platform: 'macos-latest'
+            os: 'macos'
             args: '--target aarch64-apple-darwin'
             target: 'aarch64-apple-darwin'
           - platform: 'macos-latest'
+            os: 'macos'
             args: '--target x86_64-apple-darwin'
             target: 'x86_64-apple-darwin'
           - platform: 'ubuntu-22.04'
+            os: 'linux'
+            args: ''
+            target: ''
+          - platform: 'ubuntu-22.04-arm'
+            os: 'linux'
             args: ''
             target: ''
           - platform: 'windows-latest'
+            os: 'windows'
             args: ''
             target: ''
+          - platform: 'windows-latest'
+            os: 'windows'
+            args: '--target aarch64-pc-windows-msvc'
+            target: 'aarch64-pc-windows-msvc'
 
     runs-on: ${{ matrix.platform }}
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
-      - name: Free disk space (ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04'
+      - name: Free disk space (Linux only)
+        if: matrix.os == 'linux'
         run: |
           echo "Disk usage before cleanup:"
           df -h
@@ -56,13 +69,10 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Add additional Rust targets
-        if: matrix.target != ''
-        run: rustup target add ${{ matrix.target }}
-
-
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
 
       - name: Cache Bun dependencies
         uses: actions/cache@v4
@@ -72,21 +82,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
 
-      - name: Install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04'
+      - name: Install dependencies (Linux only)
+        if: matrix.os == 'linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libfuse2
 
-      - name: Configure AppImage runtime (ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04'
+      - name: Configure AppImage runtime (Linux only)
+        if: matrix.os == 'linux'
         run: echo "APPIMAGE_EXTRACT_AND_RUN=1" >> "$GITHUB_ENV"
 
       - name: Install frontend dependencies
         run: bun install
 
       - name: Import Apple Certificate (macOS only)
-        if: matrix.platform == 'macos-latest'
+        if: matrix.os == 'macos'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
@@ -117,9 +127,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ matrix.os == 'macos' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ matrix.os == 'macos' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ matrix.os == 'macos' && secrets.APPLE_TEAM_ID || '' }}
         with:
           tagName: v__VERSION__
           releaseName: 'Athas v__VERSION__'
@@ -138,3 +148,13 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           args: ${{ matrix.args }}
+
+  deploy-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger docs rebuild on www
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.WWW_DEPLOY_TOKEN }}
+          repository: athasdev/www
+          event-type: docs-updated

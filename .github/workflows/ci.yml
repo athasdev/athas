@@ -1,10 +1,10 @@
-name: Bun CI
+name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [master]
   pull_request:
-    branches: [main, master]
+    branches: [master]
   workflow_dispatch:
 
 concurrency:
@@ -12,10 +12,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
-    # Don't run on forks
+  bun:
     if: github.repository == 'athasdev/athas'
-    name: check format, types, and lint
+    name: Bun — typecheck, lint, extensions
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,3 +43,32 @@ jobs:
 
       - name: Validate extensions catalog
         run: bun extensions:check
+
+  rust:
+    if: github.repository == 'athasdev/athas'
+    name: Rust — fmt, cargo check
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cache APT packages
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          version: 1.0
+
+      - name: Check formatting
+        run: cargo fmt --check --all
+
+      - name: Check
+        run: cargo check --workspace
