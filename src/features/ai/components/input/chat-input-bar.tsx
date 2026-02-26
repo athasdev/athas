@@ -4,6 +4,7 @@ import { useAIChatStore } from "@/features/ai/store/store";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
 import Dropdown from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
@@ -67,6 +68,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // Get state from stores with optimized selectors
   const { fontSize, fontFamily } = useEditorSettingsStore();
+  const settings = useSettingsStore((state) => state.settings);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   // Get state from store - DO NOT subscribe to 'input' to avoid re-renders on every keystroke
   const isTyping = useAIChatStore((state) => state.isTyping);

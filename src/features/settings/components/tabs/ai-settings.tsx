@@ -12,7 +12,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionMode } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
@@ -28,6 +28,7 @@ import {
   clearKairoTokens,
   hasKairoAccessToken,
   isKairoConfigured,
+  KAIRO_AUTH_UPDATED_EVENT,
   startKairoOAuthLogin,
 } from "@/utils/kairo-auth";
 import { getProvider } from "@/utils/providers";
@@ -112,25 +113,41 @@ export const AISettings = () => {
     checkAllProviderApiKeys();
   }, [checkAllProviderApiKeys]);
 
-  const refreshKairoAuthState = async () => {
+  const refreshKairoAuthState = useCallback(async (): Promise<boolean> => {
     try {
-      setIsKairoConnected(await hasKairoAccessToken());
+      const isConnected = await hasKairoAccessToken();
+      setIsKairoConnected(isConnected);
+      return isConnected;
     } catch {
       setIsKairoConnected(false);
+      return false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     const handleWindowFocus = () => {
-      refreshKairoAuthState();
+      void refreshKairoAuthState();
     };
 
-    refreshKairoAuthState();
+    const handleKairoAuthUpdated = () => {
+      void (async () => {
+        const isConnected = await refreshKairoAuthState();
+        setKairoAuthMessage(
+          isConnected
+            ? "Kairo Code connected."
+            : "Login finished, but Kairo Code is still not connected. Try again.",
+        );
+      })();
+    };
+
+    void refreshKairoAuthState();
     window.addEventListener("focus", handleWindowFocus);
+    window.addEventListener(KAIRO_AUTH_UPDATED_EVENT, handleKairoAuthUpdated);
     return () => {
       window.removeEventListener("focus", handleWindowFocus);
+      window.removeEventListener(KAIRO_AUTH_UPDATED_EVENT, handleKairoAuthUpdated);
     };
-  }, []);
+  }, [refreshKairoAuthState]);
 
   const providers = getAvailableProviders();
   const currentProvider = providers.find((p) => p.id === settings.aiProviderId);
@@ -230,8 +247,12 @@ export const AISettings = () => {
       setKairoAuthMessage("Complete login in your browser...");
       const mode = await startKairoOAuthLogin();
       if (mode === "device") {
-        await refreshKairoAuthState();
-        setKairoAuthMessage("Kairo Code connected.");
+        const isConnected = await refreshKairoAuthState();
+        setKairoAuthMessage(
+          isConnected
+            ? "Kairo Code connected."
+            : "Login finished, but Kairo Code is still not connected. Try again.",
+        );
       } else {
         setKairoAuthMessage("Finish login in your browser, then return to Athas.");
       }

@@ -134,7 +134,6 @@ impl AcpWorker {
       // Create ACP client
       let client = Arc::new(AthasAcpClient::new(
          app_handle.clone(),
-         agent_id.clone(),
          workspace_path.clone(),
          terminal_manager,
       ));

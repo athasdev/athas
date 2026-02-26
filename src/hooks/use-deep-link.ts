@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { toast } from "@/stores/toast-store";
-import { completeKairoOAuthCallback } from "@/utils/kairo-auth";
+import { completeKairoOAuthCallback, KAIRO_AUTH_UPDATED_EVENT } from "@/utils/kairo-auth";
 
 /**
  * Hook to handle deep link URLs
@@ -91,6 +91,7 @@ async function handleAuthCallback(token: string) {
 async function handleKairoAuthCallback(searchParams: URLSearchParams) {
   try {
     await completeKairoOAuthCallback(searchParams);
+    window.dispatchEvent(new CustomEvent(KAIRO_AUTH_UPDATED_EVENT));
     toast.success("Kairo Code connected successfully!");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Authentication failed";

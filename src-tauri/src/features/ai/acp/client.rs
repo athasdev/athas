@@ -433,6 +433,10 @@ impl acp::Client for AthasAcpClient {
                tool_name: tool_call.title.clone(),
                tool_id: tool_call.tool_call_id.to_string(),
                input,
+               status: None,
+               kind: None,
+               content: None,
+               locations: None,
             });
          }
          acp::SessionUpdate::ToolCallUpdate(update) => {
@@ -452,6 +456,14 @@ impl acp::Client for AthasAcpClient {
                session_id,
                tool_id: update.tool_call_id.to_string(),
                success,
+               tool_name: None,
+               input: None,
+               output: None,
+               error: None,
+               status: None,
+               kind: None,
+               content: None,
+               locations: None,
             });
          }
          acp::SessionUpdate::CurrentModeUpdate(update) => {

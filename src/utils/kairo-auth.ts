@@ -7,6 +7,7 @@ import {
 } from "./token-manager";
 
 const PENDING_AUTH_STORAGE_KEY = "kairo_oauth_pkce";
+const BACKUP_TOKEN_STORAGE_KEY = "kairo_oauth_tokens_backup";
 const TOKEN_PROVIDER_ID = "kairo-code";
 const DEFAULT_SCOPE = "kairo.code:stream kairo.models:read";
 const DEFAULT_EXPIRY_SECONDS = 60 * 60;
@@ -37,6 +38,7 @@ export const KAIRO_REDIRECT_URI =
 export const KAIRO_CLIENT_NAME = import.meta.env.VITE_KAIRO_CLIENT_NAME || "athas";
 export const KAIRO_CLIENT_VERSION = import.meta.env.VITE_KAIRO_CLIENT_VERSION || "0.0.0";
 export const KAIRO_CLIENT_PLATFORM = import.meta.env.VITE_KAIRO_CLIENT_PLATFORM || "desktop";
+export const KAIRO_AUTH_UPDATED_EVENT = "kairo-auth-updated";
 
 export interface KairoModelOption {
   id: string;
@@ -96,6 +98,8 @@ interface StoredKairoTokenSet {
   expiresAt: number;
 }
 
+type LooseStoredTokenSet = Record<string, unknown>;
+
 const base64UrlEncode = (bytes: Uint8Array): string => {
   const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
@@ -133,6 +137,30 @@ const clearPendingPkce = (): void => {
   localStorage.removeItem(PENDING_AUTH_STORAGE_KEY);
 };
 
+const saveBackupTokens = (tokens: StoredKairoTokenSet): void => {
+  try {
+    localStorage.setItem(BACKUP_TOKEN_STORAGE_KEY, JSON.stringify(tokens));
+  } catch {
+    // Ignore localStorage failures (private mode, quota exceeded, etc.)
+  }
+};
+
+const readBackupTokens = (): StoredKairoTokenSet | null => {
+  try {
+    return parseStoredTokens(localStorage.getItem(BACKUP_TOKEN_STORAGE_KEY));
+  } catch {
+    return null;
+  }
+};
+
+const clearBackupTokens = (): void => {
+  try {
+    localStorage.removeItem(BACKUP_TOKEN_STORAGE_KEY);
+  } catch {
+    // Ignore localStorage failures.
+  }
+};
+
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 const getOauthErrorCode = (error: unknown): string | null => {
@@ -142,16 +170,92 @@ const getOauthErrorCode = (error: unknown): string | null => {
   return normalized ? normalized : null;
 };
 
+const toPositiveNumber = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
+
+const resolveExpiresAt = (tokenSet: LooseStoredTokenSet): number => {
+  const absoluteExpiry = toPositiveNumber(tokenSet.expiresAt ?? tokenSet.expires_at);
+  if (absoluteExpiry) {
+    // Some legacy token payloads stored epoch seconds, others store epoch milliseconds.
+    return absoluteExpiry < 1_000_000_000_000 ? absoluteExpiry * 1000 : absoluteExpiry;
+  }
+
+  const expiresIn = toPositiveNumber(tokenSet.expiresIn ?? tokenSet.expires_in);
+  if (expiresIn) {
+    return Date.now() + expiresIn * 1000;
+  }
+
+  return Date.now() + DEFAULT_EXPIRY_SECONDS * 1000;
+};
+
+const normalizeStoredTokens = (value: unknown): StoredKairoTokenSet | null => {
+  if (typeof value === "string") {
+    const accessToken = value.trim();
+    if (!accessToken) {
+      return null;
+    }
+
+    return {
+      accessToken,
+      tokenType: "Bearer",
+      expiresAt: Date.now() + DEFAULT_EXPIRY_SECONDS * 1000,
+    };
+  }
+
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const tokenSet = value as LooseStoredTokenSet;
+  const accessTokenValue = tokenSet.accessToken ?? tokenSet.access_token;
+  if (typeof accessTokenValue !== "string" || !accessTokenValue.trim()) {
+    return null;
+  }
+
+  const refreshTokenValue = tokenSet.refreshToken ?? tokenSet.refresh_token;
+  const refreshToken =
+    typeof refreshTokenValue === "string" && refreshTokenValue.trim()
+      ? refreshTokenValue.trim()
+      : undefined;
+
+  const tokenTypeValue = tokenSet.tokenType ?? tokenSet.token_type;
+  const tokenType =
+    typeof tokenTypeValue === "string" && tokenTypeValue.trim() ? tokenTypeValue.trim() : "Bearer";
+
+  const scopeValue = tokenSet.scope;
+  const scope = typeof scopeValue === "string" && scopeValue.trim() ? scopeValue.trim() : undefined;
+
+  return {
+    accessToken: accessTokenValue.trim(),
+    refreshToken,
+    tokenType,
+    scope,
+    expiresAt: resolveExpiresAt(tokenSet),
+  };
+};
+
 const parseStoredTokens = (raw: string | null): StoredKairoTokenSet | null => {
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as StoredKairoTokenSet;
-    if (!parsed.accessToken || typeof parsed.expiresAt !== "number") {
+    return normalizeStoredTokens(JSON.parse(raw));
+  } catch {
+    const trimmed = raw.trim();
+    if (!trimmed || trimmed.startsWith("{") || trimmed.startsWith("[")) {
       return null;
     }
-    return parsed;
-  } catch {
-    return null;
+    return normalizeStoredTokens(trimmed);
   }
 };
 
@@ -207,6 +311,16 @@ const exchangeToken = async (payload: Record<string, unknown>): Promise<StoredKa
   }
 
   return normalizeTokenResponse(body);
+};
+
+const persistKairoTokens = async (tokens: StoredKairoTokenSet): Promise<void> => {
+  saveBackupTokens(tokens);
+  try {
+    await storeProviderApiToken(TOKEN_PROVIDER_ID, JSON.stringify(tokens));
+  } catch (error) {
+    // Keep the local backup token so auth state survives secure storage issues.
+    console.warn("Failed to persist Kairo token to secure storage, using local backup.", error);
+  }
 };
 
 const normalizeKairoModel = (model: unknown): KairoModelOption | null => {
@@ -406,7 +520,7 @@ export async function startKairoOAuthLogin(): Promise<"pkce" | "device"> {
     const device = await requestDeviceAuthorization();
     await openUrl(device.verification_uri_complete);
     const tokens = await pollDeviceAuthorization(device);
-    await storeProviderApiToken(TOKEN_PROVIDER_ID, JSON.stringify(tokens));
+    await persistKairoTokens(tokens);
     return "device";
   }
 
@@ -463,13 +577,24 @@ export async function completeKairoOAuthCallback(searchParams: URLSearchParams):
     code_verifier: pending.codeVerifier,
   });
 
-  await storeProviderApiToken(TOKEN_PROVIDER_ID, JSON.stringify(tokens));
+  await persistKairoTokens(tokens);
   clearPendingPkce();
 }
 
 async function getStoredKairoTokens(): Promise<StoredKairoTokenSet | null> {
   const raw = await getProviderApiToken(TOKEN_PROVIDER_ID);
-  return parseStoredTokens(raw);
+  const stored = parseStoredTokens(raw);
+  if (stored) {
+    saveBackupTokens(stored);
+    return stored;
+  }
+
+  const backup = readBackupTokens();
+  if (backup) {
+    return backup;
+  }
+
+  return null;
 }
 
 async function refreshKairoTokens(refreshToken: string): Promise<StoredKairoTokenSet> {
@@ -488,7 +613,7 @@ export async function refreshKairoAccessToken(): Promise<string | null> {
 
   try {
     const refreshed = await refreshKairoTokens(stored.refreshToken);
-    await storeProviderApiToken(TOKEN_PROVIDER_ID, JSON.stringify(refreshed));
+    await persistKairoTokens(refreshed);
     return refreshed.accessToken;
   } catch {
     await clearKairoTokens();
@@ -520,6 +645,10 @@ export async function getValidKairoAccessToken(): Promise<string | null> {
 }
 
 export async function clearKairoTokens(): Promise<void> {
-  await removeProviderApiToken(TOKEN_PROVIDER_ID);
+  try {
+    await removeProviderApiToken(TOKEN_PROVIDER_ID);
+  } finally {
+    clearBackupTokens();
+  }
   clearPendingPkce();
 }

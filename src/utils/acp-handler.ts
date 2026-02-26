@@ -1,9 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/store/store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { buildContextPrompt } from "./context-builder";
 import {
   getValidKairoAccessToken,
@@ -51,6 +51,8 @@ export class AcpStreamHandler {
   private pendingNewMessage = false;
   private cancelled = false;
   private wasRunning = false;
+  private lastRawTextChunk: string | null = null;
+  private accumulatedText = "";
 
   constructor(
     private agentId: string,
@@ -303,11 +305,13 @@ Detailed step description with specific files/commands.
   private handleContentChunk(event: Extract<AcpEvent, { type: "content_chunk" }>): void {
     if (this.pendingNewMessage && this.handlers.onNewMessage) {
       this.handlers.onNewMessage();
+      this.lastRawTextChunk = null;
+      this.accumulatedText = "";
     }
     this.pendingNewMessage = false;
 
     if (event.content.type === "text") {
-      this.handlers.onChunk(event.content.text);
+      this.handleTextChunk(event.content.text);
     } else if (event.content.type === "image") {
       if (this.handlers.onImageChunk) {
         this.handlers.onImageChunk(event.content.data, event.content.mediaType);
@@ -322,6 +326,45 @@ Detailed step description with specific files/commands.
       // Content block is complete, but session may continue
       console.log("Content block complete");
     }
+  }
+
+  private handleTextChunk(text: string): void {
+    if (!text) {
+      return;
+    }
+
+    // Some ACP adapters occasionally emit the same chunk twice.
+    if (this.lastRawTextChunk === text) {
+      return;
+    }
+
+    // Snapshot mode: chunk contains full text so far.
+    if (this.accumulatedText && text.startsWith(this.accumulatedText)) {
+      const delta = text.slice(this.accumulatedText.length);
+      if (delta) {
+        this.handlers.onChunk(delta);
+      }
+      this.accumulatedText = text;
+      this.lastRawTextChunk = text;
+      return;
+    }
+
+    // Guard against a known bad shape where a snapshot is duplicated in the same chunk.
+    if (this.accumulatedText && text === `${this.accumulatedText}${this.accumulatedText}`) {
+      this.lastRawTextChunk = text;
+      return;
+    }
+
+    // No-progress duplicate fragment.
+    if (this.accumulatedText?.endsWith(text)) {
+      this.lastRawTextChunk = text;
+      return;
+    }
+
+    // Delta mode: chunk is incremental text.
+    this.handlers.onChunk(text);
+    this.accumulatedText += text;
+    this.lastRawTextChunk = text;
   }
 
   private handleToolStart(event: Extract<AcpEvent, { type: "tool_start" }>): void {
@@ -411,6 +454,8 @@ Detailed step description with specific files/commands.
       clearTimeout(this.timeout);
       this.timeout = undefined;
     }
+    this.lastRawTextChunk = null;
+    this.accumulatedText = "";
     this.pendingNewMessage = false;
 
     if (this.listeners.event) {
