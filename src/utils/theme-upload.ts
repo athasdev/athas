@@ -32,20 +32,17 @@ function isNewFormat(themeFile: unknown): themeFile is NewThemeFile {
   return "appearance" in firstTheme && "colors" in firstTheme && "syntax" in firstTheme;
 }
 
-/**
- * Convert new format theme to internal ThemeDefinition
- */
 function convertNewFormatTheme(jsonTheme: NewJsonTheme): ThemeDefinition {
-  // Convert colors to CSS variables with -- prefix
   const cssVariables: Record<string, string> = {};
   for (const [key, value] of Object.entries(jsonTheme.colors)) {
     cssVariables[`--${key}`] = value;
+    cssVariables[`--color-${key}`] = value;
   }
 
-  // Convert syntax to syntaxTokens with --syntax- prefix
   const syntaxTokens: Record<string, string> = {};
   for (const [key, value] of Object.entries(jsonTheme.syntax)) {
     syntaxTokens[`--syntax-${key}`] = value;
+    syntaxTokens[`--color-syntax-${key}`] = value;
   }
 
   const isDark = jsonTheme.appearance === "dark";

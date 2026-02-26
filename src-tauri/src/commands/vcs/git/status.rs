@@ -119,3 +119,22 @@ fn _git_init(repo_path: String) -> Result<()> {
    Repository::init(&repo_path).context("Failed to initialize repository")?;
    Ok(())
 }
+
+#[command]
+pub fn git_discover_repo(path: String) -> Result<Option<String>, String> {
+   let discovered = match Repository::discover(&path) {
+      Ok(repo) => {
+         if let Some(workdir) = repo.workdir() {
+            Some(workdir.to_string_lossy().to_string())
+         } else {
+            repo
+               .path()
+               .parent()
+               .map(|parent| parent.to_string_lossy().to_string())
+         }
+      }
+      Err(_) => None,
+   };
+
+   Ok(discovered)
+}

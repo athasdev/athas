@@ -25,9 +25,10 @@ dirs = "5.0"
 ec4rs = "1.2"
 env_logger = "0.11.8"
 futures-util = "0.3"
-git2 = { version = "0.20", features = ["vendored-openssl"] }
+git2 = { version = "0.20", features = ["vendored-libgit2", "vendored-openssl"] }
 interceptor = { path = "./packages/interceptor" }
 lazy_static = "1.4"
+mimalloc = { version = "0.1", default-features = false }
 log = "0.4.27"
 lsp-types = { version = "0.95", features = ["proposed"] }
 notify = "8.1.0"
@@ -42,6 +43,7 @@ flate2 = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 sha2 = "0.10"
 serde_json = "1.0"
+keyring = "3.6.3"
 ssh2 = { version = "0.9", features = ["vendored-openssl"] }
 tauri = { version = "2", features = ["protocol-asset", "macos-private-api", "unstable", "test"] }
 tauri-plugin-dialog = "2"
@@ -81,3 +83,4 @@ tauri-plugin-window-state = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 rand = "0.8.5"
+objc = "0.2"

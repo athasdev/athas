@@ -1,11 +1,78 @@
-import { wasmParserLoader } from "../../lib/wasm-parser";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { convertToEditorTokens, tokenizeCode, wasmParserLoader } from "../../lib/wasm-parser";
+import { indexedDBParserCache } from "../../lib/wasm-parser/cache-indexeddb";
+import {
+  fetchHighlightQuery,
+  getDefaultParserWasmUrl,
+} from "../../lib/wasm-parser/extension-assets";
 import { useBufferStore } from "../../stores/buffer-store";
 import type { Change } from "../../types/editor";
 import { logger } from "../../utils/logger";
-import { extensionManager } from "../manager";
 import type { EditorAPI, EditorExtension, Token } from "../types";
 
 const DEBOUNCE_TIME_MS = 150; // Debounce for tokenization requests
+
+const EXTENSION_TO_LANGUAGE: Record<string, string> = {
+  js: "javascript",
+  mjs: "javascript",
+  cjs: "javascript",
+  jsx: "javascript",
+  ts: "typescript",
+  tsx: "typescriptreact",
+  py: "python",
+  rs: "rust",
+  go: "go",
+  java: "java",
+  c: "c",
+  h: "c",
+  cpp: "cpp",
+  cc: "cpp",
+  cxx: "cpp",
+  hpp: "cpp",
+  hh: "cpp",
+  hxx: "cpp",
+  cs: "csharp",
+  rb: "ruby",
+  php: "php",
+  html: "html",
+  htm: "html",
+  css: "css",
+  scss: "css",
+  json: "json",
+  yaml: "yaml",
+  yml: "yaml",
+  toml: "toml",
+  md: "markdown",
+  markdown: "markdown",
+  sh: "bash",
+  bash: "bash",
+  zsh: "bash",
+  swift: "swift",
+  kt: "kotlin",
+  kts: "kotlin",
+  scala: "scala",
+  lua: "lua",
+  dart: "dart",
+  ex: "elixir",
+  exs: "elixir",
+  ml: "ocaml",
+  mli: "ocaml",
+  sol: "solidity",
+  zig: "zig",
+  vue: "vue",
+};
+
+async function resolveHighlightQuery(
+  languageId: string,
+  options: { cachedQuery?: string; wasmUrl?: string },
+): Promise<string> {
+  const { cachedQuery, wasmUrl } = options;
+  const { query } = await fetchHighlightQuery(languageId, {
+    wasmUrl,
+    cacheMode: "no-store",
+  });
+  return query || cachedQuery || "";
+}
 
 class SyntaxHighlighter {
   private tokens: Token[] = [];
@@ -159,20 +226,27 @@ class SyntaxHighlighter {
       // Check if aborted before proceeding
       if (signal.aborted) return;
 
-      // Ensure language provider is loaded (lazy loading)
-      const languageProvider = await extensionManager.ensureLanguageProvider(extension);
-      if (!languageProvider) {
-        logger.debug(
-          "SyntaxHighlighter",
-          "No language provider available for extension:",
-          extension,
-        );
+      const languageId =
+        extensionRegistry.getLanguageId(targetFilePath || "") || EXTENSION_TO_LANGUAGE[extension];
+      if (!languageId) {
+        logger.debug("SyntaxHighlighter", "No language mapping for extension:", extension);
         this.tokens = [];
       } else {
         try {
-          this.tokens = await languageProvider.getTokens(content);
+          const cached = await indexedDBParserCache.get(languageId);
+          const wasmPath = cached?.sourceUrl || getDefaultParserWasmUrl(languageId);
+          const highlightQuery = await resolveHighlightQuery(languageId, {
+            cachedQuery: cached?.highlightQuery,
+            wasmUrl: cached?.sourceUrl || wasmPath,
+          });
+          const highlightTokens = await tokenizeCode(content, languageId, {
+            languageId,
+            wasmPath,
+            highlightQuery,
+          });
+          this.tokens = convertToEditorTokens(highlightTokens);
         } catch (error) {
-          logger.error("SyntaxHighlighter", `Failed to tokenize with ${extension}:`, error);
+          logger.error("SyntaxHighlighter", `Failed to tokenize with ${languageId}:`, error);
           this.tokens = [];
         }
       }

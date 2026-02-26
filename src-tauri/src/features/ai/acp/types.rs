@@ -143,6 +143,18 @@ pub enum AcpContentBlock {
    },
 }
 
+/// UI action types that agents can request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "action", rename_all = "snake_case")]
+pub enum UiAction {
+   /// Open a URL in the web viewer
+   #[serde(rename_all = "camelCase")]
+   OpenWebViewer { url: String },
+   /// Open a terminal with an optional command
+   #[serde(rename_all = "camelCase")]
+   OpenTerminal { command: Option<String> },
+}
+
 /// Events emitted to the frontend via Tauri
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -236,5 +248,11 @@ pub enum AcpEvent {
    PromptComplete {
       session_id: String,
       stop_reason: StopReason,
+   },
+   /// UI action request from agent
+   #[serde(rename_all = "camelCase")]
+   UiAction {
+      session_id: String,
+      action: UiAction,
    },
 }

@@ -74,7 +74,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         data-tauri-drag-region
         className={`relative z-50 flex select-none items-center justify-between ${
           isMacOS ? "h-11" : "h-7"
-        } bg-primary-bg`}
+        } border-border/70 border-b bg-secondary-bg/70 px-2 backdrop-blur-sm`}
       >
         <div className="flex-1" />
 
@@ -84,7 +84,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             <Tooltip content="Minimize" side="bottom">
               <button
                 onClick={handleMinimize}
-                className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
+                className="flex h-6 w-8 items-center justify-center rounded-full border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
               >
                 <Minus className="h-3.5 w-3.5 text-text-lighter" />
               </button>
@@ -92,7 +92,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
               <button
                 onClick={handleToggleMaximize}
-                className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
+                className="flex h-6 w-8 items-center justify-center rounded-full border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
               >
                 {isMaximized ? (
                   <Minimize2 className="h-3.5 w-3.5 text-text-lighter" />
@@ -104,7 +104,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             <Tooltip content="Close" side="bottom">
               <button
                 onClick={handleClose}
-                className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-error"
+                className="group flex h-6 w-8 items-center justify-center rounded-full border border-transparent transition-colors hover:bg-error"
               >
                 <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
               </button>
@@ -120,7 +120,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     return (
       <div
         data-tauri-drag-region
-        className="relative z-50 flex h-9 select-none items-center justify-between bg-primary-bg pl-0.5"
+        className="relative z-50 flex h-10 select-none items-center justify-between border-border/70 border-b bg-secondary-bg/70 px-2 backdrop-blur-sm"
       >
         {!settings.nativeMenuBar && (
           <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
@@ -135,7 +135,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         </div>
 
         {/* Account menu */}
-        <div className="mr-4 flex items-center gap-0.5">
+        <div className="mr-2 flex items-center gap-1">
           <AccountMenu iconSize={14} />
         </div>
       </div>
@@ -146,14 +146,14 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   return (
     <div
       data-tauri-drag-region
-      className={"z-50 flex h-7 select-none items-center justify-between bg-primary-bg"}
+      className="relative z-50 flex h-8 select-none items-center justify-between border-border/70 border-b bg-secondary-bg/70 px-2 backdrop-blur-sm"
     >
       {!settings.nativeMenuBar && (
         <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
       )}
 
       {/* Left side */}
-      <div data-tauri-drag-region className="flex flex-1 items-center px-2">
+      <div data-tauri-drag-region className="flex flex-1 items-center px-1">
         {/* Menu bar button */}
         {!settings.nativeMenuBar && settings.compactMenuBar && (
           <Tooltip content="Menu" side="bottom">
@@ -161,7 +161,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               onClick={() => {
                 setMenuBarActiveMenu("File");
               }}
-              className={`mr-2 flex items-center justify-center rounded py-0.5 text-text`}
+              className="mr-2 flex h-6 w-8 items-center justify-center rounded-full border border-border bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             >
               <MenuIcon size={16} />
             </button>
@@ -181,17 +181,17 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       </div>
 
       {/* Right side */}
-      <div className="z-20 flex items-center gap-0.5">
+      <div className="z-20 flex items-center gap-1">
         {/* Account menu */}
-        <AccountMenu iconSize={12} className="mr-2 px-1 py-0.5" />
+        <AccountMenu iconSize={12} className="mr-1" />
 
         {/* Window controls - only show on Linux */}
         {isLinux && (
-          <div className="flex items-center">
+          <div className="flex items-center gap-0.5">
             <Tooltip content="Minimize" side="bottom">
               <button
                 onClick={handleMinimize}
-                className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
+                className="flex h-6 w-8 items-center justify-center rounded-full border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
               >
                 <Minus className="h-3.5 w-3.5 text-text-lighter" />
               </button>
@@ -199,7 +199,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
               <button
                 onClick={handleToggleMaximize}
-                className="flex h-7 w-10 items-center justify-center transition-colors hover:bg-hover"
+                className="flex h-6 w-8 items-center justify-center rounded-full border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
               >
                 {isMaximized ? (
                   <Minimize2 className="h-3.5 w-3.5 text-text-lighter" />
@@ -211,7 +211,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             <Tooltip content="Close" side="bottom">
               <button
                 onClick={handleClose}
-                className="group flex h-7 w-10 items-center justify-center transition-colors hover:bg-error"
+                className="group flex h-6 w-8 items-center justify-center rounded-full border border-transparent transition-colors hover:bg-error"
               >
                 <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
               </button>

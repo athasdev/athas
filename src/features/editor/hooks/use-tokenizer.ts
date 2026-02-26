@@ -4,9 +4,11 @@
  */
 
 import { useCallback, useRef, useState } from "react";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
-import { indexedDBParserCache } from "../lib/wasm-parser/cache-indexeddb";
+import { indexedDBParserCache, type ParserCacheEntry } from "../lib/wasm-parser/cache-indexeddb";
+import { fetchHighlightQuery, getDefaultParserWasmUrl } from "../lib/wasm-parser/extension-assets";
 import {
   tokenizeCodeWithTree,
   tokenizeRange as wasmTokenizeRange,
@@ -30,18 +32,25 @@ interface TokenCache {
   previousContent: string;
 }
 
+interface TextMetricsCache {
+  text: string;
+  normalizedText: string;
+  lineOffsets: number[];
+  lineCount: number;
+}
+
 /**
  * Map file extensions to Tree-sitter language IDs
  */
 const EXTENSION_TO_LANGUAGE: Record<string, string> = {
-  js: "tsx",
-  jsx: "tsx",
-  mjs: "tsx",
-  cjs: "tsx",
-  ts: "tsx",
-  tsx: "tsx",
-  mts: "tsx",
-  cts: "tsx",
+  js: "javascript",
+  mjs: "javascript",
+  cjs: "javascript",
+  jsx: "javascript",
+  ts: "typescript",
+  tsx: "typescriptreact",
+  mts: "typescript",
+  cts: "typescript",
   py: "python",
   rs: "rust",
   go: "go",
@@ -52,8 +61,9 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   cc: "cpp",
   cxx: "cpp",
   hpp: "cpp",
+  hh: "cpp",
   hxx: "cpp",
-  cs: "c_sharp",
+  cs: "csharp",
   rb: "ruby",
   php: "php",
   html: "html",
@@ -85,24 +95,103 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   erb: "embedded_template",
 };
 
+const FILENAME_TO_LANGUAGE: Record<string, string> = {
+  ".bashrc": "bash",
+  ".zshrc": "bash",
+  ".bash_profile": "bash",
+  ".profile": "bash",
+  "go.mod": "go",
+  "go.sum": "go",
+  "go.work": "go",
+};
+
+const QUERY_REFRESHED_THIS_SESSION = new Set<string>();
+
 function getExtension(path: string): string {
   const parts = path.split(".");
   return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
 }
 
 export function getLanguageId(filePath: string): string | null {
+  const fromRegistry = extensionRegistry.getLanguageId(filePath);
+  if (fromRegistry) {
+    return fromRegistry;
+  }
+
+  const fileName = filePath.split("/").pop()?.toLowerCase() || "";
+  const fromFilename = FILENAME_TO_LANGUAGE[fileName];
+  if (fromFilename) {
+    return fromFilename;
+  }
+
   const ext = getExtension(filePath);
   return EXTENSION_TO_LANGUAGE[ext] || null;
 }
 
-/**
- * Get the query folder for a language ID
- */
-function getQueryFolder(languageId: string): string {
-  if (languageId === "typescript" || languageId === "javascript") {
-    return "tsx";
+function shouldRefreshLegacyHighlightQuery(languageId: string, queryText: string): boolean {
+  if (!queryText.trim()) {
+    return true;
   }
-  return languageId;
+
+  // Existing TypeScript query in old installs was too limited, refresh from local extension.
+  if (languageId === "typescript" && queryText.trim().length < 1000) {
+    return true;
+  }
+
+  // Older cached C++ queries can reference nodes not present in the shipped parser.
+  if (languageId === "cpp" && queryText.includes("(module_name")) {
+    return true;
+  }
+
+  return false;
+}
+
+async function resolveHighlightQuery(
+  languageId: string,
+  cached?: ParserCacheEntry,
+): Promise<string> {
+  let highlightQuery = cached?.highlightQuery || "";
+  const shouldTryRefresh =
+    shouldRefreshLegacyHighlightQuery(languageId, highlightQuery) ||
+    !QUERY_REFRESHED_THIS_SESSION.has(languageId) ||
+    !highlightQuery.trim();
+
+  if (!shouldTryRefresh) {
+    return highlightQuery;
+  }
+
+  try {
+    const { query: latestQuery, sourceUrl } = await fetchHighlightQuery(languageId, {
+      wasmUrl: cached?.sourceUrl,
+      cacheMode: "no-store",
+    });
+
+    if (!latestQuery.trim()) {
+      QUERY_REFRESHED_THIS_SESSION.add(languageId);
+      return highlightQuery;
+    }
+
+    if (cached && latestQuery !== highlightQuery) {
+      await indexedDBParserCache.set({
+        ...cached,
+        highlightQuery: latestQuery,
+      });
+      logger.info(
+        "Editor",
+        `[Tokenizer] Refreshed highlight query from ${sourceUrl || "fallback source"}`,
+      );
+      highlightQuery = latestQuery;
+    } else if (!cached) {
+      highlightQuery = latestQuery;
+    }
+
+    QUERY_REFRESHED_THIS_SESSION.add(languageId);
+  } catch {
+    logger.warn("Editor", `[Tokenizer] Failed to refresh highlight query for ${languageId}`);
+    QUERY_REFRESHED_THIS_SESSION.add(languageId);
+  }
+
+  return highlightQuery;
 }
 
 /**
@@ -117,6 +206,7 @@ function convertToToken(highlightToken: HighlightToken): Token {
 }
 
 const FULL_TOKENIZE_INTERVAL = 30000; // Re-tokenize full document every 30 seconds
+const LARGE_FILE_LINE_THRESHOLD = 20000; // Use viewport-only strategy for very large files
 
 export function useTokenizer({
   filePath,
@@ -132,8 +222,27 @@ export function useTokenizer({
     lastFullTokenizeTime: 0,
     previousContent: "",
   });
+  const textMetricsRef = useRef<TextMetricsCache | null>(null);
   const treeCacheActions = useTreeCacheStore.use.actions();
   const { startMeasure, endMeasure } = usePerformanceMonitor("Tokenizer");
+
+  const getTextMetrics = useCallback((text: string): TextMetricsCache => {
+    const cached = textMetricsRef.current;
+    if (cached && cached.text === text) {
+      return cached;
+    }
+
+    const normalizedText = normalizeLineEndings(text);
+    const lineOffsets = buildLineOffsetMap(text);
+    const nextMetrics: TextMetricsCache = {
+      text,
+      normalizedText,
+      lineOffsets,
+      lineCount: lineOffsets.length,
+    };
+    textMetricsRef.current = nextMetrics;
+    return nextMetrics;
+  }, []);
 
   /**
    * Tokenize the full document using WASM parser
@@ -151,56 +260,18 @@ export function useTokenizer({
 
       setLoading(true);
       try {
-        // Check if language extension is installed before trying to load parser
-        const { extensionManager } = await import("@/features/editor/extensions/manager");
-        const ext = getExtension(filePath);
-        const provider = await extensionManager.ensureLanguageProvider(ext);
-        if (!provider) {
-          logger.debug("Editor", `[Tokenizer] No installed provider for ${languageId}`);
-          setTokens([]);
-          setLoading(false);
-          return;
-        }
-
         // Check if parser is in IndexedDB cache
         const cached = await indexedDBParserCache.get(languageId);
-        if (!cached) {
-          // Parser should be in cache after extension installation
-          logger.warn(
-            "Editor",
-            `[Tokenizer] Extension installed but parser not in cache for ${languageId}`,
-          );
-          setTokens([]);
-          setLoading(false);
-          return;
-        }
 
         // Normalize line endings before tokenizing
         const normalizedText = normalizeLineEndings(text);
         startMeasure(`tokenizeFull (len: ${normalizedText.length})`);
 
-        // Use cached config
-        const wasmPath = cached.sourceUrl;
-        let highlightQuery = cached.highlightQuery;
+        const wasmPath = cached?.sourceUrl || getDefaultParserWasmUrl(languageId);
+        const highlightQuery = await resolveHighlightQuery(languageId, cached || undefined);
 
-        // Try to load highlight query if not cached
-        if (!highlightQuery || highlightQuery.trim().length === 0) {
-          const queryFolder = getQueryFolder(languageId);
-          const queryPath = `/extensions/${queryFolder}/highlights.scm`;
-          try {
-            const response = await fetch(queryPath);
-            if (response.ok) {
-              highlightQuery = await response.text();
-              // Update cache with the loaded query
-              await indexedDBParserCache.set({
-                ...cached,
-                highlightQuery,
-              });
-              logger.info("Editor", `[Tokenizer] Loaded highlight query from ${queryPath}`);
-            }
-          } catch {
-            logger.warn("Editor", `[Tokenizer] Failed to load highlight query from ${queryPath}`);
-          }
+        if (!cached) {
+          logger.info("Editor", `[Tokenizer] Using remote parser source for ${languageId}`);
         }
 
         // Always do full parse - incremental parsing disabled for now
@@ -251,11 +322,57 @@ export function useTokenizer({
 
       startMeasure("tokenizeRangeInternal");
 
-      const lineCount = text.split("\n").length;
+      const { normalizedText, lineOffsets, lineCount } = getTextMetrics(text);
 
       // For small files, always tokenize fully
       if (lineCount < EDITOR_CONSTANTS.SMALL_FILE_THRESHOLD) {
         return tokenizeFull(text);
+      }
+
+      // For very large files, keep tokenization strictly viewport-scoped to avoid
+      // repeatedly merging/sorting huge token arrays while scrolling.
+      if (lineCount >= LARGE_FILE_LINE_THRESHOLD) {
+        setLoading(true);
+        try {
+          const cached = await indexedDBParserCache.get(languageId);
+          const wasmPath = cached?.sourceUrl || getDefaultParserWasmUrl(languageId);
+          const highlightQuery = await resolveHighlightQuery(languageId, cached || undefined);
+
+          const clampedStartLine = Math.max(0, Math.min(viewportRange.startLine, lineCount - 1));
+          const clampedEndLine = Math.max(
+            clampedStartLine + 1,
+            Math.min(viewportRange.endLine, lineCount),
+          );
+
+          const highlightTokens = await wasmTokenizeRange(
+            text,
+            languageId,
+            clampedStartLine,
+            clampedEndLine,
+            {
+              languageId,
+              wasmPath,
+              highlightQuery,
+            },
+          );
+
+          const rangeTokens = highlightTokens.map(convertToToken);
+          setTokens(rangeTokens);
+          setTokenizedContent(normalizedText);
+          cacheRef.current = {
+            fullTokens: rangeTokens,
+            lastFullTokenizeTime: Date.now(),
+            previousContent: normalizedText,
+          };
+        } catch (error) {
+          logger.warn("Editor", "[Tokenizer] Large-file viewport tokenization failed:", error);
+          setTokens([]);
+          setTokenizedContent(normalizedText);
+        } finally {
+          setLoading(false);
+          endMeasure("tokenizeRangeInternal");
+        }
+        return;
       }
 
       // Check if we need a full re-tokenize (periodic refresh)
@@ -266,52 +383,19 @@ export function useTokenizer({
 
       setLoading(true);
       try {
-        // Check if language extension is installed before trying to load parser
-        const { extensionManager } = await import("@/features/editor/extensions/manager");
-        const ext = getExtension(filePath);
-        const provider = await extensionManager.ensureLanguageProvider(ext);
-        if (!provider) {
-          logger.debug("Editor", `[Tokenizer] No installed provider for ${languageId}`);
-          setTokens([]);
-          setLoading(false);
-          return;
-        }
-
         // Check if parser is in IndexedDB cache
         const cached = await indexedDBParserCache.get(languageId);
         if (!cached) {
-          // Parser should be in cache after extension installation
           logger.warn(
             "Editor",
-            `[Tokenizer] Extension installed but parser not in cache for ${languageId}`,
+            `[Tokenizer] Parser not in cache for ${languageId}, falling back to full tokenization`,
           );
-          setTokens([]);
-          setLoading(false);
-          return;
+          return tokenizeFull(text);
         }
 
         // Use cached config
         const wasmPath = cached.sourceUrl;
-        let highlightQuery = cached.highlightQuery;
-
-        // Try to load highlight query if not cached
-        if (!highlightQuery || highlightQuery.trim().length === 0) {
-          const queryFolder = getQueryFolder(languageId);
-          const queryPath = `/extensions/${queryFolder}/highlights.scm`;
-          try {
-            const response = await fetch(queryPath);
-            if (response.ok) {
-              highlightQuery = await response.text();
-              // Update cache with the loaded query
-              await indexedDBParserCache.set({
-                ...cached,
-                highlightQuery,
-              });
-            }
-          } catch {
-            logger.warn("Editor", `[Tokenizer] Failed to load highlight query from ${queryPath}`);
-          }
-        }
+        const highlightQuery = await resolveHighlightQuery(languageId, cached);
 
         // Tokenize the viewport range
         const highlightTokens = await wasmTokenizeRange(
@@ -331,8 +415,6 @@ export function useTokenizer({
         // Merge with cached tokens from outside the viewport
         const { fullTokens } = cacheRef.current;
 
-        // Use cached line offset map for O(1) lookups instead of O(n) reduce
-        const lineOffsets = buildLineOffsetMap(text);
         const rangeStartOffset = lineOffsets[viewportRange.startLine] || 0;
         const rangeEndOffset = lineOffsets[viewportRange.endLine] || text.length;
 
@@ -346,7 +428,6 @@ export function useTokenizer({
           (a, b) => a.start - b.start,
         );
 
-        const normalizedText = normalizeLineEndings(text);
         setTokens(mergedTokens);
         setTokenizedContent(normalizedText);
 
@@ -365,7 +446,7 @@ export function useTokenizer({
         endMeasure("tokenizeRangeInternal");
       }
     },
-    [enabled, filePath, tokenizeFull],
+    [enabled, filePath, getTextMetrics, tokenizeFull],
   );
 
   /**

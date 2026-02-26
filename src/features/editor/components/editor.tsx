@@ -5,8 +5,10 @@ import { useGitGutter } from "@/features/git/hooks/use-gutter";
 import { useSettingsStore } from "@/features/settings/store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/stores/zoom-store";
+import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
+import { useAutocomplete } from "../hooks/use-autocomplete";
 import { useContextMenu } from "../hooks/use-context-menu";
 import { useEditorOperations } from "../hooks/use-editor-operations";
 import { useFoldTransform } from "../hooks/use-fold-transform";
@@ -27,7 +29,7 @@ import type { Decoration, Position, Range } from "../types/editor";
 import { applyVirtualEdit, calculateActualOffset } from "../utils/fold-transformer";
 import { calculateLineHeight, calculateLineOffset, splitLines } from "../utils/lines";
 import { applyMultiCursorBackspace, applyMultiCursorEdit } from "../utils/multi-cursor";
-import { calculateCursorPosition } from "../utils/position";
+import { calculateCursorPosition, getAccurateCursorX } from "../utils/position";
 import { scrollLogger } from "../utils/scroll-logger";
 import { InlineDiff } from "./diff/inline-diff";
 import { Gutter } from "./gutter/gutter";
@@ -37,6 +39,7 @@ import { HighlightLayer } from "./layers/highlight-layer";
 import { InputLayer } from "./layers/input-layer";
 import { MultiCursorLayer } from "./layers/multi-cursor-layer";
 import { SearchHighlightLayer } from "./layers/search-highlight-layer";
+import { SelectionLayer } from "./layers/selection-layer";
 import { VimCursorLayer } from "./layers/vim-cursor-layer";
 import { Minimap } from "./minimap/minimap";
 
@@ -46,6 +49,24 @@ interface EditorProps {
   onMouseLeave?: () => void;
   onMouseEnter?: () => void;
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+}
+
+const LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD = 20000;
+const LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS = 120;
+const SCROLL_STATE_UPDATE_INTERVAL_MS = 33;
+const AUTO_PAIRS: Record<string, string> = {
+  "(": ")",
+  "[": "]",
+  "{": "}",
+  '"': '"',
+  "'": "'",
+  "`": "`",
+};
+const AUTO_PAIR_CLOSERS = new Set(Object.values(AUTO_PAIRS));
+const BLOCK_COMMENT_LANGUAGES = new Set(["css"]);
+
+function isAltGraphPressed(e: React.KeyboardEvent<HTMLTextAreaElement>): boolean {
+  return e.getModifierState("AltGraph") || (e.ctrlKey && e.altKey && !e.metaKey);
 }
 
 export function Editor({
@@ -59,7 +80,9 @@ export function Editor({
   const highlightRef = useRef<HTMLDivElement>(null);
   const multiCursorRef = useRef<HTMLDivElement>(null);
   const searchHighlightRef = useRef<HTMLDivElement>(null);
+  const selectionLayerRef = useRef<HTMLDivElement>(null);
   const vimCursorRef = useRef<HTMLDivElement>(null);
+  const autocompleteCompletionRef = useRef<HTMLDivElement>(null);
 
   // Track scroll position for minimap
   const [editorScrollTop, setEditorScrollTop] = useState(0);
@@ -88,6 +111,8 @@ export function Editor({
   const fontFamily = useEditorSettingsStore.use.fontFamily();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
+  const aiCompletionEnabled = useSettingsStore((state) => state.settings.aiCompletion);
+  const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
   const vimMode = useVimStore.use.mode();
 
   // Apply zoom by scaling font size instead of CSS transform
@@ -144,6 +169,8 @@ export function Editor({
   // Use consistent line height for both textarea and gutter
   // This ensures they stay synchronized at all zoom levels
   const lineHeight = useMemo(() => calculateLineHeight(fontSize), [fontSize]);
+  const shouldVirtualizeRendering =
+    lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
 
   const {
     viewportRange,
@@ -185,6 +212,12 @@ export function Editor({
   const handleInput = useCallback(
     (newVirtualContent: string) => {
       if (!bufferId || !inputRef.current) return;
+
+      // Any actual typing/edit should dismiss hover info immediately.
+      const uiActions = useEditorUIStore.getState().actions;
+      uiActions.setHoverInfo(null);
+      uiActions.setIsHovering(false);
+      uiActions.setAutocompleteCompletion(null);
 
       let newActualContent: string;
       if (foldTransform.hasActiveFolds) {
@@ -282,6 +315,11 @@ export function Editor({
     } else {
       setSelection(undefined);
     }
+
+    // Cursor movement/navigation should hide stale hover tooltip.
+    const uiActions = useEditorUIStore.getState().actions;
+    uiActions.setHoverInfo(null);
+    uiActions.setIsHovering(false);
   }, [bufferId, lines, actualLines, setCursorPosition, setSelection, foldTransform]);
 
   const handleClick = useCallback(
@@ -342,14 +380,33 @@ export function Editor({
   const isLspCompletionVisible = useEditorUIStore.use.isLspCompletionVisible();
   const filteredCompletions = useEditorUIStore.use.filteredCompletions();
   const selectedLspIndex = useEditorUIStore.use.selectedLspIndex();
-  const { setSelectedLspIndex, setIsLspCompletionVisible } = useEditorUIStore.use.actions();
+  const autocompleteCompletion = useEditorUIStore.use.autocompleteCompletion();
+  const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
+  const { setSelectedLspIndex, setIsLspCompletionVisible, setAutocompleteCompletion } =
+    useEditorUIStore.use.actions();
   const searchMatches = useEditorUIStore.use.searchMatches();
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
   const lspActions = useLspStore.use.actions();
 
+  useAutocomplete({
+    enabled: aiCompletionEnabled,
+    model: aiAutocompleteModelId,
+    filePath: filePath || null,
+    languageId: filePath ? getLanguageId(filePath) : null,
+    content,
+    cursorOffset: cursorPosition.offset,
+    lastInputTimestamp,
+    hasActiveFolds: foldTransform.hasActiveFolds,
+    setAutocompleteCompletion,
+  });
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.altKey && (e.key === "[" || e.key === "]")) {
+      const isAltGraph = isAltGraphPressed(e);
+      const hasBlockedModifier =
+        e.metaKey || (e.ctrlKey && !isAltGraph) || (e.altKey && !isAltGraph);
+
+      if (!isAltGraph && e.altKey && (e.key === "[" || e.key === "]")) {
         e.preventDefault();
         const decorations = useEditorDecorationsStore.getState().decorations;
         const changedLines: number[] = [];
@@ -414,7 +471,7 @@ export function Editor({
       }
 
       // Shift+Alt+Down/Up for column cursors (add cursor above/below current line)
-      if (e.shiftKey && e.altKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      if (!isAltGraph && e.shiftKey && e.altKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
         e.preventDefault();
 
         const contentLines = splitLines(content);
@@ -595,6 +652,128 @@ export function Editor({
         }
       }
 
+      // Auto-pairing for single cursor editing
+      if (inputRef.current && !hasBlockedModifier) {
+        const textarea = e.currentTarget;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const currentContent = textarea.value;
+        const selectedText = currentContent.substring(start, end);
+        const nextChar = currentContent[start] || "";
+        const prevChar = start > 0 ? currentContent[start - 1] : "";
+        const currentLanguageId = filePath ? getLanguageId(filePath) : null;
+
+        // CSS block comment expansion: typing * after / becomes /* */
+        if (
+          e.key === "*" &&
+          start === end &&
+          prevChar === "/" &&
+          currentLanguageId &&
+          BLOCK_COMMENT_LANGUAGES.has(currentLanguageId)
+        ) {
+          e.preventDefault();
+          const insertText = "* */";
+          const newContent =
+            currentContent.substring(0, start) + insertText + currentContent.substring(end);
+          const newCursorPos = start + 2; // Keep cursor between /* and */
+
+          textarea.value = newContent;
+          textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+          handleInput(newContent);
+          return;
+        }
+
+        // Skip over existing closer if user types the same closer
+        if (
+          e.key.length === 1 &&
+          start === end &&
+          AUTO_PAIR_CLOSERS.has(e.key) &&
+          nextChar === e.key
+        ) {
+          e.preventDefault();
+          textarea.selectionStart = textarea.selectionEnd = start + 1;
+          return;
+        }
+
+        // Auto-insert closing pair (also wraps selection)
+        const closingPair = AUTO_PAIRS[e.key];
+        if (e.key.length === 1 && closingPair) {
+          // Prevent apostrophe pairing in words like don't
+          if (e.key === "'" && /\w/.test(prevChar)) {
+            return;
+          }
+
+          e.preventDefault();
+          const newContent =
+            currentContent.substring(0, start) +
+            e.key +
+            selectedText +
+            closingPair +
+            currentContent.substring(end);
+          const newCursorPos = start + 1;
+          const newSelectionEnd = start + 1 + selectedText.length;
+
+          textarea.value = newContent;
+          if (selectedText.length > 0) {
+            textarea.selectionStart = newCursorPos;
+            textarea.selectionEnd = newSelectionEnd;
+          } else {
+            textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+          }
+          handleInput(newContent);
+          return;
+        }
+
+        // Delete pair together when backspacing between pairs
+        if (e.key === "Backspace" && start === end && start > 0) {
+          const leftChar = currentContent[start - 1];
+          const rightChar = currentContent[start] || "";
+          const expectedRight = AUTO_PAIRS[leftChar];
+
+          if (expectedRight && rightChar === expectedRight) {
+            e.preventDefault();
+            const newContent =
+              currentContent.substring(0, start - 1) + currentContent.substring(start + 1);
+            const newCursorPos = start - 1;
+            textarea.value = newContent;
+            textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+            handleInput(newContent);
+            return;
+          }
+        }
+      }
+
+      if (
+        autocompleteCompletion &&
+        !isLspCompletionVisible &&
+        e.key === "Tab" &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey
+      ) {
+        const textarea = e.currentTarget;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+
+        if (start === end && start === autocompleteCompletion.cursorOffset) {
+          e.preventDefault();
+
+          const currentContent = textarea.value;
+          const newContent =
+            currentContent.substring(0, start) +
+            autocompleteCompletion.text +
+            currentContent.substring(end);
+          const newCursorPos = start + autocompleteCompletion.text.length;
+
+          textarea.value = newContent;
+          textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+
+          setAutocompleteCompletion(null);
+          handleInput(newContent);
+          return;
+        }
+      }
+
       if (isLspCompletionVisible && filteredCompletions.length > 0) {
         const maxIndex = filteredCompletions.length;
 
@@ -651,6 +830,37 @@ export function Editor({
         return;
       }
 
+      if (e.key === "Escape" && autocompleteCompletion) {
+        e.preventDefault();
+        setAutocompleteCompletion(null);
+        return;
+      }
+
+      if (e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        const textarea = e.currentTarget;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const currentContent = textarea.value;
+
+        // Preserve indentation from the current line (spaces/tabs at line start).
+        const lineStart = currentContent.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+        const currentLinePrefix = currentContent.slice(lineStart, start);
+        const indentMatch = currentLinePrefix.match(/^[\t ]*/);
+        const indent = indentMatch?.[0] ?? "";
+
+        const inserted = `\n${indent}`;
+        const newContent =
+          currentContent.substring(0, start) + inserted + currentContent.substring(end);
+        const newCursorPos = start + inserted.length;
+
+        textarea.value = newContent;
+        textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+
+        handleInput(newContent);
+        return;
+      }
+
       if (e.key === "Tab") {
         if (e.ctrlKey || e.metaKey) {
           return;
@@ -677,10 +887,12 @@ export function Editor({
       tabSize,
       handleInput,
       isLspCompletionVisible,
+      autocompleteCompletion,
       filteredCompletions,
       selectedLspIndex,
       setSelectedLspIndex,
       setIsLspCompletionVisible,
+      setAutocompleteCompletion,
       lspActions,
       multiCursorState,
       clearSecondaryCursors,
@@ -690,6 +902,7 @@ export function Editor({
       updateCursor,
       tokenize,
       cursorPosition.line,
+      cursorPosition.offset,
       setCursorPosition,
       lines,
     ],
@@ -699,6 +912,7 @@ export function Editor({
   const lastScrollRef = useRef({ top: 0, left: 0 });
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastStoreScrollUpdateRef = useRef(0);
 
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLTextAreaElement>) => {
@@ -729,8 +943,10 @@ export function Editor({
         scrollRafRef.current = requestAnimationFrame(() => {
           const { top, left } = lastScrollRef.current;
 
-          // Update scroll state for minimap
-          setEditorScrollTop(top);
+          // Avoid full editor re-renders on scroll when minimap is hidden
+          if (minimapEnabled) {
+            setEditorScrollTop(top);
+          }
 
           // Update highlight layer transform for visual sync
           if (highlightRef.current) {
@@ -747,13 +963,28 @@ export function Editor({
             searchHighlightRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
+          // Update selection layer transform for visual sync
+          if (selectionLayerRef.current) {
+            selectionLayerRef.current.style.transform = `translate(-${left}px, -${top}px)`;
+          }
+
           // Update vim cursor layer transform for visual sync
           if (vimCursorRef.current) {
             vimCursorRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
-          // Update state store with captured buffer ID to avoid race condition
-          useEditorStateStore.getState().actions.setScrollForBuffer(currentBufferId, top, left);
+          // Update pro completion ghost layer transform for visual sync
+          if (autocompleteCompletionRef.current) {
+            autocompleteCompletionRef.current.style.transform = `translate(-${left}px, -${top}px)`;
+          }
+
+          // Throttle store updates during active scrolling to reduce expensive
+          // subscriber re-renders (notably on huge files).
+          const now = performance.now();
+          if (now - lastStoreScrollUpdateRef.current >= SCROLL_STATE_UPDATE_INTERVAL_MS) {
+            useEditorStateStore.getState().actions.setScrollForBuffer(currentBufferId, top, left);
+            lastStoreScrollUpdateRef.current = now;
+          }
 
           // Update viewport tracking in the same RAF
           handleViewportScroll(top, lines.length);
@@ -765,9 +996,12 @@ export function Editor({
       // Mark scrolling as finished after 150ms of no scroll events
       scrollTimeoutRef.current = setTimeout(() => {
         isScrollingRef.current = false;
+        const { top, left } = lastScrollRef.current;
+        useEditorStateStore.getState().actions.setScrollForBuffer(currentBufferId, top, left);
+        lastStoreScrollUpdateRef.current = performance.now();
       }, 150);
     },
-    [bufferId, handleViewportScroll, lines.length],
+    [bufferId, handleViewportScroll, lines.length, minimapEnabled],
   );
 
   useEffect(() => {
@@ -796,11 +1030,15 @@ export function Editor({
     };
   }, []);
 
-  // Native wheel handler for textarea - required for Tauri/WebView
-  // Scrolls on dominant axis per event to prevent diagonal scrolling
+  // Keep native wheel behavior on macOS for high-frequency trackpad scrolling and momentum.
+  // On non-macOS platforms we keep manual forwarding for WebView consistency.
   useEffect(() => {
     const textarea = inputRef.current;
     if (!textarea) return;
+
+    if (typeof navigator !== "undefined" && navigator.userAgent.includes("Mac")) {
+      return;
+    }
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -842,6 +1080,7 @@ export function Editor({
 
   // Tokenization scheduled via requestAnimationFrame for smooth updates
   const tokenizeRafRef = useRef<number | null>(null);
+  const tokenizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!buffer?.content || !buffer?.path) return;
@@ -850,8 +1089,27 @@ export function Editor({
     if (tokenizeRafRef.current !== null) {
       cancelAnimationFrame(tokenizeRafRef.current);
     }
+    if (tokenizeTimeoutRef.current !== null) {
+      clearTimeout(tokenizeTimeoutRef.current);
+    }
 
     const contentToTokenize = foldTransform.hasActiveFolds ? displayContent : buffer.content;
+    const isLargeFile = lines.length >= LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD;
+
+    // Defer tokenization while actively scrolling very large files to keep
+    // scroll handling on the main thread responsive.
+    if (isLargeFile && isScrollingRef.current) {
+      tokenizeTimeoutRef.current = setTimeout(() => {
+        tokenize(contentToTokenize, viewportRange);
+        tokenizeTimeoutRef.current = null;
+      }, LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS);
+
+      return () => {
+        if (tokenizeTimeoutRef.current !== null) {
+          clearTimeout(tokenizeTimeoutRef.current);
+        }
+      };
+    }
 
     // Use requestAnimationFrame for smooth tokenization
     // This batches updates to the next frame without visible delay
@@ -864,6 +1122,9 @@ export function Editor({
       if (tokenizeRafRef.current !== null) {
         cancelAnimationFrame(tokenizeRafRef.current);
       }
+      if (tokenizeTimeoutRef.current !== null) {
+        clearTimeout(tokenizeTimeoutRef.current);
+      }
     };
   }, [
     bufferId,
@@ -872,6 +1133,7 @@ export function Editor({
     tokenize,
     foldTransform.hasActiveFolds,
     displayContent,
+    lines.length,
     viewportRange,
   ]);
 
@@ -954,6 +1216,36 @@ export function Editor({
     [lines, bufferId, updateBufferContent],
   );
 
+  const inlineAutocompletePreview = useMemo(() => {
+    if (!autocompleteCompletion || isLspCompletionVisible) return null;
+    if (autocompleteCompletion.cursorOffset !== cursorPosition.offset) return null;
+    if (visualCursorLine < 0 || visualCursorLine >= lines.length) return null;
+
+    const normalized = autocompleteCompletion.text.replace(/\r\n/g, "\n");
+    if (!normalized) return null;
+
+    const lineText = lines[visualCursorLine] || "";
+    const cursorColumn = Math.min(cursorPosition.column, lineText.length);
+    const cursorX = getAccurateCursorX(lineText, cursorColumn, fontSize, fontFamily, tabSize);
+
+    return {
+      text: normalized,
+      top: visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+      left: cursorX + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+    };
+  }, [
+    autocompleteCompletion,
+    isLspCompletionVisible,
+    cursorPosition.offset,
+    cursorPosition.column,
+    visualCursorLine,
+    lines,
+    fontSize,
+    fontFamily,
+    tabSize,
+    lineHeight,
+  ]);
+
   if (!buffer) return null;
 
   return (
@@ -965,6 +1257,7 @@ export function Editor({
           fontFamily={fontFamily}
           lineHeight={lineHeight}
           textareaRef={inputRef}
+          virtualize={shouldVirtualizeRendering}
           filePath={filePath}
           onLineClick={handleLineClick}
           onGitIndicatorClick={inlineDiff.toggle}
@@ -988,12 +1281,13 @@ export function Editor({
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             tabSize={tabSize}
-            viewportRange={viewportRange}
+            viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
           />
         )}
         <InputLayer
           textareaRef={inputRef}
           content={displayContent}
+          filePath={filePath}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
           onScroll={handleScroll}
@@ -1007,6 +1301,43 @@ export function Editor({
           bufferId={bufferId || undefined}
           showText={!hasSyntaxHighlighting}
         />
+        <SelectionLayer
+          ref={selectionLayerRef}
+          textareaRef={inputRef}
+          content={displayContent}
+          fontSize={fontSize}
+          fontFamily={fontFamily}
+          lineHeight={lineHeight}
+          tabSize={tabSize}
+          viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+        />
+        {inlineAutocompletePreview && (
+          <div
+            ref={autocompleteCompletionRef}
+            className="pointer-events-none absolute inset-0 z-[3]"
+          >
+            <div
+              style={{
+                position: "absolute",
+                top: `${inlineAutocompletePreview.top}px`,
+                left: `${inlineAutocompletePreview.left}px`,
+                fontSize: `${fontSize}px`,
+                fontFamily,
+                lineHeight: `${lineHeight}px`,
+                whiteSpace: "pre",
+                opacity: 0.42,
+                color: "var(--text-lighter, #94a3b8)",
+              }}
+            >
+              {inlineAutocompletePreview.text}
+            </div>
+          </div>
+        )}
+        {autocompleteCompletion && !isLspCompletionVisible && !inlineAutocompletePreview && (
+          <div className="pointer-events-none absolute right-3 bottom-3 z-40 rounded-md bg-primary-bg/80 px-2 py-1 text-[11px] text-text-lighter/80">
+            Tab to accept AI suggestion
+          </div>
+        )}
         {multiCursorState && (
           <MultiCursorLayer
             ref={multiCursorRef}
@@ -1041,6 +1372,7 @@ export function Editor({
             lineHeight={lineHeight}
             tabSize={tabSize}
             content={displayContent}
+            viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
           />
         )}
 

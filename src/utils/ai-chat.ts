@@ -112,7 +112,7 @@ export const getChatCompletionStream = async (
   context: ContextInfo,
   onChunk: (chunk: string) => void,
   onComplete: () => void,
-  onError: (error: string) => void,
+  onError: (error: string, canReconnect?: boolean) => void,
   conversationHistory?: AIMessage[],
   onNewMessage?: () => void,
   onToolUse?: (
@@ -126,6 +126,8 @@ export const getChatCompletionStream = async (
   onAcpEvent?: (event: AcpEvent) => void,
   mode: ChatMode = "chat",
   outputStyle: OutputStyle = "default",
+  onImageChunk?: (data: string, mediaType: string) => void,
+  onResourceChunk?: (uri: string, name: string | null) => void,
   _sessionId?: string,
   abortSignal?: AbortSignal,
 ): Promise<void> => {
@@ -141,7 +143,7 @@ export const getChatCompletionStream = async (
       const installed = await isKairoAcpInstalled();
       if (!installed) {
         onError(
-          "Kairo Code ACP adapter is not installed. Run: bun add -g --no-cache @colineapp/kairo-code-acp",
+          "Kairo Code ACP adapter is not installed. Run: pnpm add -g @colineapp/kairo-code-acp",
         );
         return;
       }
@@ -158,6 +160,8 @@ export const getChatCompletionStream = async (
         onToolComplete,
         onPermissionRequest,
         onEvent: onAcpEvent,
+        onImageChunk,
+        onResourceChunk,
       });
       await handler.start(userMessage, context, { mode, outputStyle });
       return;

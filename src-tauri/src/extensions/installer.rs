@@ -11,6 +11,22 @@ pub struct ExtensionInstaller {
    extensions_dir: PathBuf,
 }
 
+fn validate_extension_id(extension_id: &str) -> Result<()> {
+   if extension_id.is_empty() || extension_id.len() > 128 {
+      anyhow::bail!("Invalid extension id length");
+   }
+   if extension_id.contains("..") || extension_id.contains('/') || extension_id.contains('\\') {
+      anyhow::bail!("Invalid extension id path characters");
+   }
+   if !extension_id
+      .chars()
+      .all(|ch| ch.is_ascii_alphanumeric() || ch == '.' || ch == '_' || ch == '-')
+   {
+      anyhow::bail!("Invalid extension id characters");
+   }
+   Ok(())
+}
+
 impl ExtensionInstaller {
    pub fn new(app_handle: AppHandle) -> Result<Self> {
       let app_data_dir = app_handle
@@ -35,6 +51,8 @@ impl ExtensionInstaller {
       extension_id: &str,
       download_info: &DownloadInfo,
    ) -> Result<PathBuf> {
+      validate_extension_id(extension_id)?;
+
       log::info!(
          "Downloading extension {} from {}",
          extension_id,
@@ -54,7 +72,23 @@ impl ExtensionInstaller {
 
       // Download the file
       let response = reqwest::get(&download_info.url).await?;
+      if !response.status().is_success() {
+         anyhow::bail!(
+            "Failed to download extension {}: HTTP {}",
+            extension_id,
+            response.status()
+         );
+      }
       let bytes = response.bytes().await?;
+
+      if download_info.size > 0 && bytes.len() as u64 != download_info.size {
+         anyhow::bail!(
+            "Downloaded extension size mismatch for {}: expected {}, got {}",
+            extension_id,
+            download_info.size,
+            bytes.len()
+         );
+      }
 
       log::info!(
          "Downloaded {} bytes for extension {}",
@@ -95,6 +129,8 @@ impl ExtensionInstaller {
 
    /// Extract extension archive
    async fn extract_extension(&self, extension_id: &str, archive_path: &Path) -> Result<PathBuf> {
+      validate_extension_id(extension_id)?;
+
       log::info!(
          "Extracting extension {} from {:?}",
          extension_id,
@@ -124,7 +160,13 @@ impl ExtensionInstaller {
       let tar_gz = fs::File::open(archive_path)?;
       let tar = flate2::read::GzDecoder::new(tar_gz);
       let mut archive = tar::Archive::new(tar);
-      archive.unpack(&extension_dir)?;
+      for entry in archive.entries()? {
+         let mut entry = entry?;
+         let unpacked = entry.unpack_in(&extension_dir)?;
+         if !unpacked {
+            anyhow::bail!("Archive entry attempted to escape extension directory");
+         }
+      }
 
       log::info!(
          "Extension {} extracted to {:?}",
@@ -144,6 +186,8 @@ impl ExtensionInstaller {
       extension_id: String,
       download_info: DownloadInfo,
    ) -> Result<()> {
+      validate_extension_id(&extension_id)?;
+
       log::info!("Installing extension {}", extension_id);
 
       // Emit initial progress
@@ -193,6 +237,8 @@ impl ExtensionInstaller {
 
    /// Uninstall extension
    pub fn uninstall_extension(&self, extension_id: &str) -> Result<()> {
+      validate_extension_id(extension_id)?;
+
       log::info!("Uninstalling extension {}", extension_id);
 
       let extension_dir = self.extensions_dir.join(extension_id);
@@ -254,5 +300,30 @@ impl ExtensionInstaller {
    /// Get extension directory path
    pub fn get_extension_dir(&self, extension_id: &str) -> PathBuf {
       self.extensions_dir.join(extension_id)
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::validate_extension_id;
+
+   #[test]
+   fn validate_extension_id_accepts_safe_values() {
+      assert!(validate_extension_id("language.typescript").is_ok());
+      assert!(validate_extension_id("theme-dark_01").is_ok());
+   }
+
+   #[test]
+   fn validate_extension_id_rejects_path_traversal() {
+      assert!(validate_extension_id("../evil").is_err());
+      assert!(validate_extension_id("evil/dir").is_err());
+      assert!(validate_extension_id("evil\\dir").is_err());
+   }
+
+   #[test]
+   fn validate_extension_id_rejects_invalid_characters() {
+      assert!(validate_extension_id("evil$id").is_err());
+      assert!(validate_extension_id("").is_err());
+      assert!(validate_extension_id(&"a".repeat(129)).is_err());
    }
 }

@@ -27,14 +27,14 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
 
   const clearSearch = useSettingsStore((state) => state.clearSearch);
 
-  // Set the active tab to the initial tab when the dialog opens
+  // Sync active tab with settingsInitialTab whenever it changes (enables deep linking when dialog is already open)
   useEffect(() => {
     if (isOpen) {
       setActiveTab(settingsInitialTab);
     }
-  }, [isOpen, settingsInitialTab]);
+  }, [settingsInitialTab]);
 
-  // Clear search when dialog closes
+  // Clear search and reset tab when dialog closes
   useEffect(() => {
     if (!isOpen) {
       clearSearch();
@@ -81,9 +81,9 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         content: "flex p-0",
       }}
     >
-      <div className="flex h-full w-full">
+      <div className="flex h-full w-full overflow-hidden">
         {/* Sidebar */}
-        <div className="w-48 border-border border-r bg-secondary-bg">
+        <div className="w-52 border-border/50 border-r bg-secondary-bg/30">
           <SettingsVerticalTabs activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
 

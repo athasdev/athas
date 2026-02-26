@@ -15,8 +15,8 @@
         "text-light": "#4e4f47",
         "text-lighter": "#6a737d",
         "border": "#f0f0f0",
-        "hover": "#f7f7f7",
-        "selected": "#f7f7f7",
+        "hover": "#e8e8e8",
+        "selected": "#e0e0e0",
         "accent": "#1c6b48"
       },
       "syntax": {
@@ -50,8 +50,8 @@
         "text-light": "#4e4f47",
         "text-lighter": "#6a737d",
         "border": "#E7E5DB",
-        "hover": "#E7E5DB",
-        "selected": "#E7E5DB",
+        "hover": "#DBD9CF",
+        "selected": "#D0CEBF",
         "accent": "#1c6b48"
       },
       "syntax": {

@@ -1,14 +1,22 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { GitStash } from "../types/git";
+import { isNotGitRepositoryError, resolveRepositoryPath } from "./repo";
 
 export const getStashes = async (repoPath: string): Promise<GitStash[]> => {
   try {
+    const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+    if (!resolvedRepoPath) {
+      return [];
+    }
+
     const stashes = await tauriInvoke<GitStash[]>("git_get_stashes", {
-      repoPath,
+      repoPath: resolvedRepoPath,
     });
     return stashes;
   } catch (error) {
-    console.error("Failed to get stashes:", error);
+    if (!isNotGitRepositoryError(error)) {
+      console.error("Failed to get stashes:", error);
+    }
     return [];
   }
 };

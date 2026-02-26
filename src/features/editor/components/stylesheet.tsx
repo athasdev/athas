@@ -16,8 +16,6 @@ export function EditorStylesheet() {
           caret-color: var(--color-text);
           /* Force font loading */
           font-display: swap;
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
         }
         .code-editor-content:focus {
           outline: none;
@@ -47,9 +45,6 @@ export function EditorStylesheet() {
           user-select: none;
           -webkit-user-select: none;
           -moz-user-select: none;
-          /* Font optimization for line numbers */
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
         }
         .line-numbers-container::-webkit-scrollbar {
           display: none;
@@ -109,6 +104,21 @@ export function EditorStylesheet() {
         /* Force line numbers font override */
         .line-numbers-container.font-override {
           font-family: var(--editor-font-family) !important;
+        }
+
+        /* Platform-specific font rendering */
+        :root[data-platform="macos"] .code-editor-content,
+        :root[data-platform="macos"] .line-numbers-container {
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+
+        :root[data-platform="windows"] .code-editor-content,
+        :root[data-platform="windows"] .line-numbers-container,
+        :root[data-platform="windows"] .editor-textarea {
+          font-variant-ligatures: none;
+          font-feature-settings: "liga" 0, "calt" 0, "tnum" 1;
+          text-rendering: optimizeSpeed;
         }
 
         /* Disable selection on breadcrumbs */

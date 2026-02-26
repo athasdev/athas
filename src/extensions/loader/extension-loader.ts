@@ -49,7 +49,7 @@ function createDummyEditorAPI(): EditorAPI {
       tabSize: 2,
       lineNumbers: true,
       wordWrap: false,
-      theme: "one-dark",
+      theme: "vitesse-dark",
     }),
     updateSettings: () => {},
     on: () => () => {},
@@ -248,14 +248,15 @@ class ExtensionLoader {
     // Load all extensions from registry
     const extensions = extensionRegistry.getAllExtensions();
 
-    for (const extension of extensions) {
-      try {
-        await this.loadExtension(extension);
-      } catch (error) {
+    const results = await Promise.allSettled(extensions.map((ext) => this.loadExtension(ext)));
+
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result.status === "rejected") {
         logger.error(
           "ExtensionLoader",
-          `Failed to load extension ${extension.manifest.displayName}:`,
-          error,
+          `Failed to load extension ${extensions[i].manifest.displayName}:`,
+          result.reason,
         );
       }
     }

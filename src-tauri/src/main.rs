@@ -1,6 +1,9 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 use commands::*;
 use features::{AcpAgentBridge, ClaudeCodeBridge, FileWatcher};
 use log::{debug, info};
@@ -24,8 +27,49 @@ mod features;
 mod logger;
 mod lsp;
 mod menu;
+mod secure_storage;
 mod ssh;
 mod terminal;
+
+#[cfg(target_os = "macos")]
+#[allow(unexpected_cfgs)]
+fn disable_macos_autofill_heuristics() {
+   use objc::{
+      class, msg_send,
+      runtime::{NO, Object},
+      sel, sel_impl,
+   };
+   use std::ffi::CString;
+
+   // Disables macOS AutoFill heuristics in the app webview process.
+   // This is known to reduce extra AutoFill subprocess activity.
+   unsafe {
+      let key_cstr = match CString::new("NSAutoFillHeuristicControllerEnabled") {
+         Ok(value) => value,
+         Err(_) => return,
+      };
+
+      let key: *mut Object = msg_send![class!(NSString), stringWithUTF8String: key_cstr.as_ptr()];
+      if key.is_null() {
+         return;
+      }
+
+      let user_defaults: *mut Object = msg_send![class!(NSUserDefaults), standardUserDefaults];
+      if user_defaults.is_null() {
+         return;
+      }
+
+      let existing_value: *mut Object = msg_send![user_defaults, objectForKey: key];
+      if existing_value.is_null() {
+         let false_value: *mut Object = msg_send![class!(NSNumber), numberWithBool: NO];
+         if false_value.is_null() {
+            return;
+         }
+
+         let _: () = msg_send![user_defaults, setObject: false_value forKey: key];
+      }
+   }
+}
 
 fn main() {
    #[cfg(target_os = "linux")]
@@ -35,6 +79,9 @@ fn main() {
          std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
       }
    }
+
+   #[cfg(target_os = "macos")]
+   disable_macos_autofill_heuristics();
 
    tauri::Builder::default()
       .plugin(tauri_plugin_store::Builder::default().build())
@@ -73,12 +120,19 @@ fn main() {
          // Set up the file watcher
          app.manage(Arc::new(FileWatcher::new(app.handle().clone())));
 
+         // Set up terminal manager (shared between ACP and direct terminal usage)
+         let terminal_manager = Arc::new(TerminalManager::new());
+         app.manage(terminal_manager.clone());
+
          // Set up Claude bridge (legacy, kept for rollback)
          let claude_bridge = Arc::new(Mutex::new(ClaudeCodeBridge::new(app.handle().clone())));
          app.manage(claude_bridge.clone());
 
          // Set up ACP agent bridge (new implementation)
-         let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(app.handle().clone())));
+         let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(
+            app.handle().clone(),
+            terminal_manager,
+         )));
          app.manage(acp_bridge);
 
          // Set up LSP manager
@@ -272,7 +326,6 @@ fn main() {
 
          Ok(())
       })
-      .manage(Arc::new(TerminalManager::new()))
       .invoke_handler(tauri::generate_handler![
          // File system commands
          open_file_external,
@@ -286,6 +339,7 @@ fn main() {
          clipboard_paste,
          // Git commands
          git_status,
+         git_discover_repo,
          git_add,
          git_reset,
          git_commit,

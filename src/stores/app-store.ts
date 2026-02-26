@@ -7,10 +7,18 @@ import { gitDiffCache } from "@/features/git/utils/diff-cache";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "../features/file-system/controllers/platform";
 
-// History tracking state (module-level to avoid re-renders)
 const HISTORY_DEBOUNCE_MS = 500;
 const historyDebounceTimers = new Map<string, NodeJS.Timeout>();
 const lastBufferContent = new Map<string, string>();
+
+export function cleanupBufferHistoryTracking(bufferId: string): void {
+  const timer = historyDebounceTimers.get(bufferId);
+  if (timer) {
+    clearTimeout(timer);
+    historyDebounceTimers.delete(bufferId);
+  }
+  lastBufferContent.delete(bufferId);
+}
 
 interface AppState {
   // Autosave state

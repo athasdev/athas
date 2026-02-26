@@ -20,8 +20,8 @@ export function NewTabMenu({ onClose }: NewTabMenuProps) {
       type="button"
       onClick={handleClick}
       className={cn(
-        "flex size-5 items-center justify-center rounded transition-colors",
-        "text-text-lighter hover:bg-hover hover:text-text",
+        "flex size-5 items-center justify-center rounded-full border border-transparent transition-colors",
+        "text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text",
       )}
       title="New Tab (Cmd+T)"
       aria-label="New Tab"

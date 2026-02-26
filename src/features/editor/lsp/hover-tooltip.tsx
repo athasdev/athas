@@ -1,16 +1,49 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { parseMarkdown } from "@/features/editor/markdown/parser";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import "./hover-tooltip.css";
 
 export const HoverTooltip = memo(() => {
   const fontSize = useEditorSettingsStore((state) => state.fontSize);
-  const fontFamily = useEditorSettingsStore((state) => state.fontFamily);
   const { hoverInfo, actions } = useEditorUIStore();
 
   const handleMouseEnter = () => actions.setIsHovering(true);
-  const handleMouseLeave = () => actions.setIsHovering(false);
+  const handleMouseLeave = () => {
+    actions.setIsHovering(false);
+    actions.setHoverInfo(null);
+  };
+
+  useEffect(() => {
+    const clearHover = () => {
+      actions.setIsHovering(false);
+      actions.setHoverInfo(null);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        clearHover();
+      }
+    };
+
+    const onGlobalInteraction = () => {
+      clearHover();
+    };
+
+    window.addEventListener("blur", clearHover);
+    window.addEventListener("keydown", onGlobalInteraction, true);
+    window.addEventListener("pointerdown", onGlobalInteraction, true);
+    window.addEventListener("wheel", onGlobalInteraction, { capture: true, passive: true });
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("blur", clearHover);
+      window.removeEventListener("keydown", onGlobalInteraction, true);
+      window.removeEventListener("pointerdown", onGlobalInteraction, true);
+      window.removeEventListener("wheel", onGlobalInteraction, true);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [actions]);
 
   const renderedContent = useMemo(() => {
     if (!hoverInfo?.content) return null;
@@ -19,14 +52,15 @@ export const HoverTooltip = memo(() => {
 
   if (!hoverInfo) return null;
 
+  const bodyMaxHeight = Math.max(110, EDITOR_CONSTANTS.HOVER_TOOLTIP_HEIGHT - 16);
+
   return (
     <div
-      className="hover-tooltip fixed max-w-lg overflow-auto rounded border border-border bg-primary-bg p-3 shadow-lg"
+      className="hover-tooltip fixed w-full max-w-[440px] overflow-hidden"
       style={{
         left: hoverInfo.position?.left || 0,
         top: hoverInfo.position?.top || 0,
-        fontSize: `${fontSize * 0.9}px`,
-        fontFamily: fontFamily,
+        fontSize: `${fontSize * 0.84}px`,
         zIndex: EDITOR_CONSTANTS.Z_INDEX.TOOLTIP,
         maxHeight: EDITOR_CONSTANTS.HOVER_TOOLTIP_HEIGHT,
       }}
@@ -34,10 +68,12 @@ export const HoverTooltip = memo(() => {
       onMouseLeave={handleMouseLeave}
     >
       {renderedContent && (
-        <div
-          className="markdown-preview hover-tooltip-content text-sm text-text"
-          dangerouslySetInnerHTML={{ __html: renderedContent }}
-        />
+        <div className="hover-tooltip-body custom-scrollbar" style={{ maxHeight: bodyMaxHeight }}>
+          <div
+            className="markdown-preview hover-tooltip-content text-sm text-text"
+            dangerouslySetInnerHTML={{ __html: renderedContent }}
+          />
+        </div>
       )}
     </div>
   );

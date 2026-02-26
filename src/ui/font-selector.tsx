@@ -3,6 +3,17 @@ import { useFontStore } from "@/stores/font-store";
 import type { FontInfo } from "@/stores/types/font";
 import Dropdown from "@/ui/dropdown";
 
+// Bundled fonts that are always available
+const BUNDLED_FONTS: FontInfo[] = [
+  { name: "Geist Variable", family: "Geist Variable", style: "Regular", is_monospace: false },
+  {
+    name: "Geist Mono Variable",
+    family: "Geist Mono Variable",
+    style: "Regular",
+    is_monospace: true,
+  },
+];
+
 interface FontSelectorProps {
   value: string;
   onChange: (fontFamily: string) => void;
@@ -42,12 +53,18 @@ export const FontSelector = ({
     setSelectedFont(value);
   }, [value]);
 
-  const fonts = monospaceOnly ? monospaceFonts : availableFonts;
+  const systemFonts = monospaceOnly ? monospaceFonts : availableFonts;
+  const bundledFonts = monospaceOnly ? BUNDLED_FONTS.filter((f) => f.is_monospace) : BUNDLED_FONTS;
+
+  // Combine bundled fonts with system fonts, avoiding duplicates
+  const systemFontFamilies = new Set(systemFonts.map((f) => f.family));
+  const uniqueBundledFonts = bundledFonts.filter((f) => !systemFontFamilies.has(f.family));
+  const fonts = [...uniqueBundledFonts, ...systemFonts];
 
   // Convert fonts to dropdown options
-  const fontOptions = fonts.map((font: FontInfo) => ({
+  const fontOptions = fonts.map((font: FontInfo, index) => ({
     value: font.family,
-    label: font.family,
+    label: index < uniqueBundledFonts.length ? `${font.family} (bundled)` : font.family,
   }));
 
   // Add custom font option if current value is not in the list

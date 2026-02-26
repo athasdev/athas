@@ -81,6 +81,17 @@ export const useDefinitionLink = ({
   const pendingRequestRef = useRef<{ cancelled: boolean } | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const setPointerCursor = useCallback((editor: HTMLElement | null, enabled: boolean) => {
+    if (!editor) return;
+    const cursor = enabled ? "pointer" : "";
+    editor.style.cursor = cursor;
+
+    const textarea = editor.querySelector("textarea") as HTMLElement | null;
+    if (textarea) {
+      textarea.style.cursor = cursor;
+    }
+  }, []);
+
   // Calculate position from mouse coordinates
   const calculatePosition = useCallback(
     (x: number, y: number, editor: HTMLElement): { line: number; column: number } | null => {
@@ -116,6 +127,7 @@ export const useDefinitionLink = ({
       if (!isLanguageSupported || !filePath || !getDefinition) {
         currentWordRef.current = null;
         actions.setDefinitionLinkRange(null);
+        setPointerCursor(editor, false);
         return;
       }
 
@@ -123,6 +135,7 @@ export const useDefinitionLink = ({
       if (!pos) {
         currentWordRef.current = null;
         actions.setDefinitionLinkRange(null);
+        setPointerCursor(editor, false);
         return;
       }
 
@@ -130,6 +143,7 @@ export const useDefinitionLink = ({
       if (!boundaries) {
         currentWordRef.current = null;
         actions.setDefinitionLinkRange(null);
+        setPointerCursor(editor, false);
         return;
       }
 
@@ -165,6 +179,7 @@ export const useDefinitionLink = ({
 
       // Clear highlight while we query the new word
       actions.setDefinitionLinkRange(null);
+      setPointerCursor(editor, false);
 
       // Make LSP call immediately (same word check prevents spamming)
       const request = { cancelled: false };
@@ -180,17 +195,28 @@ export const useDefinitionLink = ({
               startColumn: boundaries.startColumn,
               endColumn: boundaries.endColumn,
             });
+            setPointerCursor(editor, true);
           } else {
             actions.setDefinitionLinkRange(null);
+            setPointerCursor(editor, false);
           }
         })
         .catch(() => {
           if (!request.cancelled) {
             actions.setDefinitionLinkRange(null);
+            setPointerCursor(editor, false);
           }
         });
     },
-    [content, filePath, isLanguageSupported, getDefinition, calculatePosition, actions],
+    [
+      content,
+      filePath,
+      isLanguageSupported,
+      getDefinition,
+      calculatePosition,
+      actions,
+      setPointerCursor,
+    ],
   );
 
   // Handle mouse move - track position and update highlight if modifier held
@@ -222,7 +248,8 @@ export const useDefinitionLink = ({
     }
 
     actions.setDefinitionLinkRange(null);
-  }, [actions]);
+    setPointerCursor(editorRefCache.current, false);
+  }, [actions, setPointerCursor]);
 
   // Global key event handlers
   useEffect(() => {
@@ -259,6 +286,7 @@ export const useDefinitionLink = ({
         }
 
         actions.setDefinitionLinkRange(null);
+        setPointerCursor(editorRefCache.current, false);
       }
     };
 
@@ -278,6 +306,7 @@ export const useDefinitionLink = ({
       }
 
       actions.setDefinitionLinkRange(null);
+      setPointerCursor(editorRefCache.current, false);
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -294,7 +323,7 @@ export const useDefinitionLink = ({
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [updateDefinitionLink, actions]);
+  }, [updateDefinitionLink, actions, setPointerCursor]);
 
   return {
     handleMouseMove,

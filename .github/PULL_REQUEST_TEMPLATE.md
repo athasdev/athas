@@ -22,4 +22,9 @@
 
 Closes # Fixes #
 
+## Checklist
+
+- [ ] I have read and will follow the [Code of Conduct](../CODE_OF_CONDUCT.md).
+- [ ] I have read and agree to the
+      [Contributor License and Feedback Agreement](../CONTRIBUTOR_LICENSE_AND_FEEDBACK_AGREEMENT.md).
 

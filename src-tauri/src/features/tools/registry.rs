@@ -15,7 +15,10 @@ impl ToolRegistry {
          "rust" => Some(Self::rust_tools()),
          "go" => Some(Self::go_tools()),
          "php" => Some(Self::php_tools()),
-         "html" | "css" | "scss" | "less" => Some(Self::web_tools()),
+         "bash" => Some(Self::bash_tools()),
+         "lua" => Some(Self::lua_tools()),
+         "html" => Some(Self::html_tools()),
+         "css" | "scss" | "less" => Some(Self::css_tools()),
          "json" | "jsonc" => Some(Self::json_tools()),
          "yaml" | "yml" => Some(Self::yaml_tools()),
          "toml" => Some(Self::toml_tools()),
@@ -200,13 +203,79 @@ impl ToolRegistry {
       tools
    }
 
-   fn web_tools() -> HashMap<ToolType, ToolConfig> {
+   fn bash_tools() -> HashMap<ToolType, ToolConfig> {
       let mut tools = HashMap::new();
 
       tools.insert(
          ToolType::Lsp,
          ToolConfig {
-            name: "vscode-langservers-extracted".to_string(),
+            name: "bash-language-server".to_string(),
+            runtime: ToolRuntime::Bun,
+            package: Some("bash-language-server".to_string()),
+            download_url: None,
+            args: vec!["start".to_string()],
+            env: HashMap::new(),
+         },
+      );
+
+      tools
+   }
+
+   fn lua_tools() -> HashMap<ToolType, ToolConfig> {
+      let mut tools = HashMap::new();
+
+      tools.insert(
+         ToolType::Lsp,
+         ToolConfig {
+            name: "lua-language-server".to_string(),
+            runtime: ToolRuntime::Binary,
+            package: None,
+            download_url: Some(Self::lua_language_server_url()),
+            args: vec![],
+            env: HashMap::new(),
+         },
+      );
+
+      tools
+   }
+
+   fn html_tools() -> HashMap<ToolType, ToolConfig> {
+      let mut tools = HashMap::new();
+
+      tools.insert(
+         ToolType::Lsp,
+         ToolConfig {
+            name: "vscode-html-language-server".to_string(),
+            runtime: ToolRuntime::Bun,
+            package: Some("vscode-langservers-extracted".to_string()),
+            download_url: None,
+            args: vec!["--stdio".to_string()],
+            env: HashMap::new(),
+         },
+      );
+
+      tools.insert(
+         ToolType::Formatter,
+         ToolConfig {
+            name: "prettier".to_string(),
+            runtime: ToolRuntime::Bun,
+            package: Some("prettier".to_string()),
+            download_url: None,
+            args: vec!["--stdin-filepath".to_string(), "${file}".to_string()],
+            env: HashMap::new(),
+         },
+      );
+
+      tools
+   }
+
+   fn css_tools() -> HashMap<ToolType, ToolConfig> {
+      let mut tools = HashMap::new();
+
+      tools.insert(
+         ToolType::Lsp,
+         ToolConfig {
+            name: "vscode-css-language-server".to_string(),
             runtime: ToolRuntime::Bun,
             package: Some("vscode-langservers-extracted".to_string()),
             download_url: None,
@@ -236,7 +305,7 @@ impl ToolRegistry {
       tools.insert(
          ToolType::Lsp,
          ToolConfig {
-            name: "vscode-langservers-extracted".to_string(),
+            name: "vscode-json-language-server".to_string(),
             runtime: ToolRuntime::Bun,
             package: Some("vscode-langservers-extracted".to_string()),
             download_url: None,
@@ -356,6 +425,22 @@ impl ToolRegistry {
       format!(
          "https://github.com/rust-lang/rust-analyzer/releases/latest/download/rust-analyzer-{}-{}.{}",
          arch, os, ext
+      )
+   }
+
+   fn lua_language_server_url() -> String {
+      let platform = match (std::env::consts::OS, std::env::consts::ARCH) {
+         ("macos", "aarch64") => "darwin-arm64",
+         ("macos", "x86_64") => "darwin-x64",
+         ("linux", "x86_64") => "linux-x64",
+         ("windows", "x86_64") => "win32-x64",
+         // Fallback to linux-x64 package when platform-specific builds are unavailable.
+         _ => "linux-x64",
+      };
+
+      format!(
+         "https://athas.dev/extensions/packages/lua/lua-{}.tar.gz",
+         platform
       )
    }
 }

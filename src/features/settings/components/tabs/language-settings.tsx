@@ -11,6 +11,7 @@ export const LanguageSettings = () => {
     defaultLanguage,
     autoDetectLanguage,
     formatOnSave,
+    lintOnSave,
     formatter,
     autoCompletion,
     parameterHints,
@@ -72,6 +73,14 @@ export const LanguageSettings = () => {
           <Switch
             checked={formatOnSave}
             onChange={(checked) => updateSetting("formatOnSave", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow label="Lint on Save" description="Run linter when saving files">
+          <Switch
+            checked={lintOnSave}
+            onChange={(checked) => updateSetting("lintOnSave", checked)}
             size="sm"
           />
         </SettingRow>

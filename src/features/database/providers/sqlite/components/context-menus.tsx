@@ -25,7 +25,7 @@ export const SqliteTableMenu = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-[200px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
+      className="fixed z-[10040] min-w-[200px] rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
       style={{
         left: sqliteTableMenu.x,
         top: sqliteTableMenu.y,
@@ -39,15 +39,15 @@ export const SqliteTableMenu = ({
           onCloseMenu();
         }}
         className={cn(
-          "flex w-full items-center gap-2 px-3 py-1.5",
-          "ui-font text-left text-text text-xs hover:bg-hover",
+          "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5",
+          "ui-font text-left text-text text-xs transition-colors hover:bg-hover",
         )}
       >
         <PlusIcon size="12" />
         Add New Row
       </button>
 
-      <div className="my-1 border-border border-t"></div>
+      <div className="my-1 border-border/70 border-t"></div>
 
       <button
         onMouseDown={(e) => {
@@ -57,8 +57,8 @@ export const SqliteTableMenu = ({
           onCloseMenu();
         }}
         className={cn(
-          "flex w-full items-center gap-2 px-3 py-1.5",
-          "ui-font text-left text-red-400 text-xs hover:bg-hover",
+          "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5",
+          "ui-font text-left text-red-400 text-xs transition-colors hover:bg-hover",
         )}
       >
         <TrashIcon size="12" />
@@ -89,7 +89,7 @@ export const SqliteRowMenu = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-[180px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
+      className="fixed z-[10040] min-w-[180px] rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
       style={{
         left: sqliteRowMenu.x,
         top: sqliteRowMenu.y,
@@ -103,8 +103,8 @@ export const SqliteRowMenu = ({
           onCloseMenu();
         }}
         className={cn(
-          "flex w-full items-center gap-2 px-3 py-1.5",
-          "ui-font text-left text-text text-xs hover:bg-hover",
+          "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5",
+          "ui-font text-left text-text text-xs transition-colors hover:bg-hover",
         )}
       >
         <EditIcon size="12" />
@@ -119,8 +119,8 @@ export const SqliteRowMenu = ({
           onCloseMenu();
         }}
         className={cn(
-          "flex w-full items-center gap-2 px-3 py-1.5",
-          "ui-font text-left text-red-400 text-xs hover:bg-hover",
+          "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5",
+          "ui-font text-left text-red-400 text-xs transition-colors hover:bg-hover",
         )}
       >
         <TrashIcon size="12" />

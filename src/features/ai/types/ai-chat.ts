@@ -16,6 +16,16 @@ export interface ToolCall {
   isComplete?: boolean;
 }
 
+export interface ImageContent {
+  data: string;
+  mediaType: string;
+}
+
+export interface ResourceContent {
+  uri: string;
+  name: string | null;
+}
+
 export interface Message {
   id: string;
   content: string;
@@ -25,6 +35,8 @@ export interface Message {
   isToolUse?: boolean;
   toolName?: string;
   toolCalls?: ToolCall[];
+  images?: ImageContent[];
+  resources?: ResourceContent[];
 }
 
 // Agent types for AI chat
@@ -112,6 +124,7 @@ export interface ContextInfo {
   projectRoot?: string;
   language?: string;
   providerId?: string;
+  agentId?: AgentType;
 }
 
 export interface AIChatProps {

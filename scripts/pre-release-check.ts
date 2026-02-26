@@ -175,28 +175,6 @@ async function main() {
     return { passed: true };
   });
 
-  header("Changelog");
-
-  // Check: Changelog has entry for current version
-  await runCheck("Changelog has version entry", async () => {
-    const changelogPath = join(process.cwd(), "CHANGELOG.md");
-    if (!existsSync(changelogPath)) {
-      return { passed: true, warning: true, message: "CHANGELOG.md not found" };
-    }
-
-    const changelog = readFileSync(changelogPath, "utf-8");
-    const versionPattern = new RegExp(`## \\[${currentVersion}\\]`);
-
-    if (!versionPattern.test(changelog)) {
-      return {
-        passed: true,
-        warning: true,
-        message: `No entry for v${currentVersion} in CHANGELOG.md`,
-      };
-    }
-    return { passed: true };
-  });
-
   header("Frontend Checks");
 
   // Check: TypeScript

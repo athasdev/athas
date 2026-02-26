@@ -1,6 +1,7 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { GitDiff } from "../types/git";
 import { gitDiffCache } from "../utils/diff-cache";
+import { isNotGitRepositoryError, resolveRepositoryForFile, resolveRepositoryPath } from "./repo";
 
 export const getFileDiff = async (
   repoPath: string,
@@ -9,24 +10,31 @@ export const getFileDiff = async (
   content?: string,
 ): Promise<GitDiff | null> => {
   try {
-    const cached = gitDiffCache.get(repoPath, filePath, staged, content);
+    const resolved = await resolveRepositoryForFile(repoPath, filePath);
+    if (!resolved) {
+      return null;
+    }
+
+    const cached = gitDiffCache.get(resolved.repoPath, resolved.filePath, staged, content);
     if (cached) {
       return cached;
     }
 
     const diff = await tauriInvoke<GitDiff>("git_diff_file", {
-      repoPath,
-      filePath,
+      repoPath: resolved.repoPath,
+      filePath: resolved.filePath,
       staged,
     });
 
     if (diff) {
-      gitDiffCache.set(repoPath, filePath, staged, diff, content);
+      gitDiffCache.set(resolved.repoPath, resolved.filePath, staged, diff, content);
     }
 
     return diff;
   } catch (error) {
-    console.error("Failed to get file diff:", error);
+    if (!isNotGitRepositoryError(error)) {
+      console.error("Failed to get file diff:", error);
+    }
     return null;
   }
 };
@@ -38,25 +46,37 @@ export const getFileDiffAgainstContent = async (
   base: "head" | "index" = "head",
 ): Promise<GitDiff | null> => {
   try {
-    const cached = gitDiffCache.get(repoPath, filePath, base === "index", content);
+    const resolved = await resolveRepositoryForFile(repoPath, filePath);
+    if (!resolved) {
+      return null;
+    }
+
+    const cached = gitDiffCache.get(
+      resolved.repoPath,
+      resolved.filePath,
+      base === "index",
+      content,
+    );
     if (cached) {
       return cached;
     }
 
     const diff = await tauriInvoke<GitDiff>("git_diff_file_with_content", {
-      repoPath,
-      filePath,
+      repoPath: resolved.repoPath,
+      filePath: resolved.filePath,
       content,
       base,
     });
 
     if (diff) {
-      gitDiffCache.set(repoPath, filePath, base === "index", diff, content);
+      gitDiffCache.set(resolved.repoPath, resolved.filePath, base === "index", diff, content);
     }
 
     return diff;
   } catch (error) {
-    console.error("Failed to get file diff against content:", error);
+    if (!isNotGitRepositoryError(error)) {
+      console.error("Failed to get file diff against content:", error);
+    }
     return null;
   }
 };
@@ -66,13 +86,20 @@ export const getCommitDiff = async (
   commitHash: string,
 ): Promise<GitDiff[] | null> => {
   try {
+    const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+    if (!resolvedRepoPath) {
+      return null;
+    }
+
     const diffs = await tauriInvoke<GitDiff[]>("git_commit_diff", {
-      repoPath,
+      repoPath: resolvedRepoPath,
       commitHash,
     });
     return diffs;
   } catch (error) {
-    console.error("Failed to get commit diff:", error);
+    if (!isNotGitRepositoryError(error)) {
+      console.error("Failed to get commit diff:", error);
+    }
     return null;
   }
 };
@@ -82,10 +109,20 @@ export const getStashDiff = async (
   stashIndex: number,
 ): Promise<GitDiff[] | null> => {
   try {
-    const diffs = await tauriInvoke<GitDiff[]>("git_stash_diff", { repoPath, stashIndex });
+    const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+    if (!resolvedRepoPath) {
+      return null;
+    }
+
+    const diffs = await tauriInvoke<GitDiff[]>("git_stash_diff", {
+      repoPath: resolvedRepoPath,
+      stashIndex,
+    });
     return diffs;
   } catch (error) {
-    console.error("Failed to get stash diff:", error);
+    if (!isNotGitRepositoryError(error)) {
+      console.error("Failed to get stash diff:", error);
+    }
     return null;
   }
 };

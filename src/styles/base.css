@@ -29,6 +29,13 @@ button {
   cursor: pointer;
 }
 
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+}
+
 textarea {
   scrollbar-width: thin;
   scrollbar-color: #ccc #f5f5f5;

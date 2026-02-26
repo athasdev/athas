@@ -1,4 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  getHighlightQueryUrl,
+  getWasmUrlForLanguage,
+} from "@/extensions/languages/language-packager";
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 import { tokenizeByLine } from "@/features/editor/lib/wasm-parser/tokenizer";
 import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
@@ -6,11 +11,11 @@ import type { GitDiffLine } from "../types/git";
 
 const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   js: "javascript",
-  jsx: "javascript",
+  jsx: "javascriptreact",
   mjs: "javascript",
   cjs: "javascript",
   ts: "typescript",
-  tsx: "typescript",
+  tsx: "typescriptreact",
   mts: "typescript",
   cts: "typescript",
   py: "python",
@@ -56,28 +61,44 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   erb: "embedded_template",
 };
 
+function normalizeRegistryLanguageId(languageId: string): string {
+  switch (languageId) {
+    case "csharp":
+      return "c_sharp";
+    case "jsonc":
+      return "json";
+    default:
+      return languageId;
+  }
+}
+
 function getExtension(path: string): string {
   const parts = path.split(".");
   return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
 }
 
 function getLanguageId(filePath: string): string | null {
+  const fromRegistry = extensionRegistry.getLanguageId(filePath);
+  if (fromRegistry) {
+    return normalizeRegistryLanguageId(fromRegistry);
+  }
+
   const ext = getExtension(filePath);
   return EXTENSION_TO_LANGUAGE[ext] || null;
 }
 
-function getLocalWasmPath(languageId: string): string {
-  if (languageId === "typescript" || languageId === "javascript") {
-    return "/extensions/tsx/parser.wasm";
+function getWasmPath(languageId: string): string {
+  if (languageId === "typescriptreact" || languageId === "javascriptreact") {
+    return getWasmUrlForLanguage("tsx");
   }
-  return `/extensions/${languageId}/parser.wasm`;
+  return getWasmUrlForLanguage(languageId);
 }
 
-function getQueryFolder(languageId: string): string {
-  if (languageId === "typescript" || languageId === "javascript") {
-    return "tsx";
+function getHighlightQueryPath(languageId: string): string {
+  if (languageId === "typescriptreact" || languageId === "javascriptreact") {
+    return getHighlightQueryUrl("tsx");
   }
-  return languageId;
+  return getHighlightQueryUrl(languageId);
 }
 
 interface ReconstructedContent {
@@ -161,7 +182,7 @@ export function useDiffHighlighting(
       try {
         const cached = await indexedDBParserCache.get(lang);
 
-        let wasmPath = getLocalWasmPath(lang);
+        let wasmPath = getWasmPath(lang);
         let highlightQuery: string | undefined;
 
         if (cached) {
@@ -170,8 +191,7 @@ export function useDiffHighlighting(
         }
 
         if (!highlightQuery || highlightQuery.trim().length === 0) {
-          const queryFolder = getQueryFolder(lang);
-          const queryPath = `/extensions/${queryFolder}/highlights.scm`;
+          const queryPath = getHighlightQueryPath(lang);
           try {
             const response = await fetch(queryPath);
             if (response.ok) {

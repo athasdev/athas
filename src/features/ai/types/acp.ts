@@ -52,6 +52,11 @@ export type StopReason = "end_turn" | "max_tokens" | "max_turn_requests" | "refu
 
 export type AcpToolStatus = "pending" | "in_progress" | "completed" | "failed";
 
+// UI action types that agents can request
+export type UiAction =
+  | { action: "open_web_viewer"; url: string }
+  | { action: "open_terminal"; command: string | null };
+
 export type AcpEvent =
   | {
       type: "content_chunk";
@@ -123,4 +128,9 @@ export type AcpEvent =
       type: "prompt_complete";
       sessionId: string;
       stopReason: StopReason;
+    }
+  | {
+      type: "ui_action";
+      sessionId: string;
+      action: UiAction;
     };

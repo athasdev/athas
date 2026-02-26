@@ -262,12 +262,15 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
   return (
     <>
       {/* Backdrop to close menus when clicking outside */}
-      {activeMenu && <div className="fixed inset-0 z-20" onClick={() => setActiveMenu(null)} />}
+      {activeMenu && (
+        <div className="fixed inset-0 z-[10020]" onClick={() => setActiveMenu(null)} />
+      )}
 
       <div
         className={cn(
-          "z-20 flex h-7 items-center bg-primary-bg px-0.5",
-          settings.compactMenuBar && "absolute inset-0",
+          "z-[10030] flex h-7 items-center gap-1 rounded-full border border-border bg-primary-bg/70 px-1 py-0.5",
+          settings.compactMenuBar &&
+            "absolute inset-0 h-full rounded-none border-none bg-transparent px-2 py-0",
         )}
       >
         {Object.keys(menus).map((menuName) => (
@@ -276,8 +279,8 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
             <Button
               variant="ghost"
               className={cn(
-                "h-6 px-3 text-text-light text-xs",
-                activeMenu === menuName && "bg-selected!",
+                "h-6 rounded-full border border-transparent px-3 text-text-light text-xs transition-colors hover:border-border/70 hover:bg-hover",
+                activeMenu === menuName && "border-border bg-selected!",
               )}
               // Click to open menu; click again to close
               onClick={() => setActiveMenu((value) => (value ? null : menuName))}
@@ -289,7 +292,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
 
             {/* Menu content */}
             {activeMenu === menuName && (
-              <div className="absolute top-full left-0 mt-1">
+              <div className="absolute top-full left-0 z-[10040] mt-1">
                 {menus[menuName as keyof typeof menus]}
               </div>
             )}

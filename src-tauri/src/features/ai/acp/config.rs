@@ -3,11 +3,17 @@ use std::{
    collections::HashMap,
    env, fs,
    path::{Path, PathBuf},
+   time::Instant,
 };
 
+/// Cache duration for binary detection (60 seconds)
+const DETECTION_CACHE_SECONDS: u64 = 60;
+
 /// Registry of known ACP-compatible agents
+#[derive(Clone)]
 pub struct AgentRegistry {
    agents: HashMap<String, AgentConfig>,
+   last_detection: Option<Instant>,
 }
 
 impl AgentRegistry {
@@ -65,14 +71,17 @@ impl AgentRegistry {
       );
 
       // Kairo Code - native ACP adapter
-      // Install: bun add -g --no-cache @colineapp/kairo-code-acp
+      // Install: pnpm add -g @colineapp/kairo-code-acp
       agents.insert(
          "kairo-code".to_string(),
          AgentConfig::new("kairo-code", "Kairo Code", "kairo-code-acp")
             .with_description("Coline Kairo Code (ACP adapter)"),
       );
 
-      Self { agents }
+      Self {
+         agents,
+         last_detection: None,
+      }
    }
 
    pub fn get(&self, id: &str) -> Option<&AgentConfig> {
@@ -84,6 +93,19 @@ impl AgentRegistry {
    }
 
    pub fn detect_installed(&mut self) {
+      // Check if we should skip detection due to caching
+      if let Some(last) = self.last_detection {
+         let elapsed = last.elapsed().as_secs();
+         if elapsed < DETECTION_CACHE_SECONDS {
+            log::debug!(
+               "Skipping binary detection, cached for {}s more",
+               DETECTION_CACHE_SECONDS - elapsed
+            );
+            return;
+         }
+      }
+
+      log::debug!("Running binary detection for ACP agents");
       for config in self.agents.values_mut() {
          if let Some(path) = find_binary(&config.binary_name) {
             config.installed = true;
@@ -93,6 +115,8 @@ impl AgentRegistry {
             config.binary_path = None;
          }
       }
+
+      self.last_detection = Some(Instant::now());
    }
 }
 
@@ -125,6 +149,8 @@ fn find_binary(binary_name: &str) -> Option<PathBuf> {
       candidates.push(home.join(".pnpm"));
       candidates.push(home.join("Library/pnpm"));
       candidates.push(home.join("Library/pnpm/bin"));
+      candidates.push(home.join(".cargo/bin"));
+      candidates.push(home.join("go/bin"));
       candidates.push(home.join(".asdf/shims"));
       candidates.push(home.join(".local/share/mise/shims"));
 
@@ -192,6 +218,15 @@ fn find_binary(binary_name: &str) -> Option<PathBuf> {
             candidates.push(entry.path().join("bin"));
          }
       }
+   }
+   if let Some(dir) = env::var_os("GOPATH") {
+      candidates.push(PathBuf::from(dir).join("bin"));
+   }
+   if let Some(dir) = env::var_os("GOBIN") {
+      candidates.push(PathBuf::from(dir));
+   }
+   if let Some(dir) = env::var_os("CARGO_HOME") {
+      candidates.push(PathBuf::from(dir).join("bin"));
    }
 
    for dir in candidates {

@@ -218,37 +218,33 @@ export const useEditorStateStore = createSelectors(
         clearPositionCache: (bufferId) => viewStateCache.clear(bufferId),
         restorePositionForFile: (bufferId) => {
           const cachedState = viewStateCache.get(bufferId);
-          console.log("[restorePositionForFile]", bufferId, "cached:", cachedState);
-          if (cachedState) {
-            // Restore cursor position and scroll offset together
-            set({
-              cursorPosition: cachedState.cursor,
-              scrollTop: cachedState.scrollTop,
-              scrollLeft: cachedState.scrollLeft,
-            });
-            // Apply scroll position to DOM elements synchronously to avoid flash
-            const viewport = document.querySelector(".editor-viewport") as HTMLDivElement | null;
-            const textarea = document.querySelector(
-              ".editor-textarea",
-            ) as HTMLTextAreaElement | null;
-            console.log("[restorePositionForFile] setting scroll to", cachedState.scrollTop);
-            if (viewport) {
-              viewport.scrollTop = cachedState.scrollTop;
-              viewport.scrollLeft = cachedState.scrollLeft;
-            }
-            if (textarea) {
-              textarea.scrollTop = cachedState.scrollTop;
-              textarea.scrollLeft = cachedState.scrollLeft;
-              console.log(
-                "[restorePositionForFile] textarea scroll after set:",
-                textarea.scrollTop,
-              );
-            }
-            return true;
+          const restoredState = cachedState ?? {
+            cursor: { line: 0, column: 0, offset: 0 },
+            scrollTop: 0,
+            scrollLeft: 0,
+          };
+
+          // Restore cursor position and scroll offset together.
+          // If the file has no cache yet, reset both cursor and scroll to defaults.
+          set({
+            cursorPosition: restoredState.cursor,
+            scrollTop: restoredState.scrollTop,
+            scrollLeft: restoredState.scrollLeft,
+          });
+
+          // Apply scroll position to DOM elements synchronously to avoid flash.
+          const viewport = document.querySelector(".editor-viewport") as HTMLDivElement | null;
+          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement | null;
+          if (viewport) {
+            viewport.scrollTop = restoredState.scrollTop;
+            viewport.scrollLeft = restoredState.scrollLeft;
           }
-          // Reset to beginning for files with no cached position
-          set({ cursorPosition: { line: 0, column: 0, offset: 0 } });
-          return false;
+          if (textarea) {
+            textarea.scrollTop = restoredState.scrollTop;
+            textarea.scrollLeft = restoredState.scrollLeft;
+          }
+
+          return cachedState !== null;
         },
 
         // Multi-cursor actions

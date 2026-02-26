@@ -56,16 +56,68 @@ function isValidColor(value: string): boolean {
   return /^#[0-9A-Fa-f]{3,8}$/.test(value);
 }
 
+function normalizeColorValue(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (isValidColor(trimmed)) return trimmed;
+  if (typeof CSS !== "undefined" && CSS.supports("color", trimmed)) {
+    return trimmed;
+  }
+
+  // Support raw RGB triplets like "255 255 255" or "255,255,255"
+  if (/^\d{1,3}\s+\d{1,3}\s+\d{1,3}$/.test(trimmed)) {
+    const rgb = `rgb(${trimmed})`;
+    return CSS.supports("color", rgb) ? rgb : null;
+  }
+  if (/^\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}$/.test(trimmed)) {
+    const rgb = `rgb(${trimmed})`;
+    return CSS.supports("color", rgb) ? rgb : null;
+  }
+
+  return null;
+}
+
+function withAlpha(color: string, alpha: number, fallback: string): string {
+  const normalized = normalizeColorValue(color);
+  if (!normalized) return fallback;
+
+  const hexMatch = normalized.match(/^#([0-9a-f]{6}|[0-9a-f]{3})$/i);
+  if (hexMatch) {
+    let hex = hexMatch[1];
+    if (hex.length === 3) {
+      hex = hex
+        .split("")
+        .map((c) => `${c}${c}`)
+        .join("");
+    }
+    const r = Number.parseInt(hex.slice(0, 2), 16);
+    const g = Number.parseInt(hex.slice(2, 4), 16);
+    const b = Number.parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  if (normalized.startsWith("rgb(")) {
+    return normalized.replace(/^rgb\((.*)\)$/i, `rgb($1 / ${alpha})`);
+  }
+  if (normalized.startsWith("rgba(")) {
+    return normalized.replace(/^rgba\((.*),\s*[^,]+\)$/i, `rgba($1, ${alpha})`);
+  }
+
+  return fallback;
+}
+
 export function useTerminalTheme() {
   const getTerminalTheme = useCallback((): TerminalTheme => {
     const computedStyle = getComputedStyle(document.documentElement);
 
-    // Helper to get a valid color from CSS variables or use default
+    // Helper to get a valid CSS color from variables or use default
     const getColor = (varNames: string[], defaultValue: string): string => {
       for (const varName of varNames) {
         const value = computedStyle.getPropertyValue(varName).trim();
-        if (value && isValidColor(value)) {
-          return value;
+        const normalized = normalizeColorValue(value);
+        if (normalized) {
+          return normalized;
         }
       }
       return defaultValue;
@@ -80,7 +132,7 @@ export function useTerminalTheme() {
       foreground: fg,
       cursor: accent,
       cursorAccent: bg,
-      selectionBackground: `${accent}40`,
+      selectionBackground: withAlpha(accent, 0.25, DEFAULT_THEME.selectionBackground),
       selectionForeground: fg,
       black: getColor(["--terminal-black", "--color-terminal-black"], DEFAULT_THEME.black),
       red: getColor(["--terminal-red", "--color-terminal-red"], DEFAULT_THEME.red),

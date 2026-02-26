@@ -137,9 +137,10 @@ pub fn lsp_document_open(
    lsp_manager: State<'_, LspManager>,
    file_path: String,
    content: String,
+   language_id: Option<String>,
 ) -> LspResult<()> {
    lsp_manager
-      .notify_document_open(&file_path, content)
+      .notify_document_open(&file_path, content, language_id)
       .map_err(Into::into)
 }
 

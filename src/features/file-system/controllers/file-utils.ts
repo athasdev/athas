@@ -1,8 +1,14 @@
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
+
 /**
  * Get the programming language from a filename based on its extension
  */
 export const getLanguageFromFilename = (filename: string): string => {
   const lowerFilename = filename.toLowerCase();
+  const fromRegistry = extensionRegistry.getLanguageId(filename);
+  if (fromRegistry === "ruby") {
+    return "Ruby";
+  }
 
   // Handle compound extensions like .html.erb
   if (lowerFilename.endsWith(".html.erb")) {

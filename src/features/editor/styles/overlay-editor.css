@@ -81,13 +81,13 @@
 
 /* Selection styling for the input layer */
 .input-layer::selection {
-  background: var(--selection-bg, rgba(38, 79, 120, 0.6));
-  color: var(--text, #d4d4d4);
+  background: transparent;
+  color: inherit;
 }
 
 .input-layer::-moz-selection {
-  background: var(--selection-bg, rgba(38, 79, 120, 0.6));
-  color: var(--text, #d4d4d4);
+  background: transparent;
+  color: inherit;
 }
 
 /* Line structure in highlight layer */

@@ -144,8 +144,8 @@ async function release() {
   const newVersion = bumpVersion(currentVersion, bumpType);
   info(`New version: ${newVersion}`);
 
-  // Get commits for changelog
-  log("\n📝 Generating changelog...\n", "yellow");
+  // Get commits since last release
+  log("\nFetching recent commits...\n", "yellow");
   const commits = await getCommitsSinceLastTag();
 
   if (commits.length === 0) {
