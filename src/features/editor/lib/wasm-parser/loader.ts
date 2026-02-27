@@ -198,7 +198,7 @@ class WasmParserLoader {
   }
 
   /**
-   * Compile highlight query with compatibility rewrites for known parser/query mismatches.
+   * Compile highlight query with compatibility rewrites for parser/query mismatches.
    */
   private compileHighlightQuery(
     language: Language,
@@ -211,66 +211,148 @@ class WasmParserLoader {
         queryText,
       };
     } catch (error) {
-      const rewrittenQuery = this.rewriteIncompatibleHighlightQuery(languageId, queryText, error);
-      if (rewrittenQuery !== queryText) {
-        try {
-          return {
-            query: new Query(language, rewrittenQuery),
-            queryText: rewrittenQuery,
-          };
-        } catch (rewriteError) {
-          logger.error(
-            "WasmParser",
-            `Highlight query rewrite failed for ${languageId}:`,
-            rewriteError,
-          );
-        }
-      }
+      const recovered = this.tryRecoverHighlightQuery(language, languageId, queryText, error);
+      if (recovered) return recovered;
       throw error;
     }
   }
 
   /**
-   * Rewrite known incompatible node references so highlighting still works with older parser WASM builds.
+   * Try to recover from unsupported nodes by removing patterns that reference them.
+   */
+  private tryRecoverHighlightQuery(
+    language: Language,
+    languageId: string,
+    queryText: string,
+    error: unknown,
+  ): { query: Query; queryText: string } | null {
+    let rewrittenQuery = queryText;
+    let currentError = error;
+    const seenNodes = new Set<string>();
+
+    for (let attempts = 0; attempts < 8; attempts++) {
+      const badNode = this.extractBadNodeName(currentError);
+      if (!badNode || seenNodes.has(badNode)) {
+        break;
+      }
+      seenNodes.add(badNode);
+
+      const nextQuery = this.rewriteIncompatibleHighlightQuery(languageId, rewrittenQuery, badNode);
+      if (nextQuery === rewrittenQuery) {
+        break;
+      }
+      rewrittenQuery = nextQuery;
+
+      logger.warn(
+        "WasmParser",
+        `Applied ${languageId} highlight compatibility rewrite for missing node '${badNode}'`,
+      );
+
+      try {
+        return {
+          query: new Query(language, rewrittenQuery),
+          queryText: rewrittenQuery,
+        };
+      } catch (rewriteError) {
+        currentError = rewriteError;
+      }
+    }
+
+    logger.error("WasmParser", `Highlight query rewrite failed for ${languageId}:`, currentError);
+    return null;
+  }
+
+  private extractBadNodeName(error: unknown): string | null {
+    const message =
+      error instanceof Error ? error.message : typeof error === "string" ? error : String(error);
+    const match = message.match(/Bad node name '([^']+)'/);
+    return match?.[1] ?? null;
+  }
+
+  /**
+   * Rewrite unsupported node references so older parser WASM builds can still highlight partially.
    */
   private rewriteIncompatibleHighlightQuery(
     languageId: string,
     queryText: string,
-    error: unknown,
+    badNodeName: string,
   ): string {
-    const message =
-      error instanceof Error ? error.message : typeof error === "string" ? error : String(error);
+    let rewritten = this.stripNodeExpressions(queryText, badNodeName);
 
-    // Rust parser/query mismatch: older parser versions do not expose `doc_comment`.
-    if (languageId === "rust" && message.includes("Bad node name 'doc_comment'")) {
-      let rewritten = queryText;
-      rewritten = rewritten.replace(
-        /\(\s*line_comment\s+\(\s*doc_comment\s*\)\s*\)\s*@comment\.documentation\s*/g,
-        "",
-      );
-      rewritten = rewritten.replace(
-        /\(\s*block_comment\s+\(\s*doc_comment\s*\)\s*\)\s*@comment\.documentation\s*/g,
-        "",
-      );
+    if (languageId === "rust" && badNodeName === "doc_comment") {
+      rewritten = this.ensureRustDocCommentFallback(rewritten);
+    }
 
-      if (!rewritten.includes("^///|^//!")) {
-        rewritten = `${rewritten.trimEnd()}
+    return rewritten;
+  }
+
+  private stripNodeExpressions(queryText: string, badNodeName: string): string {
+    const nodeRegex = new RegExp(
+      `\\(${badNodeName.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}(?=[\\s)])`,
+    );
+    const lines = queryText.split("\n");
+    const output: string[] = [];
+    let expressionLines: string[] = [];
+    let depth = 0;
+    let inExpression = false;
+
+    const flushExpression = () => {
+      if (expressionLines.length === 0) return;
+      const expressionText = expressionLines.join("\n");
+      if (!nodeRegex.test(expressionText)) {
+        output.push(expressionText);
+      }
+      expressionLines = [];
+    };
+
+    for (const line of lines) {
+      if (!inExpression) {
+        if (line.trimStart().startsWith("(")) {
+          inExpression = true;
+          expressionLines = [line];
+          depth = (line.match(/\(/g) || []).length - (line.match(/\)/g) || []).length;
+          if (depth <= 0) {
+            flushExpression();
+            inExpression = false;
+            depth = 0;
+          }
+        } else {
+          output.push(line);
+        }
+        continue;
+      }
+
+      expressionLines.push(line);
+      depth += (line.match(/\(/g) || []).length - (line.match(/\)/g) || []).length;
+      if (depth <= 0) {
+        flushExpression();
+        inExpression = false;
+        depth = 0;
+      }
+    }
+
+    if (inExpression) {
+      flushExpression();
+    }
+
+    return `${output
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trimEnd()}\n`;
+  }
+
+  private ensureRustDocCommentFallback(queryText: string): string {
+    if (queryText.includes("^///|^//!")) {
+      return queryText;
+    }
+
+    return `${queryText.trimEnd()}
 
 ((line_comment) @comment.documentation
  (#match? @comment.documentation "^///|^//!"))
 ((block_comment) @comment.documentation
  (#match? @comment.documentation "^/\\*\\*|^/\\*!"))
 `;
-      }
-
-      logger.warn(
-        "WasmParser",
-        "Applied Rust highlight compatibility rewrite for missing doc_comment node",
-      );
-      return rewritten;
-    }
-
-    return queryText;
   }
 
   private async _loadParserInternal(config: ParserConfig): Promise<LoadedParser> {
