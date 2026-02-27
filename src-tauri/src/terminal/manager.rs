@@ -52,7 +52,20 @@ impl TerminalManager {
 
    pub fn close_terminal(&self, id: &str) -> Result<()> {
       let mut connections = self.connections.lock().unwrap();
-      connections.remove(id);
+      if let Some(connection) = connections.remove(id)
+         && let Err(e) = connection.kill()
+      {
+         log::debug!("Terminal {} kill returned error: {}", id, e);
+      }
       Ok(())
+   }
+
+   pub fn kill_terminal(&self, id: &str) -> Result<()> {
+      let connections = self.connections.lock().unwrap();
+      if let Some(connection) = connections.get(id) {
+         connection.kill()
+      } else {
+         Err(anyhow!("Terminal connection not found"))
+      }
    }
 }

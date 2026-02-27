@@ -231,9 +231,33 @@ fn find_binary(binary_name: &str) -> Option<PathBuf> {
 }
 
 fn check_dir_for_binary(dir: &Path, binary_name: &str) -> Option<PathBuf> {
-   let candidate = dir.join(binary_name);
-   if candidate.exists() {
-      return Some(candidate);
+   #[cfg(target_os = "windows")]
+   {
+      let lowercase_name = binary_name.to_ascii_lowercase();
+      let mut candidate_names = vec![binary_name.to_string()];
+
+      for ext in [".exe", ".cmd", ".bat", ".ps1"] {
+         if !lowercase_name.ends_with(ext) {
+            candidate_names.push(format!("{binary_name}{ext}"));
+         }
+      }
+
+      for name in candidate_names {
+         let candidate = dir.join(name);
+         if candidate.is_file() {
+            return Some(candidate);
+         }
+      }
+
+      None
    }
-   None
+
+   #[cfg(not(target_os = "windows"))]
+   {
+      let candidate = dir.join(binary_name);
+      if candidate.is_file() {
+         return Some(candidate);
+      }
+      None
+   }
 }

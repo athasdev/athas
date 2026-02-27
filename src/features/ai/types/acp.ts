@@ -17,6 +17,7 @@ export interface AcpAgentStatus {
   running: boolean;
   sessionActive: boolean;
   initialized: boolean;
+  sessionId?: string | null;
 }
 
 export type AcpContentBlock =
@@ -47,6 +48,15 @@ export interface SessionModeState {
   availableModes: SessionMode[];
 }
 
+export type AcpPlanEntryPriority = "high" | "medium" | "low";
+export type AcpPlanEntryStatus = "pending" | "in_progress" | "completed";
+
+export interface AcpPlanEntry {
+  content: string;
+  priority: AcpPlanEntryPriority;
+  status: AcpPlanEntryStatus;
+}
+
 // Prompt turn types
 export type StopReason = "end_turn" | "max_tokens" | "max_turn_requests" | "refusal" | "cancelled";
 
@@ -57,7 +67,19 @@ export type UiAction =
 
 export type AcpEvent =
   | {
+      type: "user_message_chunk";
+      sessionId: string;
+      content: AcpContentBlock;
+      isComplete: boolean;
+    }
+  | {
       type: "content_chunk";
+      sessionId: string;
+      content: AcpContentBlock;
+      isComplete: boolean;
+    }
+  | {
+      type: "thought_chunk";
       sessionId: string;
       content: AcpContentBlock;
       isComplete: boolean;
@@ -99,6 +121,11 @@ export type AcpEvent =
       type: "slash_commands_update";
       sessionId: string;
       commands: SlashCommand[];
+    }
+  | {
+      type: "plan_update";
+      sessionId: string;
+      entries: AcpPlanEntry[];
     }
   | {
       type: "session_mode_update";

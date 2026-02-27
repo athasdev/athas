@@ -1,12 +1,15 @@
-use super::types::{AcpContentBlock, AcpEvent, UiAction};
+use super::types::{
+   AcpContentBlock, AcpEvent, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus, UiAction,
+};
 use crate::terminal::{TerminalManager, config::TerminalConfig};
 use agent_client_protocol as acp;
 use async_trait::async_trait;
 use std::{
    collections::HashMap,
+   path::PathBuf,
    sync::{Arc, Mutex as StdMutex},
 };
-use tauri::{AppHandle, Emitter, Listener};
+use tauri::{AppHandle, Emitter, EventId, Listener};
 use tokio::sync::{Mutex, mpsc, oneshot};
 
 /// Response for permission requests
@@ -24,6 +27,7 @@ struct AcpTerminalState {
    truncated: bool,
    exit_status: Option<acp::TerminalExitStatus>,
    exit_waiters: Vec<oneshot::Sender<acp::TerminalExitStatus>>,
+   listener_ids: Vec<EventId>,
 }
 
 impl AcpTerminalState {
@@ -35,28 +39,53 @@ impl AcpTerminalState {
          truncated: false,
          exit_status: None,
          exit_waiters: Vec::new(),
+         listener_ids: Vec::new(),
       }
    }
 
    fn append_output(&mut self, data: &str) {
-      if self.output_buffer.len() + data.len() > self.max_output_bytes {
-         let remaining = self
-            .max_output_bytes
-            .saturating_sub(self.output_buffer.len());
-         if remaining > 0 {
-            self
-               .output_buffer
-               .push_str(&data[..remaining.min(data.len())]);
-         }
+      self.output_buffer.push_str(data);
+      self.truncate_from_beginning_to_limit();
+   }
+
+   fn truncate_from_beginning_to_limit(&mut self) {
+      if self.output_buffer.len() <= self.max_output_bytes {
+         return;
+      }
+
+      let overflow = self
+         .output_buffer
+         .len()
+         .saturating_sub(self.max_output_bytes);
+      let mut drain_end = overflow.min(self.output_buffer.len());
+
+      while drain_end < self.output_buffer.len() && !self.output_buffer.is_char_boundary(drain_end)
+      {
+         drain_end += 1;
+      }
+
+      if drain_end > 0 {
+         self.output_buffer.drain(..drain_end);
          self.truncated = true;
-      } else {
-         self.output_buffer.push_str(data);
+      }
+
+      while self.output_buffer.len() > self.max_output_bytes {
+         if let Some(first_char) = self.output_buffer.chars().next() {
+            self.output_buffer.drain(..first_char.len_utf8());
+            self.truncated = true;
+         } else {
+            break;
+         }
       }
    }
 
    fn set_exit_status(&mut self, exit_code: Option<u32>, signal: Option<String>) {
+      if self.exit_status.is_some() {
+         return;
+      }
+
       let status = acp::TerminalExitStatus::new()
-         .exit_code(exit_code.unwrap_or(0))
+         .exit_code(exit_code)
          .signal(signal);
       self.exit_status = Some(status.clone());
 
@@ -113,14 +142,17 @@ impl AthasAcpClient {
       }
    }
 
-   fn resolve_path(&self, path: &str) -> String {
-      if let Some(ref workspace) = self.workspace_path
-         && !path.starts_with('/')
-         && !path.starts_with(workspace)
-      {
-         return format!("{}/{}", workspace, path);
+   fn resolve_path(&self, path: &str) -> PathBuf {
+      let candidate = PathBuf::from(path);
+      if candidate.is_absolute() {
+         return candidate;
       }
-      path.to_string()
+
+      if let Some(ref workspace) = self.workspace_path {
+         return PathBuf::from(workspace).join(candidate);
+      }
+
+      std::env::current_dir().unwrap_or_default().join(candidate)
    }
 
    fn extract_first_url(text: &str) -> Option<String> {
@@ -265,6 +297,39 @@ impl AthasAcpClient {
          acp::RequestPermissionResponse::new(acp::RequestPermissionOutcome::Cancelled)
       }
    }
+
+   fn map_plan_priority(priority: acp::PlanEntryPriority) -> AcpPlanEntryPriority {
+      match priority {
+         acp::PlanEntryPriority::High => AcpPlanEntryPriority::High,
+         acp::PlanEntryPriority::Medium => AcpPlanEntryPriority::Medium,
+         acp::PlanEntryPriority::Low => AcpPlanEntryPriority::Low,
+         _ => AcpPlanEntryPriority::Medium,
+      }
+   }
+
+   fn map_plan_status(status: acp::PlanEntryStatus) -> AcpPlanEntryStatus {
+      match status {
+         acp::PlanEntryStatus::Pending => AcpPlanEntryStatus::Pending,
+         acp::PlanEntryStatus::InProgress => AcpPlanEntryStatus::InProgress,
+         acp::PlanEntryStatus::Completed => AcpPlanEntryStatus::Completed,
+         _ => AcpPlanEntryStatus::Pending,
+      }
+   }
+
+   fn map_content_block(content: acp::ContentBlock) -> Option<AcpContentBlock> {
+      match content {
+         acp::ContentBlock::Text(text) => Some(AcpContentBlock::Text { text: text.text }),
+         acp::ContentBlock::Image(img) => Some(AcpContentBlock::Image {
+            data: img.data,
+            media_type: img.mime_type,
+         }),
+         acp::ContentBlock::ResourceLink(link) => Some(AcpContentBlock::Resource {
+            uri: link.uri,
+            name: Some(link.name),
+         }),
+         _ => None,
+      }
+   }
 }
 
 #[async_trait(?Send)]
@@ -399,18 +464,20 @@ impl acp::Client for AthasAcpClient {
       let session_id = args.session_id.to_string();
 
       match args.update {
+         acp::SessionUpdate::UserMessageChunk(chunk) => {
+            let Some(content) = Self::map_content_block(chunk.content) else {
+               return Ok(());
+            };
+
+            self.emit_event(AcpEvent::UserMessageChunk {
+               session_id,
+               content,
+               is_complete: false,
+            });
+         }
          acp::SessionUpdate::AgentMessageChunk(chunk) => {
-            let content = match chunk.content {
-               acp::ContentBlock::Text(text) => AcpContentBlock::Text { text: text.text },
-               acp::ContentBlock::Image(img) => AcpContentBlock::Image {
-                  data: img.data,
-                  media_type: img.mime_type,
-               },
-               acp::ContentBlock::ResourceLink(link) => AcpContentBlock::Resource {
-                  uri: link.uri,
-                  name: Some(link.name),
-               },
-               _ => return Ok(()),
+            let Some(content) = Self::map_content_block(chunk.content) else {
+               return Ok(());
             };
 
             self.emit_event(AcpEvent::ContentChunk {
@@ -419,14 +486,27 @@ impl acp::Client for AthasAcpClient {
                is_complete: false,
             });
          }
+         acp::SessionUpdate::AgentThoughtChunk(chunk) => {
+            let Some(content) = Self::map_content_block(chunk.content) else {
+               return Ok(());
+            };
+
+            self.emit_event(AcpEvent::ThoughtChunk {
+               session_id,
+               content,
+               is_complete: false,
+            });
+         }
          acp::SessionUpdate::ToolCall(tool_call) => {
             // ToolCall has: tool_call_id, title, kind, status, content, etc.
-            // Content may contain the input; we serialize the whole content for display
-            let input = if tool_call.content.is_empty() {
-               serde_json::Value::Null
-            } else {
-               serde_json::to_value(&tool_call.content).unwrap_or(serde_json::Value::Null)
-            };
+            // Prefer raw_input; fallback to content serialization for display/debugging
+            let input = tool_call.raw_input.clone().unwrap_or_else(|| {
+               if tool_call.content.is_empty() {
+                  serde_json::Value::Null
+               } else {
+                  serde_json::to_value(&tool_call.content).unwrap_or(serde_json::Value::Null)
+               }
+            });
 
             self.emit_event(AcpEvent::ToolStart {
                session_id,
@@ -436,23 +516,24 @@ impl acp::Client for AthasAcpClient {
             });
          }
          acp::SessionUpdate::ToolCallUpdate(update) => {
-            // Check tool status to determine success
-            // ToolCallUpdate has fields: kind, status, title, content, etc.
-            let success = matches!(
-               update.fields.status,
-               None
-                  | Some(
-                     acp::ToolCallStatus::Pending
-                        | acp::ToolCallStatus::InProgress
-                        | acp::ToolCallStatus::Completed
-                  )
-            );
-
-            self.emit_event(AcpEvent::ToolComplete {
-               session_id,
-               tool_id: update.tool_call_id.to_string(),
-               success,
-            });
+            // Only emit completion for terminal statuses.
+            match update.fields.status {
+               Some(acp::ToolCallStatus::Completed) => {
+                  self.emit_event(AcpEvent::ToolComplete {
+                     session_id,
+                     tool_id: update.tool_call_id.to_string(),
+                     success: true,
+                  });
+               }
+               Some(acp::ToolCallStatus::Failed) => {
+                  self.emit_event(AcpEvent::ToolComplete {
+                     session_id,
+                     tool_id: update.tool_call_id.to_string(),
+                     success: false,
+                  });
+               }
+               _ => {}
+            }
          }
          acp::SessionUpdate::CurrentModeUpdate(update) => {
             // Handle current mode change
@@ -480,6 +561,20 @@ impl acp::Client for AthasAcpClient {
                            None
                         }
                      }),
+                  })
+                  .collect(),
+            });
+         }
+         acp::SessionUpdate::Plan(plan) => {
+            self.emit_event(AcpEvent::PlanUpdate {
+               session_id,
+               entries: plan
+                  .entries
+                  .into_iter()
+                  .map(|entry| AcpPlanEntry {
+                     content: entry.content,
+                     priority: Self::map_plan_priority(entry.priority),
+                     status: Self::map_plan_status(entry.status),
                   })
                   .collect(),
             });
@@ -532,7 +627,7 @@ impl acp::Client for AthasAcpClient {
       let path = self.resolve_path(&path_str);
 
       // Create parent directories if needed
-      if let Some(parent) = std::path::Path::new(&path).parent()
+      if let Some(parent) = path.parent()
          && let Err(e) = tokio::fs::create_dir_all(parent).await
       {
          log::warn!("Failed to create parent directories: {}", e);
@@ -541,7 +636,9 @@ impl acp::Client for AthasAcpClient {
       match tokio::fs::write(&path, &args.content).await {
          Ok(_) => {
             // Emit file change event so frontend can refresh
-            let _ = self.app_handle.emit("file-changed", &path);
+            let _ = self
+               .app_handle
+               .emit("file-changed", path.to_string_lossy().to_string());
             Ok(acp::WriteTextFileResponse::new())
          }
          Err(e) => Err(acp::Error::new(
@@ -555,40 +652,43 @@ impl acp::Client for AthasAcpClient {
       &self,
       args: acp::CreateTerminalRequest,
    ) -> acp::Result<acp::CreateTerminalResponse> {
+      if args.command.trim().is_empty() {
+         return Err(acp::Error::new(
+            -32602,
+            "terminal/create command must not be empty".to_string(),
+         ));
+      }
+
       let working_dir = args
          .cwd
+         .as_ref()
          .map(|p| p.to_string_lossy().to_string())
          .or_else(|| self.workspace_path.clone());
 
       let env_map: Option<HashMap<String, String>> = if args.env.is_empty() {
          None
       } else {
-         Some(args.env.into_iter().map(|e| (e.name, e.value)).collect())
+         Some(
+            args
+               .env
+               .iter()
+               .map(|e| (e.name.clone(), e.value.clone()))
+               .collect(),
+         )
       };
-
-      // Build the full command with arguments
-      let full_command = if args.args.is_empty() {
-         args.command.clone()
+      let command = args.command.clone();
+      let command_args = if args.args.is_empty() {
+         None
       } else {
-         // Quote arguments that contain spaces or special characters
-         let quoted_args: Vec<String> = args
-            .args
-            .iter()
-            .map(|arg| {
-               if arg.contains(' ') || arg.contains('"') || arg.contains('\'') {
-                  format!("'{}'", arg.replace('\'', "'\\''"))
-               } else {
-                  arg.clone()
-               }
-            })
-            .collect();
-         format!("{} {}", args.command, quoted_args.join(" "))
+         Some(args.args.clone())
       };
 
       let config = TerminalConfig {
          working_directory: working_dir,
          shell: None,
          environment: env_map,
+         command: Some(command),
+         args: command_args,
          rows: 24,
          cols: 80,
       };
@@ -601,14 +701,6 @@ impl acp::Client for AthasAcpClient {
             let terminal_id = athas_terminal_id.clone();
             let output_limit = args.output_byte_limit.map(|l| l as u32);
             let state = AcpTerminalState::new(athas_terminal_id.clone(), output_limit);
-
-            // Execute the command in the terminal
-            if let Err(e) = self
-               .terminal_manager
-               .write_to_terminal(&athas_terminal_id, &format!("{}\n", full_command))
-            {
-               log::warn!("Failed to write command to terminal: {}", e);
-            }
             {
                let mut states = self.terminal_states.lock().unwrap();
                states.insert(terminal_id.clone(), state);
@@ -618,7 +710,7 @@ impl acp::Client for AthasAcpClient {
             let output_event = format!("pty-output-{}", athas_terminal_id);
             let states_clone = self.terminal_states.clone();
             let terminal_id_clone = terminal_id.clone();
-            self.app_handle.listen(output_event, move |event| {
+            let output_listener_id = self.app_handle.listen(output_event, move |event| {
                let payload = event.payload();
                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload)
                   && let Some(data) = parsed.get("data").and_then(|d| d.as_str())
@@ -628,18 +720,77 @@ impl acp::Client for AthasAcpClient {
                   state.append_output(data);
                }
             });
+            {
+               let mut states = self.terminal_states.lock().unwrap();
+               if let Some(state) = states.get_mut(&terminal_id) {
+                  state.listener_ids.push(output_listener_id);
+               }
+            }
+
+            // Set up exit-status listener
+            let exit_event = format!("pty-exit-{}", athas_terminal_id);
+            let states_clone = self.terminal_states.clone();
+            let terminal_id_clone = terminal_id.clone();
+            let exit_listener_id = self.app_handle.listen(exit_event, move |event| {
+               let payload = event.payload();
+               if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload) {
+                  let exit_code = parsed
+                     .get("exitCode")
+                     .and_then(|v| v.as_u64())
+                     .map(|v| v as u32);
+                  let signal = parsed
+                     .get("signal")
+                     .and_then(|v| v.as_str())
+                     .map(str::to_string);
+                  if let Ok(mut states) = states_clone.lock()
+                     && let Some(state) = states.get_mut(&terminal_id_clone)
+                  {
+                     state.set_exit_status(exit_code, signal);
+                  }
+               }
+            });
+            {
+               let mut states = self.terminal_states.lock().unwrap();
+               if let Some(state) = states.get_mut(&terminal_id) {
+                  state.listener_ids.push(exit_listener_id);
+               }
+            }
+
+            // Set up error listener
+            let error_event = format!("pty-error-{}", athas_terminal_id);
+            let states_clone = self.terminal_states.clone();
+            let terminal_id_clone = terminal_id.clone();
+            let error_listener_id = self.app_handle.listen(error_event, move |_| {
+               if let Ok(mut states) = states_clone.lock()
+                  && let Some(state) = states.get_mut(&terminal_id_clone)
+               {
+                  state.set_exit_status(Some(1), Some("pty_error".to_string()));
+               }
+            });
+            {
+               let mut states = self.terminal_states.lock().unwrap();
+               if let Some(state) = states.get_mut(&terminal_id) {
+                  state.listener_ids.push(error_listener_id);
+               }
+            }
 
             // Set up close listener
             let close_event = format!("pty-closed-{}", athas_terminal_id);
             let states_clone = self.terminal_states.clone();
             let terminal_id_clone = terminal_id.clone();
-            self.app_handle.listen(close_event, move |_| {
+            let close_listener_id = self.app_handle.listen(close_event, move |_| {
                if let Ok(mut states) = states_clone.lock()
                   && let Some(state) = states.get_mut(&terminal_id_clone)
                {
                   state.set_exit_status(Some(0), None);
                }
             });
+            {
+               let mut states = self.terminal_states.lock().unwrap();
+               if let Some(state) = states.get_mut(&terminal_id) {
+                  state.listener_ids.push(close_listener_id);
+               }
+            }
 
             log::info!("ACP terminal created: {}", terminal_id);
             Ok(acp::CreateTerminalResponse::new(terminal_id))
@@ -672,7 +823,7 @@ impl acp::Client for AthasAcpClient {
       let truncated = state.truncated;
       state.truncated = false;
 
-      Ok(acp::TerminalOutputResponse::new(output, truncated))
+      Ok(acp::TerminalOutputResponse::new(output, truncated).exit_status(state.exit_status.clone()))
    }
 
    async fn release_terminal(
@@ -685,15 +836,24 @@ impl acp::Client for AthasAcpClient {
             .terminal_states
             .lock()
             .map_err(|_| acp::Error::new(-32603, "Lock poisoned".to_string()))?;
+         if let Some(state) = states.get_mut(&terminal_id)
+            && state.exit_status.is_none()
+         {
+            state.set_exit_status(Some(1), Some("released".to_string()));
+         }
          states.remove(&terminal_id)
       };
 
-      if let Some(state) = removed_state
-         && let Err(e) = self
+      if let Some(state) = removed_state {
+         for listener_id in state.listener_ids {
+            self.app_handle.unlisten(listener_id);
+         }
+         if let Err(e) = self
             .terminal_manager
             .close_terminal(&state.athas_terminal_id)
-      {
-         log::warn!("Failed to close terminal {}: {}", terminal_id, e);
+         {
+            log::warn!("Failed to close terminal {}: {}", terminal_id, e);
+         }
       }
 
       Ok(acp::ReleaseTerminalResponse::new())
@@ -749,9 +909,19 @@ impl acp::Client for AthasAcpClient {
       };
 
       if let Some(athas_terminal_id) = athas_id
-         && let Err(e) = self.terminal_manager.close_terminal(&athas_terminal_id)
+         && let Err(e) = self.terminal_manager.kill_terminal(&athas_terminal_id)
       {
          log::warn!("Failed to kill terminal {}: {}", terminal_id, e);
+      }
+
+      {
+         let mut states = self
+            .terminal_states
+            .lock()
+            .map_err(|_| acp::Error::new(-32603, "Lock poisoned".to_string()))?;
+         if let Some(state) = states.get_mut(&terminal_id) {
+            state.set_exit_status(Some(1), Some("killed".to_string()));
+         }
       }
 
       Ok(acp::KillTerminalCommandResponse::new())
@@ -815,5 +985,39 @@ impl acp::Client for AthasAcpClient {
          args.params.get()
       );
       Ok(())
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::AcpTerminalState;
+
+   #[test]
+   fn append_output_truncates_from_beginning() {
+      let mut state = AcpTerminalState::new("terminal-1".to_string(), Some(5));
+      state.append_output("hello");
+      state.append_output("world");
+
+      assert_eq!(state.output_buffer, "world");
+      assert!(state.truncated);
+   }
+
+   #[test]
+   fn append_output_preserves_utf8_boundaries_when_truncating() {
+      let mut state = AcpTerminalState::new("terminal-2".to_string(), Some(5));
+      state.append_output("a🙂b");
+
+      assert_eq!(state.output_buffer, "🙂b");
+      assert!(state.truncated);
+   }
+
+   #[test]
+   fn exit_status_preserves_none_exit_code_for_signal_termination() {
+      let mut state = AcpTerminalState::new("terminal-3".to_string(), None);
+      state.set_exit_status(None, Some("SIGTERM".to_string()));
+
+      let status = state.exit_status.expect("exit status should be set");
+      assert_eq!(status.exit_code, None);
+      assert_eq!(status.signal.as_deref(), Some("SIGTERM"));
    }
 }

@@ -13,7 +13,7 @@ import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import ChatHistorySidebar from "../history/sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
-import { ChatMessages } from "./chat-messages";
+import { type ChatAcpEvent, ChatMessages } from "./chat-messages";
 
 interface DirectAcpUiAction {
   kind: "open_web_viewer" | "open_terminal";
@@ -97,7 +97,8 @@ const AIChat = memo(function AIChat({
   const [permissionQueue, setPermissionQueue] = useState<
     Array<{ requestId: string; description: string; permissionType: string; resource: string }>
   >([]);
-  const [acpEvents, setAcpEvents] = useState<Array<{ id: string; text: string }>>([]);
+  const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
+  const activeToolEventIdsRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
     if (activeBuffer) {
@@ -113,7 +114,41 @@ const AIChat = memo(function AIChat({
   // Clear ACP events when switching chats
   useEffect(() => {
     setAcpEvents([]);
+    activeToolEventIdsRef.current.clear();
   }, [chatState.currentChatId]);
+
+  const appendAcpEvent = useCallback(
+    (
+      event: Omit<ChatAcpEvent, "id" | "timestamp"> & {
+        id?: string;
+      },
+    ) => {
+      setAcpEvents((prev) => {
+        const now = new Date();
+        const eventId = event.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const nextEvent: ChatAcpEvent = {
+          ...event,
+          id: eventId,
+          timestamp: now,
+        };
+
+        const last = prev[prev.length - 1];
+        if (
+          last &&
+          last.kind === nextEvent.kind &&
+          last.label === nextEvent.label &&
+          (last.detail ?? "") === (nextEvent.detail ?? "") &&
+          last.state === nextEvent.state &&
+          now.getTime() - last.timestamp.getTime() < 1200
+        ) {
+          return [...prev.slice(0, -1), { ...last, timestamp: now }];
+        }
+
+        return [...prev.slice(-39), nextEvent];
+      });
+    },
+    [],
+  );
 
   // Agent availability is now handled dynamically by the model-provider-selector component
   // No need to check Claude Code status on mount
@@ -205,6 +240,7 @@ const AIChat = memo(function AIChat({
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    activeToolEventIdsRef.current.clear();
     chatActions.setIsTyping(false);
     chatActions.setStreamingMessageId(null);
   };
@@ -306,6 +342,7 @@ const AIChat = memo(function AIChat({
       const enhancedMessage = processedMessage;
       if (isAcp) {
         setAcpEvents([]);
+        activeToolEventIdsRef.current.clear();
       }
 
       await getChatCompletionStream(
@@ -415,15 +452,18 @@ details: ${errorDetails || mainError}
           chatActions.setStreamingMessageId(newMessageId);
           requestAnimationFrame(scrollToBottom);
         },
-        (toolName: string, toolInput?: any) => {
+        (toolName: string, toolInput?: any, toolId?: string) => {
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
+          const resolvedToolId =
+            toolId ?? `${toolName}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
             isToolUse: true,
             toolName,
             toolCalls: [
               ...(currentMsg?.toolCalls || []),
               {
+                id: resolvedToolId,
                 name: toolName,
                 input: toolInput,
                 timestamp: new Date(),
@@ -431,14 +471,30 @@ details: ${errorDetails || mainError}
             ],
           });
         },
-        (toolName: string) => {
+        (toolName: string, toolId?: string) => {
           const currentMessages = chatActions.getCurrentMessages();
           const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
 
+          const currentToolCalls = currentMsg?.toolCalls || [];
+          let fallbackDone = false;
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
-            toolCalls: currentMsg?.toolCalls?.map((tc) =>
-              tc.name === toolName && !tc.isComplete ? { ...tc, isComplete: true } : tc,
-            ),
+            toolCalls: currentToolCalls.map((tc, index) => {
+              if (toolId) {
+                return tc.id === toolId && !tc.isComplete ? { ...tc, isComplete: true } : tc;
+              }
+              const isMostRecentMatch =
+                !fallbackDone &&
+                tc.name === toolName &&
+                !tc.isComplete &&
+                currentToolCalls
+                  .slice(index + 1)
+                  .every((next) => next.name !== toolName || Boolean(next.isComplete));
+              if (isMostRecentMatch) {
+                fallbackDone = true;
+                return { ...tc, isComplete: true };
+              }
+              return tc;
+            }),
           });
         },
         (event) => {
@@ -455,41 +511,118 @@ details: ${errorDetails || mainError}
         (event) => {
           if (!isAcpAgent(currentAgentId)) return;
           // Only show meaningful events, skip noisy ones
-          if (event.type === "content_chunk" || event.type === "session_complete") {
+          if (
+            event.type === "content_chunk" ||
+            event.type === "user_message_chunk" ||
+            event.type === "session_complete"
+          ) {
             return;
           }
-          const format = (): string | null => {
-            switch (event.type) {
-              case "tool_start":
-                return event.toolName;
-              case "tool_complete":
-                return null; // Skip, tool_start already shown
-              case "permission_request":
-                return null; // Handled separately with permission UI
-              case "prompt_complete":
-                return null; // Not useful to show
-              case "session_mode_update":
-                return event.modeState.currentModeId
-                  ? `Mode: ${event.modeState.currentModeId}`
-                  : null;
-              case "current_mode_update":
-                return `Mode: ${event.currentModeId}`;
-              case "slash_commands_update":
-                return null; // Not useful to show
-              case "status_changed":
-                return null; // Not useful to show
-              case "error":
-                return `Error: ${event.error}`;
-              case "ui_action":
-                return null; // Handled by acp-handler
+          switch (event.type) {
+            case "thought_chunk": {
+              appendAcpEvent({
+                kind: "thinking",
+                label: "Thinking",
+                state: "running",
+              });
+              break;
             }
-          };
-          const text = format();
-          if (text) {
-            setAcpEvents((prev) => [
-              ...prev.slice(-19),
-              { id: `${Date.now()}-${event.type}`, text },
-            ]);
+            case "tool_start": {
+              const activityId = `tool-${event.toolId}`;
+              activeToolEventIdsRef.current.set(event.toolId, activityId);
+              appendAcpEvent({
+                id: activityId,
+                kind: "tool",
+                label: event.toolName,
+                detail: "running",
+                state: "running",
+              });
+              break;
+            }
+            case "tool_complete": {
+              const activityId =
+                activeToolEventIdsRef.current.get(event.toolId) ?? `tool-${event.toolId}`;
+              setAcpEvents((prev) => {
+                const hasExisting = prev.some((item) => item.id === activityId);
+                if (!hasExisting) {
+                  return [
+                    ...prev.slice(-39),
+                    {
+                      id: activityId,
+                      kind: "tool",
+                      label: "Tool call",
+                      detail: event.success ? "completed" : "failed",
+                      state: event.success ? "success" : "error",
+                      timestamp: new Date(),
+                    } satisfies ChatAcpEvent,
+                  ];
+                }
+                return prev.map((item) =>
+                  item.id === activityId
+                    ? {
+                        ...item,
+                        detail: event.success ? "completed" : "failed",
+                        state: event.success ? "success" : "error",
+                        timestamp: new Date(),
+                      }
+                    : item,
+                );
+              });
+              activeToolEventIdsRef.current.delete(event.toolId);
+              break;
+            }
+            case "permission_request":
+              break; // Handled separately with permission UI
+            case "prompt_complete":
+              break; // Not useful to show
+            case "session_mode_update":
+              if (event.modeState.currentModeId) {
+                appendAcpEvent({
+                  kind: "mode",
+                  label: "Mode changed",
+                  detail: event.modeState.currentModeId,
+                  state: "info",
+                });
+              }
+              break;
+            case "current_mode_update":
+              appendAcpEvent({
+                kind: "mode",
+                label: "Mode changed",
+                detail: event.currentModeId,
+                state: "info",
+              });
+              break;
+            case "slash_commands_update":
+              break; // Not useful to show
+            case "plan_update": {
+              const summary =
+                event.entries.length > 0
+                  ? event.entries
+                      .slice(0, 2)
+                      .map((entry) => entry.content)
+                      .join(" | ")
+                  : "No plan steps";
+              appendAcpEvent({
+                kind: "plan",
+                label: `Plan updated (${event.entries.length} steps)`,
+                detail: summary,
+                state: "info",
+              });
+              break;
+            }
+            case "status_changed":
+              break; // internal state sync
+            case "error":
+              appendAcpEvent({
+                kind: "error",
+                label: "Agent error",
+                detail: event.error,
+                state: "error",
+              });
+              break;
+            case "ui_action":
+              break; // Handled by acp-handler
           }
         },
         chatState.mode,
@@ -573,13 +706,12 @@ details: ${errorDetails || mainError}
   const handlePermission = async (approved: boolean) => {
     if (!currentPermission) return;
     try {
-      setAcpEvents((prev) => [
-        ...prev.slice(-199),
-        {
-          id: `${Date.now()}-permission-response`,
-          text: `permission_response ${approved ? "allow" : "deny"}`,
-        },
-      ]);
+      appendAcpEvent({
+        kind: "permission",
+        label: "Permission response",
+        detail: approved ? "allow" : "deny",
+        state: approved ? "success" : "info",
+      });
       await AcpStreamHandler.respondToPermission(currentPermission.requestId, approved);
     } finally {
       setPermissionQueue((prev) => prev.slice(1));

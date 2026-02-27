@@ -1,6 +1,6 @@
 use crate::terminal::config::TerminalConfig;
 use anyhow::{Result, anyhow};
-use portable_pty::{CommandBuilder, PtyPair, PtySize};
+use portable_pty::{Child, CommandBuilder, PtyPair, PtySize};
 use std::{
    collections::HashMap,
    io::{Read, Write},
@@ -14,6 +14,7 @@ pub struct TerminalConnection {
    pub pty_pair: PtyPair,
    pub app_handle: AppHandle,
    pub writer: Arc<Mutex<Option<Box<dyn Write + Send>>>>,
+   pub child: Arc<Mutex<Option<Box<dyn Child + Send + Sync>>>>,
 }
 
 impl TerminalConnection {
@@ -28,14 +29,16 @@ impl TerminalConnection {
       })?;
 
       let cmd = Self::build_command(&config)?;
-      let _child = pty_pair.slave.spawn_command(cmd)?;
+      let child = pty_pair.slave.spawn_command(cmd)?;
       let writer = Arc::new(Mutex::new(Some(pty_pair.master.take_writer()?)));
+      let child = Arc::new(Mutex::new(Some(child)));
 
       Ok(Self {
          id,
          pty_pair,
          app_handle,
          writer,
+         child,
       })
    }
 
@@ -105,31 +108,43 @@ impl TerminalConnection {
    }
 
    fn build_command(config: &TerminalConfig) -> Result<CommandBuilder> {
-      let default_shell = if cfg!(target_os = "windows") {
-         "cmd.exe".to_string()
-      } else {
-         std::env::var("SHELL").unwrap_or_else(|_| {
-            if std::path::Path::new("/bin/zsh").exists() {
-               "/bin/zsh".to_string()
-            } else if std::path::Path::new("/bin/bash").exists() {
-               "/bin/bash".to_string()
-            } else {
-               "/bin/sh".to_string()
-            }
-         })
-      };
-
-      let shell_path = if let Some(shell) = &config.shell {
+      let default_shell = || {
          if cfg!(target_os = "windows") {
-            shell.exec_win.clone().unwrap_or(default_shell.clone())
+            "cmd.exe".to_string()
          } else {
-            shell.exec_unix.clone().unwrap_or(default_shell.clone())
+            std::env::var("SHELL").unwrap_or_else(|_| {
+               if std::path::Path::new("/bin/zsh").exists() {
+                  "/bin/zsh".to_string()
+               } else if std::path::Path::new("/bin/bash").exists() {
+                  "/bin/bash".to_string()
+               } else {
+                  "/bin/sh".to_string()
+               }
+            })
          }
-      } else {
-         default_shell.clone()
       };
 
-      let mut cmd = CommandBuilder::new(&shell_path);
+      let (mut cmd, shell_path): (CommandBuilder, Option<String>) =
+         if let Some(command) = &config.command {
+            let mut builder = CommandBuilder::new(command);
+            if let Some(args) = &config.args {
+               builder.args(args);
+            }
+            (builder, None)
+         } else {
+            let default_shell = default_shell();
+            let shell_path = if let Some(shell) = &config.shell {
+               if cfg!(target_os = "windows") {
+                  shell.exec_win.clone().unwrap_or(default_shell.clone())
+               } else {
+                  shell.exec_unix.clone().unwrap_or(default_shell.clone())
+               }
+            } else {
+               default_shell.clone()
+            };
+
+            (CommandBuilder::new(&shell_path), Some(shell_path))
+         };
 
       if let Some(working_dir) = &config.working_directory {
          cmd.cwd(working_dir);
@@ -147,7 +162,9 @@ impl TerminalConnection {
       cmd.env("COLORTERM", "truecolor");
       cmd.env("TERM_PROGRAM", "athas");
       cmd.env("TERM_PROGRAM_VERSION", "1.0.0");
-      cmd.env("SHELL", &shell_path);
+      if let Some(shell_path) = shell_path {
+         cmd.env("SHELL", shell_path);
+      }
       cmd.env("FORCE_COLOR", "1");
       cmd.env("CLICOLOR", "1");
       cmd.env("CLICOLOR_FORCE", "1");
@@ -165,6 +182,7 @@ impl TerminalConnection {
    pub fn start_reader_thread(&self) {
       let id = self.id.clone();
       let app_handle = self.app_handle.clone();
+      let child = self.child.clone();
       let mut reader = self
          .pty_pair
          .master
@@ -178,6 +196,32 @@ impl TerminalConnection {
          loop {
             match reader.read(&mut buffer) {
                Ok(0) => {
+                  let mut exit_code: Option<u32> = None;
+                  let mut signal: Option<String> = None;
+
+                  if let Ok(mut child_guard) = child.lock()
+                     && let Some(child) = child_guard.as_mut()
+                  {
+                     let status = child
+                        .try_wait()
+                        .ok()
+                        .flatten()
+                        .or_else(|| child.wait().ok());
+
+                     if let Some(status) = status {
+                        exit_code = Some(status.exit_code());
+                        signal = status.signal().map(str::to_string);
+                     }
+                  }
+
+                  let _ = app_handle.emit(
+                     &format!("pty-exit-{}", id),
+                     serde_json::json!({
+                        "exitCode": exit_code,
+                        "signal": signal
+                     }),
+                  );
+
                   // End of stream
                   let _ = app_handle.emit(&format!("pty-closed-{}", id), ());
                   break;
@@ -290,6 +334,17 @@ impl TerminalConnection {
          pixel_width: 0,
          pixel_height: 0,
       })?;
+      Ok(())
+   }
+
+   pub fn kill(&self) -> Result<()> {
+      let mut child_guard = self.child.lock().unwrap();
+      if let Some(child) = child_guard.as_mut() {
+         if child.try_wait()?.is_some() {
+            return Ok(());
+         }
+         child.kill()?;
+      }
       Ok(())
    }
 }

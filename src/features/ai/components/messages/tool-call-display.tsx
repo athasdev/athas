@@ -66,11 +66,15 @@ export default function ToolCallDisplay({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const Icon = toolIcons[toolName] || toolIcons.default;
-
-  // not sure if there are tool calls that can be just empty without any input
-  if (!input || (typeof input === "object" && Object.keys(input).length === 0)) {
-    return;
-  }
+  const hasInput =
+    Boolean(input) && !(typeof input === "object" && Object.keys(input).length === 0);
+  const status = error ? "failed" : isStreaming ? "running" : "completed";
+  const statusClass =
+    status === "failed"
+      ? "border-red-500/40 bg-red-500/10 text-red-300"
+      : status === "running"
+        ? "border-blue-500/40 bg-blue-500/10 text-blue-300"
+        : "border-green-500/40 bg-green-500/10 text-green-300";
 
   // Format input parameters for display
   const formatInput = (input: any): string => {
@@ -177,51 +181,56 @@ export default function ToolCallDisplay({
   };
 
   return (
-    <div className="leading-tight">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="group flex w-full items-center gap-1 text-left text-xs opacity-75 transition-opacity duration-200 hover:opacity-100"
-      >
-        <Icon
-          size={11}
-          className={cn(
-            "opacity-60",
-            error ? "text-red-400" : "text-current",
-            isStreaming && "animate-pulse",
-          )}
-        />
-        <span className="font-medium">{toolName}</span>
-        <span className="opacity-50">·</span>
-        <span className="truncate opacity-50">{formatInput(input)}</span>
-        {isStreaming && <Clock size={8} className="ml-1 animate-spin opacity-30" />}
-        {!isStreaming && !error && output && (
-          <CheckCircle size={8} className="ml-1 text-green-400 opacity-60" />
-        )}
-        {error && <AlertCircle size={8} className="ml-1 text-red-400 opacity-60" />}
-        {toolName === "Read" && input?.file_path && !isStreaming && !error && (
+    <div className="rounded-lg border border-border/70 bg-primary-bg/60 p-1.5 leading-tight">
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="group flex min-w-0 flex-1 items-center gap-1 text-left text-xs opacity-85 transition-opacity duration-200 hover:opacity-100"
+        >
+          <Icon
+            size={11}
+            className={cn(
+              "opacity-60",
+              error ? "text-red-400" : "text-current",
+              isStreaming && "animate-pulse",
+            )}
+          />
+          <span className="font-medium">{toolName}</span>
+          <span className="opacity-50">·</span>
+          <span className="truncate opacity-60">{formatInput(input)}</span>
+          <ChevronRight
+            size={9}
+            className={cn(
+              "ml-auto opacity-35 transition-transform duration-200 group-hover:opacity-50",
+              isExpanded && "rotate-90",
+            )}
+          />
+        </button>
+        {toolName === "Read" && hasInput && input?.file_path && !isStreaming && !error && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenInEditor?.(input.file_path);
-            }}
-            className="ml-1 rounded-full p-0.5 text-text-lighter opacity-40 transition-all hover:bg-hover hover:opacity-100"
+            onClick={() => onOpenInEditor?.(input.file_path)}
+            className="rounded-full p-1 text-text-lighter opacity-50 transition-all hover:bg-hover hover:opacity-100"
             title="Open in editor"
             aria-label="Open file in editor"
           >
             <ExternalLink size={10} />
           </button>
         )}
-        <ChevronRight
-          size={8}
+        <span
           className={cn(
-            "ml-auto opacity-30 transition-transform duration-200 group-hover:opacity-50",
-            isExpanded && "rotate-90",
+            "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-medium text-[10px]",
+            statusClass,
           )}
-        />
-      </button>
+        >
+          {status === "running" ? <Clock size={8} className="animate-spin" /> : null}
+          {status === "completed" ? <CheckCircle size={8} /> : null}
+          {status === "failed" ? <AlertCircle size={8} /> : null}
+          {status}
+        </span>
+      </div>
 
       {isExpanded && (
-        <div className="mt-1 space-y-1 pl-3 text-xs opacity-80">
+        <div className="mt-1.5 space-y-1 pl-3 text-xs opacity-80">
           {/* Input section */}
           <div>
             <div className="mb-1 font-medium opacity-60">Input:</div>
@@ -231,7 +240,7 @@ export default function ToolCallDisplay({
                 fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, monospace",
               }}
             >
-              {JSON.stringify(input, null, 2)}
+              {hasInput ? JSON.stringify(input, null, 2) : "No parameters"}
             </pre>
           </div>
 

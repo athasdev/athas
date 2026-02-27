@@ -63,6 +63,33 @@ impl From<agent_client_protocol::StopReason> for StopReason {
    }
 }
 
+/// Priority level for an ACP plan entry
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AcpPlanEntryPriority {
+   High,
+   Medium,
+   Low,
+}
+
+/// Execution status for an ACP plan entry
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AcpPlanEntryStatus {
+   Pending,
+   InProgress,
+   Completed,
+}
+
+/// A single plan entry streamed by ACP agents
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpPlanEntry {
+   pub content: String,
+   pub priority: AcpPlanEntryPriority,
+   pub status: AcpPlanEntryStatus,
+}
+
 /// Configuration for an ACP-compatible agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -113,6 +140,7 @@ pub struct AcpAgentStatus {
    pub running: bool,
    pub session_active: bool,
    pub initialized: bool,
+   pub session_id: Option<String>,
 }
 
 /// Content block types in ACP messages
@@ -149,9 +177,23 @@ pub enum UiAction {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AcpEvent {
+   /// User message content chunk
+   #[serde(rename_all = "camelCase")]
+   UserMessageChunk {
+      session_id: String,
+      content: AcpContentBlock,
+      is_complete: bool,
+   },
    /// Agent message content chunk
    #[serde(rename_all = "camelCase")]
    ContentChunk {
+      session_id: String,
+      content: AcpContentBlock,
+      is_complete: bool,
+   },
+   /// Agent thought content chunk
+   #[serde(rename_all = "camelCase")]
+   ThoughtChunk {
       session_id: String,
       content: AcpContentBlock,
       is_complete: bool,
@@ -196,6 +238,12 @@ pub enum AcpEvent {
    SlashCommandsUpdate {
       session_id: String,
       commands: Vec<SlashCommand>,
+   },
+   /// Agent plan update
+   #[serde(rename_all = "camelCase")]
+   PlanUpdate {
+      session_id: String,
+      entries: Vec<AcpPlanEntry>,
    },
    /// Session mode state updated (full state with available modes)
    #[serde(rename_all = "camelCase")]

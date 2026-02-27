@@ -28,10 +28,11 @@ pub async fn start_acp_agent(
    bridge: State<'_, AcpBridgeState>,
    agent_id: String,
    workspace_path: Option<String>,
+   session_id: Option<String>,
 ) -> Result<AcpAgentStatus, String> {
    let bridge = { bridge.lock().await.clone() };
    bridge
-      .start_agent(&agent_id, workspace_path)
+      .start_agent(&agent_id, workspace_path, session_id)
       .await
       .map_err(|e| e.to_string())
 }

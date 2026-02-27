@@ -3,6 +3,7 @@ import type { FileEntry } from "@/features/file-system/types/app";
 import type { Buffer } from "@/features/tabs/types/buffer";
 
 export interface ToolCall {
+  id?: string;
   name: string;
   input: any;
   output?: any;

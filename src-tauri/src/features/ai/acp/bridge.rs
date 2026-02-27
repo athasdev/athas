@@ -23,6 +23,7 @@ enum AcpCommand {
    Initialize {
       agent_id: String,
       workspace_path: Option<String>,
+      session_id: Option<String>,
       config: Box<AgentConfig>,
       app_handle: AppHandle,
       terminal_manager: Arc<TerminalManager>,
@@ -68,10 +69,53 @@ impl AcpWorker {
       }
    }
 
+   async fn ensure_process_alive(&mut self) -> Result<()> {
+      let Some(process) = self.process.as_mut() else {
+         return Ok(());
+      };
+
+      match process.try_wait() {
+         Ok(Some(status)) => {
+            let session_id = self.session_id.as_ref().map(ToString::to_string);
+            if let Some(app_handle) = self.app_handle.as_ref() {
+               let _ = app_handle.emit(
+                  "acp-event",
+                  AcpEvent::Error {
+                     session_id: session_id.clone(),
+                     error: format!("ACP agent process exited: {}", status),
+                  },
+               );
+               let _ = app_handle.emit(
+                  "acp-event",
+                  AcpEvent::StatusChanged {
+                     status: AcpAgentStatus::default(),
+                  },
+               );
+            }
+
+            if let Some(io_handle) = self.io_handle.take() {
+               io_handle.abort();
+            }
+
+            self.connection = None;
+            self.session_id = None;
+            self.process = None;
+            self.client = None;
+            self.agent_id = None;
+            self.app_handle = None;
+
+            bail!("ACP agent process exited: {}", status);
+         }
+         Ok(None) => Ok(()),
+         Err(e) => Err(anyhow::anyhow!("Failed to check ACP process status: {}", e)),
+      }
+   }
+
    async fn initialize(
       &mut self,
       agent_id: String,
       workspace_path: Option<String>,
+      session_id: Option<String>,
       config: AgentConfig,
       app_handle: AppHandle,
       terminal_manager: Arc<TerminalManager>,
@@ -193,14 +237,15 @@ impl AcpWorker {
 
       log::info!("Sending ACP initialize request...");
 
-      match tokio::time::timeout(
+      let init_response = match tokio::time::timeout(
          std::time::Duration::from_secs(30),
          connection.initialize(init_request),
       )
       .await
       {
-         Ok(Ok(_)) => {
+         Ok(Ok(response)) => {
             log::info!("ACP connection initialized successfully");
+            response
          }
          Ok(Err(e)) => {
             io_handle.abort();
@@ -215,9 +260,11 @@ impl AcpWorker {
                 different arguments"
             );
          }
-      }
+      };
 
-      // Create session with timeout
+      let auth_methods = init_response.auth_methods.clone();
+
+      // Create or load session with timeout
       let cwd = workspace_path
          .clone()
          .map(std::path::PathBuf::from)
@@ -225,50 +272,172 @@ impl AcpWorker {
 
       log::info!("Creating ACP session in {:?}...", cwd);
 
-      let session_request = acp::NewSessionRequest::new(cwd);
-      let session_result = tokio::time::timeout(
-         std::time::Duration::from_secs(30),
-         connection.new_session(session_request),
-      )
-      .await;
+      let new_session = |connection: Arc<acp::ClientSideConnection>, cwd: std::path::PathBuf| async move {
+         let session_request = acp::NewSessionRequest::new(cwd);
+         tokio::time::timeout(
+            std::time::Duration::from_secs(30),
+            connection.new_session(session_request),
+         )
+         .await
+      };
 
-      let (session_id, initial_modes) = match session_result {
-         Ok(Ok(session)) => {
-            log::info!("ACP session created: {}", session.session_id);
-            client.set_session_id(session.session_id.to_string()).await;
+      let load_session = |connection: Arc<acp::ClientSideConnection>,
+                          cwd: std::path::PathBuf,
+                          existing_session_id: String| async move {
+         let request = acp::LoadSessionRequest::new(existing_session_id, cwd);
+         tokio::time::timeout(
+            std::time::Duration::from_secs(30),
+            connection.load_session(request),
+         )
+         .await
+      };
 
-            // Extract initial mode state if available
-            let modes = session.modes.map(|m| SessionModeState {
-               current_mode_id: Some(m.current_mode_id.to_string()),
-               available_modes: m
-                  .available_modes
-                  .into_iter()
-                  .map(|mode| SessionMode {
-                     id: mode.id.to_string(),
-                     name: mode.name,
-                     description: mode.description,
-                  })
-                  .collect(),
-            });
-
-            (Some(session.session_id), modes)
-         }
-         Ok(Err(e)) => {
-            log::error!("Failed to create ACP session: {}", e);
-            io_handle.abort();
-            let _ = child.kill().await;
-            bail!("Failed to create ACP session: {}", e);
-         }
-         Err(_) => {
-            log::error!("ACP session creation timed out");
-            io_handle.abort();
-            let _ = child.kill().await;
-            bail!("ACP session creation timed out");
+      let authenticate = |connection: Arc<acp::ClientSideConnection>| {
+         let auth_methods = auth_methods.clone();
+         async move {
+            if let Some(method) = auth_methods.first() {
+               log::info!(
+                  "Agent requires authentication, attempting ACP authenticate with method: {}",
+                  method.id
+               );
+               let auth_request = acp::AuthenticateRequest::new(method.id.clone());
+               match tokio::time::timeout(
+                  std::time::Duration::from_secs(30),
+                  connection.authenticate(auth_request),
+               )
+               .await
+               {
+                  Ok(Ok(_)) => Ok(()),
+                  Ok(Err(e)) => Err(anyhow::anyhow!("ACP authentication failed: {}", e)),
+                  Err(_) => Err(anyhow::anyhow!("ACP authentication timed out")),
+               }
+            } else {
+               Err(anyhow::anyhow!(
+                  "Agent requires authentication but did not advertise auth methods"
+               ))
+            }
          }
       };
 
+      let mut active_session_id: Option<acp::SessionId> = None;
+      let mut initial_modes: Option<SessionModeState> = None;
+
+      if let Some(existing_session_id) = session_id.clone() {
+         log::info!(
+            "Attempting ACP session/load for session ID: {}",
+            existing_session_id
+         );
+         let mut load_result =
+            load_session(connection.clone(), cwd.clone(), existing_session_id.clone()).await;
+
+         if let Ok(Err(err)) = &load_result
+            && matches!(err.code, acp::ErrorCode::AuthRequired)
+         {
+            if let Err(e) = authenticate(connection.clone()).await {
+               io_handle.abort();
+               let _ = child.kill().await;
+               bail!("{}", e);
+            }
+            load_result =
+               load_session(connection.clone(), cwd.clone(), existing_session_id.clone()).await;
+         }
+
+         match load_result {
+            Ok(Ok(load_response)) => {
+               log::info!("ACP session loaded: {}", existing_session_id);
+               active_session_id = Some(acp::SessionId::new(existing_session_id.clone()));
+               client.set_session_id(existing_session_id).await;
+               initial_modes = load_response.modes.map(|m| SessionModeState {
+                  current_mode_id: Some(m.current_mode_id.to_string()),
+                  available_modes: m
+                     .available_modes
+                     .into_iter()
+                     .map(|mode| SessionMode {
+                        id: mode.id.to_string(),
+                        name: mode.name,
+                        description: mode.description,
+                     })
+                     .collect(),
+               });
+            }
+            Ok(Err(err))
+               if matches!(
+                  err.code,
+                  acp::ErrorCode::MethodNotFound | acp::ErrorCode::ResourceNotFound
+               ) =>
+            {
+               log::warn!(
+                  "ACP session/load unavailable or session missing ({}), falling back to \
+                   session/new",
+                  err
+               );
+            }
+            Ok(Err(err)) => {
+               io_handle.abort();
+               let _ = child.kill().await;
+               bail!(
+                  "Failed to load ACP session {}: {}",
+                  existing_session_id,
+                  err
+               );
+            }
+            Err(_) => {
+               io_handle.abort();
+               let _ = child.kill().await;
+               bail!("ACP session/load timed out");
+            }
+         }
+      }
+
+      if active_session_id.is_none() {
+         let mut session_result = new_session(connection.clone(), cwd.clone()).await;
+         if let Ok(Err(err)) = &session_result
+            && matches!(err.code, acp::ErrorCode::AuthRequired)
+         {
+            if let Err(e) = authenticate(connection.clone()).await {
+               io_handle.abort();
+               let _ = child.kill().await;
+               bail!("{}", e);
+            }
+            log::info!("ACP authentication succeeded, retrying session creation");
+            session_result = new_session(connection.clone(), cwd.clone()).await;
+         }
+
+         let session = match session_result {
+            Ok(Ok(session)) => session,
+            Ok(Err(e)) => {
+               log::error!("Failed to create ACP session: {}", e);
+               io_handle.abort();
+               let _ = child.kill().await;
+               bail!("Failed to create ACP session: {}", e);
+            }
+            Err(_) => {
+               log::error!("ACP session creation timed out");
+               io_handle.abort();
+               let _ = child.kill().await;
+               bail!("ACP session creation timed out");
+            }
+         };
+
+         log::info!("ACP session created: {}", session.session_id);
+         client.set_session_id(session.session_id.to_string()).await;
+         initial_modes = session.modes.map(|m| SessionModeState {
+            current_mode_id: Some(m.current_mode_id.to_string()),
+            available_modes: m
+               .available_modes
+               .into_iter()
+               .map(|mode| SessionMode {
+                  id: mode.id.to_string(),
+                  name: mode.name,
+                  description: mode.description,
+               })
+               .collect(),
+         });
+         active_session_id = Some(session.session_id);
+      }
+
       // Emit initial session mode state if available
-      if let (Some(sid), Some(mode_state)) = (&session_id, initial_modes)
+      if let (Some(sid), Some(mode_state)) = (&active_session_id, initial_modes)
          && let Err(e) = app_handle.emit(
             "acp-event",
             AcpEvent::SessionModeUpdate {
@@ -282,7 +451,7 @@ impl AcpWorker {
 
       // Store state
       self.connection = Some(connection);
-      self.session_id = session_id.clone();
+      self.session_id = active_session_id.clone();
       self.process = Some(child);
       self.io_handle = Some(io_handle);
       self.client = Some(client);
@@ -292,14 +461,17 @@ impl AcpWorker {
       let status = AcpAgentStatus {
          agent_id,
          running: true,
-         session_active: session_id.is_some(),
+         session_active: active_session_id.is_some(),
          initialized: true,
+         session_id: active_session_id.as_ref().map(ToString::to_string),
       };
 
       Ok((status, permission_sender))
    }
 
-   async fn send_prompt(&self, prompt: &str) -> Result<()> {
+   async fn send_prompt(&mut self, prompt: &str) -> Result<()> {
+      self.ensure_process_alive().await?;
+
       let connection = self
          .connection
          .as_ref()
@@ -366,7 +538,9 @@ impl AcpWorker {
       Ok(())
    }
 
-   async fn cancel_prompt(&self) -> Result<()> {
+   async fn cancel_prompt(&mut self) -> Result<()> {
+      self.ensure_process_alive().await?;
+
       let connection = self.connection.as_ref().context("No active connection")?;
       let session_id = self.session_id.as_ref().context("No active session")?;
 
@@ -380,7 +554,9 @@ impl AcpWorker {
       Ok(())
    }
 
-   async fn set_mode(&self, mode_id: &str) -> Result<()> {
+   async fn set_mode(&mut self, mode_id: &str) -> Result<()> {
+      self.ensure_process_alive().await?;
+
       let connection = self.connection.as_ref().context("No active connection")?;
       let session_id = self.session_id.as_ref().context("No active session")?;
 
@@ -420,6 +596,7 @@ impl AcpWorker {
             running: true,
             session_active: self.session_id.is_some(),
             initialized: self.connection.is_some(),
+            session_id: self.session_id.as_ref().map(ToString::to_string),
          },
          None => AcpAgentStatus::default(),
       }
@@ -471,63 +648,96 @@ impl AcpAgentBridge {
       status: Arc<Mutex<AcpAgentStatus>>,
    ) {
       let mut worker = AcpWorker::new();
+      let mut health_check = tokio::time::interval(std::time::Duration::from_secs(1));
+      health_check.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
-      while let Some(cmd) = command_rx.recv().await {
-         match cmd {
-            AcpCommand::Initialize {
-               agent_id,
-               workspace_path,
-               config,
-               app_handle,
-               terminal_manager,
-               response_tx,
-            } => {
-               let result = worker
-                  .initialize(
+      loop {
+         tokio::select! {
+            maybe_cmd = command_rx.recv() => {
+               let Some(cmd) = maybe_cmd else {
+                  break;
+               };
+
+               match cmd {
+                  AcpCommand::Initialize {
                      agent_id,
                      workspace_path,
-                     *config,
+                     session_id,
+                     config,
                      app_handle,
                      terminal_manager,
-                  )
-                  .await;
+                     response_tx,
+                  } => {
+                     let result = worker
+                        .initialize(
+                           agent_id,
+                           workspace_path,
+                           session_id,
+                           *config,
+                           app_handle,
+                           terminal_manager,
+                        )
+                        .await;
 
-               // Update shared status
+                     // Update shared status
+                     {
+                        let mut s = status.lock().await;
+                        *s = worker.get_status();
+                     }
+
+                     let _ = response_tx.send(result);
+                  }
+                  AcpCommand::SendPrompt {
+                     prompt,
+                     response_tx,
+                  } => {
+                     let result = worker.send_prompt(&prompt).await;
+                     {
+                        let mut s = status.lock().await;
+                        *s = worker.get_status();
+                     }
+                     let _ = response_tx.send(result);
+                  }
+                  AcpCommand::SetMode {
+                     mode_id,
+                     response_tx,
+                  } => {
+                     let result = worker.set_mode(&mode_id).await;
+                     {
+                        let mut s = status.lock().await;
+                        *s = worker.get_status();
+                     }
+                     let _ = response_tx.send(result);
+                  }
+                  AcpCommand::CancelPrompt { response_tx } => {
+                     let result = worker.cancel_prompt().await;
+                     {
+                        let mut s = status.lock().await;
+                        *s = worker.get_status();
+                     }
+                     let _ = response_tx.send(result);
+                  }
+                  AcpCommand::Stop { response_tx } => {
+                     let result = worker.stop().await;
+
+                     // Update shared status
+                     {
+                        let mut s = status.lock().await;
+                        *s = AcpAgentStatus::default();
+                     }
+
+                     let _ = response_tx.send(result);
+                  }
+               }
+            }
+            _ = health_check.tick() => {
+               if let Err(err) = worker.ensure_process_alive().await {
+                  log::warn!("ACP worker process health check failed: {}", err);
+               }
                {
                   let mut s = status.lock().await;
                   *s = worker.get_status();
                }
-
-               let _ = response_tx.send(result);
-            }
-            AcpCommand::SendPrompt {
-               prompt,
-               response_tx,
-            } => {
-               let result = worker.send_prompt(&prompt).await;
-               let _ = response_tx.send(result);
-            }
-            AcpCommand::SetMode {
-               mode_id,
-               response_tx,
-            } => {
-               let result = worker.set_mode(&mode_id).await;
-               let _ = response_tx.send(result);
-            }
-            AcpCommand::CancelPrompt { response_tx } => {
-               let result = worker.cancel_prompt().await;
-               let _ = response_tx.send(result);
-            }
-            AcpCommand::Stop { response_tx } => {
-               let result = worker.stop().await;
-
-               // Update shared status
-               {
-                  let mut s = status.lock().await;
-                  *s = AcpAgentStatus::default();
-               }
-
-               let _ = response_tx.send(result);
             }
          }
       }
@@ -544,6 +754,7 @@ impl AcpAgentBridge {
       &self,
       agent_id: &str,
       workspace_path: Option<String>,
+      session_id: Option<String>,
    ) -> Result<AcpAgentStatus> {
       let config = self
          .registry
@@ -558,6 +769,7 @@ impl AcpAgentBridge {
          .send(AcpCommand::Initialize {
             agent_id: agent_id.to_string(),
             workspace_path,
+            session_id,
             config: Box::new(config),
             app_handle: self.app_handle.clone(),
             terminal_manager: self.terminal_manager.clone(),
@@ -622,7 +834,7 @@ impl AcpAgentBridge {
       // Get current session ID before stopping
       let current_status = self.status.lock().await.clone();
       let session_id = if current_status.running {
-         Some(current_status.agent_id.clone())
+         current_status.session_id.clone()
       } else {
          None
       };

@@ -87,10 +87,6 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
     };
   }, [hideSlashCommands]);
 
-  if (filteredCommands.length === 0) {
-    return null;
-  }
-
   return createPortal(
     <div
       ref={dropdownRef}
@@ -105,33 +101,42 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       role="listbox"
       aria-label="Slash command suggestions"
     >
-      <div className="items-container py-1" role="listbox" aria-label="Command list">
-        {filteredCommands.map((command, index) => (
-          <button
-            key={command.name}
-            onClick={() => onSelect(command)}
-            className={cn(
-              "ui-font flex w-full items-start gap-2 px-3 py-2 text-left text-xs transition-colors",
-              "focus:outline-none focus:ring-1 focus:ring-accent/50",
-              index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
-            )}
-            role="option"
-            aria-selected={index === selectedIndex}
-            tabIndex={index === selectedIndex ? 0 : -1}
-          >
-            <Command size={12} className="mt-0.5 shrink-0 text-text-lighter" />
-            <div className="min-w-0 flex-1">
-              <div className="font-medium text-text">/{command.name}</div>
-              <div className="truncate text-[10px] text-text-lighter">{command.description}</div>
-              {command.input?.hint && (
-                <div className="mt-0.5 truncate text-[10px] text-text-lighter opacity-60">
-                  {command.input.hint}
-                </div>
+      {filteredCommands.length > 0 ? (
+        <div className="items-container py-1" role="listbox" aria-label="Command list">
+          {filteredCommands.map((command, index) => (
+            <button
+              key={command.name}
+              onClick={() => onSelect(command)}
+              className={cn(
+                "ui-font flex w-full items-start gap-2 px-3 py-2 text-left text-xs transition-colors",
+                "focus:outline-none focus:ring-1 focus:ring-accent/50",
+                index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
               )}
-            </div>
-          </button>
-        ))}
-      </div>
+              role="option"
+              aria-selected={index === selectedIndex}
+              tabIndex={index === selectedIndex ? 0 : -1}
+            >
+              <Command size={12} className="mt-0.5 shrink-0 text-text-lighter" />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-text">/{command.name}</div>
+                <div className="truncate text-[10px] text-text-lighter">{command.description}</div>
+                {command.input?.hint && (
+                  <div className="mt-0.5 truncate text-[10px] text-text-lighter opacity-60">
+                    {command.input.hint}
+                  </div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="px-3 py-2.5 text-text-lighter text-xs">
+          <div className="font-medium text-text">No slash commands available</div>
+          <div className="mt-0.5 text-[10px] opacity-75">
+            Start an ACP session to load commands for the current agent.
+          </div>
+        </div>
+      )}
     </div>,
     document.body,
   );

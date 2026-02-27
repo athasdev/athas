@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useProjectStore } from "@/stores/project-store";
 import { buildContextPrompt } from "./context-builder";
 import type { ContextInfo } from "./types";
 
@@ -11,8 +12,8 @@ interface AcpHandlers {
   onComplete: () => void;
   onError: (error: string, canReconnect?: boolean) => void;
   onNewMessage?: () => void;
-  onToolUse?: (toolName: string, toolInput?: unknown) => void;
-  onToolComplete?: (toolName: string) => void;
+  onToolUse?: (toolName: string, toolInput?: unknown, toolId?: string) => void;
+  onToolComplete?: (toolName: string, toolId?: string) => void;
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
   onEvent?: (event: AcpEvent) => void;
   onImageChunk?: (data: string, mediaType: string) => void;
@@ -25,10 +26,11 @@ interface AcpListeners {
 
 export class AcpStreamHandler {
   private static activeHandler: AcpStreamHandler | null = null;
+  private static lastSessionIdByAgent = new Map<string, string>();
   private listeners: AcpListeners = {};
   private timeout?: NodeJS.Timeout;
   private lastActivityTime = Date.now();
-  private currentToolName: string | null = null;
+  private activeTools = new Map<string, string>();
   private sessionComplete = false;
   private pendingNewMessage = false;
   private cancelled = false;
@@ -66,10 +68,15 @@ export class AcpStreamHandler {
         const startStatus = await invoke<AcpAgentStatus>("start_acp_agent", {
           agentId: this.agentId,
           workspacePath,
+          sessionId: AcpStreamHandler.lastSessionIdByAgent.get(this.agentId) ?? null,
         });
 
         if (!startStatus.running) {
           throw new Error(`${this.agentId} failed to start`);
+        }
+
+        if (startStatus.sessionId) {
+          AcpStreamHandler.lastSessionIdByAgent.set(this.agentId, startStatus.sessionId);
         }
 
         this.wasRunning = true;
@@ -85,8 +92,6 @@ export class AcpStreamHandler {
   }
 
   private getWorkspacePath(): string | null {
-    // Get workspace path from the project store
-    const { useProjectStore } = require("@/stores/project-store");
     return useProjectStore.getState().rootFolderPath ?? null;
   }
 
@@ -111,8 +116,16 @@ export class AcpStreamHandler {
     this.lastActivityTime = Date.now();
 
     switch (event.type) {
+      case "user_message_chunk":
+        // User echo chunk from agent; no UI mutation needed in current chat flow
+        break;
+
       case "content_chunk":
         this.handleContentChunk(event);
+        break;
+
+      case "thought_chunk":
+        // Thought chunks are surfaced through generic ACP event stream UI for now
         break;
 
       case "tool_start":
@@ -150,6 +163,10 @@ export class AcpStreamHandler {
       case "slash_commands_update":
         // Handle slash commands update
         useAIChatStore.getState().setAvailableSlashCommands(event.commands);
+        break;
+
+      case "plan_update":
+        // Plan updates are surfaced through generic ACP event stream UI for now
         break;
 
       case "prompt_complete":
@@ -190,6 +207,10 @@ export class AcpStreamHandler {
 
   private handleStatusChanged(event: Extract<AcpEvent, { type: "status_changed" }>): void {
     console.log("Agent status changed:", event.status);
+
+    if (event.status.running && event.status.sessionId) {
+      AcpStreamHandler.lastSessionIdByAgent.set(this.agentId, event.status.sessionId);
+    }
 
     // Detect unexpected agent crash: was running but now stopped without user action
     if (this.wasRunning && !event.status.running && !this.sessionComplete && !this.cancelled) {
@@ -245,17 +266,18 @@ export class AcpStreamHandler {
   }
 
   private handleToolStart(event: Extract<AcpEvent, { type: "tool_start" }>): void {
-    this.currentToolName = event.toolName;
+    this.activeTools.set(event.toolId, event.toolName);
     if (this.handlers.onToolUse) {
-      this.handlers.onToolUse(event.toolName, event.input);
+      this.handlers.onToolUse(event.toolName, event.input, event.toolId);
     }
   }
 
   private handleToolComplete(event: Extract<AcpEvent, { type: "tool_complete" }>): void {
-    if (this.currentToolName && this.handlers.onToolComplete) {
-      this.handlers.onToolComplete(this.currentToolName);
+    const toolName = this.activeTools.get(event.toolId);
+    if (toolName && this.handlers.onToolComplete) {
+      this.handlers.onToolComplete(toolName, event.toolId);
     }
-    this.currentToolName = null;
+    this.activeTools.delete(event.toolId);
     this.pendingNewMessage = true;
 
     if (!event.success) {
@@ -302,7 +324,7 @@ export class AcpStreamHandler {
       }
 
       // If no activity for 10 seconds and no active tool, consider complete
-      if (inactiveTime > 10000 && !this.currentToolName) {
+      if (inactiveTime > 10000 && this.activeTools.size === 0) {
         console.log("No activity for 10 seconds, conversation appears complete");
         this.cleanup();
         this.handlers.onComplete();
@@ -332,6 +354,7 @@ export class AcpStreamHandler {
       this.timeout = undefined;
     }
     this.pendingNewMessage = false;
+    this.activeTools.clear();
 
     if (this.listeners.event) {
       this.listeners.event();

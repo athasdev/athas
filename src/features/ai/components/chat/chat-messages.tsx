@@ -1,4 +1,13 @@
-import { MessageSquare } from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  Brain,
+  Map as MapIcon,
+  MessageSquare,
+  Settings2,
+  ShieldCheck,
+  Wrench,
+} from "lucide-react";
 import { forwardRef, memo, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
@@ -29,8 +38,51 @@ const getAgentLabel = (agentId: string | undefined): string => {
 
 interface ChatMessagesProps {
   onApplyCode?: (code: string, language?: string) => void;
-  acpEvents?: Array<{ id: string; text: string }>;
+  acpEvents?: ChatAcpEvent[];
 }
+
+export interface ChatAcpEvent {
+  id: string;
+  kind: "thinking" | "tool" | "plan" | "mode" | "error" | "permission" | "status";
+  label: string;
+  detail?: string;
+  state?: "running" | "success" | "error" | "info";
+  timestamp: Date;
+}
+
+const getEventIcon = (kind: ChatAcpEvent["kind"]) => {
+  switch (kind) {
+    case "thinking":
+      return Brain;
+    case "tool":
+      return Wrench;
+    case "plan":
+      return MapIcon;
+    case "mode":
+      return Settings2;
+    case "error":
+      return AlertCircle;
+    case "permission":
+      return ShieldCheck;
+    case "status":
+      return Activity;
+    default:
+      return Activity;
+  }
+};
+
+const getStateClasses = (state: ChatAcpEvent["state"]) => {
+  switch (state) {
+    case "running":
+      return "border-blue-500/40 bg-blue-500/10 text-blue-300";
+    case "success":
+      return "border-green-500/40 bg-green-500/10 text-green-300";
+    case "error":
+      return "border-red-500/40 bg-red-500/10 text-red-300";
+    default:
+      return "border-border bg-secondary-bg/80 text-text-lighter";
+  }
+};
 
 export const ChatMessages = memo(
   forwardRef<HTMLDivElement, ChatMessagesProps>(function ChatMessages(
@@ -134,12 +186,39 @@ export const ChatMessages = memo(
         })}
         {acpEvents && acpEvents.length > 0 && (
           <div className="px-4 pb-2">
-            <div className="rounded-xl border border-border bg-primary-bg/80 px-2.5 py-1.5 font-mono text-[11px] text-text-lighter">
-              {acpEvents.map((event) => (
-                <div key={event.id} className="truncate">
-                  {event.text}
-                </div>
-              ))}
+            <div className="rounded-2xl border border-border bg-primary-bg/85 px-2.5 py-2">
+              <div className="mb-1.5 flex items-center gap-1.5 text-text-lighter text-xs">
+                <Activity size={12} />
+                <span>Agent Activity</span>
+              </div>
+              <div className="space-y-1">
+                {acpEvents.slice(-8).map((event) => {
+                  const Icon = getEventIcon(event.kind);
+                  return (
+                    <div
+                      key={event.id}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg border px-2 py-1 text-xs",
+                        getStateClasses(event.state),
+                      )}
+                    >
+                      <Icon
+                        size={11}
+                        className={cn(event.state === "running" && "animate-pulse")}
+                      />
+                      <span className="min-w-0 flex-1 truncate">
+                        {event.label}
+                        {event.detail ? (
+                          <span className="opacity-75"> · {event.detail}</span>
+                        ) : null}
+                      </span>
+                      <span className="shrink-0 opacity-60">
+                        {getRelativeTime(event.timestamp)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}

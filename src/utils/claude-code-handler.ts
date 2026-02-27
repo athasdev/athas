@@ -9,8 +9,8 @@ interface ClaudeCodeHandlers {
   onComplete: () => void;
   onError: (error: string) => void;
   onNewMessage?: () => void;
-  onToolUse?: (toolName: string, toolInput?: any) => void;
-  onToolComplete?: (toolName: string) => void;
+  onToolUse?: (toolName: string, toolInput?: any, toolId?: string) => void;
+  onToolComplete?: (toolName: string, toolId?: string) => void;
 }
 
 interface ClaudeListeners {

@@ -387,10 +387,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
       // Update local state for button enabled/disabled
       setHasInputText(plainTextFromDiv.trim().length > 0);
 
-      // Detect slash commands at start of input
-      if (plainTextFromDiv.startsWith("/")) {
-        const search = plainTextFromDiv.slice(1).split(" ")[0]; // Get text after / until space
-        if (!plainTextFromDiv.includes(" ") && search.length < 50) {
+      // Detect slash commands at start of input (robust against leading whitespace/newlines)
+      const normalizedInput = plainTextFromDiv.trimStart();
+      if (normalizedInput.startsWith("/")) {
+        const slashToken = normalizedInput.slice(1);
+        const hasWhitespaceAfterSlash = /\s/.test(slashToken);
+        const search = hasWhitespaceAfterSlash ? slashToken.split(/\s+/)[0] : slashToken;
+
+        if (!hasWhitespaceAfterSlash && search.length < 50) {
           const position = {
             top: inputRef.current.offsetTop + inputRef.current.offsetHeight + 4,
             left: inputRef.current.offsetLeft,
