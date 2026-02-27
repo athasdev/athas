@@ -1,3 +1,4 @@
+import { ChevronsUpDown } from "lucide-react";
 import { memo, useMemo } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import Dropdown from "@/ui/dropdown";
@@ -19,6 +20,10 @@ export const SessionModeSelector = memo(function SessionModeSelector({
       label: mode.name,
     }));
   }, [sessionModeState.availableModes]);
+  const currentModeLabel = useMemo(
+    () => modeOptions.find((option) => option.value === sessionModeState.currentModeId)?.label,
+    [modeOptions, sessionModeState.currentModeId],
+  );
 
   const handleModeChange = (modeId: string) => {
     changeSessionMode(modeId);
@@ -37,8 +42,19 @@ export const SessionModeSelector = memo(function SessionModeSelector({
         onChange={handleModeChange}
         size="xs"
         openDirection="up"
-        className="min-w-20"
+        className="min-w-[96px]"
         placeholder="Mode"
+        CustomTrigger={({ ref, onClick }) => (
+          <button
+            ref={ref}
+            type="button"
+            onClick={onClick}
+            className="inline-flex h-8 min-w-[96px] items-center justify-between gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 font-medium text-text text-xs transition-colors hover:bg-hover"
+          >
+            <span className="truncate">{currentModeLabel || "Mode"}</span>
+            <ChevronsUpDown size={12} className="shrink-0 text-text-lighter" />
+          </button>
+        )}
       />
     </div>
   );

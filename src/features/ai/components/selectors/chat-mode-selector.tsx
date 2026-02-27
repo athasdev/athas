@@ -32,7 +32,7 @@ export const ChatModeSelector = memo(function ChatModeSelector({
   return (
     <div
       className={cn(
-        "flex h-7 items-center rounded-md border border-border bg-primary-bg p-0.5",
+        "inline-flex h-8 items-center rounded-full border border-border bg-secondary-bg/80 p-1",
         className,
       )}
     >
@@ -42,16 +42,18 @@ export const ChatModeSelector = memo(function ChatModeSelector({
         return (
           <button
             key={m.id}
+            type="button"
             onClick={() => setMode(m.id)}
+            aria-pressed={isActive}
             className={cn(
-              "flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors",
+              "inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 font-medium text-[11px] transition-all duration-200",
               isActive
-                ? "bg-accent/15 font-medium text-accent"
-                : "text-text-lighter hover:text-text-light",
+                ? "border-border bg-primary-bg text-text"
+                : "border-transparent text-text-lighter hover:border-border/70 hover:bg-hover/70 hover:text-text",
             )}
             title={m.description}
           >
-            <Icon size={11} />
+            <Icon size={12} />
             <span>{m.label}</span>
           </button>
         );

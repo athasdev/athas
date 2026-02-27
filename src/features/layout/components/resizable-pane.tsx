@@ -88,15 +88,12 @@ export function ResizablePane({ children, position, widthKey, className }: Resiz
   );
 
   const handlePosition = position === "right" ? "left-0" : "right-0";
-  const borderSide = position === "right" ? "border-l" : "border-r";
-
   return (
     <div
       ref={paneRef}
       style={{ width: `${width}px` }}
       className={cn(
-        "relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden border-border bg-secondary-bg",
-        borderSide,
+        "relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden bg-secondary-bg",
         className,
       )}
     >

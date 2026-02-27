@@ -3,9 +3,10 @@
  * Handles loading and initializing Tree-sitter WASM parsers
  */
 
-import { Language, Parser, type Query } from "web-tree-sitter";
+import { Language, Parser, Query } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
 import { indexedDBParserCache } from "./cache-indexeddb";
+import { fetchHighlightQuery } from "./extension-assets";
 import type { LoadedParser, ParserConfig } from "./types";
 
 class WasmParserLoader {
@@ -33,7 +34,11 @@ class WasmParserLoader {
     try {
       await Parser.init({
         locateFile(scriptName: string) {
-          return `/tree-sitter/${scriptName}`;
+          const baseOrigin =
+            typeof window !== "undefined" && window.location?.origin
+              ? `${window.location.origin}/`
+              : "/";
+          return new URL(`tree-sitter/${scriptName}`, baseOrigin).toString();
         },
       });
       this.initialized = true;
@@ -68,7 +73,7 @@ class WasmParserLoader {
 
         // Create highlight query from text
         try {
-          const query = cached.language.query(highlightQuery);
+          const query = new Query(cached.language, highlightQuery);
           const updatedParser: LoadedParser = {
             ...cached,
             highlightQuery: query,
@@ -90,12 +95,11 @@ class WasmParserLoader {
 
           return updatedParser;
         } catch (error) {
-          logger.error("WasmParser", `Failed to create highlight query for ${languageId}:`, error);
-          // Try to fetch local highlight query as fallback
-          const localQuery = await this.fetchLocalHighlightQuery(languageId);
+          // Try to fetch local highlight query as fallback before surfacing an error.
+          const localQuery = await this.fetchHighlightQueryText(languageId, config.wasmPath);
           if (localQuery) {
             try {
-              const query = cached.language.query(localQuery);
+              const query = new Query(cached.language, localQuery);
               const updatedParser: LoadedParser = {
                 ...cached,
                 highlightQuery: query,
@@ -115,15 +119,26 @@ class WasmParserLoader {
                 })
                 .catch(() => {});
 
-              logger.info("WasmParser", `Using local highlight query for ${languageId}`);
+              logger.info("WasmParser", `Using refreshed highlight query for ${languageId}`);
               return updatedParser;
             } catch (localError) {
+              logger.error(
+                "WasmParser",
+                `Failed to create highlight query for ${languageId}:`,
+                error,
+              );
               logger.error(
                 "WasmParser",
                 `Local highlight query also failed for ${languageId}:`,
                 localError,
               );
             }
+          } else {
+            logger.error(
+              "WasmParser",
+              `Failed to create highlight query for ${languageId}:`,
+              error,
+            );
           }
         }
       }
@@ -152,22 +167,26 @@ class WasmParserLoader {
   }
 
   /**
-   * Fetch highlight query from local public directory
+   * Fetch highlight query from parser source, CDN or local fallback.
    */
-  private async fetchLocalHighlightQuery(languageId: string): Promise<string | null> {
-    // TypeScript and JavaScript both use tsx queries
-    const queryFolder =
-      languageId === "typescript" || languageId === "javascript" ? "tsx" : languageId;
-    const localPath = `/extensions/${queryFolder}/highlights.scm`;
-    try {
-      const response = await fetch(localPath);
-      if (response.ok) {
-        return await response.text();
-      }
-    } catch {
-      logger.debug("WasmParser", `No local highlight query found at ${localPath}`);
+  private async fetchHighlightQueryText(
+    languageId: string,
+    wasmPath?: string,
+  ): Promise<string | null> {
+    const { query, sourceUrl } = await fetchHighlightQuery(languageId, {
+      wasmUrl: wasmPath,
+      cacheMode: "no-store",
+    });
+    if (!query) {
+      logger.debug("WasmParser", `No highlight query source found for ${languageId}`);
+      return null;
     }
-    return null;
+
+    logger.debug(
+      "WasmParser",
+      `Resolved highlight query for ${languageId} from ${sourceUrl || "fallback source"}`,
+    );
+    return query;
   }
 
   private async _loadParserInternal(config: ParserConfig): Promise<LoadedParser> {
@@ -278,10 +297,10 @@ class WasmParserLoader {
 
           // Also fetch highlight query from local path if not provided
           if (!queryText) {
-            const localQuery = await this.fetchLocalHighlightQuery(languageId);
+            const localQuery = await this.fetchHighlightQueryText(languageId, wasmPath);
             if (localQuery) {
               queryText = localQuery;
-              logger.info("WasmParser", `Loaded local highlight query for ${languageId}`);
+              logger.info("WasmParser", `Loaded highlight query for ${languageId}`);
             }
           }
 
@@ -317,15 +336,15 @@ class WasmParserLoader {
       let query: Query | undefined;
       if (queryText) {
         try {
-          query = language.query(queryText);
+          query = new Query(language, queryText);
         } catch (error) {
           logger.warn("WasmParser", `Failed to compile highlight query for ${languageId}`, error);
           // Try to fetch local highlight query as fallback
-          const localQuery = await this.fetchLocalHighlightQuery(languageId);
+          const localQuery = await this.fetchHighlightQueryText(languageId, wasmPath);
           if (localQuery && localQuery !== queryText) {
             try {
-              query = language.query(localQuery);
-              logger.info("WasmParser", `Using local highlight query fallback for ${languageId}`);
+              query = new Query(language, localQuery);
+              logger.info("WasmParser", `Using highlight query fallback for ${languageId}`);
               // Update IndexedDB cache with the correct local query
               indexedDBParserCache
                 .get(languageId)

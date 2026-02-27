@@ -12,31 +12,53 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionMode } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
+import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
 import Dropdown from "@/ui/dropdown";
 import Section, { SettingRow } from "@/ui/section";
-import Slider from "@/ui/slider";
 import Switch from "@/ui/switch";
+import { fetchAutocompleteModels } from "@/utils/autocomplete";
 import { cn } from "@/utils/cn";
 import {
   clearKairoTokens,
   hasKairoAccessToken,
   isKairoConfigured,
+  KAIRO_AUTH_UPDATED_EVENT,
   startKairoOAuthLogin,
 } from "@/utils/kairo-auth";
 import { getProvider } from "@/utils/providers";
 
+const DEFAULT_AUTOCOMPLETE_MODEL_ID = "openai/gpt-5-nano";
+
+const DEFAULT_AUTOCOMPLETE_MODELS = [
+  { id: "openai/gpt-5-nano", name: "GPT-5 Nano" },
+  { id: "openai/gpt-5-mini", name: "GPT-5 Mini" },
+  { id: "openai/gpt-5.1-codex-mini", name: "GPT-5.1 Codex Mini" },
+  { id: "google/gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite" },
+];
+
+function resolveAutocompleteDefaultModelId(models: Array<{ id: string; name: string }>): string {
+  if (models.some((model) => model.id === DEFAULT_AUTOCOMPLETE_MODEL_ID)) {
+    return DEFAULT_AUTOCOMPLETE_MODEL_ID;
+  }
+  return models[0]?.id || DEFAULT_AUTOCOMPLETE_MODEL_ID;
+}
+
 export const AISettings = () => {
   const { settings, updateSetting } = useSettingsStore();
+  const { showToast } = useToast();
 
   // State for available session modes
   const [availableModes, setAvailableModes] = useState<SessionMode[]>([]);
   const [isClearingChats, setIsClearingChats] = useState(false);
+  const [autocompleteModels, setAutocompleteModels] = useState(DEFAULT_AUTOCOMPLETE_MODELS);
+  const [isLoadingAutocompleteModels, setIsLoadingAutocompleteModels] = useState(false);
+  const [autocompleteModelError, setAutocompleteModelError] = useState<string | null>(null);
 
   // Detect installed agents on mount
   useEffect(() => {
@@ -91,25 +113,41 @@ export const AISettings = () => {
     checkAllProviderApiKeys();
   }, [checkAllProviderApiKeys]);
 
-  const refreshKairoAuthState = async () => {
+  const refreshKairoAuthState = useCallback(async (): Promise<boolean> => {
     try {
-      setIsKairoConnected(await hasKairoAccessToken());
+      const isConnected = await hasKairoAccessToken();
+      setIsKairoConnected(isConnected);
+      return isConnected;
     } catch {
       setIsKairoConnected(false);
+      return false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     const handleWindowFocus = () => {
-      refreshKairoAuthState();
+      void refreshKairoAuthState();
     };
 
-    refreshKairoAuthState();
+    const handleKairoAuthUpdated = () => {
+      void (async () => {
+        const isConnected = await refreshKairoAuthState();
+        setKairoAuthMessage(
+          isConnected
+            ? "Kairo Code connected."
+            : "Login finished, but Kairo Code is still not connected. Try again.",
+        );
+      })();
+    };
+
+    void refreshKairoAuthState();
     window.addEventListener("focus", handleWindowFocus);
+    window.addEventListener(KAIRO_AUTH_UPDATED_EVENT, handleKairoAuthUpdated);
     return () => {
       window.removeEventListener("focus", handleWindowFocus);
+      window.removeEventListener(KAIRO_AUTH_UPDATED_EVENT, handleKairoAuthUpdated);
     };
-  }, []);
+  }, [refreshKairoAuthState]);
 
   const providers = getAvailableProviders();
   const currentProvider = providers.find((p) => p.id === settings.aiProviderId);
@@ -155,6 +193,32 @@ export const AISettings = () => {
     fetchDynamicModels();
   }, [settings.aiProviderId, updateSetting, setDynamicModels]);
 
+  const loadAutocompleteModels = async () => {
+    setIsLoadingAutocompleteModels(true);
+    setAutocompleteModelError(null);
+    try {
+      const models = await fetchAutocompleteModels();
+      if (models.length > 0) {
+        setAutocompleteModels(models);
+        if (!models.some((model) => model.id === settings.aiAutocompleteModelId)) {
+          updateSetting("aiAutocompleteModelId", resolveAutocompleteDefaultModelId(models));
+        }
+      } else {
+        setAutocompleteModels(DEFAULT_AUTOCOMPLETE_MODELS);
+      }
+    } catch (error) {
+      console.error("Failed to fetch autocomplete models:", error);
+      setAutocompleteModels(DEFAULT_AUTOCOMPLETE_MODELS);
+      setAutocompleteModelError("Could not load model list. Showing defaults.");
+    } finally {
+      setIsLoadingAutocompleteModels(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadAutocompleteModels();
+  }, []);
+
   const providerOptions = getAvailableProviders().map((provider) => ({
     value: provider.id,
     label: provider.name,
@@ -183,8 +247,12 @@ export const AISettings = () => {
       setKairoAuthMessage("Complete login in your browser...");
       const mode = await startKairoOAuthLogin();
       if (mode === "device") {
-        await refreshKairoAuthState();
-        setKairoAuthMessage("Kairo Code connected.");
+        const isConnected = await refreshKairoAuthState();
+        setKairoAuthMessage(
+          isConnected
+            ? "Kairo Code connected."
+            : "Login finished, but Kairo Code is still not connected. Try again.",
+        );
       } else {
         setKairoAuthMessage("Finish login in your browser, then return to Athas.");
       }
@@ -410,21 +478,19 @@ export const AISettings = () => {
 
         <SettingRow label="Model" description="Select the AI model to use">
           <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <select
-                value={settings.aiModelId}
-                onChange={(e) => updateSetting("aiModelId", e.target.value)}
-                className="flex-1 rounded-md border border-border bg-secondary-bg px-3 py-1.5 text-sm text-text outline-none focus:border-accent"
-              >
-                {(dynamicModels[settings.aiProviderId] || currentProvider?.models || []).map(
-                  (model: any) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name}
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
+            <Dropdown
+              value={settings.aiModelId}
+              options={(dynamicModels[settings.aiProviderId] || currentProvider?.models || []).map(
+                (model: { id: string; name: string }) => ({
+                  value: model.id,
+                  label: model.name,
+                }),
+              )}
+              onChange={(value) => updateSetting("aiModelId", value)}
+              size="xs"
+              searchable={true}
+              className="w-56"
+            />
             {supportsDynamicModels && (
               <Button
                 variant="ghost"
@@ -519,57 +585,8 @@ export const AISettings = () => {
         </Section>
       )}
 
-      <Section title="Model Parameters">
-        <SettingRow
-          label="Temperature"
-          description="Controls randomness in responses (0 = deterministic, 2 = creative)"
-        >
-          <Slider
-            value={settings.aiTemperature}
-            min={0}
-            max={2}
-            step={0.1}
-            onChange={(value) => updateSetting("aiTemperature", value)}
-            valueFormatter={(v) => v.toFixed(1)}
-          />
-        </SettingRow>
-
-        <SettingRow label="Max Tokens" description="Maximum length of AI responses">
-          <Dropdown
-            value={settings.aiMaxTokens.toString()}
-            options={[
-              { value: "1024", label: "1,024" },
-              { value: "2048", label: "2,048" },
-              { value: "4096", label: "4,096" },
-              { value: "8192", label: "8,192" },
-              { value: "16384", label: "16,384" },
-            ]}
-            onChange={(value) => updateSetting("aiMaxTokens", parseInt(value))}
-            size="xs"
-          />
-        </SettingRow>
-      </Section>
-
-      <Section title="Defaults">
-        <SettingRow
-          label="Default Output Style"
-          description="Default verbosity level for AI responses"
-        >
-          <Dropdown
-            value={settings.aiDefaultOutputStyle}
-            options={[
-              { value: "default", label: "Default" },
-              { value: "explanatory", label: "Explanatory" },
-              { value: "learning", label: "Learning" },
-            ]}
-            onChange={(value) =>
-              updateSetting("aiDefaultOutputStyle", value as "default" | "explanatory" | "learning")
-            }
-            size="xs"
-          />
-        </SettingRow>
-
-        {availableModes.length > 0 && (
+      {availableModes.length > 0 && (
+        <Section title="Agent Defaults">
           <SettingRow
             label="Default Session Mode"
             description="Default mode for ACP agent sessions"
@@ -587,14 +604,11 @@ export const AISettings = () => {
               size="xs"
             />
           </SettingRow>
-        )}
-      </Section>
+        </Section>
+      )}
 
-      <Section title="Behavior">
-        <SettingRow
-          label="AI Completion"
-          description="Enable AI-powered code completions while typing"
-        >
+      <Section title="Autocomplete">
+        <SettingRow label="AI Completion" description="Enable AI autocomplete while typing">
           <Switch
             checked={settings.aiCompletion}
             onChange={(checked) => updateSetting("aiCompletion", checked)}
@@ -602,15 +616,42 @@ export const AISettings = () => {
           />
         </SettingRow>
         <SettingRow
-          label="Auto Open Read Files"
-          description="Automatically open files in the editor when AI reads them"
+          label="Autocomplete Model"
+          description="Choose any OpenRouter model for autocomplete"
         >
-          <Switch
-            checked={settings.aiAutoOpenReadFiles}
-            onChange={(checked) => updateSetting("aiAutoOpenReadFiles", checked)}
-            size="sm"
-          />
+          <div className="flex items-center gap-2">
+            <Dropdown
+              value={settings.aiAutocompleteModelId}
+              options={autocompleteModels.map((model) => ({
+                value: model.id,
+                label: model.name,
+              }))}
+              onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
+              size="xs"
+              searchable={true}
+              className="w-56"
+            />
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={loadAutocompleteModels}
+              disabled={isLoadingAutocompleteModels}
+              title="Refresh model list"
+            >
+              <RefreshCw size={14} className={cn(isLoadingAutocompleteModels && "animate-spin")} />
+            </Button>
+          </div>
         </SettingRow>
+        {autocompleteModelError && (
+          <div className="mt-1 flex items-center gap-1.5 px-1 text-red-500 text-xs">
+            <AlertCircle size={12} />
+            <span>{autocompleteModelError}</span>
+          </div>
+        )}
+        <div className="px-1 text-text-lighter text-xs">
+          Pro uses Athas-hosted autocomplete credit. Free can use BYOK by setting an OpenRouter API
+          key in the API Keys section.
+        </div>
       </Section>
 
       <Section title="Chat History">
@@ -627,6 +668,7 @@ export const AISettings = () => {
                 setIsClearingChats(true);
                 try {
                   await useAIChatStore.getState().clearAllChats();
+                  showToast({ message: "All chats cleared", type: "success" });
                 } finally {
                   setIsClearingChats(false);
                 }

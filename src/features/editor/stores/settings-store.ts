@@ -33,7 +33,7 @@ export const useEditorSettingsStore = createSelectors(
       wordWrap: true,
       lineNumbers: true,
       disabled: false,
-      theme: "one-dark",
+      theme: "vitesse-dark",
       actions: {
         setFontSize: (size) => set({ fontSize: size }),
         setFontFamily: (family) => set({ fontFamily: family }),

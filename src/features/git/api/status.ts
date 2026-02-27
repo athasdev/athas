@@ -1,12 +1,19 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { GitHunk, GitStatus } from "../types/git";
+import { isNotGitRepositoryError, resolveRepositoryPath } from "./repo";
 
 export const getGitStatus = async (repoPath: string): Promise<GitStatus | null> => {
   try {
-    const status = await tauriInvoke<GitStatus>("git_status", { repoPath });
+    const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+    if (!resolvedRepoPath) {
+      return null;
+    }
+    const status = await tauriInvoke<GitStatus>("git_status", { repoPath: resolvedRepoPath });
     return status;
   } catch (error) {
-    console.error("Failed to get git status:", error);
+    if (!isNotGitRepositoryError(error)) {
+      console.error("Failed to get git status:", error);
+    }
     return null;
   }
 };

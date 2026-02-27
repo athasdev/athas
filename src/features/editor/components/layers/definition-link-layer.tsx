@@ -5,7 +5,9 @@
 import type { RefObject } from "react";
 import { memo, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
+import { useEditorSettingsStore } from "../../stores/settings-store";
 import { useEditorUIStore } from "../../stores/ui-store";
+import { getAccurateCursorX } from "../../utils/position";
 
 interface DefinitionLinkLayerProps {
   fontSize: number;
@@ -18,6 +20,7 @@ interface DefinitionLinkLayerProps {
 export const DefinitionLinkLayer = memo(
   ({ fontSize, fontFamily, lineHeight, content, textareaRef }: DefinitionLinkLayerProps) => {
     const definitionLinkRange = useEditorUIStore.use.definitionLinkRange();
+    const tabSize = useEditorSettingsStore.use.tabSize();
 
     const highlightStyle = useMemo(() => {
       if (!definitionLinkRange) return null;
@@ -29,31 +32,10 @@ export const DefinitionLinkLayer = memo(
 
       const lineText = lines[line];
       if (startColumn < 0 || endColumn > lineText.length) return null;
-
-      // Create a hidden element for measuring text width
-      const measureElement = document.createElement("span");
-      measureElement.style.cssText = `
-      position: absolute;
-      visibility: hidden;
-      white-space: pre;
-      font-family: ${fontFamily};
-      font-size: ${fontSize}px;
-    `;
-      document.body.appendChild(measureElement);
-
-      // Measure text before start column
-      const textBeforeStart = lineText.substring(0, startColumn);
-      measureElement.textContent = textBeforeStart;
-      const left =
-        measureElement.getBoundingClientRect().width + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
-
-      // Measure the word itself
-      const wordText = lineText.substring(startColumn, endColumn);
-      measureElement.textContent = wordText;
-      const width = measureElement.getBoundingClientRect().width;
-
-      // Cleanup
-      document.body.removeChild(measureElement);
+      const startX = getAccurateCursorX(lineText, startColumn, fontSize, fontFamily, tabSize);
+      const endX = getAccurateCursorX(lineText, endColumn, fontSize, fontFamily, tabSize);
+      const left = startX + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
+      const width = Math.max(endX - startX, 2);
 
       // Get current scroll position from textarea to position relative to viewport
       const scrollTop = textareaRef.current?.scrollTop ?? 0;
@@ -64,10 +46,10 @@ export const DefinitionLinkLayer = memo(
       return {
         top,
         left: left - scrollLeft,
-        width: Math.max(width, 2),
+        width,
         height: lineHeight,
       };
-    }, [definitionLinkRange, content, fontSize, fontFamily, lineHeight, textareaRef]);
+    }, [definitionLinkRange, content, fontSize, fontFamily, lineHeight, tabSize, textareaRef]);
 
     if (!highlightStyle) return null;
 

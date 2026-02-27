@@ -51,6 +51,7 @@ interface Settings {
   aiReasoningLevel: number;
   aiThinkingEffort: "low" | "medium" | "high" | "max";
   aiDefaultOutputStyle: "default" | "explanatory" | "learning";
+  aiAutocompleteModelId: string;
   aiDefaultSessionMode: string;
   // Layout
   sidebarWidth: number;
@@ -85,8 +86,6 @@ interface Settings {
   //// File tree
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
-  //// Command Bar
-  commandBarFileLimit: number;
 }
 
 const defaultSettings: Settings = {
@@ -96,26 +95,26 @@ const defaultSettings: Settings = {
   mouseWheelZoom: false,
   commandBarPreview: true,
   // Editor
-  fontFamily: "Menlo, Consolas, Liberation Mono, monospace",
+  fontFamily: "Geist Mono Variable",
   fontSize: 14,
   tabSize: 2,
   wordWrap: true,
   lineNumbers: true,
   showMinimap: false,
   // Terminal
-  terminalFontFamily: "Menlo, Consolas, Liberation Mono, monospace",
+  terminalFontFamily: "Geist Mono Variable",
   terminalFontSize: 14,
   terminalLineHeight: 1.2,
   terminalLetterSpacing: 0,
   terminalCursorStyle: "block",
   terminalCursorBlink: true,
   // UI
-  uiFontFamily: "Menlo, Consolas, Liberation Mono, monospace",
+  uiFontFamily: "Geist Variable",
   // Theme
-  theme: "one-dark", // Changed from "auto" since we don't support continuous monitoring
+  theme: "vitesse-dark", // Changed from "auto" since we don't support continuous monitoring
   iconTheme: "colorful-material",
-  autoThemeLight: "one-light",
-  autoThemeDark: "one-dark",
+  autoThemeLight: "vitesse-light",
+  autoThemeDark: "vitesse-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
   // AI
@@ -130,6 +129,7 @@ const defaultSettings: Settings = {
   aiReasoningLevel: 2,
   aiThinkingEffort: "high",
   aiDefaultOutputStyle: "default",
+  aiAutocompleteModelId: "openai/gpt-5-nano",
   aiDefaultSessionMode: "",
   // Layout
   sidebarWidth: 220,
@@ -167,12 +167,10 @@ const defaultSettings: Settings = {
   //// File tree
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
-  //// Command Bar
-  commandBarFileLimit: 2000,
 };
 
 // Theme class constants
-const ALL_THEME_CLASSES = ["force-one-light", "force-one-dark"];
+const ALL_THEME_CLASSES = ["force-vitesse-light", "force-vitesse-dark"];
 
 let storeInstance: Store;
 
@@ -209,6 +207,26 @@ const saveSettingsToStore = async (settings: Partial<Settings>) => {
   } catch (error) {
     console.error("Failed to save settings to store:", error);
   }
+};
+
+// Debounced version to prevent excessive disk writes
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+let pendingSettings: Partial<Settings> = {};
+
+const debouncedSaveSettingsToStore = (settings: Partial<Settings>) => {
+  // Merge pending settings
+  pendingSettings = { ...pendingSettings, ...settings };
+
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+
+  saveTimeout = setTimeout(() => {
+    const settingsToSave = pendingSettings;
+    pendingSettings = {};
+    saveTimeout = null;
+    saveSettingsToStore(settingsToSave);
+  }, 300);
 };
 
 const applyTheme = async (theme: Theme) => {
@@ -270,11 +288,11 @@ const initializeSettings = async () => {
 
     // Detect theme if none exists
     if (!loadedSettings.theme) {
-      let detectedTheme = getSystemThemePreference() === "dark" ? "one-dark" : "one-light";
+      let detectedTheme = getSystemThemePreference() === "dark" ? "vitesse-dark" : "vitesse-light";
 
       try {
         const tauriDetectedTheme = await invoke<string>("get_system_theme");
-        detectedTheme = tauriDetectedTheme === "dark" ? "one-dark" : "one-light";
+        detectedTheme = tauriDetectedTheme === "dark" ? "vitesse-dark" : "vitesse-light";
       } catch {
         console.log("Tauri theme detection not available, using browser detection");
       }
@@ -346,14 +364,13 @@ export const useSettingsStore = create(
 
         // Update individual setting
         updateSetting: async <K extends keyof Settings>(key: K, value: Settings[K]) => {
-          console.log(`Updating setting ${key} to:`, value);
           set((state) => {
             state.settings[key] = value;
           });
 
           if (key === "theme") applyTheme(value as Theme);
 
-          await saveSettingsToStore({ [key]: value });
+          debouncedSaveSettingsToStore({ [key]: value });
         },
 
         // Search actions

@@ -81,23 +81,17 @@ export class ThemeLoader extends BaseThemeExtension {
     }
   }
 
-  /**
-   * Convert new JSON theme format to internal ThemeDefinition
-   * - colors → cssVariables with -- prefix
-   * - syntax → syntaxTokens with --syntax- prefix
-   * - appearance → isDark and category
-   */
   private convertJsonToThemeDefinition(jsonTheme: JsonTheme): ThemeDefinition {
-    // Convert colors to CSS variables with -- prefix
     const cssVariables: Record<string, string> = {};
     for (const [key, value] of Object.entries(jsonTheme.colors)) {
       cssVariables[`--${key}`] = value;
+      cssVariables[`--color-${key}`] = value;
     }
 
-    // Convert syntax to syntaxTokens with --syntax- prefix
     const syntaxTokens: Record<string, string> = {};
     for (const [key, value] of Object.entries(jsonTheme.syntax)) {
       syntaxTokens[`--syntax-${key}`] = value;
+      syntaxTokens[`--color-syntax-${key}`] = value;
     }
 
     const isDark = jsonTheme.appearance === "dark";

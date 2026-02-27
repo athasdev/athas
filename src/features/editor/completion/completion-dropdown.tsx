@@ -12,6 +12,7 @@ import { useZoomStore } from "@/stores/zoom-store";
 import { cn } from "@/utils/cn";
 import { highlightMatches } from "@/utils/fuzzy-matcher";
 import { useOverlayManager } from "../hooks/use-overlay-manager";
+import "./completion-dropdown.css";
 
 interface CompletionDropdownProps {
   onApplyCompletion?: (completion: CompletionItem) => void;
@@ -150,7 +151,7 @@ export const CompletionDropdown = memo(
 
     return (
       <div
-        className="absolute flex"
+        className="editor-completion-dropdown absolute flex items-start"
         style={{
           left: `${x}px`,
           top: `${y}px`,
@@ -159,7 +160,7 @@ export const CompletionDropdown = memo(
       >
         {/* Main completion list */}
         <div
-          className="overflow-y-auto border border-border bg-secondary-bg shadow-md"
+          className="editor-completion-list custom-scrollbar overflow-y-auto"
           style={{
             minWidth: `${EDITOR_CONSTANTS.DROPDOWN_MIN_WIDTH}px`,
             maxWidth: `${EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH}px`,
@@ -179,8 +180,10 @@ export const CompletionDropdown = memo(
                   }
                 }}
                 className={cn(
-                  "ui-font cursor-pointer px-2 py-1 text-xs",
-                  isSelected ? "bg-accent text-primary-bg" : "text-text hover:bg-hover",
+                  "editor-completion-item ui-font cursor-pointer px-2 py-1 text-xs",
+                  isSelected
+                    ? "editor-completion-item-selected text-text"
+                    : "text-text hover:bg-hover",
                 )}
                 onClick={() => handleSelect(item)}
               >
@@ -199,7 +202,7 @@ export const CompletionDropdown = memo(
         {/* Documentation panel (VS Code style) */}
         {hasDocPanel && (
           <div
-            className="ml-0.5 border border-border bg-secondary-bg p-2 shadow-md"
+            className="editor-completion-docs custom-scrollbar ml-1 p-2"
             style={{
               minWidth: "200px",
               maxWidth: "300px",

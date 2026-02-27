@@ -1,9 +1,15 @@
+import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { extensionManager } from "../extensions/manager";
 
 /**
  * Detect programming language from file extension using the extension registry
  */
 export function detectLanguageFromPath(filePath: string): string {
+  const fromRegistry = extensionRegistry.getLanguageId(filePath);
+  if (fromRegistry) {
+    return fromRegistry;
+  }
+
   const extension = filePath.toLowerCase().split(".").pop() || "";
 
   // First, try to get language from extension manager

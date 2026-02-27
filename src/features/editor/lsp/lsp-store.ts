@@ -13,6 +13,28 @@ const COMPLETION_CACHE_TTL_MS = EDITOR_CONSTANTS.COMPLETION_CACHE_TTL_MS;
 const MAX_CACHE_SIZE = EDITOR_CONSTANTS.MAX_COMPLETION_CACHE_SIZE;
 const COMPLETION_HIDE_DELAY_MS = 200; // Stability period before hiding to prevent flicker
 
+function isCursorInsideCssBlockComment(value: string, cursorPos: number): boolean {
+  if (cursorPos <= 0) return false;
+
+  const textBeforeCursor = value.slice(0, cursorPos);
+  const lastCommentStart = textBeforeCursor.lastIndexOf("/*");
+  if (lastCommentStart === -1) return false;
+
+  const lastCommentEnd = textBeforeCursor.lastIndexOf("*/");
+  return lastCommentStart > lastCommentEnd;
+}
+
+function shouldSuppressCompletionInContext(
+  filePath: string,
+  value: string,
+  cursorPos: number,
+): boolean {
+  const languageId = extensionRegistry.getLanguageId(filePath);
+  if (languageId !== "css") return false;
+
+  return isCursorInsideCssBlockComment(value, cursorPos);
+}
+
 /**
  * Get snippet completions for a file
  */
@@ -258,6 +280,11 @@ export const useLspStore = createSelectors(
         }
 
         // Smart triggering: check context before requesting completions
+        if (shouldSuppressCompletionInContext(filePath, value, cursorPos)) {
+          completionActions.setIsLspCompletionVisible(false);
+          return;
+        }
+
         const currentChar = cursorPos > 0 ? value[cursorPos - 1] : "";
 
         // Only skip if we just typed whitespace - use delayed hide to prevent flicker

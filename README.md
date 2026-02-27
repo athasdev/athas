@@ -7,10 +7,14 @@
 
 ## Features
 
-- External editor support (Neovim, Helix, etc.)
-- Git integration
 - AI agents
-- Terminal
+- Git integration
+- Syntax highlighting
+- LSP support
+- Vim keybindings
+- Integrated terminal
+- SQLite viewer
+- External editor support
 
 ## Download
 
@@ -23,6 +27,8 @@ See the [documentation](https://athas.dev/docs).
 ## Contributing
 
 Contributions are welcome! See the [contributing guide](CONTRIBUTING.md).
+Please also review our [Code of Conduct](CODE_OF_CONDUCT.md) and
+[Contributor License and Feedback Agreement](CONTRIBUTOR_LICENSE_AND_FEEDBACK_AGREEMENT.md).
 
 ## Support
 

@@ -97,7 +97,7 @@ export const themeProvider = new ThemeProvider();
 /**
  * Apply default theme on app startup
  */
-export function initializeThemeProvider(defaultThemeId = "one-dark"): void {
+export function initializeThemeProvider(defaultThemeId = "vitesse-dark"): void {
   // Wait for registry to be initialized
   extensionRegistry.ensureInitialized().then(() => {
     // Load persisted theme preference

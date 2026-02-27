@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useDebounce } from "use-debounce";
+import { useDebounce, useDebouncedCallback } from "use-debounce";
 import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
-import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
+import { PREVIEW_DEBOUNCE_DELAY, SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { useFileLoader } from "./use-file-loader";
 import { useFileSearch } from "./use-file-search";
 import { useKeyboardNavigation } from "./use-keyboard-navigation";
@@ -52,14 +52,19 @@ export const useGlobalSearch = () => {
     [handleFileSelect, onClose, addOrUpdateRecentFile],
   );
 
-  // Handle preview on hover/selection
+  // Handle preview on hover/selection with debounce
+  const debouncedSetPreview = useDebouncedCallback(
+    (path: string | null) => setPreviewFilePath(path),
+    PREVIEW_DEBOUNCE_DELAY,
+  );
+
   const handlePreviewChange = useCallback(
     (path: string | null) => {
       if (commandBarPreview) {
-        setPreviewFilePath(path);
+        debouncedSetPreview(path);
       }
     },
-    [commandBarPreview],
+    [commandBarPreview, debouncedSetPreview],
   );
 
   // Keyboard navigation
@@ -76,12 +81,12 @@ export const useGlobalSearch = () => {
     if (commandBarPreview && allResults.length > 0 && selectedIndex >= 0) {
       const selectedFile = allResults[selectedIndex];
       if (selectedFile && !selectedFile.isDir) {
-        setPreviewFilePath(selectedFile.path);
+        debouncedSetPreview(selectedFile.path);
       } else {
-        setPreviewFilePath(null);
+        debouncedSetPreview(null);
       }
     }
-  }, [selectedIndex, allResults, commandBarPreview]);
+  }, [selectedIndex, allResults, commandBarPreview, debouncedSetPreview]);
 
   // Reset state when global search becomes visible
   useEffect(() => {

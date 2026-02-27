@@ -10,6 +10,7 @@ import { useRecentFilesStore } from "@/features/file-system/controllers/recent-f
 import type { MultiFileDiff } from "@/features/git/types/diff";
 import type { GitDiff } from "@/features/git/types/git";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { cleanupBufferHistoryTracking } from "@/stores/app-store";
 import { useSessionStore } from "@/stores/session-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -21,6 +22,19 @@ const syncBufferToPane = (bufferId: string) => {
   } else if (activePane) {
     paneStore.actions.setActivePaneBuffer(activePane.id, bufferId);
   }
+};
+
+const syncAndFocusBufferInPane = (bufferId: string) => {
+  const paneStore = usePaneStore.getState();
+  const paneWithBuffer = paneStore.actions.getPaneByBufferId(bufferId);
+
+  if (paneWithBuffer) {
+    paneStore.actions.setActivePane(paneWithBuffer.id);
+    paneStore.actions.setActivePaneBuffer(paneWithBuffer.id, bufferId);
+    return;
+  }
+
+  syncBufferToPane(bufferId);
 };
 
 const removeBufferFromPanes = (bufferId: string) => {
@@ -174,7 +188,19 @@ const generateBufferId = (path: string): string => {
   return `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
 };
 
-const saveSessionToStore = (buffers: Buffer[], activeBufferId: string | null) => {
+let saveSessionTimer: NodeJS.Timeout | null = null;
+const SAVE_SESSION_DEBOUNCE_MS = 300;
+
+const saveSessionToStore = (_buffers: Buffer[], _activeBufferId: string | null) => {
+  if (saveSessionTimer) clearTimeout(saveSessionTimer);
+  saveSessionTimer = setTimeout(() => {
+    const { buffers, activeBufferId } = useBufferStore.getState();
+    saveSessionToStoreImmediate(buffers, activeBufferId);
+    saveSessionTimer = null;
+  }, SAVE_SESSION_DEBOUNCE_MS);
+};
+
+const saveSessionToStoreImmediate = (buffers: Buffer[], activeBufferId: string | null) => {
   // Get the root folder path from file system store
   // We'll import this dynamically to avoid circular dependencies
   import("@/features/file-system/controllers/store").then(({ useFileSystemStore }) => {
@@ -252,7 +278,7 @@ export const useBufferStore = createSelectors(
           isHtmlPreview = false,
           isCsvPreview = false,
           sourceFilePath?: string,
-          isPreview = true,
+          isPreview = false,
           isPdf = false,
         ) => {
           const { buffers, maxOpenTabs } = get();
@@ -390,29 +416,10 @@ export const useBufferStore = createSelectors(
                   );
 
                   if (installed) {
-                    // Extension installed or bundled, start LSP
-                    logger.info("BufferStore", `Starting LSP for ${path}`);
-                    import("@/features/editor/lsp/lsp-client")
-                      .then(({ LspClient }) => {
-                        return import("@/features/file-system/controllers/store").then(
-                          ({ useFileSystemStore }) => {
-                            const lspClient = LspClient.getInstance();
-                            const workspacePath =
-                              useFileSystemStore.getState().rootFolderPath || path;
-                            logger.info(
-                              "BufferStore",
-                              `Calling lspClient.startForFile(${path}, ${workspacePath})`,
-                            );
-                            return lspClient.startForFile(path, workspacePath);
-                          },
-                        );
-                      })
-                      .then(() => {
-                        logger.info("BufferStore", `LSP started successfully for ${path}`);
-                      })
-                      .catch((error) => {
-                        logger.error("BufferStore", "Failed to start LSP:", error);
-                      });
+                    // LSP startup is handled by use-lsp-integration for the active editor buffer.
+                    // Avoid starting LSP from openBuffer to prevent background/session files from
+                    // triggering language servers unexpectedly.
+                    logger.debug("BufferStore", `Extension ready for ${path}`);
                   } else {
                     // Marketplace extension not installed, emit event for UI to handle
                     logger.info(
@@ -810,6 +817,8 @@ export const useBufferStore = createSelectors(
 
           if (bufferIndex === -1) return;
 
+          cleanupBufferHistoryTracking(bufferId);
+
           // Remove from pane
           removeBufferFromPanes(bufferId);
 
@@ -928,6 +937,7 @@ export const useBufferStore = createSelectors(
         },
 
         setActiveBuffer: (bufferId: string) => {
+          syncAndFocusBufferInPane(bufferId);
           set((state) => {
             state.activeBufferId = bufferId;
             state.buffers = state.buffers.map((b) => ({
@@ -1021,13 +1031,7 @@ export const useBufferStore = createSelectors(
         },
 
         handleTabClick: (bufferId: string) => {
-          set((state) => {
-            state.activeBufferId = bufferId;
-            state.buffers = state.buffers.map((b) => ({
-              ...b,
-              isActive: b.id === bufferId,
-            }));
-          });
+          get().actions.setActiveBuffer(bufferId);
         },
 
         handleTabClose: (bufferId: string) => {
@@ -1133,6 +1137,26 @@ export const useBufferStore = createSelectors(
         },
 
         switchToNextBuffer: () => {
+          const paneStore = usePaneStore.getState();
+          const activePane = paneStore.actions.getActivePane();
+          const paneBufferIds = activePane?.bufferIds ?? [];
+
+          // Prefer pane-aware cycling so tab highlight and editor stay in sync
+          if (activePane && paneBufferIds.length > 0) {
+            paneStore.actions.switchToNextBufferInPane();
+            const updatedActiveBufferId = paneStore.actions.getActivePane()?.activeBufferId;
+            if (!updatedActiveBufferId) return;
+
+            set((state) => {
+              state.activeBufferId = updatedActiveBufferId;
+              state.buffers = state.buffers.map((b) => ({
+                ...b,
+                isActive: b.id === updatedActiveBufferId,
+              }));
+            });
+            return;
+          }
+
           const { buffers, activeBufferId } = get();
           if (buffers.length === 0) return;
 
@@ -1140,16 +1164,30 @@ export const useBufferStore = createSelectors(
           const nextIndex = (currentIndex + 1) % buffers.length;
           const nextBufferId = buffers[nextIndex].id;
 
-          set((state) => {
-            state.activeBufferId = nextBufferId;
-            state.buffers = state.buffers.map((b) => ({
-              ...b,
-              isActive: b.id === nextBufferId,
-            }));
-          });
+          get().actions.setActiveBuffer(nextBufferId);
         },
 
         switchToPreviousBuffer: () => {
+          const paneStore = usePaneStore.getState();
+          const activePane = paneStore.actions.getActivePane();
+          const paneBufferIds = activePane?.bufferIds ?? [];
+
+          // Prefer pane-aware cycling so tab highlight and editor stay in sync
+          if (activePane && paneBufferIds.length > 0) {
+            paneStore.actions.switchToPreviousBufferInPane();
+            const updatedActiveBufferId = paneStore.actions.getActivePane()?.activeBufferId;
+            if (!updatedActiveBufferId) return;
+
+            set((state) => {
+              state.activeBufferId = updatedActiveBufferId;
+              state.buffers = state.buffers.map((b) => ({
+                ...b,
+                isActive: b.id === updatedActiveBufferId,
+              }));
+            });
+            return;
+          }
+
           const { buffers, activeBufferId } = get();
           if (buffers.length === 0) return;
 
@@ -1157,13 +1195,7 @@ export const useBufferStore = createSelectors(
           const prevIndex = (currentIndex - 1 + buffers.length) % buffers.length;
           const prevBufferId = buffers[prevIndex].id;
 
-          set((state) => {
-            state.activeBufferId = prevBufferId;
-            state.buffers = state.buffers.map((b) => ({
-              ...b,
-              isActive: b.id === prevBufferId,
-            }));
-          });
+          get().actions.setActiveBuffer(prevBufferId);
         },
 
         getActiveBuffer: (): Buffer | null => {

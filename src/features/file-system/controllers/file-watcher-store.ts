@@ -3,7 +3,6 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { dirname } from "@tauri-apps/api/path";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
-import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "./store";
 
@@ -26,14 +25,6 @@ export const useFileWatcherStore = create(
     setProjectRoot: async (path: string) => {
       try {
         await invoke("set_project_root", { path });
-
-        // Start LSP for the project
-        try {
-          const lspClient = LspClient.getInstance();
-          await lspClient.start(path);
-        } catch (error) {
-          console.error("Failed to start LSP:", error);
-        }
       } catch (error) {
         console.error("Failed to set project root:", path, error);
       }

@@ -3,9 +3,9 @@ import type { SettingSearchRecord } from "../types/search";
 export const settingsSearchIndex: SettingSearchRecord[] = [
   // General Settings
   {
-    id: "general-auto-save",
-    tab: "general",
-    section: "File Management",
+    id: "editor-auto-save",
+    tab: "editor",
+    section: "Saving",
     label: "Auto Save",
     description: "Automatically save files when editing",
     keywords: ["save", "automatic", "files"],
@@ -30,12 +30,12 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     ],
   },
   {
-    id: "general-mouse-wheel-zoom",
-    tab: "general",
-    section: "Zoom",
+    id: "editor-mouse-wheel-zoom",
+    tab: "editor",
+    section: "Display",
     label: "Mouse Wheel Zoom",
-    description: "Use mouse wheel to zoom in/out",
-    keywords: ["zoom", "mouse", "wheel", "scroll"],
+    description: "Use Ctrl+Scroll to zoom editor",
+    keywords: ["zoom", "mouse", "wheel", "scroll", "ctrl"],
   },
   {
     id: "general-open-settings",
@@ -143,6 +143,24 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Enable vim keybindings and commands",
     keywords: ["vim", "keybindings", "modal", "editing"],
   },
+  {
+    id: "editor-max-open-tabs",
+    tab: "editor",
+    section: "Tabs",
+    label: "Max Open Tabs",
+    description: "Maximum number of tabs before oldest closes",
+    keywords: ["tabs", "limit", "maximum", "open"],
+  },
+
+  // General Settings (non-editor)
+  {
+    id: "general-command-bar-preview",
+    tab: "general",
+    section: "Command Bar",
+    label: "Command Bar Preview",
+    description: "Show file preview in command bar",
+    keywords: ["command", "bar", "preview", "file", "quick open"],
+  },
 
   // File Tree Settings
   {
@@ -244,6 +262,30 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Auto Open Read Files",
     description: "Automatically open files in the editor when AI reads them",
     keywords: ["ai", "auto", "open", "read", "files", "editor"],
+  },
+  {
+    id: "ai-autocomplete",
+    tab: "ai",
+    section: "Autocomplete",
+    label: "AI Completion",
+    description: "Enable AI autocomplete in the editor",
+    keywords: ["ai", "autocomplete", "completion", "openrouter"],
+  },
+  {
+    id: "ai-autocomplete-model",
+    tab: "ai",
+    section: "Autocomplete",
+    label: "Autocomplete Model",
+    description: "Choose the OpenRouter model used for autocomplete",
+    keywords: ["ai", "model", "autocomplete", "openrouter"],
+  },
+  {
+    id: "ai-autocomplete-byok",
+    tab: "ai",
+    section: "Autocomplete",
+    label: "Autocomplete BYOK",
+    description: "Use your own OpenRouter API key for autocomplete on the free plan",
+    keywords: ["ai", "autocomplete", "byok", "openrouter", "api key", "free"],
   },
 
   // Keyboard Settings
@@ -386,6 +428,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["format", "save", "automatic", "formatting", "prettier"],
   },
   {
+    id: "language-lint-on-save",
+    tab: "language",
+    section: "Code Formatting",
+    label: "Lint on Save",
+    description: "Run linter when saving files",
+    keywords: ["lint", "linter", "save", "eslint", "check"],
+  },
+  {
     id: "language-formatter",
     tab: "language",
     section: "Code Formatting",
@@ -457,7 +507,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     section: "Features",
     label: "AI Assistant",
     description: "AI-powered code assistance and chat",
-    keywords: ["ai", "assistant", "chat", "copilot"],
+    keywords: ["ai", "assistant", "chat"],
   },
   {
     id: "features-breadcrumbs",
@@ -468,63 +518,67 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["breadcrumbs", "navigation", "path"],
   },
 
+  // Terminal Settings
+  {
+    id: "terminal-font-family",
+    tab: "terminal",
+    section: "Typography",
+    label: "Terminal Font Family",
+    description: "Font family for the integrated terminal",
+    keywords: ["terminal", "font", "family", "monospace", "nerd font"],
+  },
+  {
+    id: "terminal-font-size",
+    tab: "terminal",
+    section: "Typography",
+    label: "Terminal Font Size",
+    description: "Terminal font size in pixels",
+    keywords: ["terminal", "font", "size"],
+  },
+  {
+    id: "terminal-line-height",
+    tab: "terminal",
+    section: "Typography",
+    label: "Terminal Line Height",
+    description: "Line height multiplier for terminal",
+    keywords: ["terminal", "line", "height", "spacing"],
+  },
+  {
+    id: "terminal-letter-spacing",
+    tab: "terminal",
+    section: "Typography",
+    label: "Terminal Letter Spacing",
+    description: "Additional spacing between characters in terminal",
+    keywords: ["terminal", "letter", "spacing", "characters"],
+  },
+  {
+    id: "terminal-cursor-style",
+    tab: "terminal",
+    section: "Cursor",
+    label: "Terminal Cursor Style",
+    description: "Shape of the terminal cursor",
+    keywords: ["terminal", "cursor", "style", "block", "underline", "bar"],
+  },
+  {
+    id: "terminal-cursor-blink",
+    tab: "terminal",
+    section: "Cursor",
+    label: "Terminal Cursor Blink",
+    description: "Whether the terminal cursor should blink",
+    keywords: ["terminal", "cursor", "blink", "blinking"],
+  },
+
+  // Extensions Settings
+  {
+    id: "extensions-browse",
+    tab: "extensions",
+    section: "Extensions",
+    label: "Browse Extensions",
+    description: "Browse and manage installed extensions",
+    keywords: ["extensions", "browse", "install", "manage", "language", "theme", "icon"],
+  },
+
   // Advanced Settings
-  {
-    id: "advanced-file-watcher",
-    tab: "advanced",
-    section: "Performance",
-    label: "File Watcher",
-    description: "Watch for file changes in workspace",
-    keywords: ["file", "watcher", "watch", "changes", "performance"],
-  },
-  {
-    id: "advanced-memory-limit",
-    tab: "advanced",
-    section: "Performance",
-    label: "Memory Limit",
-    description: "Maximum memory usage (MB)",
-    keywords: ["memory", "limit", "performance", "usage"],
-  },
-  {
-    id: "advanced-developer-mode",
-    tab: "advanced",
-    section: "Development",
-    label: "Developer Mode",
-    description: "Enable developer tools and debug features",
-    keywords: ["developer", "mode", "debug", "tools"],
-  },
-  {
-    id: "advanced-debug-logging",
-    tab: "advanced",
-    section: "Development",
-    label: "Debug Logging",
-    description: "Show detailed logs in console",
-    keywords: ["debug", "logging", "logs", "console"],
-  },
-  {
-    id: "advanced-auto-update-extensions",
-    tab: "advanced",
-    section: "Extensions",
-    label: "Auto Update Extensions",
-    description: "Automatically update installed extensions",
-    keywords: ["extensions", "auto", "update", "automatic"],
-  },
-  {
-    id: "advanced-extension-host",
-    tab: "advanced",
-    section: "Extensions",
-    label: "Extension Host",
-    description: "Enable extension host for third-party extensions",
-    keywords: ["extensions", "host", "third-party"],
-  },
-  {
-    id: "advanced-clear-cache",
-    tab: "advanced",
-    section: "Data",
-    label: "Clear Cache",
-    description: "Clear application cache and temporary files",
-    keywords: ["cache", "clear", "temporary", "files"],
-  },
   {
     id: "advanced-reset-settings",
     tab: "advanced",

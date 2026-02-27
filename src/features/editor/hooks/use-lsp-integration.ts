@@ -25,7 +25,6 @@ interface UseLspIntegrationOptions {
   cursorPosition: Position;
   editorRef: RefObject<HTMLDivElement | null> | RefObject<HTMLTextAreaElement>;
   fontSize: number;
-  lineNumbers: boolean;
 }
 
 /**
@@ -46,7 +45,6 @@ export const useLspIntegration = ({
   cursorPosition,
   editorRef,
   fontSize,
-  lineNumbers,
 }: UseLspIntegrationOptions) => {
   // Get LSP client instance (singleton)
   const lspClient = useMemo(() => LspClient.getInstance(), []);
@@ -64,7 +62,7 @@ export const useLspIntegration = ({
   const snippetCompletion = useSnippetCompletion(filePath);
 
   // Get layout dimensions for hover position calculations
-  const { gutterWidth, charWidth } = useEditorLayout();
+  const { charWidth } = useEditorLayout();
 
   // Use constant debounce for predictable completion behavior
   const completionTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -100,8 +98,6 @@ export const useLspIntegration = ({
     isLanguageSupported: (fp) => isFileSupported(fp),
     filePath: filePath || "",
     fontSize,
-    lineNumbers,
-    gutterWidth,
     charWidth,
   });
 
@@ -160,10 +156,12 @@ export const useLspIntegration = ({
     initLsp();
 
     return () => {
-      // Notify LSP about document close and clean up tracking
-      lspClient.notifyDocumentClose(filePath).catch((error) => {
-        console.error("LSP document close error:", error);
-      });
+      // Notify LSP about document close only if open was sent successfully.
+      if (openedDocumentsRef.current.has(filePath)) {
+        lspClient.notifyDocumentClose(filePath).catch((error) => {
+          console.error("LSP document close error:", error);
+        });
+      }
       documentVersionsRef.current.delete(filePath);
       openedDocumentsRef.current.delete(filePath);
     };

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Athas",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "identifier": "com.code.athas",
   "build": {
     "beforeDevCommand": "bun vite",
@@ -33,7 +33,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost; connect-src 'self' https://athas.dev https://*.athas.dev https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://*.githubusercontent.com; img-src 'self' asset: http://asset.localhost data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "csp": "default-src 'self' ipc: http://ipc.localhost; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 https://athas.dev https://*.athas.dev https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://*.githubusercontent.com; img-src 'self' asset: http://asset.localhost data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'",
       "capabilities": [
         "main-capability"
       ],

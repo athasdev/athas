@@ -21,6 +21,7 @@ interface InputLayerProps {
   tabSize: number;
   onScroll?: (e: React.UIEvent<HTMLTextAreaElement>) => void;
   bufferId?: string;
+  filePath?: string;
   showText?: boolean;
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
@@ -40,6 +41,7 @@ const InputLayerComponent = ({
   tabSize,
   onScroll,
   bufferId,
+  filePath,
   showText = false,
   textareaRef,
 }: InputLayerProps) => {
@@ -59,7 +61,7 @@ const InputLayerComponent = ({
     if (ref.current && ref.current.value !== content) {
       ref.current.value = content;
     }
-  }, [bufferId, content, ref]);
+  }, [bufferId, filePath, content, ref]);
 
   return (
     <textarea
@@ -101,6 +103,8 @@ InputLayerComponent.displayName = "InputLayer";
 export const InputLayer = memo(InputLayerComponent, (prev, next) => {
   return (
     prev.bufferId === next.bufferId &&
+    prev.filePath === next.filePath &&
+    prev.content === next.content &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&

@@ -49,7 +49,8 @@ export const defaultKeymaps: Keybinding[] = [
 
   // View Operations
   { key: "cmd+b", command: "workbench.toggleSidebar", source: "default" },
-  { key: "cmd+`", command: "workbench.toggleTerminal", source: "default" },
+  { key: "cmd+j", command: "workbench.toggleTerminal", source: "default" },
+  { key: "cmd+`", command: "workbench.toggleTerminalAlt", source: "default" },
   { key: "cmd+shift+j", command: "workbench.toggleDiagnostics", source: "default" },
   // Note: cmd+shift+p is handled by the global keyboard shortcuts to avoid race conditions with command context
   { key: "cmd+f", command: "workbench.showFind", source: "default", when: "editorFocus" },
@@ -63,8 +64,10 @@ export const defaultKeymaps: Keybinding[] = [
 
   // Navigation
   { key: "cmd+g", command: "editor.goToLine", source: "default", when: "editorFocus" },
-  { key: "ctrl+tab", command: "workbench.nextTab", source: "default" },
-  { key: "ctrl+shift+tab", command: "workbench.previousTab", source: "default" },
+  { key: "cmd+alt+right", command: "workbench.nextTab", source: "default" },
+  { key: "cmd+alt+left", command: "workbench.previousTab", source: "default" },
+  { key: "ctrl+tab", command: "workbench.nextTabCtrlTab", source: "default" },
+  { key: "ctrl+shift+tab", command: "workbench.previousTabCtrlTab", source: "default" },
   { key: "ctrl+pagedown", command: "workbench.nextTabAlt", source: "default" },
   { key: "ctrl+pageup", command: "workbench.previousTabAlt", source: "default" },
   { key: "cmd+1", command: "workbench.switchToTab1", source: "default" },

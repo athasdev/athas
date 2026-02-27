@@ -59,6 +59,7 @@ TODO.md
 
 # claude local settings
 .claude/settings.local.json
+src-tauri/.claude/settings.local.json
 
 # Tauri gen files
 src-tauri/gen/
@@ -77,3 +78,6 @@ src/extensions/bundled/*/grammars/*.wasm
 
 # Benchmark files
 benchmark_*.md
+
+# local codex settings
+src-tauri/.claude/settings.local.json

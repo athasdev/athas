@@ -1,0 +1,87 @@
+---
+title: AI Agents
+description: Use CLI-based AI coding agents like Claude Code and Codex
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { Steps, Step } from "fumadocs-ui/components/steps";
+
+AI Agents are powerful coding assistants that can read and write files, run commands, and help you build software.
+
+## Supported Agents
+
+Athas supports several AI coding agents:
+
+| Agent | Description |
+|-------|-------------|
+| **Claude Code** | Anthropic's coding agent |
+| **Gemini CLI** | Google's coding agent |
+| **Codex CLI** | OpenAI's coding agent |
+| **OpenCode** | SST's open-source agent |
+| **Kimi CLI** | Moonshot's coding agent |
+| **Qwen Code** | Alibaba's coding agent |
+
+## Getting Started
+
+<Steps>
+  <Step>
+    Install your preferred agent:
+
+    | Agent | Install command |
+    |-------|-----------------|
+    | Claude Code | `npm install -g @anthropic-ai/claude-code` |
+    | Gemini CLI | `npm install -g @anthropic-ai/gemini-cli` |
+    | Codex CLI | `npm install -g @openai/codex` |
+    | OpenCode | `go install github.com/sst/opencode@latest` |
+    | Kimi CLI | `npm install -g @anthropic-ai/kimi-cli` |
+    | Qwen Code | `pip install qwen-code` |
+  </Step>
+  <Step>
+    Open the AI panel and select the agent from the dropdown
+  </Step>
+  <Step>
+    Start chatting - the agent will automatically start when you send a message
+  </Step>
+</Steps>
+
+<Callout type="info">
+  Agents are detected automatically. If an agent appears grayed out, it means it's not installed on your system.
+</Callout>
+
+## What Agents Can Do
+
+Unlike regular AI chat, agents can:
+
+- **Read and write files** in your project
+- **Run terminal commands** to build, test, or install packages
+- **Search your codebase** to understand context
+- **Make multi-file changes** in a single conversation
+
+## Permissions
+
+When an agent wants to perform an action (like editing a file or running a command), you'll see a permission prompt:
+
+- Click **Allow** to approve the action
+- Click **Deny** to reject it
+
+This keeps you in control of what changes are made to your project.
+
+## Slash Commands
+
+Some agents support slash commands for quick actions. Type `/` in the chat input to see available commands like:
+
+- `/web` - Search the web
+- `/compact` - Get concise responses
+- `/init` - Initialize a project
+
+Available commands depend on which agent you're using.
+
+## Switching Modes
+
+Some agents (like Claude Code) support different modes:
+
+- **Code Mode** - Full access to read, write, and execute
+- **Plan Mode** - Planning only, no file changes
+- **Ask Mode** - Questions only, requires approval for actions
+
+Switch modes using the mode selector in the chat header when available.

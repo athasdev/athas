@@ -34,9 +34,6 @@
       "allow": [
         {
           "path": "$HOME/**"
-        },
-        {
-          "path": "/**"
         }
       ],
       "requireLiteralLeadingDot": false
@@ -54,6 +51,12 @@
       "allow": [
         {
           "url": "https://athas.dev/**"
+        },
+        {
+          "url": "http://localhost:3000/**"
+        },
+        {
+          "url": "http://127.0.0.1:3000/**"
         },
         {
           "url": "https://generativelanguage.googleapis.com/**"
@@ -74,59 +77,6 @@
       "allow": [
         {
           "validator": "^(https?://|file://|mailto:).*"
-        }
-      ]
-    },
-    {
-      "identifier": "shell:allow-execute",
-      "allow": [
-        {
-          "name": "sh",
-          "cmd": "sh",
-          "args": [
-            "-c",
-            {
-              "validator": ".*"
-            }
-          ]
-        },
-        {
-          "name": "gsettings",
-          "cmd": "gsettings",
-          "args": [
-            "get",
-            "org.gnome.desktop.interface",
-            {
-              "validator": "(gtk-theme|color-scheme)"
-            }
-          ]
-        },
-        {
-          "name": "kreadconfig5",
-          "cmd": "kreadconfig5",
-          "args": [
-            "--file",
-            "kdeglobals",
-            "--group",
-            "General",
-            "--key",
-            "ColorScheme"
-          ]
-        },
-        {
-          "name": "defaults",
-          "cmd": "defaults",
-          "args": ["read", "-g", "AppleInterfaceStyle"]
-        },
-        {
-          "name": "reg",
-          "cmd": "reg",
-          "args": [
-            "query",
-            "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
-            "/v",
-            "AppsUseLightTheme"
-          ]
         }
       ]
     },

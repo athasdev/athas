@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import AIChat from "@/features/ai/components/chat/ai-chat";
-import GitHubCopilotSettings from "@/features/ai/components/github-copilot-settings";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import CommandBar from "@/features/command-bar/components/command-bar";
 import CommandPalette from "@/features/command-palette/components/command-palette";
@@ -159,7 +158,7 @@ export function MainLayout() {
   }, [switchToProject, setIsSwitchingProject]);
 
   return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden bg-primary-bg">
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-secondary-bg">
       {/* Drag-and-drop overlay */}
       {isDraggingOver && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-primary-bg/90 backdrop-blur-sm">
@@ -172,7 +171,6 @@ export function MainLayout() {
       )}
 
       <CustomTitleBarWithSettings />
-      <div className="h-px shrink-0 bg-border" />
 
       <div className="z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
@@ -194,11 +192,13 @@ export function MainLayout() {
           )}
 
           {/* Main content area with split view */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="relative min-h-0 flex-1 overflow-hidden">
-              <SplitViewRoot />
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col px-2 py-2">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-primary-bg">
+              <div className="relative min-h-0 flex-1 overflow-hidden">
+                <SplitViewRoot />
+              </div>
+              <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
             </div>
-            <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
           </div>
 
           {/* Right sidebar or AI chat based on settings */}
@@ -226,7 +226,6 @@ export function MainLayout() {
       <VimCommandBar />
       <VimSearchBar />
       <CommandPalette />
-      <GitHubCopilotSettings />
       <ProjectNameMenu />
       <GlobalNewTabMenu />
 

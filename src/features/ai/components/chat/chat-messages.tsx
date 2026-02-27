@@ -20,8 +20,6 @@ const getAgentLabel = (agentId: string | undefined): string => {
       return "Gemini";
     case "codex-cli":
       return "Codex";
-    case "kairo-code":
-      return "Kairo";
     case "custom":
       return "API";
     default:
@@ -31,10 +29,14 @@ const getAgentLabel = (agentId: string | undefined): string => {
 
 interface ChatMessagesProps {
   onApplyCode?: (code: string, language?: string) => void;
+  acpEvents?: Array<{ id: string; text: string }>;
 }
 
 export const ChatMessages = memo(
-  forwardRef<HTMLDivElement, ChatMessagesProps>(function ChatMessages({ onApplyCode }, ref) {
+  forwardRef<HTMLDivElement, ChatMessagesProps>(function ChatMessages(
+    { onApplyCode, acpEvents },
+    ref,
+  ) {
     const { currentChatId, chats, switchToChat } = useAIChatStore(
       useShallow((state) => ({
         currentChatId: state.currentChatId,
@@ -66,17 +68,17 @@ export const ChatMessages = memo(
 
       return (
         <div className="flex h-full flex-col items-center justify-center p-4">
-          <div className="w-full max-w-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-primary-bg/90 p-3">
             <div className="mb-2 flex items-center gap-1.5 text-text-lighter text-xs">
               <MessageSquare size={12} />
               <span>Recent Chats</span>
             </div>
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {recentChats.map((chat) => (
                 <button
                   key={chat.id}
                   onClick={() => switchToChat(chat.id)}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-hover"
+                  className="flex w-full items-center gap-2 rounded-xl border border-transparent px-2 py-2 text-left transition-colors hover:border-border hover:bg-hover"
                 >
                   <span className="min-w-0 flex-1 truncate text-text text-xs">{chat.title}</span>
                   <span className="shrink-0 text-[10px] text-text-lighter">
@@ -112,8 +114,12 @@ export const ChatMessages = memo(
           const isPlanMessage = message.role === "assistant" && hasPlanBlock(message.content);
 
           const messageClassName = cn(
-            isToolOnlyMessage ? (previousMessageIsToolOnly ? "px-3" : "px-3 pt-1") : "p-3",
-            isPlanMessage && "border-l-2 border-accent/40",
+            isToolOnlyMessage
+              ? previousMessageIsToolOnly
+                ? "px-4 py-1"
+                : "px-4 pt-2 pb-1"
+              : "px-4 py-2",
+            isPlanMessage && "pt-2",
           );
 
           return (
@@ -126,6 +132,17 @@ export const ChatMessages = memo(
             </div>
           );
         })}
+        {acpEvents && acpEvents.length > 0 && (
+          <div className="px-4 pb-2">
+            <div className="rounded-xl border border-border bg-primary-bg/80 px-2.5 py-1.5 font-mono text-[11px] text-text-lighter">
+              {acpEvents.map((event) => (
+                <div key={event.id} className="truncate">
+                  {event.text}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div ref={ref} />
       </>
     );

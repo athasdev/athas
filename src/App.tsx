@@ -1,13 +1,15 @@
 import { enableMapSet } from "immer";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { useLspInitialization } from "@/features/editor/hooks/use-lsp-initialization";
 import { useKeymapContext } from "@/features/keymaps/hooks/use-keymap-context";
 import { useKeymaps } from "@/features/keymaps/hooks/use-keymaps";
 import { useRemoteConnection } from "@/features/remote/hooks/use-remote-connection";
 import { useRemoteWindowClose } from "@/features/remote/hooks/use-remote-window-close";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
-import UpdateDialog from "@/features/settings/components/update-dialog";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
+
+const UpdateDialog = lazy(() => import("@/features/settings/components/update-dialog"));
+
 import { useContextMenuPrevention } from "@/features/window/hooks/use-context-menu-prevention";
 import { useFontLoading } from "@/features/window/hooks/use-font-loading";
 import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
@@ -122,17 +124,18 @@ function App() {
         <ZoomIndicator />
         <ToastContainer />
 
-        {/* Update Dialog */}
         {showUpdateDialog && updateInfo && (
-          <UpdateDialog
-            updateInfo={updateInfo}
-            downloadProgress={downloadProgress}
-            downloading={downloading}
-            installing={installing}
-            error={updateError}
-            onDownload={downloadUpdate}
-            onDismiss={dismissUpdate}
-          />
+          <Suspense fallback={null}>
+            <UpdateDialog
+              updateInfo={updateInfo}
+              downloadProgress={downloadProgress}
+              downloading={downloading}
+              installing={installing}
+              error={updateError}
+              onDownload={downloadUpdate}
+              onDismiss={dismissUpdate}
+            />
+          </Suspense>
         )}
       </div>
     </>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileSearchResult } from "@/features/global-search/lib/rust-api/search";
@@ -12,6 +12,7 @@ export const useContentSearch = (isVisible: boolean) => {
   const [results, setResults] = useState<FileSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   const performSearch = useCallback(async () => {
     if (!debouncedQuery || !rootFolderPath) {
@@ -19,6 +20,7 @@ export const useContentSearch = (isVisible: boolean) => {
       return;
     }
 
+    const currentRequestId = ++requestIdRef.current;
     setIsSearching(true);
     setError(null);
 
@@ -30,13 +32,22 @@ export const useContentSearch = (isVisible: boolean) => {
         max_results: 100,
       });
 
+      if (currentRequestId !== requestIdRef.current) {
+        return;
+      }
+
       setResults(searchResults);
     } catch (err) {
+      if (currentRequestId !== requestIdRef.current) {
+        return;
+      }
       console.error("Search error:", err);
       setError(`Search failed: ${err}`);
       setResults([]);
     } finally {
-      setIsSearching(false);
+      if (currentRequestId === requestIdRef.current) {
+        setIsSearching(false);
+      }
     }
   }, [debouncedQuery, rootFolderPath]);
 

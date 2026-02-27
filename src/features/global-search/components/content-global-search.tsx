@@ -1,10 +1,12 @@
 import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDebouncedCallback } from "use-debounce";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
 import { CommandInput } from "@/ui/command";
 import { cn } from "@/utils/cn";
+import { PREVIEW_DEBOUNCE_DELAY } from "../constants/limits";
 import { useContentSearch } from "../hooks/use-content-search";
 import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
 import { FilePreview } from "./file-preview";
@@ -23,25 +25,19 @@ const ContentGlobalSearch = () => {
   const { query, setQuery, debouncedQuery, results, isSearching, error, rootFolderPath } =
     useContentSearch(isVisible);
 
+  const debouncedSetPreview = useDebouncedCallback(
+    (path: string | null) => setPreviewFilePath(path),
+    PREVIEW_DEBOUNCE_DELAY,
+  );
+
   const onClose = useCallback(() => {
     setIsVisible(false);
   }, [setIsVisible]);
 
   const handleFileClick = useCallback(
     (filePath: string, lineNumber?: number) => {
-      handleFileSelect(filePath, false);
       onClose();
-
-      // If line number is provided, jump to that line
-      if (lineNumber) {
-        setTimeout(() => {
-          window.dispatchEvent(
-            new CustomEvent("menu-go-to-line", {
-              detail: { line: lineNumber },
-            }),
-          );
-        }, 100);
-      }
+      void handleFileSelect(filePath, false, lineNumber);
     },
     [handleFileSelect, onClose],
   );
@@ -107,10 +103,10 @@ const ContentGlobalSearch = () => {
     if (commandBarPreview && flattenedMatches.length > 0 && selectedIndex >= 0) {
       const selectedMatch = flattenedMatches[selectedIndex];
       if (selectedMatch) {
-        setPreviewFilePath(selectedMatch.filePath);
+        debouncedSetPreview(selectedMatch.filePath);
       }
     }
-  }, [selectedIndex, flattenedMatches, commandBarPreview]);
+  }, [selectedIndex, flattenedMatches, commandBarPreview, debouncedSetPreview]);
 
   // Focus input when visible
   useEffect(() => {
@@ -231,7 +227,7 @@ const ContentGlobalSearch = () => {
                     match={item.match}
                     onClick={() => handleFileClick(item.filePath, item.match.line_number)}
                     onHover={
-                      commandBarPreview ? () => setPreviewFilePath(item.filePath) : undefined
+                      commandBarPreview ? () => debouncedSetPreview(item.filePath) : undefined
                     }
                   />
                 ))}

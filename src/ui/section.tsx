@@ -10,12 +10,12 @@ interface SectionProps {
 
 export default function Section({ title, description, children, className }: SectionProps) {
   return (
-    <div className={cn("space-y-3", className)}>
-      <div>
-        <h4 className="font-medium text-sm text-text">{title}</h4>
+    <div className={cn("rounded-2xl border border-border/70 bg-transparent px-4 py-3", className)}>
+      <div className="mb-3">
+        <h4 className="font-semibold text-sm text-text">{title}</h4>
         {description && <p className="text-text-lighter text-xs">{description}</p>}
       </div>
-      <div className="space-y-2">{children}</div>
+      <div className="space-y-2.5">{children}</div>
     </div>
   );
 }
@@ -29,7 +29,7 @@ interface SettingRowProps {
 
 export function SettingRow({ label, description, children, className }: SettingRowProps) {
   return (
-    <div className={cn("flex items-center justify-between gap-4", className)}>
+    <div className={cn("flex items-center justify-between gap-4 px-1 py-2.5", className)}>
       <div className="min-w-0 flex-1">
         <div className="font-medium text-text text-xs">{label}</div>
         {description && <div className="text-text-lighter text-xs">{description}</div>}

@@ -10,7 +10,7 @@ export const ToastContainer = () => {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="relative flex min-w-[280px] max-w-[380px] flex-col gap-2 rounded border border-border bg-primary-bg/95 px-3 py-2 shadow-lg backdrop-blur-sm"
+          className="relative flex min-w-[280px] max-w-[380px] flex-col gap-2 rounded-xl border border-border bg-primary-bg/95 px-3 py-2.5 shadow-xl backdrop-blur-sm"
         >
           <div className="flex items-start gap-2">
             {toast.type === "error" && (

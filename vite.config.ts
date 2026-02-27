@@ -9,11 +9,11 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
   plugins: [
-    react(),
-    tailwindcss(),
     codeInspectorPlugin({
       bundler: "vite",
     }),
+    react(),
+    tailwindcss(),
   ],
   resolve: {
     alias: {
@@ -40,12 +40,6 @@ export default defineConfig(async () => ({
     watch: {
       // 3. tell vite to ignore watching `src-tauri` and `interceptor`
       ignored: ["**/src-tauri/**", "**/interceptor/**"],
-    },
-    proxy: {
-      "/extensions": {
-        target: "http://localhost:3001",
-        changeOrigin: true,
-      },
     },
   },
 }));

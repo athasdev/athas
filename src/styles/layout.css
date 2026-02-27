@@ -1,7 +1,7 @@
 .buffer-container {
   position: relative;
   z-index: 10;
-  background: #ffffff;
+  background: var(--primary-bg);
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   transition: box-shadow 0.2s ease;
@@ -35,7 +35,7 @@
 }
 
 .buffer {
-  background: #ffffff;
+  background: var(--primary-bg);
   border-radius: 8px;
   overflow: hidden;
   position: relative;
@@ -77,7 +77,7 @@
 .pane {
   background: var(--color-secondary-bg);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: 8px;
   position: relative;
   z-index: 5;
 }
@@ -85,7 +85,7 @@
 .pane-header {
   background: var(--color-secondary-bg);
   border-bottom: 1px solid var(--color-border);
-  border-radius: 6px 6px 0 0;
+  border-radius: 8px 8px 0 0;
   padding: 8px 12px;
   font-size: 12px;
   color: var(--color-text-light);

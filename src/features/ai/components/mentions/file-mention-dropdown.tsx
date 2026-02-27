@@ -249,7 +249,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       ref={dropdownRef}
       className="scrollbar-hidden fixed select-none overflow-y-auto rounded-md border border-border bg-secondary-bg shadow-lg"
       style={{
-        zIndex: EDITOR_CONSTANTS.Z_INDEX.DROPDOWN,
+        zIndex: 10040,
         maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
         width: "320px",
         left: `${adjustedPosition.left}px`,

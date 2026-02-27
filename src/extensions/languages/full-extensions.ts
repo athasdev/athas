@@ -75,28 +75,28 @@ export const fullExtensions: ExtensionManifest[] = [
       },
     ],
     installation: {
-      downloadUrl: `${CDN_BASE_URL}/packages/php/php-darwin-arm64.tar.gz`,
+      downloadUrl: `${CDN_BASE_URL}/php/php-darwin-arm64.tar.gz`,
       size: 52681335,
       checksum: "5c21da47f7c17cfa798fa2cfd0df905992824f520e8d9930640fcfa5e44ece4d",
       minEditorVersion: "0.2.0",
       platformArch: {
         "darwin-arm64": {
-          downloadUrl: `${CDN_BASE_URL}/packages/php/php-darwin-arm64.tar.gz`,
+          downloadUrl: `${CDN_BASE_URL}/php/php-darwin-arm64.tar.gz`,
           size: 52681335,
           checksum: "5c21da47f7c17cfa798fa2cfd0df905992824f520e8d9930640fcfa5e44ece4d",
         },
         "darwin-x64": {
-          downloadUrl: `${CDN_BASE_URL}/packages/php/php-darwin-x64.tar.gz`,
+          downloadUrl: `${CDN_BASE_URL}/php/php-darwin-x64.tar.gz`,
           size: 56850520,
           checksum: "6fa06325af8518b346235f7c86d887a88d04c970398657ac8c8c21482fcb180c",
         },
         "linux-x64": {
-          downloadUrl: `${CDN_BASE_URL}/packages/php/php-linux-x64.tar.gz`,
+          downloadUrl: `${CDN_BASE_URL}/php/php-linux-x64.tar.gz`,
           size: 55510926,
           checksum: "a29aa4bbb04f623bc22826a38d86ccb9590d1f9bf3ad7ddbc05f79522d8f835a",
         },
         "win32-x64": {
-          downloadUrl: `${CDN_BASE_URL}/packages/php/php-win32-x64.tar.gz`,
+          downloadUrl: `${CDN_BASE_URL}/php/php-win32-x64.tar.gz`,
           size: 52036166,
           checksum: "40f2d64fb15330bb950fbc59b44c74dcc74368abafcd8ff502e18b956a478cc5",
         },

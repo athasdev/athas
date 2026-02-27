@@ -29,6 +29,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         currentChatId: null,
         selectedAgentId: "custom" as AgentType, // Default to custom (API-based)
         input: "",
+        pastedImages: [],
         isTyping: false,
         streamingMessageId: null,
         selectedBufferIds: new Set<string>(),
@@ -139,6 +140,18 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         setInput: (input) =>
           set((state) => {
             state.input = input;
+          }),
+        addPastedImage: (image) =>
+          set((state) => {
+            state.pastedImages = [...state.pastedImages, image];
+          }),
+        removePastedImage: (imageId) =>
+          set((state) => {
+            state.pastedImages = state.pastedImages.filter((img) => img.id !== imageId);
+          }),
+        clearPastedImages: () =>
+          set((state) => {
+            state.pastedImages = [];
           }),
         setIsTyping: (isTyping) =>
           set((state) => {
@@ -768,19 +781,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         },
 
         applyDefaultSettings: () => {
-          // Import settings store dynamically to avoid circular dependency
-          import("@/features/settings/store").then(({ useSettingsStore }) => {
-            const settings = useSettingsStore.getState().settings;
-            set((state) => {
-              // Apply default output style if not already set or different
-              if (
-                settings.aiDefaultOutputStyle &&
-                settings.aiDefaultOutputStyle !== state.outputStyle
-              ) {
-                state.outputStyle = settings.aiDefaultOutputStyle;
-              }
-            });
-          });
+          // No-op: settings that were applied here have been removed
         },
 
         // Helper getters
@@ -796,21 +797,26 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         },
       }),
       {
-        name: "athas-ai-chat-settings-v6",
-        version: 2,
+        name: "athas-ai-chat-settings-v7",
+        version: 3,
         partialize: (state) => ({
           mode: state.mode,
           outputStyle: state.outputStyle,
           selectedAgentId: state.selectedAgentId,
+          sessionModeState: state.sessionModeState,
         }),
         merge: (persistedState, currentState) =>
           produce(currentState, (draft) => {
-            // Only merge mode, outputStyle, and selectedAgentId from localStorage
+            // Only merge mode, outputStyle, selectedAgentId, and sessionModeState from localStorage
             // Chats are loaded from SQLite separately
             if (persistedState) {
               draft.mode = (persistedState as any).mode || "chat";
               draft.outputStyle = (persistedState as any).outputStyle || "default";
               draft.selectedAgentId = (persistedState as any).selectedAgentId || "custom";
+              draft.sessionModeState = (persistedState as any).sessionModeState || {
+                currentModeId: null,
+                availableModes: [],
+              };
             }
           }),
       },

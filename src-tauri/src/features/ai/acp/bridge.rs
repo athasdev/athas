@@ -3,9 +3,11 @@ use super::{
    config::AgentRegistry,
    types::{AcpAgentStatus, AcpEvent, AgentConfig, SessionMode, SessionModeState, StopReason},
 };
+use crate::terminal::TerminalManager;
 use acp::Agent;
 use agent_client_protocol as acp;
 use anyhow::{Context, Result, bail};
+use serde_json::json;
 use std::{process::Stdio, sync::Arc, thread};
 use tauri::{AppHandle, Emitter};
 use tokio::{
@@ -24,6 +26,7 @@ enum AcpCommand {
       config: Box<AgentConfig>,
       env_vars: std::collections::HashMap<String, String>,
       app_handle: AppHandle,
+      terminal_manager: Arc<TerminalManager>,
       response_tx: oneshot::Sender<Result<(AcpAgentStatus, mpsc::Sender<PermissionResponse>)>>,
    },
    SendPrompt {
@@ -72,6 +75,7 @@ impl AcpWorker {
       workspace_path: Option<String>,
       config: AgentConfig,
       app_handle: AppHandle,
+      terminal_manager: Arc<TerminalManager>,
    ) -> Result<(AcpAgentStatus, mpsc::Sender<PermissionResponse>)> {
       // Stop any existing agent first
       self.stop().await?;
@@ -130,8 +134,8 @@ impl AcpWorker {
       // Create ACP client
       let client = Arc::new(AthasAcpClient::new(
          app_handle.clone(),
-         agent_id.clone(),
          workspace_path.clone(),
+         terminal_manager,
       ));
       let permission_sender = client.permission_sender();
 
@@ -155,8 +159,37 @@ impl AcpWorker {
       });
 
       // Initialize connection with timeout
+      let mut client_meta = acp::Meta::new();
+      client_meta.insert(
+         "athas".to_string(),
+         json!({
+            "extensionMethods": [
+               {
+                  "name": "athas.openWebViewer",
+                  "description": "Open a URL in Athas web viewer",
+                  "params": { "url": "string" }
+               },
+               {
+                  "name": "athas.openTerminal",
+                  "description": "Open a terminal tab in Athas",
+                  "params": { "command": "string|null" }
+               }
+            ],
+            "notes": "Call these via ACP extension methods, not shell commands."
+         }),
+      );
+
+      let client_capabilities = acp::ClientCapabilities::new()
+         .fs(
+            acp::FileSystemCapability::new()
+               .read_text_file(true)
+               .write_text_file(true),
+         )
+         .terminal(true)
+         .meta(client_meta);
+
       let init_request = acp::InitializeRequest::new(acp::ProtocolVersion::LATEST)
-         .client_capabilities(acp::ClientCapabilities::default())
+         .client_capabilities(client_capabilities)
          .client_info(acp::Implementation::new("Athas", env!("CARGO_PKG_VERSION")));
 
       log::info!("Sending ACP initialize request...");
@@ -268,18 +301,50 @@ impl AcpWorker {
    }
 
    async fn send_prompt(&self, prompt: &str) -> Result<()> {
-      let connection = self.connection.as_ref().context("No active connection")?;
-      let session_id = self.session_id.as_ref().context("No active session")?;
+      let connection = self
+         .connection
+         .as_ref()
+         .context("No active connection")?
+         .clone();
+      let session_id = self
+         .session_id
+         .as_ref()
+         .context("No active session")?
+         .clone();
       let app_handle = self
          .app_handle
          .as_ref()
-         .context("No app handle available")?;
+         .context("No app handle available")?
+         .clone();
+      let prompt = prompt.to_string();
 
+      tokio::task::spawn_local(async move {
+         if let Err(err) =
+            Self::run_prompt(connection, session_id.clone(), app_handle.clone(), prompt).await
+         {
+            log::error!("Failed to run ACP prompt: {}", err);
+            let _ = app_handle.emit(
+               "acp-event",
+               AcpEvent::Error {
+                  session_id: Some(session_id.to_string()),
+                  error: format!("Failed to run prompt: {}", err),
+               },
+            );
+         }
+      });
+
+      Ok(())
+   }
+
+   async fn run_prompt(
+      connection: Arc<acp::ClientSideConnection>,
+      session_id: acp::SessionId,
+      app_handle: AppHandle,
+      prompt: String,
+   ) -> Result<()> {
       let prompt_request = acp::PromptRequest::new(
          session_id.clone(),
-         vec![acp::ContentBlock::Text(acp::TextContent::new(
-            prompt.to_string(),
-         ))],
+         vec![acp::ContentBlock::Text(acp::TextContent::new(prompt))],
       );
 
       let response = connection
@@ -363,16 +428,18 @@ impl AcpWorker {
 }
 
 /// Manages ACP agent connections via a dedicated worker thread
+#[derive(Clone)]
 pub struct AcpAgentBridge {
    app_handle: AppHandle,
    registry: AgentRegistry,
    command_tx: mpsc::Sender<AcpCommand>,
    status: Arc<Mutex<AcpAgentStatus>>,
    permission_tx: Arc<Mutex<Option<mpsc::Sender<PermissionResponse>>>>,
+   terminal_manager: Arc<TerminalManager>,
 }
 
 impl AcpAgentBridge {
-   pub fn new(app_handle: AppHandle) -> Self {
+   pub fn new(app_handle: AppHandle, terminal_manager: Arc<TerminalManager>) -> Self {
       let mut registry = AgentRegistry::new();
       registry.detect_installed();
 
@@ -396,6 +463,7 @@ impl AcpAgentBridge {
          command_tx,
          status,
          permission_tx: Arc::new(Mutex::new(None)),
+         terminal_manager,
       }
    }
 
@@ -413,6 +481,7 @@ impl AcpAgentBridge {
                config,
                env_vars,
                app_handle,
+               terminal_manager,
                response_tx,
             } => {
                let mut config = *config;
@@ -420,7 +489,13 @@ impl AcpAgentBridge {
                   config.env_vars.insert(key, value);
                }
                let result = worker
-                  .initialize(agent_id, workspace_path, config, app_handle)
+                  .initialize(
+                     agent_id,
+                     workspace_path,
+                     config,
+                     app_handle,
+                     terminal_manager,
+                  )
                   .await;
 
                // Update shared status
@@ -472,7 +547,7 @@ impl AcpAgentBridge {
 
    /// Start an ACP agent by ID
    pub async fn start_agent(
-      &mut self,
+      &self,
       agent_id: &str,
       workspace_path: Option<String>,
       env_vars: std::collections::HashMap<String, String>,
@@ -498,6 +573,7 @@ impl AcpAgentBridge {
             config: Box::new(config),
             env_vars,
             app_handle: self.app_handle.clone(),
+            terminal_manager: self.terminal_manager.clone(),
             response_tx,
          })
          .await
@@ -555,7 +631,15 @@ impl AcpAgentBridge {
    }
 
    /// Stop the active agent
-   pub async fn stop_agent(&mut self) -> Result<()> {
+   pub async fn stop_agent(&self) -> Result<()> {
+      // Get current session ID before stopping
+      let current_status = self.status.lock().await.clone();
+      let session_id = if current_status.running {
+         Some(current_status.agent_id.clone())
+      } else {
+         None
+      };
+
       let (response_tx, response_rx) = oneshot::channel();
 
       self
@@ -570,6 +654,13 @@ impl AcpAgentBridge {
       {
          let mut tx = self.permission_tx.lock().await;
          *tx = None;
+      }
+
+      // Emit SessionComplete before StatusChanged
+      if let Some(sid) = session_id {
+         let _ = self
+            .app_handle
+            .emit("acp-event", AcpEvent::SessionComplete { session_id: sid });
       }
 
       // Emit status change

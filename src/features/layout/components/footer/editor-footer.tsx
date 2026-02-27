@@ -20,6 +20,7 @@ import GitBranchManager from "@/features/git/components/branch-manager";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
+import { cn } from "@/utils/cn";
 import { useUIState } from "../../../../stores/ui-state-store";
 import { getFilenameFromPath } from "../../../file-system/controllers/file-utils";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
@@ -178,7 +179,11 @@ const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => 
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-center rounded p-1 transition-colors ${config.color} ${config.bgHover}`}
+        className={cn(
+          "flex h-6 w-6 items-center justify-center rounded-full border border-transparent p-0 transition-colors",
+          config.color,
+          config.bgHover,
+        )}
         style={{ minHeight: 0, minWidth: 0 }}
         title={config.title}
       >
@@ -206,10 +211,13 @@ const EditorFooter = () => {
     (total, diagnostics) => total + diagnostics.length,
     0,
   );
+  const footerPillClass =
+    "flex h-6 items-center gap-0.5 rounded-full border border-transparent px-2 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text";
+  const footerActiveClass = "border-border bg-selected text-text";
 
   return (
-    <div className="relative z-20 flex min-h-8 shrink-0 items-center justify-between border-border border-t bg-secondary-bg px-2 py-1">
-      <div className="ui-font flex items-center gap-0.5 text-text-lighter text-xs">
+    <div className="relative z-20 flex min-h-9 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
+      <div className="ui-font flex items-center gap-1 text-text-lighter text-xs">
         {/* Git branch manager */}
         {rootFolderPath && gitStatus?.branch && (
           <GitBranchManager
@@ -239,11 +247,12 @@ const EditorFooter = () => {
                 }, 100);
               }
             }}
-            className={`flex items-center gap-0.5 rounded px-1 py-0.5 transition-colors ${
-              uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"
-                ? "bg-selected text-text"
-                : "text-text-lighter hover:bg-hover"
-            }`}
+            className={cn(
+              footerPillClass,
+              uiState.isBottomPaneVisible &&
+                uiState.bottomPaneActiveTab === "terminal" &&
+                footerActiveClass,
+            )}
             style={{ minHeight: 0, minWidth: 0 }}
             title="Toggle Terminal"
           >
@@ -260,13 +269,15 @@ const EditorFooter = () => {
                 !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "diagnostics";
               uiState.setIsBottomPaneVisible(showingDiagnostics);
             }}
-            className={`flex items-center gap-0.5 rounded px-1 py-0.5 transition-colors ${
-              uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"
-                ? "bg-selected text-text"
-                : diagnosticsCount > 0
-                  ? "text-warning hover:bg-hover"
-                  : "text-text-lighter hover:bg-hover"
-            }`}
+            className={cn(
+              footerPillClass,
+              uiState.isBottomPaneVisible &&
+                uiState.bottomPaneActiveTab === "diagnostics" &&
+                footerActiveClass,
+              !(uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics") &&
+                diagnosticsCount > 0 &&
+                "text-warning",
+            )}
             style={{ minHeight: 0, minWidth: 0 }}
             title={
               diagnosticsCount > 0
@@ -292,11 +303,12 @@ const EditorFooter = () => {
           <button
             onClick={downloadAndInstall}
             disabled={downloading || installing}
-            className={`flex items-center gap-0.5 rounded px-1 py-0.5 transition-colors ${
+            className={cn(
+              footerPillClass,
               downloading || installing
-                ? "cursor-not-allowed text-text-lighter"
-                : "text-blue-400 hover:bg-hover hover:text-blue-300"
-            }`}
+                ? "cursor-not-allowed border-transparent text-text-lighter"
+                : "text-blue-400 hover:text-blue-300",
+            )}
             style={{ minHeight: 0, minWidth: 0 }}
             title={
               downloading
@@ -324,11 +336,12 @@ const EditorFooter = () => {
           onClick={() => {
             updateSetting("isAIChatVisible", !settings.isAIChatVisible);
           }}
-          className={`flex items-center justify-center rounded px-1 py-0.5 transition-colors ${
+          className={cn(
+            "flex h-6 items-center justify-center rounded-full border border-transparent px-2 transition-colors",
             settings.isAIChatVisible
-              ? "bg-selected text-text"
-              : "text-text-lighter hover:bg-hover hover:text-text"
-          }`}
+              ? "border-border bg-selected text-text"
+              : "text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text",
+          )}
           style={{ minHeight: 0, minWidth: 0 }}
           title="Toggle AI Chat"
         >
@@ -338,7 +351,7 @@ const EditorFooter = () => {
         {/* Settings button */}
         <button
           onClick={() => uiState.setIsSettingsDialogVisible(true)}
-          className="flex items-center justify-center rounded px-1 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+          className="flex h-6 items-center justify-center rounded-full border border-transparent px-2 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
           style={{ minHeight: 0, minWidth: 0 }}
           title="Settings"
         >

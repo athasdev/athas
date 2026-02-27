@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { buildContextPrompt } from "./context-builder";
 import {
   getValidKairoAccessToken,
@@ -16,7 +17,7 @@ import type { ContextInfo } from "./types";
 interface AcpHandlers {
   onChunk: (chunk: string) => void;
   onComplete: () => void;
-  onError: (error: string) => void;
+  onError: (error: string, canReconnect?: boolean) => void;
   onNewMessage?: () => void;
   onToolUse?: (
     toolName: string,
@@ -27,6 +28,8 @@ interface AcpHandlers {
   onToolComplete?: (toolName: string, event?: Extract<AcpEvent, { type: "tool_complete" }>) => void;
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
   onEvent?: (event: AcpEvent) => void;
+  onImageChunk?: (data: string, mediaType: string) => void;
+  onResourceChunk?: (uri: string, name: string | null) => void;
 }
 
 interface AcpListeners {
@@ -47,6 +50,9 @@ export class AcpStreamHandler {
   private sessionComplete = false;
   private pendingNewMessage = false;
   private cancelled = false;
+  private wasRunning = false;
+  private lastRawTextChunk: string | null = null;
+  private accumulatedText = "";
 
   constructor(
     private agentId: string,
@@ -95,8 +101,12 @@ export class AcpStreamHandler {
           throw new Error(`${this.agentId} failed to start`);
         }
 
+        this.wasRunning = true;
+
         // Wait for initialization
         await new Promise((resolve) => setTimeout(resolve, 1000));
+      } else {
+        this.wasRunning = true;
       }
     } catch (error) {
       throw new Error(`${this.agentId} is currently unavailable: ${error}`);
@@ -212,8 +222,7 @@ Detailed step description with specific files/commands.
         break;
 
       case "status_changed":
-        // Status changes are informational
-        console.log("Agent status changed:", event.status);
+        this.handleStatusChanged(event);
         break;
 
       case "session_mode_update":
@@ -231,6 +240,10 @@ Detailed step description with specific files/commands.
 
       case "prompt_complete":
         this.handlePromptComplete(event);
+        break;
+
+      case "ui_action":
+        this.handleUiAction(event);
         break;
     }
   }
@@ -261,20 +274,97 @@ Detailed step description with specific files/commands.
     useAIChatStore.getState().setCurrentModeId(event.currentModeId);
   }
 
-  private handleContentChunk(event: Extract<AcpEvent, { type: "content_chunk" }>): void {
-    if (event.content.type === "text") {
-      if (this.pendingNewMessage && this.handlers.onNewMessage) {
-        this.handlers.onNewMessage();
-      }
-      this.pendingNewMessage = false;
+  private handleStatusChanged(event: Extract<AcpEvent, { type: "status_changed" }>): void {
+    console.log("Agent status changed:", event.status);
 
-      this.handlers.onChunk(event.content.text);
+    if (this.wasRunning && !event.status.running && !this.sessionComplete && !this.cancelled) {
+      console.warn("Agent crashed unexpectedly");
+      this.cleanup();
+      this.handlers.onError("Agent disconnected unexpectedly. Click retry to restart.", true);
+    }
+  }
+
+  private handleUiAction(event: Extract<AcpEvent, { type: "ui_action" }>): void {
+    const { action } = event;
+    const bufferActions = useBufferStore.getState().actions;
+
+    switch (action.action) {
+      case "open_web_viewer":
+        bufferActions.openWebViewerBuffer(action.url);
+        break;
+
+      case "open_terminal":
+        bufferActions.openTerminalBuffer({
+          command: action.command ?? undefined,
+          name: action.command ?? undefined,
+        });
+        break;
+    }
+  }
+
+  private handleContentChunk(event: Extract<AcpEvent, { type: "content_chunk" }>): void {
+    if (this.pendingNewMessage && this.handlers.onNewMessage) {
+      this.handlers.onNewMessage();
+      this.lastRawTextChunk = null;
+      this.accumulatedText = "";
+    }
+    this.pendingNewMessage = false;
+
+    if (event.content.type === "text") {
+      this.handleTextChunk(event.content.text);
+    } else if (event.content.type === "image") {
+      if (this.handlers.onImageChunk) {
+        this.handlers.onImageChunk(event.content.data, event.content.mediaType);
+      }
+    } else if (event.content.type === "resource") {
+      if (this.handlers.onResourceChunk) {
+        this.handlers.onResourceChunk(event.content.uri, event.content.name);
+      }
     }
 
     if (event.isComplete) {
       // Content block is complete, but session may continue
       console.log("Content block complete");
     }
+  }
+
+  private handleTextChunk(text: string): void {
+    if (!text) {
+      return;
+    }
+
+    // Some ACP adapters occasionally emit the same chunk twice.
+    if (this.lastRawTextChunk === text) {
+      return;
+    }
+
+    // Snapshot mode: chunk contains full text so far.
+    if (this.accumulatedText && text.startsWith(this.accumulatedText)) {
+      const delta = text.slice(this.accumulatedText.length);
+      if (delta) {
+        this.handlers.onChunk(delta);
+      }
+      this.accumulatedText = text;
+      this.lastRawTextChunk = text;
+      return;
+    }
+
+    // Guard against a known bad shape where a snapshot is duplicated in the same chunk.
+    if (this.accumulatedText && text === `${this.accumulatedText}${this.accumulatedText}`) {
+      this.lastRawTextChunk = text;
+      return;
+    }
+
+    // No-progress duplicate fragment.
+    if (this.accumulatedText?.endsWith(text)) {
+      this.lastRawTextChunk = text;
+      return;
+    }
+
+    // Delta mode: chunk is incremental text.
+    this.handlers.onChunk(text);
+    this.accumulatedText += text;
+    this.lastRawTextChunk = text;
   }
 
   private handleToolStart(event: Extract<AcpEvent, { type: "tool_start" }>): void {
@@ -300,10 +390,12 @@ Detailed step description with specific files/commands.
     if (this.handlers.onPermissionRequest) {
       this.handlers.onPermissionRequest(event);
     } else {
-      // Auto-approve if no handler (for now)
-      // In production, this should show a dialog
-      console.warn("Permission request received but no handler set, auto-approving");
-      AcpStreamHandler.respondToPermission(event.requestId, true).catch(console.error);
+      // Auto-reject if no handler for safety.
+      console.error(
+        "Permission request received but no handler set, auto-rejecting for safety:",
+        event.description,
+      );
+      AcpStreamHandler.respondToPermission(event.requestId, false).catch(console.error);
     }
   }
 
@@ -362,6 +454,8 @@ Detailed step description with specific files/commands.
       clearTimeout(this.timeout);
       this.timeout = undefined;
     }
+    this.lastRawTextChunk = null;
+    this.accumulatedText = "";
     this.pendingNewMessage = false;
 
     if (this.listeners.event) {
