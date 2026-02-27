@@ -3,10 +3,15 @@ import type { FileEntry } from "@/features/file-system/types/app";
 import type { Buffer } from "@/features/tabs/types/buffer";
 
 export interface ToolCall {
+  toolId?: string;
   name: string;
+  kind?: string;
+  status?: "pending" | "in_progress" | "completed" | "failed";
   input: any;
   output?: any;
   error?: string;
+  content?: unknown;
+  locations?: unknown;
   timestamp: Date;
   isComplete?: boolean;
 }
@@ -41,6 +46,7 @@ export type AgentType =
   | "gemini-cli"
   | "kimi-cli"
   | "opencode"
+  | "kairo-code"
   | "qwen-code"
   | "custom";
 
@@ -80,6 +86,12 @@ export const AGENT_OPTIONS: AgentInfo[] = [
     id: "opencode",
     name: "OpenCode",
     description: "SST OpenCode",
+    isAcp: true,
+  },
+  {
+    id: "kairo-code",
+    name: "Kairo Code",
+    description: "Coline Kairo Code (ACP)",
     isAcp: true,
   },
   {

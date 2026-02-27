@@ -45,6 +45,12 @@ interface Settings {
   aiChatWidth: number;
   isAIChatVisible: boolean;
   aiCompletion: boolean;
+  aiAutoOpenReadFiles: boolean;
+  aiTemperature: number;
+  aiMaxTokens: number;
+  aiReasoningLevel: number;
+  aiThinkingEffort: "low" | "medium" | "high" | "max";
+  aiDefaultOutputStyle: "default" | "explanatory" | "learning";
   aiAutocompleteModelId: string;
   aiDefaultSessionMode: string;
   // Layout
@@ -119,6 +125,12 @@ const defaultSettings: Settings = {
   aiChatWidth: 400,
   isAIChatVisible: false,
   aiCompletion: true,
+  aiAutoOpenReadFiles: true,
+  aiTemperature: 0.7,
+  aiMaxTokens: 4096,
+  aiReasoningLevel: 2,
+  aiThinkingEffort: "high",
+  aiDefaultOutputStyle: "default",
   aiAutocompleteModelId: "openai/gpt-5-nano",
   aiDefaultSessionMode: "",
   // Layout

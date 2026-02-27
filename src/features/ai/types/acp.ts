@@ -50,6 +50,8 @@ export interface SessionModeState {
 // Prompt turn types
 export type StopReason = "end_turn" | "max_tokens" | "max_turn_requests" | "refusal" | "cancelled";
 
+export type AcpToolStatus = "pending" | "in_progress" | "completed" | "failed";
+
 // UI action types that agents can request
 export type UiAction =
   | { action: "open_web_viewer"; url: string }
@@ -68,12 +70,24 @@ export type AcpEvent =
       toolName: string;
       toolId: string;
       input: unknown;
+      status?: AcpToolStatus;
+      kind?: string;
+      content?: unknown;
+      locations?: unknown;
     }
   | {
       type: "tool_complete";
       sessionId: string;
       toolId: string;
       success: boolean;
+      toolName?: string;
+      input?: unknown;
+      output?: unknown;
+      error?: string;
+      status?: AcpToolStatus;
+      kind?: string;
+      content?: unknown;
+      locations?: unknown;
     }
   | {
       type: "permission_request";

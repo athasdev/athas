@@ -6,8 +6,10 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useProjectStore } from "@/stores/project-store";
+import { toast } from "@/stores/toast-store";
 import { AcpStreamHandler } from "@/utils/acp-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/utils/ai-chat";
+import { hasKairoAccessToken } from "@/utils/kairo-auth";
 import type { ContextInfo } from "@/utils/types";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import ChatHistorySidebar from "../history/sidebar";
@@ -542,6 +544,16 @@ details: ${errorDetails || mainError}
       const isAcp = isAcpAgent(currentAgentId);
       // For ACP agents (Claude Code, etc.), we don't need an API key
       if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
+
+      if (currentAgentId === "kairo-code") {
+        const isConnected = await hasKairoAccessToken();
+        if (!isConnected) {
+          toast.error(
+            "Kairo Code requires Coline login first. Connect it in Settings > AI > Agent Authentication.",
+          );
+          return;
+        }
+      }
 
       chatActions.setInput("");
 

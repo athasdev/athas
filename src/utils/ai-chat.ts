@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
@@ -24,7 +25,83 @@ export {
   storeProviderApiToken,
   validateProviderApiKey,
 } from "./token-manager";
-// Re-export types and legacy functions;
+
+interface AvailableAcpAgent {
+  id: string;
+  installed: boolean;
+}
+
+let kairoAcpInstalledCache: { installed: boolean; checkedAt: number } | null = null;
+const KAIRO_ACP_CACHE_TTL_MS = 15_000;
+
+const isKairoAcpInstalled = async (): Promise<boolean> => {
+  const now = Date.now();
+  if (kairoAcpInstalledCache && now - kairoAcpInstalledCache.checkedAt < KAIRO_ACP_CACHE_TTL_MS) {
+    return kairoAcpInstalledCache.installed;
+  }
+
+  try {
+    const agents = await invoke<AvailableAcpAgent[]>("get_available_agents");
+    const installed = agents.find((agent) => agent.id === "kairo-code")?.installed === true;
+    kairoAcpInstalledCache = { installed, checkedAt: now };
+    return installed;
+  } catch {
+    // If detection fails, prefer stable behavior over hard-failing ACP startup.
+    kairoAcpInstalledCache = { installed: false, checkedAt: now };
+    return false;
+  }
+};
+
+const MAX_HISTORY_MESSAGES = 40;
+
+const isAbortError = (error: unknown): boolean => {
+  if (error instanceof DOMException) {
+    return error.name === "AbortError";
+  }
+  if (error instanceof Error) {
+    return error.name === "AbortError";
+  }
+  return false;
+};
+
+const normalizeConversationHistory = (
+  conversationHistory: AIMessage[] | undefined,
+  userMessage: string,
+): AIMessage[] => {
+  if (!conversationHistory || conversationHistory.length === 0) {
+    return [];
+  }
+
+  const normalized = conversationHistory
+    .filter(
+      (message) =>
+        (message.role === "system" || message.role === "user" || message.role === "assistant") &&
+        typeof message.content === "string" &&
+        message.content.trim().length > 0,
+    )
+    .map((message) => ({
+      role: message.role,
+      content: message.content,
+    })) as AIMessage[];
+
+  if (normalized.length === 0) {
+    return [];
+  }
+
+  const trimmedUserMessage = userMessage.trim();
+  if (trimmedUserMessage) {
+    const last = normalized[normalized.length - 1];
+    if (last.role === "user" && last.content.trim() === trimmedUserMessage) {
+      normalized.pop();
+    }
+  }
+
+  if (normalized.length > MAX_HISTORY_MESSAGES) {
+    return normalized.slice(normalized.length - MAX_HISTORY_MESSAGES);
+  }
+
+  return normalized;
+};
 
 // Generic streaming chat completion function that works with any agent/provider
 export const getChatCompletionStream = async (
@@ -38,18 +115,42 @@ export const getChatCompletionStream = async (
   onError: (error: string, canReconnect?: boolean) => void,
   conversationHistory?: AIMessage[],
   onNewMessage?: () => void,
-  onToolUse?: (toolName: string, toolInput?: any) => void,
-  onToolComplete?: (toolName: string) => void,
+  onToolUse?: (
+    toolName: string,
+    toolInput?: any,
+    toolId?: string,
+    event?: Extract<AcpEvent, { type: "tool_start" }>,
+  ) => void,
+  onToolComplete?: (toolName: string, event?: Extract<AcpEvent, { type: "tool_complete" }>) => void,
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void,
   onAcpEvent?: (event: AcpEvent) => void,
   mode: ChatMode = "chat",
   outputStyle: OutputStyle = "default",
   onImageChunk?: (data: string, mediaType: string) => void,
   onResourceChunk?: (uri: string, name: string | null) => void,
+  _sessionId?: string,
+  abortSignal?: AbortSignal,
 ): Promise<void> => {
   try {
-    // Handle ACP-based CLI agents (Claude Code, Gemini CLI, Codex CLI)
-    if (isAcpAgent(agentId)) {
+    const normalizedConversationHistory = normalizeConversationHistory(
+      conversationHistory,
+      userMessage,
+    );
+
+    // Handle ACP-based CLI agents.
+    // Kairo Code is ACP-only in Athas; do not silently degrade to HTTP mode.
+    if (agentId === "kairo-code") {
+      const installed = await isKairoAcpInstalled();
+      if (!installed) {
+        onError(
+          "Kairo Code ACP adapter is not installed. Run: pnpm add -g @colineapp/kairo-code-acp",
+        );
+        return;
+      }
+    }
+
+    const shouldUseAcp = isAcpAgent(agentId);
+    if (shouldUseAcp) {
       const handler = new AcpStreamHandler(agentId, {
         onChunk,
         onComplete,
@@ -62,7 +163,7 @@ export const getChatCompletionStream = async (
         onImageChunk,
         onResourceChunk,
       });
-      await handler.start(userMessage, context);
+      await handler.start(userMessage, context, { mode, outputStyle });
       return;
     }
 
@@ -104,8 +205,8 @@ export const getChatCompletionStream = async (
     ];
 
     // Add conversation history if provided
-    if (conversationHistory && conversationHistory.length > 0) {
-      messages.push(...conversationHistory);
+    if (normalizedConversationHistory.length > 0) {
+      messages.push(...normalizedConversationHistory);
     }
 
     // Add the current user message
@@ -140,7 +241,10 @@ export const getChatCompletionStream = async (
       method: "POST",
       headers,
       body: JSON.stringify(payload),
-    });
+      ...(providerId !== "gemini" && providerId !== "ollama" && abortSignal
+        ? { signal: abortSignal }
+        : {}),
+    } as any);
 
     if (!response.ok) {
       console.error(`${provider.name} API error:`, response.status, response.statusText);
@@ -153,7 +257,11 @@ export const getChatCompletionStream = async (
 
     await processStreamingResponse(response, onChunk, onComplete, onError);
   } catch (error: any) {
-    console.error(`${providerId} streaming chat completion error:`, error);
-    onError(`Failed to connect to ${providerId} API: ${error.message || error}`);
+    if (isAbortError(error)) {
+      return;
+    }
+    const target = agentId === "kairo-code" ? "kairo-code" : providerId;
+    console.error(`${target} streaming chat completion error:`, error);
+    onError(`Failed to connect to ${target} API: ${error.message || error}`);
   }
 };

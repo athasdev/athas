@@ -1,9 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/store/store";
+import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { buildContextPrompt } from "./context-builder";
+import {
+  getValidKairoAccessToken,
+  KAIRO_BASE_URL,
+  KAIRO_CLIENT_NAME,
+  KAIRO_CLIENT_PLATFORM,
+  KAIRO_CLIENT_VERSION,
+} from "./kairo-auth";
 import type { ContextInfo } from "./types";
 
 interface AcpHandlers {
@@ -11,8 +19,13 @@ interface AcpHandlers {
   onComplete: () => void;
   onError: (error: string, canReconnect?: boolean) => void;
   onNewMessage?: () => void;
-  onToolUse?: (toolName: string, toolInput?: unknown) => void;
-  onToolComplete?: (toolName: string) => void;
+  onToolUse?: (
+    toolName: string,
+    toolInput?: unknown,
+    toolId?: string,
+    event?: Extract<AcpEvent, { type: "tool_start" }>,
+  ) => void;
+  onToolComplete?: (toolName: string, event?: Extract<AcpEvent, { type: "tool_complete" }>) => void;
   onPermissionRequest?: (event: Extract<AcpEvent, { type: "permission_request" }>) => void;
   onEvent?: (event: AcpEvent) => void;
   onImageChunk?: (data: string, mediaType: string) => void;
@@ -21,6 +34,11 @@ interface AcpHandlers {
 
 interface AcpListeners {
   event?: () => void;
+}
+
+interface AcpStartOptions {
+  mode?: ChatMode;
+  outputStyle?: OutputStyle;
 }
 
 export class AcpStreamHandler {
@@ -33,17 +51,27 @@ export class AcpStreamHandler {
   private pendingNewMessage = false;
   private cancelled = false;
   private wasRunning = false;
+  private lastRawTextChunk: string | null = null;
+  private accumulatedText = "";
 
   constructor(
     private agentId: string,
     private handlers: AcpHandlers,
   ) {}
 
-  async start(userMessage: string, context: ContextInfo): Promise<void> {
+  async start(
+    userMessage: string,
+    context: ContextInfo,
+    options: AcpStartOptions = {},
+  ): Promise<void> {
     try {
+      if (AcpStreamHandler.activeHandler && AcpStreamHandler.activeHandler !== this) {
+        AcpStreamHandler.activeHandler.cancelled = true;
+        AcpStreamHandler.activeHandler.cleanup();
+      }
       AcpStreamHandler.activeHandler = this;
-      await this.ensureAgentRunning();
-      const fullMessage = this.buildMessage(userMessage, context);
+      await this.ensureAgentRunning(context);
+      const fullMessage = this.buildMessage(userMessage, context, options);
       await this.setupListeners();
       await invoke("send_acp_prompt", { prompt: fullMessage });
       this.setupTimeout();
@@ -53,19 +81,20 @@ export class AcpStreamHandler {
     }
   }
 
-  private async ensureAgentRunning(): Promise<void> {
+  private async ensureAgentRunning(context: ContextInfo): Promise<void> {
     try {
       const status = await invoke<AcpAgentStatus>("get_acp_status");
 
       if (!status.running || status.agentId !== this.agentId) {
         console.log(`Starting agent ${this.agentId}...`);
 
-        // Get current workspace path if available
-        const workspacePath = this.getWorkspacePath();
+        const workspacePath = this.getWorkspacePath(context);
+        const envVars = await this.getAgentEnvVars();
 
         const startStatus = await invoke<AcpAgentStatus>("start_acp_agent", {
           agentId: this.agentId,
           workspacePath,
+          envVars,
         });
 
         if (!startStatus.running) {
@@ -84,14 +113,71 @@ export class AcpStreamHandler {
     }
   }
 
-  private getWorkspacePath(): string | null {
-    // Get workspace path from the project store
-    const { useProjectStore } = require("@/stores/project-store");
-    return useProjectStore.getState().rootFolderPath ?? null;
+  private getWorkspacePath(context: ContextInfo): string | null {
+    const root =
+      typeof context.projectRoot === "string" && context.projectRoot.trim().length > 0
+        ? context.projectRoot.trim()
+        : null;
+    return root;
   }
 
-  private buildMessage(userMessage: string, context: ContextInfo): string {
+  private async getAgentEnvVars(): Promise<Record<string, string> | undefined> {
+    if (this.agentId !== "kairo-code") {
+      return undefined;
+    }
+
+    const accessToken = await getValidKairoAccessToken();
+    if (!accessToken) {
+      throw new Error(
+        "Kairo Code is not connected. Login in Settings > AI > Agent Authentication.",
+      );
+    }
+
+    // Kairo ACP in Athas is expected to run with tool-calling enabled.
+    // Keep this hard-coded for now to avoid accidental silent downgrade.
+    const enableKairoTools = true;
+
+    return {
+      KAIRO_ACCESS_TOKEN: accessToken,
+      COLINE_KAIRO_ACCESS_TOKEN: accessToken,
+      KAIRO_OAUTH_ACCESS_TOKEN: accessToken,
+      KAIRO_BASE_URL,
+      KAIRO_CLIENT_NAME,
+      KAIRO_CLIENT_VERSION,
+      KAIRO_CLIENT_PLATFORM,
+      KAIRO_ENABLE_TOOLS: enableKairoTools ? "1" : "0",
+    };
+  }
+
+  private buildMessage(
+    userMessage: string,
+    context: ContextInfo,
+    options: AcpStartOptions,
+  ): string {
     const contextPrompt = buildContextPrompt(context);
+    const mode = options.mode ?? "chat";
+
+    if (this.agentId === "kairo-code" && mode === "plan") {
+      const planDirective = `PLAN MODE: You are in planning mode.
+- Do not execute or modify code directly.
+- Focus on analysis, step-by-step implementation planning, and risks.
+- Use conditional wording (would/could/should), not direct execution wording.
+
+When returning an implementation plan, use this exact structure:
+
+[PLAN_BLOCK]
+[STEP] Short step title
+Detailed step description with specific files/commands.
+[/STEP]
+[/PLAN_BLOCK]`;
+
+      if (!contextPrompt) {
+        return `${planDirective}\n\nUser request:\n${userMessage}`;
+      }
+
+      return `${planDirective}\n\nContext:\n${contextPrompt}\n\nUser request:\n${userMessage}`;
+    }
+
     return contextPrompt ? `${contextPrompt}\n\n${userMessage}` : userMessage;
   }
 
@@ -191,11 +277,9 @@ export class AcpStreamHandler {
   private handleStatusChanged(event: Extract<AcpEvent, { type: "status_changed" }>): void {
     console.log("Agent status changed:", event.status);
 
-    // Detect unexpected agent crash: was running but now stopped without user action
     if (this.wasRunning && !event.status.running && !this.sessionComplete && !this.cancelled) {
       console.warn("Agent crashed unexpectedly");
       this.cleanup();
-      // Pass canReconnect=true to indicate the error is recoverable
       this.handlers.onError("Agent disconnected unexpectedly. Click retry to restart.", true);
     }
   }
@@ -206,12 +290,10 @@ export class AcpStreamHandler {
 
     switch (action.action) {
       case "open_web_viewer":
-        console.log("Opening web viewer:", action.url);
         bufferActions.openWebViewerBuffer(action.url);
         break;
 
       case "open_terminal":
-        console.log("Opening terminal:", action.command);
         bufferActions.openTerminalBuffer({
           command: action.command ?? undefined,
           name: action.command ?? undefined,
@@ -223,11 +305,13 @@ export class AcpStreamHandler {
   private handleContentChunk(event: Extract<AcpEvent, { type: "content_chunk" }>): void {
     if (this.pendingNewMessage && this.handlers.onNewMessage) {
       this.handlers.onNewMessage();
+      this.lastRawTextChunk = null;
+      this.accumulatedText = "";
     }
     this.pendingNewMessage = false;
 
     if (event.content.type === "text") {
-      this.handlers.onChunk(event.content.text);
+      this.handleTextChunk(event.content.text);
     } else if (event.content.type === "image") {
       if (this.handlers.onImageChunk) {
         this.handlers.onImageChunk(event.content.data, event.content.mediaType);
@@ -244,16 +328,55 @@ export class AcpStreamHandler {
     }
   }
 
+  private handleTextChunk(text: string): void {
+    if (!text) {
+      return;
+    }
+
+    // Some ACP adapters occasionally emit the same chunk twice.
+    if (this.lastRawTextChunk === text) {
+      return;
+    }
+
+    // Snapshot mode: chunk contains full text so far.
+    if (this.accumulatedText && text.startsWith(this.accumulatedText)) {
+      const delta = text.slice(this.accumulatedText.length);
+      if (delta) {
+        this.handlers.onChunk(delta);
+      }
+      this.accumulatedText = text;
+      this.lastRawTextChunk = text;
+      return;
+    }
+
+    // Guard against a known bad shape where a snapshot is duplicated in the same chunk.
+    if (this.accumulatedText && text === `${this.accumulatedText}${this.accumulatedText}`) {
+      this.lastRawTextChunk = text;
+      return;
+    }
+
+    // No-progress duplicate fragment.
+    if (this.accumulatedText?.endsWith(text)) {
+      this.lastRawTextChunk = text;
+      return;
+    }
+
+    // Delta mode: chunk is incremental text.
+    this.handlers.onChunk(text);
+    this.accumulatedText += text;
+    this.lastRawTextChunk = text;
+  }
+
   private handleToolStart(event: Extract<AcpEvent, { type: "tool_start" }>): void {
     this.currentToolName = event.toolName;
     if (this.handlers.onToolUse) {
-      this.handlers.onToolUse(event.toolName, event.input);
+      this.handlers.onToolUse(event.toolName, event.input, event.toolId, event);
     }
   }
 
   private handleToolComplete(event: Extract<AcpEvent, { type: "tool_complete" }>): void {
-    if (this.currentToolName && this.handlers.onToolComplete) {
-      this.handlers.onToolComplete(this.currentToolName);
+    if (this.handlers.onToolComplete) {
+      this.handlers.onToolComplete(event.toolName || this.currentToolName || "unknown", event);
     }
     this.currentToolName = null;
     this.pendingNewMessage = true;
@@ -267,7 +390,7 @@ export class AcpStreamHandler {
     if (this.handlers.onPermissionRequest) {
       this.handlers.onPermissionRequest(event);
     } else {
-      // Auto-reject if no handler for safety - prevents unintended actions
+      // Auto-reject if no handler for safety.
       console.error(
         "Permission request received but no handler set, auto-rejecting for safety:",
         event.description,
@@ -331,6 +454,8 @@ export class AcpStreamHandler {
       clearTimeout(this.timeout);
       this.timeout = undefined;
     }
+    this.lastRawTextChunk = null;
+    this.accumulatedText = "";
     this.pendingNewMessage = false;
 
     if (this.listeners.event) {
@@ -379,11 +504,7 @@ export class AcpStreamHandler {
 
   // Static method to cancel the current prompt turn
   static async cancelPrompt(): Promise<void> {
+    await invoke("cancel_acp_prompt");
     AcpStreamHandler.activeHandler?.forceStop();
-    try {
-      await invoke("cancel_acp_prompt");
-    } catch (error) {
-      console.error("Failed to cancel ACP prompt on backend:", error);
-    }
   }
 }

@@ -63,6 +63,9 @@
         },
         {
           "url": "http://localhost:11434/**"
+        },
+        {
+          "url": "https://coline.app/**"
         }
       ]
     },

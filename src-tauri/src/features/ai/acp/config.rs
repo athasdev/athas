@@ -70,6 +70,14 @@ impl AgentRegistry {
             .with_args(vec!["--acp"]),
       );
 
+      // Kairo Code - native ACP adapter
+      // Install: pnpm add -g @colineapp/kairo-code-acp
+      agents.insert(
+         "kairo-code".to_string(),
+         AgentConfig::new("kairo-code", "Kairo Code", "kairo-code-acp")
+            .with_description("Coline Kairo Code (ACP adapter)"),
+      );
+
       Self {
          agents,
          last_detection: None,
