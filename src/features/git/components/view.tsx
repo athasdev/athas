@@ -1,10 +1,13 @@
-import { MoreHorizontal, RefreshCw } from "lucide-react";
+import { open } from "@tauri-apps/plugin-dialog";
+import { FolderOpen, MoreHorizontal, RefreshCw } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { cn } from "@/utils/cn";
+import { getFolderName } from "@/utils/path-helpers";
 import { getBranches } from "../api/branches";
 import { getGitLog } from "../api/commits";
 import { getCommitDiff, getFileDiff, getStashDiff } from "../api/diff";
+import { resolveRepositoryPath } from "../api/repo";
 import { getStashes } from "../api/stash";
 import { getGitStatus } from "../api/status";
 import { useGitStore } from "../stores/git-store";
@@ -31,6 +34,9 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const { setIsLoadingGitData, setIsRefreshing } = actions;
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showGitActionsMenu, setShowGitActionsMenu] = useState(false);
+  const [manualRepoPath, setManualRepoPath] = useState<string | null>(null);
+  const [isSelectingRepo, setIsSelectingRepo] = useState(false);
+  const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
   const [gitActionsMenuPosition, setGitActionsMenuPosition] = useState<{
     x: number;
     y: number;
@@ -40,17 +46,60 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [showTagManager, setShowTagManager] = useState(false);
 
   const wasActiveRef = useRef(isActive);
+  const activeRepoPath = manualRepoPath ?? repoPath;
+
+  const handleSelectRepository = useCallback(async () => {
+    setIsSelectingRepo(true);
+    setRepoSelectionError(null);
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+      });
+
+      if (!selected || Array.isArray(selected)) {
+        return;
+      }
+
+      const resolvedRepoPath = await resolveRepositoryPath(selected);
+      if (!resolvedRepoPath) {
+        const message = "Selected folder is not inside a Git repository.";
+        setRepoSelectionError(message);
+        alert(message);
+        return;
+      }
+
+      setManualRepoPath(resolvedRepoPath);
+    } catch (error) {
+      console.error("Failed to select repository:", error);
+      const message = "Failed to select repository";
+      setRepoSelectionError(message);
+      alert(`${message}:\n${error}`);
+    } finally {
+      setIsSelectingRepo(false);
+    }
+  }, []);
+
+  const handleUseWorkspaceRoot = useCallback(() => {
+    setManualRepoPath(null);
+    setRepoSelectionError(null);
+  }, []);
+
+  useEffect(() => {
+    setManualRepoPath(null);
+    setRepoSelectionError(null);
+  }, [repoPath]);
 
   const loadInitialGitData = useCallback(async () => {
-    if (!repoPath) return;
+    if (!activeRepoPath) return;
 
     setIsLoadingGitData(true);
     try {
       const [status, commits, branches, stashes] = await Promise.all([
-        getGitStatus(repoPath),
-        getGitLog(repoPath, 50, 0),
-        getBranches(repoPath),
-        getStashes(repoPath),
+        getGitStatus(activeRepoPath),
+        getGitLog(activeRepoPath, 50, 0),
+        getBranches(activeRepoPath),
+        getStashes(activeRepoPath),
       ]);
 
       actions.loadFreshGitData({
@@ -58,30 +107,33 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         commits,
         branches,
         stashes,
-        repoPath,
+        repoPath: activeRepoPath,
       });
     } catch (error) {
       console.error("Failed to load initial git data:", error);
     } finally {
       setIsLoadingGitData(false);
     }
-  }, [repoPath, actions, setIsLoadingGitData]);
+  }, [activeRepoPath, actions, setIsLoadingGitData]);
 
   const refreshGitData = useCallback(async () => {
-    if (!repoPath) return;
+    if (!activeRepoPath) return;
 
     try {
-      const [status, branches] = await Promise.all([getGitStatus(repoPath), getBranches(repoPath)]);
+      const [status, branches] = await Promise.all([
+        getGitStatus(activeRepoPath),
+        getBranches(activeRepoPath),
+      ]);
 
       await actions.refreshGitData({
         gitStatus: status,
         branches,
-        repoPath,
+        repoPath: activeRepoPath,
       });
     } catch (error) {
       console.error("Failed to refresh git data:", error);
     }
-  }, [repoPath, actions]);
+  }, [activeRepoPath, actions]);
 
   const handleManualRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -120,7 +172,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     const handleFileChange = (event: CustomEvent) => {
       const { path } = event.detail;
 
-      if (repoPath && path.startsWith(repoPath)) {
+      if (activeRepoPath && path.startsWith(activeRepoPath)) {
         if (refreshTimeout) {
           clearTimeout(refreshTimeout);
         }
@@ -139,7 +191,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         clearTimeout(refreshTimeout);
       }
     };
-  }, [repoPath, refreshGitData]);
+  }, [activeRepoPath, refreshGitData]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -159,7 +211,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   }, [showBranchDropdown, showGitActionsMenu]);
 
   const handleOpenOriginalFile = async (filePath: string) => {
-    if (!repoPath || !onFileSelect) return;
+    if (!activeRepoPath || !onFileSelect) return;
 
     try {
       let actualFilePath = filePath;
@@ -173,7 +225,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         actualFilePath = actualFilePath.slice(1, -1);
       }
 
-      const fullPath = `${repoPath}/${actualFilePath}`;
+      const fullPath = `${activeRepoPath}/${actualFilePath}`;
 
       onFileSelect(fullPath, false);
     } catch (error) {
@@ -183,7 +235,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   };
 
   const handleViewFileDiff = async (filePath: string, staged: boolean = false) => {
-    if (!repoPath || !onFileSelect) return;
+    if (!activeRepoPath || !onFileSelect) return;
 
     try {
       let actualFilePath = filePath;
@@ -208,7 +260,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         return;
       }
 
-      const diff = await getFileDiff(repoPath, actualFilePath, staged);
+      const diff = await getFileDiff(activeRepoPath, actualFilePath, staged);
 
       if (diff && (diff.lines.length > 0 || diff.is_image)) {
         const encodedPath = encodeURIComponent(actualFilePath);
@@ -230,10 +282,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   };
 
   const handleViewCommitDiff = async (commitHash: string, filePath?: string) => {
-    if (!repoPath || !onFileSelect) return;
+    if (!activeRepoPath || !onFileSelect) return;
 
     try {
-      const diffs = await getCommitDiff(repoPath, commitHash);
+      const diffs = await getCommitDiff(activeRepoPath, commitHash);
 
       if (diffs && diffs.length > 0) {
         if (filePath) {
@@ -272,10 +324,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   };
 
   const handleViewStashDiff = async (stashIndex: number) => {
-    if (!repoPath || !onFileSelect) return;
+    if (!activeRepoPath || !onFileSelect) return;
 
     try {
-      const diffs = await getStashDiff(repoPath, stashIndex);
+      const diffs = await getStashDiff(activeRepoPath, stashIndex);
 
       if (diffs && diffs.length > 0) {
         const { additions, deletions } = countDiffStats(diffs);
@@ -325,7 +377,26 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     </button>
   );
 
-  if (!repoPath) {
+  const renderSelectRepositoryButton = (compact = false) => (
+    <button
+      onClick={handleSelectRepository}
+      disabled={isSelectingRepo}
+      className={cn(
+        "inline-flex items-center gap-1 rounded transition-colors",
+        compact
+          ? "h-5 px-1.5 text-[9px]"
+          : "mt-2 border border-border bg-primary-bg px-2 py-1 text-[10px] hover:bg-hover",
+        "text-text-lighter hover:text-text disabled:cursor-not-allowed disabled:opacity-50",
+      )}
+      title="Select repository folder"
+      aria-label="Select repository folder"
+    >
+      <FolderOpen size={compact ? 10 : 12} />
+      {isSelectingRepo ? "Selecting..." : "Select Repository"}
+    </button>
+  );
+
+  if (!activeRepoPath) {
     return (
       <div className="flex h-full flex-col bg-secondary-bg">
         <div
@@ -339,7 +410,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="ui-font text-center text-text-lighter text-xs">
             <div className="mb-1">No Git repository detected</div>
-            <div className="text-[10px] opacity-75">Open a Git project folder</div>
+            <div className="text-[10px] opacity-75">Open a folder or select a repository</div>
+            {renderSelectRepositoryButton()}
+            {repoSelectionError && (
+              <div className="mt-2 text-[10px] text-red-400">{repoSelectionError}</div>
+            )}
           </div>
         </div>
       </div>
@@ -378,7 +453,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="ui-font text-center text-text-lighter text-xs">
             <div className="mb-1">Not a Git repository</div>
-            <div className="text-[10px] opacity-75">Initialize with: git init</div>
+            <div className="text-[10px] opacity-75">Initialize with: git init or select a repo</div>
+            {renderSelectRepositoryButton()}
+            {repoSelectionError && (
+              <div className="mt-2 text-[10px] text-red-400">{repoSelectionError}</div>
+            )}
           </div>
         </div>
       </div>
@@ -399,7 +478,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <div className="flex items-center gap-1">
             <GitBranchManager
               currentBranch={gitStatus.branch}
-              repoPath={repoPath}
+              repoPath={activeRepoPath}
               onBranchChange={refreshGitData}
               compact
             />
@@ -414,6 +493,19 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           </div>
 
           <div className="flex items-center gap-0.5">
+            {renderSelectRepositoryButton(true)}
+            {manualRepoPath && repoPath && (
+              <button
+                onClick={handleUseWorkspaceRoot}
+                className={cn(
+                  "h-5 rounded px-1.5 text-[9px] text-text-lighter transition-colors hover:bg-hover hover:text-text",
+                )}
+                title={`Use workspace root (${getFolderName(repoPath)})`}
+                aria-label="Use workspace root repository"
+              >
+                {getFolderName(manualRepoPath)}
+              </button>
+            )}
             <button
               onClick={handleManualRefresh}
               disabled={isLoadingGitData || isRefreshing}
@@ -441,14 +533,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               onFileSelect={handleViewFileDiff}
               onOpenFile={handleOpenOriginalFile}
               onRefresh={handleManualRefresh}
-              repoPath={repoPath}
+              repoPath={activeRepoPath}
             />
           </div>
 
-          <GitCommitHistory onViewCommitDiff={handleViewCommitDiff} repoPath={repoPath} />
+          <GitCommitHistory onViewCommitDiff={handleViewCommitDiff} repoPath={activeRepoPath} />
 
           <GitStashPanel
-            repoPath={repoPath}
+            repoPath={activeRepoPath}
             onRefresh={handleManualRefresh}
             onViewStashDiff={handleViewStashDiff}
           />
@@ -456,7 +548,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
         <GitCommitPanel
           stagedFilesCount={stagedFiles.length}
-          repoPath={repoPath}
+          repoPath={activeRepoPath}
           onCommitSuccess={refreshGitData}
         />
       </div>
@@ -469,23 +561,25 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           setGitActionsMenuPosition(null);
         }}
         hasGitRepo={!!gitStatus}
-        repoPath={repoPath}
+        repoPath={activeRepoPath}
         onRefresh={handleManualRefresh}
         onOpenRemoteManager={() => setShowRemoteManager(true)}
         onOpenTagManager={() => setShowTagManager(true)}
+        onSelectRepository={handleSelectRepository}
+        isSelectingRepository={isSelectingRepo}
       />
 
       <GitRemoteManager
         isOpen={showRemoteManager}
         onClose={() => setShowRemoteManager(false)}
-        repoPath={repoPath}
+        repoPath={activeRepoPath}
         onRefresh={handleManualRefresh}
       />
 
       <GitTagManager
         isOpen={showTagManager}
         onClose={() => setShowTagManager(false)}
-        repoPath={repoPath}
+        repoPath={activeRepoPath}
         onRefresh={handleManualRefresh}
       />
     </>
