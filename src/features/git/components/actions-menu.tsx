@@ -1,5 +1,6 @@
 import {
   Download,
+  FolderOpen,
   GitPullRequest,
   RefreshCw,
   RotateCcw,
@@ -23,6 +24,8 @@ interface GitActionsMenuProps {
   onRefresh?: () => void;
   onOpenRemoteManager?: () => void;
   onOpenTagManager?: () => void;
+  onSelectRepository?: () => Promise<void> | void;
+  isSelectingRepository?: boolean;
 }
 
 const GitActionsMenu = ({
@@ -34,6 +37,8 @@ const GitActionsMenu = ({
   onRefresh,
   onOpenRemoteManager,
   onOpenTagManager,
+  onSelectRepository,
+  isSelectingRepository,
 }: GitActionsMenuProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { isRefreshing } = useGitStore();
@@ -92,6 +97,11 @@ const GitActionsMenu = ({
     onClose();
   };
 
+  const handleSelectRepository = async () => {
+    await onSelectRepository?.();
+    onClose();
+  };
+
   if (!isOpen || !position) {
     return null;
   }
@@ -116,6 +126,24 @@ const GitActionsMenu = ({
             onMouseDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              handleSelectRepository();
+            }}
+            disabled={isSelectingRepository}
+            className={cn(
+              "flex w-full items-center gap-2 px-3 py-1.5",
+              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
+            )}
+          >
+            <FolderOpen size={12} />
+            {isSelectingRepository ? "Selecting..." : "Select Repository"}
+          </button>
+
+          <div className="my-1 border-border border-t"></div>
+
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               handlePush();
             }}
             disabled={isLoading}
@@ -127,6 +155,24 @@ const GitActionsMenu = ({
             <Upload size={12} />
             Push Changes
           </button>
+
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleSelectRepository();
+            }}
+            disabled={isSelectingRepository}
+            className={cn(
+              "flex w-full items-center gap-2 px-3 py-1.5",
+              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
+            )}
+          >
+            <FolderOpen size={12} />
+            {isSelectingRepository ? "Selecting..." : "Select Repository"}
+          </button>
+
+          <div className="my-1 border-border border-t"></div>
 
           <button
             onMouseDown={(e) => {

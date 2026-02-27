@@ -10,6 +10,7 @@ import type {
   LinterConfiguration,
   LspConfiguration,
   PlatformExecutable,
+  ToolRuntime,
 } from "../types/extension-manifest";
 
 const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
@@ -24,6 +25,9 @@ interface ExternalLanguageContribution {
 
 interface ExternalToolConfig {
   name?: string;
+  runtime?: ToolRuntime;
+  package?: string;
+  downloadUrl?: string;
   args?: string[];
   env?: Record<string, string>;
 }
@@ -88,6 +92,10 @@ function createLspConfig(manifest: ExternalLanguageManifest): LspConfiguration |
   const languageIds = languages.map((lang) => lang.id);
 
   return {
+    name: lsp.name,
+    runtime: lsp.runtime,
+    package: lsp.package,
+    downloadUrl: lsp.downloadUrl,
     server: defaultCommand(lsp.name),
     args: lsp.args || [],
     env: lsp.env,
@@ -104,6 +112,10 @@ function createFormatterConfig(
   if (!formatter?.name || languageIds.length === 0) return undefined;
 
   return {
+    name: formatter.name,
+    runtime: formatter.runtime,
+    package: formatter.package,
+    downloadUrl: formatter.downloadUrl,
     command: defaultCommand(formatter.name),
     args: formatter.args || [],
     env: formatter.env,
@@ -119,6 +131,10 @@ function createLinterConfig(manifest: ExternalLanguageManifest): LinterConfigura
   if (!linter?.name || languageIds.length === 0) return undefined;
 
   return {
+    name: linter.name,
+    runtime: linter.runtime,
+    package: linter.package,
+    downloadUrl: linter.downloadUrl,
     command: defaultCommand(linter.name),
     args: linter.args || [],
     env: linter.env,

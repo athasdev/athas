@@ -18,6 +18,7 @@ import type { AgentConfig, SessionMode } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
+import { useAuthStore } from "@/stores/auth-store";
 import Button from "@/ui/button";
 import Dropdown from "@/ui/dropdown";
 import Section, { SettingRow } from "@/ui/section";
@@ -51,7 +52,12 @@ function resolveAutocompleteDefaultModelId(models: Array<{ id: string; name: str
 
 export const AISettings = () => {
   const { settings, updateSetting } = useSettingsStore();
+  const subscription = useAuthStore((state) => state.subscription);
   const { showToast } = useToast();
+  const enterprisePolicy = subscription?.enterprise?.policy;
+  const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
+  const aiCompletionAllowedByPolicy = managedPolicy ? managedPolicy.aiCompletionEnabled : true;
+  const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
 
   // State for available session modes
   const [availableModes, setAvailableModes] = useState<SessionMode[]>([]);
@@ -610,8 +616,9 @@ export const AISettings = () => {
       <Section title="Autocomplete">
         <SettingRow label="AI Completion" description="Enable AI autocomplete while typing">
           <Switch
-            checked={settings.aiCompletion}
+            checked={aiCompletionAllowedByPolicy ? settings.aiCompletion : false}
             onChange={(checked) => updateSetting("aiCompletion", checked)}
+            disabled={!aiCompletionAllowedByPolicy}
             size="sm"
           />
         </SettingRow>
@@ -630,12 +637,13 @@ export const AISettings = () => {
               size="xs"
               searchable={true}
               className="w-56"
+              disabled={!aiCompletionAllowedByPolicy}
             />
             <Button
               variant="ghost"
               size="xs"
               onClick={loadAutocompleteModels}
-              disabled={isLoadingAutocompleteModels}
+              disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
               title="Refresh model list"
             >
               <RefreshCw size={14} className={cn(isLoadingAutocompleteModels && "animate-spin")} />
@@ -652,6 +660,13 @@ export const AISettings = () => {
           Pro uses Athas-hosted autocomplete credit. Free can use BYOK by setting an OpenRouter API
           key in the API Keys section.
         </div>
+        {managedPolicy ? (
+          <div className="px-1 text-text-lighter text-xs">
+            Enterprise policy:{" "}
+            {aiCompletionAllowedByPolicy ? "AI completion enabled." : "AI completion disabled."}{" "}
+            {byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}
+          </div>
+        ) : null}
       </Section>
 
       <Section title="Chat History">

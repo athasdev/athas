@@ -8,12 +8,14 @@ import {
   Search,
   Settings,
   Settings2,
+  Shield,
   Sparkles,
   Terminal,
   Wrench,
 } from "lucide-react";
 import * as React from "react";
 import { useSettingsStore } from "@/features/settings/store";
+import { useAuthStore } from "@/stores/auth-store";
 import type { SettingsTab } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 
@@ -80,6 +82,11 @@ const tabs: TabItem[] = [
     icon: Settings,
   },
   {
+    id: "enterprise",
+    label: "Enterprise",
+    icon: Shield,
+  },
+  {
     id: "advanced",
     label: "Advanced",
     icon: Wrench,
@@ -90,12 +97,17 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
   const searchQuery = useSettingsStore((state) => state.search.query);
   const searchResults = useSettingsStore((state) => state.search.results);
   const setSearchQuery = useSettingsStore((state) => state.setSearchQuery);
+  const subscription = useAuthStore((state) => state.subscription);
+  const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
 
   // Get unique tabs from search results
   const matchingTabs = searchQuery ? [...new Set(searchResults.map((result) => result.tab))] : [];
 
   // Filter tabs based on search
-  const visibleTabs = searchQuery ? tabs.filter((tab) => matchingTabs.includes(tab.id)) : tabs;
+  const baseTabs = hasEnterpriseAccess ? tabs : tabs.filter((tab) => tab.id !== "enterprise");
+  const visibleTabs = searchQuery
+    ? baseTabs.filter((tab) => matchingTabs.includes(tab.id))
+    : baseTabs;
 
   // Auto-select first visible tab when searching
   React.useEffect(() => {

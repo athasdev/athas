@@ -16,6 +16,37 @@ interface ProcessedGitChanges {
   deletedLines: Map<number, number>;
 }
 
+const LARGE_FILE_CONTENT_THRESHOLD = 250_000;
+const GUTTER_SKIP_PATH_PREFIXES = [
+  "archives/",
+  "node_modules/",
+  "vendor/",
+  ".cargo/",
+  "target/",
+  ".next/",
+  "dist/",
+  "build/",
+];
+
+function toRelativePath(filePath: string, rootFolderPath: string): string {
+  let relativePath = filePath;
+  if (relativePath.startsWith(rootFolderPath)) {
+    relativePath = relativePath.slice(rootFolderPath.length);
+  }
+  if (relativePath.startsWith("/")) {
+    relativePath = relativePath.slice(1);
+  }
+  return relativePath.replace(/\\/g, "/");
+}
+
+function shouldSkipGitGutter(relativePath: string, contentLength: number): boolean {
+  if (contentLength > LARGE_FILE_CONTENT_THRESHOLD) {
+    return true;
+  }
+
+  return GUTTER_SKIP_PATH_PREFIXES.some((prefix) => relativePath.startsWith(prefix));
+}
+
 export function useGitGutter({ filePath, content, enabled = true }: GitGutterHookOptions) {
   const gitDecorationIdsRef = useRef<string[]>([]);
   const lastDiffRef = useRef<GitDiff | null>(null);
@@ -139,74 +170,64 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
     }
   }, []);
 
+  const clearGitDecorations = useCallback(() => {
+    const decorationsStore = useEditorDecorationsStore.getState();
+    if (gitDecorationIdsRef.current.length > 0) {
+      decorationsStore.removeDecorations(gitDecorationIdsRef.current);
+      gitDecorationIdsRef.current = [];
+    }
+  }, []);
+
   const updateGitGutter = useCallback(
     async (useContentDiff: boolean = false, specificContent?: string) => {
       const targetContent = specificContent ?? content;
 
-      console.log(`[GitGutter] updateGitGutter called for ${filePath}`, {
-        enabled,
-        filePath,
-        rootFolderPath,
-        contentLength: targetContent?.length || 0,
-        useContentDiff,
-      });
-
       if (!enabled || !filePath || !rootFolderPath) {
-        console.log(`[GitGutter] Skipping update - missing requirements`);
         return;
       }
       if (filePath.startsWith("diff://")) {
-        console.log(`[GitGutter] Skipping diff:// file`);
         return;
       }
 
       try {
-        let relativePath = filePath;
-        if (relativePath.startsWith(rootFolderPath)) {
-          relativePath = relativePath.slice(rootFolderPath.length);
-          if (relativePath.startsWith("/")) relativePath = relativePath.slice(1);
-        }
+        const relativePath = toRelativePath(filePath, rootFolderPath);
 
-        console.log(`[GitGutter] Getting diff for ${relativePath}`);
+        if (shouldSkipGitGutter(relativePath, targetContent?.length || 0)) {
+          clearGitDecorations();
+          return;
+        }
 
         const diff = useContentDiff
           ? await getFileDiffAgainstContent(rootFolderPath, relativePath, targetContent, "head")
           : await getFileDiff(rootFolderPath, relativePath, false, targetContent);
 
         if (useContentDiff && targetContent !== latestRequestedContentRef.current) {
-          console.log(`[GitGutter] Skipping result - stale content`);
           return;
         }
 
         if (!diff || diff.is_binary || diff.is_image) {
-          const decorationsStore = useEditorDecorationsStore.getState();
-          if (gitDecorationIdsRef.current.length > 0) {
-            decorationsStore.removeDecorations(gitDecorationIdsRef.current);
-            gitDecorationIdsRef.current = [];
-          }
+          clearGitDecorations();
           return;
         }
 
         lastDiffRef.current = diff;
 
         const changes = processGitDiff(diff);
-        console.log(`[GitGutter] Processed changes:`, {
-          added: changes.addedLines.size,
-          modified: changes.modifiedLines.size,
-          deleted: changes.deletedLines.size,
-        });
-
         applyGitDecorations(changes);
       } catch (error) {
         console.error(`[GitGutter] Error updating git gutter:`, error);
-        const decorationsStore = useEditorDecorationsStore.getState();
-        if (gitDecorationIdsRef.current.length > 0) {
-          decorationsStore.removeDecorations(gitDecorationIdsRef.current);
-          gitDecorationIdsRef.current = [];
-        }
+        clearGitDecorations();
       }
     },
-    [enabled, filePath, rootFolderPath, processGitDiff, applyGitDecorations, content],
+    [
+      enabled,
+      filePath,
+      rootFolderPath,
+      processGitDiff,
+      applyGitDecorations,
+      content,
+      clearGitDecorations,
+    ],
   );
 
   const debouncedUpdate = useCallback(() => {
@@ -225,17 +246,14 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
   useEffect(() => {
     if (filePath && rootFolderPath) {
       latestRequestedContentRef.current = content;
+      lastContentHashRef.current = contentHash;
       updateGitGutter(false);
     }
 
     return () => {
-      const decorationsStore = useEditorDecorationsStore.getState();
-      if (gitDecorationIdsRef.current.length > 0) {
-        decorationsStore.removeDecorations(gitDecorationIdsRef.current);
-        gitDecorationIdsRef.current = [];
-      }
+      clearGitDecorations();
     };
-  }, [filePath, rootFolderPath]);
+  }, [filePath, rootFolderPath, content, contentHash, updateGitGutter, clearGitDecorations]);
 
   useEffect(() => {
     if (contentHash && contentHash !== lastContentHashRef.current) {
@@ -255,20 +273,13 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
     };
 
     const handleGitStatusUpdate = (event?: CustomEvent) => {
-      console.log(`[GitGutter] handleGitStatusUpdate called`, {
-        filePath,
-        eventFilePath: event?.detail?.filePath,
-      });
-
       if (event?.detail?.filePath) {
         const eventFilePath = event.detail.filePath;
         if (eventFilePath !== filePath && !filePath.endsWith(eventFilePath)) {
-          console.log(`[GitGutter] Ignoring event - path mismatch`);
           return;
         }
       }
 
-      console.log(`[GitGutter] Proceeding with git gutter update`);
       updateGitGutter(false);
     };
 
@@ -287,12 +298,6 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
 
   return {
     updateGitGutter: useCallback(() => updateGitGutter(false), [updateGitGutter]),
-    clearGitGutter: useCallback(() => {
-      const decorationsStore = useEditorDecorationsStore.getState();
-      if (gitDecorationIdsRef.current.length > 0) {
-        decorationsStore.removeDecorations(gitDecorationIdsRef.current);
-        gitDecorationIdsRef.current = [];
-      }
-    }, []),
+    clearGitGutter: clearGitDecorations,
   };
 }

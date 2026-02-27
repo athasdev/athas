@@ -72,7 +72,9 @@ interface Settings {
   // Features
   coreFeatures: CoreFeaturesState;
   // Advanced
-  //  > nothing here, yet
+  enterpriseManagedMode: boolean;
+  enterpriseRequireExtensionAllowlist: boolean;
+  enterpriseAllowedExtensionIds: string[];
   // Other
   extensionsActiveTab:
     | "all"
@@ -160,7 +162,9 @@ const defaultSettings: Settings = {
     persistentCommands: true,
   },
   // Advanced
-  //  > nothing here, yet
+  enterpriseManagedMode: false,
+  enterpriseRequireExtensionAllowlist: false,
+  enterpriseAllowedExtensionIds: [],
   // Other
   extensionsActiveTab: "all",
   maxOpenTabs: 10,

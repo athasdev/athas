@@ -213,11 +213,16 @@ impl ToolInstaller {
             Self::install_via_cargo(app_handle, package, &config.name).await
          }
          ToolRuntime::Binary => {
-            let url = config
-               .download_url
-               .as_ref()
-               .ok_or_else(|| ToolError::ConfigError("No download URL specified".to_string()))?;
-            Self::download_binary(app_handle, &config.name, url).await
+            if let Some(url) = config.download_url.as_ref() {
+               Self::download_binary(app_handle, &config.name, url).await
+            } else {
+               which::which(&config.name).map_err(|_| {
+                  ToolError::NotFound(format!(
+                     "{} (not found on PATH and no download URL configured)",
+                     config.name
+                  ))
+               })
+            }
          }
       }
    }
@@ -579,6 +584,11 @@ impl ToolInstaller {
          }
          ToolRuntime::Binary => {
             let bin_name = Self::bin_file_name(&config.name);
+            if config.download_url.is_none() {
+               if let Ok(system_path) = which::which(&config.name) {
+                  return Ok(system_path);
+               }
+            }
             Ok(tools_dir.join("bin").join(bin_name))
          }
       }

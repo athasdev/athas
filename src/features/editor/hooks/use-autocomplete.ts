@@ -122,8 +122,10 @@ export function useAutocomplete({
   const previousInputTimestampRef = useRef<number>(0);
 
   const subscriptionStatus = subscription?.status ?? "free";
+  const enterprisePolicy = subscription?.enterprise?.policy;
+  const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
   const isPro = subscriptionStatus === "pro" || subscriptionStatus === "trial";
-  const useByok = !isPro;
+  const useByok = managedPolicy ? managedPolicy.allowByok && !isPro : !isPro;
 
   useEffect(() => {
     return () => {
@@ -148,6 +150,7 @@ export function useAutocomplete({
     if (
       !enabled ||
       !isAuthenticated ||
+      (managedPolicy ? !managedPolicy.aiCompletionEnabled : false) ||
       hasActiveFolds ||
       lastInputTimestamp === 0 ||
       cursorOffset <= 0
@@ -157,6 +160,8 @@ export function useAutocomplete({
           enabled,
           isAuthenticated,
           subscriptionStatus,
+          enterpriseManaged: Boolean(managedPolicy),
+          aiCompletionEnabled: managedPolicy ? managedPolicy.aiCompletionEnabled : true,
           hasActiveFolds,
           lastInputTimestamp,
           cursorOffset,
@@ -269,6 +274,7 @@ export function useAutocomplete({
   }, [
     enabled,
     isAuthenticated,
+    managedPolicy,
     useByok,
     subscriptionStatus,
     filePath,

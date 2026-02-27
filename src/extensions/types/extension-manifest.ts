@@ -12,6 +12,8 @@ export type PlatformArch =
   | "linux-arm64"
   | "win32-x64";
 
+export type ToolRuntime = "bun" | "node" | "python" | "go" | "rust" | "binary";
+
 export interface ExtensionManifest {
   // Core metadata
   id: string; // Unique identifier (e.g., "athas.rust")
@@ -92,6 +94,12 @@ export interface LanguageContribution {
 }
 
 export interface LspConfiguration {
+  // Tool metadata for runtime installation
+  name?: string;
+  runtime?: ToolRuntime;
+  package?: string;
+  downloadUrl?: string;
+
   // Server executable paths per platform
   server: PlatformExecutable;
 
@@ -220,6 +228,12 @@ export interface ExtensionActivationContext {
 }
 
 export interface FormatterConfiguration {
+  // Tool metadata for runtime installation
+  name?: string;
+  runtime?: ToolRuntime;
+  package?: string;
+  downloadUrl?: string;
+
   // Formatter executable per platform
   command: PlatformExecutable;
 
@@ -243,6 +257,12 @@ export interface FormatterConfiguration {
 }
 
 export interface LinterConfiguration {
+  // Tool metadata for runtime installation
+  name?: string;
+  runtime?: ToolRuntime;
+  package?: string;
+  downloadUrl?: string;
+
   // Linter executable per platform
   command: PlatformExecutable;
 

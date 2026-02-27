@@ -76,6 +76,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
   };
 
   const subscriptionStatus = subscription?.status ?? "free";
+  const isEnterprise = subscription?.subscription?.plan === "enterprise";
 
   const signedOutItems: ContextMenuItem[] = [
     {
@@ -106,7 +107,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     },
     {
       id: "subscription",
-      label: `Plan: ${subscriptionStatus === "pro" ? "Pro" : subscriptionStatus === "trial" ? "Trial" : "Free"}`,
+      label: `Plan: ${isEnterprise ? "Enterprise" : subscriptionStatus === "pro" ? "Pro" : subscriptionStatus === "trial" ? "Trial" : "Free"}`,
       icon: <CreditCard size={12} />,
       onClick: handleViewPricing,
     },

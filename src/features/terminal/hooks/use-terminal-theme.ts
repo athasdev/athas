@@ -126,6 +126,82 @@ export function useTerminalTheme() {
     const bg = getColor(["--primary-bg", "--color-primary-bg"], DEFAULT_THEME.background);
     const fg = getColor(["--text", "--color-text"], DEFAULT_THEME.foreground);
     const accent = getColor(["--accent", "--color-accent"], DEFAULT_THEME.cursor);
+    const syntaxKeyword = getColor(
+      ["--syntax-keyword", "--color-syntax-keyword"],
+      DEFAULT_THEME.magenta,
+    );
+    const syntaxString = getColor(
+      ["--syntax-string", "--color-syntax-string"],
+      DEFAULT_THEME.green,
+    );
+    const syntaxNumber = getColor(
+      ["--syntax-number", "--color-syntax-number"],
+      DEFAULT_THEME.yellow,
+    );
+    const syntaxFunction = getColor(
+      ["--syntax-function", "--color-syntax-function"],
+      DEFAULT_THEME.blue,
+    );
+    const syntaxVariable = getColor(
+      ["--syntax-variable", "--color-syntax-variable"],
+      DEFAULT_THEME.red,
+    );
+    const syntaxOperator = getColor(
+      ["--syntax-operator", "--color-syntax-operator"],
+      DEFAULT_THEME.cyan,
+    );
+
+    const black = getColor(
+      ["--terminal-black", "--color-terminal-black", "--secondary-bg", "--color-secondary-bg"],
+      DEFAULT_THEME.black,
+    );
+    const red = getColor(
+      ["--terminal-red", "--color-terminal-red", "--syntax-variable", "--color-syntax-variable"],
+      syntaxVariable,
+    );
+    const green = getColor(
+      ["--terminal-green", "--color-terminal-green", "--syntax-string", "--color-syntax-string"],
+      syntaxString,
+    );
+    const yellow = getColor(
+      [
+        "--terminal-yellow",
+        "--color-terminal-yellow",
+        "--syntax-number",
+        "--color-syntax-number",
+        "--syntax-type",
+        "--color-syntax-type",
+      ],
+      syntaxNumber,
+    );
+    const blue = getColor(
+      ["--terminal-blue", "--color-terminal-blue", "--syntax-function", "--color-syntax-function"],
+      syntaxFunction,
+    );
+    const magenta = getColor(
+      [
+        "--terminal-magenta",
+        "--color-terminal-magenta",
+        "--syntax-keyword",
+        "--color-syntax-keyword",
+      ],
+      syntaxKeyword,
+    );
+    const cyan = getColor(
+      ["--terminal-cyan", "--color-terminal-cyan", "--syntax-operator", "--color-syntax-operator"],
+      syntaxOperator,
+    );
+    const white = getColor(
+      [
+        "--terminal-white",
+        "--color-terminal-white",
+        "--text-light",
+        "--color-text-light",
+        "--text",
+        "--color-text",
+      ],
+      DEFAULT_THEME.white,
+    );
 
     return {
       background: bg,
@@ -134,45 +210,38 @@ export function useTerminalTheme() {
       cursorAccent: bg,
       selectionBackground: withAlpha(accent, 0.25, DEFAULT_THEME.selectionBackground),
       selectionForeground: fg,
-      black: getColor(["--terminal-black", "--color-terminal-black"], DEFAULT_THEME.black),
-      red: getColor(["--terminal-red", "--color-terminal-red"], DEFAULT_THEME.red),
-      green: getColor(["--terminal-green", "--color-terminal-green"], DEFAULT_THEME.green),
-      yellow: getColor(["--terminal-yellow", "--color-terminal-yellow"], DEFAULT_THEME.yellow),
-      blue: getColor(["--terminal-blue", "--color-terminal-blue"], DEFAULT_THEME.blue),
-      magenta: getColor(["--terminal-magenta", "--color-terminal-magenta"], DEFAULT_THEME.magenta),
-      cyan: getColor(["--terminal-cyan", "--color-terminal-cyan"], DEFAULT_THEME.cyan),
-      white: getColor(["--terminal-white", "--color-terminal-white"], DEFAULT_THEME.white),
+      black,
+      red,
+      green,
+      yellow,
+      blue,
+      magenta,
+      cyan,
+      white,
       brightBlack: getColor(
-        ["--terminal-bright-black", "--color-terminal-bright-black"],
-        DEFAULT_THEME.brightBlack,
+        [
+          "--terminal-bright-black",
+          "--color-terminal-bright-black",
+          "--text-lighter",
+          "--color-text-lighter",
+        ],
+        black,
       ),
-      brightRed: getColor(
-        ["--terminal-bright-red", "--color-terminal-bright-red"],
-        DEFAULT_THEME.brightRed,
-      ),
-      brightGreen: getColor(
-        ["--terminal-bright-green", "--color-terminal-bright-green"],
-        DEFAULT_THEME.brightGreen,
-      ),
+      brightRed: getColor(["--terminal-bright-red", "--color-terminal-bright-red"], red),
+      brightGreen: getColor(["--terminal-bright-green", "--color-terminal-bright-green"], green),
       brightYellow: getColor(
         ["--terminal-bright-yellow", "--color-terminal-bright-yellow"],
-        DEFAULT_THEME.brightYellow,
+        yellow,
       ),
-      brightBlue: getColor(
-        ["--terminal-bright-blue", "--color-terminal-bright-blue"],
-        DEFAULT_THEME.brightBlue,
-      ),
+      brightBlue: getColor(["--terminal-bright-blue", "--color-terminal-bright-blue"], blue),
       brightMagenta: getColor(
         ["--terminal-bright-magenta", "--color-terminal-bright-magenta"],
-        DEFAULT_THEME.brightMagenta,
+        magenta,
       ),
-      brightCyan: getColor(
-        ["--terminal-bright-cyan", "--color-terminal-bright-cyan"],
-        DEFAULT_THEME.brightCyan,
-      ),
+      brightCyan: getColor(["--terminal-bright-cyan", "--color-terminal-bright-cyan"], cyan),
       brightWhite: getColor(
-        ["--terminal-bright-white", "--color-terminal-bright-white"],
-        DEFAULT_THEME.brightWhite,
+        ["--terminal-bright-white", "--color-terminal-bright-white", "--text", "--color-text"],
+        white,
       ),
     };
   }, []);

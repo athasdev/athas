@@ -73,7 +73,11 @@ class WasmParserLoader {
 
         // Create highlight query from text
         try {
-          const query = new Query(cached.language, highlightQuery);
+          const { query, queryText: compiledQueryText } = this.compileHighlightQuery(
+            cached.language,
+            languageId,
+            highlightQuery,
+          );
           const updatedParser: LoadedParser = {
             ...cached,
             highlightQuery: query,
@@ -87,7 +91,7 @@ class WasmParserLoader {
               if (cachedEntry && !cachedEntry.highlightQuery) {
                 indexedDBParserCache.set({
                   ...cachedEntry,
-                  highlightQuery,
+                  highlightQuery: compiledQueryText,
                 });
               }
             })
@@ -99,7 +103,11 @@ class WasmParserLoader {
           const localQuery = await this.fetchHighlightQueryText(languageId, config.wasmPath);
           if (localQuery) {
             try {
-              const query = new Query(cached.language, localQuery);
+              const { query, queryText: compiledQueryText } = this.compileHighlightQuery(
+                cached.language,
+                languageId,
+                localQuery,
+              );
               const updatedParser: LoadedParser = {
                 ...cached,
                 highlightQuery: query,
@@ -113,7 +121,7 @@ class WasmParserLoader {
                   if (cachedEntry) {
                     indexedDBParserCache.set({
                       ...cachedEntry,
-                      highlightQuery: localQuery,
+                      highlightQuery: compiledQueryText,
                     });
                   }
                 })
@@ -187,6 +195,164 @@ class WasmParserLoader {
       `Resolved highlight query for ${languageId} from ${sourceUrl || "fallback source"}`,
     );
     return query;
+  }
+
+  /**
+   * Compile highlight query with compatibility rewrites for parser/query mismatches.
+   */
+  private compileHighlightQuery(
+    language: Language,
+    languageId: string,
+    queryText: string,
+  ): { query: Query; queryText: string } {
+    try {
+      return {
+        query: new Query(language, queryText),
+        queryText,
+      };
+    } catch (error) {
+      const recovered = this.tryRecoverHighlightQuery(language, languageId, queryText, error);
+      if (recovered) return recovered;
+      throw error;
+    }
+  }
+
+  /**
+   * Try to recover from unsupported nodes by removing patterns that reference them.
+   */
+  private tryRecoverHighlightQuery(
+    language: Language,
+    languageId: string,
+    queryText: string,
+    error: unknown,
+  ): { query: Query; queryText: string } | null {
+    let rewrittenQuery = queryText;
+    let currentError = error;
+    const seenNodes = new Set<string>();
+
+    for (let attempts = 0; attempts < 8; attempts++) {
+      const badNode = this.extractBadNodeName(currentError);
+      if (!badNode || seenNodes.has(badNode)) {
+        break;
+      }
+      seenNodes.add(badNode);
+
+      const nextQuery = this.rewriteIncompatibleHighlightQuery(languageId, rewrittenQuery, badNode);
+      if (nextQuery === rewrittenQuery) {
+        break;
+      }
+      rewrittenQuery = nextQuery;
+
+      logger.warn(
+        "WasmParser",
+        `Applied ${languageId} highlight compatibility rewrite for missing node '${badNode}'`,
+      );
+
+      try {
+        return {
+          query: new Query(language, rewrittenQuery),
+          queryText: rewrittenQuery,
+        };
+      } catch (rewriteError) {
+        currentError = rewriteError;
+      }
+    }
+
+    logger.error("WasmParser", `Highlight query rewrite failed for ${languageId}:`, currentError);
+    return null;
+  }
+
+  private extractBadNodeName(error: unknown): string | null {
+    const message =
+      error instanceof Error ? error.message : typeof error === "string" ? error : String(error);
+    const match = message.match(/Bad node name '([^']+)'/);
+    return match?.[1] ?? null;
+  }
+
+  /**
+   * Rewrite unsupported node references so older parser WASM builds can still highlight partially.
+   */
+  private rewriteIncompatibleHighlightQuery(
+    languageId: string,
+    queryText: string,
+    badNodeName: string,
+  ): string {
+    let rewritten = this.stripNodeExpressions(queryText, badNodeName);
+
+    if (languageId === "rust" && badNodeName === "doc_comment") {
+      rewritten = this.ensureRustDocCommentFallback(rewritten);
+    }
+
+    return rewritten;
+  }
+
+  private stripNodeExpressions(queryText: string, badNodeName: string): string {
+    const nodeRegex = new RegExp(
+      `\\(${badNodeName.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}(?=[\\s)])`,
+    );
+    const lines = queryText.split("\n");
+    const output: string[] = [];
+    let expressionLines: string[] = [];
+    let depth = 0;
+    let inExpression = false;
+
+    const flushExpression = () => {
+      if (expressionLines.length === 0) return;
+      const expressionText = expressionLines.join("\n");
+      if (!nodeRegex.test(expressionText)) {
+        output.push(expressionText);
+      }
+      expressionLines = [];
+    };
+
+    for (const line of lines) {
+      if (!inExpression) {
+        if (line.trimStart().startsWith("(")) {
+          inExpression = true;
+          expressionLines = [line];
+          depth = (line.match(/\(/g) || []).length - (line.match(/\)/g) || []).length;
+          if (depth <= 0) {
+            flushExpression();
+            inExpression = false;
+            depth = 0;
+          }
+        } else {
+          output.push(line);
+        }
+        continue;
+      }
+
+      expressionLines.push(line);
+      depth += (line.match(/\(/g) || []).length - (line.match(/\)/g) || []).length;
+      if (depth <= 0) {
+        flushExpression();
+        inExpression = false;
+        depth = 0;
+      }
+    }
+
+    if (inExpression) {
+      flushExpression();
+    }
+
+    return `${output
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trimEnd()}\n`;
+  }
+
+  private ensureRustDocCommentFallback(queryText: string): string {
+    if (queryText.includes("^///|^//!")) {
+      return queryText;
+    }
+
+    return `${queryText.trimEnd()}
+
+((line_comment) @comment.documentation
+ (#match? @comment.documentation "^///|^//!"))
+((block_comment) @comment.documentation
+ (#match? @comment.documentation "^/\\*\\*|^/\\*!"))
+`;
   }
 
   private async _loadParserInternal(config: ParserConfig): Promise<LoadedParser> {
@@ -335,15 +501,35 @@ class WasmParserLoader {
       // Compile highlight query if provided
       let query: Query | undefined;
       if (queryText) {
+        const sourceQueryText = queryText;
         try {
-          query = new Query(language, queryText);
+          const compiled = this.compileHighlightQuery(language, languageId, queryText);
+          query = compiled.query;
+          queryText = compiled.queryText;
+
+          if (queryText !== sourceQueryText) {
+            indexedDBParserCache
+              .get(languageId)
+              .then((cachedEntry) => {
+                if (cachedEntry) {
+                  indexedDBParserCache.set({
+                    ...cachedEntry,
+                    highlightQuery: queryText || "",
+                  });
+                }
+              })
+              .catch(() => {});
+          }
         } catch (error) {
           logger.warn("WasmParser", `Failed to compile highlight query for ${languageId}`, error);
           // Try to fetch local highlight query as fallback
           const localQuery = await this.fetchHighlightQueryText(languageId, wasmPath);
           if (localQuery && localQuery !== queryText) {
             try {
-              query = new Query(language, localQuery);
+              const compiled = this.compileHighlightQuery(language, languageId, localQuery);
+              query = compiled.query;
+              queryText = compiled.queryText;
+              const resolvedQueryText = compiled.queryText;
               logger.info("WasmParser", `Using highlight query fallback for ${languageId}`);
               // Update IndexedDB cache with the correct local query
               indexedDBParserCache
@@ -352,7 +538,7 @@ class WasmParserLoader {
                   if (cachedEntry) {
                     indexedDBParserCache.set({
                       ...cachedEntry,
-                      highlightQuery: localQuery,
+                      highlightQuery: resolvedQueryText,
                     });
                   }
                 })

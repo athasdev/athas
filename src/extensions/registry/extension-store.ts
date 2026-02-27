@@ -3,6 +3,8 @@ import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
+import { useAuthStore } from "@/stores/auth-store";
+import { NODE_PLATFORM, PLATFORM_ARCH } from "@/utils/platform";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { extensionInstaller } from "../installer/extension-installer";
 import {
@@ -14,7 +16,7 @@ import {
   initializeLanguagePackager,
 } from "../languages/language-packager";
 import { extensionRegistry } from "../registry/extension-registry";
-import type { ExtensionManifest } from "../types/extension-manifest";
+import type { ExtensionManifest, ToolRuntime } from "../types/extension-manifest";
 
 export interface ExtensionInstallationMetadata {
   id: string;
@@ -53,6 +55,21 @@ interface ExtensionStoreState {
 }
 
 const HIDDEN_MARKETPLACE_EXTENSION_IDS = new Set(["athas.tsx"]);
+
+const normalizeExtensionId = (value: string) => value.trim().toLowerCase();
+
+function isExtensionAllowedByEnterprisePolicy(extensionId: string): boolean {
+  const subscription = useAuthStore.getState().subscription;
+  const enterprise = subscription?.enterprise;
+  const policy = enterprise?.policy;
+
+  if (!enterprise?.has_access || !policy?.managedMode || !policy.requireExtensionAllowlist) {
+    return true;
+  }
+
+  const allowedIds = new Set((policy.allowedExtensionIds || []).map(normalizeExtensionId));
+  return allowedIds.has(normalizeExtensionId(extensionId));
+}
 
 function mergeMarketplaceLanguageExtensions(extensions: ExtensionManifest[]): ExtensionManifest[] {
   const visibleExtensions = extensions.filter(
@@ -152,6 +169,25 @@ async function registerLanguageProvider(params: {
 
 type ToolType = "lsp" | "formatter" | "linter";
 type ToolPathMap = Partial<Record<ToolType, string>>;
+type BackendToolRuntime = Extract<
+  ToolRuntime,
+  "bun" | "node" | "python" | "go" | "rust" | "binary"
+>;
+
+interface BackendToolConfig {
+  name: string;
+  runtime: BackendToolRuntime;
+  package?: string;
+  downloadUrl?: string;
+  args?: string[];
+  env?: Record<string, string>;
+}
+
+interface BackendLanguageToolConfigSet {
+  lsp?: BackendToolConfig;
+  formatter?: BackendToolConfig;
+  linter?: BackendToolConfig;
+}
 
 function getCommandDefault(
   command:
@@ -164,6 +200,117 @@ function getCommandDefault(
     | undefined,
 ): string | undefined {
   return command?.default || command?.darwin || command?.linux || command?.win32;
+}
+
+function getArchToken(): "arm64" | "x64" {
+  return PLATFORM_ARCH.endsWith("arm64") ? "arm64" : "x64";
+}
+
+function getTargetOsToken(): "apple-darwin" | "unknown-linux-gnu" | "pc-windows-msvc" {
+  if (NODE_PLATFORM === "darwin") return "apple-darwin";
+  if (NODE_PLATFORM === "win32") return "pc-windows-msvc";
+  return "unknown-linux-gnu";
+}
+
+function getTargetArchToken(): "aarch64" | "x86_64" {
+  return getArchToken() === "arm64" ? "aarch64" : "x86_64";
+}
+
+function resolveDownloadUrlTemplate(template: string, extensionVersion: string): string {
+  return template
+    .replace(/\$\{os\}/g, NODE_PLATFORM)
+    .replace(/\$\{arch\}/g, getArchToken())
+    .replace(/\$\{platformArch\}/g, PLATFORM_ARCH)
+    .replace(/\$\{targetOs\}/g, getTargetOsToken())
+    .replace(/\$\{targetArch\}/g, getTargetArchToken())
+    .replace(/\$\{archiveExt\}/g, NODE_PLATFORM === "win32" ? "zip" : "gz")
+    .replace(/\$\{version\}/g, extensionVersion || "latest");
+}
+
+function toBackendToolConfig(
+  input: {
+    name?: string;
+    runtime?: ToolRuntime;
+    package?: string;
+    downloadUrl?: string;
+    args?: string[];
+    env?: Record<string, string>;
+  },
+  extensionVersion: string,
+): BackendToolConfig | undefined {
+  const name = input.name?.trim();
+  if (!name || !input.runtime) {
+    return undefined;
+  }
+
+  const downloadUrl = input.downloadUrl
+    ? resolveDownloadUrlTemplate(input.downloadUrl, extensionVersion)
+    : undefined;
+
+  return {
+    name,
+    runtime: input.runtime,
+    ...(input.package ? { package: input.package } : {}),
+    ...(downloadUrl ? { downloadUrl } : {}),
+    ...(input.args ? { args: input.args } : {}),
+    ...(input.env ? { env: input.env } : {}),
+  };
+}
+
+function getLanguageToolConfigSet(
+  manifest?: ExtensionManifest,
+): BackendLanguageToolConfigSet | undefined {
+  if (!manifest) return undefined;
+
+  const lsp = manifest.lsp
+    ? toBackendToolConfig(
+        {
+          name: manifest.lsp.name || getCommandDefault(manifest.lsp.server),
+          runtime: manifest.lsp.runtime,
+          package: manifest.lsp.package,
+          downloadUrl: manifest.lsp.downloadUrl,
+          args: manifest.lsp.args,
+          env: manifest.lsp.env,
+        },
+        manifest.version,
+      )
+    : undefined;
+
+  const formatter = manifest.formatter
+    ? toBackendToolConfig(
+        {
+          name: manifest.formatter.name || getCommandDefault(manifest.formatter.command),
+          runtime: manifest.formatter.runtime,
+          package: manifest.formatter.package,
+          downloadUrl: manifest.formatter.downloadUrl,
+          args: manifest.formatter.args,
+          env: manifest.formatter.env,
+        },
+        manifest.version,
+      )
+    : undefined;
+
+  const linter = manifest.linter
+    ? toBackendToolConfig(
+        {
+          name: manifest.linter.name || getCommandDefault(manifest.linter.command),
+          runtime: manifest.linter.runtime,
+          package: manifest.linter.package,
+          downloadUrl: manifest.linter.downloadUrl,
+          args: manifest.linter.args,
+          env: manifest.linter.env,
+        },
+        manifest.version,
+      )
+    : undefined;
+
+  const tools: BackendLanguageToolConfigSet = {
+    ...(lsp ? { lsp } : {}),
+    ...(formatter ? { formatter } : {}),
+    ...(linter ? { linter } : {}),
+  };
+
+  return Object.keys(tools).length > 0 ? tools : undefined;
 }
 
 function resolveInstalledExtensionId(
@@ -192,19 +339,30 @@ function resolveInstalledExtensionId(
   return installed.extensionId || `athas.${installed.languageId}`;
 }
 
-async function installLanguageTools(languageId: string): Promise<void> {
+async function installLanguageTools(
+  languageId: string,
+  manifest?: ExtensionManifest,
+): Promise<void> {
   try {
-    await invoke("install_language_tools", { languageId });
+    await invoke("install_language_tools", {
+      languageId,
+      tools: getLanguageToolConfigSet(manifest),
+    });
   } catch (error) {
     console.warn(`Failed to install tools for ${languageId}:`, error);
   }
 }
 
-async function getToolPath(languageId: string, toolType: ToolType): Promise<string | null> {
+async function getToolPath(
+  languageId: string,
+  toolType: ToolType,
+  manifest?: ExtensionManifest,
+): Promise<string | null> {
   try {
     return await invoke<string | null>("get_tool_path", {
       languageId,
       toolType,
+      tools: getLanguageToolConfigSet(manifest),
     });
   } catch {
     return null;
@@ -213,16 +371,17 @@ async function getToolPath(languageId: string, toolType: ToolType): Promise<stri
 
 async function resolveToolPaths(
   languageId: string,
+  manifest?: ExtensionManifest,
   options: { ensureInstalled?: boolean } = {},
 ): Promise<ToolPathMap> {
   if (options.ensureInstalled) {
-    await installLanguageTools(languageId);
+    await installLanguageTools(languageId, manifest);
   }
 
   const [lsp, formatter, linter] = await Promise.all([
-    getToolPath(languageId, "lsp"),
-    getToolPath(languageId, "formatter"),
-    getToolPath(languageId, "linter"),
+    getToolPath(languageId, "lsp", manifest),
+    getToolPath(languageId, "formatter", manifest),
+    getToolPath(languageId, "linter", manifest),
   ]);
 
   return {
@@ -356,7 +515,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             const aliases = languageConfig?.aliases;
 
             if (extension) {
-              const toolPaths = await resolveToolPaths(languageId);
+              const toolPaths = await resolveToolPaths(languageId, extension);
               const runtimeManifest = buildRuntimeManifest(extension, toolPaths);
               extensionRegistry.registerExtension(runtimeManifest, {
                 isBundled: false,
@@ -479,6 +638,12 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           throw new Error(`Extension ${extensionId} not found in registry`);
         }
 
+        if (!isExtensionAllowedByEnterprisePolicy(extensionId)) {
+          throw new Error(
+            `Installation blocked by enterprise policy. "${extensionId}" is not in the extension allowlist.`,
+          );
+        }
+
         if (!extension.manifest.installation) {
           throw new Error(`Extension ${extensionId} has no installation metadata`);
         }
@@ -525,7 +690,9 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             }
 
             const primaryLanguageId = languageConfigs[0].id;
-            const toolPaths = await resolveToolPaths(primaryLanguageId, { ensureInstalled: true });
+            const toolPaths = await resolveToolPaths(primaryLanguageId, extension.manifest, {
+              ensureInstalled: true,
+            });
             const runtimeManifest = buildRuntimeManifest(extension.manifest, toolPaths);
             extensionRegistry.registerExtension(runtimeManifest, {
               isBundled: false,
@@ -731,6 +898,12 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         const extension = get().availableExtensions.get(extensionId);
         if (!extension?.manifest.languages?.[0]) {
           throw new Error(`Extension ${extensionId} not found or has no languages`);
+        }
+
+        if (!isExtensionAllowedByEnterprisePolicy(extensionId)) {
+          throw new Error(
+            `Update blocked by enterprise policy. "${extensionId}" is not in the extension allowlist.`,
+          );
         }
 
         const languageIds = extension.manifest.languages.map((language) => language.id);

@@ -8,8 +8,8 @@ import { Terminal } from "@xterm/xterm";
 import { useCallback, useEffect, useRef } from "react";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useSettingsStore } from "@/features/settings/store";
+import { useTerminalTheme } from "@/features/terminal/hooks/use-terminal-theme";
 import { useProjectStore } from "@/stores/project-store";
-import { useThemeStore } from "@/stores/theme-store";
 import { cn } from "@/utils/cn";
 import "@xterm/xterm/css/xterm.css";
 import "@/features/terminal/styles/terminal.css";
@@ -19,31 +19,6 @@ interface ExternalEditorTerminalProps {
   fileName: string;
   terminalConnectionId: string;
   onEditorExit?: () => void;
-}
-
-interface TerminalTheme {
-  background: string;
-  foreground: string;
-  cursor: string;
-  cursorAccent: string;
-  selectionBackground: string;
-  selectionForeground: string;
-  black: string;
-  red: string;
-  green: string;
-  yellow: string;
-  blue: string;
-  magenta: string;
-  cyan: string;
-  white: string;
-  brightBlack: string;
-  brightRed: string;
-  brightGreen: string;
-  brightYellow: string;
-  brightBlue: string;
-  brightMagenta: string;
-  brightCyan: string;
-  brightWhite: string;
 }
 
 export const ExternalEditorTerminal = ({
@@ -60,40 +35,10 @@ export const ExternalEditorTerminal = ({
   const themeRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const resizeRafRef = useRef<number | null>(null);
 
-  const { currentTheme } = useThemeStore();
   const { fontSize: editorFontSize, fontFamily: editorFontFamily } = useEditorSettingsStore();
   const { rootFolderPath } = useProjectStore();
   const { settings } = useSettingsStore();
-
-  const getTerminalTheme = useCallback((): TerminalTheme => {
-    const computedStyle = getComputedStyle(document.documentElement);
-    const getColor = (varName: string) => computedStyle.getPropertyValue(varName).trim();
-
-    return {
-      background: getColor("--color-primary-bg"),
-      foreground: getColor("--color-text"),
-      cursor: getColor("--color-accent"),
-      cursorAccent: getColor("--color-background"),
-      selectionBackground: `${getColor("--color-accent")}40`,
-      selectionForeground: getColor("--color-text"),
-      black: getColor("--color-terminal-black") || "#000000",
-      red: getColor("--color-terminal-red") || "#CD3131",
-      green: getColor("--color-terminal-green") || "#0DBC79",
-      yellow: getColor("--color-terminal-yellow") || "#E5E510",
-      blue: getColor("--color-terminal-blue") || "#2472C8",
-      magenta: getColor("--color-terminal-magenta") || "#BC3FBC",
-      cyan: getColor("--color-terminal-cyan") || "#11A8CD",
-      white: getColor("--color-terminal-white") || "#E5E5E5",
-      brightBlack: getColor("--color-terminal-bright-black") || "#666666",
-      brightRed: getColor("--color-terminal-bright-red") || "#F14C4C",
-      brightGreen: getColor("--color-terminal-bright-green") || "#23D18B",
-      brightYellow: getColor("--color-terminal-bright-yellow") || "#F5F543",
-      brightBlue: getColor("--color-terminal-bright-blue") || "#3B8EEA",
-      brightMagenta: getColor("--color-terminal-bright-magenta") || "#D670D6",
-      brightCyan: getColor("--color-terminal-bright-cyan") || "#29B8DB",
-      brightWhite: getColor("--color-terminal-bright-white") || "#FFFFFF",
-    };
-  }, []);
+  const { getTerminalTheme } = useTerminalTheme();
 
   const getEditorCommand = useCallback(
     (path: string): string => {
@@ -338,7 +283,7 @@ export const ExternalEditorTerminal = ({
         themeRefreshTimeoutRef.current = null;
       }, 50);
     }
-  }, [currentTheme, getTerminalTheme]);
+  }, [settings.theme, getTerminalTheme]);
 
   useEffect(() => {
     const handleResize = () => {

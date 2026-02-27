@@ -6,7 +6,6 @@ import { themeRegistry } from "@/extensions/themes/theme-registry";
 
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
-import { useThemeStore } from "@/stores/theme-store";
 import {
   createTerminalAddons,
   injectLinkStyles,
@@ -56,9 +55,9 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   }, [onTerminalExit]);
 
   const { updateSession, getSession } = useTerminalStore();
-  const { currentTheme } = useThemeStore();
 
   const {
+    theme: terminalThemeId,
     terminalFontFamily,
     terminalFontSize,
     terminalLineHeight,
@@ -318,7 +317,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       xtermRef.current?.refresh(0, xtermRef.current.rows - 1);
       addonsRef.current?.fitAddon.fit();
     }, 10);
-  }, [currentTheme, getTerminalTheme]);
+  }, [terminalThemeId, getTerminalTheme]);
 
   // Handle font changes
   useEffect(() => {

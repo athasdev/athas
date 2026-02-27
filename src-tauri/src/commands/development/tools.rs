@@ -1,5 +1,5 @@
 use crate::features::tools::{
-   LanguageToolStatus, ToolInstaller, ToolRegistry, ToolStatus, ToolType,
+   LanguageToolConfigSet, LanguageToolStatus, ToolInstaller, ToolRegistry, ToolStatus, ToolType,
 };
 use tauri::AppHandle;
 
@@ -8,18 +8,19 @@ use tauri::AppHandle;
 pub async fn install_language_tools(
    app_handle: AppHandle,
    language_id: String,
+   tools: Option<LanguageToolConfigSet>,
 ) -> Result<LanguageToolStatus, String> {
    let mut status = LanguageToolStatus::new(&language_id);
 
-   let tools = ToolRegistry::get_tools(&language_id);
-   if tools.is_none() {
+   let resolved_tools = ToolRegistry::get_tools(&language_id, tools);
+   if resolved_tools.is_none() {
       return Ok(status);
    }
 
-   let tools = tools.unwrap();
+   let resolved_tools = resolved_tools.unwrap();
 
    // Install LSP
-   if let Some(config) = tools.get(&ToolType::Lsp) {
+   if let Some(config) = resolved_tools.get(&ToolType::Lsp) {
       status.lsp = Some(match ToolInstaller::install(&app_handle, config).await {
          Ok(_) => ToolStatus::Installed,
          Err(e) => ToolStatus::Failed(e.to_string()),
@@ -27,7 +28,7 @@ pub async fn install_language_tools(
    }
 
    // Install formatter
-   if let Some(config) = tools.get(&ToolType::Formatter) {
+   if let Some(config) = resolved_tools.get(&ToolType::Formatter) {
       status.formatter = Some(match ToolInstaller::install(&app_handle, config).await {
          Ok(_) => ToolStatus::Installed,
          Err(e) => ToolStatus::Failed(e.to_string()),
@@ -35,7 +36,7 @@ pub async fn install_language_tools(
    }
 
    // Install linter
-   if let Some(config) = tools.get(&ToolType::Linter) {
+   if let Some(config) = resolved_tools.get(&ToolType::Linter) {
       status.linter = Some(match ToolInstaller::install(&app_handle, config).await {
          Ok(_) => ToolStatus::Installed,
          Err(e) => ToolStatus::Failed(e.to_string()),
@@ -51,6 +52,7 @@ pub async fn install_tool(
    app_handle: AppHandle,
    language_id: String,
    tool_type: String,
+   tools: Option<LanguageToolConfigSet>,
 ) -> Result<ToolStatus, String> {
    let tool_type = match tool_type.as_str() {
       "lsp" => ToolType::Lsp,
@@ -59,7 +61,7 @@ pub async fn install_tool(
       _ => return Err(format!("Unknown tool type: {}", tool_type)),
    };
 
-   let config = ToolRegistry::get_tool(&language_id, tool_type).ok_or_else(|| {
+   let config = ToolRegistry::get_tool(&language_id, tool_type, tools).ok_or_else(|| {
       format!(
          "No {} configured for {}",
          tool_type_str(&tool_type),
@@ -78,18 +80,19 @@ pub async fn install_tool(
 pub async fn get_language_tool_status(
    app_handle: AppHandle,
    language_id: String,
+   tools: Option<LanguageToolConfigSet>,
 ) -> Result<LanguageToolStatus, String> {
    let mut status = LanguageToolStatus::new(&language_id);
 
-   let tools = ToolRegistry::get_tools(&language_id);
-   if tools.is_none() {
+   let resolved_tools = ToolRegistry::get_tools(&language_id, tools);
+   if resolved_tools.is_none() {
       return Ok(status);
    }
 
-   let tools = tools.unwrap();
+   let resolved_tools = resolved_tools.unwrap();
 
    // Check LSP
-   if let Some(config) = tools.get(&ToolType::Lsp) {
+   if let Some(config) = resolved_tools.get(&ToolType::Lsp) {
       status.lsp = Some(
          if ToolInstaller::is_installed(&app_handle, config).unwrap_or(false) {
             ToolStatus::Installed
@@ -100,7 +103,7 @@ pub async fn get_language_tool_status(
    }
 
    // Check formatter
-   if let Some(config) = tools.get(&ToolType::Formatter) {
+   if let Some(config) = resolved_tools.get(&ToolType::Formatter) {
       status.formatter = Some(
          if ToolInstaller::is_installed(&app_handle, config).unwrap_or(false) {
             ToolStatus::Installed
@@ -111,7 +114,7 @@ pub async fn get_language_tool_status(
    }
 
    // Check linter
-   if let Some(config) = tools.get(&ToolType::Linter) {
+   if let Some(config) = resolved_tools.get(&ToolType::Linter) {
       status.linter = Some(
          if ToolInstaller::is_installed(&app_handle, config).unwrap_or(false) {
             ToolStatus::Installed
@@ -130,6 +133,7 @@ pub async fn get_tool_path(
    app_handle: AppHandle,
    language_id: String,
    tool_type: String,
+   tools: Option<LanguageToolConfigSet>,
 ) -> Result<Option<String>, String> {
    let tool_type = match tool_type.as_str() {
       "lsp" => ToolType::Lsp,
@@ -138,7 +142,7 @@ pub async fn get_tool_path(
       _ => return Err(format!("Unknown tool type: {}", tool_type)),
    };
 
-   let config = match ToolRegistry::get_tool(&language_id, tool_type) {
+   let config = match ToolRegistry::get_tool(&language_id, tool_type, tools) {
       Some(c) => c,
       None => return Ok(None),
    };
@@ -159,8 +163,11 @@ pub async fn get_tool_path(
 
 /// Get available tools for a language
 #[tauri::command]
-pub fn get_available_tools(language_id: String) -> Result<Vec<String>, String> {
-   let tools = ToolRegistry::get_tools(&language_id);
+pub fn get_available_tools(
+   language_id: String,
+   tools: Option<LanguageToolConfigSet>,
+) -> Result<Vec<String>, String> {
+   let tools = ToolRegistry::get_tools(&language_id, tools);
    match tools {
       Some(t) => Ok(t.keys().map(|k| tool_type_str(k).to_string()).collect()),
       None => Ok(vec![]),
