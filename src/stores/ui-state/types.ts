@@ -7,6 +7,7 @@ export type SettingsTab =
   | "keyboard"
   | "language"
   | "features"
+  | "enterprise"
   | "advanced"
   | "fileTree"
   | "terminal";

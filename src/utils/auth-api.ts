@@ -25,6 +25,29 @@ export interface SubscriptionInfo {
     ends_at: string | null;
     trial_ends_at: string | null;
   } | null;
+  enterprise: {
+    has_access: boolean;
+    is_admin: boolean;
+    policy: {
+      managedMode: boolean;
+      requireExtensionAllowlist: boolean;
+      allowedExtensionIds: string[];
+      allowByok: boolean;
+      aiCompletionEnabled: boolean;
+      aiChatEnabled: boolean;
+      updatedAt: string | null;
+    } | null;
+  };
+}
+
+export interface EnterprisePolicy {
+  managedMode: boolean;
+  requireExtensionAllowlist: boolean;
+  allowedExtensionIds: string[];
+  allowByok: boolean;
+  aiCompletionEnabled: boolean;
+  aiChatEnabled: boolean;
+  updatedAt: string | null;
 }
 
 type DesktopAuthPollResponse =
@@ -100,6 +123,26 @@ export async function fetchSubscriptionStatus(): Promise<SubscriptionInfo> {
     throw new Error(`Failed to fetch subscription: ${response.status}`);
   }
   return await response.json();
+}
+
+export async function updateEnterprisePolicy(
+  patch: Partial<Omit<EnterprisePolicy, "updatedAt">>,
+): Promise<EnterprisePolicy> {
+  const response = await authenticatedFetch("/api/enterprise/policy", {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+
+  const payload = (await response.json().catch(() => null)) as {
+    policy?: EnterprisePolicy;
+    error?: string;
+  } | null;
+
+  if (!response.ok || !payload?.policy) {
+    throw new Error(payload?.error || `Failed to update enterprise policy: ${response.status}`);
+  }
+
+  return payload.policy;
 }
 
 export async function logoutFromServer(): Promise<void> {

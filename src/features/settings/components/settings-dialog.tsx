@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
+import { useAuthStore } from "@/stores/auth-store";
 import { type SettingsTab, useUIState } from "@/stores/ui-state-store";
 import Dialog from "@/ui/dialog";
 import { SettingsVerticalTabs } from "./settings-vertical-tabs";
@@ -8,6 +9,7 @@ import { AdvancedSettings } from "./tabs/advanced-settings";
 import { AISettings } from "./tabs/ai-settings";
 import { AppearanceSettings } from "./tabs/appearance-settings";
 import { EditorSettings } from "./tabs/editor-settings";
+import { EnterpriseSettings } from "./tabs/enterprise-settings";
 import { ExtensionsSettings } from "./tabs/extensions-settings";
 import { FeaturesSettings } from "./tabs/features-settings";
 import { FileTreeSettings } from "./tabs/file-tree-settings";
@@ -24,15 +26,21 @@ interface SettingsDialogProps {
 const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   const { settingsInitialTab } = useUIState();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+  const subscription = useAuthStore((state) => state.subscription);
+  const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
 
   const clearSearch = useSettingsStore((state) => state.clearSearch);
 
   // Sync active tab with settingsInitialTab whenever it changes (enables deep linking when dialog is already open)
   useEffect(() => {
     if (isOpen) {
-      setActiveTab(settingsInitialTab);
+      if (!hasEnterpriseAccess && settingsInitialTab === "enterprise") {
+        setActiveTab("general");
+      } else {
+        setActiveTab(settingsInitialTab);
+      }
     }
-  }, [settingsInitialTab]);
+  }, [settingsInitialTab, isOpen, hasEnterpriseAccess]);
 
   // Clear search and reset tab when dialog closes
   useEffect(() => {
@@ -59,6 +67,8 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         return <LanguageSettings />;
       case "features":
         return <FeaturesSettings />;
+      case "enterprise":
+        return hasEnterpriseAccess ? <EnterpriseSettings /> : <GeneralSettings />;
       case "advanced":
         return <AdvancedSettings />;
       case "fileTree":

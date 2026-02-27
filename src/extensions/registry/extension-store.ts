@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
+import { useAuthStore } from "@/stores/auth-store";
 import { NODE_PLATFORM, PLATFORM_ARCH } from "@/utils/platform";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { extensionInstaller } from "../installer/extension-installer";
@@ -54,6 +55,21 @@ interface ExtensionStoreState {
 }
 
 const HIDDEN_MARKETPLACE_EXTENSION_IDS = new Set(["athas.tsx"]);
+
+const normalizeExtensionId = (value: string) => value.trim().toLowerCase();
+
+function isExtensionAllowedByEnterprisePolicy(extensionId: string): boolean {
+  const subscription = useAuthStore.getState().subscription;
+  const enterprise = subscription?.enterprise;
+  const policy = enterprise?.policy;
+
+  if (!enterprise?.has_access || !policy?.managedMode || !policy.requireExtensionAllowlist) {
+    return true;
+  }
+
+  const allowedIds = new Set((policy.allowedExtensionIds || []).map(normalizeExtensionId));
+  return allowedIds.has(normalizeExtensionId(extensionId));
+}
 
 function mergeMarketplaceLanguageExtensions(extensions: ExtensionManifest[]): ExtensionManifest[] {
   const visibleExtensions = extensions.filter(
@@ -622,6 +638,12 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           throw new Error(`Extension ${extensionId} not found in registry`);
         }
 
+        if (!isExtensionAllowedByEnterprisePolicy(extensionId)) {
+          throw new Error(
+            `Installation blocked by enterprise policy. "${extensionId}" is not in the extension allowlist.`,
+          );
+        }
+
         if (!extension.manifest.installation) {
           throw new Error(`Extension ${extensionId} has no installation metadata`);
         }
@@ -876,6 +898,12 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         const extension = get().availableExtensions.get(extensionId);
         if (!extension?.manifest.languages?.[0]) {
           throw new Error(`Extension ${extensionId} not found or has no languages`);
+        }
+
+        if (!isExtensionAllowedByEnterprisePolicy(extensionId)) {
+          throw new Error(
+            `Update blocked by enterprise policy. "${extensionId}" is not in the extension allowlist.`,
+          );
         }
 
         const languageIds = extension.manifest.languages.map((language) => language.id);

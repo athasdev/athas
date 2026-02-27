@@ -4,6 +4,7 @@ import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
+import { useAuthStore } from "@/stores/auth-store";
 import { useProjectStore } from "@/stores/project-store";
 import { AcpStreamHandler } from "@/utils/acp-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/utils/ai-chat";
@@ -82,6 +83,11 @@ const AIChat = memo(function AIChat({
 }: AIChatProps) {
   const { rootFolderPath } = useProjectStore();
   const { settings } = useSettingsStore();
+  const subscription = useAuthStore((state) => state.subscription);
+  const enterprisePolicy = subscription?.enterprise?.policy;
+  const isAiChatBlockedByPolicy = Boolean(
+    enterprisePolicy?.managedMode && !enterprisePolicy.aiChatEnabled,
+  );
 
   const chatState = useChatState();
   const chatActions = useChatActions();
@@ -585,69 +591,81 @@ details: ${errorDetails || mainError}
       className={`ui-font flex h-full flex-col bg-secondary-bg text-text text-xs ${className || ""}`}
     >
       <ChatHeader />
-
-      <div className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto">
-        <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} acpEvents={acpEvents} />
-      </div>
-
-      {currentPermission && (
-        <div className="bg-transparent px-3 pt-2 text-xs">
-          <div className="flex items-center gap-2 rounded-2xl border border-border bg-primary-bg/90 px-3 py-2 font-mono">
-            <span className="text-text-lighter">permission:</span>
-            <span
-              className="min-w-0 flex-1 truncate text-text"
-              title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
-            >
-              {currentPermission.description}
-            </span>
-            <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                onClick={() => handlePermission(false)}
-                className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text-lighter hover:bg-hover"
-              >
-                deny
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePermission(true)}
-                className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text hover:bg-hover"
-              >
-                allow
-              </button>
-            </div>
+      {isAiChatBlockedByPolicy ? (
+        <div className="flex h-full items-center justify-center p-6">
+          <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
+            <p className="font-medium text-sm text-text">AI chat is disabled</p>
+            <p className="mt-2 text-text-lighter text-xs">
+              Your organization policy has disabled AI chat for this workspace.
+            </p>
           </div>
         </div>
+      ) : (
+        <>
+          <div className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto">
+            <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} acpEvents={acpEvents} />
+          </div>
+
+          {currentPermission && (
+            <div className="bg-transparent px-3 pt-2 text-xs">
+              <div className="flex items-center gap-2 rounded-2xl border border-border bg-primary-bg/90 px-3 py-2 font-mono">
+                <span className="text-text-lighter">permission:</span>
+                <span
+                  className="min-w-0 flex-1 truncate text-text"
+                  title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
+                >
+                  {currentPermission.description}
+                </span>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handlePermission(false)}
+                    className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text-lighter hover:bg-hover"
+                  >
+                    deny
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePermission(true)}
+                    className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text hover:bg-hover"
+                  >
+                    allow
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <AIChatInputBar
+            buffers={buffers}
+            allProjectFiles={allProjectFiles}
+            onSendMessage={handleSendMessage}
+            onStopStreaming={stopStreaming}
+          />
+
+          <ApiKeyModal
+            isOpen={chatState.apiKeyModalState.isOpen}
+            onClose={() => chatActions.setApiKeyModalState({ isOpen: false, providerId: null })}
+            providerId={chatState.apiKeyModalState.providerId || ""}
+            onSave={chatActions.saveApiKey}
+            onRemove={chatActions.removeApiKey}
+            hasExistingKey={
+              chatState.apiKeyModalState.providerId
+                ? chatActions.hasProviderApiKey(chatState.apiKeyModalState.providerId)
+                : false
+            }
+          />
+
+          <ChatHistorySidebar
+            chats={chatState.chats}
+            currentChatId={chatState.currentChatId}
+            onSwitchToChat={chatActions.switchToChat}
+            onDeleteChat={handleDeleteChat}
+            isOpen={chatState.isChatHistoryVisible}
+            onClose={() => chatActions.setIsChatHistoryVisible(false)}
+          />
+        </>
       )}
-
-      <AIChatInputBar
-        buffers={buffers}
-        allProjectFiles={allProjectFiles}
-        onSendMessage={handleSendMessage}
-        onStopStreaming={stopStreaming}
-      />
-
-      <ApiKeyModal
-        isOpen={chatState.apiKeyModalState.isOpen}
-        onClose={() => chatActions.setApiKeyModalState({ isOpen: false, providerId: null })}
-        providerId={chatState.apiKeyModalState.providerId || ""}
-        onSave={chatActions.saveApiKey}
-        onRemove={chatActions.removeApiKey}
-        hasExistingKey={
-          chatState.apiKeyModalState.providerId
-            ? chatActions.hasProviderApiKey(chatState.apiKeyModalState.providerId)
-            : false
-        }
-      />
-
-      <ChatHistorySidebar
-        chats={chatState.chats}
-        currentChatId={chatState.currentChatId}
-        onSwitchToChat={chatActions.switchToChat}
-        onDeleteChat={handleDeleteChat}
-        isOpen={chatState.isChatHistoryVisible}
-        onClose={() => chatActions.setIsChatHistoryVisible(false)}
-      />
     </div>
   );
 });

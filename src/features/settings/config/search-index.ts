@@ -77,6 +77,30 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Reset zoom to 100%",
     keywords: ["keyboard", "shortcut", "zoom", "reset"],
   },
+  {
+    id: "enterprise-managed-mode",
+    tab: "enterprise",
+    section: "Enterprise Controls",
+    label: "Managed Enterprise Mode",
+    description: "Enable organization-managed controls in the desktop app",
+    keywords: ["enterprise", "managed", "policy", "organization", "admin"],
+  },
+  {
+    id: "enterprise-extension-allowlist-toggle",
+    tab: "enterprise",
+    section: "Enterprise Controls",
+    label: "Require Extension Allowlist",
+    description: "Block extension installs unless explicitly approved",
+    keywords: ["enterprise", "extensions", "allowlist", "policy", "security"],
+  },
+  {
+    id: "enterprise-extension-allowlist-entries",
+    tab: "enterprise",
+    section: "Extension Allowlist",
+    label: "Extension Allowlist",
+    description: "Approved extension IDs for enterprise-managed environments",
+    keywords: ["enterprise", "extensions", "ids", "allowlist", "approved"],
+  },
 
   // Editor Settings
   {

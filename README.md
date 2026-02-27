@@ -15,6 +15,7 @@
 - Integrated terminal
 - SQLite viewer
 - External editor support
+- Enterprise policy controls (managed mode + extension allowlist)
 
 ## Download
 
