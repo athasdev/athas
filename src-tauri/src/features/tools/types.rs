@@ -63,6 +63,18 @@ pub enum ToolType {
    Linter,
 }
 
+/// Tool configurations provided by a language extension manifest.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct LanguageToolConfigSet {
+   #[serde(default)]
+   pub lsp: Option<ToolConfig>,
+   #[serde(default)]
+   pub formatter: Option<ToolConfig>,
+   #[serde(default)]
+   pub linter: Option<ToolConfig>,
+}
+
 /// Status of all tools for a language
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
