@@ -73,7 +73,11 @@ class WasmParserLoader {
 
         // Create highlight query from text
         try {
-          const query = new Query(cached.language, highlightQuery);
+          const { query, queryText: compiledQueryText } = this.compileHighlightQuery(
+            cached.language,
+            languageId,
+            highlightQuery,
+          );
           const updatedParser: LoadedParser = {
             ...cached,
             highlightQuery: query,
@@ -87,7 +91,7 @@ class WasmParserLoader {
               if (cachedEntry && !cachedEntry.highlightQuery) {
                 indexedDBParserCache.set({
                   ...cachedEntry,
-                  highlightQuery,
+                  highlightQuery: compiledQueryText,
                 });
               }
             })
@@ -99,7 +103,11 @@ class WasmParserLoader {
           const localQuery = await this.fetchHighlightQueryText(languageId, config.wasmPath);
           if (localQuery) {
             try {
-              const query = new Query(cached.language, localQuery);
+              const { query, queryText: compiledQueryText } = this.compileHighlightQuery(
+                cached.language,
+                languageId,
+                localQuery,
+              );
               const updatedParser: LoadedParser = {
                 ...cached,
                 highlightQuery: query,
@@ -113,7 +121,7 @@ class WasmParserLoader {
                   if (cachedEntry) {
                     indexedDBParserCache.set({
                       ...cachedEntry,
-                      highlightQuery: localQuery,
+                      highlightQuery: compiledQueryText,
                     });
                   }
                 })
@@ -187,6 +195,82 @@ class WasmParserLoader {
       `Resolved highlight query for ${languageId} from ${sourceUrl || "fallback source"}`,
     );
     return query;
+  }
+
+  /**
+   * Compile highlight query with compatibility rewrites for known parser/query mismatches.
+   */
+  private compileHighlightQuery(
+    language: Language,
+    languageId: string,
+    queryText: string,
+  ): { query: Query; queryText: string } {
+    try {
+      return {
+        query: new Query(language, queryText),
+        queryText,
+      };
+    } catch (error) {
+      const rewrittenQuery = this.rewriteIncompatibleHighlightQuery(languageId, queryText, error);
+      if (rewrittenQuery !== queryText) {
+        try {
+          return {
+            query: new Query(language, rewrittenQuery),
+            queryText: rewrittenQuery,
+          };
+        } catch (rewriteError) {
+          logger.error(
+            "WasmParser",
+            `Highlight query rewrite failed for ${languageId}:`,
+            rewriteError,
+          );
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Rewrite known incompatible node references so highlighting still works with older parser WASM builds.
+   */
+  private rewriteIncompatibleHighlightQuery(
+    languageId: string,
+    queryText: string,
+    error: unknown,
+  ): string {
+    const message =
+      error instanceof Error ? error.message : typeof error === "string" ? error : String(error);
+
+    // Rust parser/query mismatch: older parser versions do not expose `doc_comment`.
+    if (languageId === "rust" && message.includes("Bad node name 'doc_comment'")) {
+      let rewritten = queryText;
+      rewritten = rewritten.replace(
+        /\(\s*line_comment\s+\(\s*doc_comment\s*\)\s*\)\s*@comment\.documentation\s*/g,
+        "",
+      );
+      rewritten = rewritten.replace(
+        /\(\s*block_comment\s+\(\s*doc_comment\s*\)\s*\)\s*@comment\.documentation\s*/g,
+        "",
+      );
+
+      if (!rewritten.includes("^///|^//!")) {
+        rewritten = `${rewritten.trimEnd()}
+
+((line_comment) @comment.documentation
+ (#match? @comment.documentation "^///|^//!"))
+((block_comment) @comment.documentation
+ (#match? @comment.documentation "^/\\*\\*|^/\\*!"))
+`;
+      }
+
+      logger.warn(
+        "WasmParser",
+        "Applied Rust highlight compatibility rewrite for missing doc_comment node",
+      );
+      return rewritten;
+    }
+
+    return queryText;
   }
 
   private async _loadParserInternal(config: ParserConfig): Promise<LoadedParser> {
@@ -335,15 +419,35 @@ class WasmParserLoader {
       // Compile highlight query if provided
       let query: Query | undefined;
       if (queryText) {
+        const sourceQueryText = queryText;
         try {
-          query = new Query(language, queryText);
+          const compiled = this.compileHighlightQuery(language, languageId, queryText);
+          query = compiled.query;
+          queryText = compiled.queryText;
+
+          if (queryText !== sourceQueryText) {
+            indexedDBParserCache
+              .get(languageId)
+              .then((cachedEntry) => {
+                if (cachedEntry) {
+                  indexedDBParserCache.set({
+                    ...cachedEntry,
+                    highlightQuery: queryText || "",
+                  });
+                }
+              })
+              .catch(() => {});
+          }
         } catch (error) {
           logger.warn("WasmParser", `Failed to compile highlight query for ${languageId}`, error);
           // Try to fetch local highlight query as fallback
           const localQuery = await this.fetchHighlightQueryText(languageId, wasmPath);
           if (localQuery && localQuery !== queryText) {
             try {
-              query = new Query(language, localQuery);
+              const compiled = this.compileHighlightQuery(language, languageId, localQuery);
+              query = compiled.query;
+              queryText = compiled.queryText;
+              const resolvedQueryText = compiled.queryText;
               logger.info("WasmParser", `Using highlight query fallback for ${languageId}`);
               // Update IndexedDB cache with the correct local query
               indexedDBParserCache
@@ -352,7 +456,7 @@ class WasmParserLoader {
                   if (cachedEntry) {
                     indexedDBParserCache.set({
                       ...cachedEntry,
-                      highlightQuery: localQuery,
+                      highlightQuery: resolvedQueryText,
                     });
                   }
                 })
