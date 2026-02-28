@@ -229,33 +229,68 @@ class WasmParserLoader {
     let rewrittenQuery = queryText;
     let currentError = error;
     const seenNodes = new Set<string>();
+    const seenPredicates = new Set<string>();
 
-    for (let attempts = 0; attempts < 8; attempts++) {
+    for (let attempts = 0; attempts < 12; attempts++) {
       const badNode = this.extractBadNodeName(currentError);
-      if (!badNode || seenNodes.has(badNode)) {
-        break;
-      }
-      seenNodes.add(badNode);
+      if (badNode && !seenNodes.has(badNode)) {
+        seenNodes.add(badNode);
 
-      const nextQuery = this.rewriteIncompatibleHighlightQuery(languageId, rewrittenQuery, badNode);
-      if (nextQuery === rewrittenQuery) {
-        break;
-      }
-      rewrittenQuery = nextQuery;
+        const nextQuery = this.rewriteIncompatibleHighlightQuery(
+          languageId,
+          rewrittenQuery,
+          badNode,
+        );
+        if (nextQuery !== rewrittenQuery) {
+          rewrittenQuery = nextQuery;
 
-      logger.warn(
-        "WasmParser",
-        `Applied ${languageId} highlight compatibility rewrite for missing node '${badNode}'`,
-      );
+          logger.warn(
+            "WasmParser",
+            `Applied ${languageId} highlight compatibility rewrite for missing node '${badNode}'`,
+          );
 
-      try {
-        return {
-          query: new Query(language, rewrittenQuery),
-          queryText: rewrittenQuery,
-        };
-      } catch (rewriteError) {
-        currentError = rewriteError;
+          try {
+            return {
+              query: new Query(language, rewrittenQuery),
+              queryText: rewrittenQuery,
+            };
+          } catch (rewriteError) {
+            currentError = rewriteError;
+            continue;
+          }
+        }
       }
+
+      const badPredicate = this.extractBadPredicateName(currentError);
+      if (badPredicate && !seenPredicates.has(badPredicate)) {
+        seenPredicates.add(badPredicate);
+
+        const nextQuery = this.rewriteIncompatiblePredicateQuery(
+          languageId,
+          rewrittenQuery,
+          badPredicate,
+        );
+        if (nextQuery !== rewrittenQuery) {
+          rewrittenQuery = nextQuery;
+
+          logger.warn(
+            "WasmParser",
+            `Applied ${languageId} highlight compatibility rewrite for unsupported predicate '${badPredicate}'`,
+          );
+
+          try {
+            return {
+              query: new Query(language, rewrittenQuery),
+              queryText: rewrittenQuery,
+            };
+          } catch (rewriteError) {
+            currentError = rewriteError;
+            continue;
+          }
+        }
+      }
+
+      break;
     }
 
     logger.error("WasmParser", `Highlight query rewrite failed for ${languageId}:`, currentError);
@@ -269,6 +304,15 @@ class WasmParserLoader {
     return match?.[1] ?? null;
   }
 
+  private extractBadPredicateName(error: unknown): string | null {
+    const message =
+      error instanceof Error ? error.message : typeof error === "string" ? error : String(error);
+    const backtickMatch = message.match(/`([^`]+)` predicate/);
+    if (backtickMatch?.[1]) return backtickMatch[1];
+    const quoteMatch = message.match(/predicate ['"]([^'"]+)['"]/);
+    return quoteMatch?.[1] ?? null;
+  }
+
   /**
    * Rewrite unsupported node references so older parser WASM builds can still highlight partially.
    */
@@ -278,6 +322,17 @@ class WasmParserLoader {
     badNodeName: string,
   ): string {
     return this.stripNodeExpressions(queryText, badNodeName);
+  }
+
+  /**
+   * Rewrite incompatible predicate invocations (e.g. predicate arity changes across engines).
+   */
+  private rewriteIncompatiblePredicateQuery(
+    _languageId: string,
+    queryText: string,
+    predicateName: string,
+  ): string {
+    return this.stripPredicateCalls(queryText, predicateName);
   }
 
   private stripNodeExpressions(queryText: string, badNodeName: string): string {
@@ -333,6 +388,101 @@ class WasmParserLoader {
       .join("\n")
       .replace(/\n{3,}/g, "\n\n")
       .trimEnd()}\n`;
+  }
+
+  private stripPredicateCalls(queryText: string, predicateName: string): string {
+    const escapedPredicate = predicateName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const predicateRegex = new RegExp(`\\(${escapedPredicate}(?=[\\s)])`, "g");
+    const output: string[] = [];
+    let cursor = 0;
+    let changed = false;
+    let match = predicateRegex.exec(queryText);
+    while (match !== null) {
+      const start = match.index;
+      const end = this.findMatchingParenIndex(queryText, start);
+      if (end === -1) {
+        return queryText;
+      }
+
+      output.push(queryText.slice(cursor, start));
+      cursor = end + 1;
+      changed = true;
+      match = predicateRegex.exec(queryText);
+    }
+
+    if (!changed) return queryText;
+
+    output.push(queryText.slice(cursor));
+
+    return `${output
+      .join("")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trimEnd()}\n`;
+  }
+
+  private findMatchingParenIndex(text: string, startIndex: number): number {
+    if (startIndex < 0 || startIndex >= text.length || text[startIndex] !== "(") {
+      return -1;
+    }
+
+    let depth = 0;
+    let inString = false;
+    let escapeNext = false;
+    let inComment = false;
+
+    for (let index = startIndex; index < text.length; index++) {
+      const char = text[index];
+
+      if (inComment) {
+        if (char === "\n") {
+          inComment = false;
+        }
+        continue;
+      }
+
+      if (inString) {
+        if (escapeNext) {
+          escapeNext = false;
+          continue;
+        }
+        if (char === "\\") {
+          escapeNext = true;
+          continue;
+        }
+        if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === ";") {
+        inComment = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === "(") {
+        depth += 1;
+        continue;
+      }
+
+      if (char === ")") {
+        depth -= 1;
+        if (depth === 0) {
+          return index;
+        }
+        if (depth < 0) {
+          return -1;
+        }
+      }
+    }
+
+    return -1;
   }
 
   private async _loadParserInternal(config: ParserConfig): Promise<LoadedParser> {
