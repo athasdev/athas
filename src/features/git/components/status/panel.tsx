@@ -207,11 +207,11 @@ const GitStatusPanel = ({
   };
 
   return (
-    <div className="select-none">
+    <div className="select-none p-1.5">
       {stagedFiles.length > 0 && (
-        <div className="border-border border-b">
+        <div className="mb-2 overflow-hidden rounded-lg border border-border/60 bg-primary-bg/60">
           <div
-            className="flex cursor-pointer items-center gap-1 bg-secondary-bg px-3 py-1 text-text-lighter hover:bg-hover"
+            className="flex cursor-pointer items-center gap-1 bg-secondary-bg/80 px-2.5 py-1.5 text-text-lighter hover:bg-hover"
             onClick={() => setIsStagedCollapsed(!isStagedCollapsed)}
           >
             {isStagedCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
@@ -237,14 +237,14 @@ const GitStatusPanel = ({
           </div>
 
           {!isStagedCollapsed && (
-            <div className="bg-primary-bg">{renderFileList(groupedStagedFiles)}</div>
+            <div className="bg-primary-bg/70">{renderFileList(groupedStagedFiles)}</div>
           )}
         </div>
       )}
 
-      <div className="border-border border-b">
+      <div className="overflow-hidden rounded-lg border border-border/60 bg-primary-bg/60">
         <div
-          className="flex cursor-pointer items-center gap-1 bg-secondary-bg px-3 py-1 text-text-lighter hover:bg-hover"
+          className="flex cursor-pointer items-center gap-1 bg-secondary-bg/80 px-2.5 py-1.5 text-text-lighter hover:bg-hover"
           onClick={() => setIsChangesCollapsed(!isChangesCollapsed)}
         >
           {isChangesCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
@@ -288,10 +288,10 @@ const GitStatusPanel = ({
         </div>
 
         {!isChangesCollapsed && (
-          <div className="bg-primary-bg">
+          <div className="bg-primary-bg/70">
             {unstagedFiles.length === 0
               ? stagedFiles.length === 0 && (
-                  <div className="flex items-center gap-2 px-3 py-2 text-[10px] text-text-lighter">
+                  <div className="flex items-center gap-2 px-2.5 py-2 text-[10px] text-text-lighter">
                     <Check size={10} className="text-success" />
                     <span className="italic">No changes</span>
                   </div>
@@ -304,7 +304,7 @@ const GitStatusPanel = ({
       {contextMenu && onOpenFile && (
         <div
           ref={contextMenuRef}
-          className="fixed z-50 min-w-[120px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
+          className="fixed z-50 min-w-[120px] rounded-md border border-border bg-secondary-bg py-1"
           style={{
             left: contextMenu.x,
             top: contextMenu.y,

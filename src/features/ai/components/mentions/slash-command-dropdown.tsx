@@ -17,6 +17,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
 
   const slashCommandState = useAIChatStore((state) => state.slashCommandState);
   const hideSlashCommands = useAIChatStore((state) => state.hideSlashCommands);
+  const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
   const getFilteredSlashCommands = useAIChatStore((state) => state.getFilteredSlashCommands);
 
   const { position, selectedIndex } = slashCommandState;
@@ -36,7 +37,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
 
   // Adjust position
   const adjustedPosition = useMemo(() => {
-    const dropdownWidth = 280;
+    const dropdownWidth = Math.min(320, window.innerWidth - 16);
     const dropdownHeight = Math.min(
       filteredCommands.length * 40 + 16,
       EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT,
@@ -61,6 +62,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
     return {
       top: Math.max(padding, top),
       left: Math.max(padding, left),
+      width: dropdownWidth,
     };
   }, [position.top, position.left, filteredCommands.length]);
 
@@ -94,7 +96,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       style={{
         zIndex: 10040,
         maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
-        width: "280px",
+        width: `${adjustedPosition.width}px`,
         left: `${adjustedPosition.left}px`,
         top: `${adjustedPosition.top}px`,
       }}
@@ -131,10 +133,19 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
         </div>
       ) : (
         <div className="px-3 py-2.5 text-text-lighter text-xs">
-          <div className="font-medium text-text">No slash commands available</div>
-          <div className="mt-0.5 text-[10px] opacity-75">
-            Start an ACP session to load commands for the current agent.
-          </div>
+          {availableSlashCommands.length > 0 ? (
+            <>
+              <div className="font-medium text-text">No matching slash commands</div>
+              <div className="mt-0.5 text-[10px] opacity-75">Try a different search after `/`.</div>
+            </>
+          ) : (
+            <>
+              <div className="font-medium text-text">No slash commands available yet</div>
+              <div className="mt-0.5 text-[10px] opacity-75">
+                Start an ACP session to load commands for this agent.
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>,

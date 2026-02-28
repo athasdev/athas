@@ -136,7 +136,7 @@ const CommitHoverPreview = memo(
 
     return createPortal(
       <div
-        className="pointer-events-auto fixed z-50 w-60 rounded border border-border bg-secondary-bg p-3 text-[9px] shadow-lg"
+        className="pointer-events-auto fixed z-50 w-60 rounded border border-border bg-secondary-bg p-3 text-[9px]"
         style={{ top: verticalPosition, left: horizontalPosition, width: cardWidth }}
         onMouseEnter={onKeepOpen}
         onMouseLeave={onRequestClose}

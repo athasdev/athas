@@ -43,7 +43,7 @@ function FileTreeItemComponent({
     return (
       <div className="file-tree-item w-full" data-depth={depth}>
         <div
-          className="flex min-h-[20px] w-full items-center gap-1.5 px-1.5 py-0.5"
+          className="flex min-h-[22px] w-full items-center gap-1.5 rounded-md px-1.5 py-0.5"
           style={{ paddingLeft: `${paddingLeft}px`, paddingRight: "8px" }}
         >
           <FileIcon
@@ -97,10 +97,10 @@ function FileTreeItemComponent({
           file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
         }
         className={cn(
-          "ui-font flex min-h-[20px] w-full min-w-max cursor-pointer select-none items-center gap-1.5",
+          "ui-font flex min-h-[22px] w-full min-w-max cursor-pointer select-none items-center gap-1.5",
           "whitespace-nowrap border-none bg-transparent px-1.5 py-0.5 text-left text-text text-xs",
-          "shadow-none outline-none transition-colors duration-150",
-          "hover:bg-hover focus:outline-none",
+          "outline-none transition-colors duration-150",
+          "rounded-md hover:bg-hover focus:outline-none",
           activePath === file.path && "bg-selected",
           dragOverPath === file.path &&
             "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-20",

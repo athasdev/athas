@@ -1,7 +1,16 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import ApiKeyModal from "@/features/ai/components/api-key-modal";
+import {
+  appendChatAcpEvent,
+  type ChatAcpEventInput,
+  truncateDetail,
+  updateToolCompletionAcpEvent,
+} from "@/features/ai/lib/acp-event-timeline";
+import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
+import { createToolCall, markToolCallComplete } from "@/features/ai/lib/tool-call-state";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
+import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -13,65 +22,7 @@ import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import ChatHistorySidebar from "../history/sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
-import { type ChatAcpEvent, ChatMessages } from "./chat-messages";
-
-interface DirectAcpUiAction {
-  kind: "open_web_viewer" | "open_terminal";
-  url?: string;
-  command?: string;
-}
-
-const stripWrappingChars = (value: string): string =>
-  value
-    .trim()
-    .replace(/^[`"'([{<\s]+/, "")
-    .replace(/[`"')\]}>.,!?;:\s]+$/, "")
-    .trim();
-
-const normalizeWebUrl = (input: string): string | null => {
-  const cleaned = stripWrappingChars(input);
-  if (!cleaned) return null;
-
-  if (/^https?:\/\//i.test(cleaned)) {
-    try {
-      return new URL(cleaned).toString();
-    } catch {
-      return null;
-    }
-  }
-
-  const hostLike = cleaned
-    .replace(/^www\./i, "www.")
-    .match(/^[a-z0-9.-]+\.[a-z]{2,}(?:\/[^\s]*)?$/i);
-  if (!hostLike) return null;
-
-  try {
-    return new URL(`https://${cleaned}`).toString();
-  } catch {
-    return null;
-  }
-};
-
-const parseDirectAcpUiAction = (message: string): DirectAcpUiAction | null => {
-  const text = message.trim();
-  if (!text) return null;
-
-  // Examples: "open linear.app on web", "open https://x.com in browser"
-  const webMatch = text.match(/\bopen\s+(.+?)\s+(?:on|in)\s+(?:web|browser|site)\b/i);
-  if (webMatch?.[1]) {
-    const url = normalizeWebUrl(webMatch[1]);
-    if (url) return { kind: "open_web_viewer", url };
-  }
-
-  // Examples: "open lazygit on terminal", "open npm run dev in terminal"
-  const terminalMatch = text.match(/\bopen\s+(.+?)\s+(?:on|in)\s+terminal\b/i);
-  if (terminalMatch?.[1]) {
-    const command = stripWrappingChars(terminalMatch[1]);
-    if (command) return { kind: "open_terminal", command };
-  }
-
-  return null;
-};
+import { ChatMessages } from "./chat-messages";
 
 const AIChat = memo(function AIChat({
   className,
@@ -117,38 +68,9 @@ const AIChat = memo(function AIChat({
     activeToolEventIdsRef.current.clear();
   }, [chatState.currentChatId]);
 
-  const appendAcpEvent = useCallback(
-    (
-      event: Omit<ChatAcpEvent, "id" | "timestamp"> & {
-        id?: string;
-      },
-    ) => {
-      setAcpEvents((prev) => {
-        const now = new Date();
-        const eventId = event.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const nextEvent: ChatAcpEvent = {
-          ...event,
-          id: eventId,
-          timestamp: now,
-        };
-
-        const last = prev[prev.length - 1];
-        if (
-          last &&
-          last.kind === nextEvent.kind &&
-          last.label === nextEvent.label &&
-          (last.detail ?? "") === (nextEvent.detail ?? "") &&
-          last.state === nextEvent.state &&
-          now.getTime() - last.timestamp.getTime() < 1200
-        ) {
-          return [...prev.slice(0, -1), { ...last, timestamp: now }];
-        }
-
-        return [...prev.slice(-39), nextEvent];
-      });
-    },
-    [],
-  );
+  const appendAcpEvent = useCallback((event: ChatAcpEventInput) => {
+    setAcpEvents((prev) => appendChatAcpEvent(prev, event));
+  }, []);
 
   // Agent availability is now handled dynamically by the model-provider-selector component
   // No need to check Claude Code status on mount
@@ -244,6 +166,19 @@ const AIChat = memo(function AIChat({
     chatActions.setIsTyping(false);
     chatActions.setStreamingMessageId(null);
   };
+
+  const updateStreamingAssistantMessage = useCallback(
+    (
+      chatId: string,
+      messageId: string,
+      mutate: (currentMessage: Message | undefined) => Partial<Message>,
+    ) => {
+      const currentMessages = chatActions.getCurrentMessages();
+      const currentMessage = currentMessages.find((message) => message.id === messageId);
+      chatActions.updateMessage(chatId, messageId, mutate(currentMessage));
+    },
+    [chatActions.getCurrentMessages, chatActions.updateMessage],
+  );
 
   const processMessage = async (messageContent: string) => {
     const currentAgentId = chatActions.getCurrentAgentId();
@@ -352,11 +287,9 @@ const AIChat = memo(function AIChat({
         enhancedMessage,
         context,
         (chunk: string) => {
-          const currentMessages = chatActions.getCurrentMessages();
-          const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
-          chatActions.updateMessage(chatId, currentAssistantMessageId, {
-            content: (currentMsg?.content || "") + chunk,
-          });
+          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
+            content: (currentMessage?.content || "") + chunk,
+          }));
           requestAnimationFrame(scrollToBottom);
         },
         () => {
@@ -425,12 +358,10 @@ message: ${errorMessage}
 details: ${errorDetails || mainError}
 [/ERROR_BLOCK]`;
 
-          const currentMessages = chatActions.getCurrentMessages();
-          const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
-          chatActions.updateMessage(chatId, currentAssistantMessageId, {
-            content: currentMsg?.content || formattedError,
+          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
+            content: currentMessage?.content || formattedError,
             isStreaming: false,
-          });
+          }));
           chatActions.setIsTyping(false);
           chatActions.setStreamingMessageId(null);
           abortControllerRef.current = null;
@@ -453,49 +384,19 @@ details: ${errorDetails || mainError}
           requestAnimationFrame(scrollToBottom);
         },
         (toolName: string, toolInput?: any, toolId?: string) => {
-          const currentMessages = chatActions.getCurrentMessages();
-          const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
-          const resolvedToolId =
-            toolId ?? `${toolName}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-          chatActions.updateMessage(chatId, currentAssistantMessageId, {
+          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
             isToolUse: true,
             toolName,
             toolCalls: [
-              ...(currentMsg?.toolCalls || []),
-              {
-                id: resolvedToolId,
-                name: toolName,
-                input: toolInput,
-                timestamp: new Date(),
-              },
+              ...(currentMessage?.toolCalls || []),
+              createToolCall(toolName, toolInput, toolId),
             ],
-          });
+          }));
         },
         (toolName: string, toolId?: string) => {
-          const currentMessages = chatActions.getCurrentMessages();
-          const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
-
-          const currentToolCalls = currentMsg?.toolCalls || [];
-          let fallbackDone = false;
-          chatActions.updateMessage(chatId, currentAssistantMessageId, {
-            toolCalls: currentToolCalls.map((tc, index) => {
-              if (toolId) {
-                return tc.id === toolId && !tc.isComplete ? { ...tc, isComplete: true } : tc;
-              }
-              const isMostRecentMatch =
-                !fallbackDone &&
-                tc.name === toolName &&
-                !tc.isComplete &&
-                currentToolCalls
-                  .slice(index + 1)
-                  .every((next) => next.name !== toolName || Boolean(next.isComplete));
-              if (isMostRecentMatch) {
-                fallbackDone = true;
-                return { ...tc, isComplete: true };
-              }
-              return tc;
-            }),
-          });
+          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
+            toolCalls: markToolCallComplete(currentMessage?.toolCalls || [], toolName, toolId),
+          }));
         },
         (event) => {
           setPermissionQueue((prev) => [
@@ -542,32 +443,7 @@ details: ${errorDetails || mainError}
             case "tool_complete": {
               const activityId =
                 activeToolEventIdsRef.current.get(event.toolId) ?? `tool-${event.toolId}`;
-              setAcpEvents((prev) => {
-                const hasExisting = prev.some((item) => item.id === activityId);
-                if (!hasExisting) {
-                  return [
-                    ...prev.slice(-39),
-                    {
-                      id: activityId,
-                      kind: "tool",
-                      label: "Tool call",
-                      detail: event.success ? "completed" : "failed",
-                      state: event.success ? "success" : "error",
-                      timestamp: new Date(),
-                    } satisfies ChatAcpEvent,
-                  ];
-                }
-                return prev.map((item) =>
-                  item.id === activityId
-                    ? {
-                        ...item,
-                        detail: event.success ? "completed" : "failed",
-                        state: event.success ? "success" : "error",
-                        timestamp: new Date(),
-                      }
-                    : item,
-                );
-              });
+              setAcpEvents((prev) => updateToolCompletionAcpEvent(prev, activityId, event.success));
               activeToolEventIdsRef.current.delete(event.toolId);
               break;
             }
@@ -606,7 +482,7 @@ details: ${errorDetails || mainError}
               appendAcpEvent({
                 kind: "plan",
                 label: `Plan updated (${event.entries.length} steps)`,
-                detail: summary,
+                detail: truncateDetail(summary),
                 state: "info",
               });
               break;
@@ -617,7 +493,7 @@ details: ${errorDetails || mainError}
               appendAcpEvent({
                 kind: "error",
                 label: "Agent error",
-                detail: event.error,
+                detail: truncateDetail(event.error),
                 state: "error",
               });
               break;
@@ -628,19 +504,15 @@ details: ${errorDetails || mainError}
         chatState.mode,
         chatState.outputStyle,
         (data: string, mediaType: string) => {
-          const currentMessages = chatActions.getCurrentMessages();
-          const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
-          chatActions.updateMessage(chatId, currentAssistantMessageId, {
-            images: [...(currentMsg?.images || []), { data, mediaType }],
-          });
+          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
+            images: [...(currentMessage?.images || []), { data, mediaType }],
+          }));
           requestAnimationFrame(scrollToBottom);
         },
         (uri: string, name: string | null) => {
-          const currentMessages = chatActions.getCurrentMessages();
-          const currentMsg = currentMessages.find((m) => m.id === currentAssistantMessageId);
-          chatActions.updateMessage(chatId, currentAssistantMessageId, {
-            resources: [...(currentMsg?.resources || []), { uri, name }],
-          });
+          updateStreamingAssistantMessage(chatId, currentAssistantMessageId, (currentMessage) => ({
+            resources: [...(currentMessage?.resources || []), { uri, name }],
+          }));
           requestAnimationFrame(scrollToBottom);
         },
       );

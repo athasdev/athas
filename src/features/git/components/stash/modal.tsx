@@ -51,7 +51,7 @@ export const StashMessageModal = ({
       <div
         ref={modalRef}
         className={cn(
-          "w-80 rounded-lg border border-border bg-secondary-bg p-4 shadow-xl",
+          "w-80 rounded-lg border border-border bg-secondary-bg p-4",
           "fade-in zoom-in-95 animate-in duration-200",
         )}
       >

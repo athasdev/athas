@@ -201,7 +201,7 @@ const GitBranchManager = ({
           <div
             className={cn(
               "absolute flex w-120 flex-col rounded-lg",
-              "border border-border bg-primary-bg shadow-xl",
+              "border border-border bg-primary-bg",
             )}
             style={getModalPosition()}
             onClick={(e) => e.stopPropagation()}

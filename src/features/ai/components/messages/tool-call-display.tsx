@@ -73,8 +73,8 @@ export default function ToolCallDisplay({
     status === "failed"
       ? "border-red-500/40 bg-red-500/10 text-red-300"
       : status === "running"
-        ? "border-blue-500/40 bg-blue-500/10 text-blue-300"
-        : "border-green-500/40 bg-green-500/10 text-green-300";
+        ? "border-border/80 bg-secondary-bg/70 text-text-lighter"
+        : "border-border/80 bg-secondary-bg/70 text-text-lighter";
 
   // Format input parameters for display
   const formatInput = (input: any): string => {
@@ -181,7 +181,7 @@ export default function ToolCallDisplay({
   };
 
   return (
-    <div className="rounded-lg border border-border/70 bg-primary-bg/60 p-1.5 leading-tight">
+    <div className="rounded-lg border border-border/70 bg-primary-bg/45 p-1.5 leading-tight">
       <div className="flex items-center gap-1">
         <button
           onClick={() => setIsExpanded(!isExpanded)}

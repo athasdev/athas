@@ -256,7 +256,7 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
         createPortal(
           <div
             ref={popoverRef}
-            className="fixed min-w-92 rounded-lg border border-border bg-primary-bg shadow-xl"
+            className="fixed min-w-92 rounded-lg border border-border bg-primary-bg"
             style={{
               zIndex: EDITOR_CONSTANTS.Z_INDEX.GIT_BLAME,
               left: `${position.x}px`,

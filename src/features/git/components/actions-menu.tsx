@@ -110,7 +110,7 @@ const GitActionsMenu = ({
     <div
       className={cn(
         "fixed z-50 min-w-[180px] rounded-md",
-        "border border-border bg-secondary-bg py-1 shadow-lg",
+        "border border-border bg-secondary-bg py-1",
       )}
       style={{
         left: position.x,

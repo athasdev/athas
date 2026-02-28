@@ -149,12 +149,29 @@ const AIChatInputBar = memo(function AIChatInputBar({
     updatePosition(position);
   }, [mentionState.active, updatePosition, getPlainTextFromDiv]);
 
+  const getSlashDropdownPosition = useCallback(() => {
+    if (!inputRef.current) {
+      return { top: 0, left: 0 };
+    }
+
+    const inputRect = inputRef.current.getBoundingClientRect();
+    const containerRect = aiChatContainerRef.current?.getBoundingClientRect();
+
+    return {
+      top: inputRect.bottom + 4,
+      left: containerRect ? containerRect.left : inputRect.left,
+    };
+  }, []);
+
   // ResizeObserver to track container size changes
   useEffect(() => {
     if (!aiChatContainerRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
       recalculateMentionPosition();
+      if (slashCommandState.active) {
+        showSlashCommands(getSlashDropdownPosition(), slashCommandState.search);
+      }
     });
 
     resizeObserver.observe(aiChatContainerRef.current);
@@ -162,6 +179,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
     // Also observe the window resize
     const handleWindowResize = () => {
       recalculateMentionPosition();
+      if (slashCommandState.active) {
+        showSlashCommands(getSlashDropdownPosition(), slashCommandState.search);
+      }
     };
 
     window.addEventListener("resize", handleWindowResize);
@@ -174,7 +194,13 @@ const AIChatInputBar = memo(function AIChatInputBar({
         clearTimeout(performanceTimer.current);
       }
     };
-  }, [recalculateMentionPosition]);
+  }, [
+    recalculateMentionPosition,
+    slashCommandState.active,
+    slashCommandState.search,
+    showSlashCommands,
+    getSlashDropdownPosition,
+  ]);
 
   // Sync contentEditable div with input state when it changes externally (e.g., when switching chats)
   // We use a ref to track the last synced input to avoid subscribing to every keystroke
@@ -395,11 +421,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         const search = hasWhitespaceAfterSlash ? slashToken.split(/\s+/)[0] : slashToken;
 
         if (!hasWhitespaceAfterSlash && search.length < 50) {
-          const position = {
-            top: inputRef.current.offsetTop + inputRef.current.offsetHeight + 4,
-            left: inputRef.current.offsetLeft,
-          };
-          showSlashCommands(position, search);
+          showSlashCommands(getSlashDropdownPosition(), search);
         } else {
           hideSlashCommands();
         }
@@ -423,6 +445,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     showSlashCommands,
     hideSlashCommands,
     slashCommandState.active,
+    getSlashDropdownPosition,
   ]);
 
   // Handle paste - strip HTML formatting, keep only plain text. Images are added to preview.
@@ -745,11 +768,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     setHasInputText(true);
                     inputRef.current.focus();
                     // Trigger slash command detection
-                    const position = {
-                      top: inputRef.current.offsetTop + inputRef.current.offsetHeight + 4,
-                      left: inputRef.current.offsetLeft,
-                    };
-                    showSlashCommands(position, "");
+                    showSlashCommands(getSlashDropdownPosition(), "");
                   }
                 }}
                 className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"

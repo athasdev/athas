@@ -109,7 +109,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
       <div
         className={cn(
           "flex max-h-[80vh] w-96 flex-col rounded-lg",
-          "border border-border bg-secondary-bg shadow-xl",
+          "border border-border bg-secondary-bg",
         )}
       >
         <div className="flex items-center justify-between border-border border-b p-4">

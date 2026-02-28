@@ -70,7 +70,7 @@ export function FileIcon({
           width="8"
           height="8"
           viewBox="0 0 16 16"
-          className="-bottom-0.5 -right-0.5 absolute text-accent drop-shadow-sm"
+          className="-bottom-0.5 -right-0.5 absolute text-accent"
           role="img"
           aria-label="Symlink"
         >

@@ -5,6 +5,137 @@
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Athas</title>
+    <script>
+      (function () {
+        var CACHE_KEY = "athas.bootstrap.appearance.v1";
+        var WINDOWS_MONO_FALLBACK =
+          'Consolas, "Cascadia Mono", "Cascadia Code", "Courier New", "Geist Mono Variable", ui-monospace, monospace';
+        var WINDOWS_SANS_FALLBACK =
+          '"Segoe UI", "Geist Variable", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif';
+        var DEFAULT_MONO_FALLBACK =
+          '"Geist Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
+        var DEFAULT_SANS_FALLBACK =
+          '"Geist Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+
+        var fallbackCache = {
+          version: 1,
+          themeId: "athas-dark",
+          themeType: "dark",
+          cssVariables: {
+            "--primary-bg": "#141413",
+            "--secondary-bg": "#1c1b19",
+            "--text": "#faf9f5",
+            "--text-light": "#d7d3c6",
+            "--text-lighter": "#b0aea5",
+            "--border": "#2f2d29",
+            "--hover": "#252320",
+            "--selected": "#2c2925",
+            "--selection-bg": "rgba(106, 155, 204, 0.30)",
+            "--accent": "#d97757",
+          },
+          syntaxTokens: {},
+          editorFontFamily: "Geist Mono Variable",
+          uiFontFamily: "Geist Variable",
+        };
+
+        function isWindows() {
+          return typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent);
+        }
+
+        function stripWrappingQuotes(value) {
+          return String(value || "")
+            .trim()
+            .replace(/^['"]+|['"]+$/g, "");
+        }
+
+        function buildFontVariable(primary, fallback) {
+          var normalized = stripWrappingQuotes(primary);
+          if (!normalized) return fallback;
+          if (normalized.indexOf(",") !== -1) return normalized + ", " + fallback;
+          return '"' + normalized + '", ' + fallback;
+        }
+
+        function sanitizeVarMap(value) {
+          if (!value || typeof value !== "object" || Array.isArray(value)) {
+            return {};
+          }
+          var result = {};
+          for (var key in value) {
+            if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+            if (typeof value[key] !== "string") continue;
+            if (key.indexOf("--") !== 0) continue;
+            result[key] = value[key];
+          }
+          return result;
+        }
+
+        function parseCache(raw) {
+          if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+            return null;
+          }
+          if (raw.version !== 1) return null;
+          if (typeof raw.themeId !== "string") return null;
+          if (raw.themeType !== "dark" && raw.themeType !== "light") return null;
+          return {
+            version: 1,
+            themeId: raw.themeId,
+            themeType: raw.themeType,
+            cssVariables: sanitizeVarMap(raw.cssVariables),
+            syntaxTokens: sanitizeVarMap(raw.syntaxTokens),
+            editorFontFamily:
+              typeof raw.editorFontFamily === "string"
+                ? raw.editorFontFamily
+                : fallbackCache.editorFontFamily,
+            uiFontFamily:
+              typeof raw.uiFontFamily === "string"
+                ? raw.uiFontFamily
+                : fallbackCache.uiFontFamily,
+          };
+        }
+
+        var cache = fallbackCache;
+        try {
+          var rawCache = window.localStorage.getItem(CACHE_KEY);
+          if (rawCache) {
+            var parsed = parseCache(JSON.parse(rawCache));
+            if (parsed) cache = parsed;
+          }
+        } catch (_) {
+          cache = fallbackCache;
+        }
+
+        var root = document.documentElement;
+        root.setAttribute("data-theme", cache.themeId);
+        root.setAttribute("data-theme-type", cache.themeType);
+
+        var cssVariables = cache.cssVariables || {};
+        for (var cssKey in cssVariables) {
+          if (!Object.prototype.hasOwnProperty.call(cssVariables, cssKey)) continue;
+          root.style.setProperty(cssKey, cssVariables[cssKey]);
+        }
+
+        var syntaxTokens = cache.syntaxTokens || {};
+        for (var syntaxKey in syntaxTokens) {
+          if (!Object.prototype.hasOwnProperty.call(syntaxTokens, syntaxKey)) continue;
+          root.style.setProperty(syntaxKey, syntaxTokens[syntaxKey]);
+        }
+
+        var monoFallback = isWindows() ? WINDOWS_MONO_FALLBACK : DEFAULT_MONO_FALLBACK;
+        var sansFallback = isWindows() ? WINDOWS_SANS_FALLBACK : DEFAULT_SANS_FALLBACK;
+
+        var editorFont =
+          isWindows() && stripWrappingQuotes(cache.editorFontFamily) === "Geist Mono Variable"
+            ? "Consolas"
+            : cache.editorFontFamily;
+        var uiFont =
+          isWindows() && stripWrappingQuotes(cache.uiFontFamily) === "Geist Variable"
+            ? "Segoe UI"
+            : cache.uiFontFamily;
+
+        root.style.setProperty("--editor-font-family", buildFontVariable(editorFont, monoFallback));
+        root.style.setProperty("--app-font-family", buildFontVariable(uiFont, sansFallback));
+      })();
+    </script>
   </head>
 
   <body>

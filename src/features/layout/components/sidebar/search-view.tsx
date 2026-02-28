@@ -393,14 +393,14 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
     return (
       <div
         ref={searchContainerRef}
-        className="flex h-full select-none flex-col"
+        className="flex h-full select-none flex-col gap-2 p-2"
         onKeyDown={handleKeyDown}
       >
         {/* Search Input and Options */}
-        <div className="select-none border-border border-b bg-secondary-bg px-2 py-1">
+        <div className="select-none rounded-xl border border-border/70 bg-secondary-bg/85 p-2">
           <div className="relative flex w-full items-center">
-            <span className="pointer-events-none absolute left-2 z-10 text-text-lighter">
-              <Search size={11} />
+            <span className="pointer-events-none absolute left-2.5 z-10 text-text-lighter">
+              <Search size={12} />
             </span>
             <input
               ref={searchInputRef}
@@ -408,9 +408,8 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search"
-              className="h-6 w-full border-none bg-transparent pr-18 pl-6 text-text text-xs focus:outline-none focus:ring-0"
+              className="h-8 w-full rounded-lg border border-border/60 bg-primary-bg/80 pr-20 pl-7 text-text text-xs focus:outline-none focus:ring-0"
               style={{
-                borderRadius: 0,
                 boxShadow: "none",
                 userSelect: "text",
                 WebkitUserSelect: "text",
@@ -421,7 +420,7 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
               autoCorrect="off"
               spellCheck="false"
             />
-            <div className="absolute right-0 flex items-center gap-0.5">
+            <div className="absolute right-1 flex items-center gap-0.5">
               <Tooltip content="Match Case" side="bottom">
                 <Toggle
                   pressed={caseSensitive}
@@ -459,7 +458,7 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
         {/* Search Results */}
         <div
           ref={scrollContainerRef}
-          className="custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden"
+          className="custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden rounded-xl border border-border/60 bg-secondary-bg/60"
           style={{
             overscrollBehavior: "contain",
             height: "100%",
@@ -468,16 +467,16 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
           }}
         >
           {isSearching && (
-            <div className="p-3 text-center text-text-lighter text-xs">Searching...</div>
+            <div className="p-4 text-center text-text-lighter text-xs">Searching...</div>
           )}
 
           {!isSearching && hasSearched && searchQuery && searchResults.length === 0 && (
-            <div className="p-3 text-center text-text-lighter text-xs">No results found</div>
+            <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
           )}
 
           {!isSearching && searchResults.length > 0 && (
-            <div className="p-2">
-              <div className="mb-2 px-2 text-text-lighter text-xs">
+            <div className="p-3">
+              <div className="mb-2 rounded-lg bg-primary-bg/60 px-2.5 py-1.5 text-text-lighter text-xs">
                 {searchResults.length >= MAX_RESULTS ? `${MAX_RESULTS}+` : searchResults.length}{" "}
                 result{searchResults.length !== 1 ? "s" : ""} in{" "}
                 {Object.keys(groupedResults).length} file
@@ -488,11 +487,14 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
               </div>
 
               {Object.entries(groupedResults).map(([filePath, results]) => (
-                <div key={filePath} className="mb-2">
+                <div
+                  key={filePath}
+                  className="mb-2 rounded-lg border border-border/40 bg-primary-bg/70 p-1.5"
+                >
                   {/* File Header */}
                   <button
                     onClick={() => handleFileToggle(filePath)}
-                    className="flex w-full items-center gap-1 rounded px-1 py-1 text-left hover:bg-hover"
+                    className="flex w-full items-center gap-1 rounded-md px-1.5 py-1 text-left hover:bg-hover"
                   >
                     {expandedFiles.has(filePath) ? (
                       <ChevronDown size={12} className="text-text-lighter" />
@@ -507,13 +509,13 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
                   </button>
 
                   {/* File Path */}
-                  <div className="mb-1 ml-6 truncate text-text-lighter text-xs">
+                  <div className="mb-1 ml-6 truncate text-text-lighter/90 text-xs">
                     {getRelativePath(filePath)}
                   </div>
 
                   {/* Results */}
                   {expandedFiles.has(filePath) && (
-                    <div className="ml-6 space-y-0.5">
+                    <div className="ml-6 space-y-1">
                       {results.map((result, index) => {
                         const flatIndex = flatResults.findIndex(
                           (fr) => fr.file === filePath && fr.index === index,
@@ -531,7 +533,7 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
                             onClick={() => handleResultClick(result)}
                             onDoubleClick={() => handleResultDoubleClick(result)}
                             className={cn(
-                              "flex w-full items-start gap-2 rounded px-1 py-1 text-left hover:bg-hover",
+                              "flex w-full items-start gap-2 rounded-md px-1.5 py-1 text-left hover:bg-hover",
                               isSelected && "bg-selected",
                             )}
                           >

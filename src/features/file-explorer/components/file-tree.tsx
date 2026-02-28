@@ -647,7 +647,7 @@ function FileTreeComponent({
   return (
     <div
       className={cn(
-        "file-tree-container relative flex min-w-full flex-1 select-none flex-col gap-0 overflow-auto",
+        "file-tree-container relative flex min-w-full flex-1 select-none flex-col overflow-auto p-1",
         dragState.dragOverPath === "__ROOT__" &&
           "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-10",
       )}
@@ -849,7 +849,7 @@ function FileTreeComponent({
         createPortal(
           <div
             ref={contextMenuRef}
-            className="context-menu fixed z-100 rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
+            className="context-menu fixed z-100 rounded-md border border-border bg-secondary-bg py-1"
             style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px`, minWidth: "220px" }}
           >
             {contextMenu.isDir && (

@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { settingsSearchIndex } from "./config/search-index";
+import { cacheFontsForBootstrap, cacheThemeForBootstrap } from "./lib/appearance-bootstrap";
 import type { CoreFeaturesState } from "./types/feature";
 import type { SearchResult, SearchState } from "./types/search";
 
@@ -107,10 +108,10 @@ const defaultSettings: Settings = {
   // UI
   uiFontFamily: "Geist Variable",
   // Theme
-  theme: "vitesse-dark", // Changed from "auto" since we don't support continuous monitoring
+  theme: "athas-dark", // Changed from "auto" since we don't support continuous monitoring
   iconTheme: "colorful-material",
-  autoThemeLight: "vitesse-light",
-  autoThemeDark: "vitesse-dark",
+  autoThemeLight: "athas-light",
+  autoThemeDark: "athas-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
   // AI
@@ -162,7 +163,12 @@ const defaultSettings: Settings = {
 };
 
 // Theme class constants
-const ALL_THEME_CLASSES = ["force-vitesse-light", "force-vitesse-dark"];
+const ALL_THEME_CLASSES = [
+  "force-athas-light",
+  "force-athas-dark",
+  "force-vitesse-light",
+  "force-vitesse-dark",
+];
 
 let storeInstance: Store;
 
@@ -232,11 +238,19 @@ const applyTheme = async (theme: Theme) => {
     if (!themeRegistry.isRegistryReady()) {
       themeRegistry.onReady(() => {
         themeRegistry.applyTheme(theme);
+        const appliedTheme = themeRegistry.getTheme(theme);
+        if (appliedTheme) {
+          cacheThemeForBootstrap(appliedTheme);
+        }
       });
       return;
     }
 
     themeRegistry.applyTheme(theme);
+    const appliedTheme = themeRegistry.getTheme(theme);
+    if (appliedTheme) {
+      cacheThemeForBootstrap(appliedTheme);
+    }
   } catch (error) {
     console.error("Failed to apply theme via registry:", error);
     applyFallbackTheme(theme);
@@ -280,11 +294,11 @@ const initializeSettings = async () => {
 
     // Detect theme if none exists
     if (!loadedSettings.theme) {
-      let detectedTheme = getSystemThemePreference() === "dark" ? "vitesse-dark" : "vitesse-light";
+      let detectedTheme = getSystemThemePreference() === "dark" ? "athas-dark" : "athas-light";
 
       try {
         const tauriDetectedTheme = await invoke<string>("get_system_theme");
-        detectedTheme = tauriDetectedTheme === "dark" ? "vitesse-dark" : "vitesse-light";
+        detectedTheme = tauriDetectedTheme === "dark" ? "athas-dark" : "athas-light";
       } catch {
         console.log("Tauri theme detection not available, using browser detection");
       }
@@ -293,6 +307,7 @@ const initializeSettings = async () => {
     }
 
     applyTheme(loadedSettings.theme);
+    cacheFontsForBootstrap(loadedSettings.fontFamily, loadedSettings.uiFontFamily);
 
     // Update Zustand store
     useSettingsStore.getState().initializeSettings(loadedSettings);
@@ -330,6 +345,8 @@ export const useSettingsStore = create(
               state.settings = validatedSettings;
             });
 
+            cacheFontsForBootstrap(validatedSettings.fontFamily, validatedSettings.uiFontFamily);
+            applyTheme(validatedSettings.theme);
             void saveSettingsToStore(validatedSettings);
             return true;
           } catch (error) {
@@ -351,6 +368,7 @@ export const useSettingsStore = create(
           });
 
           applyTheme(defaultSettings.theme);
+          cacheFontsForBootstrap(defaultSettings.fontFamily, defaultSettings.uiFontFamily);
           await saveSettingsToStore(defaultSettings);
         },
 
@@ -361,6 +379,10 @@ export const useSettingsStore = create(
           });
 
           if (key === "theme") applyTheme(value as Theme);
+          if (key === "fontFamily" || key === "uiFontFamily") {
+            const latestSettings = useSettingsStore.getState().settings;
+            cacheFontsForBootstrap(latestSettings.fontFamily, latestSettings.uiFontFamily);
+          }
 
           debouncedSaveSettingsToStore({ [key]: value });
         },

@@ -11,6 +11,7 @@ import {
 import { forwardRef, memo, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
+import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { cn } from "@/utils/cn";
 import { getRelativeTime } from "../../lib/formatting";
 import { useAIChatStore } from "../../store/store";
@@ -41,15 +42,6 @@ interface ChatMessagesProps {
   acpEvents?: ChatAcpEvent[];
 }
 
-export interface ChatAcpEvent {
-  id: string;
-  kind: "thinking" | "tool" | "plan" | "mode" | "error" | "permission" | "status";
-  label: string;
-  detail?: string;
-  state?: "running" | "success" | "error" | "info";
-  timestamp: Date;
-}
-
 const getEventIcon = (kind: ChatAcpEvent["kind"]) => {
   switch (kind) {
     case "thinking":
@@ -74,13 +66,13 @@ const getEventIcon = (kind: ChatAcpEvent["kind"]) => {
 const getStateClasses = (state: ChatAcpEvent["state"]) => {
   switch (state) {
     case "running":
-      return "border-blue-500/40 bg-blue-500/10 text-blue-300";
+      return "border-border/80 bg-secondary-bg/80 text-text";
     case "success":
-      return "border-green-500/40 bg-green-500/10 text-green-300";
+      return "border-border/80 bg-secondary-bg/80 text-text-lighter";
     case "error":
       return "border-red-500/40 bg-red-500/10 text-red-300";
     default:
-      return "border-border bg-secondary-bg/80 text-text-lighter";
+      return "border-border/80 bg-secondary-bg/80 text-text-lighter";
   }
 };
 
@@ -186,7 +178,7 @@ export const ChatMessages = memo(
         })}
         {acpEvents && acpEvents.length > 0 && (
           <div className="px-4 pb-2">
-            <div className="rounded-2xl border border-border bg-primary-bg/85 px-2.5 py-2">
+            <div className="rounded-2xl border border-border bg-primary-bg/70 px-2.5 py-2">
               <div className="mb-1.5 flex items-center gap-1.5 text-text-lighter text-xs">
                 <Activity size={12} />
                 <span>Agent Activity</span>

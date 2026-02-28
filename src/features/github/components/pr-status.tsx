@@ -73,7 +73,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
       </button>
 
       {isExpanded && (
-        <div className="absolute top-full left-0 z-20 mt-1 min-w-[280px] rounded border border-border bg-primary-bg py-1 shadow-lg">
+        <div className="absolute top-full left-0 z-20 mt-1 min-w-[280px] rounded border border-border bg-primary-bg py-1">
           {checks.map((check, idx) => (
             <div key={idx} className="flex items-center gap-2 px-3 py-1.5">
               {check.conclusion === "SUCCESS" ? (

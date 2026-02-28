@@ -30,7 +30,7 @@ const PRListItem = memo(({ pr, onSelect, onOpenExternal, onCheckout }: PRListIte
   const timeAgo = getTimeAgo(pr.createdAt);
 
   return (
-    <div className="group border-border border-b px-2 py-2 hover:bg-hover">
+    <div className="group rounded-lg border border-border/50 bg-primary-bg/70 px-2.5 py-2 transition-colors hover:bg-hover">
       <div className="flex items-start gap-2">
         <GitPullRequest
           size={14}
@@ -181,11 +181,11 @@ const GitHubPRsView = memo(() => {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex h-full flex-col bg-secondary-bg">
-        <div className="flex items-center justify-between border-border border-b px-2 py-1.5">
+      <div className="flex h-full flex-col gap-2 p-2">
+        <div className="flex items-center justify-between rounded-xl border border-border/70 bg-secondary-bg/85 px-2.5 py-2">
           <span className="font-medium text-text text-xs">Pull Requests</span>
         </div>
-        <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border/60 bg-secondary-bg/60 p-4 text-center">
           <AlertCircle size={24} className="mb-2 text-text-lighter" />
           <p className="text-text text-xs">GitHub CLI not authenticated</p>
           <p className="mt-1 text-[10px] text-text-lighter">Run `gh auth login` in terminal</p>
@@ -195,13 +195,13 @@ const GitHubPRsView = memo(() => {
   }
 
   return (
-    <div className="flex h-full flex-col bg-secondary-bg">
+    <div className="flex h-full flex-col gap-2 p-2">
       {/* Header */}
-      <div className="flex items-center justify-between border-border border-b px-2 py-1.5">
+      <div className="flex items-center justify-between rounded-xl border border-border/70 bg-secondary-bg/85 px-2.5 py-2">
         <div className="relative">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-text text-xs hover:bg-hover"
+            className="flex items-center gap-1 rounded-md px-1.5 py-1 text-text text-xs hover:bg-hover"
           >
             {filterLabels[currentFilter]}
             <ChevronDown size={12} />
@@ -209,7 +209,7 @@ const GitHubPRsView = memo(() => {
           {isFilterOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setIsFilterOpen(false)} />
-              <div className="absolute top-full left-0 z-20 mt-1 rounded border border-border bg-primary-bg py-1 shadow-lg">
+              <div className="absolute top-full left-0 z-20 mt-1 rounded border border-border bg-primary-bg py-1">
                 {(Object.keys(filterLabels) as PRFilter[]).map((filter) => (
                   <button
                     key={filter}
@@ -237,7 +237,7 @@ const GitHubPRsView = memo(() => {
       </div>
 
       {/* Content */}
-      <div className="scrollbar-hidden flex-1 overflow-y-auto">
+      <div className="scrollbar-hidden flex-1 overflow-y-auto rounded-xl border border-border/60 bg-secondary-bg/60 p-2">
         {error ? (
           <div className="flex flex-col items-center justify-center p-4 text-center">
             <AlertCircle size={20} className="mb-2 text-error" />
@@ -256,15 +256,17 @@ const GitHubPRsView = memo(() => {
             <p className="text-text-lighter text-xs">No pull requests</p>
           </div>
         ) : (
-          prs.map((pr) => (
-            <PRListItem
-              key={pr.number}
-              pr={pr}
-              onSelect={() => handleSelectPR(pr.number)}
-              onOpenExternal={() => handleOpenPR(pr.number)}
-              onCheckout={() => handleCheckoutPR(pr.number)}
-            />
-          ))
+          <div className="space-y-2">
+            {prs.map((pr) => (
+              <PRListItem
+                key={pr.number}
+                pr={pr}
+                onSelect={() => handleSelectPR(pr.number)}
+                onOpenExternal={() => handleOpenPR(pr.number)}
+                onCheckout={() => handleCheckoutPR(pr.number)}
+              />
+            ))}
+          </div>
         )}
       </div>
     </div>

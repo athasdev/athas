@@ -10,7 +10,6 @@ import { useSidebarStore } from "@/stores/sidebar-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 import SearchView, { type SearchViewRef } from "./search-view";
-import { SidebarPaneSelector } from "./sidebar-pane-selector";
 
 // Helper function to flatten the file tree
 const flattenFileTree = (files: FileEntry[]): FileEntry[] => {
@@ -31,8 +30,7 @@ const flattenFileTree = (files: FileEntry[]): FileEntry[] => {
 
 export const MainSidebar = memo(() => {
   // Get state from stores
-  const { isGitViewActive, isSearchViewActive, isGitHubPRsViewActive, setActiveView } =
-    useUIState();
+  const { isGitViewActive, isSearchViewActive, isGitHubPRsViewActive } = useUIState();
 
   // Ref for SearchView to enable focus functionality
   const searchViewRef = useRef<SearchViewRef>(null);
@@ -82,17 +80,8 @@ export const MainSidebar = memo(() => {
   }, [files, isSearchViewActive]);
 
   return (
-    <div className="flex h-full flex-col ">
-      {/* Pane Selection Row */}
-      <SidebarPaneSelector
-        isGitViewActive={isGitViewActive}
-        isSearchViewActive={isSearchViewActive}
-        isGitHubPRsViewActive={isGitHubPRsViewActive}
-        coreFeatures={settings.coreFeatures}
-        onViewChange={setActiveView}
-      />
-
-      <div className="flex-1 overflow-hidden">
+    <div className="flex h-full flex-col gap-2 p-2">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-border/70 bg-primary-bg/70">
         {settings.coreFeatures.git && (
           <div className={cn("h-full", !isGitViewActive && "hidden")}>
             <GitView
@@ -130,8 +119,10 @@ export const MainSidebar = memo(() => {
           )}
         >
           {isFileTreeLoading ? (
-            <div className="flex flex-1 items-center justify-center">
-              <div className="text-text text-xs">Loading...</div>
+            <div className="flex h-full flex-1 items-center justify-center p-4">
+              <div className="rounded-lg border border-border/60 bg-secondary-bg px-3 py-2 text-text-lighter text-xs">
+                Loading files...
+              </div>
             </div>
           ) : (
             <FileTree

@@ -1,6 +1,7 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Maximize2, MenuIcon, Minimize2, Minus, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
@@ -18,6 +19,8 @@ interface CustomTitleBarProps {
 
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const { settings } = useSettingsStore();
+  const { isGitViewActive, isSearchViewActive, isGitHubPRsViewActive, setActiveView } =
+    useUIState();
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -120,14 +123,22 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     return (
       <div
         data-tauri-drag-region
-        className="relative z-50 flex h-10 select-none items-center justify-between border-border/70 border-b bg-secondary-bg/70 px-2 backdrop-blur-sm"
+        className="relative z-50 flex h-10 select-none items-center justify-between border-border/70 border-b bg-secondary-bg/70 pr-2 pl-[78px] backdrop-blur-sm"
       >
-        {!settings.nativeMenuBar && (
-          <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
-        )}
-
-        {/* macOS traffic light space holder */}
-        <div className="flex items-center space-x-2 pl-3" />
+        {/* Left side: keep clear of traffic lights */}
+        <div className="pointer-events-auto flex min-w-0 items-center gap-2">
+          {!settings.nativeMenuBar && (
+            <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
+          )}
+          <SidebarPaneSelector
+            isGitViewActive={isGitViewActive}
+            isSearchViewActive={isSearchViewActive}
+            isGitHubPRsViewActive={isGitHubPRsViewActive}
+            coreFeatures={settings.coreFeatures}
+            onViewChange={setActiveView}
+            compact
+          />
+        </div>
 
         {/* Center - Project tabs for macOS */}
         <div className="-translate-x-1/2 pointer-events-auto absolute left-1/2 flex transform items-center">
@@ -148,12 +159,12 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       data-tauri-drag-region
       className="relative z-50 flex h-8 select-none items-center justify-between border-border/70 border-b bg-secondary-bg/70 px-2 backdrop-blur-sm"
     >
-      {!settings.nativeMenuBar && (
-        <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
-      )}
-
       {/* Left side */}
       <div data-tauri-drag-region className="flex flex-1 items-center px-1">
+        {!settings.nativeMenuBar && (
+          <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
+        )}
+
         {/* Menu bar button */}
         {!settings.nativeMenuBar && settings.compactMenuBar && (
           <Tooltip content="Menu" side="bottom">
@@ -167,6 +178,17 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             </button>
           </Tooltip>
         )}
+
+        <div className="pointer-events-auto mr-2">
+          <SidebarPaneSelector
+            isGitViewActive={isGitViewActive}
+            isSearchViewActive={isSearchViewActive}
+            isGitHubPRsViewActive={isGitHubPRsViewActive}
+            coreFeatures={settings.coreFeatures}
+            onViewChange={setActiveView}
+            compact
+          />
+        </div>
 
         {/* Project tabs */}
         <div

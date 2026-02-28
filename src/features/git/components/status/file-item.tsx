@@ -31,7 +31,9 @@ export const GitFileItem = ({
 
   return (
     <div
-      className={cn("group flex cursor-pointer items-center gap-2", "px-3 py-1 hover:bg-hover")}
+      className={cn(
+        "group mx-1 mb-1 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-hover",
+      )}
       onClick={onClick}
       onContextMenu={onContextMenu}
     >

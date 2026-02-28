@@ -398,16 +398,16 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   if (!activeRepoPath) {
     return (
-      <div className="flex h-full flex-col bg-secondary-bg">
+      <div className="flex h-full flex-col gap-2 p-2">
         <div
           className={cn(
-            "flex items-center justify-between border-border border-b",
-            "bg-secondary-bg px-2 py-1.5",
+            "flex items-center justify-between rounded-xl border border-border/70",
+            "bg-secondary-bg/85 px-2.5 py-2",
           )}
         >
           <div className="flex items-center gap-2">{renderActionsButton()}</div>
         </div>
-        <div className="flex flex-1 items-center justify-center p-4">
+        <div className="flex flex-1 items-center justify-center rounded-xl border border-border/60 bg-secondary-bg/60 p-4">
           <div className="ui-font text-center text-text-lighter text-xs">
             <div className="mb-1">No Git repository detected</div>
             <div className="text-[10px] opacity-75">Open a folder or select a repository</div>
@@ -423,16 +423,16 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   if (isLoadingGitData && !gitStatus) {
     return (
-      <div className="flex h-full flex-col bg-secondary-bg">
+      <div className="flex h-full flex-col gap-2 p-2">
         <div
           className={cn(
-            "flex items-center justify-between border-border border-b",
-            "bg-secondary-bg px-2 py-1.5",
+            "flex items-center justify-between rounded-xl border border-border/70",
+            "bg-secondary-bg/85 px-2.5 py-2",
           )}
         >
           <div className="flex items-center gap-2">{renderActionsButton()}</div>
         </div>
-        <div className="flex flex-1 items-center justify-center p-4">
+        <div className="flex flex-1 items-center justify-center rounded-xl border border-border/60 bg-secondary-bg/60 p-4">
           <div className="ui-font text-center text-text-lighter text-xs">Loading Git status...</div>
         </div>
       </div>
@@ -441,16 +441,16 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   if (!gitStatus) {
     return (
-      <div className="flex h-full flex-col bg-secondary-bg">
+      <div className="flex h-full flex-col gap-2 p-2">
         <div
           className={cn(
-            "flex items-center justify-between border-border border-b",
-            "bg-secondary-bg px-2 py-1.5",
+            "flex items-center justify-between rounded-xl border border-border/70",
+            "bg-secondary-bg/85 px-2.5 py-2",
           )}
         >
           <div className="flex items-center gap-2">{renderActionsButton()}</div>
         </div>
-        <div className="flex flex-1 items-center justify-center p-4">
+        <div className="flex flex-1 items-center justify-center rounded-xl border border-border/60 bg-secondary-bg/60 p-4">
           <div className="ui-font text-center text-text-lighter text-xs">
             <div className="mb-1">Not a Git repository</div>
             <div className="text-[10px] opacity-75">Initialize with: git init or select a repo</div>
@@ -468,11 +468,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   return (
     <>
-      <div className="ui-font flex h-full select-none flex-col bg-secondary-bg text-xs">
+      <div className="ui-font flex h-full select-none flex-col gap-2 p-2 text-xs">
         <div
           className={cn(
-            "flex items-center justify-between border-border border-b",
-            "bg-secondary-bg px-2 py-1.5",
+            "flex items-center justify-between rounded-xl border border-border/70",
+            "bg-secondary-bg/85 px-2.5 py-2",
           )}
         >
           <div className="flex items-center gap-1">
@@ -526,8 +526,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="max-h-[50%] flex-none overflow-y-auto border-border border-b">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+          <div className="max-h-[50%] flex-none overflow-y-auto rounded-xl border border-border/60 bg-secondary-bg/55">
             <GitStatusPanel
               files={gitStatus.files}
               onFileSelect={handleViewFileDiff}
@@ -537,20 +537,26 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             />
           </div>
 
-          <GitCommitHistory onViewCommitDiff={handleViewCommitDiff} repoPath={activeRepoPath} />
+          <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border/60 bg-secondary-bg/55">
+            <GitCommitHistory onViewCommitDiff={handleViewCommitDiff} repoPath={activeRepoPath} />
+          </div>
 
-          <GitStashPanel
-            repoPath={activeRepoPath}
-            onRefresh={handleManualRefresh}
-            onViewStashDiff={handleViewStashDiff}
-          />
+          <div className="max-h-[34%] overflow-y-auto rounded-xl border border-border/60 bg-secondary-bg/55">
+            <GitStashPanel
+              repoPath={activeRepoPath}
+              onRefresh={handleManualRefresh}
+              onViewStashDiff={handleViewStashDiff}
+            />
+          </div>
         </div>
 
-        <GitCommitPanel
-          stagedFilesCount={stagedFiles.length}
-          repoPath={activeRepoPath}
-          onCommitSuccess={refreshGitData}
-        />
+        <div className="rounded-xl border border-border/60 bg-secondary-bg/55">
+          <GitCommitPanel
+            stagedFilesCount={stagedFiles.length}
+            repoPath={activeRepoPath}
+            onCommitSuccess={refreshGitData}
+          />
+        </div>
       </div>
 
       <GitActionsMenu
