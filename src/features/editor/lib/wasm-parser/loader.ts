@@ -273,17 +273,11 @@ class WasmParserLoader {
    * Rewrite unsupported node references so older parser WASM builds can still highlight partially.
    */
   private rewriteIncompatibleHighlightQuery(
-    languageId: string,
+    _languageId: string,
     queryText: string,
     badNodeName: string,
   ): string {
-    let rewritten = this.stripNodeExpressions(queryText, badNodeName);
-
-    if (languageId === "rust" && badNodeName === "doc_comment") {
-      rewritten = this.ensureRustDocCommentFallback(rewritten);
-    }
-
-    return rewritten;
+    return this.stripNodeExpressions(queryText, badNodeName);
   }
 
   private stripNodeExpressions(queryText: string, badNodeName: string): string {
@@ -339,20 +333,6 @@ class WasmParserLoader {
       .join("\n")
       .replace(/\n{3,}/g, "\n\n")
       .trimEnd()}\n`;
-  }
-
-  private ensureRustDocCommentFallback(queryText: string): string {
-    if (queryText.includes("^///|^//!")) {
-      return queryText;
-    }
-
-    return `${queryText.trimEnd()}
-
-((line_comment) @comment.documentation
- (#match? @comment.documentation "^///|^//!"))
-((block_comment) @comment.documentation
- (#match? @comment.documentation "^/\\*\\*|^/\\*!"))
-`;
   }
 
   private async _loadParserInternal(config: ParserConfig): Promise<LoadedParser> {
