@@ -1,4 +1,3 @@
-import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { convertToEditorTokens, tokenizeCode, wasmParserLoader } from "../../lib/wasm-parser";
 import { indexedDBParserCache } from "../../lib/wasm-parser/cache-indexeddb";
 import {
@@ -7,60 +6,11 @@ import {
 } from "../../lib/wasm-parser/extension-assets";
 import { useBufferStore } from "../../stores/buffer-store";
 import type { Change } from "../../types/editor";
+import { getLanguageIdFromPath } from "../../utils/language-id";
 import { logger } from "../../utils/logger";
 import type { EditorAPI, EditorExtension, Token } from "../types";
 
 const DEBOUNCE_TIME_MS = 150; // Debounce for tokenization requests
-
-const EXTENSION_TO_LANGUAGE: Record<string, string> = {
-  js: "javascript",
-  mjs: "javascript",
-  cjs: "javascript",
-  jsx: "javascript",
-  ts: "typescript",
-  tsx: "typescriptreact",
-  py: "python",
-  rs: "rust",
-  go: "go",
-  java: "java",
-  c: "c",
-  h: "c",
-  cpp: "cpp",
-  cc: "cpp",
-  cxx: "cpp",
-  hpp: "cpp",
-  hh: "cpp",
-  hxx: "cpp",
-  cs: "csharp",
-  rb: "ruby",
-  php: "php",
-  html: "html",
-  htm: "html",
-  css: "css",
-  scss: "css",
-  json: "json",
-  yaml: "yaml",
-  yml: "yaml",
-  toml: "toml",
-  md: "markdown",
-  markdown: "markdown",
-  sh: "bash",
-  bash: "bash",
-  zsh: "bash",
-  swift: "swift",
-  kt: "kotlin",
-  kts: "kotlin",
-  scala: "scala",
-  lua: "lua",
-  dart: "dart",
-  ex: "elixir",
-  exs: "elixir",
-  ml: "ocaml",
-  mli: "ocaml",
-  sol: "solidity",
-  zig: "zig",
-  vue: "vue",
-};
 
 async function resolveHighlightQuery(
   languageId: string,
@@ -202,32 +152,13 @@ class SyntaxHighlighter {
       }
       const content = targetBufferAtStart.content;
       const contentHash = content.length; // Simple hash, could use better hashing
-      const rawExt = (targetFilePath?.split(".").pop() || "txt").toLowerCase();
-      const normalizeExt = (ext: string) => {
-        switch (ext) {
-          case "mjs":
-          case "cjs":
-            return "js";
-          case "yml":
-            return "yaml";
-          case "htm":
-            return "html";
-          case "jsonc":
-            return "json";
-          case "mdx":
-            return "markdown";
-          default:
-            return ext;
-        }
-      };
-      const extension = normalizeExt(rawExt);
+      const extension = (targetFilePath?.split(".").pop() || "txt").toLowerCase();
       logger.debug("SyntaxHighlighter", "Tokenizing file with extension:", extension);
 
       // Check if aborted before proceeding
       if (signal.aborted) return;
 
-      const languageId =
-        extensionRegistry.getLanguageId(targetFilePath || "") || EXTENSION_TO_LANGUAGE[extension];
+      const languageId = getLanguageIdFromPath(targetFilePath || "");
       if (!languageId) {
         logger.debug("SyntaxHighlighter", "No language mapping for extension:", extension);
         this.tokens = [];

@@ -1334,27 +1334,3 @@ export const useBufferStore = createSelectors(
     isEqual,
   ),
 );
-
-// Ensure syntax highlighting kicks in whenever the active buffer changes,
-// even if the editor component effect hasn’t run yet (e.g., fast tab switches).
-{
-  let lastActiveId: string | null = null;
-  useBufferStore.subscribe(async (state) => {
-    const activeId = state.activeBufferId;
-    if (!activeId || activeId === lastActiveId) return;
-    lastActiveId = activeId;
-    const buffer = state.buffers.find((b) => b.id === activeId);
-    if (!buffer || !buffer.path) return;
-    try {
-      const mod = await import("@/features/editor/extensions/builtin/syntax-highlighting");
-      mod.setSyntaxHighlightingFilePath(buffer.path);
-    } catch (e) {
-      logger.warn(
-        "Editor",
-        "[BufferStore] Failed to trigger syntax highlighting for",
-        buffer.path,
-        e,
-      );
-    }
-  });
-}

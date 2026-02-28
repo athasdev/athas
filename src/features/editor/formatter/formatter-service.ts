@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import { logger } from "@/features/editor/utils/logger";
 
 export interface FormatOptions {
@@ -38,7 +39,7 @@ export async function formatContent(options: FormatOptions): Promise<FormatResul
 
     logger.debug("FormatterService", `Formatting ${filePath} with ${formatterConfig.command}`);
 
-    const language = languageId || getLanguageFromPath(filePath);
+    const language = languageId || getLanguageIdFromPath(filePath) || "plaintext";
     const formatterName = getFormatterName(formatterConfig.command);
 
     // Get workspace folder (if available)
@@ -122,32 +123,6 @@ function getFormatterName(command: string): string {
 
   // Default to prettier for unknown formatters
   return "prettier";
-}
-
-/**
- * Get language ID from file path
- */
-function getLanguageFromPath(filePath: string): string {
-  const ext = filePath.split(".").pop()?.toLowerCase() || "";
-
-  const extToLang: Record<string, string> = {
-    ts: "typescript",
-    tsx: "typescript",
-    js: "javascript",
-    jsx: "javascript",
-    json: "json",
-    html: "html",
-    css: "css",
-    md: "markdown",
-    rs: "rust",
-    go: "go",
-    py: "python",
-    java: "java",
-    c: "c",
-    cpp: "cpp",
-  };
-
-  return extToLang[ext] || "typescript";
 }
 
 /**

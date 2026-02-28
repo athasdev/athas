@@ -4,7 +4,6 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
 import { indexedDBParserCache, type ParserCacheEntry } from "../lib/wasm-parser/cache-indexeddb";
@@ -16,6 +15,7 @@ import {
 import type { HighlightToken } from "../lib/wasm-parser/types";
 import { useTreeCacheStore } from "../stores/tree-cache-store";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/html";
+import { getLanguageIdFromPath } from "../utils/language-id";
 import { usePerformanceMonitor } from "./use-performance";
 import type { ViewportRange } from "./use-viewport-lines";
 
@@ -39,93 +39,10 @@ interface TextMetricsCache {
   lineCount: number;
 }
 
-/**
- * Map file extensions to Tree-sitter language IDs
- */
-const EXTENSION_TO_LANGUAGE: Record<string, string> = {
-  js: "javascript",
-  mjs: "javascript",
-  cjs: "javascript",
-  jsx: "javascript",
-  ts: "typescript",
-  tsx: "typescriptreact",
-  mts: "typescript",
-  cts: "typescript",
-  py: "python",
-  rs: "rust",
-  go: "go",
-  java: "java",
-  c: "c",
-  h: "c",
-  cpp: "cpp",
-  cc: "cpp",
-  cxx: "cpp",
-  hpp: "cpp",
-  hh: "cpp",
-  hxx: "cpp",
-  cs: "csharp",
-  rb: "ruby",
-  php: "php",
-  html: "html",
-  htm: "html",
-  css: "css",
-  scss: "css",
-  json: "json",
-  yaml: "yaml",
-  yml: "yaml",
-  toml: "toml",
-  md: "markdown",
-  markdown: "markdown",
-  sh: "bash",
-  bash: "bash",
-  zsh: "bash",
-  swift: "swift",
-  kt: "kotlin",
-  kts: "kotlin",
-  scala: "scala",
-  lua: "lua",
-  dart: "dart",
-  ex: "elixir",
-  exs: "elixir",
-  ml: "ocaml",
-  mli: "ocaml",
-  sol: "solidity",
-  zig: "zig",
-  vue: "vue",
-  erb: "embedded_template",
-};
-
-const FILENAME_TO_LANGUAGE: Record<string, string> = {
-  ".bashrc": "bash",
-  ".zshrc": "bash",
-  ".bash_profile": "bash",
-  ".profile": "bash",
-  "go.mod": "go",
-  "go.sum": "go",
-  "go.work": "go",
-};
-
 const QUERY_REFRESHED_THIS_SESSION = new Set<string>();
 
-function getExtension(path: string): string {
-  const parts = path.split(".");
-  return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
-}
-
 export function getLanguageId(filePath: string): string | null {
-  const fromRegistry = extensionRegistry.getLanguageId(filePath);
-  if (fromRegistry) {
-    return fromRegistry;
-  }
-
-  const fileName = filePath.split("/").pop()?.toLowerCase() || "";
-  const fromFilename = FILENAME_TO_LANGUAGE[fileName];
-  if (fromFilename) {
-    return fromFilename;
-  }
-
-  const ext = getExtension(filePath);
-  return EXTENSION_TO_LANGUAGE[ext] || null;
+  return getLanguageIdFromPath(filePath);
 }
 
 function shouldRefreshLegacyHighlightQuery(languageId: string, queryText: string): boolean {

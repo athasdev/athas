@@ -51,11 +51,9 @@ export const useDiagnosticsStore = createSelectors(
 
     actions: {
       setDiagnostics: (filePath: string, diagnostics: Diagnostic[]) => {
-        console.log(`[DiagnosticsStore] Setting ${diagnostics.length} diagnostics for ${filePath}`);
         set((state) => {
           const newMap = new Map(state.diagnosticsByFile);
           newMap.set(filePath, diagnostics);
-          console.log(`[DiagnosticsStore] Total files with diagnostics: ${newMap.size}`);
           return { diagnosticsByFile: newMap };
         });
       },

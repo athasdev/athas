@@ -107,15 +107,6 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
     setFileInfo(filePath);
   }, [filePath, setFileInfo]);
 
-  // Ensure syntax highlighter knows the current file path immediately on change
-  useEffect(() => {
-    if (!filePath) return;
-    // Lazy import to avoid loading the extension module until needed
-    import("@/features/editor/extensions/builtin/syntax-highlighting")
-      .then((mod) => mod.setSyntaxHighlightingFilePath(filePath))
-      .catch(() => {});
-  }, [filePath]);
-
   // Editor view store automatically syncs with active buffer
 
   // Set disabled state

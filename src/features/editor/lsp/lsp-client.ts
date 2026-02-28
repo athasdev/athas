@@ -75,20 +75,18 @@ export class LspClient {
 
   private async setupDiagnosticsListener() {
     try {
-      console.log("[LSPClient] Setting up diagnostics listener...");
+      logger.debug("LSPClient", "Setting up diagnostics listener");
       const unlisten = await listen<PublishDiagnosticsParams>("lsp://diagnostics", (event) => {
         try {
-          console.log("[LSPClient] Received diagnostics event:", JSON.stringify(event, null, 2));
-
           if (!event.payload) {
-            console.error("[LSPClient] No payload in diagnostics event");
+            logger.error("LSPClient", "No payload in diagnostics event");
             return;
           }
 
           const { uri, diagnostics } = event.payload;
 
           if (!uri) {
-            console.error("[LSPClient] No uri in diagnostics payload:", event.payload);
+            logger.error("LSPClient", "No uri in diagnostics payload:", event.payload);
             return;
           }
 
@@ -96,13 +94,13 @@ export class LspClient {
 
           // Convert URI to file path
           const filePath = uri.replace("file://", "");
-          console.log(`[LSPClient] File path: ${filePath}`);
 
           // Convert LSP diagnostics to our internal format
           const diagnosticsList = diagnostics || [];
           const convertedDiagnostics = diagnosticsList.map((d) => convertLSPDiagnostic(d));
-          console.log(
-            `[LSPClient] Converted ${convertedDiagnostics.length} diagnostics for ${filePath}`,
+          logger.debug(
+            "LSPClient",
+            `Converted ${convertedDiagnostics.length} diagnostics for ${filePath}`,
           );
 
           // Update diagnostics store
@@ -113,20 +111,12 @@ export class LspClient {
             "LSPClient",
             `Updated diagnostics for ${filePath}: ${convertedDiagnostics.length} items`,
           );
-
-          // Log store state after update
-          const currentState = useDiagnosticsStore.getState();
-          console.log("[LSPClient] Diagnostics store state:", {
-            size: currentState.diagnosticsByFile.size,
-            files: Array.from(currentState.diagnosticsByFile.keys()),
-          });
         } catch (innerError) {
-          console.error("[LSPClient] Error processing diagnostics event:", innerError);
+          logger.error("LSPClient", "Error processing diagnostics event:", innerError);
         }
       });
-      console.log("[LSPClient] Diagnostics listener setup complete, unlisten:", unlisten);
+      logger.debug("LSPClient", "Diagnostics listener setup complete", unlisten);
     } catch (error) {
-      console.error("[LSPClient] Failed to setup diagnostics listener:", error);
       logger.error("LSPClient", "Failed to setup diagnostics listener:", error);
     }
   }

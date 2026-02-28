@@ -1,104 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  getHighlightQueryUrl,
-  getWasmUrlForLanguage,
-} from "@/extensions/languages/language-packager";
-import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
+import {
+  fetchHighlightQuery,
+  getDefaultParserWasmUrl,
+} from "@/features/editor/lib/wasm-parser/extension-assets";
 import { tokenizeByLine } from "@/features/editor/lib/wasm-parser/tokenizer";
 import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
+import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import type { GitDiffLine } from "../types/git";
 
-const EXTENSION_TO_LANGUAGE: Record<string, string> = {
-  js: "javascript",
-  jsx: "javascriptreact",
-  mjs: "javascript",
-  cjs: "javascript",
-  ts: "typescript",
-  tsx: "typescriptreact",
-  mts: "typescript",
-  cts: "typescript",
-  py: "python",
-  rs: "rust",
-  go: "go",
-  java: "java",
-  c: "c",
-  h: "c",
-  cpp: "cpp",
-  cc: "cpp",
-  cxx: "cpp",
-  hpp: "cpp",
-  hxx: "cpp",
-  cs: "c_sharp",
-  rb: "ruby",
-  php: "php",
-  html: "html",
-  htm: "html",
-  css: "css",
-  scss: "css",
-  json: "json",
-  yaml: "yaml",
-  yml: "yaml",
-  toml: "toml",
-  md: "markdown",
-  markdown: "markdown",
-  sh: "bash",
-  bash: "bash",
-  zsh: "bash",
-  swift: "swift",
-  kt: "kotlin",
-  kts: "kotlin",
-  scala: "scala",
-  lua: "lua",
-  dart: "dart",
-  ex: "elixir",
-  exs: "elixir",
-  ml: "ocaml",
-  mli: "ocaml",
-  sol: "solidity",
-  zig: "zig",
-  vue: "vue",
-  erb: "embedded_template",
-};
-
-function normalizeRegistryLanguageId(languageId: string): string {
-  switch (languageId) {
-    case "csharp":
-      return "c_sharp";
-    case "jsonc":
-      return "json";
-    default:
-      return languageId;
-  }
-}
-
-function getExtension(path: string): string {
-  const parts = path.split(".");
-  return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
-}
-
 function getLanguageId(filePath: string): string | null {
-  const fromRegistry = extensionRegistry.getLanguageId(filePath);
-  if (fromRegistry) {
-    return normalizeRegistryLanguageId(fromRegistry);
-  }
-
-  const ext = getExtension(filePath);
-  return EXTENSION_TO_LANGUAGE[ext] || null;
-}
-
-function getWasmPath(languageId: string): string {
-  if (languageId === "typescriptreact" || languageId === "javascriptreact") {
-    return getWasmUrlForLanguage("tsx");
-  }
-  return getWasmUrlForLanguage(languageId);
-}
-
-function getHighlightQueryPath(languageId: string): string {
-  if (languageId === "typescriptreact" || languageId === "javascriptreact") {
-    return getHighlightQueryUrl("tsx");
-  }
-  return getHighlightQueryUrl(languageId);
+  return getLanguageIdFromPath(filePath);
 }
 
 interface ReconstructedContent {
@@ -182,7 +94,7 @@ export function useDiffHighlighting(
       try {
         const cached = await indexedDBParserCache.get(lang);
 
-        let wasmPath = getWasmPath(lang);
+        let wasmPath = getDefaultParserWasmUrl(lang);
         let highlightQuery: string | undefined;
 
         if (cached) {
@@ -191,12 +103,12 @@ export function useDiffHighlighting(
         }
 
         if (!highlightQuery || highlightQuery.trim().length === 0) {
-          const queryPath = getHighlightQueryPath(lang);
           try {
-            const response = await fetch(queryPath);
-            if (response.ok) {
-              highlightQuery = await response.text();
-            }
+            const { query } = await fetchHighlightQuery(lang, {
+              wasmUrl: wasmPath,
+              cacheMode: "no-store",
+            });
+            highlightQuery = query || highlightQuery;
           } catch {
             // Ignore fetch errors
           }
