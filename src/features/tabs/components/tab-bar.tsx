@@ -653,11 +653,11 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   return (
     <>
       <div
-        className={`relative shrink-0 px-2 pt-1.5 pb-1 ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
+        className={`relative shrink-0 px-2 pt-1 pb-1 ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
       >
         <div
           ref={tabBarRef}
-          className="flex gap-1 overflow-x-auto overflow-y-hidden px-0.5 py-0.5 [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex gap-1 overflow-x-auto overflow-y-hidden rounded-lg border border-border/55 bg-secondary-bg/45 px-1 py-1 [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}

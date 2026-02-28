@@ -69,11 +69,13 @@ const TabBarItem = memo(function TabBarItem({
         aria-label={`${buffer.name}${buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         className={cn(
-          "group relative flex h-6 shrink-0 cursor-pointer select-none items-center gap-1 whitespace-nowrap rounded-full px-2.5 transition-[transform,opacity,color] duration-200 ease-[ease]",
-          isActive ? "text-text" : "text-text-lighter hover:text-text",
+          "group relative flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-lg border px-2 transition-[transform,opacity,color,background-color,border-color] duration-200 ease-[ease]",
+          isActive
+            ? "border-border/80 bg-primary-bg/95 text-text"
+            : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",
           isDraggedTab ? "opacity-30" : "opacity-100",
         )}
-        style={{ minWidth: 110, maxWidth: 300 }}
+        style={{ minWidth: 104, maxWidth: 290 }}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
@@ -83,7 +85,7 @@ const TabBarItem = memo(function TabBarItem({
         onDragEnd={onDragEnd}
         onAuxClick={handleAuxClick}
       >
-        <div className="grid size-3 max-h-3 max-w-3 shrink-0 place-content-center py-3">
+        <div className="grid size-3 shrink-0 place-content-center">
           {buffer.path === "extensions://marketplace" ? (
             <Package size={12} className="text-text-lighter" />
           ) : buffer.isTerminal ? (
@@ -142,9 +144,9 @@ const TabBarItem = memo(function TabBarItem({
             }
           }}
           className={cn(
-            "-translate-y-1/2 absolute top-1/2 right-1 flex size-4 cursor-pointer select-none items-center justify-center rounded-full text-text-lighter transition-opacity",
-            "hover:text-text",
-            buffer.isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+            "-translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 cursor-pointer select-none items-center justify-center rounded-md text-text-lighter transition-opacity",
+            "hover:bg-hover hover:text-text",
+            buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
           )}
           title={buffer.isPinned ? "Unpin tab" : `Close ${buffer.name}`}
           tabIndex={-1}

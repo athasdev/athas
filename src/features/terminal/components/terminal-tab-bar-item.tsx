@@ -57,9 +57,11 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         aria-label={`${terminal.name}${terminal.isPinned ? " (pinned)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         className={cn(
-          "tab-bar-item group relative flex shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap border-border border-r px-2 py-1",
-          isActive ? "bg-primary-bg" : "bg-secondary-bg",
-          terminal.isPinned ? "border-l-2 border-l-accent" : "",
+          "tab-bar-item group relative flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-lg border px-2",
+          isActive
+            ? "border-border/80 bg-primary-bg/95"
+            : "border-transparent text-text-light hover:border-border/60 hover:bg-hover/80",
+          terminal.isPinned && "border-l-accent/80",
           isDraggedTab ? "opacity-30" : "opacity-100",
         )}
         onMouseDown={onMouseDown}
@@ -70,7 +72,6 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         onDragEnd={onDragEnd}
         onAuxClick={handleAuxClick}
       >
-        {isActive && <div className="absolute right-0 bottom-0 left-0 h-0.5 bg-accent" />}
         {terminal.isPinned && <Pin className="shrink-0 text-accent" size={10} />}
         <TerminalIcon size={12} className="shrink-0 text-text-lighter" />
         <span
@@ -93,10 +94,10 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
             }
           }}
           className={cn(
-            "flex size-4 shrink-0 cursor-pointer select-none items-center justify-center rounded transition-opacity",
+            "flex size-4 shrink-0 cursor-pointer select-none items-center justify-center rounded-md transition-opacity",
             "text-text-lighter",
             "hover:bg-hover hover:text-text",
-            terminal.isPinned ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+            terminal.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
           )}
           title={terminal.isPinned ? "Unpin terminal" : `Close ${terminal.name}`}
           tabIndex={-1}

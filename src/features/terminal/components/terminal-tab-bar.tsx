@@ -340,8 +340,8 @@ const TerminalTabBar = ({
     return (
       <div
         className={cn(
-          "flex min-h-7 items-center justify-between",
-          "border-border border-b bg-secondary-bg px-2 py-1",
+          "flex min-h-8 items-center justify-between",
+          "border-border border-b bg-secondary-bg px-2 py-1.5",
         )}
       >
         <div className="flex items-center gap-1.5">
@@ -353,8 +353,8 @@ const TerminalTabBar = ({
             <button
               onClick={onNewTerminal}
               className={cn(
-                "flex items-center gap-0.5 px-1.5 py-1",
-                "text-text-lighter text-xs transition-colors hover:bg-hover",
+                "flex h-6 w-6 items-center justify-center rounded-lg border border-transparent",
+                "text-text-lighter text-xs transition-colors hover:border-border/70 hover:bg-hover",
               )}
             >
               <Plus size={9} />
@@ -371,8 +371,8 @@ const TerminalTabBar = ({
         ref={tabBarRef}
         className={cn(
           "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border",
-          "flex min-h-7 items-center justify-between overflow-x-auto",
-          "border-border border-b bg-secondary-bg",
+          "flex min-h-8 items-center justify-between overflow-hidden",
+          "border-border border-b bg-secondary-bg px-1.5 py-1",
         )}
         style={{
           scrollbarWidth: "thin",
@@ -382,7 +382,7 @@ const TerminalTabBar = ({
       >
         {/* Left side - Terminal tabs */}
         <div
-          className="scrollbar-hidden flex overflow-x-auto"
+          className="scrollbar-hidden flex min-w-0 flex-1 overflow-x-auto rounded-lg border border-border/55 bg-secondary-bg/45 px-1 py-1"
           data-tab-container
           onWheel={(e) => {
             // Handle horizontal wheel scrolling with native delta values for natural acceleration
@@ -438,13 +438,13 @@ const TerminalTabBar = ({
         </div>
 
         {/* Right side - Action buttons */}
-        <div className="flex items-center gap-1 px-1">
+        <div className="flex shrink-0 items-center gap-1 px-1">
           <Tooltip content="New Terminal (Cmd+T)" side="bottom">
             <button
               onClick={onNewTerminal}
               className={cn(
-                "flex shrink-0 cursor-pointer items-center rounded p-1",
-                "text-text-lighter transition-colors hover:bg-hover",
+                "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1",
+                "text-text-lighter transition-colors hover:border-border/70 hover:bg-hover",
               )}
             >
               <Plus size={14} />
@@ -459,10 +459,10 @@ const TerminalTabBar = ({
               <button
                 onClick={onSplitView}
                 className={cn(
-                  "flex shrink-0 cursor-pointer items-center rounded p-1",
+                  "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border p-1",
                   isSplitView
-                    ? "bg-selected text-text"
-                    : "text-text-lighter transition-colors hover:bg-hover",
+                    ? "border-border/80 bg-primary-bg text-text"
+                    : "border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover",
                 )}
               >
                 <SplitSquareHorizontal size={12} />
@@ -478,8 +478,8 @@ const TerminalTabBar = ({
               <button
                 onClick={onFullScreen}
                 className={cn(
-                  "flex shrink-0 cursor-pointer items-center rounded p-1",
-                  "text-text-lighter transition-colors hover:bg-hover",
+                  "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1",
+                  "text-text-lighter transition-colors hover:border-border/70 hover:bg-hover",
                 )}
               >
                 {isFullScreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
@@ -499,7 +499,7 @@ const TerminalTabBar = ({
                 el.style.top = `${dragCurrentPosition.y - rect.height / 2}px`;
               }
             }}
-            className="ui-font fixed z-50 flex cursor-pointer items-center gap-1.5 border border-border bg-bg px-2 py-1.5 text-xs shadow-lg"
+            className="ui-font fixed z-50 flex cursor-pointer items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1.5 text-xs shadow-sm"
             style={{
               opacity: 0.95,
               minWidth: 60,
