@@ -7,13 +7,18 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
+import { splitLines } from "@/features/editor/utils/lines";
 import { logger } from "@/features/editor/utils/logger";
+import { calculateCursorPosition } from "@/features/editor/utils/position";
 import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
-import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
+import { useSettingsStore } from "@/features/settings/store";
+import { useAuthStore } from "@/stores/auth-store";
+import { toast } from "@/stores/toast-store";
 import { useUIState } from "@/stores/ui-state-store";
+import { InlineEditError, requestInlineEdit } from "@/utils/inline-edit";
 
 interface DirectoryEntry {
   name: string;
@@ -26,11 +31,16 @@ export default function Breadcrumb() {
 
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
+  const { updateBufferContent } = useBufferStore.use.actions();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { rootFolderPath, handleFileSelect } = useFileSystemStore();
   const { isFindVisible, setIsFindVisible } = useUIState();
-  const { toggle: toggleInlineEditToolbar } = useInlineEditToolbarStore.use.actions();
+  const editorActions = useEditorStateStore.use.actions();
   const selection = useEditorStateStore.use.selection?.();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const subscription = useAuthStore((state) => state.subscription);
+  const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
+  const [isInlineEditRunning, setIsInlineEditRunning] = useState(false);
 
   const jumpListActions = useJumpListStore.use.actions();
   const canGoBack = jumpListActions.canGoBack();
@@ -80,8 +90,88 @@ export default function Breadcrumb() {
     setIsFindVisible(!isFindVisible);
   };
 
-  const handleInlineEditClick = () => {
-    toggleInlineEditToolbar();
+  const handleInlineEditClick = async () => {
+    if (!activeBuffer || !selection) return;
+
+    const startOffset = Math.min(selection.start.offset, selection.end.offset);
+    const endOffset = Math.max(selection.start.offset, selection.end.offset);
+    if (startOffset === endOffset) return;
+
+    const selectedText = activeBuffer.content.slice(startOffset, endOffset);
+    if (!selectedText.trim()) {
+      toast.warning("Select non-empty code before inline edit.");
+      return;
+    }
+
+    if (!isAuthenticated) {
+      toast.error("Please sign in to use inline edit.");
+      return;
+    }
+
+    const subscriptionStatus = subscription?.status ?? "free";
+    const enterprisePolicy = subscription?.enterprise?.policy;
+    const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
+    const isPro = subscriptionStatus === "pro" || subscriptionStatus === "trial";
+
+    if (managedPolicy && !managedPolicy.aiCompletionEnabled) {
+      toast.error("Inline edit is disabled by your organization policy.");
+      return;
+    }
+
+    const useByok = managedPolicy ? managedPolicy.allowByok && !isPro : !isPro;
+    if (managedPolicy && useByok && !managedPolicy.allowByok) {
+      toast.error("BYOK is disabled by your organization policy.");
+      return;
+    }
+
+    const instruction = window.prompt(
+      "Inline edit instruction",
+      "Improve this code while preserving behavior.",
+    );
+    if (instruction === null) return;
+
+    const beforeSelection = activeBuffer.content.slice(0, startOffset);
+    const afterSelection = activeBuffer.content.slice(endOffset);
+
+    setIsInlineEditRunning(true);
+
+    try {
+      const { editedText } = await requestInlineEdit(
+        {
+          model: aiAutocompleteModelId,
+          beforeSelection,
+          selectedText,
+          afterSelection,
+          instruction: instruction.trim(),
+          filePath: activeBuffer.path,
+          languageId: activeBuffer.language,
+        },
+        { useByok },
+      );
+
+      if (!editedText.trim()) {
+        toast.warning("Inline edit returned an empty result.");
+        return;
+      }
+
+      const newContent = `${beforeSelection}${editedText}${afterSelection}`;
+      updateBufferContent(activeBuffer.id, newContent, true);
+
+      const newCursorOffset = startOffset + editedText.length;
+      const newPosition = calculateCursorPosition(newCursorOffset, splitLines(newContent));
+      editorActions.setCursorPosition(newPosition);
+      editorActions.setSelection(undefined);
+
+      toast.success("Inline edit applied.");
+    } catch (error) {
+      if (error instanceof InlineEditError) {
+        toast.error(error.message);
+      } else {
+        toast.error("Inline edit failed. Please try again.");
+      }
+    } finally {
+      setIsInlineEditRunning(false);
+    }
   };
 
   const hasSelection = selection && selection.start.offset !== selection.end.offset;
@@ -340,9 +430,11 @@ export default function Breadcrumb() {
           )}
           <button
             onClick={handleInlineEditClick}
-            disabled={!hasSelection}
+            disabled={!hasSelection || isInlineEditRunning}
             className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
-            title="AI inline edit (select text first)"
+            title={
+              isInlineEditRunning ? "Applying inline edit..." : "AI inline edit (select text first)"
+            }
           >
             <Sparkles size={12} />
           </button>
