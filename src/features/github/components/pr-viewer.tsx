@@ -1,6 +1,8 @@
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   ChevronDown,
   ChevronRight,
+  Copy,
   ExternalLink,
   FileText,
   GitBranch,
@@ -8,14 +10,29 @@ import {
   GitPullRequest,
   MessageSquare,
   RefreshCw,
+  Search,
+  SlidersHorizontal,
 } from "lucide-react";
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  memo,
+  type ReactNode,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useRepositoryStore } from "@/features/git/stores/repository-store";
+import { toast } from "@/stores/toast-store";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { usePRDiffHighlighting } from "../hooks/use-pr-diff-highlighting";
 import { useGitHubStore } from "../store";
-import type { Label, LinkedIssue, ReviewRequest } from "../types";
+import type { Label, LinkedIssue, PullRequestFile, ReviewRequest } from "../types";
 import GitHubMarkdown from "./github-markdown";
 import {
   AssigneesList,
@@ -31,7 +48,8 @@ interface FileDiff {
   oldPath?: string;
   additions: number;
   deletions: number;
-  lines: string[];
+  status: "added" | "deleted" | "modified" | "renamed";
+  lines?: string[];
 }
 
 interface Commit {
@@ -39,54 +57,153 @@ interface Commit {
   messageHeadline: string;
   messageBody: string;
   authoredDate: string;
+  url?: string;
   authors: { login: string; name: string; email: string }[];
 }
 
-function parseDiff(diffText: string): FileDiff[] {
-  const files: FileDiff[] = [];
-  const fileChunks = diffText.split(/^diff --git /m).filter(Boolean);
+interface FilePatchData {
+  path: string;
+  oldPath?: string;
+  status: FileDiff["status"];
+  lines: string[];
+}
 
-  for (const chunk of fileChunks) {
-    const lines = chunk.split("\n");
-    const headerLine = lines[0];
+interface DiffSectionRef {
+  start: number;
+  end: number;
+  oldPath: string;
+  newPath: string;
+}
 
-    const pathMatch = headerLine.match(/a\/(.+?) b\/(.+)/);
-    if (!pathMatch) continue;
+type DiffSectionIndex = Record<string, DiffSectionRef>;
 
-    const oldPath = pathMatch[1];
-    const newPath = pathMatch[2];
+const EXPAND_ALL_EAGER_PATCH_LIMIT = 10;
+const EXPANDED_PATCH_BACKGROUND_BATCH = 4;
 
-    let additions = 0;
-    let deletions = 0;
-    const diffLines: string[] = [];
+function inferFileStatus(additions: number, deletions: number): FileDiff["status"] {
+  if (additions > 0 && deletions === 0) return "added";
+  if (deletions > 0 && additions === 0) return "deleted";
+  return "modified";
+}
 
-    let inDiff = false;
-    for (const line of lines.slice(1)) {
-      if (line.startsWith("@@")) {
-        inDiff = true;
-        diffLines.push(line);
-        continue;
-      }
-      if (inDiff) {
-        diffLines.push(line);
-        if (line.startsWith("+") && !line.startsWith("+++")) {
-          additions++;
-        } else if (line.startsWith("-") && !line.startsWith("---")) {
-          deletions++;
-        }
-      }
-    }
+function toFileDiffFromMetadata(file: PullRequestFile): FileDiff {
+  return {
+    path: file.path,
+    additions: file.additions,
+    deletions: file.deletions,
+    status: inferFileStatus(file.additions, file.deletions),
+  };
+}
 
-    files.push({
-      path: newPath,
-      oldPath: oldPath !== newPath ? oldPath : undefined,
-      additions,
-      deletions,
-      lines: diffLines,
+function buildDiffSectionIndex(diffText: string): DiffSectionIndex {
+  if (!diffText) return {};
+
+  const headerRegex = /^diff --git a\/(.+?) b\/(.+)$/gm;
+  const headers: Array<Pick<DiffSectionRef, "start" | "oldPath" | "newPath">> = [];
+  for (let match = headerRegex.exec(diffText); match !== null; match = headerRegex.exec(diffText)) {
+    headers.push({
+      start: match.index,
+      oldPath: match[1],
+      newPath: match[2],
     });
   }
 
-  return files;
+  if (headers.length === 0) return {};
+
+  const index: DiffSectionIndex = {};
+  for (let i = 0; i < headers.length; i += 1) {
+    const current = headers[i];
+    const next = headers[i + 1];
+    const sectionRef: DiffSectionRef = {
+      start: current.start,
+      end: next ? next.start : diffText.length,
+      oldPath: current.oldPath,
+      newPath: current.newPath,
+    };
+
+    if (!index[current.newPath]) {
+      index[current.newPath] = sectionRef;
+    }
+    if (current.oldPath !== current.newPath && !index[current.oldPath]) {
+      index[current.oldPath] = sectionRef;
+    }
+  }
+
+  return index;
+}
+
+function extractFilePatch(
+  diffText: string,
+  targetPath: string,
+  sectionIndex: DiffSectionIndex,
+): FilePatchData | null {
+  if (!diffText || !targetPath) return null;
+  const sectionRef = sectionIndex[targetPath];
+  if (!sectionRef) return null;
+
+  const section = diffText.slice(sectionRef.start, sectionRef.end);
+
+  const lines = section.split("\n");
+  if (lines.length === 0) return null;
+
+  const oldPath = sectionRef.oldPath;
+  const newPath = sectionRef.newPath;
+  const patchLines: string[] = [];
+  let status: FileDiff["status"] = oldPath !== newPath ? "renamed" : "modified";
+  let inPatch = false;
+
+  for (const line of lines.slice(1)) {
+    if (line.startsWith("new file mode")) {
+      status = "added";
+      continue;
+    }
+    if (line.startsWith("deleted file mode")) {
+      status = "deleted";
+      continue;
+    }
+    if (line.startsWith("@@")) {
+      inPatch = true;
+      patchLines.push(line);
+      continue;
+    }
+    if (inPatch) {
+      patchLines.push(line);
+    }
+  }
+
+  return {
+    path: newPath,
+    oldPath: oldPath !== newPath ? oldPath : undefined,
+    status,
+    lines: patchLines,
+  };
+}
+
+function resolveSafeRepoFilePath(repoPath: string, relativePath: string): string | null {
+  const normalizedBase = repoPath.replace(/[\\/]$/, "");
+  const normalizedInput = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
+
+  if (!normalizedBase || !normalizedInput) return null;
+  if (/^[A-Za-z]:/.test(normalizedInput) || normalizedInput.startsWith("//")) return null;
+
+  const segments = normalizedInput.split("/").filter(Boolean);
+  if (
+    segments.length === 0 ||
+    segments.some((segment) => segment === "." || segment === ".." || segment.includes("\0"))
+  ) {
+    return null;
+  }
+
+  const separator = normalizedBase.includes("\\") ? "\\" : "/";
+  return `${normalizedBase}${separator}${segments.join(separator)}`;
+}
+
+function getCommentKey(comment: {
+  author: { login: string };
+  createdAt: string;
+  body: string;
+}): string {
+  return `${comment.author.login}:${comment.createdAt}:${comment.body.slice(0, 32)}`;
 }
 
 function getTimeAgo(dateString: string): string {
@@ -99,6 +216,92 @@ function getTimeAgo(dateString: string): string {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
   if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
   return `${Math.floor(seconds / 604800)}w ago`;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== "object" || value === null) return null;
+  return value as Record<string, unknown>;
+}
+
+function asNonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function normalizeCommitAuthor(value: unknown): Commit["authors"][number] | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  return {
+    login: asNonEmptyString(record.login) ?? "",
+    name: asNonEmptyString(record.name) ?? "",
+    email: asNonEmptyString(record.email) ?? "",
+  };
+}
+
+function normalizeCommit(raw: unknown, index: number): Commit | null {
+  const record = asRecord(raw);
+  if (!record) return null;
+
+  const oid =
+    asNonEmptyString(record.oid) ??
+    asNonEmptyString(record.sha) ??
+    asNonEmptyString(record.id) ??
+    `commit-${index + 1}`;
+
+  const fullMessage = asNonEmptyString(record.message) ?? "";
+  const firstMessageLine = fullMessage.split("\n")[0]?.trim();
+  const messageHeadline =
+    asNonEmptyString(record.messageHeadline) ??
+    asNonEmptyString(record.title) ??
+    firstMessageLine ??
+    oid.slice(0, 7);
+
+  const messageBody =
+    asNonEmptyString(record.messageBody) ??
+    (fullMessage.includes("\n") ? fullMessage.split("\n").slice(1).join("\n").trim() : "");
+
+  const authoredDate =
+    asNonEmptyString(record.authoredDate) ??
+    asNonEmptyString(record.committedDate) ??
+    asNonEmptyString(record.committedAt) ??
+    asNonEmptyString(record.createdAt) ??
+    new Date().toISOString();
+
+  const authorsField = record.authors;
+  const authorsRecord = asRecord(authorsField);
+  const rawAuthors = (Array.isArray(authorsField) ? authorsField : null) ??
+    (authorsRecord && Array.isArray(authorsRecord.nodes) ? authorsRecord.nodes : null) ?? [
+      record.author,
+    ];
+  const normalizedAuthors = rawAuthors
+    .map(normalizeCommitAuthor)
+    .filter((author): author is Commit["authors"][number] => !!author);
+
+  return {
+    oid,
+    messageHeadline,
+    messageBody,
+    authoredDate,
+    url: asNonEmptyString(record.url) ?? undefined,
+    authors: normalizedAuthors,
+  };
+}
+
+async function copyToClipboard(value: string, successMessage: string) {
+  try {
+    await writeText(value);
+    toast.success(successMessage);
+  } catch {
+    try {
+      if (typeof navigator === "undefined" || !navigator.clipboard) {
+        throw new Error("Clipboard API is unavailable.");
+      }
+      await navigator.clipboard.writeText(value);
+      toast.success(successMessage);
+    } catch (error) {
+      toast.error(`Failed to copy: ${String(error)}`);
+    }
+  }
 }
 
 /**
@@ -187,8 +390,8 @@ const DiffLineDisplay = memo(({ line, index, tokens }: DiffLineDisplayProps) => 
   };
 
   return (
-    <div className={cn("px-4 py-0.5 font-mono text-xs", bgClass, textClass)}>
-      <span className="mr-4 inline-block w-10 select-none text-right text-text-lighter/50">
+    <div className={cn("px-3 py-0 font-mono text-[11px] leading-4", bgClass, textClass)}>
+      <span className="mr-3 inline-block w-10 select-none text-right text-text-lighter/50">
         {index + 1}
       </span>
       <span className="whitespace-pre">{renderContent()}</span>
@@ -200,42 +403,97 @@ DiffLineDisplay.displayName = "DiffLineDisplay";
 
 interface FileDiffViewProps {
   file: FileDiff;
-  defaultExpanded?: boolean;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onOpenFile: (relativePath: string) => void;
+  isLoadingPatch: boolean;
+  patchError?: string;
 }
 
-const FileDiffView = memo(({ file, defaultExpanded = false }: FileDiffViewProps) => {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const tokenMap = usePRDiffHighlighting(isExpanded ? file.lines : [], file.path);
+const FileDiffView = memo(
+  ({ file, isExpanded, onToggle, onOpenFile, isLoadingPatch, patchError }: FileDiffViewProps) => {
+    const fileLines = file.lines ?? [];
+    const tokenMap = usePRDiffHighlighting(isExpanded ? fileLines : [], file.path);
+    const statusColors: Record<FileDiff["status"], string> = {
+      added: "bg-git-added/15 text-git-added",
+      deleted: "bg-git-deleted/15 text-git-deleted",
+      modified: "bg-git-modified/15 text-git-modified",
+      renamed: "bg-git-renamed/15 text-git-renamed",
+    };
 
-  return (
-    <div className="min-w-0 border-border border-b">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-hover"
-      >
-        {isExpanded ? (
-          <ChevronDown size={14} className="text-text-lighter" />
-        ) : (
-          <ChevronRight size={14} className="text-text-lighter" />
+    return (
+      <div className="min-w-0 overflow-hidden rounded-lg bg-secondary-bg/35">
+        <button
+          onClick={onToggle}
+          className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-hover/60"
+        >
+          {isExpanded ? (
+            <ChevronDown size={14} className="text-text-lighter" />
+          ) : (
+            <ChevronRight size={14} className="text-text-lighter" />
+          )}
+          <FileText size={14} className="text-text-lighter" />
+          <span className="min-w-0 flex-1 truncate text-text text-xs">{file.path}</span>
+          {file.oldPath && (
+            <span className="max-w-48 truncate text-[10px] text-text-lighter">
+              from {file.oldPath}
+            </span>
+          )}
+          <span
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[10px] capitalize",
+              statusColors[file.status],
+            )}
+          >
+            {file.status}
+          </span>
+          <span className="text-[10px] text-git-added">+{file.additions}</span>
+          <span className="text-[10px] text-git-deleted">-{file.deletions}</span>
+        </button>
+        {isExpanded && (
+          <div className="bg-primary-bg/65">
+            <div className="flex items-center justify-between px-3 py-1.5">
+              <Tooltip content="Open file in editor" side="top">
+                <button
+                  onClick={() => onOpenFile(file.path)}
+                  className="rounded-md border border-border/70 bg-secondary-bg/70 px-2 py-1 text-[10px] text-text-lighter hover:bg-hover hover:text-text"
+                >
+                  Open File
+                </button>
+              </Tooltip>
+              <span className="text-[10px] text-text-lighter">
+                {isLoadingPatch ? "Loading patch..." : `${fileLines.length} diff lines`}
+              </span>
+            </div>
+            <div className="max-h-[540px] overflow-auto">
+              {isLoadingPatch ? (
+                <div className="flex items-center justify-center py-6">
+                  <RefreshCw size={14} className="animate-spin text-text-lighter" />
+                  <span className="ml-2 text-text-lighter text-xs">Loading file diff...</span>
+                </div>
+              ) : patchError ? (
+                <div className="px-3 py-4 text-center text-error text-xs">{patchError}</div>
+              ) : fileLines.length === 0 ? (
+                <div className="px-3 py-4 text-center text-text-lighter text-xs">
+                  No diff hunks available for this file.
+                </div>
+              ) : (
+                fileLines.map((line, index) => (
+                  <DiffLineDisplay
+                    key={index}
+                    line={line}
+                    index={index}
+                    tokens={tokenMap.get(index)}
+                  />
+                ))
+              )}
+            </div>
+          </div>
         )}
-        <FileText size={14} className="text-text-lighter" />
-        <span className="flex-1 truncate text-sm text-text">{file.path}</span>
-        {file.oldPath && (
-          <span className="text-text-lighter text-xs">(renamed from {file.oldPath})</span>
-        )}
-        <span className="text-git-added text-xs">+{file.additions}</span>
-        <span className="text-git-deleted text-xs">-{file.deletions}</span>
-      </button>
-      {isExpanded && (
-        <div className="max-h-[600px] overflow-auto border-border border-t bg-primary-bg">
-          {file.lines.map((line, index) => (
-            <DiffLineDisplay key={index} line={line} index={index} tokens={tokenMap.get(index)} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-});
+      </div>
+    );
+  },
+);
 
 FileDiffView.displayName = "FileDiffView";
 
@@ -247,11 +505,12 @@ const CommitItem = memo(({ commit }: CommitItemProps) => {
   const author = commit.authors[0];
   const shortSha = commit.oid.slice(0, 7);
   const authorName = author?.login || author?.name || "Unknown";
+  const avatarLogin = (author?.login || "").trim();
 
   return (
-    <div className="flex items-start gap-3 border-border border-b px-4 py-3 hover:bg-hover/50">
+    <div className="flex items-start gap-3 rounded-lg bg-secondary-bg/35 px-4 py-3 hover:bg-hover/50">
       <img
-        src={`https://github.com/${authorName}.png?size=32`}
+        src={`https://github.com/${encodeURIComponent(avatarLogin || "github")}.png?size=32`}
         alt={authorName}
         className="h-6 w-6 shrink-0 rounded-full bg-secondary-bg"
         loading="lazy"
@@ -267,6 +526,26 @@ const CommitItem = memo(({ commit }: CommitItemProps) => {
           <span className="font-medium">{authorName}</span>
           <span>committed {getTimeAgo(commit.authoredDate)}</span>
           <code className="rounded bg-primary-bg px-1.5 py-0.5 font-mono">{shortSha}</code>
+          <Tooltip content="Copy full commit SHA" side="top">
+            <button
+              onClick={() => void copyToClipboard(commit.oid, "Commit SHA copied")}
+              className="rounded border border-transparent p-0.5 text-text-lighter hover:border-border hover:bg-hover hover:text-text"
+              aria-label="Copy commit SHA"
+            >
+              <Copy size={11} />
+            </button>
+          </Tooltip>
+          {commit.url && (
+            <Tooltip content="Open commit on GitHub" side="top">
+              <button
+                onClick={() => window.open(commit.url, "_blank", "noopener,noreferrer")}
+                className="rounded border border-transparent p-0.5 text-text-lighter hover:border-border hover:bg-hover hover:text-text"
+                aria-label="Open commit in browser"
+              >
+                <ExternalLink size={11} />
+              </button>
+            </Tooltip>
+          )}
         </div>
       </div>
     </div>
@@ -287,7 +566,7 @@ const CommentItem = memo(({ comment }: CommentItemProps) => {
   const authorLogin = comment.author.login;
 
   return (
-    <div className="flex gap-3 border-border border-b px-4 py-4">
+    <div className="flex gap-3 rounded-lg bg-secondary-bg/35 px-4 py-4">
       <img
         src={`https://github.com/${authorLogin}.png?size=40`}
         alt={authorLogin}
@@ -314,55 +593,278 @@ interface PRViewerProps {
 }
 
 type TabType = "description" | "files" | "commits" | "comments";
+type FileStatusFilter = "all" | "added" | "deleted" | "modified" | "renamed";
+type FilePatchState = {
+  loading: boolean;
+  error?: string;
+  data?: FilePatchData;
+};
 
 const PRViewer = memo(({ prNumber }: PRViewerProps) => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
-  const { selectedPRDetails, selectedPRDiff, selectedPRComments, isLoadingDetails, detailsError } =
-    useGitHubStore();
-  const { selectPR, openPRInBrowser, checkoutPR } = useGitHubStore().actions;
+  const selectedRepoPath = useRepositoryStore.use.activeRepoPath();
+  const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
+  const {
+    selectedPRDetails,
+    selectedPRDiff,
+    selectedPRFiles,
+    selectedPRComments,
+    isLoadingDetails,
+    isLoadingContent,
+    detailsError,
+    contentError,
+  } = useGitHubStore();
+  const { selectPR, fetchPRContent, openPRInBrowser, checkoutPR } = useGitHubStore().actions;
+  const repoPath = selectedRepoPath ?? rootFolderPath;
 
   const [activeTab, setActiveTab] = useState<TabType>("description");
+  const [fileQuery, setFileQuery] = useState("");
+  const [fileStatusFilter, setFileStatusFilter] = useState<FileStatusFilter>("all");
+  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
+  const [filePatches, setFilePatches] = useState<Record<string, FilePatchState>>({});
+  const patchLoadSeqRef = useRef(0);
+  const [, startTabTransition] = useTransition();
 
   // Load PR data when component mounts
   useEffect(() => {
-    if (rootFolderPath && prNumber) {
-      selectPR(rootFolderPath, prNumber);
+    if (repoPath && prNumber) {
+      void selectPR(repoPath, prNumber);
     }
-  }, [rootFolderPath, prNumber, selectPR]);
+  }, [repoPath, prNumber, selectPR]);
 
-  const parsedDiff = useMemo(() => {
-    if (!selectedPRDiff) return [];
-    return parseDiff(selectedPRDiff);
+  useEffect(() => {
+    setActiveTab("description");
+    setExpandedFiles(new Set());
+    setFilePatches({});
+    patchLoadSeqRef.current += 1;
+  }, [prNumber, repoPath]);
+
+  useEffect(() => {
+    if (!repoPath || !prNumber) return;
+    if (activeTab === "files") {
+      void fetchPRContent(repoPath, prNumber, { mode: "files" });
+    } else if (activeTab === "comments") {
+      void fetchPRContent(repoPath, prNumber, { mode: "comments" });
+    }
+  }, [activeTab, repoPath, prNumber, fetchPRContent]);
+
+  const baseDiffFiles = useMemo(() => {
+    return selectedPRFiles.map(toFileDiffFromMetadata);
+  }, [selectedPRFiles]);
+
+  const baseDiffByPath = useMemo(() => {
+    return new Map(baseDiffFiles.map((file) => [file.path, file]));
+  }, [baseDiffFiles]);
+
+  const diffSectionIndex = useMemo(() => {
+    return buildDiffSectionIndex(selectedPRDiff ?? "");
   }, [selectedPRDiff]);
 
+  const diffFiles = useMemo(() => {
+    return baseDiffFiles.map((file) => {
+      const patch = filePatches[file.path];
+      return {
+        ...file,
+        oldPath: patch?.data?.oldPath ?? file.oldPath,
+        status: patch?.data?.status ?? file.status,
+        lines: patch?.data?.lines,
+      };
+    });
+  }, [baseDiffFiles, filePatches]);
+
   const commits = useMemo(() => {
-    if (!selectedPRDetails?.commits) return [];
-    return selectedPRDetails.commits as Commit[];
+    if (!Array.isArray(selectedPRDetails?.commits)) return [];
+    return selectedPRDetails.commits
+      .map((commit, index) => normalizeCommit(commit, index))
+      .filter((commit): commit is Commit => !!commit);
   }, [selectedPRDetails?.commits]);
 
+  const deferredFileQuery = useDeferredValue(fileQuery);
+  const filteredDiff = useMemo(() => {
+    const query = deferredFileQuery.trim().toLowerCase();
+    return diffFiles.filter((file) => {
+      if (fileStatusFilter !== "all" && file.status !== fileStatusFilter) return false;
+      if (!query) return true;
+      return (
+        file.path.toLowerCase().includes(query) ||
+        file.oldPath?.toLowerCase().includes(query) ||
+        false
+      );
+    });
+  }, [diffFiles, deferredFileQuery, fileStatusFilter]);
+
   const handleOpenInBrowser = useCallback(() => {
-    if (rootFolderPath) {
-      openPRInBrowser(rootFolderPath, prNumber);
+    if (repoPath) {
+      openPRInBrowser(repoPath, prNumber);
     }
-  }, [rootFolderPath, prNumber, openPRInBrowser]);
+  }, [repoPath, prNumber, openPRInBrowser]);
 
   const handleCheckout = useCallback(async () => {
-    if (rootFolderPath) {
+    if (repoPath) {
       try {
-        await checkoutPR(rootFolderPath, prNumber);
+        await checkoutPR(repoPath, prNumber);
       } catch (err) {
         console.error("Failed to checkout PR:", err);
       }
     }
-  }, [rootFolderPath, prNumber, checkoutPR]);
+  }, [repoPath, prNumber, checkoutPR]);
 
   const handleRefresh = useCallback(() => {
-    if (rootFolderPath) {
-      selectPR(rootFolderPath, prNumber);
+    if (repoPath) {
+      void selectPR(repoPath, prNumber, { force: true });
+      if (activeTab === "files") {
+        void fetchPRContent(repoPath, prNumber, { force: true, mode: "files" });
+      } else if (activeTab === "comments") {
+        void fetchPRContent(repoPath, prNumber, { force: true, mode: "comments" });
+      }
     }
-  }, [rootFolderPath, prNumber, selectPR]);
+  }, [activeTab, repoPath, prNumber, selectPR, fetchPRContent]);
 
-  if (isLoadingDetails) {
+  const handleCopyPRLink = useCallback(() => {
+    if (!selectedPRDetails?.url) {
+      toast.error("PR link is not available.");
+      return;
+    }
+    void copyToClipboard(selectedPRDetails.url, "PR link copied");
+  }, [selectedPRDetails?.url]);
+
+  const handleCopyBranchName = useCallback(() => {
+    if (!selectedPRDetails?.headRef) {
+      toast.error("Branch name is not available.");
+      return;
+    }
+    void copyToClipboard(selectedPRDetails.headRef, "Branch name copied");
+  }, [selectedPRDetails?.headRef]);
+
+  const loadFilePatch = useCallback(
+    (path: string) => {
+      if (!selectedPRDiff) return;
+      let shouldSchedule = false;
+      setFilePatches((prev) => {
+        const existing = prev[path];
+        if (existing?.loading || existing?.data) {
+          return prev;
+        }
+        shouldSchedule = true;
+        return {
+          ...prev,
+          [path]: { ...(existing ?? {}), loading: true, error: undefined },
+        };
+      });
+      if (!shouldSchedule) return;
+
+      const loadSeq = patchLoadSeqRef.current;
+      const run = () => {
+        try {
+          const patch = extractFilePatch(selectedPRDiff, path, diffSectionIndex);
+          if (patchLoadSeqRef.current !== loadSeq) return;
+
+          setFilePatches((prev) => ({
+            ...prev,
+            [path]: {
+              loading: false,
+              data: patch ?? {
+                path,
+                status: baseDiffByPath.get(path)?.status ?? "modified",
+                lines: [],
+              },
+            },
+          }));
+        } catch (error) {
+          if (patchLoadSeqRef.current !== loadSeq) return;
+          setFilePatches((prev) => ({
+            ...prev,
+            [path]: {
+              loading: false,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          }));
+        }
+      };
+
+      if (typeof window !== "undefined") {
+        const requestIdle = (
+          window as Window & {
+            requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+          }
+        ).requestIdleCallback;
+        if (typeof requestIdle === "function") {
+          requestIdle(() => run(), { timeout: 120 });
+          return;
+        }
+      }
+      window.setTimeout(run, 0);
+    },
+    [selectedPRDiff, diffSectionIndex, baseDiffByPath],
+  );
+
+  const handleToggleFileExpanded = useCallback(
+    (path: string) => {
+      let shouldLoad = false;
+      setExpandedFiles((prev) => {
+        const next = new Set(prev);
+        if (next.has(path)) {
+          next.delete(path);
+        } else {
+          next.add(path);
+          shouldLoad = true;
+        }
+        return next;
+      });
+
+      if (shouldLoad) {
+        loadFilePatch(path);
+      }
+    },
+    [loadFilePatch],
+  );
+
+  const handleExpandAllFiles = useCallback(() => {
+    const paths = filteredDiff.map((file) => file.path);
+    setExpandedFiles(new Set(paths));
+
+    for (const path of paths.slice(0, EXPAND_ALL_EAGER_PATCH_LIMIT)) {
+      loadFilePatch(path);
+    }
+  }, [filteredDiff, loadFilePatch]);
+
+  const handleCollapseAllFiles = useCallback(() => {
+    setExpandedFiles(new Set());
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== "files" || !selectedPRDiff || expandedFiles.size === 0) return;
+
+    const missingPatches = Array.from(expandedFiles).filter((path) => {
+      const patchState = filePatches[path];
+      return !patchState?.loading && !patchState?.data && !patchState?.error;
+    });
+    if (missingPatches.length === 0) return;
+
+    for (const path of missingPatches.slice(0, EXPANDED_PATCH_BACKGROUND_BATCH)) {
+      loadFilePatch(path);
+    }
+  }, [activeTab, expandedFiles, filePatches, selectedPRDiff, loadFilePatch]);
+
+  const handleOpenChangedFile = useCallback(
+    (relativePath: string) => {
+      if (!repoPath) {
+        toast.error("No repository selected.");
+        return;
+      }
+
+      const fullPath = resolveSafeRepoFilePath(repoPath, relativePath);
+      if (!fullPath) {
+        toast.error("Invalid file path in diff.");
+        return;
+      }
+
+      void handleFileSelect(fullPath, false);
+    },
+    [repoPath, handleFileSelect],
+  );
+
+  if (isLoadingDetails && !selectedPRDetails) {
     return (
       <div className="flex h-full flex-col bg-primary-bg">
         <div className="flex flex-1 items-center justify-center">
@@ -373,7 +875,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
     );
   }
 
-  if (detailsError) {
+  if (detailsError && !selectedPRDetails) {
     return (
       <div className="flex h-full flex-col bg-primary-bg">
         <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
@@ -393,19 +895,26 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
     return null;
   }
 
+  const isRefreshingDetails = isLoadingDetails && !!selectedPRDetails;
   const pr = selectedPRDetails;
+  const changedFilesCount = pr.changedFiles || selectedPRFiles.length || 0;
 
   return (
     <div className="flex h-full flex-col bg-primary-bg">
+      {isRefreshingDetails && (
+        <div className="h-px w-full overflow-hidden bg-border">
+          <div className="h-full w-1/3 animate-pulse bg-accent/70" />
+        </div>
+      )}
       {/* Header */}
-      <div className="shrink-0 border-border border-b bg-secondary-bg px-4 py-3">
-        <div className="flex items-start justify-between gap-4">
+      <div className="shrink-0 bg-secondary-bg/60 px-3 py-3 sm:px-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-start gap-2">
               <GitPullRequest
                 size={18}
                 className={cn(
-                  "shrink-0",
+                  "mt-0.5 shrink-0",
                   pr.state === "MERGED"
                     ? "text-purple-500"
                     : pr.state === "CLOSED"
@@ -413,30 +922,53 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
                       : "text-green-500",
                 )}
               />
-              <span className="shrink-0 text-sm text-text-lighter">#{pr.number}</span>
-              <h1 className="truncate font-medium text-text">{pr.title}</h1>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-text-lighter text-xs">
-              <span className="font-medium text-text-light">{pr.author.login}</span>
-              <span>opened {getTimeAgo(pr.createdAt)}</span>
-              <div className="flex items-center gap-1">
-                <GitBranch size={12} />
-                <span className="font-mono">
-                  {pr.headRef} → {pr.baseRef}
-                </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-md border border-border bg-primary-bg/70 px-1.5 py-0.5 font-mono text-[11px] text-text-lighter">
+                    #{pr.number}
+                  </span>
+                  <h1 className="min-w-0 break-words font-medium text-sm text-text sm:text-base">
+                    {pr.title}
+                  </h1>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-lighter">
+                  <span className="font-medium text-text-light">@{pr.author.login}</span>
+                  <span>opened {getTimeAgo(pr.createdAt)}</span>
+                  <span>updated {getTimeAgo(pr.updatedAt)}</span>
+                  <div className="flex min-w-0 items-center gap-1 rounded-md border border-border/70 bg-primary-bg/65 px-1.5 py-0.5">
+                    <GitBranch size={11} />
+                    <span className="truncate font-mono text-[10px]">
+                      {pr.headRef} → {pr.baseRef}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
+                  <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
+                    {changedFilesCount} files
+                  </span>
+                  <span className="rounded-md bg-git-added/15 px-2 py-1 text-git-added">
+                    +{pr.additions}
+                  </span>
+                  <span className="rounded-md bg-git-deleted/15 px-2 py-1 text-git-deleted">
+                    -{pr.deletions}
+                  </span>
+                  <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
+                    {commits.length} commits
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 flex-wrap items-center gap-1">
             {pr.isDraft && (
-              <span className="mr-2 rounded bg-text-lighter/20 px-2 py-1 text-text-lighter text-xs">
+              <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter">
                 Draft
               </span>
             )}
             {pr.reviewDecision && (
               <span
                 className={cn(
-                  "mr-2 rounded px-2 py-1 text-xs",
+                  "rounded-md px-2 py-1 text-[10px]",
                   pr.reviewDecision === "APPROVED"
                     ? "bg-green-500/20 text-green-500"
                     : pr.reviewDecision === "CHANGES_REQUESTED"
@@ -451,36 +983,53 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
                     : "Review Required"}
               </span>
             )}
-            <button
-              onClick={handleRefresh}
-              className="rounded p-2 text-text-lighter hover:bg-hover hover:text-text"
-              title="Refresh"
-            >
-              <RefreshCw size={14} />
-            </button>
-            <button
-              onClick={handleCheckout}
-              className="rounded p-2 text-text-lighter hover:bg-hover hover:text-text"
-              title="Checkout PR branch"
-            >
-              <GitBranch size={14} />
-            </button>
-            <button
-              onClick={handleOpenInBrowser}
-              className="rounded p-2 text-text-lighter hover:bg-hover hover:text-text"
-              title="Open in browser"
-            >
-              <ExternalLink size={14} />
-            </button>
+            <Tooltip content="Refresh PR data" side="bottom">
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshingDetails}
+                className="rounded-md border border-transparent p-2 text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text"
+                aria-label="Refresh PR data"
+              >
+                <RefreshCw size={14} className={isRefreshingDetails ? "animate-spin" : ""} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Checkout PR branch" side="bottom">
+              <button
+                onClick={handleCheckout}
+                className="rounded-md border border-transparent p-2 text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text"
+                aria-label="Checkout PR branch"
+              >
+                <GitBranch size={14} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Open on GitHub" side="bottom">
+              <button
+                onClick={handleOpenInBrowser}
+                className="rounded-md border border-transparent p-2 text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text"
+                aria-label="Open pull request in browser"
+              >
+                <ExternalLink size={14} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Copy PR link" side="bottom">
+              <button
+                onClick={handleCopyPRLink}
+                className="rounded-md border border-transparent p-2 text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text"
+                aria-label="Copy PR link"
+              >
+                <Copy size={14} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Copy branch name" side="bottom">
+              <button
+                onClick={handleCopyBranchName}
+                className="rounded-md border border-transparent p-2 text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text"
+                aria-label="Copy branch name"
+              >
+                <GitBranch size={14} />
+              </button>
+            </Tooltip>
           </div>
-        </div>
-
-        {/* Stats bar */}
-        <div className="mt-3 flex items-center gap-4 text-xs">
-          <span className="text-text-lighter">{pr.changedFiles} files changed</span>
-          <span className="text-green-500">+{pr.additions}</span>
-          <span className="text-red-500">-{pr.deletions}</span>
-          <span className="text-text-lighter">{commits.length} commits</span>
         </div>
       </div>
 
@@ -491,7 +1040,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
         pr.reviewRequests?.length > 0 ||
         pr.labels?.length > 0 ||
         pr.assignees?.length > 0) && (
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-border border-b bg-secondary-bg/50 px-4 py-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-3 bg-secondary-bg/45 px-4 py-2">
           {pr.statusChecks && pr.statusChecks.length > 0 && (
             <CIStatusIndicator checks={pr.statusChecks} />
           )}
@@ -510,66 +1059,116 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
           {pr.assignees && pr.assignees.length > 0 && <AssigneesList assignees={pr.assignees} />}
         </div>
       )}
+      {detailsError && (
+        <div className="flex shrink-0 items-center justify-between gap-2 bg-error/8 px-4 py-2">
+          <p className="truncate text-[11px] text-error/90">{detailsError}</p>
+          <button
+            onClick={handleRefresh}
+            className="shrink-0 rounded-md border border-error/40 px-2 py-1 text-[10px] text-error/90 hover:bg-error/10"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Tabs */}
-      <div className="flex shrink-0 border-border border-b bg-secondary-bg">
-        <button
-          onClick={() => setActiveTab("description")}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 text-sm transition-colors",
-            activeTab === "description"
-              ? "border-accent border-b-2 text-text"
-              : "text-text-lighter hover:text-text",
-          )}
-        >
-          <FileText size={14} />
-          Description
-        </button>
-        <button
-          onClick={() => setActiveTab("files")}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 text-sm transition-colors",
-            activeTab === "files"
-              ? "border-accent border-b-2 text-text"
-              : "text-text-lighter hover:text-text",
-          )}
-        >
-          <FileText size={14} />
-          Files ({parsedDiff.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("commits")}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 text-sm transition-colors",
-            activeTab === "commits"
-              ? "border-accent border-b-2 text-text"
-              : "text-text-lighter hover:text-text",
-          )}
-        >
-          <GitCommit size={14} />
-          Commits ({commits.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("comments")}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 text-sm transition-colors",
-            activeTab === "comments"
-              ? "border-accent border-b-2 text-text"
-              : "text-text-lighter hover:text-text",
-          )}
-        >
-          <MessageSquare size={14} />
-          Comments ({selectedPRComments.length})
-        </button>
+      <div className="shrink-0 bg-secondary-bg/55 px-3 py-2 sm:px-4">
+        <div className="scrollbar-hidden flex min-w-0 overflow-x-auto">
+          <div className="inline-flex items-center gap-1 rounded-xl border border-border/70 bg-primary-bg/55 p-1">
+            <Tooltip content="PR description" side="bottom">
+              <button
+                onClick={() =>
+                  startTabTransition(() => {
+                    setActiveTab("description");
+                  })
+                }
+                className={cn(
+                  "flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-colors",
+                  activeTab === "description"
+                    ? "border border-border/80 bg-primary-bg text-text"
+                    : "text-text-lighter hover:bg-hover hover:text-text",
+                )}
+              >
+                <FileText size={13} />
+                Description
+              </button>
+            </Tooltip>
+            <Tooltip content="Changed files and diff" side="bottom">
+              <button
+                onClick={() =>
+                  startTabTransition(() => {
+                    setActiveTab("files");
+                  })
+                }
+                className={cn(
+                  "flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-colors",
+                  activeTab === "files"
+                    ? "border border-border/80 bg-primary-bg text-text"
+                    : "text-text-lighter hover:bg-hover hover:text-text",
+                )}
+              >
+                <FileText size={13} />
+                Files
+                <span className="rounded bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
+                  {changedFilesCount}
+                </span>
+              </button>
+            </Tooltip>
+            <Tooltip content="Commits in this PR" side="bottom">
+              <button
+                onClick={() =>
+                  startTabTransition(() => {
+                    setActiveTab("commits");
+                  })
+                }
+                className={cn(
+                  "flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-colors",
+                  activeTab === "commits"
+                    ? "border border-border/80 bg-primary-bg text-text"
+                    : "text-text-lighter hover:bg-hover hover:text-text",
+                )}
+              >
+                <GitCommit size={13} />
+                Commits
+                <span className="rounded bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
+                  {commits.length}
+                </span>
+              </button>
+            </Tooltip>
+            <Tooltip content="Discussion and comments" side="bottom">
+              <button
+                onClick={() =>
+                  startTabTransition(() => {
+                    setActiveTab("comments");
+                  })
+                }
+                className={cn(
+                  "flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-colors",
+                  activeTab === "comments"
+                    ? "border border-border/80 bg-primary-bg text-text"
+                    : "text-text-lighter hover:bg-hover hover:text-text",
+                )}
+              >
+                <MessageSquare size={13} />
+                Comments
+                <span className="rounded bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
+                  {selectedPRComments.length}
+                </span>
+              </button>
+            </Tooltip>
+          </div>
+        </div>
       </div>
 
       {/* Content */}
       <div className="min-w-0 flex-1 overflow-y-auto">
         {/* Description Tab */}
         {activeTab === "description" && (
-          <div className="p-4">
+          <div className="p-3 sm:p-4">
             {pr.body ? (
-              <GitHubMarkdown content={pr.body} />
+              <div className="rounded-xl border border-border/60 bg-secondary-bg/35 p-3 sm:p-4">
+                <GitHubMarkdown content={pr.body} />
+              </div>
             ) : (
               <p className="text-sm text-text-lighter italic">No description provided</p>
             )}
@@ -578,44 +1177,161 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
 
         {/* Files Tab */}
         {activeTab === "files" && (
-          <div className="min-w-0">
-            {parsedDiff.length === 0 ? (
-              <div className="flex items-center justify-center p-8">
-                <p className="text-sm text-text-lighter">No file changes</p>
+          <div className="min-w-0 p-3 sm:p-4">
+            <div className="mb-3 rounded-xl border border-border/60 bg-secondary-bg/35 p-2.5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleExpandAllFiles}
+                    className="rounded-md border border-border/70 bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter hover:bg-hover hover:text-text"
+                  >
+                    Expand All
+                  </button>
+                  <button
+                    onClick={handleCollapseAllFiles}
+                    className="rounded-md border border-border/70 bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter hover:bg-hover hover:text-text"
+                  >
+                    Collapse All
+                  </button>
+                  <span className="rounded-md border border-border/70 bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter">
+                    {filteredDiff.length} of {diffFiles.length} files
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <div className="relative">
+                    <Search
+                      size={12}
+                      className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
+                    />
+                    <input
+                      value={fileQuery}
+                      onChange={(e) => setFileQuery(e.target.value)}
+                      placeholder="Search changed files..."
+                      className="ui-font h-8 w-full rounded-md border border-border/70 bg-primary-bg/70 pr-2 pl-7 text-text text-xs placeholder:text-text-lighter focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30 sm:w-56"
+                    />
+                  </div>
+                  <div className="relative">
+                    <SlidersHorizontal
+                      size={12}
+                      className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
+                    />
+                    <select
+                      value={fileStatusFilter}
+                      onChange={(e) => setFileStatusFilter(e.target.value as FileStatusFilter)}
+                      className="ui-font h-8 w-full appearance-none rounded-md border border-border/70 bg-primary-bg/70 pr-7 pl-7 text-text text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30 sm:w-40"
+                    >
+                      <option value="all">All statuses</option>
+                      <option value="added">Added</option>
+                      <option value="modified">Modified</option>
+                      <option value="deleted">Deleted</option>
+                      <option value="renamed">Renamed</option>
+                    </select>
+                    <ChevronDown
+                      size={12}
+                      className="-translate-y-1/2 pointer-events-none absolute top-1/2 right-2 text-text-lighter"
+                    />
+                  </div>
+                </div>
               </div>
-            ) : (
-              parsedDiff.map((file, index) => (
-                <FileDiffView key={file.path} file={file} defaultExpanded={index === 0} />
-              ))
-            )}
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-secondary-bg/35 p-1">
+              {isLoadingContent && !selectedPRDiff ? (
+                <div className="flex items-center justify-center p-8">
+                  <RefreshCw size={16} className="animate-spin text-text-lighter" />
+                  <span className="ml-2 text-text-lighter text-xs">Loading diff...</span>
+                </div>
+              ) : contentError ? (
+                <div className="flex items-center justify-center p-8 text-center">
+                  <div>
+                    <p className="text-error text-xs">{contentError}</p>
+                    <button
+                      onClick={handleRefresh}
+                      className="mt-2 rounded-md border border-error/40 px-2 py-1 text-[10px] text-error/90 hover:bg-error/10"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                </div>
+              ) : diffFiles.length === 0 ? (
+                <div className="flex items-center justify-center p-8">
+                  <p className="text-sm text-text-lighter">No file changes</p>
+                </div>
+              ) : filteredDiff.length === 0 ? (
+                <div className="flex items-center justify-center p-8">
+                  <p className="text-sm text-text-lighter">No files match your filters</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filteredDiff.map((file) => (
+                    <FileDiffView
+                      key={file.path}
+                      file={file}
+                      isExpanded={expandedFiles.has(file.path)}
+                      onToggle={() => handleToggleFileExpanded(file.path)}
+                      onOpenFile={handleOpenChangedFile}
+                      isLoadingPatch={!!filePatches[file.path]?.loading}
+                      patchError={filePatches[file.path]?.error}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {/* Commits Tab */}
         {activeTab === "commits" && (
-          <div>
-            {commits.length === 0 ? (
-              <div className="flex items-center justify-center p-8">
-                <p className="text-sm text-text-lighter">No commits</p>
-              </div>
-            ) : (
-              commits.map((commit) => <CommitItem key={commit.oid} commit={commit} />)
-            )}
+          <div className="p-3 sm:p-4">
+            <div className="rounded-xl border border-border/60 bg-secondary-bg/35 p-1">
+              {commits.length === 0 ? (
+                <div className="flex items-center justify-center p-8">
+                  <p className="text-sm text-text-lighter">No commits</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {commits.map((commit) => (
+                    <CommitItem key={commit.oid} commit={commit} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {/* Comments Tab */}
         {activeTab === "comments" && (
-          <div>
-            {selectedPRComments.length === 0 ? (
-              <div className="flex items-center justify-center p-8">
-                <p className="text-sm text-text-lighter">No comments</p>
-              </div>
-            ) : (
-              selectedPRComments.map((comment, index) => (
-                <CommentItem key={index} comment={comment} />
-              ))
-            )}
+          <div className="p-3 sm:p-4">
+            <div className="rounded-xl border border-border/60 bg-secondary-bg/35 p-1">
+              {isLoadingContent && selectedPRComments.length === 0 ? (
+                <div className="flex items-center justify-center p-8">
+                  <RefreshCw size={16} className="animate-spin text-text-lighter" />
+                  <span className="ml-2 text-text-lighter text-xs">Loading comments...</span>
+                </div>
+              ) : contentError ? (
+                <div className="flex items-center justify-center p-8 text-center">
+                  <div>
+                    <p className="text-error text-xs">{contentError}</p>
+                    <button
+                      onClick={handleRefresh}
+                      className="mt-2 rounded-md border border-error/40 px-2 py-1 text-[10px] text-error/90 hover:bg-error/10"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                </div>
+              ) : selectedPRComments.length === 0 ? (
+                <div className="flex items-center justify-center p-8">
+                  <p className="text-sm text-text-lighter">No comments</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {selectedPRComments.map((comment, index) => (
+                    <CommentItem key={getCommentKey(comment) || `${index}`} comment={comment} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
