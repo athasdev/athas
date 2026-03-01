@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
 import { basename, dirname, extname, join } from "@tauri-apps/api/path";
-import { confirm } from "@tauri-apps/plugin-dialog";
 import { copyFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
@@ -875,25 +874,7 @@ export const useFileSystemStore = createSelectors(
         return get().createDirectory(dirPath, folderName);
       },
 
-      handleDeletePath: async (targetPath: string, isDirectory: boolean) => {
-        const itemType = isDirectory ? "folder" : "file";
-        const confirmMessage = isDirectory
-          ? `Are you sure you want to delete the folder "${targetPath
-              .split("/")
-              .pop()}" and all its contents? This action cannot be undone.`
-          : `Are you sure you want to delete the file "${targetPath
-              .split("/")
-              .pop()}"? This action cannot be undone.`;
-
-        const confirmed = await confirm(confirmMessage, {
-          title: `Delete ${itemType}`,
-          okLabel: "Delete",
-          cancelLabel: "Cancel",
-          kind: "warning",
-        });
-
-        if (!confirmed) return;
-
+      handleDeletePath: async (targetPath: string, _isDirectory: boolean) => {
         return get().deleteFile(targetPath);
       },
 

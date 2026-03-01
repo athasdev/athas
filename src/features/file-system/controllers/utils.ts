@@ -225,16 +225,22 @@ export function updateDirectoryContents(
 
       // Update children with new entries and sort them
       item.children = sortFileEntries(
-        newEntries.map((entry: any) => {
-          const existingChild = preserveStates ? existingChildrenMap.get(entry.path) : null;
-          return {
-            name: entry.name || "Unknown",
-            path: entry.path,
-            isDir: entry.is_dir || false,
-            expanded: existingChild?.expanded || false,
-            children: existingChild?.children || undefined,
-          };
-        }),
+        newEntries
+          .filter((entry: any) => {
+            const entryName = entry.name || "Unknown";
+            const isDir = entry.is_dir || false;
+            return !shouldIgnore(entryName, isDir);
+          })
+          .map((entry: any) => {
+            const existingChild = preserveStates ? existingChildrenMap.get(entry.path) : null;
+            return {
+              name: entry.name || "Unknown",
+              path: entry.path,
+              isDir: entry.is_dir || false,
+              expanded: existingChild?.expanded || false,
+              children: existingChild?.children || undefined,
+            };
+          }),
       );
 
       return true; // Directory was found and updated

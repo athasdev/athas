@@ -1,5 +1,6 @@
 import ignore from "ignore";
 import {
+  AlertTriangle,
   Clipboard,
   Copy,
   Edit,
@@ -32,6 +33,7 @@ import type { ContextMenuState, FileEntry } from "@/features/file-system/types/a
 import { getGitStatus } from "@/features/git/api/status";
 import type { GitFile, GitStatus } from "@/features/git/types/git";
 import { useSettingsStore } from "@/features/settings/store";
+import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
 import { IS_MAC } from "@/utils/platform";
@@ -41,6 +43,17 @@ import "../styles/file-tree.css";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 const GIT_STATUS_DEBOUNCE_MS = 500;
+const ALWAYS_HIDDEN_FILE_NAMES = new Set([".ds_store"]);
+
+const isAlwaysHiddenFileName = (name: string): boolean =>
+  ALWAYS_HIDDEN_FILE_NAMES.has(name.toLowerCase());
+
+const getPathBaseName = (path: string): string => {
+  const trimmedPath = path.replace(/[\\/]+$/, "");
+  if (!trimmedPath) return path;
+  const segments = trimmedPath.split(/[\\/]/);
+  return segments[segments.length - 1] || path;
+};
 
 interface FileTreeProps {
   files: FileEntry[];
@@ -82,6 +95,10 @@ function FileTreeComponent({
   onFileMove,
 }: FileTreeProps) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<{ path: string; isDir: boolean } | null>(
+    null,
+  );
+  const [isDeletingPath, setIsDeletingPath] = useState(false);
   const [editingValue, setEditingValue] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
@@ -258,7 +275,9 @@ function FileTreeComponent({
   const filteredFiles = useMemo(() => {
     const process = (items: FileEntry[]): FileEntry[] =>
       items
-        .filter((item) => !isUserHidden(item.path, item.isDir))
+        .filter(
+          (item) => !isAlwaysHiddenFileName(item.name) && !isUserHidden(item.path, item.isDir),
+        )
         .map((item) => ({
           ...item,
           ignored: isGitIgnored(item.path, item.isDir),
@@ -576,6 +595,11 @@ function FileTreeComponent({
         for (const entry of entries as Array<{ path: string; is_dir?: boolean }>) {
           if (!entry.path) continue;
           const isDir = !!entry.is_dir;
+          const entryName = getPathBaseName(entry.path);
+
+          if (isAlwaysHiddenFileName(entryName)) {
+            continue;
+          }
 
           if (isUserHidden(entry.path, isDir) || isGitIgnored(entry.path, isDir)) {
             continue;
@@ -643,6 +667,18 @@ function FileTreeComponent({
       firstFilePath.split(pathSep).slice(0, -1).join(pathSep) || ".";
     }
   };
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteCandidate) return;
+
+    setIsDeletingPath(true);
+    try {
+      await Promise.resolve(onDeletePath?.(deleteCandidate.path, deleteCandidate.isDir));
+      setDeleteCandidate(null);
+    } finally {
+      setIsDeletingPath(false);
+    }
+  }, [deleteCandidate, onDeletePath]);
 
   return (
     <div
@@ -1064,13 +1100,47 @@ function FileTreeComponent({
               label="Delete"
               className="hover:text-red-500"
               onClick={() => {
-                onDeletePath?.(contextMenu.path, contextMenu.isDir);
+                setDeleteCandidate({ path: contextMenu.path, isDir: contextMenu.isDir });
                 setContextMenu(null);
               }}
             />
           </div>,
           document.body,
         )}
+      {deleteCandidate && (
+        <Dialog
+          title={deleteCandidate.isDir ? "Delete Folder" : "Delete File"}
+          icon={AlertTriangle}
+          onClose={() => {
+            if (!isDeletingPath) setDeleteCandidate(null);
+          }}
+          size="sm"
+          footer={
+            <>
+              <button
+                onClick={() => setDeleteCandidate(null)}
+                disabled={isDeletingPath}
+                className="rounded border border-border bg-primary-bg px-3 py-1.5 text-text text-xs transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleDeleteConfirm()}
+                disabled={isDeletingPath}
+                className="rounded bg-git-deleted px-3 py-1.5 text-white text-xs transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isDeletingPath ? "Deleting..." : "Delete"}
+              </button>
+            </>
+          }
+        >
+          <p className="text-text text-xs">
+            {deleteCandidate.isDir
+              ? `Are you sure you want to delete the folder "${getPathBaseName(deleteCandidate.path)}" and all its contents? This action cannot be undone.`
+              : `Are you sure you want to delete the file "${getPathBaseName(deleteCandidate.path)}"? This action cannot be undone.`}
+          </p>
+        </Dialog>
+      )}
     </div>
   );
 }
