@@ -1,4 +1,14 @@
-import { Check, ChevronDown, ChevronUp, Columns2, Rows3, Trash2, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Columns2,
+  FileText,
+  Rows3,
+  Trash2,
+  X,
+} from "lucide-react";
 import { memo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { cn } from "@/utils/cn";
@@ -66,38 +76,80 @@ const DiffHeader = memo(
       );
     };
 
+    const renderFileBreadcrumb = () => {
+      const fullPath = diff?.file_path || fileName || "";
+      if (!fullPath) return null;
+
+      const pathSegments = fullPath.split("/").filter(Boolean);
+      const visibleSegments =
+        pathSegments.length > 4 ? ["...", ...pathSegments.slice(-4)] : pathSegments;
+
+      return (
+        <div
+          className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/75 px-2.5 py-1"
+          title={fullPath}
+        >
+          <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded bg-secondary-bg/80 text-text-lighter">
+            <FileText size={10} />
+          </span>
+          {visibleSegments.map((segment, index) => {
+            const isLast = index === visibleSegments.length - 1;
+
+            return (
+              <div
+                key={`${segment}-${index}`}
+                className="flex min-w-0 items-center gap-1 text-[11px]"
+              >
+                {index > 0 && <ChevronRight size={11} className="shrink-0 text-text-lighter/70" />}
+                <span
+                  className={cn(
+                    "truncate",
+                    isLast ? "font-medium text-text" : "text-text-lighter/85",
+                  )}
+                >
+                  {segment}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
     const isMultiFileView = !!commitHash && !!totalFiles;
 
     return (
       <div
         className={cn(
           "ui-font sticky top-0 z-10 flex items-center justify-between border-border border-b",
-          "bg-secondary-bg px-3 py-1.5 text-text text-xs",
+          "bg-secondary-bg/95 px-3 py-1.5 text-text text-xs backdrop-blur-sm",
         )}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 leading-4">
           {isMultiFileView ? (
             <>
-              <span className="font-medium">{commitHash?.substring(0, 7)}</span>
+              <span className="rounded-md border border-border bg-primary-bg/70 px-1.5 py-0.5 font-mono text-[11px] text-text">
+                {commitHash?.substring(0, 7)}
+              </span>
               <span className="text-text-lighter">
                 {totalFiles} file{totalFiles !== 1 ? "s" : ""}
               </span>
             </>
           ) : (
             <>
-              <span className="truncate font-medium">{fileName}</span>
+              {renderFileBreadcrumb()}
               {renderFileStatus()}
               <div className="flex items-center gap-2 text-[10px]">{renderStats()}</div>
             </>
           )}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5 leading-none">
           {isMultiFileView && (
             <>
               <button
                 onClick={onExpandAll}
-                className="rounded p-1 text-text-lighter hover:bg-hover hover:text-text"
+                className="rounded-md border border-transparent p-1 text-text-lighter hover:border-border hover:bg-hover hover:text-text"
                 title="Expand all"
                 aria-label="Expand all files"
               >
@@ -105,7 +157,7 @@ const DiffHeader = memo(
               </button>
               <button
                 onClick={onCollapseAll}
-                className="rounded p-1 text-text-lighter hover:bg-hover hover:text-text"
+                className="rounded-md border border-transparent p-1 text-text-lighter hover:border-border hover:bg-hover hover:text-text"
                 title="Collapse all"
                 aria-label="Collapse all files"
               >
@@ -118,9 +170,10 @@ const DiffHeader = memo(
           <button
             onClick={() => onShowWhitespaceChange?.(!showWhitespace)}
             className={cn(
-              "flex items-center gap-1 rounded p-1",
+              "flex items-center gap-1 rounded-md border p-1",
+              showWhitespace ? "border-accent/40 bg-accent/10 text-text" : "border-transparent",
               showWhitespace ? "text-text" : "text-text-lighter",
-              "hover:bg-hover",
+              "hover:border-border hover:bg-hover",
             )}
             title={showWhitespace ? "Hide whitespace" : "Show whitespace"}
             aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
@@ -130,12 +183,14 @@ const DiffHeader = memo(
           </button>
 
           {onViewModeChange && (
-            <div className="flex rounded border border-border">
+            <div className="flex rounded-md border border-border bg-primary-bg/60">
               <button
                 onClick={() => onViewModeChange("unified")}
                 className={cn(
-                  "rounded-l px-1.5 py-0.5 text-[10px]",
-                  viewMode === "unified" ? "bg-accent text-white" : "text-text-lighter",
+                  "rounded-l-md px-1.5 py-0.5 text-[10px]",
+                  viewMode === "unified"
+                    ? "bg-accent text-white"
+                    : "text-text-lighter hover:bg-hover",
                 )}
                 title="Unified view"
                 aria-label="Unified diff view"
@@ -145,8 +200,10 @@ const DiffHeader = memo(
               <button
                 onClick={() => onViewModeChange("split")}
                 className={cn(
-                  "rounded-r px-1.5 py-0.5 text-[10px]",
-                  viewMode === "split" ? "bg-accent text-white" : "text-text-lighter",
+                  "rounded-r-md px-1.5 py-0.5 text-[10px]",
+                  viewMode === "split"
+                    ? "bg-accent text-white"
+                    : "text-text-lighter hover:bg-hover",
                 )}
                 title="Split view"
                 aria-label="Split diff view"
@@ -160,7 +217,7 @@ const DiffHeader = memo(
 
           <button
             onClick={handleClose}
-            className="rounded p-1 text-text-lighter hover:bg-hover hover:text-text"
+            className="rounded-md border border-transparent p-1 text-text-lighter hover:border-border hover:bg-hover hover:text-text"
             title="Close"
             aria-label="Close diff view"
           >

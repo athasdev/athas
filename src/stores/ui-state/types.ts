@@ -9,7 +9,6 @@ export type SettingsTab =
   | "features"
   | "enterprise"
   | "advanced"
-  | "fileTree"
   | "terminal";
 
 export type BottomPaneTab = "terminal" | "diagnostics";

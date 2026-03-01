@@ -130,21 +130,28 @@ impl AcpWorker {
          );
       }
 
+      let binary = config.binary_path.as_deref().unwrap_or(&config.binary_name);
       log::info!(
-         "Starting agent '{}' (binary: {}, args: {:?})",
+         "Starting agent '{}' (binary: {}, resolved: {}, args: {:?})",
          config.name,
          config.binary_name,
+         binary,
          config.args
       );
 
       // Build command
-      let binary = config.binary_path.as_deref().unwrap_or(&config.binary_name);
 
       let mut cmd = Command::new(binary);
       cmd.args(&config.args)
          .stdin(Stdio::piped())
          .stdout(Stdio::piped())
          .stderr(Stdio::piped());
+
+      let uses_npx_codex_adapter = binary.ends_with("npx")
+         && config
+            .args
+            .iter()
+            .any(|arg| arg == "@zed-industries/codex-acp");
 
       // Set environment variables
       for (key, value) in &config.env_vars {
@@ -235,10 +242,14 @@ impl AcpWorker {
          .client_capabilities(client_capabilities)
          .client_info(acp::Implementation::new("Athas", env!("CARGO_PKG_VERSION")));
 
-      log::info!("Sending ACP initialize request...");
+      let initialize_timeout_secs = if uses_npx_codex_adapter { 120 } else { 30 };
+      log::info!(
+         "Sending ACP initialize request (timeout: {}s)...",
+         initialize_timeout_secs
+      );
 
       let init_response = match tokio::time::timeout(
-         std::time::Duration::from_secs(30),
+         std::time::Duration::from_secs(initialize_timeout_secs),
          connection.initialize(init_request),
       )
       .await

@@ -44,13 +44,14 @@ export class AcpStreamHandler {
   async start(userMessage: string, context: ContextInfo): Promise<void> {
     try {
       AcpStreamHandler.activeHandler = this;
+      await this.setupListeners();
       await this.ensureAgentRunning();
       const fullMessage = this.buildMessage(userMessage, context);
-      await this.setupListeners();
       await invoke("send_acp_prompt", { prompt: fullMessage });
       this.setupTimeout();
     } catch (error) {
       console.error("ACP agent error:", error);
+      this.cleanup();
       this.handlers.onError(`${this.agentId} is currently unavailable`);
     }
   }

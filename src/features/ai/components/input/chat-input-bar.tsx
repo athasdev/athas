@@ -124,30 +124,25 @@ const AIChatInputBar = memo(function AIChatInputBar({
     return text;
   }, []);
 
+  const getMentionDropdownPosition = useCallback(() => {
+    if (!inputRef.current) {
+      return { top: 0, left: 0 };
+    }
+
+    const inputRect = inputRef.current.getBoundingClientRect();
+    const paddingLeft = 8;
+
+    return {
+      top: inputRect.bottom + 6,
+      left: inputRect.left + paddingLeft,
+    };
+  }, []);
+
   // Function to recalculate mention dropdown position
   const recalculateMentionPosition = useCallback(() => {
-    if (!mentionState.active || !inputRef.current) return;
-
-    const div = inputRef.current;
-    const value = getPlainTextFromDiv();
-    const selection = window.getSelection();
-    const cursorPos = selection?.rangeCount ? selection.getRangeAt(0).startOffset : 0;
-    const beforeCursor = value.slice(0, cursorPos);
-    const lastAtIndex = beforeCursor.lastIndexOf("@");
-
-    if (lastAtIndex === -1) return;
-
-    const divRect = div.getBoundingClientRect();
-    const aiChatContainer = div.closest(".ai-chat-container");
-    const containerRect = aiChatContainer?.getBoundingClientRect();
-
-    const position = {
-      top: divRect.bottom + 4, // Position below the input area
-      left: containerRect ? containerRect.left : divRect.left, // Position at the left edge of the sidebar
-    };
-
-    updatePosition(position);
-  }, [mentionState.active, updatePosition, getPlainTextFromDiv]);
+    if (!mentionState.active) return;
+    updatePosition(getMentionDropdownPosition());
+  }, [mentionState.active, updatePosition, getMentionDropdownPosition]);
 
   const getSlashDropdownPosition = useCallback(() => {
     if (!inputRef.current) {
@@ -155,11 +150,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
     }
 
     const inputRect = inputRef.current.getBoundingClientRect();
-    const containerRect = aiChatContainerRef.current?.getBoundingClientRect();
+    const paddingLeft = 8;
 
     return {
-      top: inputRect.bottom + 4,
-      left: containerRect ? containerRect.left : inputRect.left,
+      top: inputRect.bottom + 6,
+      left: inputRect.left + paddingLeft,
     };
   }, []);
 
@@ -381,10 +376,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           const afterAt = plainText.slice(lastAtIndex + 1);
           // Check if there's no space between @ and end, and it's not part of a mention badge
           if (!afterAt.includes(" ") && !afterAt.includes("]") && afterAt.length < 50) {
-            const position = {
-              top: inputRef.current.offsetTop + inputRef.current.offsetHeight + 4,
-              left: inputRef.current.offsetLeft,
-            };
+            const position = getMentionDropdownPosition();
             showMention(position, afterAt, lastAtIndex);
           } else {
             hideMention();
@@ -394,7 +386,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         }
       }, 150); // Increased to 150ms for better performance
     },
-    [showMention, hideMention],
+    [showMention, hideMention, getMentionDropdownPosition],
   );
 
   // Optimized input change handler - no throttle for immediate response
@@ -733,17 +725,19 @@ const AIChatInputBar = memo(function AIChatInputBar({
         />
 
         {/* Bottom row: Context + Mode + Style + Model/Agent + Send */}
-        <div className="mt-2.5 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <ContextSelector
-              buffers={buffers}
-              selectedBufferIds={selectedBufferIds}
-              selectedFilesPaths={selectedFilesPaths}
-              onToggleBuffer={toggleBufferSelection}
-              onToggleFile={toggleFileSelection}
-              isOpen={isContextDropdownOpen}
-              onToggleOpen={() => setIsContextDropdownOpen(!isContextDropdownOpen)}
-            />
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <div ref={contextDropdownRef} className="min-w-0 flex-1">
+              <ContextSelector
+                buffers={buffers}
+                selectedBufferIds={selectedBufferIds}
+                selectedFilesPaths={selectedFilesPaths}
+                onToggleBuffer={toggleBufferSelection}
+                onToggleFile={toggleFileSelection}
+                isOpen={isContextDropdownOpen}
+                onToggleOpen={() => setIsContextDropdownOpen(!isContextDropdownOpen)}
+              />
+            </div>
 
             {/* Queue indicator */}
             {queueCount > 0 && (
@@ -754,7 +748,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             )}
           </div>
 
-          <div className="flex select-none items-center gap-1.5">
+          <div className="ml-auto flex shrink-0 select-none items-center gap-1.5">
             {/* Chat mode selector */}
             <ChatModeSelector />
 

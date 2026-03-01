@@ -107,48 +107,48 @@ const TabContextMenu = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 w-[190px] select-none rounded-md border border-border bg-secondary-bg py-0.5 shadow-lg"
+      className="fixed z-[10040] min-w-[190px] select-none rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        transform: "translateZ(0)", // Force GPU acceleration for consistent rendering
+        transform: "translateZ(0)",
       }}
     >
       <button
-        className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onPin(buffer.id);
           onClose();
         }}
       >
-        {buffer.isPinned ? <PinOff size={11} /> : <Pin size={11} />}
+        {buffer.isPinned ? <PinOff size={12} /> : <Pin size={12} />}
         {buffer.isPinned ? "Unpin Tab" : "Pin Tab"}
       </button>
 
-      <div className="my-0.5 border-border border-t" />
+      <div className="my-0.5 border-border/70 border-t" />
 
       {paneId && onSplitRight && (
         <button
-          className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+          className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
           onClick={() => {
             onSplitRight(paneId, buffer.id);
             onClose();
           }}
         >
-          <Columns2 size={11} />
+          <Columns2 size={12} />
           Split Right
         </button>
       )}
 
       {paneId && onSplitDown && (
         <button
-          className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+          className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
           onClick={() => {
             onSplitDown(paneId, buffer.id);
             onClose();
           }}
         >
-          <Rows2 size={11} />
+          <Rows2 size={12} />
           Split Down
         </button>
       )}
@@ -156,7 +156,7 @@ const TabContextMenu = ({
       {paneId && (onSplitRight || onSplitDown) && <div className="my-0.5 border-border border-t" />}
 
       <button
-        className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={async () => {
           if (onCopyPath) {
             onCopyPath(buffer.path);
@@ -170,12 +170,12 @@ const TabContextMenu = ({
           onClose();
         }}
       >
-        <Copy size={11} />
+        <Copy size={12} />
         Copy Path
       </button>
 
       <button
-        className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={async () => {
           if (onCopyRelativePath) {
             onCopyRelativePath(buffer.path);
@@ -183,24 +183,24 @@ const TabContextMenu = ({
           onClose();
         }}
       >
-        <Copy size={11} />
+        <Copy size={12} />
         Copy Relative Path
       </button>
 
       <button
-        className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onRevealInFinder?.(buffer.path);
           onClose();
         }}
       >
-        <FolderOpen size={11} />
+        <FolderOpen size={12} />
         Reveal in Finder
       </button>
 
       {!buffer.isVirtual && !buffer.path.includes("://") && (
         <button
-          className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+          className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
           onClick={() => {
             const dirPath = buffer.path.substring(0, buffer.path.lastIndexOf("/"));
             const dirName = dirPath.split("/").pop() || "terminal";
@@ -212,14 +212,14 @@ const TabContextMenu = ({
             onClose();
           }}
         >
-          <Terminal size={11} />
+          <Terminal size={12} />
           Open in Terminal
         </button>
       )}
 
       {buffer.path !== "extensions://marketplace" && (
         <button
-          className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+          className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
           onClick={() => {
             if (onReload) {
               onReload(buffer.id);
@@ -227,14 +227,14 @@ const TabContextMenu = ({
             onClose();
           }}
         >
-          <RotateCcw size={11} />
+          <RotateCcw size={12} />
           Reload
         </button>
       )}
 
-      <div className="my-0.5 border-border border-t" />
+      <div className="my-0.5 border-border/70 border-t" />
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseTab(buffer.id);
           onClose();
@@ -244,7 +244,7 @@ const TabContextMenu = ({
         <KeybindingBadge keys={["⌘", "W"]} className="opacity-60" />
       </button>
       <button
-        className="ui-font w-full px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseOthers(buffer.id);
           onClose();
@@ -253,7 +253,7 @@ const TabContextMenu = ({
         Close Others
       </button>
       <button
-        className="ui-font w-full px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseToRight(buffer.id);
           onClose();
@@ -262,7 +262,7 @@ const TabContextMenu = ({
         Close to Right
       </button>
       <button
-        className="ui-font w-full px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseAll();
           onClose();

@@ -57,11 +57,11 @@ const TerminalTabContextMenu = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 w-[180px] border border-border bg-secondary-bg py-1 shadow-lg"
+      className="fixed z-[10040] min-w-[190px] select-none rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
       style={{ left: position.x, top: position.y }}
     >
       <button
-        className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onPin(terminal.id);
           onClose();
@@ -71,10 +71,10 @@ const TerminalTabContextMenu = ({
         {terminal.isPinned ? "Unpin Terminal" : "Pin Terminal"}
       </button>
 
-      <div className="my-1 border-border border-t" />
+      <div className="my-0.5 border-border/70 border-t" />
 
       <button
-        className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onDuplicate(terminal.id);
           onClose();
@@ -85,7 +85,7 @@ const TerminalTabContextMenu = ({
       </button>
 
       <button
-        className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onClear(terminal.id);
           onClose();
@@ -96,7 +96,7 @@ const TerminalTabContextMenu = ({
       </button>
 
       <button
-        className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onRename(terminal.id);
           onClose();
@@ -107,7 +107,7 @@ const TerminalTabContextMenu = ({
       </button>
 
       <button
-        className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onExport(terminal.id);
           onClose();
@@ -117,23 +117,21 @@ const TerminalTabContextMenu = ({
         Export Output
       </button>
 
-      <div className="my-1 border-border border-t" />
+      <div className="my-0.5 border-border/70 border-t" />
 
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseTab(terminal.id);
           onClose();
         }}
       >
-        <span className="flex items-center gap-2">
-          <X size={12} />
-          Close Terminal
-        </span>
+        <X size={12} />
+        Close Terminal
       </button>
 
       <button
-        className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseOthers(terminal.id);
           onClose();
@@ -143,7 +141,7 @@ const TerminalTabContextMenu = ({
       </button>
 
       <button
-        className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseAll();
           onClose();
@@ -153,7 +151,7 @@ const TerminalTabContextMenu = ({
       </button>
 
       <button
-        className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseToRight(terminal.id);
           onClose();

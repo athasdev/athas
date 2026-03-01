@@ -176,32 +176,30 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["tabs", "limit", "maximum", "open"],
   },
 
-  // General Settings (non-editor)
-  {
-    id: "general-command-bar-preview",
-    tab: "general",
-    section: "Command Bar",
-    label: "Command Bar Preview",
-    description: "Show file preview in command bar",
-    keywords: ["command", "bar", "preview", "file", "quick open"],
-  },
-
   // File Tree Settings
   {
     id: "file-tree-hidden-file-patterns",
-    tab: "fileTree",
-    section: "File Tree Settings",
+    tab: "advanced",
+    section: "File Explorer Filters",
     label: "Hidden File Patterns",
     description: "Files matching these glob patterns will be hidden from the file tree",
     keywords: ["hidden", "files", "patterns", "glob", "filter", "exclude"],
   },
   {
     id: "file-tree-hidden-directory-patterns",
-    tab: "fileTree",
-    section: "File Tree Settings",
+    tab: "advanced",
+    section: "File Explorer Filters",
     label: "Hidden Directory Patterns",
     description: "Directories matching these glob patterns will be hidden from the file tree",
     keywords: ["hidden", "directories", "folders", "patterns", "glob", "filter", "exclude"],
+  },
+  {
+    id: "git-folder-based-changes",
+    tab: "advanced",
+    section: "Git View",
+    label: "Folder-Based Changes",
+    description: "Show Git changes in a folder tree, similar to File Explorer",
+    keywords: ["git", "changes", "folder", "tree", "files", "explorer", "sidebar"],
   },
 
   // Appearance Settings
@@ -252,6 +250,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Compact Menu Bar",
     description: "Requires UI menu bar; compact hamburger or full UI menu",
     keywords: ["menu", "bar", "compact", "hamburger", "ui"],
+  },
+  {
+    id: "appearance-command-bar-preview",
+    tab: "appearance",
+    section: "Layout",
+    label: "Command Bar Preview",
+    description: "Show right-side file preview in command bar and global search",
+    keywords: ["command", "bar", "preview", "file", "quick", "open", "global", "search"],
   },
 
   // AI Settings

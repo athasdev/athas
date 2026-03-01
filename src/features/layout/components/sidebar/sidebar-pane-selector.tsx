@@ -25,20 +25,13 @@ export const SidebarPaneSelector = ({
   const tooltipSide = compact ? "bottom" : "right";
   const getTabClass = (isActive: boolean) =>
     cn(
-      "flex items-center justify-center rounded-lg p-0 text-xs transition-all duration-150",
+      "flex items-center justify-center rounded-full p-0 text-xs transition-colors duration-150",
       compact ? "h-6 w-6" : "h-8 w-8",
-      isActive
-        ? "border border-border/70 bg-primary-bg text-text"
-        : "text-text-lighter hover:bg-hover hover:text-text",
+      isActive ? "bg-hover text-text" : "text-text-lighter hover:bg-hover hover:text-text",
     );
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-1 rounded-2xl border border-border/70 bg-secondary-bg/80",
-        compact ? "p-1" : "p-1.5",
-      )}
-    >
+    <div className={cn("flex items-center gap-1", compact ? "p-0.5" : "p-1")}>
       <Tooltip content="File Explorer" side={tooltipSide}>
         <Button
           aria-role="tab"

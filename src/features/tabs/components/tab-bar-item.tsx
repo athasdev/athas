@@ -69,7 +69,7 @@ const TabBarItem = memo(function TabBarItem({
         aria-label={`${buffer.name}${buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         className={cn(
-          "group relative flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-lg border px-2 transition-[transform,opacity,color,background-color,border-color] duration-200 ease-[ease]",
+          "group relative flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-lg border pr-5 pl-2 transition-[transform,opacity,color,background-color,border-color] duration-200 ease-[ease]",
           isActive
             ? "border-border/80 bg-primary-bg/95 text-text"
             : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",

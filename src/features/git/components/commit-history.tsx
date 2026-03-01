@@ -42,7 +42,10 @@ const CommitItem = memo(
         onMouseEnter={handleMouseEnter}
         onMouseLeave={onHoverEnd}
         onClick={handleCommitClick}
-        className={`cursor-pointer px-3 py-1 hover:bg-hover ${isActive ? "bg-hover" : ""}`}
+        className={cn(
+          "mx-1 mb-1 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-hover",
+          isActive && "bg-hover",
+        )}
       >
         <div className="truncate text-[10px] text-text leading-tight">{commit.message}</div>
         <div className="flex items-center gap-2 text-[9px] text-text-lighter">
@@ -224,7 +227,7 @@ const FileItem = memo(({ file, onFileClick }: FileItemProps) => {
 
 const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps) => {
   const { commits, hasMoreCommits, isLoadingMoreCommits, actions } = useGitStore();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [commitFiles, setCommitFiles] = useState<Record<string, any[]>>({});
   const [loadingCommits, setLoadingCommits] = useState<Set<string>>(new Set());
   const [copiedHashes, setCopiedHashes] = useState<Set<string>>(new Set());
@@ -450,64 +453,69 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
   }, [commits, hoveredCommit]);
 
   return (
-    <div className={cn("flex flex-col border-border border-b", !isCollapsed && "min-h-0 flex-1")}>
-      <button
-        type="button"
-        className="flex shrink-0 cursor-pointer items-center gap-1 bg-secondary-bg px-3 py-1 text-text-lighter hover:bg-hover"
-        onClick={() => setIsCollapsed(!isCollapsed)}
-      >
-        {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-        <span className="font-bold text-[10px] uppercase tracking-wide">History</span>
-        <div className="flex-1" />
-        <span className="rounded-full bg-primary-bg px-1.5 text-[9px]">{commits.length}</span>
-      </button>
+    <div className={cn("select-none p-1.5", !isCollapsed && "min-h-0 flex-1")}>
+      <div className="overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
+        <button
+          type="button"
+          className="sticky top-0 z-20 flex w-full shrink-0 cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
+          <span className="font-bold text-[10px] uppercase tracking-wide">History</span>
+          <div className="flex-1" />
+          <span className="rounded-full bg-primary-bg px-1.5 text-[9px]">{commits.length}</span>
+        </button>
 
-      {!isCollapsed && (
-        <div className="relative min-h-0 flex-1 overflow-y-auto" ref={scrollContainerRef}>
-          {commits.length === 0 ? (
-            <div className="px-3 py-1.5 text-[10px] text-text-lighter italic">No commits</div>
-          ) : (
-            <>
-              {commits.map((commit) => (
-                <CommitItem
-                  key={commit.hash}
-                  commit={commit}
-                  isActive={hoveredCommit?.commit.hash === commit.hash}
-                  onHover={handleCommitHover}
-                  onHoverEnd={handleCommitHoverEnd}
-                  onViewCommitDiff={handleViewCommitDiff}
-                />
-              ))}
+        {!isCollapsed && (
+          <div
+            className="relative min-h-0 flex-1 overflow-y-scroll bg-primary-bg/70 p-1"
+            ref={scrollContainerRef}
+          >
+            {commits.length === 0 ? (
+              <div className="px-2.5 py-1.5 text-[10px] text-text-lighter italic">No commits</div>
+            ) : (
+              <>
+                {commits.map((commit) => (
+                  <CommitItem
+                    key={commit.hash}
+                    commit={commit}
+                    isActive={hoveredCommit?.commit.hash === commit.hash}
+                    onHover={handleCommitHover}
+                    onHoverEnd={handleCommitHoverEnd}
+                    onViewCommitDiff={handleViewCommitDiff}
+                  />
+                ))}
 
-              {isLoadingMoreCommits && (
-                <div className="px-3 py-1.5 text-center text-[10px] text-text-lighter">
-                  Loading...
-                </div>
-              )}
+                {isLoadingMoreCommits && (
+                  <div className="px-3 py-1.5 text-center text-[10px] text-text-lighter">
+                    Loading...
+                  </div>
+                )}
 
-              {!hasMoreCommits && commits.length > 0 && (
-                <div className="px-3 py-1.5 text-center text-[10px] text-text-lighter">
-                  end of history
-                </div>
-              )}
-            </>
-          )}
+                {!hasMoreCommits && commits.length > 0 && (
+                  <div className="px-3 py-1.5 text-center text-[10px] text-text-lighter">
+                    end of history
+                  </div>
+                )}
+              </>
+            )}
 
-          {hoveredCommit && (
-            <CommitHoverPreview
-              commit={hoveredCommit.commit}
-              files={commitFiles[hoveredCommit.commit.hash] || EMPTY_FILES_ARRAY}
-              isLoading={loadingCommits.has(hoveredCommit.commit.hash)}
-              isCopied={copiedHashes.has(hoveredCommit.commit.hash)}
-              anchorRect={hoveredCommit.anchorRect}
-              onKeepOpen={clearHoverTimeout}
-              onRequestClose={scheduleHoverClear}
-              onCopyHash={copyCommitHash}
-              onViewCommitDiff={handleViewCommitDiff}
-            />
-          )}
-        </div>
-      )}
+            {hoveredCommit && (
+              <CommitHoverPreview
+                commit={hoveredCommit.commit}
+                files={commitFiles[hoveredCommit.commit.hash] || EMPTY_FILES_ARRAY}
+                isLoading={loadingCommits.has(hoveredCommit.commit.hash)}
+                isCopied={copiedHashes.has(hoveredCommit.commit.hash)}
+                anchorRect={hoveredCommit.anchorRect}
+                onKeepOpen={clearHoverTimeout}
+                onRequestClose={scheduleHoverClear}
+                onCopyHash={copyCommitHash}
+                onViewCommitDiff={handleViewCommitDiff}
+              />
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,6 +1,5 @@
 import {
   Brush,
-  Folder,
   Keyboard,
   Languages,
   Package,
@@ -40,11 +39,6 @@ const tabs: TabItem[] = [
     id: "editor",
     label: "Editor",
     icon: PenTool,
-  },
-  {
-    id: "fileTree",
-    label: "File Tree",
-    icon: Folder,
   },
   {
     id: "terminal",

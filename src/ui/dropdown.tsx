@@ -98,6 +98,7 @@ const Dropdown = ({
   }, [isOpen, searchable, openDirection]);
 
   const selectedOption = options.find((option) => option.value === value);
+  const triggerLabel = selectedOption?.label || value || placeholder;
 
   // Filter options based on search query
   const filteredOptions =
@@ -191,7 +192,7 @@ const Dropdown = ({
             sizeClasses[size],
           )}
         >
-          <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
+          <span className="truncate">{triggerLabel}</span>
           <ChevronDown
             size={iconSizes[size]}
             className={cn(

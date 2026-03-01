@@ -12,6 +12,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import { useSettingsStore } from "@/features/settings/store";
 import type { Action } from "../models/action.types";
 
 interface ViewActionsParams {
@@ -128,7 +129,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       category: "View",
       keybinding: ["⌘", "R"],
       action: () => {
-        updateSetting("isAIChatVisible", !settings.isAIChatVisible);
+        useSettingsStore.getState().toggleAIChatVisible();
         onClose();
       },
     },

@@ -10,6 +10,7 @@ interface FileListItemProps {
   index: number;
   isSelected: boolean;
   onClick: (path: string) => void;
+  onMouseEnter?: () => void;
   rootFolderPath: string | null | undefined;
 }
 
@@ -19,6 +20,7 @@ export const FileListItem = ({
   index,
   isSelected,
   onClick,
+  onMouseEnter,
   rootFolderPath,
 }: FileListItemProps) => {
   const directoryPath = getDirectoryPath(file.path, rootFolderPath);
@@ -28,6 +30,7 @@ export const FileListItem = ({
       key={`${category}-${file.path}`}
       data-item-index={index}
       onClick={() => onClick(file.path)}
+      onMouseEnter={onMouseEnter}
       isSelected={isSelected}
       className="ui-font"
     >

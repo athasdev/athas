@@ -28,11 +28,12 @@ impl AgentRegistry {
             .with_description("Claude Code (ACP adapter)"),
       );
 
-      // Codex CLI (OpenAI) - native ACP support
-      // Install: npm install -g @openai/codex
+      // Codex CLI (OpenAI) - ACP adapter
+      // Preferred install: npm install -g @zed-industries/codex-acp
       agents.insert(
          "codex-cli".to_string(),
-         AgentConfig::new("codex-cli", "Codex CLI", "codex").with_description("OpenAI Codex"),
+         AgentConfig::new("codex-cli", "Codex CLI", "codex-acp")
+            .with_description("OpenAI Codex (ACP adapter)"),
       );
 
       // Gemini CLI - native ACP support with --experimental-acp flag
@@ -99,6 +100,11 @@ impl AgentRegistry {
 
       log::debug!("Running binary detection for ACP agents");
       for config in self.agents.values_mut() {
+         if config.id == "codex-cli" {
+            detect_codex_adapter(config);
+            continue;
+         }
+
          if let Some(path) = find_binary(&config.binary_name) {
             config.installed = true;
             config.binary_path = Some(path.to_string_lossy().to_string());
@@ -116,6 +122,31 @@ impl Default for AgentRegistry {
    fn default() -> Self {
       Self::new()
    }
+}
+
+fn detect_codex_adapter(config: &mut AgentConfig) {
+   // Prefer a direct codex-acp binary when available.
+   if let Some(path) = find_binary("codex-acp") {
+      config.installed = true;
+      config.binary_path = Some(path.to_string_lossy().to_string());
+      config.args.clear();
+      log::debug!("Detected codex-acp binary at {}", path.display());
+      return;
+   }
+
+   // Fallback to npx for users who haven't installed codex-acp globally yet.
+   if let Some(path) = find_binary("npx") {
+      config.installed = true;
+      config.binary_path = Some(path.to_string_lossy().to_string());
+      config.args = vec!["-y".to_string(), "@zed-industries/codex-acp".to_string()];
+      log::debug!("Using npx fallback for codex-acp at {}", path.display());
+      return;
+   }
+
+   config.installed = false;
+   config.binary_path = None;
+   config.args.clear();
+   log::debug!("Codex ACP adapter not found (neither codex-acp nor npx available)");
 }
 
 fn find_binary(binary_name: &str) -> Option<PathBuf> {

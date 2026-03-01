@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Upload } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
@@ -39,6 +39,19 @@ export const AppearanceSettings = () => {
     return unsubscribe;
   }, []);
 
+  const normalizedThemeOptions = useMemo(() => {
+    if (themeOptions.some((option) => option.value === settings.theme)) {
+      return themeOptions;
+    }
+
+    const fallbackTheme = themeRegistry.getTheme(settings.theme);
+    if (!fallbackTheme) {
+      return themeOptions;
+    }
+
+    return [{ value: fallbackTheme.id, label: fallbackTheme.name }, ...themeOptions];
+  }, [themeOptions, settings.theme]);
+
   // Load icon themes from icon theme registry
   useEffect(() => {
     const loadIconThemes = () => {
@@ -55,6 +68,19 @@ export const AppearanceSettings = () => {
     const unsubscribe = iconThemeRegistry.onRegistryChange(loadIconThemes);
     return unsubscribe;
   }, []);
+
+  const normalizedIconThemeOptions = useMemo(() => {
+    if (iconThemeOptions.some((option) => option.value === settings.iconTheme)) {
+      return iconThemeOptions;
+    }
+
+    const fallbackIconTheme = iconThemeRegistry.getTheme(settings.iconTheme);
+    if (!fallbackIconTheme) {
+      return iconThemeOptions;
+    }
+
+    return [{ value: fallbackIconTheme.id, label: fallbackIconTheme.name }, ...iconThemeOptions];
+  }, [iconThemeOptions, settings.iconTheme]);
 
   const handleUploadTheme = async () => {
     const input = document.createElement("input");
@@ -91,10 +117,11 @@ export const AppearanceSettings = () => {
           <div className="flex items-center gap-2">
             <Dropdown
               value={settings.theme}
-              options={themeOptions}
+              options={normalizedThemeOptions}
               onChange={(value) => updateSetting("theme", value)}
               className="w-40"
               size="xs"
+              searchable
             />
             <Button onClick={handleUploadTheme} variant="ghost" size="xs" className="gap-1 px-2">
               <Upload size={12} />
@@ -106,10 +133,11 @@ export const AppearanceSettings = () => {
         <SettingRow label="Icon Theme" description="Icons displayed in the file tree and tabs">
           <Dropdown
             value={settings.iconTheme}
-            options={iconThemeOptions}
+            options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
             className="w-40"
             size="xs"
+            searchable
           />
         </SettingRow>
       </Section>
@@ -161,6 +189,17 @@ export const AppearanceSettings = () => {
             checked={settings.compactMenuBar}
             disabled={settings.nativeMenuBar}
             onChange={(checked) => updateSetting("compactMenuBar", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Command Bar Preview"
+          description="Show right-side file preview in command bar and global search"
+        >
+          <Switch
+            checked={settings.commandBarPreview}
+            onChange={(checked) => updateSetting("commandBarPreview", checked)}
             size="sm"
           />
         </SettingRow>

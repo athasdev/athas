@@ -4,10 +4,8 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useEffect, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
-import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
 import Section, { SettingRow } from "@/ui/section";
-import Switch from "@/ui/switch";
 
 export const GeneralSettings = () => {
   const {
@@ -22,7 +20,6 @@ export const GeneralSettings = () => {
     downloadAndInstall,
   } = useUpdater(false);
   const { showToast } = useToast();
-  const { settings, updateSetting } = useSettingsStore();
 
   const [cliInstalled, setCliInstalled] = useState<boolean>(false);
   const [cliChecking, setCliChecking] = useState(true);
@@ -225,16 +222,6 @@ export const GeneralSettings = () => {
               </>
             )}
           </div>
-        </SettingRow>
-      </Section>
-
-      <Section title="Command Bar">
-        <SettingRow label="Command Bar Preview" description="Show file preview in command bar">
-          <Switch
-            checked={settings.commandBarPreview}
-            onChange={(checked) => updateSetting("commandBarPreview", checked)}
-            size="sm"
-          />
         </SettingRow>
       </Section>
     </div>

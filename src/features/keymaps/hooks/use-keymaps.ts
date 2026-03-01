@@ -29,6 +29,11 @@ export function useKeymaps() {
         return;
       }
 
+      // Prevent modifier-shortcut floods when key is held down (e.g. Cmd+R auto-repeat)
+      if (e.repeat && (e.metaKey || e.ctrlKey || e.altKey)) {
+        return;
+      }
+
       // Escape key - global modal closing
       if (e.key === "Escape") {
         const { hasOpenModal, closeTopModal } = useUIState.getState();

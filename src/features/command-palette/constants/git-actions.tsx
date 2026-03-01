@@ -18,24 +18,22 @@ interface GitActionsParams {
     fetchChanges: (path: string) => Promise<boolean>;
     discardAllChanges: (path: string) => Promise<boolean>;
   };
-  setIsBranchManagerVisible: (v: boolean) => void;
   onClose: () => void;
 }
 
 export const createGitActions = (params: GitActionsParams): Action[] => {
-  const { rootFolderPath, showToast, gitStore, gitOperations, setIsBranchManagerVisible, onClose } =
-    params;
+  const { rootFolderPath, showToast, gitStore, gitOperations, onClose } = params;
 
   return [
     {
       id: "git-branch-manager",
       label: "Git: Open Branch Manager",
-      description: "Show branch manager dialog",
+      description: "Open branch manager dropdown",
       icon: <GitBranch size={14} />,
       category: "Git",
       action: () => {
         onClose();
-        setIsBranchManagerVisible(true);
+        window.dispatchEvent(new Event("athas:open-branch-manager"));
       },
     },
     {

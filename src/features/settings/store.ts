@@ -83,6 +83,7 @@ interface Settings {
   //// File tree
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
+  gitChangesFolderView: boolean;
 }
 
 const defaultSettings: Settings = {
@@ -160,7 +161,10 @@ const defaultSettings: Settings = {
   //// File tree
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
+  gitChangesFolderView: true,
 };
+
+const AI_CHAT_TOGGLE_COOLDOWN_MS = 120;
 
 // Theme class constants
 const ALL_THEME_CLASSES = [
@@ -327,6 +331,7 @@ export const useSettingsStore = create(
     combine(
       {
         settings: defaultSettings,
+        _lastAiChatToggleAt: 0,
         search: {
           query: "",
           results: [] as SearchResult[],
@@ -334,7 +339,7 @@ export const useSettingsStore = create(
           selectedResultId: null,
         } as SearchState,
       },
-      (set) => ({
+      (set, get) => ({
         // Update settings from JSON string
         updateSettingsFromJSON: (jsonString: string): boolean => {
           try {
@@ -370,6 +375,23 @@ export const useSettingsStore = create(
           applyTheme(defaultSettings.theme);
           cacheFontsForBootstrap(defaultSettings.fontFamily, defaultSettings.uiFontFamily);
           await saveSettingsToStore(defaultSettings);
+        },
+
+        toggleAIChatVisible: (forceValue?: boolean) => {
+          const now = Date.now();
+          const previousToggleAt = get()._lastAiChatToggleAt;
+          if (now - previousToggleAt < AI_CHAT_TOGGLE_COOLDOWN_MS) {
+            return;
+          }
+
+          const nextValue = forceValue !== undefined ? forceValue : !get().settings.isAIChatVisible;
+
+          set((state) => {
+            state.settings.isAIChatVisible = nextValue;
+            state._lastAiChatToggleAt = now;
+          });
+
+          debouncedSaveSettingsToStore({ isAIChatVisible: nextValue });
         },
 
         // Update individual setting

@@ -10,7 +10,6 @@ import {
   Upload,
 } from "lucide-react";
 import { useState } from "react";
-import { cn } from "@/utils/cn";
 import { fetchChanges, pullChanges, pushChanges } from "../api/remotes";
 import { discardAllChanges, initRepository } from "../api/status";
 import { useGitStore } from "../stores/git-store";
@@ -108,10 +107,7 @@ const GitActionsMenu = ({
 
   return (
     <div
-      className={cn(
-        "fixed z-50 min-w-[180px] rounded-md",
-        "border border-border bg-secondary-bg py-1",
-      )}
+      className="fixed z-[10040] min-w-[200px] select-none rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
       style={{
         left: position.x,
         top: position.y,
@@ -129,16 +125,13 @@ const GitActionsMenu = ({
               handleSelectRepository();
             }}
             disabled={isSelectingRepository}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <FolderOpen size={12} />
             {isSelectingRepository ? "Selecting..." : "Select Repository"}
           </button>
 
-          <div className="my-1 border-border border-t"></div>
+          <div className="my-0.5 border-border/70 border-t" />
 
           <button
             onMouseDown={(e) => {
@@ -147,32 +140,13 @@ const GitActionsMenu = ({
               handlePush();
             }}
             disabled={isLoading}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <Upload size={12} />
             Push Changes
           </button>
 
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleSelectRepository();
-            }}
-            disabled={isSelectingRepository}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
-            )}
-          >
-            <FolderOpen size={12} />
-            {isSelectingRepository ? "Selecting..." : "Select Repository"}
-          </button>
-
-          <div className="my-1 border-border border-t"></div>
+          <div className="my-0.5 border-border/70 border-t" />
 
           <button
             onMouseDown={(e) => {
@@ -181,10 +155,7 @@ const GitActionsMenu = ({
               handlePull();
             }}
             disabled={isLoading}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <Download size={12} />
             Pull Changes
@@ -197,16 +168,13 @@ const GitActionsMenu = ({
               handleFetch();
             }}
             disabled={isLoading}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <GitPullRequest size={12} />
             Fetch
           </button>
 
-          <div className="my-1 border-border border-t"></div>
+          <div className="my-0.5 border-border/70 border-t" />
 
           <button
             onMouseDown={(e) => {
@@ -214,10 +182,7 @@ const GitActionsMenu = ({
               e.stopPropagation();
               handleRemoteManager();
             }}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "ui-font text-left text-text text-xs hover:bg-hover",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
           >
             <Server size={12} />
             Manage Remotes
@@ -229,16 +194,13 @@ const GitActionsMenu = ({
               e.stopPropagation();
               handleTagManager();
             }}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "ui-font text-left text-text text-xs hover:bg-hover",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
           >
             <Tag size={12} />
             Manage Tags
           </button>
 
-          <div className="my-1 border-border border-t"></div>
+          <div className="my-0.5 border-border/70 border-t" />
 
           <button
             onMouseDown={(e) => {
@@ -247,16 +209,13 @@ const GitActionsMenu = ({
               handleRefresh();
             }}
             disabled={isRefreshing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
             Refresh Status
           </button>
 
-          <div className="my-1 border-border border-t"></div>
+          <div className="my-0.5 border-border/70 border-t" />
 
           <button
             onMouseDown={(e) => {
@@ -265,10 +224,7 @@ const GitActionsMenu = ({
               handleDiscardAllChanges();
             }}
             disabled={isLoading}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "ui-font text-left text-red-400 text-xs hover:bg-hover disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-red-400 text-xs hover:bg-hover disabled:opacity-50"
           >
             <RotateCcw size={12} />
             Discard All Changes
@@ -283,16 +239,13 @@ const GitActionsMenu = ({
               handleInitRepository();
             }}
             disabled={isLoading}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <Settings size={12} />
             Initialize Repository
           </button>
 
-          <div className="my-1 border-border border-t"></div>
+          <div className="my-0.5 border-border/70 border-t" />
 
           <button
             onMouseDown={(e) => {
@@ -301,10 +254,7 @@ const GitActionsMenu = ({
               handleRefresh();
             }}
             disabled={isRefreshing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5",
-              "ui-font text-left text-text text-xs hover:bg-hover disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
           >
             <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
             Refresh Status

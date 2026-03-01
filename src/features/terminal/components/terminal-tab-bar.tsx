@@ -67,16 +67,16 @@ const ToolbarContextMenu = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 w-[180px] border border-border bg-secondary-bg py-1 shadow-lg"
+      className="fixed z-[10040] min-w-[180px] select-none rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
       style={{ left: position.x, top: position.y }}
     >
-      <div className="ui-font px-2 py-1 text-[10px] text-text-lighter">Terminal Width</div>
-      <div className="my-1 border-border border-t" />
+      <div className="ui-font px-2.5 py-1 text-[10px] text-text-lighter">Terminal Width</div>
+      <div className="my-0.5 border-border/70 border-t" />
       {modes.map((mode) => (
         <button
           key={mode.value}
           className={cn(
-            "ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover",
+            "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover",
             currentMode === mode.value && "bg-selected",
           )}
           onClick={() => {
@@ -382,7 +382,7 @@ const TerminalTabBar = ({
       >
         {/* Left side - Terminal tabs */}
         <div
-          className="scrollbar-hidden flex min-w-0 flex-1 overflow-x-auto rounded-lg border border-border/55 bg-secondary-bg/45 px-1 py-1"
+          className="scrollbar-hidden flex min-w-0 flex-1 gap-1 overflow-x-auto"
           data-tab-container
           onWheel={(e) => {
             // Handle horizontal wheel scrolling with native delta values for natural acceleration

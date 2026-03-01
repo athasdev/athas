@@ -85,7 +85,7 @@ export const ContextMenu = ({ isOpen, position, items, onClose, className }: Con
     <div
       ref={menuRef}
       className={cn(
-        "fixed z-[10040] min-w-[190px] select-none rounded-xl border border-border bg-secondary-bg py-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)]",
+        "fixed z-[10040] min-w-[190px] select-none rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
         className,
       )}
       style={{
@@ -96,7 +96,7 @@ export const ContextMenu = ({ isOpen, position, items, onClose, className }: Con
     >
       {items.map((item) => {
         if (item.separator) {
-          return <div key={item.id} className="my-0.5 border-border border-t" />;
+          return <div key={item.id} className="my-0.5 border-border/70 border-t" />;
         }
 
         return (
@@ -111,7 +111,7 @@ export const ContextMenu = ({ isOpen, position, items, onClose, className }: Con
             }}
             disabled={item.disabled}
             className={cn(
-              "ui-font mx-1 flex w-[calc(100%-0.5rem)] items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text text-xs",
+              "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs",
               item.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
             )}
           >

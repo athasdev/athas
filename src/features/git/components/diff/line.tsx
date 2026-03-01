@@ -102,96 +102,113 @@ const renderHighlightedContent = (
   return <>{result}</>;
 };
 
-const DiffLine = memo(({ line, viewMode, showWhitespace, tokens }: DiffLineProps) => {
-  const lineContent = useMemo(() => {
-    return renderHighlightedContent(line.content, tokens, showWhitespace);
-  }, [line.content, tokens, showWhitespace]);
+const DiffLine = memo(
+  ({ line, viewMode, showWhitespace, tokens, fontSize, lineHeight, tabSize }: DiffLineProps) => {
+    const rowStyle = { minHeight: `${lineHeight}px` };
+    const gutterStyle = { fontSize: `${fontSize}px`, lineHeight: `${lineHeight}px` };
+    const contentStyle = {
+      fontSize: `${fontSize}px`,
+      lineHeight: `${lineHeight}px`,
+      tabSize,
+    };
 
-  if (viewMode === "split") {
+    const lineContent = useMemo(() => {
+      return renderHighlightedContent(line.content, tokens, showWhitespace);
+    }, [line.content, tokens, showWhitespace]);
+
+    if (viewMode === "split") {
+      return (
+        <div className="flex" style={rowStyle}>
+          <div
+            className={cn(
+              "flex w-1/2 border-border border-r",
+              line.line_type === "removed" ? getLineBackground("removed") : "",
+            )}
+          >
+            <div
+              className={cn(
+                "w-10 shrink-0 select-none border-border border-r px-2 text-right",
+                "editor-font text-text-lighter tabular-nums",
+                getGutterBackground(line.line_type === "removed" ? "removed" : ""),
+              )}
+              style={gutterStyle}
+            >
+              {line.line_type !== "added" ? line.old_line_number : ""}
+            </div>
+            <pre
+              className={cn(
+                "editor-font flex-1 whitespace-pre px-2",
+                line.line_type === "removed" ? getContentColor("removed") : "text-text",
+              )}
+              style={contentStyle}
+            >
+              {line.line_type !== "added" ? lineContent : ""}
+            </pre>
+          </div>
+
+          <div
+            className={cn(
+              "flex w-1/2",
+              line.line_type === "added" ? getLineBackground("added") : "",
+            )}
+          >
+            <div
+              className={cn(
+                "w-10 shrink-0 select-none border-border border-r px-2 text-right",
+                "editor-font text-text-lighter tabular-nums",
+                getGutterBackground(line.line_type === "added" ? "added" : ""),
+              )}
+              style={gutterStyle}
+            >
+              {line.line_type !== "removed" ? line.new_line_number : ""}
+            </div>
+            <pre
+              className={cn(
+                "editor-font flex-1 whitespace-pre px-2",
+                line.line_type === "added" ? getContentColor("added") : "text-text",
+              )}
+              style={contentStyle}
+            >
+              {line.line_type !== "removed" ? lineContent : ""}
+            </pre>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex min-h-[1.4em]">
+      <div className={cn("flex", getLineBackground(line.line_type))} style={rowStyle}>
         <div
           className={cn(
-            "flex w-1/2 border-border border-r",
-            line.line_type === "removed" ? getLineBackground("removed") : "",
+            "w-10 shrink-0 select-none border-border border-r px-2 text-right",
+            "editor-font text-text-lighter tabular-nums",
+            getGutterBackground(line.line_type),
           )}
+          style={gutterStyle}
         >
-          <div
-            className={cn(
-              "w-10 shrink-0 select-none border-border border-r px-2 text-right",
-              "editor-font text-text-lighter text-xs",
-              getGutterBackground(line.line_type === "removed" ? "removed" : ""),
-            )}
-          >
-            {line.line_type !== "added" ? line.old_line_number : ""}
-          </div>
-          <pre
-            className={cn(
-              "editor-font flex-1 whitespace-pre-wrap px-2 text-xs",
-              line.line_type === "removed" ? getContentColor("removed") : "text-text",
-            )}
-          >
-            {line.line_type !== "added" ? lineContent : ""}
-          </pre>
+          {line.old_line_number}
+        </div>
+        <div
+          className={cn(
+            "w-10 shrink-0 select-none border-border border-r px-2 text-right",
+            "editor-font text-text-lighter tabular-nums",
+            getGutterBackground(line.line_type),
+          )}
+          style={gutterStyle}
+        >
+          {line.new_line_number}
         </div>
 
-        <div
-          className={cn("flex w-1/2", line.line_type === "added" ? getLineBackground("added") : "")}
+        <pre
+          className={cn("editor-font flex-1 whitespace-pre px-2", getContentColor(line.line_type))}
+          style={contentStyle}
         >
-          <div
-            className={cn(
-              "w-10 shrink-0 select-none border-border border-r px-2 text-right",
-              "editor-font text-text-lighter text-xs",
-              getGutterBackground(line.line_type === "added" ? "added" : ""),
-            )}
-          >
-            {line.line_type !== "removed" ? line.new_line_number : ""}
-          </div>
-          <pre
-            className={cn(
-              "editor-font flex-1 whitespace-pre-wrap px-2 text-xs",
-              line.line_type === "added" ? getContentColor("added") : "text-text",
-            )}
-          >
-            {line.line_type !== "removed" ? lineContent : ""}
-          </pre>
-        </div>
+          {lineContent}
+        </pre>
       </div>
     );
-  }
-
-  return (
-    <div className={cn("flex min-h-[1.4em]", getLineBackground(line.line_type))}>
-      <div
-        className={cn(
-          "w-10 shrink-0 select-none border-border border-r px-2 text-right",
-          "editor-font text-text-lighter text-xs",
-          getGutterBackground(line.line_type),
-        )}
-      >
-        {line.old_line_number}
-      </div>
-      <div
-        className={cn(
-          "w-10 shrink-0 select-none border-border border-r px-2 text-right",
-          "editor-font text-text-lighter text-xs",
-          getGutterBackground(line.line_type),
-        )}
-      >
-        {line.new_line_number}
-      </div>
-
-      <pre
-        className={cn(
-          "editor-font flex-1 whitespace-pre-wrap px-2 text-xs",
-          getContentColor(line.line_type),
-        )}
-      >
-        {lineContent}
-      </pre>
-    </div>
-  );
-});
+  },
+);
 
 DiffLine.displayName = "DiffLine";
 

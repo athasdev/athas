@@ -40,11 +40,15 @@ const getThemeIcon = (category: string, _isDark?: boolean): React.ReactNode => {
   }
 };
 
+const clampSelectedIndex = (index: number, size: number): number => {
+  if (size <= 0) return 0;
+  return Math.min(Math.max(index, 0), size - 1);
+};
+
 const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: ThemeSelectorProps) => {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [initialTheme, setInitialTheme] = useState(currentTheme);
-  const [previewTheme, setPreviewTheme] = useState<string | null>(null);
   const [themes, setThemes] = useState<ThemeInfo[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -88,7 +92,6 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
     if (isVisible) {
       setInitialTheme(currentTheme);
       setQuery("");
-      setPreviewTheme(null);
 
       const initialIndex = themes.findIndex((t) => t.id === currentTheme);
       setSelectedIndex(initialIndex >= 0 ? initialIndex : 0);
@@ -96,6 +99,11 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [isVisible, themes, currentTheme]);
+
+  const applyPreviewTheme = useCallback((themeId: string) => {
+    if (!themeRegistry.getTheme(themeId)) return;
+    themeRegistry.applyTheme(themeId);
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -110,13 +118,15 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
         nextIndex = (selectedIndex - 1 + filteredThemes.length) % filteredThemes.length;
       } else if (e.key === "Enter") {
         e.preventDefault();
-        onThemeChange(filteredThemes[selectedIndex].id);
+        const selectedTheme = filteredThemes[selectedIndex];
+        if (!selectedTheme) return;
+        onThemeChange(selectedTheme.id);
         onClose();
         return;
       } else if (e.key === "Escape") {
         e.preventDefault();
         if (initialTheme) {
-          onThemeChange(initialTheme);
+          applyPreviewTheme(initialTheme);
         }
         onClose();
         return;
@@ -124,15 +134,13 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
 
       if (nextIndex !== selectedIndex) {
         setSelectedIndex(nextIndex);
-        // Preview theme when navigating with keyboard
         const theme = filteredThemes[nextIndex];
         if (theme) {
-          setPreviewTheme(theme.id);
-          onThemeChange(theme.id);
+          applyPreviewTheme(theme.id);
         }
       }
     },
-    [selectedIndex, filteredThemes, onThemeChange, onClose, initialTheme],
+    [selectedIndex, filteredThemes, onThemeChange, onClose, initialTheme, applyPreviewTheme],
   );
 
   // Reset state when visibility changes
@@ -148,6 +156,10 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
     setSelectedIndex(0);
   }, [query]);
 
+  useEffect(() => {
+    setSelectedIndex((prev) => clampSelectedIndex(prev, filteredThemes.length));
+  }, [filteredThemes.length]);
+
   // Scroll selected item into view
   useEffect(() => {
     const selectedElement = resultsRef.current?.querySelector(`[data-index="${selectedIndex}"]`);
@@ -156,10 +168,10 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
 
   const handleClose = useCallback(() => {
     if (initialTheme) {
-      onThemeChange(initialTheme);
+      applyPreviewTheme(initialTheme);
     }
     onClose();
-  }, [initialTheme, onThemeChange, onClose]);
+  }, [initialTheme, onClose, applyPreviewTheme]);
 
   const handleUploadTheme = async () => {
     // Create file input element
@@ -228,16 +240,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
                 }}
                 onMouseEnter={() => {
                   setSelectedIndex(index);
-                  setPreviewTheme(theme.id);
-                  onThemeChange(theme.id);
-                }}
-                onMouseLeave={() => {
-                  if (previewTheme === theme.id) {
-                    setPreviewTheme(null);
-                    if (initialTheme) {
-                      onThemeChange(initialTheme);
-                    }
-                  }
+                  applyPreviewTheme(theme.id);
                 }}
                 isSelected={isSelected}
                 className="gap-3 px-2 py-1.5"

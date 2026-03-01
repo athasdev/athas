@@ -70,7 +70,7 @@ const DiffHunkHeader = memo(
       <div
         className={cn(
           "group flex cursor-pointer items-center justify-between border-border border-b",
-          "bg-primary-bg px-3 py-1 text-[11px] hover:bg-hover",
+          "bg-primary-bg px-3 py-0.5 text-[11px] leading-4 hover:bg-hover",
         )}
         onClick={onToggleCollapse}
       >

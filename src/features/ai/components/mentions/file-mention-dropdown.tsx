@@ -175,7 +175,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
 
   // Adjust position using proper positioning logic like breadcrumb
   const adjustedPosition = useMemo(() => {
-    const dropdownWidth = 320;
+    const dropdownWidth = Math.min(360, window.innerWidth - 16);
     const dropdownHeight = Math.min(
       filteredFiles.length * 26 + 60, // Reduced height per item from 32 to 26
       EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT,
@@ -184,36 +184,26 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
 
     let { top, left } = position;
 
-    // If the position is negative or too high up, position it below the input instead
-    if (top < padding) {
-      // Find the textarea and position below it
-      const textarea = document.querySelector(
-        'textarea[placeholder*="tag files"]',
-      ) as HTMLTextAreaElement;
-      if (textarea) {
-        const textareaRect = textarea.getBoundingClientRect();
-        top = textareaRect.bottom + 4; // Position just below the textarea
-        left = textareaRect.left; // Align with left edge of textarea
-      } else {
-        // Fallback positioning
-        top = 100;
-        left = Math.max(padding, left);
-      }
-    }
-
     // Ensure dropdown doesn't go off the right edge of the screen
     if (left + dropdownWidth > window.innerWidth - padding) {
       left = Math.max(padding, window.innerWidth - dropdownWidth - padding);
     }
+    if (left < padding) {
+      left = padding;
+    }
 
-    // Ensure dropdown doesn't go off the bottom of the screen
+    // Prefer below input; if there isn't enough room, open above.
     if (top + dropdownHeight > window.innerHeight - padding) {
-      top = Math.max(padding, window.innerHeight - dropdownHeight - padding);
+      top = Math.max(padding, top - dropdownHeight - 12);
+    }
+    if (top < padding) {
+      top = padding;
     }
 
     return {
       top: Math.max(padding, top),
       left: Math.max(padding, left),
+      width: dropdownWidth,
     };
   }, [position.top, position.left, filteredFiles.length]);
 
@@ -251,7 +241,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       style={{
         zIndex: 10040,
         maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
-        width: "320px",
+        width: `${adjustedPosition.width}px`,
         left: `${adjustedPosition.left}px`,
         top: `${adjustedPosition.top}px`,
       }}

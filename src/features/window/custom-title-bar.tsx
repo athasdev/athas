@@ -77,7 +77,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         data-tauri-drag-region
         className={`relative z-50 flex select-none items-center justify-between ${
           isMacOS ? "h-11" : "h-7"
-        } border-border/70 border-b bg-secondary-bg/70 px-2 backdrop-blur-sm`}
+        } bg-secondary-bg/70 px-2 backdrop-blur-sm`}
       >
         <div className="flex-1" />
 
@@ -123,7 +123,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     return (
       <div
         data-tauri-drag-region
-        className="relative z-50 flex h-10 select-none items-center justify-between border-border/70 border-b bg-secondary-bg/70 pr-2 pl-[78px] backdrop-blur-sm"
+        className="relative z-50 flex h-10 select-none items-center justify-between bg-secondary-bg/70 pr-2 pl-[96px] backdrop-blur-sm"
       >
         {/* Left side: keep clear of traffic lights */}
         <div className="pointer-events-auto flex min-w-0 items-center gap-2">
@@ -157,7 +157,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   return (
     <div
       data-tauri-drag-region
-      className="relative z-50 flex h-8 select-none items-center justify-between border-border/70 border-b bg-secondary-bg/70 px-2 backdrop-blur-sm"
+      className="relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg/70 px-2 backdrop-blur-sm"
     >
       {/* Left side */}
       <div data-tauri-drag-region className="flex flex-1 items-center px-1">

@@ -2,6 +2,8 @@ import { Archive, Check, ChevronDown, ChevronRight, FileText, Minus, Plus } from
 import type React from "react";
 import { type RefObject, useMemo, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
+import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { useSettingsStore } from "@/features/settings/store";
 import { createStash } from "../../api/stash";
 import {
   discardFileChanges,
@@ -33,6 +35,75 @@ type StatusGroup = "added" | "modified" | "deleted" | "renamed" | "untracked";
 
 const STATUS_ORDER: StatusGroup[] = ["added", "modified", "deleted", "renamed", "untracked"];
 
+const createEmptyStatusGroups = (): Record<StatusGroup, GitFile[]> => ({
+  added: [],
+  modified: [],
+  deleted: [],
+  renamed: [],
+  untracked: [],
+});
+
+const groupFilesByStatus = (fileList: GitFile[]) => {
+  const groups = createEmptyStatusGroups();
+
+  for (const file of fileList) {
+    groups[file.status].push(file);
+  }
+
+  return groups;
+};
+
+interface GitFolderNode {
+  name: string;
+  fullPath: string;
+  folders: Map<string, GitFolderNode>;
+  files: GitFile[];
+}
+
+const createFolderNode = (name: string, fullPath: string): GitFolderNode => ({
+  name,
+  fullPath,
+  folders: new Map<string, GitFolderNode>(),
+  files: [],
+});
+
+const normalizePathSegments = (path: string): string[] =>
+  path
+    .replace(/\\/g, "/")
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+
+const buildGitFolderTree = (fileList: GitFile[]): GitFolderNode => {
+  const root = createFolderNode("", "");
+
+  for (const file of fileList) {
+    const segments = normalizePathSegments(file.path);
+    if (segments.length === 0) continue;
+
+    let currentNode = root;
+    let currentPath = "";
+    const directorySegments = segments.slice(0, -1);
+    for (const segment of directorySegments) {
+      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+      if (!currentNode.folders.has(segment)) {
+        currentNode.folders.set(segment, createFolderNode(segment, currentPath));
+      }
+      currentNode = currentNode.folders.get(segment)!;
+    }
+
+    currentNode.files.push(file);
+  }
+
+  return root;
+};
+
+const sortFoldersByName = (folders: Iterable<GitFolderNode>) =>
+  Array.from(folders).sort((a, b) => a.name.localeCompare(b.name));
+
+const sortFilesByPath = (fileList: GitFile[]) =>
+  [...fileList].sort((a, b) => a.path.localeCompare(b.path));
+
 const GitStatusPanel = ({
   files,
   onFileSelect,
@@ -40,11 +111,13 @@ const GitStatusPanel = ({
   onRefresh,
   repoPath,
 }: GitStatusPanelProps) => {
+  const gitChangesFolderView = useSettingsStore((state) => state.settings.gitChangesFolderView);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [isStagedCollapsed, setIsStagedCollapsed] = useState(false);
+  const [isStagedCollapsed, setIsStagedCollapsed] = useState(true);
   const [isChangesCollapsed, setIsChangesCollapsed] = useState(false);
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
 
   const [stashModal, setStashModal] = useState<{
     isOpen: boolean;
@@ -57,27 +130,8 @@ const GitStatusPanel = ({
 
   const stagedFiles = useMemo(() => files.filter((f) => f.staged), [files]);
   const unstagedFiles = useMemo(() => files.filter((f) => !f.staged), [files]);
-
-  const groupFiles = (files: GitFile[]) => {
-    const groups: Record<StatusGroup, GitFile[]> = {
-      added: [],
-      modified: [],
-      deleted: [],
-      renamed: [],
-      untracked: [],
-    };
-
-    for (const file of files) {
-      if (groups[file.status]) {
-        groups[file.status].push(file);
-      }
-    }
-
-    return groups;
-  };
-
-  const groupedStagedFiles = useMemo(() => groupFiles(stagedFiles), [stagedFiles]);
-  const groupedUnstagedFiles = useMemo(() => groupFiles(unstagedFiles), [unstagedFiles]);
+  const groupedStagedFiles = useMemo(() => groupFilesByStatus(stagedFiles), [stagedFiles]);
+  const groupedUnstagedFiles = useMemo(() => groupFilesByStatus(unstagedFiles), [unstagedFiles]);
 
   const handleStageFile = async (filePath: string) => {
     if (!repoPath) return;
@@ -181,7 +235,20 @@ const GitStatusPanel = ({
     setContextMenu(null);
   });
 
-  const renderFileList = (groupedFiles: Record<StatusGroup, GitFile[]>) => {
+  const toggleFolderCollapsed = (section: "changes", folderPath: string) => {
+    const key = `${section}:${folderPath}`;
+    setCollapsedFolders((previous) => {
+      const next = new Set(previous);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const renderFlatFileList = (groupedFiles: Record<StatusGroup, GitFile[]>) => {
     return STATUS_ORDER.map((status) => {
       const statusFiles = groupedFiles[status];
       if (statusFiles.length === 0) return null;
@@ -206,12 +273,76 @@ const GitStatusPanel = ({
     });
   };
 
+  const renderFolderTree = (fileList: GitFile[], section: "changes") => {
+    const rootNode = buildGitFolderTree(fileList);
+
+    const renderNode = (node: GitFolderNode, depth: number): React.ReactNode => {
+      const folderRows = sortFoldersByName(node.folders.values()).map((folderNode) => {
+        const collapseKey = `${section}:${folderNode.fullPath}`;
+        const isCollapsed = collapsedFolders.has(collapseKey);
+        const paddingLeft = 8 + depth * 14;
+
+        return (
+          <div key={folderNode.fullPath}>
+            <button
+              type="button"
+              onClick={() => toggleFolderCollapsed(section, folderNode.fullPath)}
+              className="ui-font mx-1 mb-1 flex w-[calc(100%-8px)] items-center gap-1.5 rounded-lg py-1 text-left text-text text-xs hover:bg-hover"
+              style={{ paddingLeft: `${paddingLeft}px`, paddingRight: "8px" }}
+            >
+              {isCollapsed ? (
+                <ChevronRight size={10} className="shrink-0 text-text-lighter" />
+              ) : (
+                <ChevronDown size={10} className="shrink-0 text-text-lighter" />
+              )}
+              <FileIcon
+                fileName={folderNode.name}
+                isDir
+                isExpanded={!isCollapsed}
+                className="shrink-0 text-text-lighter"
+                size={12}
+              />
+              <span className="truncate">{folderNode.name}</span>
+            </button>
+            {!isCollapsed && renderNode(folderNode, depth + 1)}
+          </div>
+        );
+      });
+
+      const fileRows = sortFilesByPath(node.files).map((file) => (
+        <GitFileItem
+          key={file.path}
+          file={file}
+          onClick={() => onFileSelect?.(file.path, file.staged)}
+          onContextMenu={(e) => handleContextMenu(e, file.path, file.staged)}
+          onStage={() => handleStageFile(file.path)}
+          onUnstage={() => handleUnstageFile(file.path)}
+          onDiscard={() => handleDiscardFile(file.path)}
+          onStash={() => handleStashFile(file.path)}
+          disabled={isLoading}
+          showDirectory={false}
+          showFileIcon
+          indentLevel={depth}
+        />
+      ));
+
+      return (
+        <>
+          {folderRows}
+          {fileRows}
+        </>
+      );
+    };
+
+    return renderNode(rootNode, 0);
+  };
+
   return (
     <div className="select-none p-1.5">
       {stagedFiles.length > 0 && (
-        <div className="mb-2 overflow-hidden rounded-lg border border-border/60 bg-primary-bg/60">
+        <div className="mb-2 overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
           <div
-            className="flex cursor-pointer items-center gap-1 bg-secondary-bg/80 px-2.5 py-1.5 text-text-lighter hover:bg-hover"
+            className="sticky top-0 z-20 flex cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
             onClick={() => setIsStagedCollapsed(!isStagedCollapsed)}
           >
             {isStagedCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
@@ -237,14 +368,14 @@ const GitStatusPanel = ({
           </div>
 
           {!isStagedCollapsed && (
-            <div className="bg-primary-bg/70">{renderFileList(groupedStagedFiles)}</div>
+            <div className="bg-primary-bg/70 p-1">{renderFlatFileList(groupedStagedFiles)}</div>
           )}
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-border/60 bg-primary-bg/60">
+      <div className="overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
         <div
-          className="flex cursor-pointer items-center gap-1 bg-secondary-bg/80 px-2.5 py-1.5 text-text-lighter hover:bg-hover"
+          className="sticky top-0 z-20 flex cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
           onClick={() => setIsChangesCollapsed(!isChangesCollapsed)}
         >
           {isChangesCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
@@ -288,15 +419,17 @@ const GitStatusPanel = ({
         </div>
 
         {!isChangesCollapsed && (
-          <div className="bg-primary-bg/70">
-            {unstagedFiles.length === 0
-              ? stagedFiles.length === 0 && (
-                  <div className="flex items-center gap-2 px-2.5 py-2 text-[10px] text-text-lighter">
-                    <Check size={10} className="text-success" />
-                    <span className="italic">No changes</span>
-                  </div>
-                )
-              : renderFileList(groupedUnstagedFiles)}
+          <div className="bg-primary-bg/70 p-1">
+            {unstagedFiles.length === 0 ? (
+              <div className="flex items-center gap-2 px-2.5 py-2 text-[10px] text-text-lighter">
+                <Check size={10} className="text-success" />
+                <span className="italic">No changes</span>
+              </div>
+            ) : gitChangesFolderView ? (
+              renderFolderTree(unstagedFiles, "changes")
+            ) : (
+              renderFlatFileList(groupedUnstagedFiles)
+            )}
           </div>
         )}
       </div>

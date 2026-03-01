@@ -55,6 +55,9 @@ export interface DiffLineProps {
   line: GitDiffLine;
   viewMode: "unified" | "split";
   showWhitespace: boolean;
+  fontSize: number;
+  lineHeight: number;
+  tabSize: number;
   tokens?: HighlightToken[];
 }
 

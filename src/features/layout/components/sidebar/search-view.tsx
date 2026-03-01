@@ -397,7 +397,7 @@ const SearchView = forwardRef<SearchViewRef, SearchViewProps>(
         onKeyDown={handleKeyDown}
       >
         {/* Search Input and Options */}
-        <div className="select-none rounded-xl border border-border/70 bg-secondary-bg/85 p-2">
+        <div className="select-none">
           <div className="relative flex w-full items-center">
             <span className="pointer-events-none absolute left-2.5 z-10 text-text-lighter">
               <Search size={12} />

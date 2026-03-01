@@ -10,10 +10,14 @@ import {
   Trash2,
 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
+import { useContextMenu } from "@/hooks/use-context-menu";
+import type { ContextMenuItem } from "@/ui/context-menu";
+import { ContextMenu } from "@/ui/context-menu";
 
 interface ActionItem {
   id: string;
@@ -29,6 +33,8 @@ export function EmptyEditorState() {
 
   const customActions = useCustomActionsStore.use.actions();
   const { addAction, updateAction, deleteAction } = useCustomActionsStore.getState().storeActions;
+
+  const contextMenu = useContextMenu();
 
   const [isAddingAction, setIsAddingAction] = useState(false);
   const [editingActionId, setEditingActionId] = useState<string | null>(null);
@@ -116,6 +122,42 @@ export function EmptyEditorState() {
     [deleteAction],
   );
 
+  const getContextMenuItems = useCallback((): ContextMenuItem[] => {
+    return [
+      {
+        id: "open-folder",
+        label: "Open Folder",
+        icon: <FolderOpen size={12} />,
+        onClick: handleOpenFolder,
+      },
+      {
+        id: "open-file",
+        label: "Open File",
+        icon: <FileText size={12} />,
+        onClick: handleOpenFile,
+      },
+      { id: "sep-1", label: "", separator: true, onClick: () => {} },
+      {
+        id: "new-terminal",
+        label: "New Terminal",
+        icon: <Terminal size={12} />,
+        onClick: handleOpenTerminal,
+      },
+      {
+        id: "new-agent",
+        label: "New Agent",
+        icon: <Sparkles size={12} />,
+        onClick: handleOpenAgent,
+      },
+      {
+        id: "open-url",
+        label: "Open URL",
+        icon: <Globe size={12} />,
+        onClick: handleOpenWebViewer,
+      },
+    ];
+  }, [handleOpenFolder, handleOpenFile, handleOpenTerminal, handleOpenAgent, handleOpenWebViewer]);
+
   const actions: ActionItem[] = [
     {
       id: "folder",
@@ -150,7 +192,10 @@ export function EmptyEditorState() {
   ];
 
   return (
-    <div className="flex h-full flex-col items-center justify-center">
+    <div
+      className="flex h-full flex-col items-center justify-center"
+      onContextMenu={contextMenu.open}
+    >
       <div className="flex w-48 flex-col gap-0.5">
         {actions.map((item) => (
           <button
@@ -242,6 +287,16 @@ export function EmptyEditorState() {
           </button>
         )}
       </div>
+
+      {createPortal(
+        <ContextMenu
+          isOpen={contextMenu.isOpen}
+          position={contextMenu.position}
+          items={getContextMenuItems()}
+          onClose={contextMenu.close}
+        />,
+        document.body,
+      )}
     </div>
   );
 }

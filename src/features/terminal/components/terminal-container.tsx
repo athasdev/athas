@@ -365,28 +365,24 @@ const TerminalContainer = ({
     return () => window.removeEventListener("terminal-ready", handleTerminalReady);
   }, []);
 
+  // Listen for terminal tab switch events from the keymaps system
+  useEffect(() => {
+    const handleTerminalSwitchTab = (e: Event) => {
+      const direction = (e as CustomEvent).detail;
+      if (direction === "next") {
+        switchToNextTerminal();
+      } else {
+        switchToPrevTerminal();
+      }
+    };
+
+    window.addEventListener("terminal-switch-tab", handleTerminalSwitchTab);
+    return () => window.removeEventListener("terminal-switch-tab", handleTerminalSwitchTab);
+  }, [switchToNextTerminal, switchToPrevTerminal]);
+
   // Terminal-specific keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Handle terminal tab navigation regardless of focus (when bottom pane is visible)
-      const isBottomPaneVisible = document.querySelector('[data-terminal-container="active"]');
-      // Terminal tab navigation with Ctrl+Tab and Ctrl+Shift+Tab
-      // Only intercept when terminal is focused AND bottom pane is visible
-      if (isBottomPaneVisible && e.ctrlKey && e.key === "Tab") {
-        // Check if the terminal or its children have focus
-        const terminalContainer = document.querySelector('[data-terminal-container="active"]');
-        if (terminalContainer?.contains(document.activeElement)) {
-          e.preventDefault();
-          e.stopPropagation();
-          if (e.shiftKey) {
-            switchToPrevTerminal();
-          } else {
-            switchToNextTerminal();
-          }
-          return;
-        }
-      }
-
       // Only handle other shortcuts when the terminal container or its children have focus
       const terminalContainer = document.querySelector('[data-terminal-container="active"]');
       if (!terminalContainer || !terminalContainer.contains(document.activeElement)) {

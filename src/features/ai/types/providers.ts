@@ -40,8 +40,8 @@ export const AI_AGENTS: AIAgent[] = [
   {
     id: "codex-cli",
     name: "Codex CLI",
-    binaryName: "codex",
-    description: "OpenAI's Codex CLI agent",
+    binaryName: "codex-acp",
+    description: "OpenAI Codex agent via ACP adapter",
     installed: false,
   },
 ];

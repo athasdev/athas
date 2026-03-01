@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AIChat from "@/features/ai/components/chat/ai-chat";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import CommandBar from "@/features/command-bar/components/command-bar";
@@ -29,12 +30,15 @@ import EditorFooter from "./footer/editor-footer";
 import { ResizablePane } from "./resizable-pane";
 import { MainSidebar } from "./sidebar/main-sidebar";
 
+const AI_CHAT_OVERLAY_BREAKPOINT = 1180;
+
 export function MainLayout() {
   useChatInitialization();
   usePaneKeyboard();
 
   const {
     isSidebarVisible,
+    setIsSidebarVisible,
     isThemeSelectorVisible,
     setIsThemeSelectorVisible,
     isIconThemeSelectorVisible,
@@ -49,6 +53,9 @@ export function MainLayout() {
   const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
 
   const hasRestoredWorkspace = useRef(false);
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1440,
+  );
 
   const { isDraggingOver } = useFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
@@ -88,6 +95,32 @@ export function MainLayout() {
     return allDiagnostics;
   }, [diagnosticsByFile]);
   const sidebarPosition = settings.sidebarPosition;
+  const isCompactAiOverlay = viewportWidth < AI_CHAT_OVERLAY_BREAKPOINT;
+  const showInlineAiChat = settings.isAIChatVisible && !isCompactAiOverlay;
+  const showOverlayAiChat = settings.isAIChatVisible && isCompactAiOverlay;
+  const aiOverlaySide = sidebarPosition === "right" ? "left" : "right";
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (!showOverlayAiChat) return;
+
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        updateSetting("isAIChatVisible", false);
+      }
+    };
+
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [showOverlayAiChat, updateSetting]);
 
   useEffect(() => {
     if (settings.vimRelativeLineNumbers !== relativeLineNumbers) {
@@ -172,19 +205,31 @@ export function MainLayout() {
 
       <CustomTitleBarWithSettings />
 
-      <div className="z-10 flex flex-1 flex-col overflow-hidden">
+      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
           {/* Left sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
-            <div className={!settings.isAIChatVisible ? "hidden" : undefined}>
-              <ResizablePane position="left" widthKey="aiChatWidth">
+            <div className={!showInlineAiChat ? "hidden" : undefined}>
+              <ResizablePane
+                position="left"
+                widthKey="aiChatWidth"
+                collapsible
+                collapseThreshold={0}
+                onCollapse={() => updateSetting("isAIChatVisible", false)}
+              >
                 <AIChat mode="chat" />
               </ResizablePane>
             </div>
           ) : (
             sidebarPosition === "left" && (
               <div className={!isSidebarVisible ? "hidden" : undefined}>
-                <ResizablePane position="left" widthKey="sidebarWidth">
+                <ResizablePane
+                  position="left"
+                  widthKey="sidebarWidth"
+                  collapsible
+                  collapseThreshold={0}
+                  onCollapse={() => setIsSidebarVisible(false)}
+                >
                   <MainSidebar />
                 </ResizablePane>
               </div>
@@ -204,18 +249,57 @@ export function MainLayout() {
           {/* Right sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
             <div className={!isSidebarVisible ? "hidden" : undefined}>
-              <ResizablePane position="right" widthKey="sidebarWidth">
+              <ResizablePane
+                position="right"
+                widthKey="sidebarWidth"
+                collapsible
+                collapseThreshold={0}
+                onCollapse={() => setIsSidebarVisible(false)}
+              >
                 <MainSidebar />
               </ResizablePane>
             </div>
           ) : (
-            <div className={!settings.isAIChatVisible ? "hidden" : undefined}>
-              <ResizablePane position="right" widthKey="aiChatWidth">
+            <div className={!showInlineAiChat ? "hidden" : undefined}>
+              <ResizablePane
+                position="right"
+                widthKey="aiChatWidth"
+                collapsible
+                collapseThreshold={0}
+                onCollapse={() => updateSetting("isAIChatVisible", false)}
+              >
                 <AIChat mode="chat" />
               </ResizablePane>
             </div>
           )}
         </div>
+
+        {showOverlayAiChat && (
+          <>
+            <button
+              type="button"
+              className="absolute inset-0 z-[10015] bg-black/30 backdrop-blur-[1px]"
+              onClick={() => updateSetting("isAIChatVisible", false)}
+              aria-label="Close AI chat overlay"
+            />
+
+            <div
+              className={`absolute top-2 bottom-2 z-[10020] w-[min(460px,calc(100vw-16px))] overflow-hidden rounded-2xl border border-border bg-secondary-bg shadow-2xl ${
+                aiOverlaySide === "right" ? "right-2" : "left-2"
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => updateSetting("isAIChatVisible", false)}
+                className="absolute top-2 right-2 z-[10030] flex h-7 w-7 items-center justify-center rounded-full border border-border bg-primary-bg/90 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                aria-label="Close AI chat"
+              >
+                <X size={14} />
+              </button>
+              <AIChat mode="chat" className="h-full" />
+            </div>
+          </>
+        )}
       </div>
 
       <EditorFooter />

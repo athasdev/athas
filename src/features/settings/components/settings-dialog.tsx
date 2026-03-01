@@ -12,7 +12,6 @@ import { EditorSettings } from "./tabs/editor-settings";
 import { EnterpriseSettings } from "./tabs/enterprise-settings";
 import { ExtensionsSettings } from "./tabs/extensions-settings";
 import { FeaturesSettings } from "./tabs/features-settings";
-import { FileTreeSettings } from "./tabs/file-tree-settings";
 import { GeneralSettings } from "./tabs/general-settings";
 import { KeyboardSettings } from "./tabs/keyboard-settings";
 import { LanguageSettings } from "./tabs/language-settings";
@@ -71,8 +70,6 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         return hasEnterpriseAccess ? <EnterpriseSettings /> : <GeneralSettings />;
       case "advanced":
         return <AdvancedSettings />;
-      case "fileTree":
-        return <FileTreeSettings />;
       case "terminal":
         return <TerminalSettings />;
       default:

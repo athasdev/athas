@@ -251,17 +251,17 @@ const EditorContextMenu = ({
   return (
     <div
       ref={menuRef}
-      className="fixed w-[200px] select-none rounded-md border border-border bg-secondary-bg py-0.5 shadow-lg"
+      className="fixed min-w-[200px] select-none rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
       style={{
         zIndex: EDITOR_CONSTANTS.Z_INDEX.CONTEXT_MENU,
         left: `${position.x}px`,
         top: `${position.y}px`,
-        transform: "translateZ(0)", // Force GPU acceleration for consistent rendering
+        transform: "translateZ(0)",
       }}
     >
       {/* Copy */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
         onClick={handleCopy}
         disabled={!hasSelection}
       >
@@ -274,7 +274,7 @@ const EditorContextMenu = ({
 
       {/* Cut */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
         onClick={handleCut}
         disabled={!hasSelection}
       >
@@ -287,7 +287,7 @@ const EditorContextMenu = ({
 
       {/* Paste */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={handlePaste}
       >
         <div className="flex items-center gap-2">
@@ -299,7 +299,7 @@ const EditorContextMenu = ({
 
       {/* Delete */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
         onClick={handleDelete}
         disabled={!hasSelection}
       >
@@ -310,11 +310,11 @@ const EditorContextMenu = ({
         <KeybindingBadge keys={["Del"]} className="opacity-60" />
       </button>
 
-      <div className="my-0.5 border-border border-t" />
+      <div className="my-0.5 border-border/70 border-t" />
 
       {/* Select All */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={handleSelectAll}
       >
         <div className="flex items-center gap-2">
@@ -326,7 +326,7 @@ const EditorContextMenu = ({
 
       {/* Duplicate Line */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={handleDuplicate}
       >
         <div className="flex items-center gap-2">
@@ -336,11 +336,11 @@ const EditorContextMenu = ({
         <KeybindingBadge keys={["⌘", "D"]} className="opacity-60" />
       </button>
 
-      <div className="my-0.5 border-border border-t" />
+      <div className="my-0.5 border-border/70 border-t" />
 
       {/* Toggle Comment */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={handleToggleComment}
       >
         <div className="flex items-center gap-2">
@@ -352,7 +352,7 @@ const EditorContextMenu = ({
 
       {/* Indent */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={handleIndent}
       >
         <div className="flex items-center gap-2">
@@ -364,7 +364,7 @@ const EditorContextMenu = ({
 
       {/* Outdent */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={handleOutdent}
       >
         <div className="flex items-center gap-2">
@@ -376,7 +376,7 @@ const EditorContextMenu = ({
 
       {/* Format */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={handleFormat}
       >
         <div className="flex items-center gap-2">
@@ -386,11 +386,11 @@ const EditorContextMenu = ({
         <KeybindingBadge keys={["⇧", "⌥", "F"]} className="opacity-60" />
       </button>
 
-      <div className="my-0.5 border-border border-t" />
+      <div className="my-0.5 border-border/70 border-t" />
 
       {/* Move Line Up */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={handleMoveLineUp}
       >
         <div className="flex items-center gap-2">
@@ -402,7 +402,7 @@ const EditorContextMenu = ({
 
       {/* Move Line Down */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={handleMoveLineDown}
       >
         <div className="flex items-center gap-2">
@@ -414,7 +414,7 @@ const EditorContextMenu = ({
 
       {/* Toggle Case */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
         onClick={handleToggleCase}
         disabled={!hasSelection}
       >
@@ -424,11 +424,11 @@ const EditorContextMenu = ({
         </div>
       </button>
 
-      <div className="my-0.5 border-border border-t" />
+      <div className="my-0.5 border-border/70 border-t" />
 
       {/* Find */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={handleFind}
       >
         <div className="flex items-center gap-2">
@@ -440,7 +440,7 @@ const EditorContextMenu = ({
 
       {/* Go to Line */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={handleGoToLine}
       >
         <div className="flex items-center gap-2">
@@ -452,7 +452,7 @@ const EditorContextMenu = ({
 
       {/* Toggle Bookmark */}
       <button
-        className="ui-font flex w-full items-center justify-between gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={handleToggleBookmark}
       >
         <div className="flex items-center gap-2">

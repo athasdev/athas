@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useDebounce } from "use-debounce";
+import { useDebounce, useDebouncedCallback } from "use-debounce";
 import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
-import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
+import { PREVIEW_DEBOUNCE_DELAY, SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { useFileLoader } from "./use-file-loader";
 import { useFileSearch } from "./use-file-search";
 import { useKeyboardNavigation } from "./use-keyboard-navigation";
@@ -14,13 +15,16 @@ export const useCommandBar = () => {
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const addOrUpdateRecentFile = useRecentFilesStore((state) => state.addOrUpdateRecentFile);
+  const commandBarPreview = useSettingsStore((state) => state.settings.commandBarPreview);
 
   const [query, setQuery] = useState("");
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
+  const [previewFilePath, setPreviewFilePath] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onClose = useCallback(() => {
     setIsCommandBarVisible(false);
+    setPreviewFilePath(null);
   }, [setIsCommandBarVisible]);
 
   // Load files
@@ -48,6 +52,20 @@ export const useCommandBar = () => {
     [handleFileSelect, onClose, addOrUpdateRecentFile],
   );
 
+  const debouncedSetPreview = useDebouncedCallback(
+    (path: string | null) => setPreviewFilePath(path),
+    PREVIEW_DEBOUNCE_DELAY,
+  );
+
+  const handlePreviewChange = useCallback(
+    (path: string | null) => {
+      if (commandBarPreview) {
+        debouncedSetPreview(path);
+      }
+    },
+    [commandBarPreview, debouncedSetPreview],
+  );
+
   // Keyboard navigation
   const allResults = [...openBufferFiles, ...recentFilesInResults, ...otherFiles];
   const { selectedIndex, scrollContainerRef } = useKeyboardNavigation({
@@ -57,10 +75,28 @@ export const useCommandBar = () => {
     onSelect: handleItemSelect,
   });
 
+  useEffect(() => {
+    if (commandBarPreview && allResults.length > 0 && selectedIndex >= 0) {
+      const selectedFile = allResults[selectedIndex];
+      if (selectedFile && !selectedFile.isDir) {
+        debouncedSetPreview(selectedFile.path);
+      } else {
+        debouncedSetPreview(null);
+      }
+    }
+  }, [selectedIndex, allResults, commandBarPreview, debouncedSetPreview]);
+
+  useEffect(() => {
+    if (!commandBarPreview) {
+      setPreviewFilePath(null);
+    }
+  }, [commandBarPreview]);
+
   // Reset state when command bar becomes visible
   useEffect(() => {
     if (isCommandBarVisible) {
       setQuery("");
+      setPreviewFilePath(null);
       if (inputRef.current) {
         inputRef.current.focus();
       }
@@ -83,6 +119,9 @@ export const useCommandBar = () => {
     otherFiles,
     selectedIndex,
     handleItemSelect,
+    handlePreviewChange,
+    previewFilePath,
     rootFolderPath: rootFolderPath || loaderRootFolder,
+    showPreview: commandBarPreview,
   };
 };

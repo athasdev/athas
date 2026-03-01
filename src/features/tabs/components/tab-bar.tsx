@@ -653,74 +653,70 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   return (
     <>
       <div
-        className={`relative shrink-0 px-2 pt-1 pb-1 ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
+        ref={tabBarRef}
+        className={`relative flex shrink-0 gap-1 overflow-x-auto overflow-y-hidden px-1.5 py-1 [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
+        role="tablist"
+        aria-label="Open files"
+        onWheel={handleWheel}
+        onDragOver={handleTabBarDragOver}
+        onDragLeave={handleTabBarDragLeave}
+        onDrop={handleTabBarDrop}
       >
-        <div
-          ref={tabBarRef}
-          className="flex gap-1 overflow-x-auto overflow-y-hidden rounded-lg border border-border/55 bg-secondary-bg/45 px-1 py-1 [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          role="tablist"
-          aria-label="Open files"
-          onWheel={handleWheel}
-          onDragOver={handleTabBarDragOver}
-          onDragLeave={handleTabBarDragLeave}
-          onDrop={handleTabBarDrop}
-        >
-          {sortedBuffers.map((buffer, index) => {
-            const isActive = buffer.id === activeBufferId;
-            const isDraggedTab = isDragging && draggedIndex === index;
-            const showDropIndicatorBefore =
-              isDragging && dropTargetIndex === index && draggedIndex !== index;
-            return (
-              <TabBarItem
-                key={buffer.id}
-                buffer={buffer}
-                displayName={displayNames.get(buffer.id) || buffer.name}
-                index={index}
-                isActive={isActive}
-                isDraggedTab={isDraggedTab}
-                showDropIndicatorBefore={showDropIndicatorBefore}
-                tabRef={(el) => {
-                  tabRefs.current[index] = el;
-                }}
-                onMouseDown={(e) => handleMouseDown(e, index)}
-                onDoubleClick={(e) => handleDoubleClick(e, index)}
-                onContextMenu={(e) => handleContextMenu(e, buffer)}
-                onKeyDown={(e) => handleKeyDown(e, index)}
-                onDragStart={(e) => handleDragStart(e, index)}
-                onDragEnd={handleDragEnd}
-                handleTabClose={(id) => {
-                  handleTabClose(id);
-                  // Clear cached position for this buffer
-                  clearPositionCache(id);
-                }}
-                handleTabPin={handleTabPin}
-              />
-            );
-          })}
+        {sortedBuffers.map((buffer, index) => {
+          const isActive = buffer.id === activeBufferId;
+          const isDraggedTab = isDragging && draggedIndex === index;
+          const showDropIndicatorBefore =
+            isDragging && dropTargetIndex === index && draggedIndex !== index;
+          return (
+            <TabBarItem
+              key={buffer.id}
+              buffer={buffer}
+              displayName={displayNames.get(buffer.id) || buffer.name}
+              index={index}
+              isActive={isActive}
+              isDraggedTab={isDraggedTab}
+              showDropIndicatorBefore={showDropIndicatorBefore}
+              tabRef={(el) => {
+                tabRefs.current[index] = el;
+              }}
+              onMouseDown={(e) => handleMouseDown(e, index)}
+              onDoubleClick={(e) => handleDoubleClick(e, index)}
+              onContextMenu={(e) => handleContextMenu(e, buffer)}
+              onKeyDown={(e) => handleKeyDown(e, index)}
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragEnd={handleDragEnd}
+              handleTabClose={(id) => {
+                handleTabClose(id);
+                // Clear cached position for this buffer
+                clearPositionCache(id);
+              }}
+              handleTabPin={handleTabPin}
+            />
+          );
+        })}
 
-          {isDragging && dropTargetIndex === sortedBuffers.length && (
-            <div className="relative">
-              <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
-            </div>
-          )}
-
-          <div className="flex shrink-0 items-center pl-0.5">
-            <NewTabMenu />
+        {isDragging && dropTargetIndex === sortedBuffers.length && (
+          <div className="relative">
+            <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
           </div>
-        </div>
+        )}
 
-        {isDragging &&
-          draggedIndex !== null &&
-          currentPosition &&
-          createPortal(
-            <TabDragPreview
-              x={currentPosition.x}
-              y={currentPosition.y}
-              buffer={sortedBuffers[draggedIndex]}
-            />,
-            document.body,
-          )}
+        <div className="flex shrink-0 items-center pl-0.5">
+          <NewTabMenu />
+        </div>
       </div>
+
+      {isDragging &&
+        draggedIndex !== null &&
+        currentPosition &&
+        createPortal(
+          <TabDragPreview
+            x={currentPosition.x}
+            y={currentPosition.y}
+            buffer={sortedBuffers[draggedIndex]}
+          />,
+          document.body,
+        )}
 
       <MemoizedTabContextMenu
         isOpen={contextMenu.isOpen}

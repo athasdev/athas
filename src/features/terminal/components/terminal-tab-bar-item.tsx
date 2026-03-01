@@ -57,13 +57,14 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         aria-label={`${terminal.name}${terminal.isPinned ? " (pinned)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         className={cn(
-          "tab-bar-item group relative flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-lg border px-2",
+          "tab-bar-item group relative flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-lg border pr-5 pl-2 transition-[transform,opacity,color,background-color,border-color] duration-200 ease-[ease]",
           isActive
-            ? "border-border/80 bg-primary-bg/95"
-            : "border-transparent text-text-light hover:border-border/60 hover:bg-hover/80",
+            ? "border-border/80 bg-primary-bg/95 text-text"
+            : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",
           terminal.isPinned && "border-l-accent/80",
           isDraggedTab ? "opacity-30" : "opacity-100",
         )}
+        style={{ minWidth: 104, maxWidth: 220 }}
         onMouseDown={onMouseDown}
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
@@ -76,8 +77,8 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         <TerminalIcon size={12} className="shrink-0 text-text-lighter" />
         <span
           className={cn(
-            "ui-font overflow-hidden text-ellipsis whitespace-nowrap text-xs",
-            isActive ? "text-text" : "text-text-light",
+            "ui-font flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs",
+            isActive ? "text-text" : "text-text-lighter",
           )}
           title={terminal.currentDirectory}
         >
@@ -94,8 +95,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
             }
           }}
           className={cn(
-            "flex size-4 shrink-0 cursor-pointer select-none items-center justify-center rounded-md transition-opacity",
-            "text-text-lighter",
+            "-translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 cursor-pointer select-none items-center justify-center rounded-md text-text-lighter transition-opacity",
             "hover:bg-hover hover:text-text",
             terminal.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
           )}

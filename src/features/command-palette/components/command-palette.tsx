@@ -53,7 +53,6 @@ const CommandPalette = () => {
     setActiveView,
     setIsCommandBarVisible,
     setIsGlobalSearchVisible,
-    setIsBranchManagerVisible,
     openSettingsDialog,
   } = useUIState();
   const { openQuickEdit } = useAppStore.use.actions();
@@ -176,7 +175,6 @@ const CommandPalette = () => {
         fetchChanges,
         discardAllChanges,
       },
-      setIsBranchManagerVisible,
       onClose,
     }),
     ...createAdvancedActions({

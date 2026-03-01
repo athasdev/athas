@@ -68,7 +68,7 @@ function EditableChatTitle({
 
   return (
     <span
-      className="cursor-pointer rounded-full px-2 py-1 font-medium transition-colors hover:bg-hover"
+      className="block max-w-full cursor-pointer truncate rounded-full px-2 py-1 font-medium transition-colors hover:bg-hover"
       onClick={() => setIsEditing(true)}
       title="Click to rename chat"
     >
@@ -89,28 +89,30 @@ export function ChatHeader() {
 
   return (
     <div className="relative z-[10020] flex items-center gap-2 border-border border-b bg-secondary-bg/70 px-3 py-2 backdrop-blur-sm">
-      {currentChatId ? (
-        <EditableChatTitle
-          title={currentChat ? currentChat.title : "New Chat"}
-          onUpdateTitle={(title) => updateChatTitle(currentChatId, title)}
-        />
-      ) : (
-        <span className="font-medium text-text text-xs">New Chat</span>
-      )}
+      <div className="min-w-0 flex-1">
+        {currentChatId ? (
+          <EditableChatTitle
+            title={currentChat ? currentChat.title : "New Chat"}
+            onUpdateTitle={(title) => updateChatTitle(currentChatId, title)}
+          />
+        ) : (
+          <span className="font-medium text-text text-xs">New Chat</span>
+        )}
+      </div>
 
-      <div className="flex-1" />
+      <div className="flex shrink-0 items-center gap-1.5">
+        <Tooltip content="Chat History" side="bottom">
+          <button
+            onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
+            className="flex size-8 items-center justify-center rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+            aria-label="Toggle chat history"
+          >
+            <History size={14} />
+          </button>
+        </Tooltip>
 
-      <Tooltip content="Chat History" side="bottom">
-        <button
-          onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-          className="flex size-8 items-center justify-center rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-          aria-label="Toggle chat history"
-        >
-          <History size={14} />
-        </button>
-      </Tooltip>
-
-      <UnifiedAgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />
+        <UnifiedAgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />
+      </div>
     </div>
   );
 }

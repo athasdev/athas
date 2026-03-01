@@ -37,7 +37,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
 
   // Adjust position
   const adjustedPosition = useMemo(() => {
-    const dropdownWidth = Math.min(320, window.innerWidth - 16);
+    const dropdownWidth = Math.min(360, window.innerWidth - 16);
     const dropdownHeight = Math.min(
       filteredCommands.length * 40 + 16,
       EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT,
@@ -54,9 +54,16 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
     if (left + dropdownWidth > window.innerWidth - padding) {
       left = Math.max(padding, window.innerWidth - dropdownWidth - padding);
     }
+    if (left < padding) {
+      left = padding;
+    }
 
+    // Prefer below input; if there isn't enough room, open above it.
     if (top + dropdownHeight > window.innerHeight - padding) {
-      top = Math.max(padding, window.innerHeight - dropdownHeight - padding);
+      top = Math.max(padding, top - dropdownHeight - 12);
+    }
+    if (top < padding) {
+      top = padding;
     }
 
     return {

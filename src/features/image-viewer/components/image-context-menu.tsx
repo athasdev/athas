@@ -14,7 +14,6 @@ import { useEffect, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { ImageFormatDialog } from "@/features/image-editor/components/image-format-dialog";
 import type { ImageFormat } from "@/features/image-editor/models/image-operation.types";
-import { cn } from "@/utils/cn";
 
 interface ImageContextMenuProps {
   x: number;
@@ -141,7 +140,7 @@ export function ImageContextMenu({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]"
+        className="fixed inset-0 z-[10039]"
         onClick={onClose}
         onKeyDown={onClose}
         onContextMenu={(e) => e.preventDefault()}
@@ -150,19 +149,16 @@ export function ImageContextMenu({
       {/* Context Menu */}
       <div
         ref={menuRef}
-        className={cn("fixed z-50 w-48 rounded-md border border-border bg-primary-bg shadow-xl")}
+        className="fixed z-[10040] min-w-[200px] select-none rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
         style={{ top: position.y, left: position.x }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="py-1">
+        <div>
           <button
             type="button"
             onClick={() => handleAction(onRotateCW)}
             disabled={isProcessing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RotateCw size={13} />
             <span>Rotate 90° CW</span>
@@ -171,10 +167,7 @@ export function ImageContextMenu({
             type="button"
             onClick={() => handleAction(onRotateCCW)}
             disabled={isProcessing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RotateCcw size={13} />
             <span>Rotate 90° CCW</span>
@@ -183,23 +176,17 @@ export function ImageContextMenu({
             type="button"
             onClick={() => handleAction(onRotate180)}
             disabled={isProcessing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RotateCw size={13} />
             <span>Rotate 180°</span>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-0.5 border-border/70 border-t" />
           <button
             type="button"
             onClick={() => handleAction(onFlipHorizontal)}
             disabled={isProcessing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FlipHorizontal size={13} />
             <span>Flip Horizontal</span>
@@ -208,10 +195,7 @@ export function ImageContextMenu({
             type="button"
             onClick={() => handleAction(onFlipVertical)}
             disabled={isProcessing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FlipVertical size={13} />
             <span>Flip Vertical</span>
@@ -220,23 +204,17 @@ export function ImageContextMenu({
             type="button"
             onClick={() => handleAction(onResize)}
             disabled={isProcessing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Image size={13} />
             <span>Resize...</span>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-0.5 border-border/70 border-t" />
           <button
             type="button"
             onClick={() => handleFormatSelect("png")}
             disabled={isProcessing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FileText size={13} />
             <span>Convert to PNG...</span>
@@ -245,10 +223,7 @@ export function ImageContextMenu({
             type="button"
             onClick={() => handleFormatSelect("jpeg")}
             disabled={isProcessing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FileText size={13} />
             <span>Convert to JPEG...</span>
@@ -257,10 +232,7 @@ export function ImageContextMenu({
             type="button"
             onClick={() => handleFormatSelect("webp")}
             disabled={isProcessing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FileText size={13} />
             <span>Convert to WebP...</span>
@@ -269,23 +241,17 @@ export function ImageContextMenu({
             type="button"
             onClick={() => handleFormatSelect("avif")}
             disabled={isProcessing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FileText size={13} />
             <span>Convert to AVIF...</span>
           </button>
-          <div className="my-1 h-px bg-border" />
+          <div className="my-0.5 border-border/70 border-t" />
           <button
             type="button"
             onClick={() => handleAction(onUndo)}
             disabled={!canUndo || isProcessing}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Undo2 size={13} />
             <span>Undo</span>
@@ -295,23 +261,17 @@ export function ImageContextMenu({
               type="button"
               onClick={() => handleAction(onSave)}
               disabled={isProcessing}
-              className={cn(
-                "flex w-full items-center gap-2 px-3 py-1.5 text-left text-accent text-xs transition-colors",
-                "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50",
-              )}
+              className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-accent text-xs hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save size={13} />
               <span>Save</span>
             </button>
           )}
-          <div className="my-1 h-px bg-border" />
+          <div className="my-0.5 border-border/70 border-t" />
           <button
             type="button"
             onClick={handleReveal}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
           >
             <FolderOpen size={13} />
             <span>Show in Finder</span>
@@ -319,10 +279,7 @@ export function ImageContextMenu({
           <button
             type="button"
             onClick={handleCopyPath}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs transition-colors",
-              "hover:bg-hover",
-            )}
+            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
           >
             <Copy size={13} />
             <span>Copy Path</span>

@@ -63,12 +63,18 @@ export default function Tooltip({ content, children, side = "top", className }: 
         hideTooltip();
       };
 
+      const handlePointerDown = () => {
+        hideTooltip();
+      };
+
       document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("pointerdown", handlePointerDown, true);
       window.addEventListener("resize", handleResize);
       window.addEventListener("scroll", handleScroll, true);
 
       return () => {
         document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("pointerdown", handlePointerDown, true);
         window.removeEventListener("resize", handleResize);
         window.removeEventListener("scroll", handleScroll, true);
       };
@@ -82,6 +88,8 @@ export default function Tooltip({ content, children, side = "top", className }: 
         className="inline-block"
         onMouseEnter={showTooltip}
         onMouseLeave={hideTooltip}
+        onMouseDown={hideTooltip}
+        onClick={hideTooltip}
       >
         {children}
       </div>

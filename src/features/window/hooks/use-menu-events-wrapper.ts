@@ -13,7 +13,7 @@ import { useMenuEvents } from "./use-menu-events";
 export function useMenuEventsWrapper() {
   const uiState = useUIState();
   const fileSystemStore = useFileSystemStore();
-  const { settings, updateSetting } = useSettingsStore();
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
@@ -117,7 +117,9 @@ export function useMenuEventsWrapper() {
         }, 100);
       }
     },
-    onToggleAiChat: () => updateSetting("isAIChatVisible", !settings.isAIChatVisible),
+    onToggleAiChat: () => {
+      useSettingsStore.getState().toggleAIChatVisible();
+    },
     onSplitEditor: () => {
       const paneStore = usePaneStore.getState();
       const activePane = paneStore.actions.getActivePane();

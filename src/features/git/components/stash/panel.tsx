@@ -62,76 +62,78 @@ const GitStashPanel = ({ repoPath, onRefresh, onViewStashDiff }: GitStashPanelPr
   };
 
   return (
-    <div className={cn("flex flex-col border-border border-b", !isCollapsed && "min-h-0 flex-1")}>
-      <button
-        type="button"
-        className="flex shrink-0 cursor-pointer items-center gap-1 bg-secondary-bg px-3 py-1 text-text-lighter hover:bg-hover"
-        onClick={() => setIsCollapsed(!isCollapsed)}
-      >
-        {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-        <span className="font-bold text-[10px] uppercase tracking-wide">Stashes</span>
-        <div className="flex-1" />
-        {stashes.length > 0 && (
-          <span className="rounded-full bg-primary-bg px-1.5 text-[9px]">{stashes.length}</span>
-        )}
-      </button>
-
-      {!isCollapsed && (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {stashes.length === 0 ? (
-            <div className="px-3 py-1.5 text-[10px] text-text-lighter italic">No stashes</div>
-          ) : (
-            stashes.map((stash) => (
-              <div
-                key={stash.index}
-                onClick={() => handleStashClick(stash.index)}
-                className="group flex cursor-pointer items-center justify-between gap-2 px-3 py-1 hover:bg-hover"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[10px] text-text" title={stash.message}>
-                    {stash.message || "Stashed changes"}
-                  </div>
-                  <div className="text-[9px] text-text-lighter">
-                    {formatRelativeDate(stash.date)}
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button
-                    type="button"
-                    onClick={(e) => handleApplyStash(stash.index, e)}
-                    disabled={actionLoading.has(stash.index)}
-                    className="rounded p-0.5 text-text-lighter hover:bg-secondary-bg hover:text-text disabled:opacity-50"
-                    title="Apply stash"
-                    aria-label="Apply stash"
-                  >
-                    <Download size={10} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => handlePopStash(stash.index, e)}
-                    disabled={actionLoading.has(stash.index)}
-                    className="rounded p-0.5 text-text-lighter hover:bg-secondary-bg hover:text-text disabled:opacity-50"
-                    title="Pop stash"
-                    aria-label="Pop stash"
-                  >
-                    <Upload size={10} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => handleDropStash(stash.index, e)}
-                    disabled={actionLoading.has(stash.index)}
-                    className="rounded p-0.5 text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
-                    title="Drop stash"
-                    aria-label="Drop stash"
-                  >
-                    <Trash2 size={10} />
-                  </button>
-                </div>
-              </div>
-            ))
+    <div className={cn("select-none p-1.5", !isCollapsed && "min-h-0 flex-1")}>
+      <div className="overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
+        <button
+          type="button"
+          className="sticky top-0 z-20 flex w-full shrink-0 cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
+          <span className="font-bold text-[10px] uppercase tracking-wide">Stashes</span>
+          <div className="flex-1" />
+          {stashes.length > 0 && (
+            <span className="rounded-full bg-primary-bg px-1.5 text-[9px]">{stashes.length}</span>
           )}
-        </div>
-      )}
+        </button>
+
+        {!isCollapsed && (
+          <div className="max-h-36 min-h-0 flex-1 overflow-y-scroll bg-primary-bg/70 p-1">
+            {stashes.length === 0 ? (
+              <div className="px-2.5 py-1.5 text-[10px] text-text-lighter italic">No stashes</div>
+            ) : (
+              stashes.map((stash) => (
+                <div
+                  key={stash.index}
+                  onClick={() => handleStashClick(stash.index)}
+                  className="group mb-1 flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[10px] text-text" title={stash.message}>
+                      {stash.message || "Stashed changes"}
+                    </div>
+                    <div className="text-[9px] text-text-lighter">
+                      {formatRelativeDate(stash.date)}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                    <button
+                      type="button"
+                      onClick={(e) => handleApplyStash(stash.index, e)}
+                      disabled={actionLoading.has(stash.index)}
+                      className="rounded p-0.5 text-text-lighter hover:bg-secondary-bg hover:text-text disabled:opacity-50"
+                      title="Apply stash"
+                      aria-label="Apply stash"
+                    >
+                      <Download size={10} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handlePopStash(stash.index, e)}
+                      disabled={actionLoading.has(stash.index)}
+                      className="rounded p-0.5 text-text-lighter hover:bg-secondary-bg hover:text-text disabled:opacity-50"
+                      title="Pop stash"
+                      aria-label="Pop stash"
+                    >
+                      <Upload size={10} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDropStash(stash.index, e)}
+                      disabled={actionLoading.has(stash.index)}
+                      className="rounded p-0.5 text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
+                      title="Drop stash"
+                      aria-label="Drop stash"
+                    >
+                      <Trash2 size={10} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

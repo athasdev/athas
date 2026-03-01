@@ -1,10 +1,26 @@
 import "../styles/overlay-editor.css";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { CornerDownLeft, X } from "lucide-react";
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
+import { useOnClickOutside } from "usehooks-ts";
+import { useAIChatStore } from "@/features/ai/store/store";
 import { useGitGutter } from "@/features/git/hooks/use-gutter";
 import { useSettingsStore } from "@/features/settings/store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
+import { useAuthStore } from "@/stores/auth-store";
+import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
+import { toast } from "@/stores/toast-store";
 import { useZoomStore } from "@/stores/zoom-store";
+import { type AutocompleteModel, fetchAutocompleteModels } from "@/utils/autocomplete";
+import { InlineEditError, requestInlineEdit } from "@/utils/inline-edit";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
@@ -33,6 +49,7 @@ import { calculateCursorPosition, getAccurateCursorX } from "../utils/position";
 import { scrollLogger } from "../utils/scroll-logger";
 import { InlineDiff } from "./diff/inline-diff";
 import { Gutter } from "./gutter/gutter";
+import { InlineEditModelSelector } from "./inline-edit-model-selector";
 import { DefinitionLinkLayer } from "./layers/definition-link-layer";
 import { GitBlameLayer } from "./layers/git-blame-layer";
 import { HighlightLayer } from "./layers/highlight-layer";
@@ -64,6 +81,19 @@ const AUTO_PAIRS: Record<string, string> = {
 };
 const AUTO_PAIR_CLOSERS = new Set(Object.values(AUTO_PAIRS));
 const BLOCK_COMMENT_LANGUAGES = new Set(["css"]);
+const DEFAULT_INLINE_EDIT_INSTRUCTION = "Improve this code while preserving behavior.";
+const DEFAULT_INLINE_EDIT_MODELS: AutocompleteModel[] = [
+  { id: "openai/gpt-5-nano", name: "GPT-5 Nano" },
+  { id: "openai/gpt-5-mini", name: "GPT-5 Mini" },
+  { id: "openai/gpt-5.1-codex-mini", name: "GPT-5.1 Codex Mini" },
+  { id: "google/gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite" },
+];
+const INLINE_EDIT_POPOVER_WIDTH = 320;
+const INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT = 170;
+const INLINE_EDIT_POPOVER_MARGIN = 8;
+const INLINE_EDIT_POPOVER_X_OFFSET = 10;
+const INLINE_EDIT_POPOVER_Y_OFFSET = 10;
+const INLINE_EDIT_TOP_THRESHOLD = 64;
 
 function isAltGraphPressed(e: React.KeyboardEvent<HTMLTextAreaElement>): boolean {
   return e.getModifierState("AltGraph") || (e.ctrlKey && e.altKey && !e.metaKey);
@@ -83,6 +113,9 @@ export function Editor({
   const selectionLayerRef = useRef<HTMLDivElement>(null);
   const vimCursorRef = useRef<HTMLDivElement>(null);
   const autocompleteCompletionRef = useRef<HTMLDivElement>(null);
+  const inlineEditOverlayRef = useRef<HTMLDivElement>(null);
+  const inlineEditPopoverRef = useRef<HTMLDivElement>(null);
+  const inlineEditInstructionRef = useRef<HTMLInputElement>(null);
 
   // Track scroll position for minimap
   const [editorScrollTop, setEditorScrollTop] = useState(0);
@@ -104,8 +137,11 @@ export function Editor({
     updateCursor,
   } = useEditorStateStore.use.actions();
   const cursorPosition = useEditorStateStore.use.cursorPosition();
+  const selection = useEditorStateStore.use.selection?.();
   const multiCursorState = useEditorStateStore.use.multiCursorState();
   const onChange = useEditorStateStore.use.onChange();
+  const inlineEditVisible = useInlineEditToolbarStore.use.isVisible();
+  const inlineEditToolbarActions = useInlineEditToolbarStore.use.actions();
 
   const baseFontSize = useEditorSettingsStore.use.fontSize();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
@@ -113,7 +149,73 @@ export function Editor({
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const aiCompletionEnabled = useSettingsStore((state) => state.settings.aiCompletion);
   const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const subscription = useAuthStore((state) => state.subscription);
+  const hasOpenRouterKey = useAIChatStore(
+    (state) => state.providerApiKeys.get("openrouter") || false,
+  );
+  const checkAllProviderApiKeys = useAIChatStore((state) => state.checkAllProviderApiKeys);
   const vimMode = useVimStore.use.mode();
+  const [inlineEditInstruction, setInlineEditInstruction] = useState("");
+  const [isInlineEditRunning, setIsInlineEditRunning] = useState(false);
+  const [isInlineEditModelLoading, setIsInlineEditModelLoading] = useState(false);
+  const [inlineEditModels, setInlineEditModels] = useState<AutocompleteModel[]>(
+    DEFAULT_INLINE_EDIT_MODELS,
+  );
+  const [inlineEditSelectionAnchor, setInlineEditSelectionAnchor] = useState<{
+    line: number;
+    column: number;
+  } | null>(null);
+
+  useOnClickOutside(inlineEditPopoverRef as RefObject<HTMLElement>, () => {
+    if (!inlineEditVisible) return;
+    inlineEditToolbarActions.hide();
+  });
+
+  useEffect(() => {
+    if (!inlineEditVisible) return;
+    setInlineEditInstruction("");
+    requestAnimationFrame(() => {
+      inlineEditInstructionRef.current?.focus();
+      inlineEditInstructionRef.current?.select();
+    });
+  }, [inlineEditVisible]);
+
+  useEffect(() => {
+    if (!inlineEditVisible) return;
+
+    const loadModels = async () => {
+      setIsInlineEditModelLoading(true);
+      try {
+        const models = await fetchAutocompleteModels();
+        if (models.length > 0) {
+          setInlineEditModels(models);
+          if (!models.some((model) => model.id === aiAutocompleteModelId)) {
+            await updateSetting("aiAutocompleteModelId", models[0].id);
+          }
+        } else {
+          setInlineEditModels(DEFAULT_INLINE_EDIT_MODELS);
+        }
+      } catch {
+        setInlineEditModels(DEFAULT_INLINE_EDIT_MODELS);
+      } finally {
+        setIsInlineEditModelLoading(false);
+      }
+    };
+
+    void checkAllProviderApiKeys();
+    void loadModels();
+  }, [inlineEditVisible, aiAutocompleteModelId, updateSetting, checkAllProviderApiKeys]);
+
+  useEffect(() => {
+    const hasSelection = Boolean(selection && selection.start.offset !== selection.end.offset);
+    if (hasSelection) return;
+    setInlineEditSelectionAnchor(null);
+    if (inlineEditVisible) {
+      inlineEditToolbarActions.hide();
+    }
+  }, [selection, inlineEditVisible, inlineEditToolbarActions]);
 
   // Apply zoom by scaling font size instead of CSS transform
   // This ensures text and positioned elements use the same rendering path
@@ -166,6 +268,15 @@ export function Editor({
   }, [content, startMeasure, endMeasure]);
   const lines = foldTransform.hasActiveFolds ? foldTransform.virtualLines : actualLines;
   const displayContent = foldTransform.hasActiveFolds ? foldTransform.virtualContent : content;
+
+  useEffect(() => {
+    if (!inlineEditVisible || inlineEditSelectionAnchor || !inputRef.current) return;
+    const start = inputRef.current.selectionStart;
+    const end = inputRef.current.selectionEnd;
+    if (start === end) return;
+    const anchorPos = calculateCursorPosition(Math.max(start, end), lines);
+    setInlineEditSelectionAnchor({ line: anchorPos.line, column: anchorPos.column });
+  }, [inlineEditVisible, inlineEditSelectionAnchor, lines]);
   // Use consistent line height for both textarea and gutter
   // This ensures they stay synchronized at all zoom levels
   const lineHeight = useMemo(() => calculateLineHeight(fontSize), [fontSize]);
@@ -292,6 +403,9 @@ export function Editor({
     if (selectionStart !== selectionEnd) {
       const startPos = calculateCursorPosition(selectionStart, lines);
       const endPos = calculateCursorPosition(selectionEnd, lines);
+      const anchorOffset = Math.max(selectionStart, selectionEnd);
+      const anchorPos = calculateCursorPosition(anchorOffset, lines);
+      setInlineEditSelectionAnchor({ line: anchorPos.line, column: anchorPos.column });
 
       if (foldTransform.hasActiveFolds) {
         const actualStartLine =
@@ -314,13 +428,26 @@ export function Editor({
       }
     } else {
       setSelection(undefined);
+      setInlineEditSelectionAnchor(null);
+      if (inlineEditVisible) {
+        inlineEditToolbarActions.hide();
+      }
     }
 
     // Cursor movement/navigation should hide stale hover tooltip.
     const uiActions = useEditorUIStore.getState().actions;
     uiActions.setHoverInfo(null);
     uiActions.setIsHovering(false);
-  }, [bufferId, lines, actualLines, setCursorPosition, setSelection, foldTransform]);
+  }, [
+    bufferId,
+    lines,
+    actualLines,
+    setCursorPosition,
+    setSelection,
+    foldTransform,
+    inlineEditVisible,
+    inlineEditToolbarActions,
+  ]);
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLTextAreaElement>) => {
@@ -400,11 +527,155 @@ export function Editor({
     setAutocompleteCompletion,
   });
 
+  const handleApplyInlineEdit = useCallback(async () => {
+    if (!buffer || !selection) {
+      toast.warning("Select non-empty code before inline edit.");
+      inlineEditToolbarActions.hide();
+      return;
+    }
+
+    const startOffset = Math.min(selection.start.offset, selection.end.offset);
+    const endOffset = Math.max(selection.start.offset, selection.end.offset);
+    if (startOffset === endOffset) {
+      toast.warning("Select non-empty code before inline edit.");
+      inlineEditToolbarActions.hide();
+      return;
+    }
+
+    const selectedText = buffer.content.slice(startOffset, endOffset);
+    if (!selectedText.trim()) {
+      toast.warning("Select non-empty code before inline edit.");
+      inlineEditToolbarActions.hide();
+      return;
+    }
+
+    if (!isAuthenticated) {
+      toast.error("Please sign in to use inline edit.");
+      return;
+    }
+
+    const subscriptionStatus = subscription?.status ?? "free";
+    const enterprisePolicy = subscription?.enterprise?.policy;
+    const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
+    const isPro = subscriptionStatus === "pro" || subscriptionStatus === "trial";
+
+    if (managedPolicy && !managedPolicy.aiCompletionEnabled) {
+      toast.error("Inline edit is disabled by your organization policy.");
+      return;
+    }
+
+    const useByok = managedPolicy ? managedPolicy.allowByok && !isPro : !isPro;
+    if (managedPolicy && useByok && !managedPolicy.allowByok) {
+      toast.error("BYOK is disabled by your organization policy.");
+      return;
+    }
+
+    if (useByok && !hasOpenRouterKey) {
+      await checkAllProviderApiKeys();
+      const hasOpenRouterKeyAfterRefresh =
+        useAIChatStore.getState().providerApiKeys.get("openrouter") || false;
+      if (!hasOpenRouterKeyAfterRefresh) {
+        toast.error("Free plan requires OpenRouter BYOK key for inline edit.");
+        return;
+      }
+    }
+
+    const beforeSelection = buffer.content.slice(0, startOffset);
+    const afterSelection = buffer.content.slice(endOffset);
+
+    setIsInlineEditRunning(true);
+
+    try {
+      const { editedText } = await requestInlineEdit(
+        {
+          model: aiAutocompleteModelId,
+          beforeSelection,
+          selectedText,
+          afterSelection,
+          instruction: inlineEditInstruction.trim() || DEFAULT_INLINE_EDIT_INSTRUCTION,
+          filePath: buffer.path,
+          languageId: buffer.language,
+        },
+        { useByok },
+      );
+
+      if (!editedText.trim()) {
+        toast.warning("Inline edit returned an empty result.");
+        return;
+      }
+
+      const newContent = `${beforeSelection}${editedText}${afterSelection}`;
+      updateBufferContent(buffer.id, newContent, true);
+
+      const newCursorOffset = startOffset + editedText.length;
+      const newPosition = calculateCursorPosition(newCursorOffset, splitLines(newContent));
+      setCursorPosition(newPosition);
+      setSelection(undefined);
+      setInlineEditSelectionAnchor(null);
+      inlineEditToolbarActions.hide();
+      if (inputRef.current) {
+        inputRef.current.selectionStart = newCursorOffset;
+        inputRef.current.selectionEnd = newCursorOffset;
+      }
+
+      toast.success("Inline edit applied.");
+    } catch (error) {
+      if (error instanceof InlineEditError) {
+        toast.error(error.message);
+      } else {
+        toast.error("Inline edit failed. Please try again.");
+      }
+    } finally {
+      setIsInlineEditRunning(false);
+    }
+  }, [
+    buffer,
+    selection,
+    isAuthenticated,
+    subscription,
+    hasOpenRouterKey,
+    checkAllProviderApiKeys,
+    aiAutocompleteModelId,
+    inlineEditInstruction,
+    updateBufferContent,
+    setCursorPosition,
+    setSelection,
+    inlineEditToolbarActions,
+  ]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       const isAltGraph = isAltGraphPressed(e);
       const hasBlockedModifier =
         e.metaKey || (e.ctrlKey && !isAltGraph) || (e.altKey && !isAltGraph);
+      const hasTextSelection = Boolean(
+        selection && selection.start.offset !== selection.end.offset,
+      );
+      const isInlineEditShortcut =
+        (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "i";
+
+      if (isInlineEditShortcut) {
+        e.preventDefault();
+        if (!hasTextSelection) {
+          toast.warning("Select non-empty code before inline edit.");
+          return;
+        }
+        inlineEditToolbarActions.show();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && inlineEditVisible) {
+        e.preventDefault();
+        void handleApplyInlineEdit();
+        return;
+      }
+
+      if (e.key === "Escape" && inlineEditVisible) {
+        e.preventDefault();
+        if (isInlineEditRunning) return;
+        inlineEditToolbarActions.hide();
+        return;
+      }
 
       if (!isAltGraph && e.altKey && (e.key === "[" || e.key === "]")) {
         e.preventDefault();
@@ -905,6 +1176,11 @@ export function Editor({
       cursorPosition.offset,
       setCursorPosition,
       lines,
+      selection,
+      inlineEditToolbarActions,
+      inlineEditVisible,
+      isInlineEditRunning,
+      handleApplyInlineEdit,
     ],
   );
 
@@ -976,6 +1252,10 @@ export function Editor({
           // Update pro completion ghost layer transform for visual sync
           if (autocompleteCompletionRef.current) {
             autocompleteCompletionRef.current.style.transform = `translate(-${left}px, -${top}px)`;
+          }
+
+          if (inlineEditOverlayRef.current) {
+            inlineEditOverlayRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
           // Throttle store updates during active scrolling to reduce expensive
@@ -1246,6 +1526,66 @@ export function Editor({
     lineHeight,
   ]);
 
+  const inlineEditPopoverPosition = useMemo(() => {
+    if (!inlineEditVisible || !inlineEditSelectionAnchor) return null;
+    if (inlineEditSelectionAnchor.line < 0 || inlineEditSelectionAnchor.line >= lines.length) {
+      return null;
+    }
+
+    const lineText = lines[inlineEditSelectionAnchor.line] || "";
+    const anchorColumn = Math.min(inlineEditSelectionAnchor.column, lineText.length);
+    const anchorX = getAccurateCursorX(lineText, anchorColumn, fontSize, fontFamily, tabSize);
+    const anchorTop =
+      inlineEditSelectionAnchor.line * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
+    const textarea = inputRef.current;
+    const scrollLeft = textarea?.scrollLeft ?? lastScrollRef.current.left;
+    const scrollTop = textarea?.scrollTop ?? lastScrollRef.current.top;
+    const viewportWidth =
+      textarea?.clientWidth ?? INLINE_EDIT_POPOVER_WIDTH + INLINE_EDIT_POPOVER_MARGIN * 2;
+    const viewportHeight =
+      textarea?.clientHeight ??
+      INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT + INLINE_EDIT_POPOVER_MARGIN * 2;
+
+    const minLeft = scrollLeft + INLINE_EDIT_POPOVER_MARGIN;
+    const maxLeft = Math.max(
+      minLeft,
+      scrollLeft + viewportWidth - INLINE_EDIT_POPOVER_WIDTH - INLINE_EDIT_POPOVER_MARGIN,
+    );
+    const rawLeft = anchorX + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + INLINE_EDIT_POPOVER_X_OFFSET;
+    const clampedLeft = Math.min(Math.max(rawLeft, minLeft), maxLeft);
+
+    const minTop = scrollTop + INLINE_EDIT_POPOVER_MARGIN;
+    const maxTop = Math.max(
+      minTop,
+      scrollTop +
+        viewportHeight -
+        INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT -
+        INLINE_EDIT_POPOVER_MARGIN,
+    );
+    const preferBelow = anchorTop - scrollTop < INLINE_EDIT_TOP_THRESHOLD;
+    const belowTop = anchorTop + lineHeight + INLINE_EDIT_POPOVER_Y_OFFSET;
+    const aboveTop =
+      anchorTop - INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT - INLINE_EDIT_POPOVER_Y_OFFSET;
+    let top = preferBelow ? belowTop : aboveTop;
+    if (top < minTop) {
+      top = belowTop;
+    }
+    const clampedTop = Math.min(Math.max(top, minTop), maxTop);
+
+    return {
+      top: clampedTop,
+      left: clampedLeft,
+    };
+  }, [
+    inlineEditVisible,
+    inlineEditSelectionAnchor,
+    lines,
+    fontSize,
+    fontFamily,
+    tabSize,
+    lineHeight,
+  ]);
+
   if (!buffer) return null;
 
   return (
@@ -1311,6 +1651,64 @@ export function Editor({
           tabSize={tabSize}
           viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
         />
+        {inlineEditVisible && inlineEditPopoverPosition && (
+          <div ref={inlineEditOverlayRef} className="pointer-events-none absolute inset-0 z-[200]">
+            <div
+              ref={inlineEditPopoverRef}
+              className="pointer-events-auto absolute w-80 overflow-hidden rounded-2xl border border-border bg-primary-bg/95 backdrop-blur-sm"
+              style={{
+                top: `${inlineEditPopoverPosition.top}px`,
+                left: `${inlineEditPopoverPosition.left}px`,
+              }}
+            >
+              <div className="p-1.5">
+                <div className="flex items-center gap-1.5">
+                  <input
+                    ref={inlineEditInstructionRef}
+                    value={inlineEditInstruction}
+                    onChange={(e) => setInlineEditInstruction(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void handleApplyInlineEdit();
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        if (!isInlineEditRunning) {
+                          inlineEditToolbarActions.hide();
+                        }
+                      }
+                    }}
+                    className="ui-font h-8 flex-1 bg-transparent px-1.5 text-text text-xs outline-none placeholder:text-text-lighter/80"
+                    placeholder="Describe the edit you want..."
+                  />
+                  <InlineEditModelSelector
+                    models={inlineEditModels}
+                    value={aiAutocompleteModelId}
+                    onChange={(modelId) => updateSetting("aiAutocompleteModelId", modelId)}
+                    disabled={isInlineEditRunning}
+                    isLoading={isInlineEditModelLoading}
+                  />
+                  <button
+                    onClick={() => inlineEditToolbarActions.hide()}
+                    className="rounded-lg p-1.5 text-text-lighter hover:bg-hover hover:text-text"
+                    aria-label="Close inline edit"
+                  >
+                    <X size={13} />
+                  </button>
+                  <button
+                    onClick={() => void handleApplyInlineEdit()}
+                    disabled={isInlineEditRunning}
+                    className="ui-font flex h-8 items-center gap-1 rounded-lg border border-accent bg-accent px-2 text-white text-xs hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <CornerDownLeft size={11} />
+                    {isInlineEditRunning ? "Applying..." : "Send"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {inlineAutocompletePreview && (
           <div
             ref={autocompleteCompletionRef}

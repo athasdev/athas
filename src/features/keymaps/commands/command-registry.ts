@@ -348,8 +348,7 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+r",
     execute: () => {
-      const { settings, updateSetting } = useSettingsStore.getState();
-      updateSetting("isAIChatVisible", !settings.isAIChatVisible);
+      useSettingsStore.getState().toggleAIChatVisible();
     },
   },
   {
@@ -406,6 +405,27 @@ const viewCommands: Command[] = [
   },
 ];
 
+const isTerminalFocused = () => {
+  const terminalContainer = document.querySelector('[data-terminal-container="active"]');
+  return terminalContainer?.contains(document.activeElement) ?? false;
+};
+
+const switchNextTab = () => {
+  if (isTerminalFocused()) {
+    window.dispatchEvent(new CustomEvent("terminal-switch-tab", { detail: "next" }));
+  } else {
+    useBufferStore.getState().actions.switchToNextBuffer();
+  }
+};
+
+const switchPrevTab = () => {
+  if (isTerminalFocused()) {
+    window.dispatchEvent(new CustomEvent("terminal-switch-tab", { detail: "prev" }));
+  } else {
+    useBufferStore.getState().actions.switchToPreviousBuffer();
+  }
+};
+
 const navigationCommands: Command[] = [
   {
     id: "editor.goToLine",
@@ -421,42 +441,42 @@ const navigationCommands: Command[] = [
     title: "Next Tab",
     category: "Navigation",
     keybinding: "cmd+alt+right",
-    execute: () => useBufferStore.getState().actions.switchToNextBuffer(),
+    execute: switchNextTab,
   },
   {
     id: "workbench.nextTabCtrlTab",
     title: "Next Tab (Ctrl+Tab)",
     category: "Navigation",
     keybinding: "ctrl+tab",
-    execute: () => useBufferStore.getState().actions.switchToNextBuffer(),
+    execute: switchNextTab,
   },
   {
     id: "workbench.previousTab",
     title: "Previous Tab",
     category: "Navigation",
     keybinding: "cmd+alt+left",
-    execute: () => useBufferStore.getState().actions.switchToPreviousBuffer(),
+    execute: switchPrevTab,
   },
   {
     id: "workbench.previousTabCtrlTab",
     title: "Previous Tab (Ctrl+Shift+Tab)",
     category: "Navigation",
     keybinding: "ctrl+shift+tab",
-    execute: () => useBufferStore.getState().actions.switchToPreviousBuffer(),
+    execute: switchPrevTab,
   },
   {
     id: "workbench.nextTabAlt",
     title: "Next Tab (Alt)",
     category: "Navigation",
     keybinding: "ctrl+pagedown",
-    execute: () => useBufferStore.getState().actions.switchToNextBuffer(),
+    execute: switchNextTab,
   },
   {
     id: "workbench.previousTabAlt",
     title: "Previous Tab (Alt)",
     category: "Navigation",
     keybinding: "ctrl+pageup",
-    execute: () => useBufferStore.getState().actions.switchToPreviousBuffer(),
+    execute: switchPrevTab,
   },
   ...Array.from({ length: 9 }, (_, i) => ({
     id: `workbench.switchToTab${i + 1}`,

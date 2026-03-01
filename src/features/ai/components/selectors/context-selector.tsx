@@ -1,5 +1,6 @@
 import { Database, FileText, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
@@ -105,10 +106,17 @@ export function ContextSelector({
   onToggleOpen,
 }: Omit<ContextSelectorProps, "allProjectFiles">) {
   const [searchTerm, setSearchTerm] = useState("");
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const [allFiles, setAllFiles] = useState<Array<{ name: string; path: string; isDir: boolean }>>(
     [],
   );
+  const [popoverPosition, setPopoverPosition] = useState({
+    top: 0,
+    left: 0,
+    width: 320,
+    maxHeight: 300,
+  });
 
   // Get rootFolderPath from project store and file system store
   const { rootFolderPath } = useProjectStore();
@@ -206,30 +214,46 @@ export function ContextSelector({
     return [...bufferItems, ...fileItems];
   }, [buffers, selectedBufferIds, selectedFilesPaths]);
 
-  // Calculate popover position to prevent screen overflow
-  const getPopoverPosition = useCallback(() => {
-    if (!dropdownRef.current) return { left: 0, right: "auto" };
+  const closePopover = useCallback(() => {
+    if (isOpen) {
+      onToggleOpen();
+    }
+  }, [isOpen, onToggleOpen]);
 
-    const rect = dropdownRef.current.getBoundingClientRect();
-    const popoverWidth = 320;
+  const updatePopoverPosition = useCallback(() => {
+    if (!triggerRef.current) return;
+
+    const rect = triggerRef.current.getBoundingClientRect();
     const padding = 8;
+    const width = Math.min(340, window.innerWidth - padding * 2);
+    const maxHeight = Math.min(320, window.innerHeight - padding * 2);
 
-    // Check if there's enough space on the right
-    if (rect.left + popoverWidth + padding <= window.innerWidth) {
-      return { left: 0, right: "auto" };
+    // The control is at the bottom of the input bar, so open upward by default.
+    let top = rect.top - maxHeight - 8;
+    if (top < padding) {
+      top = rect.bottom + 8;
+    }
+    if (top + maxHeight > window.innerHeight - padding) {
+      top = window.innerHeight - maxHeight - padding;
+    }
+    if (top < padding) {
+      top = padding;
     }
 
-    // Position from the right edge of the trigger
-    const rightOffset = window.innerWidth - rect.right;
-    if (rightOffset + popoverWidth + padding <= window.innerWidth) {
-      return { left: "auto", right: 0 };
+    let left = rect.left;
+    if (left + width > window.innerWidth - padding) {
+      left = window.innerWidth - width - padding;
+    }
+    if (left < padding) {
+      left = padding;
     }
 
-    // If it doesn't fit either way, position with padding from screen edge
-    return {
-      left: Math.max(padding - rect.left, -(popoverWidth - rect.width)),
-      right: "auto",
-    };
+    setPopoverPosition({
+      top,
+      left,
+      width,
+      maxHeight,
+    });
   }, []);
 
   // Handle ESC key to close dropdown
@@ -237,10 +261,10 @@ export function ContextSelector({
     (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
         e.preventDefault();
-        onToggleOpen();
+        closePopover();
       }
     },
-    [isOpen, onToggleOpen],
+    [isOpen, closePopover],
   );
 
   useEffect(() => {
@@ -248,9 +272,34 @@ export function ContextSelector({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    updatePopoverPosition();
+    const handleResize = () => updatePopoverPosition();
+    const handleScroll = () => updatePopoverPosition();
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (triggerRef.current?.contains(target) || popoverRef.current?.contains(target)) {
+        return;
+      }
+      closePopover();
+    };
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("scroll", handleScroll, true);
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleScroll, true);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, closePopover, updatePopoverPosition]);
+
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1.5">
-      <div className="relative shrink-0" ref={dropdownRef}>
+      <div className="relative shrink-0" ref={triggerRef}>
         <button
           onClick={onToggleOpen}
           className={cn(
@@ -265,19 +314,21 @@ export function ContextSelector({
         >
           <Plus size={12} />
         </button>
+      </div>
 
-        {isOpen && (
+      {isOpen &&
+        createPortal(
           <div
+            ref={popoverRef}
             className={cn(
-              "scrollbar-hidden z-[10030] mt-1 overflow-y-auto rounded-2xl border border-border bg-primary-bg/95 shadow-lg backdrop-blur-sm",
+              "scrollbar-hidden fixed z-[10040] overflow-y-auto rounded-2xl border border-border bg-primary-bg/95 shadow-lg backdrop-blur-sm",
               "select-none",
             )}
             style={{
-              width: "320px",
-              maxHeight: "300px",
-              position: "absolute",
-              bottom: "100%",
-              ...getPopoverPosition(),
+              top: `${popoverPosition.top}px`,
+              left: `${popoverPosition.left}px`,
+              width: `${popoverPosition.width}px`,
+              maxHeight: `${popoverPosition.maxHeight}px`,
             }}
             role="dialog"
             aria-label="Context file selector"
@@ -379,9 +430,9 @@ export function ContextSelector({
                 ))
               )}
             </div>
-          </div>
+          </div>,
+          document.body,
         )}
-      </div>
 
       {/* Selected items as compact badges with horizontal scrolling */}
       <div className="scrollbar-hidden flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">

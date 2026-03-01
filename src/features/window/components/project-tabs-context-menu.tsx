@@ -93,7 +93,7 @@ const ProjectTabsContextMenu = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 w-[190px] select-none rounded-md border border-border bg-secondary-bg py-0.5 shadow-lg"
+      className="fixed z-[10040] min-w-[190px] select-none rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -101,44 +101,44 @@ const ProjectTabsContextMenu = ({
       }}
     >
       <button
-        className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCopyPath(tab.path);
           onClose();
         }}
       >
-        <Copy size={11} />
+        <Copy size={12} />
         Copy Path
       </button>
 
       <button
-        className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onRevealInFinder(tab.path);
           onClose();
         }}
       >
-        <FolderOpen size={11} />
+        <FolderOpen size={12} />
         Reveal in Finder
       </button>
 
-      <div className="my-0.5 border-border border-t" />
+      <div className="my-0.5 border-border/70 border-t" />
 
       {totalTabs > 1 && (
         <button
-          className="ui-font flex w-full items-center gap-2 px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+          className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
           onClick={() => {
             onCloseProject(tab.id);
             onClose();
           }}
         >
-          <X size={11} />
+          <X size={12} />
           Close Project
         </button>
       )}
 
       <button
-        className="ui-font w-full px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseOthers(tab.id);
           onClose();
@@ -148,7 +148,7 @@ const ProjectTabsContextMenu = ({
       </button>
 
       <button
-        className="ui-font w-full px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
         onClick={() => {
           onCloseToRight(tab.id);
           onClose();
@@ -159,7 +159,7 @@ const ProjectTabsContextMenu = ({
 
       {totalTabs > 1 && (
         <button
-          className="ui-font w-full px-2.5 py-1 text-left text-text text-xs hover:bg-hover"
+          className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
           onClick={() => {
             onCloseAll();
             onClose();

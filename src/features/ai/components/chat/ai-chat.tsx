@@ -1,3 +1,4 @@
+import { listen } from "@tauri-apps/api/event";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import ApiKeyModal from "@/features/ai/components/api-key-modal";
 import {
@@ -9,6 +10,8 @@ import {
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import { createToolCall, markToolCallComplete } from "@/features/ai/lib/tool-call-state";
+import { useAIChatStore } from "@/features/ai/store/store";
+import type { AcpEvent } from "@/features/ai/types/acp";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -67,6 +70,53 @@ const AIChat = memo(function AIChat({
     setAcpEvents([]);
     activeToolEventIdsRef.current.clear();
   }, [chatState.currentChatId]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let disposed = false;
+
+    const setupAcpStateSync = async () => {
+      unlisten = await listen<AcpEvent>("acp-event", ({ payload }) => {
+        const store = useAIChatStore.getState();
+
+        switch (payload.type) {
+          case "slash_commands_update":
+            store.setAvailableSlashCommands(payload.commands);
+            break;
+          case "session_mode_update":
+            store.setSessionModeState(
+              payload.modeState.currentModeId,
+              payload.modeState.availableModes,
+            );
+            break;
+          case "current_mode_update":
+            store.setCurrentModeId(payload.currentModeId);
+            break;
+          case "status_changed":
+            if (!payload.status.running) {
+              store.setAvailableSlashCommands([]);
+              store.setSessionModeState(null, []);
+            }
+            break;
+          default:
+            break;
+        }
+      });
+    };
+
+    setupAcpStateSync().catch((error) => {
+      if (!disposed) {
+        console.error("Failed to initialize ACP state sync listener:", error);
+      }
+    });
+
+    return () => {
+      disposed = true;
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, []);
 
   const appendAcpEvent = useCallback((event: ChatAcpEventInput) => {
     setAcpEvents((prev) => appendChatAcpEvent(prev, event));

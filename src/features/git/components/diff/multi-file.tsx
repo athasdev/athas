@@ -41,8 +41,8 @@ const FileDiffSection = memo(
       <div className="border-border border-b last:border-b-0">
         <div
           className={cn(
-            "group flex cursor-pointer items-center gap-2 px-3 py-1.5",
-            "bg-secondary-bg text-xs hover:bg-hover",
+            "group flex cursor-pointer items-center gap-2 px-3 py-1",
+            "bg-secondary-bg text-[11px] leading-4 hover:bg-hover",
           )}
           onClick={onToggle}
         >
@@ -54,13 +54,13 @@ const FileDiffSection = memo(
 
           <FileText size={12} className={cn("shrink-0", statusColors[summary.status])} />
 
-          <span className="truncate text-text">{summary.fileName}</span>
+          <span className="truncate font-medium text-text">{summary.fileName}</span>
 
           {diff.is_renamed && diff.old_path && (
             <span className="text-text-lighter">← {diff.old_path.split("/").pop()}</span>
           )}
 
-          <div className="ml-auto flex items-center gap-2 text-[10px]">
+          <div className="ml-auto flex items-center gap-2 text-[10px] leading-none">
             {summary.additions > 0 && <span className="text-git-added">+{summary.additions}</span>}
             {summary.deletions > 0 && (
               <span className="text-git-deleted">-{summary.deletions}</span>

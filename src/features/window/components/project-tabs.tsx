@@ -197,7 +197,7 @@ const ProjectTabs = () => {
         {
           id: "copy-path",
           label: "Copy Path",
-          icon: <Copy size={11} />,
+          icon: <Copy size={12} />,
           onClick: async () => {
             await writeText(tab.path);
           },
@@ -205,7 +205,7 @@ const ProjectTabs = () => {
         {
           id: "reveal",
           label: "Reveal in Finder",
-          icon: <FolderOpen size={11} />,
+          icon: <FolderOpen size={12} />,
           onClick: () => {
             if (handleRevealInFolder) {
               handleRevealInFolder(tab.path);
@@ -223,7 +223,7 @@ const ProjectTabs = () => {
       items.push({
         id: "close-project",
         label: "Close Project",
-        icon: <X size={11} />,
+        icon: <X size={12} />,
         onClick: () => {
           closeProject(tab.id);
         },
@@ -327,7 +327,7 @@ const ProjectTabs = () => {
     <>
       <div
         ref={tabBarRef}
-        className="flex items-center gap-1.5 rounded-full border border-border bg-primary-bg/70 px-1.5 py-0.5"
+        className="flex items-center gap-1 rounded-lg border border-border bg-primary-bg/70 px-1 py-0.5"
       >
         {projectTabs.map((tab: ProjectTab, index: number) => {
           const isDraggedTab = isDragging && draggedIndex === index;
@@ -347,10 +347,10 @@ const ProjectTabs = () => {
                 onMouseDown={(e) => handleMouseDown(e, index, tab)}
                 onContextMenu={(e) => contextMenu.open(e, tab)}
                 className={cn(
-                  "group relative flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-colors",
+                  "group relative flex h-6 items-center gap-1.5 rounded-md border pr-5 pl-2 text-xs transition-colors",
                   tab.isActive
-                    ? "border-border bg-secondary-bg text-text"
-                    : "border-transparent text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text",
+                    ? "border-border/80 bg-secondary-bg text-text"
+                    : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",
                   isDraggedTab && "opacity-30",
                 )}
                 title={tab.path}
@@ -360,8 +360,8 @@ const ProjectTabs = () => {
                 <button
                   onClick={(e) => handleCloseTab(e, tab.id)}
                   className={cn(
-                    "close-button -translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 items-center justify-center rounded-full border border-transparent bg-primary-bg/80 transition-opacity",
-                    "hover:border-border hover:bg-hover hover:text-text",
+                    "close-button -translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 items-center justify-center rounded-md text-text-lighter transition-opacity",
+                    "hover:bg-hover hover:text-text",
                     "opacity-0 group-hover:opacity-100",
                   )}
                   title="Close project"
@@ -380,7 +380,7 @@ const ProjectTabs = () => {
         )}
         <button
           onClick={handleAddProject}
-          className="flex size-6 shrink-0 items-center justify-center rounded-full border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
+          className="flex size-6 shrink-0 items-center justify-center rounded-md border border-transparent text-text-lighter transition-colors hover:border-border/60 hover:bg-hover/80 hover:text-text"
           title="Open folder"
           aria-label="Open folder"
         >
