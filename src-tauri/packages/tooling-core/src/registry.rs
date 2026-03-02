@@ -94,3 +94,46 @@ impl ToolRegistry {
          .replace("${version}", "latest")
    }
 }
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn resolves_url_placeholders() {
+      let template =
+         "https://example.com/${os}/${arch}/${platformArch}/${targetOs}/${targetArch}.${archiveExt}?v=${version}";
+      let resolved = ToolRegistry::resolve_url_template(template);
+
+      assert!(!resolved.contains("${"));
+      assert!(resolved.starts_with("https://example.com/"));
+      assert!(resolved.contains("?v=latest"));
+   }
+
+   #[test]
+   fn normalizes_download_url_when_present() {
+      let mut env = std::collections::HashMap::new();
+      env.insert("KEY".to_string(), "VALUE".to_string());
+
+      let config = ToolConfig {
+         name: "example-tool".to_string(),
+         runtime: crate::ToolRuntime::Binary,
+         package: None,
+         download_url: Some("https://example.com/${os}/${arch}.tar.gz".to_string()),
+         args: Vec::new(),
+         env,
+      };
+
+      let language_tools = LanguageToolConfigSet {
+         lsp: Some(config),
+         formatter: None,
+         linter: None,
+      };
+
+      let tools = ToolRegistry::get_tools("typescript", Some(language_tools)).unwrap();
+      let resolved = tools.get(&ToolType::Lsp).unwrap();
+
+      assert!(resolved.download_url.as_ref().is_some());
+      assert!(!resolved.download_url.as_ref().unwrap().contains("${"));
+   }
+}

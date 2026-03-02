@@ -1,5 +1,5 @@
 [package]
-name = "athas-code"
+name = "athas"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
@@ -27,6 +27,8 @@ env_logger = "0.11.8"
 futures-util = "0.3"
 git2 = { version = "0.20", features = ["vendored-libgit2", "vendored-openssl"] }
 interceptor = { path = "./packages/interceptor" }
+athas-runtime-core = { path = "./packages/runtime-core" }
+athas-tooling-core = { path = "./packages/tooling-core" }
 lazy_static = "1.4"
 mimalloc = { version = "0.1", default-features = false }
 log = "0.4.27"

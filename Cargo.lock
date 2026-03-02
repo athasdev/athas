@@ -374,12 +374,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "athas-code"
+name = "athas"
 version = "0.1.0"
 dependencies = [
  "agent-client-protocol",
  "anyhow",
  "async-trait",
+ "athas-runtime-core",
+ "athas-tooling-core",
  "base64 0.21.7",
  "chrono",
  "colored",
@@ -441,6 +443,20 @@ dependencies = [
  "which",
  "window-vibrancy",
  "zip 2.4.2",
+]
+
+[[package]]
+name = "athas-runtime-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "athas-tooling-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

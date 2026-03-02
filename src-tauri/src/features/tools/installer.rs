@@ -1,5 +1,5 @@
-use super::types::{ToolConfig, ToolError, ToolRuntime};
 use crate::features::runtime::{RuntimeManager, RuntimeType};
+use athas_tooling_core::{ToolConfig, ToolError, ToolRuntime};
 use flate2::read::GzDecoder;
 use serde_json::Value;
 use std::{

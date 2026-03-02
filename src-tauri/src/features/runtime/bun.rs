@@ -1,4 +1,4 @@
-use super::types::{RuntimeError, RuntimeSource, RuntimeStatus};
+use athas_runtime_core::{RuntimeError, RuntimeSource, RuntimeStatus};
 use std::{
    fs::{self, File},
    io::{self, Cursor},

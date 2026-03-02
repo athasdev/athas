@@ -1,7 +1,5 @@
-use crate::features::runtime::{
-   downloader,
-   types::{RuntimeError, RuntimeSource, RuntimeStatus},
-};
+use crate::features::runtime::downloader;
+use athas_runtime_core::{RuntimeError, RuntimeSource, RuntimeStatus};
 use std::{path::PathBuf, process::Command};
 use tauri::Manager;
 

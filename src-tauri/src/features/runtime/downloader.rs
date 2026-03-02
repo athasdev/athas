@@ -1,4 +1,4 @@
-use crate::features::runtime::types::RuntimeError;
+use athas_runtime_core::RuntimeError;
 use flate2::read::GzDecoder;
 use std::{
    fs::{self, File},

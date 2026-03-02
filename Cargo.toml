@@ -1,5 +1,10 @@
 [workspace]
-members = ["src-tauri", "src-tauri/packages/interceptor"]
+members = [
+  "src-tauri",
+  "src-tauri/packages/interceptor",
+  "src-tauri/packages/runtime-core",
+  "src-tauri/packages/tooling-core",
+]
 resolver = "2"
 
 [workspace.lints.clippy]

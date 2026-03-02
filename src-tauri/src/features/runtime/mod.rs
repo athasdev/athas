@@ -1,13 +1,12 @@
 mod bun;
 mod downloader;
 mod node;
-mod types;
 
+pub use athas_runtime_core::{RuntimeError, RuntimeStatus};
 pub use bun::BunRuntime;
 pub use node::NodeRuntime;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-pub use types::{RuntimeError, RuntimeStatus};
 
 /// Supported runtime types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

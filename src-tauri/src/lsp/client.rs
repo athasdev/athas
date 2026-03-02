@@ -333,8 +333,29 @@ impl LspClient {
                log::warn!("publishDiagnostics notification has no params");
             }
          }
+         Some("window/logMessage") => {
+            if let Some(params) = params {
+               match serde_json::from_value::<LogMessageParams>(params.clone()) {
+                  Ok(log_message) => match log_message.typ {
+                     MessageType::ERROR => log::error!("LSP logMessage: {}", log_message.message),
+                     MessageType::WARNING => log::warn!("LSP logMessage: {}", log_message.message),
+                     MessageType::INFO => log::info!("LSP logMessage: {}", log_message.message),
+                     MessageType::LOG => log::debug!("LSP logMessage: {}", log_message.message),
+                     _ => log::debug!("LSP logMessage: {}", log_message.message),
+                  },
+                  Err(e) => {
+                     log::warn!(
+                        "Failed to parse window/logMessage notification params: {}",
+                        e
+                     )
+                  }
+               }
+            } else {
+               log::warn!("window/logMessage notification has no params");
+            }
+         }
          Some(method_name) => {
-            log::info!("Unhandled LSP notification: {}", method_name);
+            log::debug!("Unhandled LSP notification: {}", method_name);
          }
          None => {
             log::warn!("Received notification without method");
