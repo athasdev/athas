@@ -29,6 +29,11 @@ const ImageViewer = lazy(() =>
 const PdfViewer = lazy(() =>
   import("@/features/pdf-viewer/components/pdf-viewer").then((m) => ({ default: m.PdfViewer })),
 );
+const BinaryFileViewer = lazy(() =>
+  import("@/features/binary-viewer/components/binary-file-viewer").then((m) => ({
+    default: m.BinaryFileViewer,
+  })),
+);
 const TerminalTab = lazy(() =>
   import("@/features/terminal/components/terminal-tab").then((m) => ({ default: m.TerminalTab })),
 );
@@ -432,6 +437,14 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                 );
               } else if (activeBuffer.isSQLite) {
                 return <SQLiteViewer databasePath={activeBuffer.path} />;
+              } else if (activeBuffer.isBinary) {
+                return (
+                  <BinaryFileViewer
+                    filePath={activeBuffer.path}
+                    fileName={activeBuffer.name}
+                    rootFolderPath={rootFolderPath}
+                  />
+                );
               } else if (activeBuffer.isExternalEditor && activeBuffer.terminalConnectionId) {
                 return (
                   <ExternalEditorTerminal

@@ -65,6 +65,7 @@ export interface Buffer {
   isWebViewer: boolean;
   isPullRequest: boolean;
   isPdf: boolean;
+  isBinary: boolean;
   isActive: boolean;
   language?: string; // File language for syntax highlighting and formatting
   // For diff buffers, store the parsed diff data (single or multi-file)
@@ -133,6 +134,7 @@ interface BufferActions {
     sourceFilePath?: string,
     isPreview?: boolean,
     isPdf?: boolean,
+    isBinary?: boolean,
   ) => string;
   convertPreviewToDefinite: (bufferId: string) => void;
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
@@ -280,6 +282,7 @@ export const useBufferStore = createSelectors(
           sourceFilePath?: string,
           isPreview = false,
           isPdf = false,
+          isBinary = false,
         ) => {
           const { buffers, maxOpenTabs } = get();
 
@@ -293,7 +296,8 @@ export const useBufferStore = createSelectors(
             !isMarkdownPreview &&
             !isHtmlPreview &&
             !isCsvPreview &&
-            !isPdf;
+            !isPdf &&
+            !isBinary;
 
           // Check if already open
           const existing = buffers.find((b) => b.path === path);
@@ -348,6 +352,7 @@ export const useBufferStore = createSelectors(
             isWebViewer: false,
             isPullRequest: false,
             isPdf: isPdf,
+            isBinary,
             isActive: true,
             language: detectLanguageFromFileName(name),
             diffData,
@@ -371,7 +376,8 @@ export const useBufferStore = createSelectors(
             !isCsvPreview &&
             !isImage &&
             !isSQLite &&
-            !isPdf
+            !isPdf &&
+            !isBinary
           ) {
             useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
 
@@ -509,6 +515,7 @@ export const useBufferStore = createSelectors(
             isWebViewer: false,
             isPullRequest: false,
             isPdf: false,
+            isBinary: false,
             isActive: true,
             language: detectLanguageFromFileName(name),
             terminalConnectionId,
@@ -588,6 +595,7 @@ export const useBufferStore = createSelectors(
             isWebViewer: true,
             isPullRequest: false,
             isPdf: false,
+            isBinary: false,
             isActive: true,
             webViewerUrl: url,
             tokens: [],
@@ -649,6 +657,7 @@ export const useBufferStore = createSelectors(
             isWebViewer: false,
             isPullRequest: true,
             isPdf: false,
+            isBinary: false,
             prNumber,
             isActive: true,
             tokens: [],
@@ -705,6 +714,7 @@ export const useBufferStore = createSelectors(
             isWebViewer: false,
             isPullRequest: false,
             isPdf: false,
+            isBinary: false,
             isTerminal: true,
             terminalSessionId: sessionId,
             terminalInitialCommand: options?.command,
@@ -776,6 +786,7 @@ export const useBufferStore = createSelectors(
             isWebViewer: false,
             isPullRequest: false,
             isPdf: false,
+            isBinary: false,
             isAgent: true,
             agentSessionId,
             isActive: true,

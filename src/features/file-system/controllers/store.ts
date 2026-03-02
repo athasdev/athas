@@ -34,7 +34,13 @@ import {
   sortFileEntries,
   updateFileInTree,
 } from "./file-tree-utils";
-import { getFilenameFromPath, isImageFile, isPdfFile, isSQLiteFile } from "./file-utils";
+import {
+  getFilenameFromPath,
+  isBinaryFile,
+  isImageFile,
+  isPdfFile,
+  isSQLiteFile,
+} from "./file-utils";
 import { useFileWatcherStore } from "./file-watcher-store";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
@@ -435,6 +441,25 @@ export const useFileSystemStore = createSelectors(
             false,
             undefined,
             isPreview,
+            true,
+          );
+        } else if (isBinaryFile(resolvedPath)) {
+          if (isStaleRequest()) return;
+          openBuffer(
+            path,
+            fileName,
+            "",
+            false,
+            false,
+            false,
+            false,
+            undefined,
+            false,
+            false,
+            false,
+            undefined,
+            false,
+            false,
             true,
           );
         } else {

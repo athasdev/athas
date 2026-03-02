@@ -97,6 +97,47 @@ export const isPdfFile = (path: string): boolean => {
 };
 
 /**
+ * Check if a file is a binary file that shouldn't be opened in the text editor
+ */
+export const isBinaryFile = (path: string): boolean => {
+  const lowerPath = path.toLowerCase();
+  const binaryExtensions = [
+    ".wasm",
+    ".exe",
+    ".dll",
+    ".so",
+    ".dylib",
+    ".bin",
+    ".o",
+    ".obj",
+    ".a",
+    ".lib",
+    ".class",
+    ".pyc",
+    ".pyo",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".otf",
+    ".eot",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".bz2",
+    ".xz",
+    ".7z",
+    ".rar",
+    ".jar",
+    ".war",
+    ".ear",
+    ".iso",
+    ".dmg",
+    ".msi",
+  ];
+  return binaryExtensions.some((ext) => lowerPath.endsWith(ext));
+};
+
+/**
  * Extract filename from a path
  */
 export const getFilenameFromPath = (path: string): string => {
