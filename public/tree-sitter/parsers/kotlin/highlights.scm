@@ -39,12 +39,12 @@
 
 ; SCREAMING CASE identifiers are assumed to be constants
 ((simple_identifier) @constant
-  (#lua-match? @constant "^[A-Z][A-Z0-9_]*$"))
+  (#match? @constant "^[A-Z][A-Z0-9_]*$"))
 
 (_
   (navigation_suffix
     (simple_identifier) @constant
-    (#lua-match? @constant "^[A-Z][A-Z0-9_]*$")))
+    (#match? @constant "^[A-Z][A-Z0-9_]*$")))
 
 (enum_entry
   (simple_identifier) @constant)
@@ -82,14 +82,14 @@
     (simple_identifier) @type @_import)
   (import_alias
     (type_identifier) @type.definition)?
-  (#lua-match? @_import "^[A-Z]"))
+  (#match? @_import "^[A-Z]"))
 
 (import_header
   (identifier
     (simple_identifier) @function @_import .)
   (import_alias
     (type_identifier) @function)?
-  (#lua-match? @_import "^[a-z]"))
+  (#match? @_import "^[a-z]"))
 
 (label) @label
 
@@ -162,7 +162,7 @@
 ] @comment @spell
 
 ((multiline_comment) @comment.documentation
-  (#lua-match? @comment.documentation "^/[*][*][^*].*[*]/$"))
+  (#match? @comment.documentation "^/[*][*][^*].*[*]/$"))
 
 (shebang_line) @keyword.directive
 

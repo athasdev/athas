@@ -49,6 +49,7 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   exs: "elixir",
   ml: "ocaml",
   mli: "ocaml",
+  sql: "sql",
   sol: "solidity",
   zig: "zig",
   vue: "vue",

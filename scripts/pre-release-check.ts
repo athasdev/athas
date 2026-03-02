@@ -184,7 +184,7 @@ async function main() {
       "bash", "c", "c_sharp", "cpp", "css", "dart", "elisp", "elixir",
       "go", "html", "java", "javascript", "json", "kotlin", "lua",
       "markdown", "objc", "ocaml", "php", "python", "rescript", "ruby",
-      "rust", "scala", "solidity", "swift", "systemrdl", "tlaplus",
+      "rust", "scala", "solidity", "sql", "swift", "systemrdl", "tlaplus",
       "toml", "tsx", "typescript", "vue", "yaml", "zig",
     ];
 
