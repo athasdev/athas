@@ -175,6 +175,36 @@ async function main() {
     return { passed: true };
   });
 
+  header("Bundled Assets");
+
+  // Check: Tree-sitter parsers are present
+  await runCheck("Tree-sitter parsers", async () => {
+    const parsersDir = join(process.cwd(), "public/tree-sitter/parsers");
+    const expectedLangs = [
+      "bash", "c", "c_sharp", "cpp", "css", "dart", "elisp", "elixir",
+      "go", "html", "java", "javascript", "json", "kotlin", "lua",
+      "markdown", "objc", "ocaml", "php", "python", "rescript", "ruby",
+      "rust", "scala", "solidity", "swift", "systemrdl", "tlaplus",
+      "toml", "tsx", "typescript", "vue", "yaml", "zig",
+    ];
+
+    const missing: string[] = [];
+    for (const lang of expectedLangs) {
+      const wasmPath = join(parsersDir, lang, "parser.wasm");
+      const queryPath = join(parsersDir, lang, "highlights.scm");
+      if (!existsSync(wasmPath)) missing.push(`${lang}/parser.wasm`);
+      if (!existsSync(queryPath)) missing.push(`${lang}/highlights.scm`);
+    }
+
+    if (missing.length > 0) {
+      return {
+        passed: false,
+        message: `${missing.length} missing: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "..." : ""} (run: bun install)`,
+      };
+    }
+    return { passed: true, message: `${expectedLangs.length} languages` };
+  });
+
   header("Frontend Checks");
 
   // Check: TypeScript

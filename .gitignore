@@ -69,8 +69,8 @@ apps/desktop/src-tauri/gen/
 # storybook for UI prototyping / testing
 storybook-static/
 
-# tree-sitter parsers and queries (downloaded from CDN)
-public/tree-sitter/parsers/*.wasm
+# tree-sitter parser WASM binaries (copied by postinstall)
+public/tree-sitter/parsers/**/*.wasm
 public/tree-sitter/queries/
 
 # Bundled tree-sitter grammars
