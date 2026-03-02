@@ -7,6 +7,8 @@ import { getCommitDiff } from "../api/diff";
 import { useGitStore } from "../stores/git-store";
 
 interface GitCommitHistoryProps {
+  isCollapsed: boolean;
+  onToggle: () => void;
   onViewCommitDiff?: (commitHash: string, filePath?: string) => void;
   repoPath?: string;
 }
@@ -225,9 +227,13 @@ const FileItem = memo(({ file, onFileClick }: FileItemProps) => {
   );
 });
 
-const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps) => {
+const GitCommitHistory = ({
+  isCollapsed,
+  onToggle,
+  onViewCommitDiff,
+  repoPath,
+}: GitCommitHistoryProps) => {
   const { commits, hasMoreCommits, isLoadingMoreCommits, actions } = useGitStore();
-  const [isCollapsed, setIsCollapsed] = useState(true);
   const [commitFiles, setCommitFiles] = useState<Record<string, any[]>>({});
   const [loadingCommits, setLoadingCommits] = useState<Set<string>>(new Set());
   const [copiedHashes, setCopiedHashes] = useState<Set<string>>(new Set());
@@ -453,12 +459,12 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
   }, [commits, hoveredCommit]);
 
   return (
-    <div className={cn("select-none py-0.5 px-1.5", !isCollapsed && "min-h-0 flex-1")}>
+    <div className={cn("select-none px-1.5 py-0.5", !isCollapsed && "min-h-0 flex-1")}>
       <div className="flex flex-col overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
         <button
           type="button"
           className="sticky top-0 z-20 flex w-full shrink-0 cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={onToggle}
         >
           {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
           <span className="font-bold text-[10px] uppercase tracking-wide">History</span>

@@ -1,5 +1,13 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { Check, ChevronDown, FolderOpen, MoreHorizontal, RefreshCw, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  FolderOpen,
+  MoreHorizontal,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -63,6 +71,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   const [showRemoteManager, setShowRemoteManager] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
+  const [activeSection, setActiveSection] = useState<"changes" | "stash" | "history">("changes");
 
   const wasActiveRef = useRef(isActive);
   const repoTriggerRef = useRef<HTMLButtonElement>(null);
@@ -642,23 +651,59 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="scrollbar-none min-h-0 flex-1 overflow-y-scroll">
-            <GitStatusPanel
-              files={gitStatus.files}
-              onFileSelect={handleViewFileDiff}
-              onOpenFile={handleOpenOriginalFile}
-              onRefresh={handleManualRefresh}
-              repoPath={activeRepoPath}
-            />
+          <div
+            className={cn(
+              "flex min-h-0 flex-col px-1.5 py-0.5",
+              activeSection === "changes" && "flex-1",
+            )}
+          >
+            <div className="flex flex-col overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
+              <button
+                type="button"
+                className="sticky top-0 z-20 flex w-full shrink-0 cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
+                onClick={() => setActiveSection("changes")}
+              >
+                {activeSection === "changes" ? (
+                  <ChevronDown size={10} />
+                ) : (
+                  <ChevronRight size={10} />
+                )}
+                <span className="font-bold text-[10px] uppercase tracking-wide">Changes</span>
+                <div className="flex-1" />
+                {gitStatus.files.length > 0 && (
+                  <span className="rounded-full bg-primary-bg px-1.5 text-[9px]">
+                    {gitStatus.files.length}
+                  </span>
+                )}
+              </button>
+              {activeSection === "changes" && (
+                <div className="scrollbar-none min-h-0 flex-1 overflow-y-scroll bg-primary-bg/70">
+                  <GitStatusPanel
+                    files={gitStatus.files}
+                    onFileSelect={handleViewFileDiff}
+                    onOpenFile={handleOpenOriginalFile}
+                    onRefresh={handleManualRefresh}
+                    repoPath={activeRepoPath}
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           <GitStashPanel
+            isCollapsed={activeSection !== "stash"}
+            onToggle={() => setActiveSection(activeSection === "stash" ? "changes" : "stash")}
             repoPath={activeRepoPath}
             onRefresh={handleManualRefresh}
             onViewStashDiff={handleViewStashDiff}
           />
 
-          <GitCommitHistory onViewCommitDiff={handleViewCommitDiff} repoPath={activeRepoPath} />
+          <GitCommitHistory
+            isCollapsed={activeSection !== "history"}
+            onToggle={() => setActiveSection(activeSection === "history" ? "changes" : "history")}
+            onViewCommitDiff={handleViewCommitDiff}
+            repoPath={activeRepoPath}
+          />
         </div>
 
         <div className="shrink-0">
