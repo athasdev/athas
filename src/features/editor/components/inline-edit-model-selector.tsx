@@ -1,4 +1,4 @@
-import { Bot, Brain, Check, ChevronDown, Compass, Cpu, Globe, Rocket } from "lucide-react";
+import { Brain, Check, ChevronDown, Compass, Cpu, Globe, Rocket } from "lucide-react";
 import type { RefObject } from "react";
 import { useMemo, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
@@ -22,7 +22,7 @@ const getProviderFromModelId = (modelId: string): string => {
 const ProviderIcon = ({ providerId, className }: { providerId: string; className?: string }) => {
   switch (providerId) {
     case "openai":
-      return <Bot size={11} className={className} />;
+      return <Brain size={11} className={className} />;
     case "anthropic":
       return <Brain size={11} className={className} />;
     case "google":

@@ -488,7 +488,7 @@ const GitHubPRsView = memo(() => {
         createPortal(
           <div
             ref={filterMenuRef}
-            className="fixed z-[10040] min-w-40 rounded-xl border border-border bg-primary-bg p-1"
+            className="fixed z-[10040] min-w-40 rounded-xl border border-border bg-primary-bg"
             style={{
               left: `${filterMenuPosition.left}px`,
               top: `${filterMenuPosition.top}px`,
@@ -622,7 +622,7 @@ const GitHubPRsView = memo(() => {
         )}
 
       {/* Content */}
-      <div className="scrollbar-hidden flex-1 overflow-y-auto rounded-xl border border-border/60 bg-secondary-bg/60 p-2">
+      <div className="scrollbar-hidden flex-1 overflow-y-auto bg-secondary-bg/60">
         {!activeRepoPath ? (
           <div className="mx-auto flex max-w-72 flex-col items-center justify-center rounded-xl border border-border/60 bg-primary-bg/65 p-4 text-center">
             <FolderOpen size={20} className="mb-2 text-text-lighter" />
