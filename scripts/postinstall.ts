@@ -2,12 +2,11 @@
  * Postinstall script — runs automatically after `bun install`
  *
  * 1. Installs LSP dependencies for bundled extensions
- * 2. Copies tree-sitter WASM parsers into public/tree-sitter/parsers/{lang}/parser.wasm
- *    - Most parsers come from the tree-sitter-wasms npm package
- *    - Parsers not in that package are downloaded from GitHub releases
+ * 2. Builds tree-sitter WASM parsers from source into public/tree-sitter/parsers/{lang}/parser.wasm
+ *    using tree-sitter-cli and individual grammar packages
  */
 
-import { existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { $ } from "bun";
 
@@ -50,87 +49,92 @@ async function installBundledLspDependencies() {
 // ─── Tree-sitter Parsers ────────────────────────────────────────────
 
 const PARSERS_DIR = join(process.cwd(), "public/tree-sitter/parsers");
-const WASMS_DIR = join(process.cwd(), "node_modules/tree-sitter-wasms/out");
 
-type ParserSource =
-  | { type: "npm" }
-  | { type: "github"; repo: string; tag: string; asset: string };
+interface ParserSource {
+  package: string;
+  subdir?: string;
+}
 
-// All bundled parsers and where to get their WASM from.
-// Most come from tree-sitter-wasms npm package, some from GitHub releases.
+// All bundled parsers — built from source using tree-sitter-cli.
 const BUNDLED_PARSERS: Record<string, ParserSource> = {
-  bash: { type: "npm" },
-  c: { type: "npm" },
-  c_sharp: { type: "npm" },
-  cpp: { type: "npm" },
-  css: { type: "npm" },
-  dart: { type: "npm" },
-  elisp: { type: "npm" },
-  elixir: { type: "npm" },
-  go: { type: "npm" },
-  html: { type: "npm" },
-  java: { type: "npm" },
-  javascript: { type: "npm" },
-  json: { type: "npm" },
-  kotlin: { type: "npm" },
-  lua: { type: "npm" },
-  markdown: {
-    type: "github",
-    repo: "tree-sitter-grammars/tree-sitter-markdown",
-    tag: "v0.5.3",
-    asset: "tree-sitter-markdown.wasm",
-  },
-  objc: { type: "npm" },
-  ocaml: { type: "npm" },
-  php: { type: "npm" },
-  python: { type: "npm" },
-  rescript: { type: "npm" },
-  ruby: { type: "npm" },
-  rust: { type: "npm" },
-  scala: { type: "npm" },
-  solidity: { type: "npm" },
-  swift: { type: "npm" },
-  systemrdl: { type: "npm" },
-  tlaplus: { type: "npm" },
-  toml: { type: "npm" },
-  tsx: { type: "npm" },
-  typescript: { type: "npm" },
-  vue: { type: "npm" },
-  yaml: { type: "npm" },
-  zig: { type: "npm" },
+  bash: { package: "tree-sitter-bash" },
+  c: { package: "tree-sitter-c" },
+  c_sharp: { package: "tree-sitter-c-sharp" },
+  cpp: { package: "tree-sitter-cpp" },
+  css: { package: "tree-sitter-css" },
+  dart: { package: "tree-sitter-dart" },
+  elisp: { package: "tree-sitter-elisp" },
+  elixir: { package: "tree-sitter-elixir" },
+  go: { package: "tree-sitter-go" },
+  html: { package: "tree-sitter-html" },
+  java: { package: "tree-sitter-java" },
+  javascript: { package: "tree-sitter-javascript" },
+  json: { package: "tree-sitter-json" },
+  kotlin: { package: "tree-sitter-kotlin" },
+  lua: { package: "tree-sitter-lua" },
+  markdown: { package: "@tree-sitter-grammars/tree-sitter-markdown", subdir: "tree-sitter-markdown" },
+  objc: { package: "tree-sitter-objc" },
+  ocaml: { package: "tree-sitter-ocaml", subdir: "grammars/ocaml" },
+  php: { package: "tree-sitter-php", subdir: "php" },
+  python: { package: "tree-sitter-python" },
+  rescript: { package: "tree-sitter-rescript" },
+  ruby: { package: "tree-sitter-ruby" },
+  rust: { package: "tree-sitter-rust" },
+  scala: { package: "tree-sitter-scala" },
+  solidity: { package: "tree-sitter-solidity" },
+  sql: { package: "@derekstride/tree-sitter-sql" },
+  swift: { package: "tree-sitter-swift" },
+  systemrdl: { package: "tree-sitter-systemrdl" },
+  tlaplus: { package: "@tlaplus/tree-sitter-tlaplus" },
+  toml: { package: "tree-sitter-toml" },
+  tsx: { package: "tree-sitter-typescript", subdir: "tsx" },
+  typescript: { package: "tree-sitter-typescript", subdir: "typescript" },
+  vue: { package: "@tree-sitter-grammars/tree-sitter-vue" },
+  yaml: { package: "@tree-sitter-grammars/tree-sitter-yaml" },
+  zig: { package: "@tree-sitter-grammars/tree-sitter-zig" },
 };
 
-async function resolveParserWasm(lang: string, source: ParserSource): Promise<Uint8Array | null> {
-  if (source.type === "npm") {
-    const srcFile = join(WASMS_DIR, `tree-sitter-${lang}.wasm`);
-    if (!existsSync(srcFile)) {
-      console.warn(`  Warning: tree-sitter-${lang}.wasm not found in tree-sitter-wasms`);
-      return null;
+async function buildParserWasm(lang: string, source: ParserSource): Promise<boolean> {
+  const packageDir = join(process.cwd(), "node_modules", source.package);
+  if (!existsSync(packageDir)) {
+    console.warn(`  Warning: ${source.package} not found in node_modules`);
+    return false;
+  }
+  const destDir = join(PARSERS_DIR, lang);
+  mkdirSync(destDir, { recursive: true });
+  const outFile = join(destDir, "parser.wasm");
+  const buildDir = source.subdir ? join(packageDir, source.subdir) : packageDir;
+  console.log(`  Building ${lang}...`);
+  try {
+    await $`npx tree-sitter build --wasm -o ${outFile} ${buildDir}`.quiet();
+  } catch (error) {
+    console.warn(`  Warning: Failed to build ${lang} parser:`, error);
+    return false;
+  }
+  if (!existsSync(outFile)) return false;
+  // Copy highlights.scm if not already tracked (we have hand-edited versions)
+  const highlightsDest = join(destDir, "highlights.scm");
+  if (!existsSync(highlightsDest)) {
+    const candidates = [
+      join(packageDir, "queries", "highlights.scm"),
+      ...(source.subdir ? [join(buildDir, "queries", "highlights.scm")] : []),
+    ];
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) {
+        await Bun.write(highlightsDest, Bun.file(candidate));
+        break;
+      }
     }
-    return new Uint8Array(await Bun.file(srcFile).arrayBuffer());
   }
-
-  const url = `https://github.com/${source.repo}/releases/download/${source.tag}/${source.asset}`;
-  console.log(`  Downloading ${lang} parser...`);
-  const response = await fetch(url);
-  if (!response.ok) {
-    console.warn(`  Warning: Failed to download ${lang} parser (${response.status})`);
-    return null;
-  }
-  return new Uint8Array(await response.arrayBuffer());
+  return true;
 }
 
 async function setupTreeSitterParsers() {
   console.log("Setting up tree-sitter parsers...");
 
-  if (!existsSync(WASMS_DIR)) {
-    console.error("tree-sitter-wasms not found in node_modules. Run `bun install` first.");
-    process.exit(1);
-  }
-
   mkdirSync(PARSERS_DIR, { recursive: true });
 
-  let copied = 0;
+  let built = 0;
   let skipped = 0;
   let failed = 0;
 
@@ -140,37 +144,22 @@ async function setupTreeSitterParsers() {
 
     mkdirSync(destDir, { recursive: true });
 
-    // For npm sources, skip if destination matches source size
-    if (source.type === "npm" && existsSync(destFile)) {
-      const srcFile = join(WASMS_DIR, `tree-sitter-${lang}.wasm`);
-      try {
-        if (existsSync(srcFile) && statSync(srcFile).size === statSync(destFile).size) {
-          skipped++;
-          continue;
-        }
-      } catch {
-        // If stat fails, just re-copy
-      }
-    }
-
-    // For GitHub sources, skip if already downloaded
-    if (source.type === "github" && existsSync(destFile)) {
+    // Skip if parser.wasm already exists
+    if (existsSync(destFile)) {
       skipped++;
       continue;
     }
 
-    const data = await resolveParserWasm(lang, source);
-    if (!data) {
+    const ok = await buildParserWasm(lang, source);
+    if (ok) {
+      built++;
+    } else {
       failed++;
-      continue;
     }
-
-    await Bun.write(destFile, data);
-    copied++;
   }
 
   console.log(
-    `Tree-sitter setup complete: ${copied} copied, ${skipped} up-to-date, ${failed} failed`,
+    `Tree-sitter setup complete: ${built} built, ${skipped} up-to-date, ${failed} failed`,
   );
 }
 
