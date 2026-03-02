@@ -1,9 +1,11 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readFile } from "@tauri-apps/plugin-fs";
+import { FileIcon } from "lucide-react";
 import { memo, useEffect, useMemo, useState } from "react";
 import type { Token } from "@/features/editor/extensions/types";
 import type { LineToken } from "@/features/editor/types/editor";
-import { isImageFile } from "@/features/file-system/controllers/file-utils";
+import { isBinaryFile, isImageFile } from "@/features/file-system/controllers/file-utils";
+import { formatFileSize } from "@/features/image-editor/utils/image-file-utils";
 import { useFilePreview } from "../hooks/use-file-preview";
 
 interface FilePreviewProps {
@@ -94,6 +96,110 @@ function useImagePreview(filePath: string | null, enabled: boolean) {
   }, [enabled, filePath]);
 
   return { src, isLoading, error };
+}
+
+const BINARY_TYPE_MAP: Record<string, string> = {
+  wasm: "WebAssembly Binary",
+  exe: "Windows Executable",
+  dll: "Dynamic Link Library",
+  so: "Shared Object",
+  dylib: "Dynamic Library",
+  bin: "Binary Data",
+  o: "Object File",
+  obj: "Object File",
+  a: "Static Library",
+  lib: "Static Library",
+  class: "Java Class File",
+  pyc: "Python Bytecode",
+  woff: "Web Open Font Format",
+  woff2: "Web Open Font Format 2",
+  ttf: "TrueType Font",
+  otf: "OpenType Font",
+  zip: "ZIP Archive",
+  tar: "Tape Archive",
+  gz: "Gzip Compressed",
+  "7z": "7-Zip Archive",
+  rar: "RAR Archive",
+  jar: "Java Archive",
+  iso: "Disk Image",
+  dmg: "macOS Disk Image",
+};
+
+function getBinaryFileType(path: string): string {
+  const ext = path.split(".").pop()?.toLowerCase() || "";
+  return BINARY_TYPE_MAP[ext] || "Binary File";
+}
+
+function formatHexLines(data: Uint8Array, maxBytes = 128): string[] {
+  const lines: string[] = [];
+  const limit = Math.min(data.length, maxBytes);
+
+  for (let i = 0; i < limit; i += 16) {
+    const hex: string[] = [];
+    const ascii: string[] = [];
+
+    for (let j = 0; j < 16; j++) {
+      if (i + j < limit) {
+        hex.push(data[i + j].toString(16).padStart(2, "0"));
+        const ch = data[i + j];
+        ascii.push(ch >= 0x20 && ch <= 0x7e ? String.fromCharCode(ch) : ".");
+      } else {
+        hex.push("  ");
+        ascii.push(" ");
+      }
+    }
+
+    const addr = i.toString(16).padStart(8, "0");
+    lines.push(
+      `${addr}  ${hex.slice(0, 8).join(" ")}  ${hex.slice(8).join(" ")}  |${ascii.join("")}|`,
+    );
+  }
+
+  return lines;
+}
+
+interface BinaryPreviewData {
+  fileSize: number;
+  fileType: string;
+  hexLines: string[];
+}
+
+function useBinaryPreview(filePath: string | null, enabled: boolean) {
+  const [data, setData] = useState<BinaryPreviewData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!enabled || !filePath) {
+      setData(null);
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoading(true);
+
+    readFile(filePath)
+      .then((bytes) => {
+        if (cancelled) return;
+        setData({
+          fileSize: bytes.length,
+          fileType: getBinaryFileType(filePath),
+          hexLines: formatHexLines(bytes),
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setData(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, filePath]);
+
+  return { data, isLoading };
 }
 
 const convertTokensToLineTokens = (content: string, tokens: Token[]): LineData[] => {
@@ -228,12 +334,16 @@ const PreviewLine = memo(({ lineNumber, content, tokens }: LineData) => {
 
 export const FilePreview = ({ filePath }: FilePreviewProps) => {
   const isImage = !!(filePath && isImageFile(filePath));
-  const { content, tokens, isLoading, error } = useFilePreview(isImage ? null : filePath);
+  const isBinary = !!(filePath && !isImage && isBinaryFile(filePath));
+  const { content, tokens, isLoading, error } = useFilePreview(
+    isImage || isBinary ? null : filePath,
+  );
   const {
     src: imageSrc,
     isLoading: isImageLoading,
     error: imageError,
   } = useImagePreview(filePath, isImage);
+  const { data: binaryData, isLoading: isBinaryLoading } = useBinaryPreview(filePath, isBinary);
 
   const lineData = useMemo(() => {
     if (!content) return [];
@@ -297,6 +407,42 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
           alt={fileName}
           className="max-h-full max-w-full rounded border border-border object-contain"
         />
+      </div>
+    );
+  }
+
+  if (isBinary) {
+    if (isBinaryLoading) {
+      return (
+        <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
+          Loading binary preview...
+        </div>
+      );
+    }
+
+    if (!binaryData) {
+      return (
+        <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
+          Unable to preview binary file
+        </div>
+      );
+    }
+
+    const ext = filePath?.split(".").pop()?.toUpperCase() || "";
+    return (
+      <div className="h-full overflow-auto bg-primary-bg p-3">
+        <div className="mb-3 flex items-center gap-2 rounded border border-border/60 bg-secondary-bg px-3 py-2">
+          <FileIcon size={14} className="shrink-0 text-text-lighter" />
+          <div className="min-w-0">
+            <div className="ui-font truncate text-text text-xs">{binaryData.fileType}</div>
+            <div className="ui-font text-[10px] text-text-lighter">
+              {formatFileSize(binaryData.fileSize)} {ext && `\u2022 .${ext.toLowerCase()}`}
+            </div>
+          </div>
+        </div>
+        <pre className="font-mono text-[10px] text-text-lighter leading-[16px]">
+          {binaryData.hexLines.join("\n")}
+        </pre>
       </div>
     );
   }
