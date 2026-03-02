@@ -5,6 +5,140 @@ import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat";
 import { normalizeLanguage } from "@/features/editor/markdown/language-map";
 import { highlightCode } from "@/features/editor/markdown/prism-languages";
 
+const LANGUAGE_HINTS = new Set([
+  "bash",
+  "c",
+  "cpp",
+  "csharp",
+  "css",
+  "dart",
+  "diff",
+  "docker",
+  "elixir",
+  "erlang",
+  "go",
+  "graphql",
+  "haskell",
+  "html",
+  "java",
+  "javascript",
+  "json",
+  "jsx",
+  "kotlin",
+  "lua",
+  "makefile",
+  "markdown",
+  "markup",
+  "nginx",
+  "objectivec",
+  "perl",
+  "php",
+  "python",
+  "r",
+  "ruby",
+  "rust",
+  "scala",
+  "scss",
+  "shell",
+  "sql",
+  "swift",
+  "toml",
+  "tsx",
+  "typescript",
+  "vim",
+  "xml",
+  "yaml",
+]);
+
+const CODE_LINE_PATTERN =
+  /[{}()[\];]|=>|::|->|:=|==|!=|<=|>=|&&|\|\||^\s{2,}\S|^(let|const|var|fn|def|class|import|export|if|for|while|match|return|use|pub|impl|SELECT|FROM|INSERT|UPDATE|DELETE)\b/i;
+
+function stripQuoteWrappers(line: string): string {
+  const trimmed = line.trim();
+  return trimmed
+    .replace(/^(["'`“”‘’])+/, "")
+    .replace(/(["'`“”‘’])+$/, "")
+    .replace(/[:;,]$/, "")
+    .trim();
+}
+
+function extractLanguageHint(line: string): string | null {
+  const candidate = stripQuoteWrappers(line);
+  if (!/^[A-Za-z][A-Za-z0-9+#._-]{0,19}$/.test(candidate)) return null;
+
+  const normalized = normalizeLanguage(candidate);
+  if (!LANGUAGE_HINTS.has(normalized)) return null;
+  return normalized;
+}
+
+function isLikelyCodeLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  if (/^(#{1,6}\s|[-*+]\s|\d+\.\s|>)/.test(trimmed)) return false;
+  return CODE_LINE_PATTERN.test(line);
+}
+
+function normalizeImplicitCodeFences(text: string): string {
+  const lines = text.split("\n");
+  const output: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const languageHint = extractLanguageHint(lines[i]);
+    const nextLine = lines[i + 1];
+
+    if (!languageHint || nextLine === undefined || !isLikelyCodeLine(nextLine)) {
+      output.push(lines[i]);
+      continue;
+    }
+
+    output.push(`\`\`\`${languageHint}`);
+    i += 1;
+
+    while (i < lines.length) {
+      const current = lines[i];
+      const trimmed = current.trim();
+      if (!trimmed || trimmed === '"' || trimmed === "'") {
+        break;
+      }
+      output.push(current);
+      i += 1;
+    }
+
+    output.push("```");
+
+    if (i < lines.length && lines[i].trim() === "") {
+      output.push("");
+    }
+  }
+
+  return output.join("\n");
+}
+
+function inferCodeLanguage(code: string): string {
+  const trimmed = code.trim();
+
+  if (
+    /\b(fn|let|mut|impl|pub|use|match|enum|struct|trait|crate)\b/.test(trimmed) ||
+    /anyhow::|Result<|Option<|Some\(|None\b/.test(trimmed)
+  ) {
+    return "rust";
+  }
+
+  if (/^\s*#!/m.test(trimmed) || /\bfi\b|\bthen\b|\bdone\b|\$\w+/.test(trimmed)) {
+    return "bash";
+  }
+
+  if (/\b(def|import|from|class)\b/.test(trimmed) && /:\s*$/m.test(trimmed)) {
+    return "python";
+  }
+
+  if (/\b(const|let|function|=>|interface|type)\b/.test(trimmed)) {
+    return "typescript";
+  }
+
+  return "clike";
+}
+
 // Error Block Component
 function ErrorBlock({ errorData }: { errorData: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -50,7 +184,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
             {isExpanded ? "Hide" : "Show"} details
           </button>
           {isExpanded && (
-            <pre className="mt-1.5 overflow-x-auto rounded bg-red-950/20 p-2 text-red-300 text-xs">
+            <pre className="editor-font mt-1.5 overflow-x-auto rounded bg-red-950/20 p-2 text-red-300 text-xs">
               {(() => {
                 try {
                   const parsed = JSON.parse(details);
@@ -134,7 +268,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
       elements.push(
         <code
           key={key++}
-          className="ui-font rounded border border-border bg-secondary-bg px-1 text-xs"
+          className="editor-font rounded border border-border bg-secondary-bg px-1 text-xs"
         >
           {codeMatch[1]}
         </code>,
@@ -245,7 +379,7 @@ function renderContent(
   text: string,
   onApplyCode?: (code: string, language?: string) => void,
 ): React.ReactNode[] {
-  const lines = text.split("\n");
+  const lines = normalizeImplicitCodeFences(text).split("\n");
   const elements: React.ReactNode[] = [];
   let inCodeBlock = false;
   let codeBlockLanguage = "";
@@ -257,15 +391,17 @@ function renderContent(
   const flushCodeBlock = () => {
     if (codeBlockContent.length > 0) {
       const code = codeBlockContent.join("\n");
-      const prismLanguage = normalizeLanguage(codeBlockLanguage);
-      const highlightedCode = codeBlockLanguage ? highlightCode(code, prismLanguage) : code;
+      const explicitLanguage = codeBlockLanguage ? normalizeLanguage(codeBlockLanguage) : "";
+      const prismLanguage = explicitLanguage || inferCodeLanguage(code);
+      const highlightedCode = highlightCode(code, prismLanguage);
+      const languageLabel = explicitLanguage || (prismLanguage !== "clike" ? prismLanguage : "");
 
       elements.push(
         <div key={key++} className="group relative my-2">
-          <pre className="max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
+          <pre className="editor-font max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
             <div className="mb-1 flex items-center justify-between">
-              {codeBlockLanguage && (
-                <div className="ui-font text-text-lighter text-xs">{codeBlockLanguage}</div>
+              {languageLabel && (
+                <div className="editor-font text-text-lighter text-xs">{languageLabel}</div>
               )}
               {onApplyCode && code.trim() && (
                 <button
@@ -278,7 +414,7 @@ function renderContent(
               )}
             </div>
             <code
-              className="ui-font block whitespace-pre-wrap break-all text-text text-xs"
+              className="editor-font block whitespace-pre-wrap break-all text-text text-xs"
               dangerouslySetInnerHTML={{ __html: highlightedCode }}
             />
           </pre>

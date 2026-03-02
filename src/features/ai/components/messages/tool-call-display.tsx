@@ -1,19 +1,4 @@
-import {
-  AlertCircle,
-  CheckCircle,
-  ChevronRight,
-  Clock,
-  Database,
-  Edit,
-  ExternalLink,
-  FileText,
-  FolderOpen,
-  Globe,
-  Search,
-  Terminal,
-  Wrench,
-} from "lucide-react";
-import type React from "react";
+import { AlertCircle, CheckCircle, ChevronRight, Clock, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/utils/cn";
 
@@ -26,35 +11,6 @@ interface ToolCallDisplayProps {
   onOpenInEditor?: (filePath: string) => void;
 }
 
-const toolIcons: Record<string, React.ElementType> = {
-  // File operations
-  Read: FileText,
-  Write: Edit,
-  Edit: Edit,
-  MultiEdit: Edit,
-
-  // Search operations
-  Grep: Search,
-  Glob: FolderOpen,
-  Search: Search,
-  Task: Search,
-
-  // System operations
-  Bash: Terminal,
-  LS: FolderOpen,
-
-  // Web operations
-  WebFetch: Globe,
-  WebSearch: Globe,
-
-  // Database operations
-  NotebookRead: Database,
-  NotebookEdit: Database,
-
-  // Default
-  default: Wrench,
-};
-
 export default function ToolCallDisplay({
   toolName,
   input,
@@ -64,17 +20,15 @@ export default function ToolCallDisplay({
   onOpenInEditor,
 }: ToolCallDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-
-  const Icon = toolIcons[toolName] || toolIcons.default;
   const hasInput =
     Boolean(input) && !(typeof input === "object" && Object.keys(input).length === 0);
   const status = error ? "failed" : isStreaming ? "running" : "completed";
   const statusClass =
     status === "failed"
-      ? "border-red-500/40 bg-red-500/10 text-red-300"
+      ? "text-red-400/70"
       : status === "running"
-        ? "border-border/80 bg-secondary-bg/70 text-text-lighter"
-        : "border-border/80 bg-secondary-bg/70 text-text-lighter";
+        ? "text-text-lighter/55"
+        : "text-text-lighter/65";
 
   // Format input parameters for display
   const formatInput = (input: any): string => {
@@ -181,27 +135,19 @@ export default function ToolCallDisplay({
   };
 
   return (
-    <div className="rounded-lg border border-border/70 bg-primary-bg/45 p-1.5 leading-tight">
+    <div className="py-0.5 leading-tight">
       <div className="flex items-center gap-1">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="group flex min-w-0 flex-1 items-center gap-1 text-left text-xs opacity-85 transition-opacity duration-200 hover:opacity-100"
+          className="group flex min-w-0 flex-1 items-center gap-1 text-left text-xs"
         >
-          <Icon
-            size={11}
-            className={cn(
-              "opacity-60",
-              error ? "text-red-400" : "text-current",
-              isStreaming && "animate-pulse",
-            )}
-          />
-          <span className="font-medium">{toolName}</span>
-          <span className="opacity-50">·</span>
-          <span className="truncate opacity-60">{formatInput(input)}</span>
+          <span className="font-medium text-text-lighter/80">{toolName}</span>
+          <span className="opacity-40">·</span>
+          <span className="truncate text-text-lighter/60">{formatInput(input)}</span>
           <ChevronRight
             size={9}
             className={cn(
-              "ml-auto opacity-35 transition-transform duration-200 group-hover:opacity-50",
+              "ml-auto opacity-30 transition-transform duration-200 group-hover:opacity-50",
               isExpanded && "rotate-90",
             )}
           />
@@ -209,37 +155,30 @@ export default function ToolCallDisplay({
         {toolName === "Read" && hasInput && input?.file_path && !isStreaming && !error && (
           <button
             onClick={() => onOpenInEditor?.(input.file_path)}
-            className="rounded-full p-1 text-text-lighter opacity-50 transition-all hover:bg-hover hover:opacity-100"
+            className="rounded-full p-1 text-text-lighter/60 transition-all hover:bg-hover hover:text-text-lighter/90"
             title="Open in editor"
             aria-label="Open file in editor"
           >
             <ExternalLink size={10} />
           </button>
         )}
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-medium text-[10px]",
-            statusClass,
-          )}
-        >
-          {status === "running" ? <Clock size={8} className="animate-spin" /> : null}
-          {status === "completed" ? <CheckCircle size={8} /> : null}
-          {status === "failed" ? <AlertCircle size={8} /> : null}
-          {status}
-        </span>
+        {status === "running" ? (
+          <Clock size={10} className={cn("shrink-0 animate-spin", statusClass)} />
+        ) : null}
+        {status === "completed" ? (
+          <CheckCircle size={10} className={cn("shrink-0", statusClass)} />
+        ) : null}
+        {status === "failed" ? (
+          <AlertCircle size={10} className={cn("shrink-0", statusClass)} />
+        ) : null}
       </div>
 
       {isExpanded && (
-        <div className="mt-1.5 space-y-1 pl-3 text-xs opacity-80">
+        <div className="mt-1 space-y-1 pl-3 text-[11px] text-text-lighter/60">
           {/* Input section */}
           <div>
-            <div className="mb-1 font-medium opacity-60">Input:</div>
-            <pre
-              className="overflow-x-auto rounded-lg bg-secondary-bg/80 p-2 text-xs"
-              style={{
-                fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, monospace",
-              }}
-            >
+            <div className="mb-0.5 font-medium opacity-55">Input</div>
+            <pre className="editor-font max-h-48 overflow-x-auto whitespace-pre-wrap text-[11px]">
               {hasInput ? JSON.stringify(input, null, 2) : "No parameters"}
             </pre>
           </div>
@@ -247,14 +186,8 @@ export default function ToolCallDisplay({
           {/* Output section */}
           {output && (
             <div>
-              <div className="mb-1 font-medium opacity-60">Output:</div>
-              <pre
-                className="max-h-48 overflow-x-auto rounded-lg bg-secondary-bg/80 p-2 text-xs"
-                style={{
-                  fontFamily:
-                    "ui-monospace, SFMono-Regular, 'SF Mono', Monaco, Consolas, monospace",
-                }}
-              >
+              <div className="mb-0.5 font-medium opacity-55">Output</div>
+              <pre className="editor-font max-h-48 overflow-x-auto whitespace-pre-wrap text-[11px]">
                 {formatOutput(output)}
               </pre>
             </div>
@@ -263,8 +196,10 @@ export default function ToolCallDisplay({
           {/* Error section */}
           {error && (
             <div>
-              <div className="mb-1 font-medium text-red-400 opacity-80">Error:</div>
-              <div className="rounded-lg bg-red-500/10 p-2 text-red-400 opacity-80">{error}</div>
+              <div className="mb-0.5 font-medium text-red-400 opacity-80">Error</div>
+              <pre className="editor-font max-h-48 overflow-x-auto whitespace-pre-wrap text-[11px] text-red-400">
+                {error}
+              </pre>
             </div>
           )}
         </div>

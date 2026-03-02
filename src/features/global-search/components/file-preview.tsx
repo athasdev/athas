@@ -15,6 +15,7 @@ interface LineData {
 
 const convertTokensToLineTokens = (content: string, tokens: Token[]): LineData[] => {
   const lines = content.split("\n");
+  const sortedTokens = [...tokens].sort((a, b) => a.start - b.start || a.end - b.end);
   if (tokens.length === 0) {
     return lines.map((line, i) => ({
       lineNumber: i + 1,
@@ -39,13 +40,13 @@ const convertTokensToLineTokens = (content: string, tokens: Token[]): LineData[]
     const lineEnd = lineStart + line.length;
     const lineTokens: LineToken[] = [];
 
-    while (tokenIdx < tokens.length && tokens[tokenIdx].end <= lineStart) {
+    while (tokenIdx < sortedTokens.length && sortedTokens[tokenIdx].end <= lineStart) {
       tokenIdx++;
     }
 
     let tempIdx = tokenIdx;
-    while (tempIdx < tokens.length && tokens[tempIdx].start < lineEnd) {
-      const token = tokens[tempIdx];
+    while (tempIdx < sortedTokens.length && sortedTokens[tempIdx].start < lineEnd) {
+      const token = sortedTokens[tempIdx];
       if (token.end > lineStart) {
         const startColumn = Math.max(0, token.start - lineStart);
         const endColumn = Math.min(line.length, token.end - lineStart);
@@ -70,17 +71,50 @@ const convertTokensToLineTokens = (content: string, tokens: Token[]): LineData[]
   return lineData;
 };
 
+const normalizeLineTokens = (tokens: LineToken[], lineLength: number): LineToken[] => {
+  if (tokens.length === 0) return [];
+
+  const normalized: LineToken[] = [];
+  const sorted = [...tokens].sort(
+    (a, b) => a.startColumn - b.startColumn || a.endColumn - b.endColumn,
+  );
+  let cursor = 0;
+
+  for (const token of sorted) {
+    const start = Math.max(0, Math.min(lineLength, token.startColumn));
+    const end = Math.max(0, Math.min(lineLength, token.endColumn));
+    if (end <= start) continue;
+
+    const clippedStart = Math.max(start, cursor);
+    if (end <= clippedStart) continue;
+
+    normalized.push({
+      ...token,
+      startColumn: clippedStart,
+      endColumn: end,
+    });
+    cursor = end;
+  }
+
+  return normalized;
+};
+
 const PreviewLine = memo(({ lineNumber, content, tokens }: LineData) => {
+  const normalizedTokens = useMemo(
+    () => normalizeLineTokens(tokens, content.length),
+    [tokens, content.length],
+  );
+
   const rendered = useMemo(() => {
-    if (!tokens || tokens.length === 0) {
+    if (normalizedTokens.length === 0) {
       return <span>{content || "\u00A0"}</span>;
     }
 
     const elements: React.ReactNode[] = [];
     let lastEnd = 0;
 
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i];
+    for (let i = 0; i < normalizedTokens.length; i++) {
+      const token = normalizedTokens[i];
       if (token.startColumn > lastEnd) {
         elements.push(<span key={`t-${i}`}>{content.slice(lastEnd, token.startColumn)}</span>);
       }
@@ -97,14 +131,14 @@ const PreviewLine = memo(({ lineNumber, content, tokens }: LineData) => {
     }
 
     return <>{elements}</>;
-  }, [content, tokens]);
+  }, [content, normalizedTokens]);
 
   return (
-    <div className="flex font-mono text-[11px] leading-[18px]">
-      <span className="mr-3 w-8 select-none text-right text-text-lighter opacity-50">
+    <div className="flex items-start font-mono text-[11px] leading-[18px]">
+      <span className="mr-3 w-8 shrink-0 select-none text-right text-text-lighter opacity-50 tabular-nums">
         {lineNumber}
       </span>
-      <span className="flex-1 whitespace-pre text-text">{rendered}</span>
+      <span className="whitespace-pre text-text">{rendered}</span>
     </div>
   );
 });
@@ -150,8 +184,8 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
   }
 
   return (
-    <div className="custom-scrollbar-thin h-full overflow-y-auto bg-primary-bg p-3">
-      <div className="space-y-0">
+    <div className="custom-scrollbar-thin h-full overflow-auto bg-primary-bg p-3">
+      <div className="min-w-max space-y-0">
         {lineData.map((line) => (
           <PreviewLine key={line.lineNumber} {...line} />
         ))}

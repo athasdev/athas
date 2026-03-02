@@ -38,6 +38,7 @@ export const GitFileItem = ({
   const fileName = pathParts.pop() || file.path;
   const directory = pathParts.join("/");
   const indentPx = 8 + indentLevel * 14;
+  const fileNameTextClass = showDirectory ? "text-[10px]" : "text-xs";
 
   return (
     <div
@@ -59,7 +60,7 @@ export const GitFileItem = ({
         />
       )}
       <div className="flex min-w-0 flex-1 items-center gap-1.5" title={file.path}>
-        <span className="shrink-0 text-[10px] text-text">{fileName}</span>
+        <span className={cn("shrink-0 text-text", fileNameTextClass)}>{fileName}</span>
         {showDirectory && directory && (
           <span className="truncate text-[9px] text-text-lighter">{directory}</span>
         )}

@@ -79,6 +79,15 @@ interface PersistedPreferences {
   activeIconThemeId: string | null;
 }
 
+const EXTENSIONS_CDN_BASE = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
+
+function resolveLanguageAssetUrl(assetPath: string | undefined, fallbackPath: string): string {
+  const raw = (assetPath || fallbackPath).trim();
+  if (!raw) return `${EXTENSIONS_CDN_BASE}/${fallbackPath.replace(/^\/+/, "")}`;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `${EXTENSIONS_CDN_BASE}/${raw.replace(/^\/+/, "")}`;
+}
+
 const useExtensionStoreBase = create<ExtensionStoreState>()(
   immer((set, get) => ({
     installedExtensions: new Map(),
@@ -242,10 +251,15 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               // Simple language extension - use IndexedDB
               const { extensionInstaller } = await import("../installer/extension-installer");
 
-              // Get WASM and query URLs from CDN
-              const cdnBase = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
-              const wasmUrl = `${cdnBase}/shared/parsers/tree-sitter-${caps.languageId}.wasm`;
-              const queryUrl = `${cdnBase}/shared/queries/${caps.languageId}/highlights.scm`;
+              // Prefer manifest-declared grammar assets; fallback to language folder convention.
+              const wasmUrl = resolveLanguageAssetUrl(
+                caps.grammar?.wasmPath,
+                `${caps.languageId}/parser.wasm`,
+              );
+              const queryUrl = resolveLanguageAssetUrl(
+                caps.grammar?.highlightQuery,
+                `${caps.languageId}/highlights.scm`,
+              );
 
               await extensionInstaller.installLanguage(caps.languageId, wasmUrl, queryUrl, {
                 version: manifest.version,
