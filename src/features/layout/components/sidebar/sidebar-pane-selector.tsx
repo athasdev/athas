@@ -6,22 +6,22 @@ import Button from "../../../../ui/button";
 
 interface SidebarPaneSelectorProps {
   isGitViewActive: boolean;
-  isSearchViewActive: boolean;
   isGitHubPRsViewActive: boolean;
   coreFeatures: CoreFeaturesState;
-  onViewChange: (view: "files" | "git" | "search" | "github-prs") => void;
+  onViewChange: (view: "files" | "git" | "github-prs") => void;
+  onSearchClick?: () => void;
   compact?: boolean;
 }
 
 export const SidebarPaneSelector = ({
   isGitViewActive,
-  isSearchViewActive,
   isGitHubPRsViewActive,
   coreFeatures,
   onViewChange,
+  onSearchClick,
   compact = false,
 }: SidebarPaneSelectorProps) => {
-  const isFilesActive = !isGitViewActive && !isSearchViewActive && !isGitHubPRsViewActive;
+  const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive;
   const tooltipSide = compact ? "bottom" : "right";
   const getTabClass = (isActive: boolean) =>
     cn(
@@ -47,17 +47,14 @@ export const SidebarPaneSelector = ({
         </Button>
       </Tooltip>
 
-      {coreFeatures.search && (
-        <Tooltip content="Search" side={tooltipSide}>
+      {coreFeatures.search && onSearchClick && (
+        <Tooltip content="Search (⇧⌘F)" side={tooltipSide}>
           <Button
-            aria-role="tab"
-            aria-selected={isSearchViewActive}
             aria-label="Search"
-            onClick={() => onViewChange("search")}
+            onClick={onSearchClick}
             variant="ghost"
             size="sm"
-            data-active={isSearchViewActive}
-            className={getTabClass(isSearchViewActive)}
+            className={getTabClass(false)}
           >
             <Search size={14} />
           </Button>

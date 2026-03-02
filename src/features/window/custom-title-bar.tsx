@@ -19,8 +19,13 @@ interface CustomTitleBarProps {
 
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const { settings } = useSettingsStore();
-  const { isGitViewActive, isSearchViewActive, isGitHubPRsViewActive, setActiveView } =
-    useUIState();
+  const {
+    isGitViewActive,
+    isGitHubPRsViewActive,
+    setActiveView,
+    setIsGlobalSearchVisible,
+    isGlobalSearchVisible,
+  } = useUIState();
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -132,10 +137,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           )}
           <SidebarPaneSelector
             isGitViewActive={isGitViewActive}
-            isSearchViewActive={isSearchViewActive}
             isGitHubPRsViewActive={isGitHubPRsViewActive}
             coreFeatures={settings.coreFeatures}
             onViewChange={setActiveView}
+            onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
             compact
           />
         </div>
@@ -182,10 +187,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         <div className="pointer-events-auto mr-2">
           <SidebarPaneSelector
             isGitViewActive={isGitViewActive}
-            isSearchViewActive={isSearchViewActive}
             isGitHubPRsViewActive={isGitHubPRsViewActive}
             coreFeatures={settings.coreFeatures}
             onViewChange={setActiveView}
+            onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
             compact
           />
         </div>

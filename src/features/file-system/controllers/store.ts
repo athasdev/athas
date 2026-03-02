@@ -14,7 +14,6 @@ import { gitDiffCache } from "@/features/git/utils/diff-cache";
 import { isDiffFile, parseRawDiffContent } from "@/features/git/utils/diff-parser";
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
-import { useSearchResultsStore } from "@/stores/search-results-store";
 import { useSessionStore } from "@/stores/session-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
@@ -164,10 +163,6 @@ export const useFileSystemStore = createSelectors(
 
         // Clear git diff cache
         gitDiffCache.clear();
-
-        // Clear search results
-        useSearchResultsStore.getState().clearSearchResults();
-        useSearchResultsStore.getState().clearActivePathSearchResults();
 
         // Clear git blame data
         useGitBlameStore.getState().clearAllBlame();

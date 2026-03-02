@@ -6,7 +6,6 @@ import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAppStore } from "@/stores/app-store";
-import { useSearchViewStore } from "@/stores/search-view-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { useZoomStore } from "@/stores/zoom-store";
 import { isMac } from "@/utils/platform";
@@ -317,10 +316,8 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+h",
     execute: () => {
-      const uiState = useUIState.getState();
-      uiState.setIsSidebarVisible(true);
-      uiState.setIsSearchViewActive(true);
-      setTimeout(() => useSearchViewStore.getState().focusSearchInput(), 100);
+      const state = useUIState.getState();
+      state.setIsGlobalSearchVisible(!state.isGlobalSearchVisible);
     },
   },
   {

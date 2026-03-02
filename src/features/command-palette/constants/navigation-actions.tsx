@@ -12,7 +12,7 @@ import type { Action } from "../models/action.types";
 
 interface NavigationActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
-  setActiveView: (view: "files" | "git" | "search" | "github-prs") => void;
+  setActiveView: (view: "files" | "git" | "github-prs") => void;
   setIsCommandBarVisible: (v: boolean) => void;
   setIsGlobalSearchVisible: (v: boolean) => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
@@ -67,22 +67,9 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       },
     },
     {
-      id: "view-show-search",
-      label: "View: Show Search",
-      description: "Switch to project search view in sidebar",
-      icon: <Search size={14} />,
-      category: "Navigation",
-      keybinding: ["⌘", "⇧", "H"],
-      action: () => {
-        setIsSidebarVisible(true);
-        setActiveView("search");
-        onClose();
-      },
-    },
-    {
       id: "search-global",
       label: "Search: Global Search",
-      description: "Open global file search with preview",
+      description: "Search across files in workspace",
       icon: <Search size={14} />,
       category: "Navigation",
       keybinding: ["⌘", "⇧", "F"],
