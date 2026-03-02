@@ -1,6 +1,9 @@
-import { memo, useMemo } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { readFile } from "@tauri-apps/plugin-fs";
+import { memo, useEffect, useMemo, useState } from "react";
 import type { Token } from "@/features/editor/extensions/types";
 import type { LineToken } from "@/features/editor/types/editor";
+import { isImageFile } from "@/features/file-system/controllers/file-utils";
 import { useFilePreview } from "../hooks/use-file-preview";
 
 interface FilePreviewProps {
@@ -11,6 +14,86 @@ interface LineData {
   lineNumber: number;
   content: string;
   tokens: LineToken[];
+}
+
+const IMAGE_MIME_TYPE_BY_EXT: Record<string, string> = {
+  apng: "image/apng",
+  avif: "image/avif",
+  bmp: "image/bmp",
+  gif: "image/gif",
+  heic: "image/heic",
+  heif: "image/heif",
+  ico: "image/x-icon",
+  jfif: "image/jpeg",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  pjp: "image/jpeg",
+  pjpeg: "image/jpeg",
+  png: "image/png",
+  svg: "image/svg+xml",
+  tif: "image/tiff",
+  tiff: "image/tiff",
+  webp: "image/webp",
+};
+
+function getImageMimeType(path: string): string {
+  const extension = path.split(".").pop()?.toLowerCase() || "";
+  return IMAGE_MIME_TYPE_BY_EXT[extension] || "image/png";
+}
+
+function useImagePreview(filePath: string | null, enabled: boolean) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+    let objectUrl: string | null = null;
+
+    if (!enabled || !filePath) {
+      setSrc(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    const load = async () => {
+      try {
+        const content = await readFile(filePath);
+        if (isCancelled) return;
+
+        const blob = new Blob([content], { type: getImageMimeType(filePath) });
+        objectUrl = URL.createObjectURL(blob);
+        setSrc(objectUrl);
+      } catch (readError) {
+        if (isCancelled) return;
+        try {
+          setSrc(convertFileSrc(filePath));
+        } catch {
+          setError(`Failed to load image: ${readError}`);
+          setSrc(null);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      isCancelled = true;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [enabled, filePath]);
+
+  return { src, isLoading, error };
 }
 
 const convertTokensToLineTokens = (content: string, tokens: Token[]): LineData[] => {
@@ -135,7 +218,7 @@ const PreviewLine = memo(({ lineNumber, content, tokens }: LineData) => {
 
   return (
     <div className="flex items-start font-mono text-[11px] leading-[18px]">
-      <span className="mr-3 w-8 shrink-0 select-none text-right text-text-lighter opacity-50 tabular-nums">
+      <span className="mr-3 w-8 shrink-0 select-none text-right text-text-lighter tabular-nums opacity-50">
         {lineNumber}
       </span>
       <span className="whitespace-pre text-text">{rendered}</span>
@@ -144,7 +227,13 @@ const PreviewLine = memo(({ lineNumber, content, tokens }: LineData) => {
 });
 
 export const FilePreview = ({ filePath }: FilePreviewProps) => {
-  const { content, tokens, isLoading, error } = useFilePreview(filePath);
+  const isImage = !!(filePath && isImageFile(filePath));
+  const { content, tokens, isLoading, error } = useFilePreview(isImage ? null : filePath);
+  const {
+    src: imageSrc,
+    isLoading: isImageLoading,
+    error: imageError,
+  } = useImagePreview(filePath, isImage);
 
   const lineData = useMemo(() => {
     if (!content) return [];
@@ -171,6 +260,43 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
     return (
       <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
         {error}
+      </div>
+    );
+  }
+
+  if (isImage) {
+    if (isImageLoading) {
+      return (
+        <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
+          Loading image preview...
+        </div>
+      );
+    }
+
+    if (imageError) {
+      return (
+        <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
+          {imageError}
+        </div>
+      );
+    }
+
+    if (!imageSrc) {
+      return (
+        <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
+          Unable to preview image
+        </div>
+      );
+    }
+
+    const fileName = filePath?.split(/[\\/]/).pop() || "image";
+    return (
+      <div className="flex h-full items-center justify-center overflow-auto bg-primary-bg p-3">
+        <img
+          src={imageSrc}
+          alt={fileName}
+          className="max-h-full max-w-full rounded border border-border object-contain"
+        />
       </div>
     );
   }

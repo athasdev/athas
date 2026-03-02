@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { extensionManager } from "@/features/editor/extensions/manager";
 import type { Token } from "@/features/editor/extensions/types";
+import {
+  fetchHighlightQuery,
+  getDefaultParserWasmUrl,
+} from "@/features/editor/lib/wasm-parser/extension-assets";
+import { tokenizeCodeWithTree } from "@/features/editor/lib/wasm-parser/tokenizer";
+import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 
 interface UseFilePreviewReturn {
@@ -16,6 +21,7 @@ const MAX_CACHE_SIZE = 30;
 
 const contentCache = new Map<string, string>();
 const tokenCache = new Map<string, Token[]>();
+const highlightQueryCache = new Map<string, string>();
 
 const addToContentCache = (key: string, value: string) => {
   if (contentCache.size >= MAX_CACHE_SIZE) {
@@ -44,6 +50,7 @@ export const useFilePreview = (filePath: string | null): UseFilePreviewReturn =>
     if (!filePath) {
       setContent("");
       setTokens([]);
+      setIsLoading(false);
       setError(null);
       return;
     }
@@ -51,14 +58,44 @@ export const useFilePreview = (filePath: string | null): UseFilePreviewReturn =>
     const currentRequestId = ++requestIdRef.current;
 
     const tokenizeAsync = async (path: string, text: string, reqId: number) => {
-      const extension = path.split(".").pop() || "txt";
-      const provider = extensionManager.getLanguageProvider(extension);
-
-      if (!provider) return;
+      const languageId = getLanguageIdFromPath(path);
+      if (!languageId) return;
 
       try {
-        const fileTokens = await provider.getTokens(text);
-        if (reqId !== requestIdRef.current) return;
+        const wasmPath = getDefaultParserWasmUrl(languageId);
+        let highlightQuery = highlightQueryCache.get(languageId);
+
+        if (!highlightQuery) {
+          const resolved = await fetchHighlightQuery(languageId, {
+            wasmUrl: wasmPath,
+            cacheMode: "no-store",
+          });
+          highlightQuery = resolved.query || "";
+          highlightQueryCache.set(languageId, highlightQuery);
+        }
+
+        const result = await tokenizeCodeWithTree(text, languageId, {
+          languageId,
+          wasmPath,
+          highlightQuery,
+        });
+        if (reqId !== requestIdRef.current) {
+          try {
+            result.tree.delete();
+          } catch {}
+          return;
+        }
+
+        const fileTokens: Token[] = result.tokens.map((token) => ({
+          start: token.startIndex,
+          end: token.endIndex,
+          token_type: token.type,
+          class_name: token.type,
+        }));
+
+        try {
+          result.tree.delete();
+        } catch {}
 
         addToTokenCache(path, fileTokens);
         setTokens(fileTokens);
