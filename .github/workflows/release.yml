@@ -92,6 +92,11 @@ jobs:
         if: matrix.os == 'linux'
         run: echo "APPIMAGE_EXTRACT_AND_RUN=1" >> "$GITHUB_ENV"
 
+      # NOTE: When upgrading to Ubuntu 24.04+, add NO_STRIP=1 environment variable
+      # to the tauri-action step below. The bundled strip binary in linuxdeploy
+      # doesn't support the newer ELF .relr.dyn sections used in newer distros.
+      # See: https://github.com/linuxdeploy/linuxdeploy/issues/272
+
       - name: Install frontend dependencies
         run: bun install
 
