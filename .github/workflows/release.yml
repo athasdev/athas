@@ -69,6 +69,10 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Ensure Rust target is installed
+        if: matrix.target != ''
+        run: rustup target add ${{ matrix.target }}
+
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -86,7 +90,7 @@ jobs:
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libfuse2
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libfuse2 xdg-utils desktop-file-utils libglib2.0-bin
 
       - name: Configure AppImage runtime (Linux only)
         if: matrix.os == 'linux'
@@ -150,11 +154,12 @@ jobs:
           args: ${{ matrix.args }}
 
   deploy-docs:
+    if: ${{ secrets.WWW_DEPLOY_TOKEN != '' || secrets.WWW_REPO_TOKEN != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Trigger docs rebuild on www
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.WWW_DEPLOY_TOKEN }}
+          token: ${{ secrets.WWW_DEPLOY_TOKEN || secrets.WWW_REPO_TOKEN }}
           repository: athasdev/www
           event-type: docs-updated
