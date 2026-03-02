@@ -1,10 +1,13 @@
 import DOMPurify from "dompurify";
 import { normalizeLanguage } from "./language-map";
-import { highlightCode } from "./prism-languages";
 
 interface Footnote {
   id: string;
   text: string;
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function processInline(text: string, footnotes: Footnote[]): string {
@@ -76,8 +79,8 @@ export function parseMarkdown(content: string): string {
       if (inCodeBlock) {
         const rawLang = codeBlockLanguage || "plaintext";
         const lang = normalizeLanguage(rawLang);
-        const highlighted = highlightCode(codeBlockContent.trim(), lang);
-        processedLines.push(`<pre><code class="language-${lang}">${highlighted}</code></pre>`);
+        const escaped = escapeHtml(codeBlockContent.trim());
+        processedLines.push(`<pre><code class="language-${lang}">${escaped}</code></pre>`);
         codeBlockContent = "";
         codeBlockLanguage = "";
         inCodeBlock = false;
@@ -189,8 +192,8 @@ export function parseMarkdown(content: string): string {
   if (inCodeBlock) {
     const rawLang = codeBlockLanguage || "plaintext";
     const lang = normalizeLanguage(rawLang);
-    const highlighted = highlightCode(codeBlockContent.trim(), lang);
-    processedLines.push(`<pre><code class="language-${lang}">${highlighted}</code></pre>`);
+    const escaped = escapeHtml(codeBlockContent.trim());
+    processedLines.push(`<pre><code class="language-${lang}">${escaped}</code></pre>`);
   }
 
   if (footnotes.length > 0) {

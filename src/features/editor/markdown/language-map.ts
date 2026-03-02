@@ -12,6 +12,7 @@ export const LANGUAGE_ALIASES: Record<string, string> = {
   fish: "bash",
   yml: "yaml",
   md: "markdown",
+  mdx: "tsx",
   cs: "csharp",
   kt: "kotlin",
   cpp: "cpp",

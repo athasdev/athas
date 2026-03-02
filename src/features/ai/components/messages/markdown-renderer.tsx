@@ -1,9 +1,13 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat";
+import {
+  fetchHighlightQuery,
+  getDefaultParserWasmUrl,
+} from "@/features/editor/lib/wasm-parser/extension-assets";
+import { tokenizeCodeWithTree } from "@/features/editor/lib/wasm-parser/tokenizer";
 import { normalizeLanguage } from "@/features/editor/markdown/language-map";
-import { highlightCode } from "@/features/editor/markdown/prism-languages";
 
 const LANGUAGE_HINTS = new Set([
   "bash",
@@ -137,6 +141,200 @@ function inferCodeLanguage(code: string): string {
   }
 
   return "clike";
+}
+
+type HighlightSegment = {
+  start: number;
+  end: number;
+  className: string;
+};
+
+const TREE_SITTER_QUERY_CACHE = new Map<string, string>();
+const TREE_SITTER_TOKEN_CACHE = new Map<string, HighlightSegment[]>();
+
+const TREE_SITTER_LANGUAGE_ALIASES: Record<string, string> = {
+  csharp: "csharp",
+  jsx: "tsx",
+  shell: "bash",
+  markup: "html",
+  xml: "html",
+  objectivec: "objc",
+};
+
+function resolveTreeSitterLanguage(language: string): string | null {
+  const normalized = normalizeLanguage(language);
+  if (normalized === "clike") return null;
+  return TREE_SITTER_LANGUAGE_ALIASES[normalized] || normalized;
+}
+
+function normalizeSegments(tokens: HighlightSegment[], maxLength: number): HighlightSegment[] {
+  if (tokens.length === 0) return [];
+
+  const sorted = [...tokens].sort((a, b) => a.start - b.start || a.end - b.end);
+  const normalized: HighlightSegment[] = [];
+  let cursor = 0;
+
+  for (const token of sorted) {
+    const start = Math.max(0, Math.min(maxLength, token.start));
+    const end = Math.max(0, Math.min(maxLength, token.end));
+    if (end <= start) continue;
+
+    const clampedStart = Math.max(start, cursor);
+    if (end <= clampedStart) continue;
+
+    normalized.push({
+      ...token,
+      start: clampedStart,
+      end,
+    });
+
+    cursor = end;
+  }
+
+  return normalized;
+}
+
+function renderHighlightedCode(code: string, segments: HighlightSegment[]): React.ReactNode {
+  if (segments.length === 0) {
+    return code;
+  }
+
+  const elements: React.ReactNode[] = [];
+  let lastEnd = 0;
+
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+    if (segment.start > lastEnd) {
+      elements.push(<span key={`t-${i}`}>{code.slice(lastEnd, segment.start)}</span>);
+    }
+
+    elements.push(
+      <span key={`k-${i}`} className={segment.className}>
+        {code.slice(segment.start, segment.end)}
+      </span>,
+    );
+    lastEnd = segment.end;
+  }
+
+  if (lastEnd < code.length) {
+    elements.push(<span key="e">{code.slice(lastEnd)}</span>);
+  }
+
+  return <>{elements}</>;
+}
+
+function CodeBlock({
+  code,
+  languageHint,
+  onApplyCode,
+}: {
+  code: string;
+  languageHint: string;
+  onApplyCode?: (code: string, language?: string) => void;
+}) {
+  const explicitLanguage = languageHint ? normalizeLanguage(languageHint) : "";
+  const inferredLanguage = explicitLanguage || inferCodeLanguage(code);
+  const treeSitterLanguage = resolveTreeSitterLanguage(inferredLanguage);
+  const languageLabel = explicitLanguage || (inferredLanguage !== "clike" ? inferredLanguage : "");
+
+  const [segments, setSegments] = useState<HighlightSegment[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSegments(null);
+
+    if (!treeSitterLanguage) {
+      setSegments([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const cacheKey = `${treeSitterLanguage}:${code}`;
+    const cached = TREE_SITTER_TOKEN_CACHE.get(cacheKey);
+    if (cached) {
+      setSegments(cached);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const loadHighlighting = async () => {
+      try {
+        const wasmPath = getDefaultParserWasmUrl(treeSitterLanguage);
+        let highlightQuery = TREE_SITTER_QUERY_CACHE.get(treeSitterLanguage);
+
+        if (!highlightQuery) {
+          const resolved = await fetchHighlightQuery(treeSitterLanguage, {
+            wasmUrl: wasmPath,
+            cacheMode: "no-store",
+          });
+          highlightQuery = resolved.query || "";
+          TREE_SITTER_QUERY_CACHE.set(treeSitterLanguage, highlightQuery);
+        }
+
+        const result = await tokenizeCodeWithTree(code, treeSitterLanguage, {
+          languageId: treeSitterLanguage,
+          wasmPath,
+          highlightQuery,
+        });
+
+        const tokenSegments = normalizeSegments(
+          result.tokens.map((token) => ({
+            start: token.startIndex,
+            end: token.endIndex,
+            className: token.type,
+          })),
+          code.length,
+        );
+
+        try {
+          result.tree.delete();
+        } catch {}
+
+        if (cancelled) return;
+
+        TREE_SITTER_TOKEN_CACHE.set(cacheKey, tokenSegments);
+        setSegments(tokenSegments);
+      } catch {
+        if (!cancelled) {
+          setSegments([]);
+        }
+      }
+    };
+
+    loadHighlighting();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [code, treeSitterLanguage]);
+
+  const renderedCode = useMemo(() => renderHighlightedCode(code, segments || []), [code, segments]);
+
+  return (
+    <div className="group relative my-2">
+      <pre className="editor-font max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
+        <div className="mb-1 flex items-center justify-between">
+          {languageLabel && (
+            <div className="editor-font text-text-lighter text-xs">{languageLabel}</div>
+          )}
+          {onApplyCode && code.trim() && (
+            <button
+              onClick={() => onApplyCode(code)}
+              className="ui-font whitespace-nowrap rounded border border-border bg-primary-bg px-2 py-1 text-text text-xs opacity-0 transition-colors hover:bg-hover group-hover:opacity-100"
+              title="Apply this code to current buffer"
+            >
+              Apply
+            </button>
+          )}
+        </div>
+        <code className="editor-font block whitespace-pre-wrap break-all text-text text-xs">
+          {renderedCode}
+        </code>
+      </pre>
+    </div>
+  );
 }
 
 // Error Block Component
@@ -391,34 +589,13 @@ function renderContent(
   const flushCodeBlock = () => {
     if (codeBlockContent.length > 0) {
       const code = codeBlockContent.join("\n");
-      const explicitLanguage = codeBlockLanguage ? normalizeLanguage(codeBlockLanguage) : "";
-      const prismLanguage = explicitLanguage || inferCodeLanguage(code);
-      const highlightedCode = highlightCode(code, prismLanguage);
-      const languageLabel = explicitLanguage || (prismLanguage !== "clike" ? prismLanguage : "");
-
       elements.push(
-        <div key={key++} className="group relative my-2">
-          <pre className="editor-font max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
-            <div className="mb-1 flex items-center justify-between">
-              {languageLabel && (
-                <div className="editor-font text-text-lighter text-xs">{languageLabel}</div>
-              )}
-              {onApplyCode && code.trim() && (
-                <button
-                  onClick={() => onApplyCode(code)}
-                  className="ui-font whitespace-nowrap rounded border border-border bg-primary-bg px-2 py-1 text-text text-xs opacity-0 transition-colors hover:bg-hover group-hover:opacity-100"
-                  title="Apply this code to current buffer"
-                >
-                  Apply
-                </button>
-              )}
-            </div>
-            <code
-              className="editor-font block whitespace-pre-wrap break-all text-text text-xs"
-              dangerouslySetInnerHTML={{ __html: highlightedCode }}
-            />
-          </pre>
-        </div>,
+        <CodeBlock
+          key={key++}
+          code={code}
+          languageHint={codeBlockLanguage}
+          onApplyCode={onApplyCode}
+        />,
       );
       codeBlockContent = [];
       codeBlockLanguage = "";
