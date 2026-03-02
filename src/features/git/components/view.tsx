@@ -641,8 +641,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-          <div className="min-h-0 flex-1 overflow-y-scroll">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="scrollbar-none min-h-0 flex-1 overflow-y-scroll">
             <GitStatusPanel
               files={gitStatus.files}
               onFileSelect={handleViewFileDiff}
@@ -652,17 +652,13 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             />
           </div>
 
-          <div className="max-h-44 shrink-0 overflow-hidden">
-            <GitStashPanel
-              repoPath={activeRepoPath}
-              onRefresh={handleManualRefresh}
-              onViewStashDiff={handleViewStashDiff}
-            />
-          </div>
+          <GitStashPanel
+            repoPath={activeRepoPath}
+            onRefresh={handleManualRefresh}
+            onViewStashDiff={handleViewStashDiff}
+          />
 
-          <div className="max-h-52 shrink-0 overflow-hidden">
-            <GitCommitHistory onViewCommitDiff={handleViewCommitDiff} repoPath={activeRepoPath} />
-          </div>
+          <GitCommitHistory onViewCommitDiff={handleViewCommitDiff} repoPath={activeRepoPath} />
         </div>
 
         <div className="shrink-0">
@@ -707,7 +703,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto p-2">
               <div className="mb-1 flex items-center justify-between px-1 text-[10px] text-text-lighter uppercase tracking-wide">
                 <span>Repositories</span>
                 <span>{workspaceRepoPaths.length + (manualRepoPath ? 1 : 0)}</span>

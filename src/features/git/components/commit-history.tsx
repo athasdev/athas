@@ -453,8 +453,8 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
   }, [commits, hoveredCommit]);
 
   return (
-    <div className={cn("select-none p-1.5", !isCollapsed && "min-h-0 flex-1")}>
-      <div className="overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
+    <div className={cn("select-none py-0.5 px-1.5", !isCollapsed && "min-h-0 flex-1")}>
+      <div className="flex flex-col overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
         <button
           type="button"
           className="sticky top-0 z-20 flex w-full shrink-0 cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
@@ -468,7 +468,7 @@ const GitCommitHistory = ({ onViewCommitDiff, repoPath }: GitCommitHistoryProps)
 
         {!isCollapsed && (
           <div
-            className="relative min-h-0 flex-1 overflow-y-scroll bg-primary-bg/70 p-1"
+            className="scrollbar-none relative min-h-0 flex-1 overflow-y-scroll bg-primary-bg/70 p-1"
             ref={scrollContainerRef}
           >
             {commits.length === 0 ? (

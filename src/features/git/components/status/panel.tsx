@@ -338,7 +338,7 @@ const GitStatusPanel = ({
   };
 
   return (
-    <div className="select-none p-1.5">
+    <div className="select-none p-1">
       {stagedFiles.length > 0 && (
         <div className="mb-2 overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
           <div
