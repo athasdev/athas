@@ -157,7 +157,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger docs rebuild on www
-        if: ${{ secrets.WWW_DEPLOY_TOKEN != '' || secrets.WWW_REPO_TOKEN != '' }}
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.WWW_DEPLOY_TOKEN || secrets.WWW_REPO_TOKEN }}
