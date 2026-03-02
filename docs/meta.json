@@ -4,11 +4,11 @@
     "---Introduction---",
     "index",
     "installation",
+    "contributing",
     "---Features---",
     "terminal",
     "project-tabs",
     "workspaces",
-    "minimap",
     "command-palette",
     "---Customizing---",
     "themes",
@@ -22,9 +22,6 @@
     "---Git---",
     "git-integration",
     "git-branches",
-    "git-diff",
-    "---Contributing---",
-    "setup-contributing",
-    "releasing"
+    "git-diff"
   ]
 }

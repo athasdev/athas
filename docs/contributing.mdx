@@ -1,0 +1,129 @@
+---
+title: Contributing
+description: Set up a development environment and release Athas
+---
+
+import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+
+Thanks for helping improve Athas.
+
+## Development Setup
+
+### Common Prerequisites
+
+- Git
+- Rust (via rustup)
+- Node.js 18+ and bun
+
+### Platform Setup
+
+<Tabs items={["macOS", "Linux", "Windows"]}>
+  <Tab value="macOS">
+    **Prerequisites**
+
+    - Xcode Command Line Tools
+    - Rust (via rustup)
+    - Node.js 18+ and bun
+
+    **Install dependencies**
+
+    ```bash
+    # Install Xcode CLI tools
+    xcode-select --install
+
+    # Install Rust
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+    # Install bun
+    curl -fsSL https://bun.sh/install | bash
+    ```
+
+    If you encounter issues with Tauri:
+
+    ```bash
+    brew install pkg-config
+    ```
+  </Tab>
+  <Tab value="Linux">
+    **Prerequisites**
+
+    - Build essentials
+    - Rust (via rustup)
+    - Node.js 18+ and bun
+    - Tauri dependencies
+
+    **Ubuntu/Debian**
+
+    ```bash
+    sudo apt update
+    sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+    # Install Rust
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+    # Install bun
+    curl -fsSL https://bun.sh/install | bash
+    ```
+
+    **Fedora**
+
+    ```bash
+    sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file libxdo-devel librsvg2-devel
+
+    # Install Rust
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+    # Install bun
+    curl -fsSL https://bun.sh/install | bash
+    ```
+  </Tab>
+  <Tab value="Windows">
+    **Prerequisites**
+
+    - Visual Studio Build Tools
+    - Rust (via rustup)
+    - Node.js 18+ and bun
+    - WebView2
+
+    **Install dependencies**
+
+    1. Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with "Desktop development with C++".
+    2. Install Rust from [rustup.rs](https://rustup.rs/).
+    3. Install bun:
+       ```powershell
+       powershell -c "irm bun.sh/install.ps1 | iex"
+       ```
+    4. Ensure WebView2 is installed (usually preinstalled on Windows 10/11).
+  </Tab>
+</Tabs>
+
+### Clone and Run
+
+```bash
+git clone https://github.com/athasdev/athas.git
+cd athas
+bun install
+bun dev
+```
+
+## Release Process
+
+1. Update version in `package.json` and `src-tauri/Cargo.toml`.
+2. Create a git tag: `git tag v1.0.0`.
+3. Push the tag: `git push origin v1.0.0`.
+
+### GitHub Actions
+
+The release workflow automatically:
+
+- Builds for macOS, Linux, and Windows
+- Creates GitHub release
+- Uploads installers and binaries
+
+### Versioning
+
+We use semantic versioning: `MAJOR.MINOR.PATCH`.
+
+- **MAJOR**: Breaking changes
+- **MINOR**: New features (backwards compatible)
+- **PATCH**: Bug fixes
