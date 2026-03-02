@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { memo, useEffect, useMemo, useState } from "react";
 import type { CompletionItem } from "vscode-languageserver-protocol";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
@@ -127,8 +128,6 @@ export const CompletionDropdown = memo(
     // Check if this overlay should be shown (not hidden by higher priority overlays)
     const shouldShow = shouldShowOverlay("completion");
 
-    if (!isLspCompletionVisible || !shouldShow) return null;
-
     const handleSelect = (item: CompletionItem) => {
       if (onApplyCompletion) {
         onApplyCompletion(item);
@@ -149,78 +148,89 @@ export const CompletionDropdown = memo(
     const selectedDetail = selectedItem?.detail;
     const hasDocPanel = selectedDocumentation || selectedDetail;
 
+    const showDropdown = isLspCompletionVisible && shouldShow;
+
     return (
-      <div
-        className="editor-completion-dropdown absolute flex items-start"
-        style={{
-          left: `${x}px`,
-          top: `${y}px`,
-          zIndex: EDITOR_CONSTANTS.Z_INDEX.COMPLETION,
-        }}
-      >
-        {/* Main completion list */}
-        <div
-          className="editor-completion-list custom-scrollbar overflow-y-auto"
-          style={{
-            minWidth: `${EDITOR_CONSTANTS.DROPDOWN_MIN_WIDTH}px`,
-            maxWidth: `${EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH}px`,
-            maxHeight: `${EDITOR_CONSTANTS.MAX_VISIBLE_COMPLETIONS * 24}px`,
-          }}
-        >
-          {visibleCompletions.map((filtered, index: number) => {
-            const item = filtered.item;
-            const isSelected = index === selectedLspIndex;
-
-            return (
-              <div
-                key={index}
-                ref={(el) => {
-                  if (isSelected && el) {
-                    el.scrollIntoView({ block: "nearest" });
-                  }
-                }}
-                className={cn(
-                  "editor-completion-item ui-font cursor-pointer px-2 py-1 text-xs",
-                  isSelected
-                    ? "editor-completion-item-selected text-text"
-                    : "text-text hover:bg-hover",
-                )}
-                onClick={() => handleSelect(item)}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">
-                    {currentPrefix && filtered.indices.length > 0
-                      ? highlightMatches(item.label, filtered.indices)
-                      : item.label}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Documentation panel (VS Code style) */}
-        {hasDocPanel && (
-          <div
-            className="editor-completion-docs custom-scrollbar ml-1 p-2"
+      <AnimatePresence>
+        {showDropdown && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -4 }}
+            transition={{ duration: 0.12, ease: "easeOut" }}
+            className="editor-completion-dropdown absolute flex items-start"
             style={{
-              minWidth: "200px",
-              maxWidth: "300px",
-              maxHeight: `${EDITOR_CONSTANTS.MAX_VISIBLE_COMPLETIONS * 24 + 8}px`,
-              overflow: "auto",
+              left: `${x}px`,
+              top: `${y}px`,
+              zIndex: EDITOR_CONSTANTS.Z_INDEX.COMPLETION,
+              transformOrigin: "top left",
             }}
           >
-            {selectedDetail && (
-              <div className="ui-font mb-1 font-medium text-text text-xs">{selectedDetail}</div>
-            )}
-            {selectedDocumentation && (
-              <div className="ui-font whitespace-pre-wrap text-text-lighter text-xs">
-                {selectedDocumentation}
+            {/* Main completion list */}
+            <div
+              className="editor-completion-list custom-scrollbar overflow-y-auto"
+              style={{
+                minWidth: `${EDITOR_CONSTANTS.DROPDOWN_MIN_WIDTH}px`,
+                maxWidth: `${EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH}px`,
+                maxHeight: `${EDITOR_CONSTANTS.MAX_VISIBLE_COMPLETIONS * 24}px`,
+              }}
+            >
+              {visibleCompletions.map((filtered, index: number) => {
+                const item = filtered.item;
+                const isSelected = index === selectedLspIndex;
+
+                return (
+                  <div
+                    key={index}
+                    ref={(el) => {
+                      if (isSelected && el) {
+                        el.scrollIntoView({ block: "nearest" });
+                      }
+                    }}
+                    className={cn(
+                      "editor-completion-item ui-font cursor-pointer px-2 py-1 text-xs",
+                      isSelected
+                        ? "editor-completion-item-selected text-text"
+                        : "text-text hover:bg-hover",
+                    )}
+                    onClick={() => handleSelect(item)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {currentPrefix && filtered.indices.length > 0
+                          ? highlightMatches(item.label, filtered.indices)
+                          : item.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Documentation panel (VS Code style) */}
+            {hasDocPanel && (
+              <div
+                className="editor-completion-docs custom-scrollbar ml-1 p-2"
+                style={{
+                  minWidth: "200px",
+                  maxWidth: "300px",
+                  maxHeight: `${EDITOR_CONSTANTS.MAX_VISIBLE_COMPLETIONS * 24 + 8}px`,
+                  overflow: "auto",
+                }}
+              >
+                {selectedDetail && (
+                  <div className="ui-font mb-1 font-medium text-text text-xs">{selectedDetail}</div>
+                )}
+                {selectedDocumentation && (
+                  <div className="ui-font whitespace-pre-wrap text-text-lighter text-xs">
+                    {selectedDocumentation}
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     );
   },
   // Only re-render if onApplyCompletion callback changes

@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getAvailableProviders, getModelById } from "@/features/ai/types/providers";
@@ -113,75 +114,83 @@ export function SearchableModelDropdown({
       </button>
 
       {/* Dropdown */}
-      {isOpen && (
-        <>
-          <div
-            className="absolute top-full left-0 z-10000 mt-1 w-[320px] rounded border border-border bg-primary-bg shadow-xl"
-            onKeyDown={handleKeyDown}
-          >
-            {/* Search Input */}
-            <div className="flex items-center gap-2 border-border border-b px-2 py-1.5">
-              <Search size={12} className="text-text-lighter" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="search models..."
-                className="ui-font flex-1 border-none bg-transparent text-text text-xs outline-none placeholder:text-text-lighter"
-              />
-            </div>
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="absolute top-full left-0 z-10000 mt-1 w-[320px] origin-top rounded border border-border bg-primary-bg shadow-xl"
+              onKeyDown={handleKeyDown}
+            >
+              {/* Search Input */}
+              <div className="flex items-center gap-2 border-border border-b px-2 py-1.5">
+                <Search size={12} className="text-text-lighter" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="search models..."
+                  className="ui-font flex-1 border-none bg-transparent text-text text-xs outline-none placeholder:text-text-lighter"
+                />
+              </div>
 
-            {/* Models List */}
-            <div className="max-h-[300px] overflow-y-auto">
-              {filteredModels.length === 0 ? (
-                <div className="px-3 py-2 text-center text-text-lighter text-xs">
-                  No models found
-                </div>
-              ) : (
-                filteredModels.map((model, index) => {
-                  const isSelected =
-                    model.providerId === currentProviderId && model.modelId === currentModelId;
-                  const isHighlighted = index === selectedIndex;
+              {/* Models List */}
+              <div className="max-h-[300px] overflow-y-auto">
+                {filteredModels.length === 0 ? (
+                  <div className="px-3 py-2 text-center text-text-lighter text-xs">
+                    No models found
+                  </div>
+                ) : (
+                  filteredModels.map((model, index) => {
+                    const isSelected =
+                      model.providerId === currentProviderId && model.modelId === currentModelId;
+                    const isHighlighted = index === selectedIndex;
 
-                  return (
-                    <div
-                      key={`${model.providerId}-${model.modelId}`}
-                      className={cn(
-                        "flex cursor-pointer items-center gap-2 border-border border-b px-3 py-1.5 last:border-b-0",
-                        isSelected && "bg-hover",
-                        isHighlighted && "bg-secondary-bg",
-                      )}
-                      onClick={() => handleModelSelect(model.providerId, model.modelId)}
-                      onMouseEnter={() => setSelectedIndex(index)}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="ui-font truncate text-text text-xs">
-                            {model.modelName}
-                          </span>
-                          {isSelected && <Check size={10} className="shrink-0 text-text-lighter" />}
+                    return (
+                      <div
+                        key={`${model.providerId}-${model.modelId}`}
+                        className={cn(
+                          "flex cursor-pointer items-center gap-2 border-border border-b px-3 py-1.5 last:border-b-0",
+                          isSelected && "bg-hover",
+                          isHighlighted && "bg-secondary-bg",
+                        )}
+                        onClick={() => handleModelSelect(model.providerId, model.modelId)}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="ui-font truncate text-text text-xs">
+                              {model.modelName}
+                            </span>
+                            {isSelected && (
+                              <Check size={10} className="shrink-0 text-text-lighter" />
+                            )}
+                          </div>
+                          <div className="ui-font truncate text-[10px] text-text-lighter">
+                            {model.providerName}
+                          </div>
                         </div>
-                        <div className="ui-font truncate text-[10px] text-text-lighter">
-                          {model.providerName}
+                        <div className="shrink-0 text-right">
+                          <div className="ui-font text-[10px] text-text-lighter">
+                            {formatTokens(model.maxTokens)}
+                          </div>
                         </div>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <div className="ui-font text-[10px] text-text-lighter">
-                          {formatTokens(model.maxTokens)}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+                    );
+                  })
+                )}
+              </div>
+            </motion.div>
 
-          {/* Click Outside to Close */}
-          <div className="fixed inset-0 z-9999" onClick={() => setIsOpen(false)} />
-        </>
-      )}
+            {/* Click Outside to Close */}
+            <div className="fixed inset-0 z-9999" onClick={() => setIsOpen(false)} />
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

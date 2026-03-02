@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Search } from "lucide-react";
 import type { FC, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -118,62 +119,69 @@ const Dropdown = ({
     md: 14,
   };
 
-  const renderDropdown = () => {
-    if (!isOpen || disabled) return null;
-
-    return (
-      <div
-        ref={dropdownRef}
-        className="fixed z-[10040] max-h-96 overflow-auto rounded-xl border border-border bg-primary-bg shadow-xl"
-        style={{
-          top: dropdownPosition.top,
-          left: dropdownPosition.left,
-          width: dropdownPosition.width,
-        }}
-      >
-        {searchable && (
-          <div className="sticky top-0 border-border border-b bg-primary-bg p-2">
-            <div className="relative">
-              <Search
-                size={12}
-                className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
-              />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-full rounded border border-border bg-secondary-bg py-1 pr-2 pl-6 text-text text-xs placeholder-text-lighter focus:border-blue-500 focus:outline-none"
-                onClick={(e) => e.stopPropagation()}
-              />
+  const renderDropdown = () => (
+    <AnimatePresence>
+      {isOpen && !disabled && (
+        <motion.div
+          ref={dropdownRef}
+          initial={{ opacity: 0, scale: 0.95, y: openDirection === "up" ? 4 : -4 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: openDirection === "up" ? 4 : -4 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          className="fixed z-[10040] max-h-96 overflow-auto rounded-xl border border-border bg-primary-bg shadow-xl"
+          style={{
+            top: dropdownPosition.top,
+            left: dropdownPosition.left,
+            width: dropdownPosition.width,
+            transformOrigin: openDirection === "up" ? "bottom" : "top",
+          }}
+        >
+          {searchable && (
+            <div className="sticky top-0 border-border border-b bg-primary-bg p-2">
+              <div className="relative">
+                <Search
+                  size={12}
+                  className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
+                />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full rounded border border-border bg-secondary-bg py-1 pr-2 pl-6 text-text text-xs placeholder-text-lighter focus:border-blue-500 focus:outline-none"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
             </div>
-          </div>
-        )}
-        {filteredOptions.length === 0 ? (
-          <div className="px-2 py-4 text-center text-text-lighter text-xs">No matching options</div>
-        ) : (
-          filteredOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => {
-                onChange(option.value);
-                setIsOpen(false);
-              }}
-              className={cn(
-                "w-full px-2 py-1 text-left text-text text-xs transition-colors",
-                "hover:bg-hover",
-                value === option.value ? "bg-blue-500/20 text-blue-400" : "hover:text-text",
-              )}
-            >
-              {option.label}
-            </button>
-          ))
-        )}
-      </div>
-    );
-  };
+          )}
+          {filteredOptions.length === 0 ? (
+            <div className="px-2 py-4 text-center text-text-lighter text-xs">
+              No matching options
+            </div>
+          ) : (
+            filteredOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={cn(
+                  "w-full px-2 py-1 text-left text-text text-xs transition-colors",
+                  "hover:bg-hover",
+                  value === option.value ? "bg-blue-500/20 text-blue-400" : "hover:text-text",
+                )}
+              >
+                {option.label}
+              </button>
+            ))
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   return (
     <div className={cn("relative", className)}>

@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Command } from "lucide-react";
 import React, { useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -97,8 +98,12 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
   }, [hideSlashCommands]);
 
   return createPortal(
-    <div
+    <motion.div
       ref={dropdownRef}
+      initial={{ opacity: 0, scale: 0.95, y: -4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: -4 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
       className="scrollbar-hidden fixed select-none overflow-y-auto rounded-md border border-border bg-secondary-bg shadow-lg"
       style={{
         zIndex: 10040,
@@ -106,6 +111,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
         width: `${adjustedPosition.width}px`,
         left: `${adjustedPosition.left}px`,
         top: `${adjustedPosition.top}px`,
+        transformOrigin: "top left",
       }}
       role="listbox"
       aria-label="Slash command suggestions"
@@ -155,7 +161,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
           )}
         </div>
       )}
-    </div>,
+    </motion.div>,
     document.body,
   );
 });

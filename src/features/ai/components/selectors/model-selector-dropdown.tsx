@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronDown, Key, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
@@ -189,94 +190,101 @@ export function ModelSelectorDropdown({
         />
       </button>
 
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-[10020]" onClick={() => setIsOpen(false)} />
-          <div
-            ref={dropdownRef}
-            onKeyDown={handleKeyDown}
-            className={cn(
-              "absolute right-0 bottom-full z-[10030] mb-2",
-              "max-h-[400px] w-[280px] overflow-hidden",
-              "rounded-2xl border border-border bg-primary-bg/95 shadow-lg backdrop-blur-sm",
-            )}
-          >
-            <div className="border-border border-b p-2">
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-secondary-bg/80 px-2 py-1.5">
-                <Search size={12} className="text-text-lighter" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Search models..."
-                  className="flex-1 bg-transparent text-text text-xs outline-none placeholder:text-text-lighter"
-                />
-              </div>
-            </div>
-
-            <div className="max-h-[340px] overflow-y-auto p-1">
-              {filteredItems.length === 0 ? (
-                <div className="p-4 text-center text-text-lighter text-xs">
-                  {providers.find((p) => p.id === currentProviderId)?.id === "ollama" &&
-                  !dynamicModels.ollama?.length
-                    ? "No models detected. Please install a model."
-                    : "No models found"}
-                </div>
-              ) : (
-                filteredItems.map((item) => {
-                  if (item.type === "provider") {
-                    return (
-                      <div
-                        key={`provider-${item.providerId}`}
-                        className="flex items-center justify-between px-3 py-1.5"
-                      >
-                        <span className="font-medium text-text-lighter text-xs">
-                          {item.providerName}
-                        </span>
-                        {item.requiresApiKey && !item.hasKey && (
-                          <button
-                            onClick={handleApiKeyClick}
-                            className="flex items-center gap-1 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] text-red-400 transition-colors hover:bg-red-500/30"
-                          >
-                            <Key size={8} />
-                            Set Key
-                          </button>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  selectableIndex++;
-                  const isSelected = selectableIndex === selectedIndex;
-                  const isCurrent =
-                    item.providerId === currentProviderId && item.modelId === currentModelId;
-
-                  return (
-                    <button
-                      key={`model-${item.providerId}-${item.modelId}`}
-                      onClick={() => {
-                        onSelect(item.providerId, item.modelId!);
-                        setIsOpen(false);
-                      }}
-                      onMouseEnter={() => setSelectedIndex(selectableIndex)}
-                      className={cn(
-                        "mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors",
-                        isSelected ? "bg-hover" : "bg-transparent",
-                        isCurrent && "bg-accent/10",
-                      )}
-                    >
-                      <span className="flex-1 truncate text-text text-xs">{item.modelName}</span>
-                      {isCurrent && <Check size={10} className="text-accent" />}
-                    </button>
-                  );
-                })
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <div className="fixed inset-0 z-[10020]" onClick={() => setIsOpen(false)} />
+            <motion.div
+              ref={dropdownRef}
+              onKeyDown={handleKeyDown}
+              initial={{ opacity: 0, scale: 0.95, y: 4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 4 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className={cn(
+                "absolute right-0 bottom-full z-[10030] mb-2",
+                "max-h-[400px] w-[280px] overflow-hidden",
+                "rounded-2xl border border-border bg-primary-bg/95 shadow-lg backdrop-blur-sm",
               )}
-            </div>
-          </div>
-        </>
-      )}
+              style={{ transformOrigin: "bottom right" }}
+            >
+              <div className="border-border border-b p-2">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-secondary-bg/80 px-2 py-1.5">
+                  <Search size={12} className="text-text-lighter" />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Search models..."
+                    className="flex-1 bg-transparent text-text text-xs outline-none placeholder:text-text-lighter"
+                  />
+                </div>
+              </div>
+
+              <div className="max-h-[340px] overflow-y-auto p-1">
+                {filteredItems.length === 0 ? (
+                  <div className="p-4 text-center text-text-lighter text-xs">
+                    {providers.find((p) => p.id === currentProviderId)?.id === "ollama" &&
+                    !dynamicModels.ollama?.length
+                      ? "No models detected. Please install a model."
+                      : "No models found"}
+                  </div>
+                ) : (
+                  filteredItems.map((item) => {
+                    if (item.type === "provider") {
+                      return (
+                        <div
+                          key={`provider-${item.providerId}`}
+                          className="flex items-center justify-between px-3 py-1.5"
+                        >
+                          <span className="font-medium text-text-lighter text-xs">
+                            {item.providerName}
+                          </span>
+                          {item.requiresApiKey && !item.hasKey && (
+                            <button
+                              onClick={handleApiKeyClick}
+                              className="flex items-center gap-1 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] text-red-400 transition-colors hover:bg-red-500/30"
+                            >
+                              <Key size={8} />
+                              Set Key
+                            </button>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    selectableIndex++;
+                    const isSelected = selectableIndex === selectedIndex;
+                    const isCurrent =
+                      item.providerId === currentProviderId && item.modelId === currentModelId;
+
+                    return (
+                      <button
+                        key={`model-${item.providerId}-${item.modelId}`}
+                        onClick={() => {
+                          onSelect(item.providerId, item.modelId!);
+                          setIsOpen(false);
+                        }}
+                        onMouseEnter={() => setSelectedIndex(selectableIndex)}
+                        className={cn(
+                          "mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors",
+                          isSelected ? "bg-hover" : "bg-transparent",
+                          isCurrent && "bg-accent/10",
+                        )}
+                      >
+                        <span className="flex-1 truncate text-text text-xs">{item.modelName}</span>
+                        {isCurrent && <Check size={10} className="text-accent" />}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

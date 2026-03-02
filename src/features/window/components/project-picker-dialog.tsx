@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { motion } from "framer-motion";
 import { Edit, Folder, FolderOpen, Plus, Trash2, X } from "lucide-react";
 import { memo, useCallback, useEffect, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
@@ -165,10 +166,23 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-[9998] bg-black/20 backdrop-blur-[1px]" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className="fixed inset-0 z-[9998] bg-black/20 backdrop-blur-[1px]"
+        onClick={onClose}
+      />
 
       {/* Dialog */}
-      <div className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-[9999] w-[560px] overflow-hidden rounded-lg border border-border bg-primary-bg shadow-xl">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+        className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-[9999] w-[560px] overflow-hidden rounded-lg border border-border bg-primary-bg shadow-xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-3 py-2">
           <div className="flex items-center gap-2">
@@ -298,7 +312,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Connection Dialog */}
       <ConnectionDialog

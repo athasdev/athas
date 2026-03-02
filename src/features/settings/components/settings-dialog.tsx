@@ -84,13 +84,14 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       onClose={onClose}
       title="Settings"
       classNames={{
-        modal: "h-[80vh] max-h-[900px] w-[85vw] max-w-[1200px]",
+        modal:
+          "h-[80vh] max-h-[900px] w-[85vw] max-w-[1200px] border-0 [&>div:first-child]:border-b-0",
         content: "flex p-0",
       }}
     >
       <div className="flex h-full w-full overflow-hidden">
         {/* Sidebar */}
-        <div className="w-52 border-border/50 border-r bg-secondary-bg/30">
+        <div className="w-52">
           <SettingsVerticalTabs activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
 

@@ -23,7 +23,7 @@ const CommandBar = () => {
     otherFiles,
     selectedIndex,
     handleItemSelect,
-    handlePreviewChange,
+    handleItemHover,
     previewFilePath,
     rootFolderPath,
     showPreview,
@@ -92,7 +92,7 @@ const CommandBar = () => {
                         index={index}
                         isSelected={index === selectedIndex}
                         onClick={handleItemSelect}
-                        onMouseEnter={() => handlePreviewChange(file.path)}
+                        onMouseEnter={handleItemHover}
                         rootFolderPath={rootFolderPath}
                       />
                     ))}
@@ -112,7 +112,7 @@ const CommandBar = () => {
                           index={globalIndex}
                           isSelected={globalIndex === selectedIndex}
                           onClick={handleItemSelect}
-                          onMouseEnter={() => handlePreviewChange(file.path)}
+                          onMouseEnter={handleItemHover}
                           rootFolderPath={rootFolderPath}
                         />
                       );
@@ -134,7 +134,7 @@ const CommandBar = () => {
                           index={globalIndex}
                           isSelected={globalIndex === selectedIndex}
                           onClick={handleItemSelect}
-                          onMouseEnter={() => handlePreviewChange(file.path)}
+                          onMouseEnter={handleItemHover}
                           rootFolderPath={rootFolderPath}
                         />
                       );

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce, useDebouncedCallback } from "use-debounce";
 import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -67,13 +67,24 @@ export const useCommandBar = () => {
   );
 
   // Keyboard navigation
-  const allResults = [...openBufferFiles, ...recentFilesInResults, ...otherFiles];
-  const { selectedIndex, scrollContainerRef } = useKeyboardNavigation({
+  const allResults = useMemo(
+    () => [...openBufferFiles, ...recentFilesInResults, ...otherFiles],
+    [openBufferFiles, recentFilesInResults, otherFiles],
+  );
+  const { selectedIndex, setSelectedIndex, scrollContainerRef } = useKeyboardNavigation({
     isVisible: isCommandBarVisible,
     allResults,
     onClose,
     onSelect: handleItemSelect,
   });
+
+  const handleItemHover = useCallback(
+    (index: number, path: string) => {
+      setSelectedIndex(index);
+      handlePreviewChange(path);
+    },
+    [setSelectedIndex, handlePreviewChange],
+  );
 
   useEffect(() => {
     if (commandBarPreview && allResults.length > 0 && selectedIndex >= 0) {
@@ -119,7 +130,7 @@ export const useCommandBar = () => {
     otherFiles,
     selectedIndex,
     handleItemSelect,
-    handlePreviewChange,
+    handleItemHover,
     previewFilePath,
     rootFolderPath: rootFolderPath || loaderRootFolder,
     showPreview: commandBarPreview,

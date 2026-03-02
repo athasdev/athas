@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { AlertCircle, CheckCircle, ExternalLink, Key, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { getProviderById } from "@/features/ai/types/providers";
@@ -168,8 +169,18 @@ const ApiKeyModal = ({
   const instructions = getInstructions();
 
   return (
-    <div className="fixed inset-0 z-150 flex items-center justify-center bg-black/50">
-      <div className="flex max-h-[90vh] w-[480px] flex-col rounded-lg border border-border bg-primary-bg">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
+      className="fixed inset-0 z-150 flex items-center justify-center bg-black/50"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+        className="flex max-h-[90vh] w-[480px] flex-col rounded-lg border border-border bg-primary-bg"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-border border-b p-4">
           <div className="flex items-center gap-2">
@@ -294,8 +305,8 @@ const ApiKeyModal = ({
             Cancel
           </Button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

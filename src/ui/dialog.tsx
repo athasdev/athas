@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { type LucideProps, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/utils/cn";
@@ -36,7 +37,11 @@ const Dialog = ({
   return (
     <>
       {/* Backdrop */}
-      <div
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
         className={cn(
           "fixed inset-0 z-[9998] bg-black/20 backdrop-blur-[1px]",
           classNames?.backdrop,
@@ -45,7 +50,11 @@ const Dialog = ({
       />
 
       {/* Modal */}
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
         className={cn(
           "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-[9999]",
           "flex max-h-[90vh] flex-col overflow-hidden",
@@ -80,7 +89,7 @@ const Dialog = ({
             {footer}
           </div>
         )}
-      </div>
+      </motion.div>
     </>
   );
 };

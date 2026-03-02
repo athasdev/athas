@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
@@ -47,13 +48,18 @@ export const StashMessageModal = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    >
+      <motion.div
         ref={modalRef}
-        className={cn(
-          "w-80 rounded-lg border border-border bg-secondary-bg p-4",
-          "fade-in zoom-in-95 animate-in duration-200",
-        )}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+        className="w-80 rounded-lg border border-border bg-secondary-bg p-4"
       >
         <h3 className="mb-3 font-medium text-sm text-text">{title}</h3>
         <input
@@ -89,8 +95,8 @@ export const StashMessageModal = ({
             {isLoading ? "Stashing..." : "Stash"}
           </button>
         </div>
-      </div>
-    </div>,
+      </motion.div>
+    </motion.div>,
     document.body,
   );
 };

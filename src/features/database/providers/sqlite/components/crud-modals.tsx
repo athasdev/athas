@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { PlusIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
@@ -77,9 +78,17 @@ export const CreateRowModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[10030] flex items-center justify-center bg-black/45 backdrop-blur-sm">
-      <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
+      className="fixed inset-0 z-[10030] flex items-center justify-center bg-black/45 backdrop-blur-sm"
+    >
+      <motion.div
         ref={modalRef}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
         className="w-full max-w-md rounded-2xl border border-border/70 bg-secondary-bg/95 p-5 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.5)]"
       >
         <div className="mb-4 flex items-center justify-between">
@@ -132,8 +141,8 @@ export const CreateRowModal = ({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
@@ -220,9 +229,17 @@ export const EditRowModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[10030] flex items-center justify-center bg-black/45 backdrop-blur-sm">
-      <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
+      className="fixed inset-0 z-[10030] flex items-center justify-center bg-black/45 backdrop-blur-sm"
+    >
+      <motion.div
         ref={editModalRef}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
         className="w-full max-w-md rounded-2xl border border-border/70 bg-secondary-bg/95 p-5 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.5)]"
       >
         <div className="mb-4 flex items-center justify-between">
@@ -271,8 +288,8 @@ export const EditRowModal = ({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
@@ -345,9 +362,17 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[10030] flex items-center justify-center bg-black/45 backdrop-blur-sm">
-      <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
+      className="fixed inset-0 z-[10030] flex items-center justify-center bg-black/45 backdrop-blur-sm"
+    >
+      <motion.div
         ref={createTableModalRef}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
         className="w-full max-w-lg rounded-2xl border border-border/70 bg-secondary-bg/95 p-5 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.5)]"
       >
         <div className="mb-4 flex items-center justify-between">
@@ -443,7 +468,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

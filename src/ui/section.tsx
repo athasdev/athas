@@ -10,7 +10,7 @@ interface SectionProps {
 
 export default function Section({ title, description, children, className }: SectionProps) {
   return (
-    <div className={cn("rounded-2xl border border-border/70 bg-transparent px-4 py-3", className)}>
+    <div className={cn("px-1 py-1", className)}>
       <div className="mb-3">
         <h4 className="font-semibold text-sm text-text">{title}</h4>
         {description && <p className="text-text-lighter text-xs">{description}</p>}

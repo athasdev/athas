@@ -23,15 +23,37 @@ export const useKeyboardNavigation = ({
 }: UseKeyboardNavigationProps) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const prevResultsLengthRef = useRef(allResults.length);
+  const selectedPathRef = useRef<string | null>(null);
 
-  // Reset selected index when results length changes
   useEffect(() => {
-    if (prevResultsLengthRef.current !== allResults.length) {
+    selectedPathRef.current = allResults[selectedIndex]?.path || null;
+  }, [allResults, selectedIndex]);
+
+  // Preserve selection as results change by matching selected path first,
+  // then clamping to valid range as a fallback.
+  useEffect(() => {
+    setSelectedIndex((previousIndex) => {
+      if (allResults.length === 0) {
+        return 0;
+      }
+
+      const selectedPath = selectedPathRef.current;
+      if (selectedPath) {
+        const nextIndex = allResults.findIndex((item) => item.path === selectedPath);
+        if (nextIndex >= 0) {
+          return nextIndex;
+        }
+      }
+
+      return Math.min(previousIndex, allResults.length - 1);
+    });
+  }, [allResults]);
+
+  useEffect(() => {
+    if (isVisible) {
       setSelectedIndex(0);
-      prevResultsLengthRef.current = allResults.length;
     }
-  }, [allResults.length]);
+  }, [isVisible]);
 
   // Handle keyboard events
   useEffect(() => {
@@ -92,5 +114,5 @@ export const useKeyboardNavigation = ({
     }
   }, [selectedIndex, isVisible]);
 
-  return { selectedIndex, scrollContainerRef };
+  return { selectedIndex, setSelectedIndex, scrollContainerRef };
 };

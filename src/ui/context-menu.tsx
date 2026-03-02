@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { type ReactNode, useEffect, useRef } from "react";
 import { cn } from "@/utils/cn";
 
@@ -79,50 +80,56 @@ export const ContextMenu = ({ isOpen, position, items, onClose, className }: Con
     };
   }, [isOpen, onClose, position]);
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      ref={menuRef}
-      className={cn(
-        "fixed z-[10040] min-w-[190px] select-none rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
-        className,
-      )}
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        transform: "translateZ(0)",
-      }}
-    >
-      {items.map((item) => {
-        if (item.separator) {
-          return <div key={item.id} className="my-0.5 border-border/70 border-t" />;
-        }
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          ref={menuRef}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.12, ease: "easeOut" }}
+          className={cn(
+            "fixed z-[10040] min-w-[190px] select-none rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
+            className,
+          )}
+          style={{
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            transformOrigin: "top left",
+          }}
+        >
+          {items.map((item) => {
+            if (item.separator) {
+              return <div key={item.id} className="my-0.5 border-border/70 border-t" />;
+            }
 
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => {
-              if (!item.disabled) {
-                item.onClick();
-                onClose();
-              }
-            }}
-            disabled={item.disabled}
-            className={cn(
-              "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs",
-              item.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
-            )}
-          >
-            {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
-            <span className="flex-1">{item.label}</span>
-            {item.keybinding && (
-              <span className="text-text-lighter text-xs">{item.keybinding}</span>
-            )}
-          </button>
-        );
-      })}
-    </div>
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  if (!item.disabled) {
+                    item.onClick();
+                    onClose();
+                  }
+                }}
+                disabled={item.disabled}
+                className={cn(
+                  "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs",
+                  item.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
+                )}
+              >
+                {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
+                <span className="flex-1">{item.label}</span>
+                {item.keybinding && (
+                  <span className="text-text-lighter text-xs">{item.keybinding}</span>
+                )}
+              </button>
+            );
+          })}
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
