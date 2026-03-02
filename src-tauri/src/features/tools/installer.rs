@@ -584,10 +584,10 @@ impl ToolInstaller {
          }
          ToolRuntime::Binary => {
             let bin_name = Self::bin_file_name(&config.name);
-            if config.download_url.is_none() {
-               if let Ok(system_path) = which::which(&config.name) {
-                  return Ok(system_path);
-               }
+            if config.download_url.is_none()
+               && let Ok(system_path) = which::which(&config.name)
+            {
+               return Ok(system_path);
             }
             Ok(tools_dir.join("bin").join(bin_name))
          }

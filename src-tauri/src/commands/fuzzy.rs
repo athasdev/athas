@@ -71,7 +71,7 @@ pub fn fuzzy_match(request: FuzzyMatchRequest) -> Vec<FuzzyMatchItem> {
    }
 
    // Sort by score in descending order
-   matches.sort_by(|a, b| b.score.cmp(&a.score));
+   matches.sort_by_key(|item| std::cmp::Reverse(item.score));
 
    matches
 }
@@ -190,7 +190,7 @@ pub fn filter_completions(request: CompletionFilterRequest) -> Vec<FilteredCompl
    }
 
    // Sort by score in descending order
-   filtered.sort_by(|a, b| b.score.cmp(&a.score));
+   filtered.sort_by_key(|item| std::cmp::Reverse(item.score));
 
    // Limit to top 50 results
    filtered.truncate(50);

@@ -19,6 +19,7 @@ use tokio::{
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
 /// Commands that can be sent to the ACP worker thread
+#[allow(clippy::large_enum_variant)]
 enum AcpCommand {
    Initialize {
       agent_id: String,
