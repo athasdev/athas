@@ -3,22 +3,24 @@ import { open } from "@tauri-apps/plugin-dialog";
 import {
   BaseDirectory,
   mkdir,
+  readFile as readBinaryFile,
   readDir,
-  readTextFile,
   remove,
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
+
+const utf8Decoder = new TextDecoder("utf-8");
 /**
  * Read a text file from the filesystem
  * @param path The path to the file to read
  */
 export async function readFile(path: string): Promise<string> {
   try {
-    // Try to read as absolute path first
-    return await readTextFile(path);
+    const content = await readBinaryFile(path);
+    return utf8Decoder.decode(content);
   } catch {
-    // Fallback to reading from app data directory
-    return await readTextFile(path, { baseDir: BaseDirectory.AppData });
+    const content = await readBinaryFile(path, { baseDir: BaseDirectory.AppData });
+    return utf8Decoder.decode(content);
   }
 }
 
