@@ -4,8 +4,11 @@ import { FileIcon } from "lucide-react";
 import { memo, useEffect, useMemo, useState } from "react";
 import type { Token } from "@/features/editor/extensions/types";
 import type { LineToken } from "@/features/editor/types/editor";
-import { isBinaryFile, isImageFile } from "@/features/file-system/controllers/file-utils";
-import { formatFileSize } from "@/features/image-editor/utils/image-file-utils";
+import {
+  isBinaryFile,
+  isImageFile,
+  isSQLiteFile,
+} from "@/features/file-system/controllers/file-utils";
 import { useFilePreview } from "../hooks/use-file-preview";
 
 interface FilePreviewProps {
@@ -98,7 +101,7 @@ function useImagePreview(filePath: string | null, enabled: boolean) {
   return { src, isLoading, error };
 }
 
-const BINARY_TYPE_MAP: Record<string, string> = {
+const BINARY_LABEL_BY_EXT: Record<string, string> = {
   wasm: "WebAssembly Binary",
   exe: "Windows Executable",
   dll: "Dynamic Link Library",
@@ -111,95 +114,26 @@ const BINARY_TYPE_MAP: Record<string, string> = {
   lib: "Static Library",
   class: "Java Class File",
   pyc: "Python Bytecode",
-  woff: "Web Open Font Format",
-  woff2: "Web Open Font Format 2",
+  woff: "Web Font",
+  woff2: "Web Font",
   ttf: "TrueType Font",
   otf: "OpenType Font",
   zip: "ZIP Archive",
   tar: "Tape Archive",
-  gz: "Gzip Compressed",
+  gz: "Gzip Archive",
   "7z": "7-Zip Archive",
   rar: "RAR Archive",
   jar: "Java Archive",
   iso: "Disk Image",
   dmg: "macOS Disk Image",
+  sqlite: "SQLite Database",
+  sqlite3: "SQLite Database",
+  db: "SQLite Database",
 };
 
-function getBinaryFileType(path: string): string {
+function getBinaryFileLabel(path: string): string {
   const ext = path.split(".").pop()?.toLowerCase() || "";
-  return BINARY_TYPE_MAP[ext] || "Binary File";
-}
-
-function formatHexLines(data: Uint8Array, maxBytes = 128): string[] {
-  const lines: string[] = [];
-  const limit = Math.min(data.length, maxBytes);
-
-  for (let i = 0; i < limit; i += 16) {
-    const hex: string[] = [];
-    const ascii: string[] = [];
-
-    for (let j = 0; j < 16; j++) {
-      if (i + j < limit) {
-        hex.push(data[i + j].toString(16).padStart(2, "0"));
-        const ch = data[i + j];
-        ascii.push(ch >= 0x20 && ch <= 0x7e ? String.fromCharCode(ch) : ".");
-      } else {
-        hex.push("  ");
-        ascii.push(" ");
-      }
-    }
-
-    const addr = i.toString(16).padStart(8, "0");
-    lines.push(
-      `${addr}  ${hex.slice(0, 8).join(" ")}  ${hex.slice(8).join(" ")}  |${ascii.join("")}|`,
-    );
-  }
-
-  return lines;
-}
-
-interface BinaryPreviewData {
-  fileSize: number;
-  fileType: string;
-  hexLines: string[];
-}
-
-function useBinaryPreview(filePath: string | null, enabled: boolean) {
-  const [data, setData] = useState<BinaryPreviewData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (!enabled || !filePath) {
-      setData(null);
-      setIsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
-
-    readFile(filePath)
-      .then((bytes) => {
-        if (cancelled) return;
-        setData({
-          fileSize: bytes.length,
-          fileType: getBinaryFileType(filePath),
-          hexLines: formatHexLines(bytes),
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setData(null);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, filePath]);
-
-  return { data, isLoading };
+  return BINARY_LABEL_BY_EXT[ext] || "Binary File";
 }
 
 const convertTokensToLineTokens = (content: string, tokens: Token[]): LineData[] => {
@@ -334,7 +268,7 @@ const PreviewLine = memo(({ lineNumber, content, tokens }: LineData) => {
 
 export const FilePreview = ({ filePath }: FilePreviewProps) => {
   const isImage = !!(filePath && isImageFile(filePath));
-  const isBinary = !!(filePath && !isImage && isBinaryFile(filePath));
+  const isBinary = !!(filePath && !isImage && (isBinaryFile(filePath) || isSQLiteFile(filePath)));
   const { content, tokens, isLoading, error } = useFilePreview(
     isImage || isBinary ? null : filePath,
   );
@@ -343,7 +277,6 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
     isLoading: isImageLoading,
     error: imageError,
   } = useImagePreview(filePath, isImage);
-  const { data: binaryData, isLoading: isBinaryLoading } = useBinaryPreview(filePath, isBinary);
 
   const lineData = useMemo(() => {
     if (!content) return [];
@@ -412,37 +345,10 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
   }
 
   if (isBinary) {
-    if (isBinaryLoading) {
-      return (
-        <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
-          Loading binary preview...
-        </div>
-      );
-    }
-
-    if (!binaryData) {
-      return (
-        <div className="flex h-full items-center justify-center p-4 text-center text-text-lighter text-xs">
-          Unable to preview binary file
-        </div>
-      );
-    }
-
-    const ext = filePath?.split(".").pop()?.toUpperCase() || "";
     return (
-      <div className="h-full overflow-auto bg-primary-bg p-3">
-        <div className="mb-3 flex items-center gap-2 rounded border border-border/60 bg-secondary-bg px-3 py-2">
-          <FileIcon size={14} className="shrink-0 text-text-lighter" />
-          <div className="min-w-0">
-            <div className="ui-font truncate text-text text-xs">{binaryData.fileType}</div>
-            <div className="ui-font text-[10px] text-text-lighter">
-              {formatFileSize(binaryData.fileSize)} {ext && `\u2022 .${ext.toLowerCase()}`}
-            </div>
-          </div>
-        </div>
-        <pre className="font-mono text-[10px] text-text-lighter leading-[16px]">
-          {binaryData.hexLines.join("\n")}
-        </pre>
+      <div className="flex h-full flex-col items-center justify-center gap-1.5 p-4 text-center">
+        <FileIcon size={20} className="text-text-lighter" />
+        <span className="ui-font text-text-lighter text-xs">{getBinaryFileLabel(filePath)}</span>
       </div>
     );
   }
