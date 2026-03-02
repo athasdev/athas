@@ -51,7 +51,7 @@ const CommandPalette = () => {
     isFindVisible,
     setIsFindVisible,
     setActiveView,
-    setIsCommandBarVisible,
+    setIsQuickOpenVisible,
     setIsGlobalSearchVisible,
     openSettingsDialog,
   } = useUIState();
@@ -144,7 +144,7 @@ const CommandPalette = () => {
     ...createNavigationActions({
       setIsSidebarVisible,
       setActiveView,
-      setIsCommandBarVisible,
+      setIsQuickOpenVisible,
       setIsGlobalSearchVisible,
       openSettingsDialog,
       onClose,

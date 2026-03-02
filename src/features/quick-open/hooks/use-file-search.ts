@@ -7,7 +7,7 @@ import {
   MAX_RECENT_FILES_NO_QUERY,
   MAX_RESULTS,
 } from "../constants/limits";
-import type { CategorizedFiles, FileItem } from "../types/command-bar";
+import type { CategorizedFiles, FileItem } from "../types/quick-open";
 import { fuzzyScore } from "../utils/fuzzy-search";
 
 export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
@@ -17,11 +17,10 @@ export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
     (state) => state.getRecentFilesOrderedByFrecency,
   );
 
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-  const recentFiles = getRecentFilesOrderedByFrecency();
-
   const categorizedFiles = useMemo((): CategorizedFiles => {
-    // Get open buffer paths (excluding active buffer) - Use Set for O(1) lookups
+    const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+    const activeBufferPath = activeBuffer?.path;
+
     const openBufferPaths = new Set(
       buffers
         .filter((buffer) => buffer.id !== activeBufferId && !buffer.isVirtual)
@@ -30,18 +29,13 @@ export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
 
     const openBufferFilesData = files.filter((file) => openBufferPaths.has(file.path));
 
-    // Get recent file paths (excluding active buffer) - Use Set for O(1) lookups
+    const recentFiles = getRecentFilesOrderedByFrecency();
     const recentFilePaths = new Set(
-      recentFiles
-        .filter((rf) => !activeBuffer || rf.path !== activeBuffer.path)
-        .map((rf) => rf.path),
+      recentFiles.filter((rf) => rf.path !== activeBufferPath).map((rf) => rf.path),
     );
-
-    // Create a Map for recent file indices for O(1) lookups
     const recentFileIndices = new Map(recentFiles.map((rf, index) => [rf.path, index]));
 
     if (!debouncedQuery.trim()) {
-      // No search query - show open buffers, then recent files by frecency, then alphabetical
       const recent = files
         .filter((file) => recentFilePaths.has(file.path) && !openBufferPaths.has(file.path))
         .sort((a, b) => {
@@ -55,7 +49,7 @@ export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
           (file) =>
             !recentFilePaths.has(file.path) &&
             !openBufferPaths.has(file.path) &&
-            (!activeBuffer || file.path !== activeBuffer.path),
+            file.path !== activeBufferPath,
         )
         .slice(0, MAX_OTHER_FILES_NO_QUERY)
         .sort((a, b) => a.name.localeCompare(b.name));
@@ -67,30 +61,23 @@ export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
       };
     }
 
-    // With search query - fuzzy search all files, results are limited at the end
     const scoredFiles = files
       .map((file) => {
         const nameScore = fuzzyScore(file.name, debouncedQuery);
         const pathScore = fuzzyScore(file.path, debouncedQuery);
-        const score = Math.max(nameScore, pathScore);
-        return { file, score };
+        return { file, score: Math.max(nameScore, pathScore) };
       })
       .filter(({ score }) => score > 0)
       .sort((a, b) => {
-        // First sort by score (highest first)
         if (b.score !== a.score) return b.score - a.score;
 
-        // Then prioritize open buffers
         const aIsOpen = openBufferPaths.has(a.file.path);
         const bIsOpen = openBufferPaths.has(b.file.path);
-        if (aIsOpen && !bIsOpen) return -1;
-        if (!aIsOpen && bIsOpen) return 1;
+        if (aIsOpen !== bIsOpen) return aIsOpen ? -1 : 1;
 
-        // Then prioritize recent files by frecency
         const aIsRecent = recentFilePaths.has(a.file.path);
         const bIsRecent = recentFilePaths.has(b.file.path);
-        if (aIsRecent && !bIsRecent) return -1;
-        if (!aIsRecent && bIsRecent) return 1;
+        if (aIsRecent !== bIsRecent) return aIsRecent ? -1 : 1;
 
         if (aIsRecent && bIsRecent) {
           const aIndex = recentFileIndices.get(a.file.path) ?? Number.MAX_VALUE;
@@ -98,7 +85,6 @@ export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
           return aIndex - bIndex;
         }
 
-        // Finally sort alphabetically
         return a.file.name.localeCompare(b.file.name);
       });
 
@@ -115,7 +101,7 @@ export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
         ({ file }) =>
           !recentFilePaths.has(file.path) &&
           !openBufferPaths.has(file.path) &&
-          (!activeBuffer || file.path !== activeBuffer.path),
+          file.path !== activeBufferPath,
       )
       .map(({ file }) => file);
 
@@ -124,7 +110,7 @@ export const useFileSearch = (files: FileItem[], debouncedQuery: string) => {
       recentFilesInResults: recent.slice(0, MAX_RESULTS - openBuffers.length),
       otherFiles: others.slice(0, MAX_OTHER_FILES_SHOWN - openBuffers.length - recent.length),
     };
-  }, [files, debouncedQuery, buffers, activeBufferId, recentFiles, activeBuffer]);
+  }, [files, debouncedQuery, buffers, activeBufferId, getRecentFilesOrderedByFrecency]);
 
   return categorizedFiles;
 };

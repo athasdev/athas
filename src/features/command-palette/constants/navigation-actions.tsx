@@ -13,7 +13,7 @@ import type { Action } from "../models/action.types";
 interface NavigationActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
   setActiveView: (view: "files" | "git" | "github-prs") => void;
-  setIsCommandBarVisible: (v: boolean) => void;
+  setIsQuickOpenVisible: (v: boolean) => void;
   setIsGlobalSearchVisible: (v: boolean) => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
   onClose: () => void;
@@ -23,7 +23,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
   const {
     setIsSidebarVisible,
     setActiveView,
-    setIsCommandBarVisible,
+    setIsQuickOpenVisible,
     setIsGlobalSearchVisible,
     openSettingsDialog,
     onClose,
@@ -110,7 +110,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       keybinding: ["⌘", "P"],
       action: () => {
         onClose();
-        setIsCommandBarVisible(true);
+        setIsQuickOpenVisible(true);
       },
     },
   ];

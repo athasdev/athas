@@ -135,7 +135,7 @@ export function useMenuEventsWrapper() {
       );
       // In a full implementation, this would toggle vim keybinding mode in the editor
     },
-    onGoToFile: () => uiState.setIsCommandBarVisible(true),
+    onGoToFile: () => uiState.setIsQuickOpenVisible(true),
     onGoToLine: () => {
       // Simple go to line implementation using browser prompt
       const line = prompt("Go to line:");

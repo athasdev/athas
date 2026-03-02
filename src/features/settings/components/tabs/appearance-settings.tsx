@@ -194,12 +194,12 @@ export const AppearanceSettings = () => {
         </SettingRow>
 
         <SettingRow
-          label="Command Bar Preview"
-          description="Show right-side file preview in command bar and global search"
+          label="Quick Open Preview"
+          description="Show right-side file preview in quick open and global search"
         >
           <Switch
-            checked={settings.commandBarPreview}
-            onChange={(checked) => updateSetting("commandBarPreview", checked)}
+            checked={settings.quickOpenPreview}
+            onChange={(checked) => updateSetting("quickOpenPreview", checked)}
             size="sm"
           />
         </SettingRow>

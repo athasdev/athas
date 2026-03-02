@@ -1,4 +1,4 @@
-// Patterns to ignore when showing files in command palette
+// Patterns to ignore when showing files in quick open
 const IGNORED_DIRECTORIES = new Set([
   "node_modules",
   ".git",

@@ -16,7 +16,7 @@ interface FileMentionDropdownProps {
   onSelect: (file: FileEntry) => void;
 }
 
-// Function to check if a file should be ignored (same as command bar)
+// Function to check if a file should be ignored (same as quick open)
 const shouldIgnoreFile = (filePath: string): boolean => {
   const fileName = filePath.split("/").pop() || "";
   const fullPath = filePath.toLowerCase();
@@ -37,7 +37,7 @@ const shouldIgnoreFile = (filePath: string): boolean => {
   });
 };
 
-// Fuzzy search scoring function (same as command bar)
+// Fuzzy search scoring function (same as quick open)
 const fuzzyScore = (text: string, query: string): number => {
   if (!query) return 0;
 
@@ -101,7 +101,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   const { mentionState, hideMention } = useAIChatStore();
   const { position, selectedIndex } = mentionState;
 
-  // Load all project files on mount (same as command bar)
+  // Load all project files on mount (same as quick open)
   useEffect(() => {
     getAllProjectFiles().then((allFiles) => {
       const formattedFiles = allFiles.map((file) => ({

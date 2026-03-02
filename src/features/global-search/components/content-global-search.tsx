@@ -18,7 +18,7 @@ const ContentGlobalSearch = () => {
   const isVisible = useUIState((state) => state.isGlobalSearchVisible);
   const setIsVisible = useUIState((state) => state.setIsGlobalSearchVisible);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
-  const commandBarPreview = useSettingsStore((state) => state.settings.commandBarPreview);
+  const quickOpenPreview = useSettingsStore((state) => state.settings.quickOpenPreview);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewFilePath, setPreviewFilePath] = useState<string | null>(null);
@@ -100,13 +100,13 @@ const ContentGlobalSearch = () => {
 
   // Update preview when selected index changes
   useEffect(() => {
-    if (commandBarPreview && flattenedMatches.length > 0 && selectedIndex >= 0) {
+    if (quickOpenPreview && flattenedMatches.length > 0 && selectedIndex >= 0) {
       const selectedMatch = flattenedMatches[selectedIndex];
       if (selectedMatch) {
         debouncedSetPreview(selectedMatch.filePath);
       }
     }
-  }, [selectedIndex, flattenedMatches, commandBarPreview, debouncedSetPreview]);
+  }, [selectedIndex, flattenedMatches, quickOpenPreview, debouncedSetPreview]);
 
   // Focus input when visible
   useEffect(() => {
@@ -154,14 +154,14 @@ const ContentGlobalSearch = () => {
         data-global-search
         className={cn(
           "relative flex overflow-hidden rounded-md border border-border bg-primary-bg shadow-2xl",
-          commandBarPreview ? "h-[600px] w-[1200px]" : "h-[600px] w-[800px]",
+          quickOpenPreview ? "h-[600px] w-[1200px]" : "h-[600px] w-[800px]",
         )}
       >
         {/* Left Column - Search Results */}
         <div
           className={cn(
             "flex flex-col",
-            commandBarPreview ? "w-[600px] border-border border-r" : "w-full",
+            quickOpenPreview ? "w-[600px] border-border border-r" : "w-full",
           )}
         >
           {/* Header */}
@@ -227,7 +227,7 @@ const ContentGlobalSearch = () => {
                     match={item.match}
                     onClick={() => handleFileClick(item.filePath, item.match.line_number)}
                     onHover={
-                      commandBarPreview ? () => debouncedSetPreview(item.filePath) : undefined
+                      quickOpenPreview ? () => debouncedSetPreview(item.filePath) : undefined
                     }
                   />
                 ))}
@@ -242,7 +242,7 @@ const ContentGlobalSearch = () => {
         </div>
 
         {/* Right Column - Preview Pane */}
-        {commandBarPreview && (
+        {quickOpenPreview && (
           <div className="w-[600px] shrink-0">
             <FilePreview filePath={previewFilePath} />
           </div>

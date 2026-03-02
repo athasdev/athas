@@ -2,7 +2,7 @@ import { ClockIcon } from "lucide-react";
 import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import { CommandItem } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
-import type { FileCategory, FileItem } from "../types/command-bar";
+import type { FileCategory, FileItem } from "../types/quick-open";
 
 interface FileListItemProps {
   file: FileItem;

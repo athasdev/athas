@@ -91,7 +91,7 @@
   color: var(--color-text-light);
 }
 
-.command-bar {
+.quick-open {
   position: relative;
   z-index: 9;
   background: var(--color-secondary-bg);

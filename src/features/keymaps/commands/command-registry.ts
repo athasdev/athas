@@ -113,7 +113,7 @@ const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+p",
     execute: () => {
-      useUIState.getState().setIsCommandBarVisible(true);
+      useUIState.getState().setIsQuickOpenVisible(true);
     },
   },
 ];

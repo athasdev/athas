@@ -9,13 +9,13 @@ import { useFileLoader } from "./use-file-loader";
 import { useFileSearch } from "./use-file-search";
 import { useKeyboardNavigation } from "./use-keyboard-navigation";
 
-export const useCommandBar = () => {
-  const isCommandBarVisible = useUIState((state) => state.isCommandBarVisible);
-  const setIsCommandBarVisible = useUIState((state) => state.setIsCommandBarVisible);
+export const useQuickOpen = () => {
+  const isQuickOpenVisible = useUIState((state) => state.isQuickOpenVisible);
+  const setIsQuickOpenVisible = useUIState((state) => state.setIsQuickOpenVisible);
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const addOrUpdateRecentFile = useRecentFilesStore((state) => state.addOrUpdateRecentFile);
-  const commandBarPreview = useSettingsStore((state) => state.settings.commandBarPreview);
+  const quickOpenPreview = useSettingsStore((state) => state.settings.quickOpenPreview);
 
   const [query, setQuery] = useState("");
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
@@ -23,25 +23,22 @@ export const useCommandBar = () => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onClose = useCallback(() => {
-    setIsCommandBarVisible(false);
+    setIsQuickOpenVisible(false);
     setPreviewFilePath(null);
-  }, [setIsCommandBarVisible]);
+  }, [setIsQuickOpenVisible]);
 
-  // Load files
   const {
     files,
     isLoadingFiles,
     isIndexing,
     rootFolderPath: loaderRootFolder,
-  } = useFileLoader(isCommandBarVisible);
+  } = useFileLoader(isQuickOpenVisible);
 
-  // Search and categorize files
   const { openBufferFiles, recentFilesInResults, otherFiles } = useFileSearch(
     files,
     debouncedQuery,
   );
 
-  // Handle file selection
   const handleItemSelect = useCallback(
     (path: string) => {
       const fileName = path.split("/").pop() || path;
@@ -57,22 +54,13 @@ export const useCommandBar = () => {
     PREVIEW_DEBOUNCE_DELAY,
   );
 
-  const handlePreviewChange = useCallback(
-    (path: string | null) => {
-      if (commandBarPreview) {
-        debouncedSetPreview(path);
-      }
-    },
-    [commandBarPreview, debouncedSetPreview],
-  );
-
-  // Keyboard navigation
   const allResults = useMemo(
     () => [...openBufferFiles, ...recentFilesInResults, ...otherFiles],
     [openBufferFiles, recentFilesInResults, otherFiles],
   );
+
   const { selectedIndex, setSelectedIndex, scrollContainerRef } = useKeyboardNavigation({
-    isVisible: isCommandBarVisible,
+    isVisible: isQuickOpenVisible,
     allResults,
     onClose,
     onSelect: handleItemSelect,
@@ -81,41 +69,36 @@ export const useCommandBar = () => {
   const handleItemHover = useCallback(
     (index: number, path: string) => {
       setSelectedIndex(index);
-      handlePreviewChange(path);
+      if (quickOpenPreview) {
+        debouncedSetPreview(path);
+      }
     },
-    [setSelectedIndex, handlePreviewChange],
+    [setSelectedIndex, quickOpenPreview, debouncedSetPreview],
   );
 
   useEffect(() => {
-    if (commandBarPreview && allResults.length > 0 && selectedIndex >= 0) {
-      const selectedFile = allResults[selectedIndex];
-      if (selectedFile && !selectedFile.isDir) {
-        debouncedSetPreview(selectedFile.path);
-      } else {
-        debouncedSetPreview(null);
-      }
-    }
-  }, [selectedIndex, allResults, commandBarPreview, debouncedSetPreview]);
-
-  useEffect(() => {
-    if (!commandBarPreview) {
+    if (!quickOpenPreview) {
       setPreviewFilePath(null);
+      return;
     }
-  }, [commandBarPreview]);
+    if (allResults.length > 0 && selectedIndex >= 0) {
+      const selectedFile = allResults[selectedIndex];
+      debouncedSetPreview(selectedFile && !selectedFile.isDir ? selectedFile.path : null);
+    }
+  }, [selectedIndex, allResults, quickOpenPreview, debouncedSetPreview]);
 
-  // Reset state when command bar becomes visible
   useEffect(() => {
-    if (isCommandBarVisible) {
+    if (isQuickOpenVisible) {
       setQuery("");
       setPreviewFilePath(null);
       if (inputRef.current) {
         inputRef.current.focus();
       }
     }
-  }, [isCommandBarVisible]);
+  }, [isQuickOpenVisible]);
 
   return {
-    isVisible: isCommandBarVisible,
+    isVisible: isQuickOpenVisible,
     query,
     setQuery,
     debouncedQuery,
@@ -133,6 +116,6 @@ export const useCommandBar = () => {
     handleItemHover,
     previewFilePath,
     rootFolderPath: rootFolderPath || loaderRootFolder,
-    showPreview: commandBarPreview,
+    showPreview: quickOpenPreview,
   };
 };

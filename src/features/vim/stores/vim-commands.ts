@@ -90,8 +90,8 @@ const exploreCommand: VimCommand = {
   aliases: ["e", "Ex"],
   description: "Open file browser",
   execute: async () => {
-    const { setIsCommandBarVisible } = useUIState.getState();
-    setIsCommandBarVisible(true);
+    const { setIsQuickOpenVisible } = useUIState.getState();
+    setIsQuickOpenVisible(true);
   },
 };
 

@@ -28,7 +28,7 @@ interface ContextSelectorProps {
   onToggleOpen: () => void;
 }
 
-// Function to check if a file should be ignored (same as command bar)
+// Function to check if a file should be ignored (same as quick open)
 const shouldIgnoreFile = (filePath: string): boolean => {
   const fileName = filePath.split("/").pop() || "";
   const fullPath = filePath.toLowerCase();

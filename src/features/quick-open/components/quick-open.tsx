@@ -1,12 +1,12 @@
 import { FilePreview } from "@/features/global-search/components/file-preview";
 import Command, { CommandHeader, CommandInput, CommandList } from "@/ui/command";
 import { cn } from "@/utils/cn";
-import { useCommandBar } from "../hooks/use-command-bar";
+import { useQuickOpen } from "../hooks/use-quick-open";
 import { EmptyState } from "./empty-state";
 import { FileCountBadge } from "./file-count-badge";
 import { FileListItem } from "./file-list-item";
 
-const CommandBar = () => {
+const QuickOpen = () => {
   const {
     isVisible,
     query,
@@ -27,7 +27,7 @@ const CommandBar = () => {
     previewFilePath,
     rootFolderPath,
     showPreview,
-  } = useCommandBar();
+  } = useQuickOpen();
 
   if (!isVisible) {
     return null;
@@ -81,7 +81,6 @@ const CommandBar = () => {
               />
             ) : (
               <>
-                {/* Open Buffers Section */}
                 {openBufferFiles.length > 0 && (
                   <div className="p-0">
                     {openBufferFiles.map((file, index) => (
@@ -99,7 +98,6 @@ const CommandBar = () => {
                   </div>
                 )}
 
-                {/* Recent Files Section */}
                 {recentFilesInResults.length > 0 && (
                   <div className="p-0">
                     {recentFilesInResults.map((file, index) => {
@@ -120,7 +118,6 @@ const CommandBar = () => {
                   </div>
                 )}
 
-                {/* Other Files Section */}
                 {otherFiles.length > 0 && (
                   <div className="p-0">
                     {otherFiles.map((file, index) => {
@@ -156,4 +153,4 @@ const CommandBar = () => {
   );
 };
 
-export default CommandBar;
+export default QuickOpen;

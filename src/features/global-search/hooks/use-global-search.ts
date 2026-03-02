@@ -15,7 +15,7 @@ export const useGlobalSearch = () => {
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const addOrUpdateRecentFile = useRecentFilesStore((state) => state.addOrUpdateRecentFile);
-  const commandBarPreview = useSettingsStore((state) => state.settings.commandBarPreview);
+  const quickOpenPreview = useSettingsStore((state) => state.settings.quickOpenPreview);
 
   const [query, setQuery] = useState("");
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
@@ -60,11 +60,11 @@ export const useGlobalSearch = () => {
 
   const handlePreviewChange = useCallback(
     (path: string | null) => {
-      if (commandBarPreview) {
+      if (quickOpenPreview) {
         debouncedSetPreview(path);
       }
     },
-    [commandBarPreview, debouncedSetPreview],
+    [quickOpenPreview, debouncedSetPreview],
   );
 
   // Keyboard navigation
@@ -78,7 +78,7 @@ export const useGlobalSearch = () => {
 
   // Update preview when selected index changes
   useEffect(() => {
-    if (commandBarPreview && allResults.length > 0 && selectedIndex >= 0) {
+    if (quickOpenPreview && allResults.length > 0 && selectedIndex >= 0) {
       const selectedFile = allResults[selectedIndex];
       if (selectedFile && !selectedFile.isDir) {
         debouncedSetPreview(selectedFile.path);
@@ -86,7 +86,7 @@ export const useGlobalSearch = () => {
         debouncedSetPreview(null);
       }
     }
-  }, [selectedIndex, allResults, commandBarPreview, debouncedSetPreview]);
+  }, [selectedIndex, allResults, quickOpenPreview, debouncedSetPreview]);
 
   // Reset state when global search becomes visible
   useEffect(() => {
@@ -133,6 +133,6 @@ export const useGlobalSearch = () => {
     handlePreviewChange,
     previewFilePath,
     rootFolderPath: rootFolderPath || loaderRootFolder,
-    showPreview: commandBarPreview,
+    showPreview: quickOpenPreview,
   };
 };

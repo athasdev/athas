@@ -2,7 +2,6 @@ import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AIChat from "@/features/ai/components/chat/ai-chat";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
-import CommandBar from "@/features/command-bar/components/command-bar";
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
@@ -14,6 +13,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { SplitViewRoot } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
+import QuickOpen from "@/features/quick-open/components/quick-open";
 import { useSettingsStore } from "@/features/settings/store";
 import { GlobalNewTabMenu } from "@/features/tabs/components/global-new-tab-menu";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
@@ -305,7 +305,7 @@ export function MainLayout() {
       <EditorFooter />
 
       {/* Global modals and overlays */}
-      <CommandBar />
+      <QuickOpen />
       <ContentGlobalSearch />
       <VimCommandBar />
       <VimSearchBar />

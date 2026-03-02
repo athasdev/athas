@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import type { FileItem } from "../types/command-bar";
+import type { FileItem } from "../types/quick-open";
 import { shouldIgnoreFile } from "../utils/file-filtering";
 
 export const useFileLoader = (isVisible: boolean) => {
@@ -9,18 +9,18 @@ export const useFileLoader = (isVisible: boolean) => {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [isIndexing, setIsIndexing] = useState(false);
+  const loadedForRootRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     if (!isVisible) return;
 
+    const isAlreadyLoaded = loadedForRootRef.current === rootFolderPath;
+    if (isAlreadyLoaded && files.length > 0) return;
+
     const loadFiles = async () => {
       try {
-        const wasEmpty = files.length === 0;
-
-        if (wasEmpty) {
-          setIsLoadingFiles(true);
-          setIsIndexing(true);
-        }
+        setIsLoadingFiles(true);
+        setIsIndexing(true);
 
         const allFiles = await getAllProjectFiles();
         const filteredFiles = allFiles
@@ -31,6 +31,7 @@ export const useFileLoader = (isVisible: boolean) => {
             isDir: file.isDir,
           }));
 
+        loadedForRootRef.current = rootFolderPath;
         setFiles(filteredFiles);
       } catch (error) {
         console.error("Failed to load project files:", error);
@@ -41,7 +42,7 @@ export const useFileLoader = (isVisible: boolean) => {
     };
 
     loadFiles();
-  }, [getAllProjectFiles, isVisible]);
+  }, [getAllProjectFiles, isVisible, rootFolderPath]);
 
   return { files, isLoadingFiles, isIndexing, rootFolderPath };
 };

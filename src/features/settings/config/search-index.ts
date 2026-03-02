@@ -11,10 +11,10 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["save", "automatic", "files"],
   },
   {
-    id: "general-command-bar-file-limit",
+    id: "general-quick-open-file-limit",
     tab: "general",
     section: "File Management",
-    label: "Command Bar File Limit",
+    label: "Quick Open File Limit",
     description: "Maximum files to index for quick file search. Increase for large monorepos.",
     keywords: [
       "command",
@@ -252,12 +252,12 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["menu", "bar", "compact", "hamburger", "ui"],
   },
   {
-    id: "appearance-command-bar-preview",
+    id: "appearance-quick-open-preview",
     tab: "appearance",
     section: "Layout",
-    label: "Command Bar Preview",
-    description: "Show right-side file preview in command bar and global search",
-    keywords: ["command", "bar", "preview", "file", "quick", "open", "global", "search"],
+    label: "Quick Open Preview",
+    description: "Show right-side file preview in quick open and global search",
+    keywords: ["quick", "open", "preview", "file", "command", "bar", "global", "search"],
   },
 
   // AI Settings

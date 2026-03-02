@@ -6,7 +6,7 @@ import {
   KEY_ESCAPE,
   KEY_K,
 } from "../constants/keyboard-keys";
-import type { FileItem } from "../types/command-bar";
+import type { FileItem } from "../types/quick-open";
 
 interface UseKeyboardNavigationProps {
   isVisible: boolean;
@@ -108,7 +108,7 @@ export const useKeyboardNavigation = ({
 
     if (selectedElement) {
       selectedElement.scrollIntoView({
-        behavior: "smooth",
+        behavior: "instant",
         block: "nearest",
       });
     }
