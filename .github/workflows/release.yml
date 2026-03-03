@@ -28,11 +28,11 @@ jobs:
             target: 'x86_64-apple-darwin'
           - platform: 'ubuntu-22.04'
             os: 'linux'
-            args: ''
+            args: '--bundles deb,rpm,updater'
             target: ''
           - platform: 'ubuntu-22.04-arm'
             os: 'linux'
-            args: ''
+            args: '--bundles deb,rpm,updater'
             target: ''
           - platform: 'windows-latest'
             os: 'windows'
@@ -154,7 +154,7 @@ jobs:
             ### Installation
             - **macOS**: Download the `.dmg` file
             - **Windows**: Download the `.exe` file  
-            - **Linux**: Download the `.AppImage` file
+            - **Linux**: Download the `.deb` or `.rpm` file
             
             Full changelog: https://github.com/athasdev/athas/compare/v__PREVIOUS_VERSION__...v__VERSION__
           releaseDraft: false
