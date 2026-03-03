@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { type LucideProps, X } from "lucide-react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/utils/cn";
 
 interface DialogProps {
@@ -34,7 +35,7 @@ const Dialog = ({
   size = "md",
   classNames,
 }: DialogProps) => {
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <motion.div
@@ -90,7 +91,8 @@ const Dialog = ({
           </div>
         )}
       </motion.div>
-    </>
+    </>,
+    document.body,
   );
 };
 
