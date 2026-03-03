@@ -37,10 +37,12 @@ export function eventToKey(event: KeyboardEvent): ParsedKey {
 
   modifiers.sort();
 
-  // Use event.key by default, but fall back to code mapping for special keys
-  // This handles cases where event.key returns "Dead" or other non-character values
+  // For modifier shortcuts, prefer physical key position (event.code) for non-letter keys.
+  // This ensures shortcuts like Cmd+= work on non-US keyboard layouts (e.g. Turkish QWERTY)
+  // where the character at that physical position differs from the US layout.
   let key = event.key;
-  if (key === "Dead" || key === "Unidentified") {
+  const hasModifier = event.metaKey || event.ctrlKey || event.altKey;
+  if (key === "Dead" || key === "Unidentified" || (hasModifier && CODE_TO_KEY[event.code])) {
     key = CODE_TO_KEY[event.code] || event.code;
   }
 

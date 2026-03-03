@@ -30,14 +30,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     ],
   },
   {
-    id: "editor-mouse-wheel-zoom",
-    tab: "editor",
-    section: "Display",
-    label: "Mouse Wheel Zoom",
-    description: "Use Ctrl+Scroll to zoom editor",
-    keywords: ["zoom", "mouse", "wheel", "scroll", "ctrl"],
-  },
-  {
     id: "general-open-settings",
     tab: "general",
     section: "Quick Access",

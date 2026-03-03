@@ -391,6 +391,19 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
     isLoading,
   ]);
 
+  // Listen for zoom events from the keymaps system
+  useEffect(() => {
+    const handleZoomEvent = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail === "in") handleZoomIn();
+      else if (detail === "out") handleZoomOut();
+      else if (detail === "reset") handleResetZoom();
+    };
+
+    window.addEventListener("webviewer-zoom", handleZoomEvent);
+    return () => window.removeEventListener("webviewer-zoom", handleZoomEvent);
+  }, [handleZoomIn, handleZoomOut, handleResetZoom]);
+
   // Poll for shortcuts from the embedded webview
   useEffect(() => {
     if (!webviewLabel) return;

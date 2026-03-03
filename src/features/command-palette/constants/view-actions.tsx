@@ -31,9 +31,9 @@ interface ViewActionsParams {
     compactMenuBar: boolean;
   };
   updateSetting: (key: string, value: any) => void | Promise<void>;
-  zoomIn: (target: "window" | "terminal") => void;
-  zoomOut: (target: "window" | "terminal") => void;
-  resetZoom: (target: "window" | "terminal") => void;
+  zoomIn: (target: "editor" | "terminal") => void;
+  zoomOut: (target: "editor" | "terminal") => void;
+  resetZoom: (target: "editor" | "terminal") => void;
   openWebViewerBuffer: (url: string) => void;
   onClose: () => void;
 }
@@ -195,37 +195,37 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
     },
     {
       id: "view-zoom-in",
-      label: "View: Zoom In",
-      description: "Increase zoom level",
+      label: "Editor: Zoom In",
+      description: "Increase editor zoom level",
       icon: <ZoomIn size={14} />,
       category: "View",
       keybinding: ["⌘", "+"],
       action: () => {
-        zoomIn("window");
+        zoomIn("editor");
         onClose();
       },
     },
     {
       id: "view-zoom-out",
-      label: "View: Zoom Out",
-      description: "Decrease zoom level",
+      label: "Editor: Zoom Out",
+      description: "Decrease editor zoom level",
       icon: <ZoomOut size={14} />,
       category: "View",
       keybinding: ["⌘", "-"],
       action: () => {
-        zoomOut("window");
+        zoomOut("editor");
         onClose();
       },
     },
     {
       id: "view-reset-zoom",
-      label: "View: Reset Zoom",
-      description: "Reset zoom to default level",
+      label: "Editor: Reset Zoom",
+      description: "Reset editor zoom to default level",
       icon: <RotateCcw size={14} />,
       category: "View",
       keybinding: ["⌘", "0"],
       action: () => {
-        resetZoom("window");
+        resetZoom("editor");
         onClose();
       },
     },

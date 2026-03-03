@@ -83,14 +83,6 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
-
-        <SettingRow label="Mouse Wheel Zoom" description="Use Ctrl+Scroll to zoom editor">
-          <Switch
-            checked={settings.mouseWheelZoom}
-            onChange={(checked) => updateSetting("mouseWheelZoom", checked)}
-            size="sm"
-          />
-        </SettingRow>
       </Section>
 
       <Section title="Input">

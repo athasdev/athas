@@ -15,7 +15,6 @@ interface Settings {
   // General
   autoSave: boolean;
   sidebarPosition: "left" | "right";
-  mouseWheelZoom: boolean;
   quickOpenPreview: boolean;
   // Editor
   fontFamily: string;
@@ -90,7 +89,6 @@ const defaultSettings: Settings = {
   // General
   autoSave: true,
   sidebarPosition: "left",
-  mouseWheelZoom: false,
   quickOpenPreview: true,
   // Editor
   fontFamily: "Geist Mono Variable",

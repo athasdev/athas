@@ -9,7 +9,6 @@ import {
   Languages,
   Lightbulb,
   MessageSquare,
-  MousePointer2,
   Palette,
   Save,
   Search,
@@ -27,7 +26,6 @@ interface SettingsActionsParams {
     lineNumbers: boolean;
     vimRelativeLineNumbers: boolean;
     autoSave: boolean;
-    mouseWheelZoom: boolean;
     autoDetectLanguage: boolean;
     formatOnSave: boolean;
     autoCompletion: boolean;
@@ -215,21 +213,6 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       category: "Settings",
       action: () => {
         updateSetting("autoSave", !settings.autoSave);
-        onClose();
-      },
-    },
-    {
-      id: "toggle-mouse-wheel-zoom",
-      label: settings.mouseWheelZoom
-        ? "General: Disable Mouse Wheel Zoom"
-        : "General: Enable Mouse Wheel Zoom",
-      description: settings.mouseWheelZoom
-        ? "Disable zoom with mouse wheel"
-        : "Use mouse wheel to zoom in/out",
-      icon: <MousePointer2 size={14} />,
-      category: "Settings",
-      action: () => {
-        updateSetting("mouseWheelZoom", !settings.mouseWheelZoom);
         onClose();
       },
     },

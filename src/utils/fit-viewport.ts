@@ -1,5 +1,3 @@
-import { useZoomStore } from "@/stores/zoom-store";
-
 export interface ElementBounds {
   x: number;
   y: number;
@@ -25,10 +23,9 @@ export function adjustPositionToFitViewport(
   el: ElementBounds,
   margin: number = MARGIN,
 ): { x: number; y: number } {
-  const zoomLevel = useZoomStore.getState().windowZoomLevel;
   const viewport = {
-    width: window.innerWidth / zoomLevel,
-    height: window.innerHeight / zoomLevel,
+    width: window.innerWidth,
+    height: window.innerHeight,
   };
 
   let adjustedX = el.x;

@@ -13,8 +13,6 @@ const UpdateDialog = lazy(() => import("@/features/settings/components/update-di
 import { useContextMenuPrevention } from "@/features/window/hooks/use-context-menu-prevention";
 import { useFontLoading } from "@/features/window/hooks/use-font-loading";
 import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
-import { useScroll } from "@/features/window/hooks/use-scroll";
-import { cn } from "@/utils/cn";
 import { initializeIconThemes } from "./extensions/icon-themes/icon-theme-initializer";
 import { initializeThemeSystem } from "./extensions/themes/theme-initializer";
 import {
@@ -27,7 +25,6 @@ import {
 } from "./features/file-system/controllers/file-watcher-store";
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/layout/components/zoom-indicator";
-import { useZoomStore } from "./stores/zoom-store";
 import { ToastContainer } from "./ui/toast";
 
 // Initialize theme system immediately when the module loads
@@ -55,9 +52,6 @@ initializeKeymaps();
 function App() {
   enableMapSet();
 
-  const zoomLevel = useZoomStore.use.windowZoomLevel();
-  const showZoomIndicator = useZoomStore.use.showZoomIndicator();
-
   // Auto-update check
   const {
     showDialog: showUpdateDialog,
@@ -73,7 +67,6 @@ function App() {
   // App initialization and setup hooks
   usePlatformSetup();
   useFontLoading();
-  useScroll();
   useDeepLink();
   useExtensionInstallPrompt();
   useKeymapContext();
@@ -109,14 +102,7 @@ function App() {
       {/* Linux window resize handles (must be outside zoom container) */}
       <WindowResizeBorder />
 
-      <div
-        className={cn("overflow-hidden bg-transparent", showZoomIndicator && "zoom-transitioning")}
-        style={{
-          zoom: zoomLevel,
-          width: `${100 / zoomLevel}vw`,
-          height: `${100 / zoomLevel}vh`,
-        }}
-      >
+      <div className="h-dvh w-dvw overflow-hidden">
         <FontStyleInjector />
         <div className="window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg">
           <MainLayout />

@@ -12,6 +12,16 @@ import { isMac } from "@/utils/platform";
 import type { Command } from "../types";
 import { keymapRegistry } from "../utils/registry";
 
+function getZoomTarget(): "editor" | "terminal" | "webviewer" {
+  const terminalContainer = document.querySelector('[data-terminal-container="active"]');
+  if (terminalContainer?.contains(document.activeElement)) return "terminal";
+
+  const activeBuffer = useBufferStore.getState().buffers.find((b) => b.isActive);
+  if (activeBuffer?.isWebViewer) return "webviewer";
+
+  return "editor";
+}
+
 const fileCommands: Command[] = [
   {
     id: "file.save",
@@ -364,9 +374,12 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+=",
     execute: () => {
-      const terminalContainer = document.querySelector('[data-terminal-container="active"]');
-      const isTerminalFocused = terminalContainer?.contains(document.activeElement);
-      useZoomStore.getState().actions.zoomIn(isTerminalFocused ? "terminal" : "window");
+      const target = getZoomTarget();
+      if (target === "webviewer") {
+        window.dispatchEvent(new CustomEvent("webviewer-zoom", { detail: "in" }));
+      } else {
+        useZoomStore.getState().actions.zoomIn(target);
+      }
     },
   },
   {
@@ -375,9 +388,12 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+-",
     execute: () => {
-      const terminalContainer = document.querySelector('[data-terminal-container="active"]');
-      const isTerminalFocused = terminalContainer?.contains(document.activeElement);
-      useZoomStore.getState().actions.zoomOut(isTerminalFocused ? "terminal" : "window");
+      const target = getZoomTarget();
+      if (target === "webviewer") {
+        window.dispatchEvent(new CustomEvent("webviewer-zoom", { detail: "out" }));
+      } else {
+        useZoomStore.getState().actions.zoomOut(target);
+      }
     },
   },
   {
@@ -386,9 +402,12 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+0",
     execute: () => {
-      const terminalContainer = document.querySelector('[data-terminal-container="active"]');
-      const isTerminalFocused = terminalContainer?.contains(document.activeElement);
-      useZoomStore.getState().actions.resetZoom(isTerminalFocused ? "terminal" : "window");
+      const target = getZoomTarget();
+      if (target === "webviewer") {
+        window.dispatchEvent(new CustomEvent("webviewer-zoom", { detail: "reset" }));
+      } else {
+        useZoomStore.getState().actions.resetZoom(target);
+      }
     },
   },
   {
