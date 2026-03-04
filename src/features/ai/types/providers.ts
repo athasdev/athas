@@ -68,6 +68,29 @@ export const updateAgentStatus = (agents: Array<{ id: string; installed: boolean
 
 export const AI_PROVIDERS: ModelProvider[] = [
   {
+    id: "anthropic",
+    name: "Anthropic",
+    apiUrl: "https://api.anthropic.com/v1/messages",
+    requiresApiKey: true,
+    models: [
+      {
+        id: "claude-opus-4-6",
+        name: "Claude Opus 4.6",
+        maxTokens: 200000,
+      },
+      {
+        id: "claude-sonnet-4-5",
+        name: "Claude Sonnet 4.5",
+        maxTokens: 200000,
+      },
+      {
+        id: "claude-haiku-4-5",
+        name: "Claude Haiku 4.5",
+        maxTokens: 200000,
+      },
+    ],
+  },
+  {
     id: "openai",
     name: "OpenAI",
     apiUrl: "https://api.openai.com/v1/chat/completions",
@@ -157,21 +180,6 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "openai/gpt-5.2",
-        name: "GPT-5.2",
-        maxTokens: 400000,
-      },
-      {
-        id: "openai/gpt-5-mini",
-        name: "GPT-5 Mini",
-        maxTokens: 400000,
-      },
-      {
-        id: "openai/gpt-5-nano",
-        name: "GPT-5 Nano",
-        maxTokens: 400000,
-      },
-      {
         id: "anthropic/claude-opus-4.6",
         name: "Claude Opus 4.6",
         maxTokens: 200000,
@@ -185,6 +193,21 @@ export const AI_PROVIDERS: ModelProvider[] = [
         id: "anthropic/claude-haiku-4.5",
         name: "Claude Haiku 4.5",
         maxTokens: 200000,
+      },
+      {
+        id: "openai/gpt-5.2",
+        name: "GPT-5.2",
+        maxTokens: 400000,
+      },
+      {
+        id: "openai/gpt-5-mini",
+        name: "GPT-5 Mini",
+        maxTokens: 400000,
+      },
+      {
+        id: "openai/gpt-5-nano",
+        name: "GPT-5 Nano",
+        maxTokens: 400000,
       },
       {
         id: "google/gemini-3-pro-preview",
@@ -258,29 +281,6 @@ export const AI_PROVIDERS: ModelProvider[] = [
         id: "gemini-2.0-flash",
         name: "Gemini 2.0 Flash",
         maxTokens: 1048576,
-      },
-    ],
-  },
-  {
-    id: "anthropic",
-    name: "Anthropic",
-    apiUrl: "https://api.anthropic.com/v1/messages",
-    requiresApiKey: true,
-    models: [
-      {
-        id: "claude-opus-4-6",
-        name: "Claude Opus 4.6",
-        maxTokens: 200000,
-      },
-      {
-        id: "claude-sonnet-4-5",
-        name: "Claude Sonnet 4.5",
-        maxTokens: 200000,
-      },
-      {
-        id: "claude-haiku-4-5",
-        name: "Claude Haiku 4.5",
-        maxTokens: 200000,
       },
     ],
   },

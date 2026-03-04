@@ -15,12 +15,12 @@ import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/utils/autocomplete";
 import { cn } from "@/utils/cn";
 
-const DEFAULT_AUTOCOMPLETE_MODEL_ID = "openai/gpt-5-nano";
+const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
 
 const DEFAULT_AUTOCOMPLETE_MODELS = [
+  { id: "mistralai/devstral-small", name: "Devstral Small 1.1" },
+  { id: "moonshotai/kimi-k2.5", name: "Kimi K2.5" },
   { id: "openai/gpt-5-nano", name: "GPT-5 Nano" },
-  { id: "openai/gpt-5-mini", name: "GPT-5 Mini" },
-  { id: "openai/gpt-5.1-codex-mini", name: "GPT-5.1 Codex Mini" },
   { id: "google/gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite" },
 ];
 

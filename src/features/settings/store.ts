@@ -114,12 +114,12 @@ const defaultSettings: Settings = {
   nativeMenuBar: false,
   compactMenuBar: true,
   // AI
-  aiProviderId: "openai",
-  aiModelId: "gpt-4o-mini",
+  aiProviderId: "anthropic",
+  aiModelId: "claude-sonnet-4-5",
   aiChatWidth: 400,
   isAIChatVisible: false,
   aiCompletion: true,
-  aiAutocompleteModelId: "openai/gpt-5-nano",
+  aiAutocompleteModelId: "mistralai/devstral-small",
   aiDefaultSessionMode: "",
   // Layout
   sidebarWidth: 220,
