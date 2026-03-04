@@ -416,7 +416,16 @@ const GitHubPRsView = memo(() => {
         <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border/60 bg-secondary-bg/60 p-4 text-center">
           <AlertCircle size={24} className="mb-2 text-text-lighter" />
           <p className="text-text text-xs">GitHub CLI not authenticated</p>
-          <p className="mt-1 text-[10px] text-text-lighter">Run `gh auth login` in terminal</p>
+          <p className="mt-1 text-[10px] text-text-lighter">
+            Run <code className="rounded bg-hover px-1 py-0.5">gh auth login</code> in terminal
+          </p>
+          <button
+            onClick={() => void checkAuth()}
+            className="mt-2 text-accent text-xs hover:underline"
+            aria-label="Retry authentication check"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );

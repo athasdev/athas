@@ -148,8 +148,16 @@ export const useGitHubStore = create(
         } catch (err) {
           if (requestId !== prsRequestSeq) return;
 
+          const message = err instanceof Error ? err.message : String(err);
+          const isAuthError = /unauthorized|forbidden|401|403|credential|auth|token/i.test(message);
+
+          if (isAuthError) {
+            set({ isAuthenticated: false, currentUser: null, isLoading: false, error: null });
+            return;
+          }
+
           set({
-            error: err instanceof Error ? err.message : String(err),
+            error: message,
             isLoading: false,
             prs: cached?.prs ?? [],
           });
