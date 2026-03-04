@@ -503,67 +503,75 @@ export function AIModelSelector({
                           validationStatus.providerId === item.providerId &&
                           validationStatus.status;
 
+                        const isActiveProvider = providerId === item.providerId;
+
                         return (
                           <div key={item.id}>
                             <div className="flex items-center justify-between px-1 pt-2.5 pb-1.5">
-                              <button
-                                onClick={() => {
-                                  onProviderChange(item.providerId);
-                                  const models =
-                                    dynamicModels[item.providerId] ||
-                                    providers.find((p) => p.id === item.providerId)?.models ||
-                                    [];
-                                  if (models.length > 0) {
-                                    onModelChange(models[0].id);
-                                  }
-                                }}
-                                className="flex items-center gap-2 rounded-md px-1 py-0.5 font-medium text-xs text-text-lighter uppercase tracking-wide transition-colors hover:bg-hover hover:text-text"
-                                aria-label={`Select ${item.name} provider`}
-                              >
+                              <span className="flex items-center gap-2 font-medium text-xs text-text-lighter uppercase tracking-wide">
                                 <ProviderIcon
                                   providerId={item.providerId}
                                   size={14}
                                   className="text-text-lighter"
                                 />
                                 {item.name}
-                              </button>
-                              {item.requiresApiKey && (
-                                <div className="flex items-center gap-1">
-                                  {hasKey && !isEditing && (
-                                    <>
+                              </span>
+                              <div className="flex items-center gap-1">
+                                {item.requiresApiKey && !isEditing && (
+                                  <>
+                                    {hasKey ? (
+                                      <>
+                                        <button
+                                          onClick={() => startEditing(item.providerId)}
+                                          className="rounded px-1.5 py-0.5 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                                          aria-label={`Edit ${item.name} API key`}
+                                        >
+                                          Edit Key
+                                        </button>
+                                        <button
+                                          onClick={() => handleRemoveKey(item.providerId)}
+                                          className="rounded p-0.5 text-red-400 transition-colors hover:bg-red-500/10"
+                                          aria-label={`Remove ${item.name} API key`}
+                                        >
+                                          <Trash2 size={10} />
+                                        </button>
+                                      </>
+                                    ) : (
                                       <button
                                         onClick={() => startEditing(item.providerId)}
-                                        className="rounded px-1.5 py-0.5 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
-                                        aria-label={`Edit ${item.name} API key`}
+                                        className="flex items-center gap-1 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent transition-colors hover:bg-accent/25"
+                                        aria-label={`Set ${item.name} API key`}
                                       >
-                                        Edit
+                                        <Key size={8} />
+                                        Set Key
                                       </button>
-                                      <button
-                                        onClick={() => handleRemoveKey(item.providerId)}
-                                        className="rounded p-0.5 text-red-400 transition-colors hover:bg-red-500/10"
-                                        aria-label={`Remove ${item.name} API key`}
-                                      >
-                                        <Trash2 size={10} />
-                                      </button>
-                                    </>
-                                  )}
-                                  {!hasKey && !isEditing && (
-                                    <button
-                                      onClick={() => startEditing(item.providerId)}
-                                      className="flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] text-red-400 transition-colors hover:bg-red-500/25"
-                                      aria-label={`Set ${item.name} API key`}
-                                    >
-                                      <Key size={8} />
-                                      Set Key
-                                    </button>
-                                  )}
-                                  {hasKey && !isEditing && !showingValidation && (
-                                    <span className="flex items-center gap-1 rounded bg-green-500/15 px-1.5 py-0.5 text-[10px] text-green-500">
-                                      <Check size={8} />
-                                    </span>
-                                  )}
-                                </div>
-                              )}
+                                    )}
+                                  </>
+                                )}
+                                {!isActiveProvider && !isEditing && (
+                                  <button
+                                    onClick={() => {
+                                      onProviderChange(item.providerId);
+                                      const models =
+                                        dynamicModels[item.providerId] ||
+                                        providers.find((p) => p.id === item.providerId)?.models ||
+                                        [];
+                                      if (models.length > 0) {
+                                        onModelChange(models[0].id);
+                                      }
+                                    }}
+                                    className="flex items-center gap-1 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent transition-colors hover:bg-accent/25"
+                                    aria-label={`Use ${item.name}`}
+                                  >
+                                    Use
+                                  </button>
+                                )}
+                                {isActiveProvider && !isEditing && (
+                                  <span className="flex items-center gap-1 rounded bg-green-500/15 px-1.5 py-0.5 text-[10px] text-green-500">
+                                    <Check size={8} />
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
                             {/* Inline API key editor */}
