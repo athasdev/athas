@@ -506,14 +506,27 @@ export function AIModelSelector({
                         return (
                           <div key={item.id}>
                             <div className="flex items-center justify-between px-1 pt-2.5 pb-1.5">
-                              <span className="flex items-center gap-2 font-medium text-xs text-text-lighter uppercase tracking-wide">
+                              <button
+                                onClick={() => {
+                                  onProviderChange(item.providerId);
+                                  const models =
+                                    dynamicModels[item.providerId] ||
+                                    providers.find((p) => p.id === item.providerId)?.models ||
+                                    [];
+                                  if (models.length > 0) {
+                                    onModelChange(models[0].id);
+                                  }
+                                }}
+                                className="flex items-center gap-2 rounded-md px-1 py-0.5 font-medium text-xs text-text-lighter uppercase tracking-wide transition-colors hover:bg-hover hover:text-text"
+                                aria-label={`Select ${item.name} provider`}
+                              >
                                 <ProviderIcon
                                   providerId={item.providerId}
                                   size={14}
                                   className="text-text-lighter"
                                 />
                                 {item.name}
-                              </span>
+                              </button>
                               {item.requiresApiKey && (
                                 <div className="flex items-center gap-1">
                                   {hasKey && !isEditing && (
