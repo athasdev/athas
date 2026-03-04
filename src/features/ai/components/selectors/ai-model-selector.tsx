@@ -157,16 +157,14 @@ export function AIModelSelector({
           hasKey: providerHasKey,
         });
 
-        if (providerHasKey) {
-          for (const model of matchingModels) {
-            items.push({
-              type: "model",
-              id: model.id,
-              name: model.name,
-              providerId: provider.id,
-              isCurrent: providerId === provider.id && modelId === model.id,
-            });
-          }
+        for (const model of matchingModels) {
+          items.push({
+            type: "model",
+            id: model.id,
+            name: model.name,
+            providerId: provider.id,
+            isCurrent: providerId === provider.id && modelId === model.id,
+          });
         }
       }
     }
@@ -469,25 +467,20 @@ export function AIModelSelector({
                 </div>
 
                 {/* Search */}
-                <div className="border-border/60 border-b p-2.5">
-                  <div className="mb-1 font-medium text-[10px] text-text-lighter uppercase tracking-wide">
-                    Search Models
-                  </div>
-                  <div className="relative">
-                    <Search
-                      size={12}
-                      className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-text-lighter"
-                    />
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Search by provider or model name"
-                      className="w-full rounded-lg border border-border bg-secondary-bg py-1.5 pr-2 pl-8 text-text text-xs focus:border-accent focus:outline-none"
-                    />
-                  </div>
+                <div className="relative border-border/60 border-b">
+                  <Search
+                    size={12}
+                    className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-text-lighter"
+                  />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Search providers and models..."
+                    className="w-full bg-transparent py-2.5 pr-3 pl-8 text-text text-xs placeholder:text-text-lighter focus:outline-none"
+                  />
                 </div>
 
                 {/* Model list */}
