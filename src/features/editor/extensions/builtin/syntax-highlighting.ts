@@ -164,11 +164,11 @@ class SyntaxHighlighter {
         this.tokens = [];
       } else {
         try {
+          const wasmPath = getDefaultParserWasmUrl(languageId);
           const cached = await indexedDBParserCache.get(languageId);
-          const wasmPath = cached?.sourceUrl || getDefaultParserWasmUrl(languageId);
           const highlightQuery = await resolveHighlightQuery(languageId, {
             cachedQuery: cached?.highlightQuery,
-            wasmUrl: cached?.sourceUrl || wasmPath,
+            wasmUrl: wasmPath,
           });
           const highlightTokens = await tokenizeCode(content, languageId, {
             languageId,
