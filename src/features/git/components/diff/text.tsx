@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { useSettingsStore } from "@/features/settings/store";
 import { useZoomStore } from "@/stores/zoom-store";
@@ -27,6 +27,20 @@ const TextDiffViewer = memo(
     const hunks = useMemo(() => groupLinesIntoHunks(diff.lines), [diff.lines]);
     const tokenMap = useDiffHighlighting(diff.lines, diff.file_path);
 
+    const [collapsedHunks, setCollapsedHunks] = useState<Set<number>>(new Set());
+
+    const toggleHunkCollapse = useCallback((hunkId: number) => {
+      setCollapsedHunks((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(hunkId)) {
+          newSet.delete(hunkId);
+        } else {
+          newSet.add(hunkId);
+        }
+        return newSet;
+      });
+    }, []);
+
     if (diff.lines.length === 0) {
       return (
         <div className="flex items-center justify-center py-8 text-text-lighter text-xs">
@@ -37,32 +51,36 @@ const TextDiffViewer = memo(
 
     return (
       <div className="editor-font">
-        {hunks.map((hunk) => (
-          <div key={hunk.id}>
-            <DiffHunkHeader
-              hunk={hunk}
-              isCollapsed={false}
-              onToggleCollapse={() => {}}
-              isStaged={isStaged}
-              filePath={diff.file_path}
-              onStageHunk={onStageHunk}
-              onUnstageHunk={onUnstageHunk}
-              isInMultiFileView={isInMultiFileView}
-            />
-            {hunk.lines.map((line, lineIndex) => (
-              <DiffLine
-                key={`${hunk.id}-${lineIndex}`}
-                line={line}
-                viewMode={viewMode}
-                showWhitespace={showWhitespace}
-                fontSize={fontSize}
-                lineHeight={lineHeight}
-                tabSize={tabSize}
-                tokens={tokenMap.get(line.diffIndex)}
+        {hunks.map((hunk) => {
+          const isCollapsed = collapsedHunks.has(hunk.id);
+          return (
+            <div key={hunk.id}>
+              <DiffHunkHeader
+                hunk={hunk}
+                isCollapsed={isCollapsed}
+                onToggleCollapse={() => toggleHunkCollapse(hunk.id)}
+                isStaged={isStaged}
+                filePath={diff.file_path}
+                onStageHunk={onStageHunk}
+                onUnstageHunk={onUnstageHunk}
+                isInMultiFileView={isInMultiFileView}
               />
-            ))}
-          </div>
-        ))}
+              {!isCollapsed &&
+                hunk.lines.map((line, lineIndex) => (
+                  <DiffLine
+                    key={`${hunk.id}-${lineIndex}`}
+                    line={line}
+                    viewMode={viewMode}
+                    showWhitespace={showWhitespace}
+                    fontSize={fontSize}
+                    lineHeight={lineHeight}
+                    tabSize={tabSize}
+                    tokens={tokenMap.get(line.diffIndex)}
+                  />
+                ))}
+            </div>
+          );
+        })}
       </div>
     );
   },

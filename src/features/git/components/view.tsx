@@ -642,8 +642,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="scrollbar-none min-h-0 flex-1 overflow-y-scroll">
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
+          <div className="scrollbar-none min-h-0 overflow-y-auto">
             <GitStatusPanel
               files={gitStatus.files}
               onFileSelect={handleViewFileDiff}
