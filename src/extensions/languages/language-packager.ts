@@ -15,6 +15,7 @@ import type {
 
 const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
 const MANIFESTS_URL = `${CDN_BASE_URL}/manifests.json`;
+const BUNDLED_PARSER_BASE_URL = "/tree-sitter/parsers";
 
 interface ExternalLanguageContribution {
   id: string;
@@ -81,6 +82,27 @@ function normalizeExtensions(extensions: string[]): string[] {
 
 function defaultCommand(name?: string): PlatformExecutable {
   return { default: name || "" };
+}
+
+function isAbsoluteAssetUrl(value: string): boolean {
+  return /^(?:[a-z]+:)?\/\//i.test(value) || value.startsWith("/");
+}
+
+export function resolveLanguageAssetUrl(
+  folder: string,
+  assetPath: string | undefined,
+  fallbackFilename: string,
+): string {
+  if (!assetPath || assetPath.trim().length === 0) {
+    return `${BUNDLED_PARSER_BASE_URL}/${folder}/${fallbackFilename}`;
+  }
+
+  const normalized = assetPath.trim();
+  if (isAbsoluteAssetUrl(normalized)) {
+    return normalized;
+  }
+
+  return `${BUNDLED_PARSER_BASE_URL}/${folder}/${normalized}`;
 }
 
 function createLspConfig(manifest: ExternalLanguageManifest): LspConfiguration | undefined {
@@ -165,8 +187,16 @@ function convertLanguageManifest(
     throw new Error(`No language contributions found for ${manifest.id}`);
   }
 
-  const wasmUrl = `${CDN_BASE_URL}/${folder}/parser.wasm`;
-  const highlightQueryUrl = `${CDN_BASE_URL}/${folder}/highlights.scm`;
+  const wasmUrl = resolveLanguageAssetUrl(
+    folder,
+    manifest.capabilities?.grammar?.wasmPath,
+    "parser.wasm",
+  );
+  const highlightQueryUrl = resolveLanguageAssetUrl(
+    folder,
+    manifest.capabilities?.grammar?.highlightQuery,
+    "highlights.scm",
+  );
   const primaryLanguageId = languages[0].id;
 
   const converted: ExtensionManifest = {
@@ -283,11 +313,16 @@ export function getLanguageExtensionByFileExt(fileExt: string): ExtensionManifes
 }
 
 export function getWasmUrlForLanguage(languageId: string): string {
-  return wasmUrlByLanguageId.get(languageId) || `${CDN_BASE_URL}/${languageId}/parser.wasm`;
+  return (
+    wasmUrlByLanguageId.get(languageId) || `${BUNDLED_PARSER_BASE_URL}/${languageId}/parser.wasm`
+  );
 }
 
 export function getHighlightQueryUrl(languageId: string): string {
-  return highlightUrlByLanguageId.get(languageId) || `${CDN_BASE_URL}/${languageId}/highlights.scm`;
+  return (
+    highlightUrlByLanguageId.get(languageId) ||
+    `${BUNDLED_PARSER_BASE_URL}/${languageId}/highlights.scm`
+  );
 }
 
 export function getHighlightQueryUrlForExtension(manifest: ExtensionManifest): string {
