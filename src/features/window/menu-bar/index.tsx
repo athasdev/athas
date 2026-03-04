@@ -2,7 +2,7 @@ import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { exit } from "@tauri-apps/plugin-process";
 import type React from "react";
-import { isValidElement, type JSX, useEffect, useMemo, useState } from "react";
+import { isValidElement, type JSX, useEffect, useMemo, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
 import { useSettingsStore } from "@/features/settings/store";
@@ -20,6 +20,7 @@ interface Props {
 const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
   const { settings } = useSettingsStore();
   const [themes, setThemes] = useState<ThemeDefinition[]>([]);
+  const menuBarRef = useRef<HTMLDivElement>(null);
 
   const handleClickEmit = (event: string, payload?: unknown) => {
     emit(event, payload);
@@ -224,6 +225,20 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
     return Object.values(menus).flatMap((menu) => extractShortcuts(menu));
   }, [menus]);
 
+  // Close menu when clicking outside the menu bar
+  useEffect(() => {
+    if (!activeMenu) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (menuBarRef.current && !menuBarRef.current.contains(e.target as Node)) {
+        setActiveMenu(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, [activeMenu, setActiveMenu]);
+
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -260,46 +275,36 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
   if (settings.compactMenuBar && !activeMenu) return null;
 
   return (
-    <>
-      {/* Backdrop to close menus when clicking outside */}
-      {activeMenu && (
-        <div className="fixed inset-0 z-[10020]" onClick={() => setActiveMenu(null)} />
+    <div
+      ref={menuBarRef}
+      className={cn(
+        "z-[10030] flex h-7 items-center gap-1 rounded-full border border-border bg-primary-bg/70 px-1 py-0.5",
+        settings.compactMenuBar &&
+          "absolute inset-0 h-full rounded-none border-none bg-transparent px-2 py-0",
       )}
-
-      <div
-        className={cn(
-          "z-[10030] flex h-7 items-center gap-1 rounded-full border border-border bg-primary-bg/70 px-1 py-0.5",
-          settings.compactMenuBar &&
-            "absolute inset-0 h-full rounded-none border-none bg-transparent px-2 py-0",
-        )}
-      >
-        {Object.keys(menus).map((menuName) => (
-          <div key={menuName} className="relative h-full">
-            {/* Menu button */}
-            <Button
-              variant="ghost"
-              className={cn(
-                "h-6 rounded-full border border-transparent px-3 text-text-light text-xs transition-colors hover:border-border/70 hover:bg-hover",
-                activeMenu === menuName && "border-border bg-selected!",
-              )}
-              // Click to open menu; click again to close
-              onClick={() => setActiveMenu((value) => (value ? null : menuName))}
-              // Change menu on hover when a menu is already opened
-              onMouseEnter={() => activeMenu !== null && setActiveMenu(menuName)}
-            >
-              {menuName}
-            </Button>
-
-            {/* Menu content */}
-            {activeMenu === menuName && (
-              <div className="absolute top-full left-0 z-[10040] mt-1">
-                {menus[menuName as keyof typeof menus]}
-              </div>
+    >
+      {Object.keys(menus).map((menuName) => (
+        <div key={menuName} className="relative h-full">
+          <Button
+            variant="ghost"
+            className={cn(
+              "h-6 rounded-full border border-transparent px-3 text-text-light text-xs transition-colors hover:border-border/70 hover:bg-hover",
+              activeMenu === menuName && "border-border bg-selected!",
             )}
-          </div>
-        ))}
-      </div>
-    </>
+            onClick={() => setActiveMenu((value) => (value ? null : menuName))}
+            onMouseEnter={() => activeMenu !== null && setActiveMenu(menuName)}
+          >
+            {menuName}
+          </Button>
+
+          {activeMenu === menuName && (
+            <div className="absolute top-full left-0 z-[10040] mt-1">
+              {menus[menuName as keyof typeof menus]}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
   );
 };
 
