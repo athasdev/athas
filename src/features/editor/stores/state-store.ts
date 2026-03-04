@@ -9,7 +9,7 @@ import { useBufferStore } from "./buffer-store";
 import { useEditorSettingsStore } from "./settings-store";
 
 // Types for editor state caching
-interface EditorViewState {
+export interface EditorViewState {
   cursor: Position;
   scrollTop: number;
   scrollLeft: number;
@@ -152,7 +152,8 @@ interface EditorStateActions {
   setCursorVisibility: (visible: boolean) => void;
   getCachedPosition: (bufferId: string) => Position | null;
   clearPositionCache: (bufferId?: string) => void;
-  restorePositionForFile: (bufferId: string) => boolean;
+  restorePositionForFile: (bufferId: string) => EditorViewState;
+  resetOnBufferSwitch: () => void;
 
   // Multi-cursor actions
   enableMultiCursor: () => void;
@@ -224,27 +225,20 @@ export const useEditorStateStore = createSelectors(
             scrollLeft: 0,
           };
 
-          // Restore cursor position and scroll offset together.
-          // If the file has no cache yet, reset both cursor and scroll to defaults.
           set({
             cursorPosition: restoredState.cursor,
             scrollTop: restoredState.scrollTop,
             scrollLeft: restoredState.scrollLeft,
           });
 
-          // Apply scroll position to DOM elements synchronously to avoid flash.
-          const viewport = document.querySelector(".editor-viewport") as HTMLDivElement | null;
-          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement | null;
-          if (viewport) {
-            viewport.scrollTop = restoredState.scrollTop;
-            viewport.scrollLeft = restoredState.scrollLeft;
-          }
-          if (textarea) {
-            textarea.scrollTop = restoredState.scrollTop;
-            textarea.scrollLeft = restoredState.scrollLeft;
-          }
-
-          return cachedState !== null;
+          return restoredState;
+        },
+        resetOnBufferSwitch: () => {
+          set({
+            multiCursorState: null,
+            selection: undefined,
+            desiredColumn: undefined,
+          });
         },
 
         // Multi-cursor actions

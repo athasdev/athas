@@ -4,7 +4,7 @@
  * Uses uncontrolled input for optimal typing performance
  */
 
-import { memo, useCallback, useLayoutEffect, useRef } from "react";
+import { memo, useCallback, useRef } from "react";
 
 interface InputLayerProps {
   content: string;
@@ -40,8 +40,6 @@ const InputLayerComponent = ({
   lineHeight,
   tabSize,
   onScroll,
-  bufferId,
-  filePath,
   showText = false,
   textareaRef,
 }: InputLayerProps) => {
@@ -54,14 +52,6 @@ const InputLayerComponent = ({
     },
     [onInput],
   );
-
-  // Sync textarea value when buffer switches
-  // Uses useLayoutEffect to run before parent's scroll restoration
-  useLayoutEffect(() => {
-    if (ref.current && ref.current.value !== content) {
-      ref.current.value = content;
-    }
-  }, [bufferId, filePath, content, ref]);
 
   return (
     <textarea

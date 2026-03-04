@@ -98,6 +98,9 @@ interface EditorUIActions {
 
   // Definition link actions
   setDefinitionLinkRange: (range: DefinitionLinkRange | null) => void;
+
+  // Buffer switch reset
+  resetOnBufferSwitch: () => void;
 }
 
 export const useEditorUIStore = createSelectors(
@@ -245,6 +248,24 @@ export const useEditorUIStore = createSelectors(
 
       // Definition link actions
       setDefinitionLinkRange: (range) => set({ definitionLinkRange: range }),
+
+      // Buffer switch reset
+      resetOnBufferSwitch: () =>
+        set({
+          lspCompletions: [],
+          filteredCompletions: [],
+          currentPrefix: "",
+          selectedLspIndex: 0,
+          isLspCompletionVisible: false,
+          completionPosition: { top: 0, left: 0 },
+          hoverInfo: null,
+          isHovering: false,
+          isApplyingCompletion: false,
+          autocompleteCompletion: null,
+          searchMatches: [],
+          currentMatchIndex: -1,
+          definitionLinkRange: null,
+        }),
     },
   })),
 );
