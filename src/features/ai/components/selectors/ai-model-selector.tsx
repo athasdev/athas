@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Eye,
   EyeOff,
+  Globe,
   Key,
   RefreshCw,
   Search,
@@ -21,8 +22,9 @@ import {
   getModelById,
   getProviderById,
 } from "@/features/ai/types/providers";
+import { useSettingsStore } from "@/features/settings/store";
 import { cn } from "@/utils/cn";
-import { getProvider } from "@/utils/providers";
+import { getProvider, setOllamaBaseUrl } from "@/utils/providers";
 
 interface AIModelSelectorProps {
   providerId: string;
@@ -77,6 +79,14 @@ export function AIModelSelector({
   const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
   const saveApiKey = useAIChatStore((state) => state.saveApiKey);
   const removeApiKey = useAIChatStore((state) => state.removeApiKey);
+  const { settings, updateSetting } = useSettingsStore();
+
+  const [ollamaUrlInput, setOllamaUrlInput] = useState(
+    settings.ollamaBaseUrl || "http://localhost:11434",
+  );
+  const [ollamaUrlStatus, setOllamaUrlStatus] = useState<"idle" | "checking" | "ok" | "error">(
+    "idle",
+  );
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -392,6 +402,26 @@ export function AIModelSelector({
     }
   };
 
+  const handleSaveOllamaUrl = async (url: string) => {
+    const trimmed = url.replace(/\/+$/, "") || "http://localhost:11434";
+    setOllamaUrlStatus("checking");
+    try {
+      const response = await fetch(`${trimmed}/api/tags`, { signal: AbortSignal.timeout(3000) });
+      if (response.ok) {
+        setOllamaUrlStatus("ok");
+        updateSetting("ollamaBaseUrl", trimmed);
+        setOllamaBaseUrl(trimmed);
+        setOllamaUrlInput(trimmed);
+        fetchDynamicModels();
+        setTimeout(() => cancelEditing(), 1000);
+      } else {
+        setOllamaUrlStatus("error");
+      }
+    } catch {
+      setOllamaUrlStatus("error");
+    }
+  };
+
   let selectableIndex = -1;
 
   return (
@@ -503,12 +533,10 @@ export function AIModelSelector({
                           validationStatus.providerId === item.providerId &&
                           validationStatus.status;
 
-                        const isActiveProvider = providerId === item.providerId;
-
                         return (
                           <div key={item.id}>
                             <div className="flex items-center justify-between px-1 pt-2.5 pb-1.5">
-                              <span className="flex items-center gap-2 font-medium text-xs text-text-lighter uppercase tracking-wide">
+                              <span className="flex items-center gap-2 font-medium text-text-lighter text-xs uppercase tracking-wide">
                                 <ProviderIcon
                                   providerId={item.providerId}
                                   size={14}
@@ -517,64 +545,48 @@ export function AIModelSelector({
                                 {item.name}
                               </span>
                               <div className="flex items-center gap-1">
-                                {item.requiresApiKey && !isEditing && (
-                                  <>
-                                    {hasKey ? (
-                                      <>
-                                        <button
-                                          onClick={() => startEditing(item.providerId)}
-                                          className="rounded px-1.5 py-0.5 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
-                                          aria-label={`Edit ${item.name} API key`}
-                                        >
-                                          Edit Key
-                                        </button>
-                                        <button
-                                          onClick={() => handleRemoveKey(item.providerId)}
-                                          className="rounded p-0.5 text-red-400 transition-colors hover:bg-red-500/10"
-                                          aria-label={`Remove ${item.name} API key`}
-                                        >
-                                          <Trash2 size={10} />
-                                        </button>
-                                      </>
-                                    ) : (
+                                {item.requiresApiKey &&
+                                  !isEditing &&
+                                  (hasKey ? (
+                                    <>
                                       <button
                                         onClick={() => startEditing(item.providerId)}
-                                        className="flex items-center gap-1 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent transition-colors hover:bg-accent/25"
-                                        aria-label={`Set ${item.name} API key`}
+                                        className="rounded px-1.5 py-0.5 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                                        aria-label={`Edit ${item.name} API key`}
                                       >
-                                        <Key size={8} />
-                                        Set Key
+                                        Edit Key
                                       </button>
-                                    )}
-                                  </>
-                                )}
-                                {!isActiveProvider && !isEditing && (
+                                      <button
+                                        onClick={() => handleRemoveKey(item.providerId)}
+                                        className="rounded p-0.5 text-red-400 transition-colors hover:bg-red-500/10"
+                                        aria-label={`Remove ${item.name} API key`}
+                                      >
+                                        <Trash2 size={10} />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      onClick={() => startEditing(item.providerId)}
+                                      className="flex items-center gap-1 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent transition-colors hover:bg-accent/25"
+                                      aria-label={`Set ${item.name} API key`}
+                                    >
+                                      <Key size={8} />
+                                      Set Key
+                                    </button>
+                                  ))}
+                                {item.providerId === "ollama" && !isEditing && (
                                   <button
-                                    onClick={() => {
-                                      onProviderChange(item.providerId);
-                                      const models =
-                                        dynamicModels[item.providerId] ||
-                                        providers.find((p) => p.id === item.providerId)?.models ||
-                                        [];
-                                      if (models.length > 0) {
-                                        onModelChange(models[0].id);
-                                      }
-                                    }}
+                                    onClick={() => startEditing(item.providerId)}
                                     className="flex items-center gap-1 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent transition-colors hover:bg-accent/25"
-                                    aria-label={`Use ${item.name}`}
+                                    aria-label="Set Ollama URL"
                                   >
-                                    Use
+                                    <Globe size={8} />
+                                    Set URL
                                   </button>
-                                )}
-                                {isActiveProvider && !isEditing && (
-                                  <span className="flex items-center gap-1 rounded bg-green-500/15 px-1.5 py-0.5 text-[10px] text-green-500">
-                                    <Check size={8} />
-                                  </span>
                                 )}
                               </div>
                             </div>
 
-                            {/* Inline API key editor */}
                             <AnimatePresence>
                               {isEditing && (
                                 <motion.div
@@ -586,77 +598,150 @@ export function AIModelSelector({
                                 >
                                   <div className="px-1 pb-1.5">
                                     <div className="rounded-lg border border-border bg-secondary-bg/50 p-2">
-                                      <div className="flex items-center gap-1.5">
-                                        <div className="relative flex-1">
-                                          <input
-                                            ref={apiKeyInputRef}
-                                            type={showKey ? "text" : "password"}
-                                            value={apiKeyInput}
-                                            onChange={(e) => setApiKeyInput(e.target.value)}
-                                            onKeyDown={(e) => {
-                                              if (e.key === "Enter" && apiKeyInput.trim()) {
-                                                e.preventDefault();
-                                                handleSaveKey(item.providerId);
-                                              }
-                                              if (e.key === "Escape") {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                cancelEditing();
-                                              }
-                                            }}
-                                            placeholder={`${item.name} API key...`}
-                                            className={cn(
-                                              "w-full rounded border bg-secondary-bg px-2 py-1 pr-6 text-text text-xs",
-                                              "focus:border-accent focus:outline-none",
-                                              showingValidation &&
-                                                validationStatus.status === "invalid"
-                                                ? "border-red-500"
-                                                : "border-border",
-                                            )}
-                                            disabled={isValidating}
-                                          />
-                                          <button
-                                            type="button"
-                                            onClick={() => setShowKey(!showKey)}
-                                            className="-translate-y-1/2 absolute top-1/2 right-1.5 text-text-lighter hover:text-text"
-                                            aria-label={showKey ? "Hide key" : "Show key"}
-                                          >
-                                            {showKey ? <EyeOff size={10} /> : <Eye size={10} />}
-                                          </button>
-                                        </div>
-                                        <button
-                                          onClick={() => handleSaveKey(item.providerId)}
-                                          disabled={!apiKeyInput.trim() || isValidating}
-                                          className="rounded bg-accent px-2 py-1 text-[10px] text-white transition-colors hover:opacity-90 disabled:opacity-50"
-                                        >
-                                          {isValidating ? "..." : "Save"}
-                                        </button>
-                                        <button
-                                          onClick={cancelEditing}
-                                          className="rounded p-1 text-text-lighter hover:bg-hover hover:text-text"
-                                          aria-label="Cancel editing"
-                                        >
-                                          <X size={10} />
-                                        </button>
-                                      </div>
-                                      {showingValidation && (
-                                        <motion.div
-                                          initial={{ opacity: 0 }}
-                                          animate={{ opacity: 1 }}
-                                          className={cn(
-                                            "mt-1.5 flex items-center gap-1 text-[10px]",
-                                            validationStatus.status === "valid"
-                                              ? "text-green-500"
-                                              : "text-red-400",
+                                      {item.providerId === "ollama" ? (
+                                        <>
+                                          <div className="flex items-center gap-1.5">
+                                            <input
+                                              ref={apiKeyInputRef}
+                                              type="text"
+                                              value={ollamaUrlInput}
+                                              onChange={(e) => {
+                                                setOllamaUrlInput(e.target.value);
+                                                setOllamaUrlStatus("idle");
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                  e.preventDefault();
+                                                  handleSaveOllamaUrl(ollamaUrlInput);
+                                                }
+                                                if (e.key === "Escape") {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  cancelEditing();
+                                                }
+                                              }}
+                                              placeholder="http://localhost:11434"
+                                              spellCheck={false}
+                                              className={cn(
+                                                "w-full flex-1 rounded border bg-secondary-bg px-2 py-1 text-text text-xs",
+                                                "focus:border-accent focus:outline-none",
+                                                ollamaUrlStatus === "error"
+                                                  ? "border-red-500"
+                                                  : "border-border",
+                                              )}
+                                              disabled={ollamaUrlStatus === "checking"}
+                                            />
+                                            <button
+                                              onClick={() => handleSaveOllamaUrl(ollamaUrlInput)}
+                                              disabled={ollamaUrlStatus === "checking"}
+                                              className="rounded bg-accent px-2 py-1 text-[10px] text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                                            >
+                                              {ollamaUrlStatus === "checking" ? "..." : "Save"}
+                                            </button>
+                                            <button
+                                              onClick={cancelEditing}
+                                              className="rounded p-1 text-text-lighter hover:bg-hover hover:text-text"
+                                              aria-label="Cancel editing"
+                                            >
+                                              <X size={10} />
+                                            </button>
+                                          </div>
+                                          {ollamaUrlStatus === "ok" && (
+                                            <motion.div
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              className="mt-1.5 flex items-center gap-1 text-[10px] text-green-500"
+                                            >
+                                              <CheckCircle size={9} />
+                                              <span>Connected</span>
+                                            </motion.div>
                                           )}
-                                        >
-                                          {validationStatus.status === "valid" ? (
-                                            <CheckCircle size={9} />
-                                          ) : (
-                                            <AlertCircle size={9} />
+                                          {ollamaUrlStatus === "error" && (
+                                            <motion.div
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              className="mt-1.5 flex items-center gap-1 text-[10px] text-red-400"
+                                            >
+                                              <AlertCircle size={9} />
+                                              <span>Could not connect to Ollama at this URL</span>
+                                            </motion.div>
                                           )}
-                                          <span>{validationStatus.message}</span>
-                                        </motion.div>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <div className="flex items-center gap-1.5">
+                                            <div className="relative flex-1">
+                                              <input
+                                                ref={apiKeyInputRef}
+                                                type={showKey ? "text" : "password"}
+                                                value={apiKeyInput}
+                                                onChange={(e) => setApiKeyInput(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === "Enter" && apiKeyInput.trim()) {
+                                                    e.preventDefault();
+                                                    handleSaveKey(item.providerId);
+                                                  }
+                                                  if (e.key === "Escape") {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    cancelEditing();
+                                                  }
+                                                }}
+                                                placeholder={`${item.name} API key...`}
+                                                className={cn(
+                                                  "w-full rounded border bg-secondary-bg px-2 py-1 pr-6 text-text text-xs",
+                                                  "focus:border-accent focus:outline-none",
+                                                  showingValidation &&
+                                                    validationStatus.status === "invalid"
+                                                    ? "border-red-500"
+                                                    : "border-border",
+                                                )}
+                                                disabled={isValidating}
+                                              />
+                                              <button
+                                                type="button"
+                                                onClick={() => setShowKey(!showKey)}
+                                                className="-translate-y-1/2 absolute top-1/2 right-1.5 text-text-lighter hover:text-text"
+                                                aria-label={showKey ? "Hide key" : "Show key"}
+                                              >
+                                                {showKey ? <EyeOff size={10} /> : <Eye size={10} />}
+                                              </button>
+                                            </div>
+                                            <button
+                                              onClick={() => handleSaveKey(item.providerId)}
+                                              disabled={!apiKeyInput.trim() || isValidating}
+                                              className="rounded bg-accent px-2 py-1 text-[10px] text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                                            >
+                                              {isValidating ? "..." : "Save"}
+                                            </button>
+                                            <button
+                                              onClick={cancelEditing}
+                                              className="rounded p-1 text-text-lighter hover:bg-hover hover:text-text"
+                                              aria-label="Cancel editing"
+                                            >
+                                              <X size={10} />
+                                            </button>
+                                          </div>
+                                          {showingValidation && (
+                                            <motion.div
+                                              initial={{ opacity: 0 }}
+                                              animate={{ opacity: 1 }}
+                                              className={cn(
+                                                "mt-1.5 flex items-center gap-1 text-[10px]",
+                                                validationStatus.status === "valid"
+                                                  ? "text-green-500"
+                                                  : "text-red-400",
+                                              )}
+                                            >
+                                              {validationStatus.status === "valid" ? (
+                                                <CheckCircle size={9} />
+                                              ) : (
+                                                <AlertCircle size={9} />
+                                              )}
+                                              <span>{validationStatus.message}</span>
+                                            </motion.div>
+                                          )}
+                                        </>
                                       )}
                                     </div>
                                   </div>
