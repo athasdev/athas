@@ -258,7 +258,7 @@ const PreviewLine = memo(({ lineNumber, content, tokens }: LineData) => {
 
   return (
     <div className="flex items-start font-mono text-[11px] leading-[18px]">
-      <span className="mr-3 w-8 shrink-0 select-none text-right text-text-lighter tabular-nums opacity-50">
+      <span className="sticky left-0 z-10 mr-3 inline-block w-8 shrink-0 select-none bg-primary-bg px-3 text-right text-text-lighter/50 tabular-nums">
         {lineNumber}
       </span>
       <span className="whitespace-pre text-text">{rendered}</span>
@@ -362,8 +362,8 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
   }
 
   return (
-    <div className="custom-scrollbar-thin h-full overflow-auto bg-primary-bg p-3">
-      <div className="min-w-max space-y-0">
+    <div className="custom-scrollbar-thin h-full overflow-x-hidden overflow-y-auto bg-primary-bg py-3 pr-3">
+      <div className="space-y-0">
         {lineData.map((line) => (
           <PreviewLine key={line.lineNumber} {...line} />
         ))}
