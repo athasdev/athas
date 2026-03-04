@@ -30,9 +30,9 @@ export default function Input({
   };
 
   const iconSizes = {
-    xs: 12,
-    sm: 12,
-    md: 14,
+    xs: "var(--app-ui-icon-size-sm)",
+    sm: "var(--app-ui-icon-size-sm)",
+    md: "var(--app-ui-icon-size-md)",
   };
 
   const iconPositions = {

@@ -6,6 +6,7 @@ import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { settingsSearchIndex } from "./config/search-index";
 import { cacheFontsForBootstrap, cacheThemeForBootstrap } from "./lib/appearance-bootstrap";
+import { normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "./lib/ui-font-size";
 import type { CoreFeaturesState } from "./types/feature";
 import type { SearchResult, SearchState } from "./types/search";
 
@@ -32,6 +33,7 @@ interface Settings {
   terminalCursorBlink: boolean;
   // UI
   uiFontFamily: string;
+  uiFontSize: number;
   // Theme
   theme: Theme;
   iconTheme: string;
@@ -106,6 +108,7 @@ const defaultSettings: Settings = {
   terminalCursorBlink: true,
   // UI
   uiFontFamily: "Geist Variable",
+  uiFontSize: UI_FONT_SIZE_DEFAULT,
   // Theme
   theme: "athas-dark", // Changed from "auto" since we don't support continuous monitoring
   iconTheme: "colorful-material",
@@ -308,8 +311,14 @@ const initializeSettings = async () => {
       loadedSettings.theme = detectedTheme;
     }
 
+    loadedSettings.uiFontSize = normalizeUiFontSize(loadedSettings.uiFontSize);
+
     applyTheme(loadedSettings.theme);
-    cacheFontsForBootstrap(loadedSettings.fontFamily, loadedSettings.uiFontFamily);
+    cacheFontsForBootstrap(
+      loadedSettings.fontFamily,
+      loadedSettings.uiFontFamily,
+      loadedSettings.uiFontSize,
+    );
 
     // Update Zustand store
     useSettingsStore.getState().initializeSettings(loadedSettings);
@@ -348,7 +357,13 @@ export const useSettingsStore = create(
               state.settings = validatedSettings;
             });
 
-            cacheFontsForBootstrap(validatedSettings.fontFamily, validatedSettings.uiFontFamily);
+            validatedSettings.uiFontSize = normalizeUiFontSize(validatedSettings.uiFontSize);
+
+            cacheFontsForBootstrap(
+              validatedSettings.fontFamily,
+              validatedSettings.uiFontFamily,
+              validatedSettings.uiFontSize,
+            );
             applyTheme(validatedSettings.theme);
             void saveSettingsToStore(validatedSettings);
             return true;
@@ -371,7 +386,11 @@ export const useSettingsStore = create(
           });
 
           applyTheme(defaultSettings.theme);
-          cacheFontsForBootstrap(defaultSettings.fontFamily, defaultSettings.uiFontFamily);
+          cacheFontsForBootstrap(
+            defaultSettings.fontFamily,
+            defaultSettings.uiFontFamily,
+            defaultSettings.uiFontSize,
+          );
           await saveSettingsToStore(defaultSettings);
         },
 
@@ -394,17 +413,24 @@ export const useSettingsStore = create(
 
         // Update individual setting
         updateSetting: async <K extends keyof Settings>(key: K, value: Settings[K]) => {
+          const normalizedValue =
+            key === "uiFontSize" ? (normalizeUiFontSize(value) as Settings[K]) : value;
+
           set((state) => {
-            state.settings[key] = value;
+            state.settings[key] = normalizedValue;
           });
 
-          if (key === "theme") applyTheme(value as Theme);
-          if (key === "fontFamily" || key === "uiFontFamily") {
+          if (key === "theme") applyTheme(normalizedValue as Theme);
+          if (key === "fontFamily" || key === "uiFontFamily" || key === "uiFontSize") {
             const latestSettings = useSettingsStore.getState().settings;
-            cacheFontsForBootstrap(latestSettings.fontFamily, latestSettings.uiFontFamily);
+            cacheFontsForBootstrap(
+              latestSettings.fontFamily,
+              latestSettings.uiFontFamily,
+              latestSettings.uiFontSize,
+            );
           }
 
-          debouncedSaveSettingsToStore({ [key]: value });
+          debouncedSaveSettingsToStore({ [key]: normalizedValue });
         },
 
         // Search actions

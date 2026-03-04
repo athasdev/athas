@@ -114,9 +114,9 @@ const Dropdown = ({
   };
 
   const iconSizes = {
-    xs: 10,
-    sm: 12,
-    md: 14,
+    xs: "var(--app-ui-icon-size-xs)",
+    sm: "var(--app-ui-icon-size-sm)",
+    md: "var(--app-ui-icon-size-md)",
   };
 
   const renderDropdown = () => (
@@ -140,7 +140,7 @@ const Dropdown = ({
             <div className="sticky top-0 border-border border-b bg-primary-bg p-2">
               <div className="relative">
                 <Search
-                  size={12}
+                  size="var(--app-ui-icon-size-sm)"
                   className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
                 />
                 <input

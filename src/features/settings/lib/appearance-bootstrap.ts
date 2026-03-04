@@ -1,4 +1,5 @@
 import type { ThemeDefinition } from "@/extensions/themes/types";
+import { getUiFontScale, normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "./ui-font-size";
 
 export const APPEARANCE_BOOTSTRAP_CACHE_KEY = "athas.bootstrap.appearance.v1";
 
@@ -146,6 +147,7 @@ export interface AppearanceBootstrapCache {
   syntaxTokens: Record<string, string>;
   editorFontFamily: string;
   uiFontFamily: string;
+  uiFontSize: number;
 }
 
 const DEFAULT_EDITOR_FONT = "Geist Mono Variable";
@@ -182,6 +184,7 @@ export const DEFAULT_APPEARANCE_BOOTSTRAP_CACHE: AppearanceBootstrapCache = {
   syntaxTokens: prefixRecord("--syntax-", ATHAS_BOOTSTRAP_DEFAULTS.dark.syntax),
   editorFontFamily: DEFAULT_EDITOR_FONT,
   uiFontFamily: DEFAULT_UI_FONT,
+  uiFontSize: UI_FONT_SIZE_DEFAULT,
 };
 
 function isWindowsPlatform(): boolean {
@@ -241,6 +244,7 @@ function parseBootstrapCache(raw: unknown): AppearanceBootstrapCache | null {
     typeof record.uiFontFamily === "string"
       ? record.uiFontFamily
       : DEFAULT_APPEARANCE_BOOTSTRAP_CACHE.uiFontFamily;
+  const uiFontSize = normalizeUiFontSize(record.uiFontSize);
 
   return {
     version: 1,
@@ -250,6 +254,7 @@ function parseBootstrapCache(raw: unknown): AppearanceBootstrapCache | null {
     syntaxTokens,
     editorFontFamily,
     uiFontFamily,
+    uiFontSize,
   };
 }
 
@@ -306,6 +311,9 @@ export function applyBootstrapAppearance(cache: AppearanceBootstrapCache): void 
     buildFontVariable(editorFontPrimary, monoFallback),
   );
   root.style.setProperty("--app-font-family", buildFontVariable(uiFontPrimary, sansFallback));
+  const normalizedUiFontSize = normalizeUiFontSize(cache.uiFontSize);
+  root.style.setProperty("--app-ui-font-size", `${normalizedUiFontSize}px`);
+  root.style.setProperty("--app-ui-scale", `${getUiFontScale(normalizedUiFontSize)}`);
 }
 
 export function ensureStartupAppearanceApplied(): void {
@@ -323,16 +331,22 @@ export function cacheThemeForBootstrap(theme: ThemeDefinition): void {
     syntaxTokens: sanitizeVarMap(theme.syntaxTokens),
     editorFontFamily: existing.editorFontFamily,
     uiFontFamily: existing.uiFontFamily,
+    uiFontSize: existing.uiFontSize,
   };
   writeAppearanceBootstrapCache(next);
 }
 
-export function cacheFontsForBootstrap(editorFontFamily: string, uiFontFamily: string): void {
+export function cacheFontsForBootstrap(
+  editorFontFamily: string,
+  uiFontFamily: string,
+  uiFontSize?: number,
+): void {
   const existing = readAppearanceBootstrapCache() || DEFAULT_APPEARANCE_BOOTSTRAP_CACHE;
   const next: AppearanceBootstrapCache = {
     ...existing,
     editorFontFamily: editorFontFamily || existing.editorFontFamily,
     uiFontFamily: uiFontFamily || existing.uiFontFamily,
+    uiFontSize: uiFontSize === undefined ? existing.uiFontSize : normalizeUiFontSize(uiFontSize),
   };
   writeAppearanceBootstrapCache(next);
 }

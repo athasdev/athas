@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { currentPlatform, IS_WINDOWS } from "@/utils/platform";
+import { getUiFontScale, normalizeUiFontSize } from "../lib/ui-font-size";
 
 // Cross-platform monospace fallback stack
 const DEFAULT_MONO_FALLBACK =
@@ -71,7 +72,14 @@ export const FontStyleInjector = () => {
       "--app-font-family",
       buildFontVariable(effectiveUiFont, sansFallback),
     );
-  }, [settings.fontFamily, settings.uiFontFamily, codeEditorFontFamily]);
+
+    const normalizedUiFontSize = normalizeUiFontSize(settings.uiFontSize);
+    document.documentElement.style.setProperty("--app-ui-font-size", `${normalizedUiFontSize}px`);
+    document.documentElement.style.setProperty(
+      "--app-ui-scale",
+      `${getUiFontScale(normalizedUiFontSize)}`,
+    );
+  }, [settings.fontFamily, settings.uiFontFamily, settings.uiFontSize, codeEditorFontFamily]);
 
   return null;
 };

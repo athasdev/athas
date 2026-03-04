@@ -1,10 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Upload } from "lucide-react";
+import { Minus, Plus, Upload } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
+import {
+  formatUiFontSize,
+  shiftUiFontSize,
+  UI_FONT_SIZE_MAX,
+  UI_FONT_SIZE_MIN,
+} from "@/features/settings/lib/ui-font-size";
 import { useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
 import Dropdown from "@/ui/dropdown";
@@ -105,6 +111,17 @@ export const AppearanceSettings = () => {
     updateSetting("iconTheme", themeId);
   };
 
+  const canDecreaseUiFontSize = settings.uiFontSize > UI_FONT_SIZE_MIN;
+  const canIncreaseUiFontSize = settings.uiFontSize < UI_FONT_SIZE_MAX;
+
+  const handleDecreaseUiFontSize = () => {
+    updateSetting("uiFontSize", shiftUiFontSize(settings.uiFontSize, -1));
+  };
+
+  const handleIncreaseUiFontSize = () => {
+    updateSetting("uiFontSize", shiftUiFontSize(settings.uiFontSize, 1));
+  };
+
   const getThemeDescription = () => {
     const currentTheme = themeRegistry.getTheme(settings.theme);
     return currentTheme?.description || "Choose your preferred color theme";
@@ -153,6 +170,38 @@ export const AppearanceSettings = () => {
             className="w-48"
             monospaceOnly={false}
           />
+        </SettingRow>
+
+        <SettingRow label="UI Font Size" description="Adjust UI text and icon scale in 0.5px steps">
+          <div className="flex items-center gap-1.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={handleDecreaseUiFontSize}
+              disabled={!canDecreaseUiFontSize}
+              aria-label="Decrease UI font size"
+              className="px-1.5"
+            >
+              <Minus size="var(--app-ui-icon-size-sm)" />
+            </Button>
+
+            <div className="ui-font min-w-[52px] text-center text-text text-xs tabular-nums">
+              {formatUiFontSize(settings.uiFontSize)}
+            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={handleIncreaseUiFontSize}
+              disabled={!canIncreaseUiFontSize}
+              aria-label="Increase UI font size"
+              className="px-1.5"
+            >
+              <Plus size="var(--app-ui-icon-size-sm)" />
+            </Button>
+          </div>
         </SettingRow>
       </Section>
 

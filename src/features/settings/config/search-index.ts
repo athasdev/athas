@@ -220,6 +220,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["font", "ui", "typography", "family"],
   },
   {
+    id: "appearance-ui-font-size",
+    tab: "appearance",
+    section: "Typography",
+    label: "UI Font Size",
+    description: "Adjust UI text and icon scale in 0.5px steps",
+    keywords: ["font", "size", "ui", "icon", "scale", "typography"],
+  },
+  {
     id: "appearance-sidebar-position",
     tab: "appearance",
     section: "Layout",

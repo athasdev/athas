@@ -77,6 +77,11 @@
   :root {
     --app-font-family: var(--font-sans);
     --editor-font-family: var(--font-mono);
+    --app-ui-font-size: 14px;
+    --app-ui-scale: 1;
+    --app-ui-icon-size-xs: calc(10px * var(--app-ui-scale));
+    --app-ui-icon-size-sm: calc(12px * var(--app-ui-scale));
+    --app-ui-icon-size-md: calc(14px * var(--app-ui-scale));
 
     --primary-bg: #ffffff;
     --secondary-bg: #f8f8f8;
@@ -229,5 +234,6 @@
 
   html {
     font-family: var(--app-font-family);
+    font-size: calc(16px * var(--app-ui-scale));
   }
 }
