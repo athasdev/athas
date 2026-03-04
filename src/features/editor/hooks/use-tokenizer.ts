@@ -177,19 +177,13 @@ export function useTokenizer({
 
       setLoading(true);
       try {
-        // Check if parser is in IndexedDB cache
-        const cached = await indexedDBParserCache.get(languageId);
-
         // Normalize line endings before tokenizing
         const normalizedText = normalizeLineEndings(text);
         startMeasure(`tokenizeFull (len: ${normalizedText.length})`);
 
-        const wasmPath = cached?.sourceUrl || getDefaultParserWasmUrl(languageId);
+        const wasmPath = getDefaultParserWasmUrl(languageId);
+        const cached = await indexedDBParserCache.get(languageId);
         const highlightQuery = await resolveHighlightQuery(languageId, cached || undefined);
-
-        if (!cached) {
-          logger.info("Editor", `[Tokenizer] Using remote parser source for ${languageId}`);
-        }
 
         // Always do full parse - incremental parsing disabled for now
         // The debouncing provides sufficient performance improvement
@@ -251,8 +245,8 @@ export function useTokenizer({
       if (lineCount >= LARGE_FILE_LINE_THRESHOLD) {
         setLoading(true);
         try {
+          const wasmPath = getDefaultParserWasmUrl(languageId);
           const cached = await indexedDBParserCache.get(languageId);
-          const wasmPath = cached?.sourceUrl || getDefaultParserWasmUrl(languageId);
           const highlightQuery = await resolveHighlightQuery(languageId, cached || undefined);
 
           const clampedStartLine = Math.max(0, Math.min(viewportRange.startLine, lineCount - 1));
@@ -300,19 +294,9 @@ export function useTokenizer({
 
       setLoading(true);
       try {
-        // Check if parser is in IndexedDB cache
+        const wasmPath = getDefaultParserWasmUrl(languageId);
         const cached = await indexedDBParserCache.get(languageId);
-        if (!cached) {
-          logger.warn(
-            "Editor",
-            `[Tokenizer] Parser not in cache for ${languageId}, falling back to full tokenization`,
-          );
-          return tokenizeFull(text);
-        }
-
-        // Use cached config
-        const wasmPath = cached.sourceUrl;
-        const highlightQuery = await resolveHighlightQuery(languageId, cached);
+        const highlightQuery = await resolveHighlightQuery(languageId, cached || undefined);
 
         // Tokenize the viewport range
         const highlightTokens = await wasmTokenizeRange(
