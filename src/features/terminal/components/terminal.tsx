@@ -118,6 +118,21 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         return true;
       });
 
+      if (terminal.textarea) {
+        terminal.textarea.addEventListener("beforeinput", (e) => {
+          if (e.inputType === "insertReplacementText" || e.inputType === "insertFromDrop") {
+            const text = e.dataTransfer?.getData("text/plain") ?? e.data;
+            if (text) {
+              e.preventDefault();
+              const currentId = currentConnectionIdRef.current;
+              if (currentId) {
+                invoke("terminal_write", { id: currentId, data: text }).catch(() => {});
+              }
+            }
+          }
+        });
+      }
+
       loadWebLinksAddon(terminal);
       terminal.unicode.activeVersion = "11";
       injectLinkStyles(sessionId, terminalRef.current.id || `terminal-${sessionId}`);
