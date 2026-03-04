@@ -7,7 +7,6 @@ import type { AIProvider, ProviderConfig } from "./provider-interface";
 
 const providers = new Map<string, AIProvider>();
 
-// Initialize providers
 function initializeProviders(): void {
   const openAIConfig: ProviderConfig = {
     id: "openai",
@@ -60,4 +59,14 @@ export function getProvider(providerId: string): AIProvider | undefined {
     initializeProviders();
   }
   return providers.get(providerId);
+}
+
+export function setOllamaBaseUrl(baseUrl: string): void {
+  if (providers.size === 0) {
+    initializeProviders();
+  }
+  const ollama = providers.get("ollama");
+  if (ollama instanceof OllamaProvider) {
+    ollama.setBaseUrl(baseUrl);
+  }
 }

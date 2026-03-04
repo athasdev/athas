@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { AlertCircle, RefreshCw, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { AlertCircle, CheckCircle, Globe, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AIModelSelector } from "@/features/ai/components/selectors/ai-model-selector";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionMode } from "@/features/ai/types/acp";
@@ -14,7 +14,9 @@ import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/utils/autocomplete";
 import { cn } from "@/utils/cn";
+import { setOllamaBaseUrl } from "@/utils/providers";
 
+const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
 
 const DEFAULT_AUTOCOMPLETE_MODELS = [
@@ -40,35 +42,74 @@ export const AISettings = () => {
   const aiCompletionAllowedByPolicy = managedPolicy ? managedPolicy.aiCompletionEnabled : true;
   const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
 
-  // State for available session modes
   const [availableModes, setAvailableModes] = useState<SessionMode[]>([]);
   const [isClearingChats, setIsClearingChats] = useState(false);
   const [autocompleteModels, setAutocompleteModels] = useState(DEFAULT_AUTOCOMPLETE_MODELS);
   const [isLoadingAutocompleteModels, setIsLoadingAutocompleteModels] = useState(false);
   const [autocompleteModelError, setAutocompleteModelError] = useState<string | null>(null);
 
-  // Detect installed agents on mount
+  // Ollama URL state
+  const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL);
+  const [ollamaStatus, setOllamaStatus] = useState<"idle" | "checking" | "ok" | "error">("idle");
+  const ollamaDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
   useEffect(() => {
     const detectAgents = async () => {
       try {
         const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
         updateAgentStatus(availableAgents.map((a) => ({ id: a.id, installed: a.installed })));
       } catch {
-        // Failed to detect agents, leave as not installed
+        // Failed to detect agents
       }
     };
     detectAgents();
   }, []);
 
-  // Get available session modes from AI chat store
   useEffect(() => {
     const unsubscribe = useAIChatStore.subscribe((state) => {
       setAvailableModes(state.sessionModeState.availableModes);
     });
-    // Initialize with current value
     setAvailableModes(useAIChatStore.getState().sessionModeState.availableModes);
     return unsubscribe;
   }, []);
+
+  // Sync Ollama base URL on mount
+  useEffect(() => {
+    const url = settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL;
+    setOllamaBaseUrl(url);
+  }, []);
+
+  const checkOllamaConnection = useCallback(async (url: string) => {
+    setOllamaStatus("checking");
+    try {
+      const response = await fetch(`${url}/api/tags`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      setOllamaStatus(response.ok ? "ok" : "error");
+    } catch {
+      setOllamaStatus("error");
+    }
+  }, []);
+
+  const handleOllamaUrlChange = (value: string) => {
+    setOllamaUrl(value);
+    setOllamaStatus("idle");
+
+    if (ollamaDebounceRef.current) clearTimeout(ollamaDebounceRef.current);
+    ollamaDebounceRef.current = setTimeout(() => {
+      const trimmed = value.replace(/\/+$/, "") || DEFAULT_OLLAMA_BASE_URL;
+      updateSetting("ollamaBaseUrl", trimmed);
+      setOllamaBaseUrl(trimmed);
+      checkOllamaConnection(trimmed);
+    }, 600);
+  };
+
+  const handleResetOllamaUrl = () => {
+    setOllamaUrl(DEFAULT_OLLAMA_BASE_URL);
+    updateSetting("ollamaBaseUrl", DEFAULT_OLLAMA_BASE_URL);
+    setOllamaBaseUrl(DEFAULT_OLLAMA_BASE_URL);
+    checkOllamaConnection(DEFAULT_OLLAMA_BASE_URL);
+  };
 
   const providers = getAvailableProviders();
 
@@ -106,10 +147,11 @@ export const AISettings = () => {
     void loadAutocompleteModels();
   }, []);
 
-  // Get all providers that require authentication (but not API keys)
   const providersNeedingAuth = getAvailableProviders().filter(
     (p) => p.requiresAuth && !p.requiresApiKey,
   );
+
+  const isOllamaSelected = settings.aiProviderId === "ollama";
 
   return (
     <div className="space-y-4">
@@ -123,6 +165,54 @@ export const AISettings = () => {
           />
         </SettingRow>
       </Section>
+
+      {(isOllamaSelected || settings.ollamaBaseUrl !== DEFAULT_OLLAMA_BASE_URL) && (
+        <Section title="Ollama">
+          <SettingRow label="Endpoint" description="Base URL for Ollama API (local, LAN, or cloud)">
+            <div className="flex items-center gap-1.5">
+              <div className="relative">
+                <Globe
+                  size={11}
+                  className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 text-text-lighter"
+                />
+                <input
+                  type="text"
+                  value={ollamaUrl}
+                  onChange={(e) => handleOllamaUrlChange(e.target.value)}
+                  placeholder={DEFAULT_OLLAMA_BASE_URL}
+                  spellCheck={false}
+                  className={cn(
+                    "w-56 rounded-lg border bg-secondary-bg py-1.5 pr-2 pl-7 text-text text-xs",
+                    "focus:border-accent focus:outline-none",
+                    ollamaStatus === "error" ? "border-red-500/60" : "border-border",
+                  )}
+                />
+              </div>
+              {ollamaStatus === "checking" && (
+                <RefreshCw size={12} className="animate-spin text-text-lighter" />
+              )}
+              {ollamaStatus === "ok" && <CheckCircle size={12} className="text-green-500" />}
+              {ollamaStatus === "error" && <AlertCircle size={12} className="text-red-400" />}
+              {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
+                <button
+                  onClick={handleResetOllamaUrl}
+                  className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
+                  title="Reset to default"
+                  aria-label="Reset Ollama URL to default"
+                >
+                  <RotateCcw size={11} />
+                </button>
+              )}
+            </div>
+          </SettingRow>
+          {ollamaStatus === "error" && (
+            <div className="flex items-center gap-1.5 px-1 text-red-400 text-xs">
+              <AlertCircle size={11} className="shrink-0" />
+              <span>Could not connect. Check that Ollama is running at this address.</span>
+            </div>
+          )}
+        </Section>
+      )}
 
       {providersNeedingAuth.length > 0 && (
         <Section title="Authentication">

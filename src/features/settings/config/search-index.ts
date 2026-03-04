@@ -286,6 +286,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["api", "key", "authentication", "credentials"],
   },
   {
+    id: "ai-ollama-endpoint",
+    tab: "ai",
+    section: "Ollama",
+    label: "Ollama Endpoint",
+    description: "Base URL for the Ollama API server",
+    keywords: ["ollama", "endpoint", "url", "local", "lan", "cloud", "host", "port"],
+  },
+  {
     id: "ai-auto-open-files",
     tab: "ai",
     section: "Behavior",

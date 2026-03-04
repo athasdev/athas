@@ -1,14 +1,26 @@
+import type { ProviderModel } from "./provider-interface";
 import { AIProvider, type ProviderHeaders, type StreamRequest } from "./provider-interface";
 
+const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
+
 export class OllamaProvider extends AIProvider {
-  buildHeaders(_apiKey?: string): ProviderHeaders {
-    // Ollama typically doesn't require headers, but we can add Content-Type
+  private baseUrl: string = DEFAULT_OLLAMA_BASE_URL;
+
+  setBaseUrl(url: string) {
+    this.baseUrl = url.replace(/\/+$/, "") || DEFAULT_OLLAMA_BASE_URL;
+  }
+
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  buildHeaders(): ProviderHeaders {
     return {
       "Content-Type": "application/json",
     };
   }
 
-  buildPayload(request: StreamRequest): any {
+  buildPayload(request: StreamRequest) {
     return {
       model: request.modelId,
       messages: request.messages,
@@ -18,32 +30,28 @@ export class OllamaProvider extends AIProvider {
     };
   }
 
-  async validateApiKey(_apiKey: string): Promise<boolean> {
-    // Ollama doesn't require an API key by default
+  async validateApiKey(): Promise<boolean> {
     return true;
   }
 
-  // Override buildUrl to point to the local Ollama instance
-  buildUrl(_request: StreamRequest): string {
-    return "http://localhost:11434/v1/chat/completions";
+  buildUrl(): string {
+    return `${this.baseUrl}/v1/chat/completions`;
   }
 
-  async getModels(): Promise<any[]> {
+  async getModels(): Promise<ProviderModel[]> {
     try {
-      const response = await fetch("http://localhost:11434/api/tags", {
-        signal: AbortSignal.timeout(2000), // 2 second timeout
+      const response = await fetch(`${this.baseUrl}/api/tags`, {
+        signal: AbortSignal.timeout(3000),
       });
-      if (!response.ok) {
-        return [];
-      }
+      if (!response.ok) return [];
+
       const data = await response.json();
-      return data.models.map((model: any) => ({
+      return data.models.map((model: { name: string }) => ({
         id: model.name,
         name: model.name,
-        maxTokens: 4096, // Default for now as Ollama doesn't always provide this
+        maxTokens: 4096,
       }));
     } catch {
-      // Silent fail - Ollama is likely not running
       return [];
     }
   }

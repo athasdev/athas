@@ -49,6 +49,7 @@ interface Settings {
   aiCompletion: boolean;
   aiAutocompleteModelId: string;
   aiDefaultSessionMode: string;
+  ollamaBaseUrl: string;
   // Layout
   sidebarWidth: number;
   // Keyboard
@@ -124,6 +125,7 @@ const defaultSettings: Settings = {
   aiCompletion: true,
   aiAutocompleteModelId: "mistralai/devstral-small",
   aiDefaultSessionMode: "",
+  ollamaBaseUrl: "http://localhost:11434",
   // Layout
   sidebarWidth: 220,
   // Keyboard
@@ -320,6 +322,13 @@ const initializeSettings = async () => {
       loadedSettings.uiFontSize,
     );
 
+    // Sync Ollama base URL with provider
+    if (loadedSettings.ollamaBaseUrl) {
+      import("@/utils/providers").then(({ setOllamaBaseUrl }) => {
+        setOllamaBaseUrl(loadedSettings.ollamaBaseUrl);
+      });
+    }
+
     // Update Zustand store
     useSettingsStore.getState().initializeSettings(loadedSettings);
     await saveSettingsToStore(loadedSettings);
@@ -421,6 +430,11 @@ export const useSettingsStore = create(
           });
 
           if (key === "theme") applyTheme(normalizedValue as Theme);
+          if (key === "ollamaBaseUrl") {
+            import("@/utils/providers").then(({ setOllamaBaseUrl }) => {
+              setOllamaBaseUrl(normalizedValue as string);
+            });
+          }
           if (key === "fontFamily" || key === "uiFontFamily" || key === "uiFontSize") {
             const latestSettings = useSettingsStore.getState().settings;
             cacheFontsForBootstrap(
