@@ -191,7 +191,7 @@ function FileTreeComponent({
     }, GIT_STATUS_DEBOUNCE_MS);
 
     return () => clearTimeout(debounceTimer);
-  }, [rootFolderPath, files]);
+  }, [rootFolderPath]);
 
   useEffect(() => {
     if (!rootFolderPath) return;
@@ -211,8 +211,10 @@ function FileTreeComponent({
     };
 
     window.addEventListener("git-status-updated", handleGitStatusUpdated);
+    window.addEventListener("git-status-changed", handleGitStatusUpdated);
     return () => {
       window.removeEventListener("git-status-updated", handleGitStatusUpdated);
+      window.removeEventListener("git-status-changed", handleGitStatusUpdated);
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [rootFolderPath]);

@@ -6,6 +6,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { stageHunk, unstageHunk } from "@/features/git/api/status";
 import type { GitHunk } from "@/features/git/types/git";
 import TabBar from "@/features/tabs/components/tab-bar";
+import { extractDroppedFilePaths } from "@/utils/dropped-file-paths";
 import { EmptyEditorState } from "../../layout/components/empty-editor-state";
 import { usePaneStore } from "../stores/pane-store";
 import type { PaneGroup } from "../types/pane";
@@ -292,45 +293,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         }
       }
 
-      // Handle file path drop from file tree
-      const filePath = e.dataTransfer.getData("text/plain");
-      if (filePath?.startsWith("/")) {
-        try {
-          const fileName = filePath.split("/").pop() || "Untitled";
-          const content = await readFileContent(filePath);
-
-          // Check if buffer already exists
-          const existingBuffer = buffers.find((b) => b.path === filePath);
-          if (existingBuffer) {
-            // Buffer exists, add to this pane if not already there
-            if (!pane.bufferIds.includes(existingBuffer.id)) {
-              addBufferToPane(pane.id, existingBuffer.id, true);
-            } else {
-              setActivePaneBuffer(pane.id, existingBuffer.id);
-            }
-          } else {
-            // Open the file as a new buffer
-            const bufferId = openBuffer(filePath, fileName, content, false, false, false, false);
-            // Ensure it's in this pane
-            if (!pane.bufferIds.includes(bufferId)) {
-              addBufferToPane(pane.id, bufferId, true);
-            }
-          }
-          return;
-        } catch (error) {
-          console.error("Failed to open dropped file:", error);
+      const droppedPaths = extractDroppedFilePaths(e.dataTransfer);
+      if (droppedPaths.length > 0 && handleFileOpen) {
+        for (const droppedPath of droppedPaths) {
+          await handleFileOpen(droppedPath, false);
         }
-      }
-
-      // Handle native file drop
-      if (e.dataTransfer.files.length > 0) {
-        const files = Array.from(e.dataTransfer.files);
-        for (const file of files) {
-          const path = (file as File & { path?: string }).path;
-          if (path && handleFileOpen) {
-            await handleFileOpen(path, false);
-          }
-        }
+        return;
       }
     },
     [

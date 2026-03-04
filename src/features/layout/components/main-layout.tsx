@@ -23,6 +23,7 @@ import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wr
 import { useFolderDrop } from "@/hooks/use-folder-drop";
 import { useUIState } from "@/stores/ui-state-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
+import { parseDroppedPaths } from "@/utils/dropped-file-paths";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
@@ -60,17 +61,20 @@ export function MainLayout() {
   const { isDraggingOver } = useFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
 
+    const droppedPaths = parseDroppedPaths(paths);
+    if (droppedPaths.length === 0) return;
+
     try {
-      const info = await getSymlinkInfo(paths[0]);
+      const info = await getSymlinkInfo(droppedPaths[0]);
       if (info?.is_dir) {
         if (handleOpenFolderByPath) {
-          await handleOpenFolderByPath(paths[0]);
+          await handleOpenFolderByPath(droppedPaths[0]);
         }
         return;
       }
 
       if (handleFileOpen) {
-        for (const p of paths) {
+        for (const p of droppedPaths) {
           try {
             const pInfo = await getSymlinkInfo(p);
             if (!pInfo?.is_dir) {
