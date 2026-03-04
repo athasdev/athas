@@ -39,6 +39,16 @@ interface DropdownPosition {
   maxHeight: number;
 }
 
+interface FilteredItem {
+  type: "provider" | "model";
+  id: string;
+  name: string;
+  providerId: string;
+  requiresApiKey?: boolean;
+  hasKey?: boolean;
+  isCurrent?: boolean;
+}
+
 export function AIModelSelector({
   providerId,
   modelId,
@@ -53,7 +63,6 @@ export function AIModelSelector({
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
 
-  // Inline API key editing state
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -122,34 +131,23 @@ export function AIModelSelector({
   }, [providerId]);
 
   const filteredItems = useMemo(() => {
-    const items: Array<{
-      type: "provider" | "model";
-      id: string;
-      name: string;
-      providerId: string;
-      requiresApiKey?: boolean;
-      hasKey?: boolean;
-      isCurrent?: boolean;
-    }> = [];
-
+    const items: FilteredItem[] = [];
     const searchLower = search.toLowerCase();
 
     for (const provider of providers) {
       const providerHasKey = !provider.requiresApiKey || hasProviderApiKey(provider.id);
       const models = dynamicModels[provider.id] || provider.models;
+      const providerNameMatches = provider.name.toLowerCase().includes(searchLower);
 
       const matchingModels = models.filter(
         (model) =>
           !search ||
-          provider.name.toLowerCase().includes(searchLower) ||
+          providerNameMatches ||
           model.name.toLowerCase().includes(searchLower) ||
           model.id.toLowerCase().includes(searchLower),
       );
 
-      if (
-        matchingModels.length > 0 ||
-        (!search && provider.name.toLowerCase().includes(searchLower))
-      ) {
+      if (matchingModels.length > 0 || !search || providerNameMatches) {
         items.push({
           type: "provider",
           id: `provider-${provider.id}`,
@@ -214,8 +212,8 @@ export function AIModelSelector({
 
     const rect = trigger.getBoundingClientRect();
     const viewportPadding = 8;
-    const width = 340;
-    const estimatedHeight = 460;
+    const width = 360;
+    const estimatedHeight = 480;
     const safeWidth = Math.min(width, window.innerWidth - viewportPadding * 2);
     const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
     const availableAbove = rect.top - viewportPadding;
@@ -321,7 +319,6 @@ export function AIModelSelector({
     [selectableItems, selectedIndex, handleModelSelect, editingProvider],
   );
 
-  // Inline API key handlers
   const startEditing = (targetProviderId: string) => {
     setEditingProvider(targetProviderId);
     setApiKeyInput("");
@@ -408,7 +405,7 @@ export function AIModelSelector({
         className="flex items-center gap-2 rounded-lg border border-border bg-secondary-bg px-3 py-1.5 text-xs transition-colors hover:bg-hover disabled:opacity-50"
         aria-label="Select AI provider and model"
       >
-        <ProviderIcon providerId={providerId} size={12} className="text-text-lighter" />
+        <ProviderIcon providerId={providerId} size={14} className="text-text-lighter" />
         <span className="text-text">
           {currentProvider?.name || providerId}
           <span className="text-text-lighter"> / </span>
@@ -440,10 +437,10 @@ export function AIModelSelector({
               >
                 {/* Header */}
                 <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/75 px-3 py-2.5">
-                  <div className="flex min-w-0 items-center gap-1.5">
+                  <div className="flex min-w-0 items-center gap-2">
                     <ProviderIcon
                       providerId={providerId}
-                      size={12}
+                      size={14}
                       className="shrink-0 text-text-lighter"
                     />
                     <span className="truncate font-medium text-text text-xs">
@@ -458,7 +455,7 @@ export function AIModelSelector({
                         className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
                         aria-label="Refresh models"
                       >
-                        <RefreshCw size={11} className={cn(isLoadingModels && "animate-spin")} />
+                        <RefreshCw size={12} className={cn(isLoadingModels && "animate-spin")} />
                       </button>
                     )}
                     <button
@@ -473,13 +470,13 @@ export function AIModelSelector({
 
                 {/* Search */}
                 <div className="border-border/60 border-b p-2.5">
-                  <div className="mb-1 text-[10px] text-text-lighter uppercase tracking-wide">
+                  <div className="mb-1 font-medium text-[10px] text-text-lighter uppercase tracking-wide">
                     Search Models
                   </div>
                   <div className="relative">
                     <Search
-                      size={11}
-                      className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 text-text-lighter"
+                      size={12}
+                      className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-text-lighter"
                     />
                     <input
                       ref={inputRef}
@@ -488,7 +485,7 @@ export function AIModelSelector({
                       onChange={(e) => setSearch(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="Search by provider or model name"
-                      className="w-full rounded-lg border border-border bg-secondary-bg py-1.5 pr-2 pl-7 text-text text-xs focus:border-accent focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-secondary-bg py-1.5 pr-2 pl-8 text-text text-xs focus:border-accent focus:outline-none"
                     />
                   </div>
                 </div>
@@ -515,11 +512,11 @@ export function AIModelSelector({
 
                         return (
                           <div key={item.id}>
-                            <div className="flex items-center justify-between px-1 pt-2 pb-1">
-                              <span className="flex items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-wide">
+                            <div className="flex items-center justify-between px-1 pt-2.5 pb-1.5">
+                              <span className="flex items-center gap-2 font-medium text-xs text-text-lighter uppercase tracking-wide">
                                 <ProviderIcon
                                   providerId={item.providerId}
-                                  size={10}
+                                  size={14}
                                   className="text-text-lighter"
                                 />
                                 {item.name}
@@ -530,7 +527,7 @@ export function AIModelSelector({
                                     <>
                                       <button
                                         onClick={() => startEditing(item.providerId)}
-                                        className="rounded px-1 py-0.5 text-[9px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                                        className="rounded px-1.5 py-0.5 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
                                         aria-label={`Edit ${item.name} API key`}
                                       >
                                         Edit
@@ -540,23 +537,23 @@ export function AIModelSelector({
                                         className="rounded p-0.5 text-red-400 transition-colors hover:bg-red-500/10"
                                         aria-label={`Remove ${item.name} API key`}
                                       >
-                                        <Trash2 size={9} />
+                                        <Trash2 size={10} />
                                       </button>
                                     </>
                                   )}
                                   {!hasKey && !isEditing && (
                                     <button
                                       onClick={() => startEditing(item.providerId)}
-                                      className="flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[9px] text-red-400 transition-colors hover:bg-red-500/25"
+                                      className="flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] text-red-400 transition-colors hover:bg-red-500/25"
                                       aria-label={`Set ${item.name} API key`}
                                     >
-                                      <Key size={7} />
+                                      <Key size={8} />
                                       Set Key
                                     </button>
                                   )}
                                   {hasKey && !isEditing && !showingValidation && (
-                                    <span className="flex items-center gap-1 rounded bg-green-500/15 px-1.5 py-0.5 text-[9px] text-green-500">
-                                      <Check size={7} />
+                                    <span className="flex items-center gap-1 rounded bg-green-500/15 px-1.5 py-0.5 text-[10px] text-green-500">
+                                      <Check size={8} />
                                     </span>
                                   )}
                                 </div>
@@ -666,13 +663,13 @@ export function AIModelSelector({
                           onClick={() => handleModelSelect(item.providerId, item.id)}
                           onMouseEnter={() => setSelectedIndex(itemIndex)}
                           className={cn(
-                            "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors",
+                            "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors",
                             isHighlighted ? "bg-hover" : "bg-transparent",
                             item.isCurrent && "bg-accent/10",
                           )}
                         >
                           <span className="flex-1 truncate text-text">{item.name}</span>
-                          {item.isCurrent && <Check size={10} className="shrink-0 text-accent" />}
+                          {item.isCurrent && <Check size={12} className="shrink-0 text-accent" />}
                         </button>
                       );
                     })
