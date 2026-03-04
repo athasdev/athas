@@ -643,7 +643,7 @@ export function AIModelSelector({
                                           <button
                                             onClick={() => handleSaveOllamaUrl(ollamaUrlInput)}
                                             disabled={ollamaUrlStatus === "checking"}
-                                            className="shrink-0 rounded px-2 py-1 text-[10px] text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+                                            className="shrink-0 rounded bg-accent/15 px-2 py-1 text-accent text-xs transition-colors hover:bg-accent/25 disabled:opacity-50"
                                           >
                                             {ollamaUrlStatus === "checking" ? "..." : "Save"}
                                           </button>
@@ -713,7 +713,7 @@ export function AIModelSelector({
                                           <button
                                             onClick={() => handleSaveKey(item.providerId)}
                                             disabled={!apiKeyInput.trim() || isValidating}
-                                            className="shrink-0 rounded px-2 py-1 text-[10px] text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+                                            className="shrink-0 rounded bg-accent/15 px-2 py-1 text-accent text-xs transition-colors hover:bg-accent/25 disabled:opacity-50"
                                           >
                                             {isValidating ? "..." : "Save"}
                                           </button>
