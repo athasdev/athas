@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Check, ChevronDown, Key, Plus, Search, Terminal } from "lucide-react";
+import { Check, ChevronDown, Key, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig } from "@/features/ai/types/acp";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
@@ -375,7 +376,7 @@ export function UnifiedAgentSelector({
           onClick={() => setIsOpen(!isOpen)}
           className="ui-font flex h-8 items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
         >
-          <Terminal size={11} className="text-text-lighter" />
+          <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
           <span className="max-w-[140px] truncate text-text">
             {currentAgent?.name || "Custom"}
             {isCustomAgent && currentModelName && (
@@ -473,7 +474,14 @@ export function UnifiedAgentSelector({
                           key={item.id}
                           className="flex items-center justify-between px-3 py-1.5"
                         >
-                          <span className="font-medium text-text-lighter text-xs">{item.name}</span>
+                          <span className="flex items-center gap-1.5 font-medium text-text-lighter text-xs">
+                            <ProviderIcon
+                              providerId={item.providerId || item.id}
+                              size={11}
+                              className="text-text-lighter"
+                            />
+                            {item.name}
+                          </span>
                           {item.requiresApiKey && !item.hasKey && (
                             <button
                               onClick={(e) => {
@@ -507,7 +515,11 @@ export function UnifiedAgentSelector({
                             item.isCurrent && "bg-accent/10",
                           )}
                         >
-                          <Terminal size={10} className="text-text-lighter" />
+                          <ProviderIcon
+                            providerId={item.id}
+                            size={10}
+                            className="text-text-lighter"
+                          />
                           <span className="flex-1 truncate text-text text-xs">{item.name}</span>
                           {item.isCurrent && <Check size={10} className="text-accent" />}
                           {!item.isCurrent && item.isInstalled && item.id !== "custom" && (

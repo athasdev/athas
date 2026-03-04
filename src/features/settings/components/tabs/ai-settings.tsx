@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionMode } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
@@ -180,6 +181,7 @@ export const AISettings = () => {
   const providerOptions = getAvailableProviders().map((provider) => ({
     value: provider.id,
     label: provider.name,
+    icon: <ProviderIcon providerId={provider.id} size={12} className="text-text-lighter" />,
   }));
 
   const handleProviderChange = (providerId: string) => {

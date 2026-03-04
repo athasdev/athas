@@ -1,7 +1,8 @@
-import { Brain, Check, ChevronDown, Compass, Cpu, Globe, Rocket } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import type { RefObject } from "react";
 import { useMemo, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import type { AutocompleteModel } from "@/utils/autocomplete";
 import { cn } from "@/utils/cn";
 
@@ -17,23 +18,6 @@ const getProviderFromModelId = (modelId: string): string => {
   const slashIndex = modelId.indexOf("/");
   if (slashIndex <= 0) return "default";
   return modelId.slice(0, slashIndex).toLowerCase();
-};
-
-const ProviderIcon = ({ providerId, className }: { providerId: string; className?: string }) => {
-  switch (providerId) {
-    case "openai":
-      return <Brain size={11} className={className} />;
-    case "anthropic":
-      return <Brain size={11} className={className} />;
-    case "google":
-      return <Globe size={11} className={className} />;
-    case "xai":
-      return <Rocket size={11} className={className} />;
-    case "deepseek":
-      return <Compass size={11} className={className} />;
-    default:
-      return <Cpu size={11} className={className} />;
-  }
 };
 
 export const InlineEditModelSelector = ({
@@ -68,7 +52,7 @@ export const InlineEditModelSelector = ({
         )}
         aria-label="Inline edit model selector"
       >
-        <ProviderIcon providerId={selectedProviderId} className="shrink-0 text-text-lighter" />
+        <ProviderIcon providerId={selectedProviderId} size={11} className="text-text-lighter" />
         <span className="truncate">{selectedLabel}</span>
         <ChevronDown
           size={10}
@@ -102,7 +86,7 @@ export const InlineEditModelSelector = ({
                     isActive ? "bg-selected text-text" : "text-text hover:bg-hover",
                   )}
                 >
-                  <ProviderIcon providerId={providerId} className="shrink-0 text-text-lighter" />
+                  <ProviderIcon providerId={providerId} size={11} className="text-text-lighter" />
                   <span className="min-w-0 flex-1 truncate">{model.name}</span>
                   {isActive && <Check size={10} className="shrink-0 text-accent" />}
                 </button>

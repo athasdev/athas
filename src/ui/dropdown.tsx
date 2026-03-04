@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Search } from "lucide-react";
-import type { FC, RefObject } from "react";
+import type { FC, ReactNode, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
@@ -9,7 +9,7 @@ import { adjustPositionToFitViewport } from "@/utils/fit-viewport";
 
 interface DropdownProps {
   value: string;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; icon?: ReactNode }[];
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
@@ -174,7 +174,10 @@ const Dropdown = ({
                   value === option.value ? "bg-blue-500/20 text-blue-400" : "hover:text-text",
                 )}
               >
-                {option.label}
+                <span className="flex items-center gap-1.5">
+                  {option.icon}
+                  {option.label}
+                </span>
               </button>
             ))
           )}
@@ -200,6 +203,7 @@ const Dropdown = ({
             sizeClasses[size],
           )}
         >
+          {selectedOption?.icon}
           <span className="truncate">{triggerLabel}</span>
           <ChevronDown
             size={iconSizes[size]}

@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { getAvailableProviders, getModelById } from "@/features/ai/types/providers";
 import { cn } from "@/utils/cn";
 
@@ -161,6 +162,11 @@ export function SearchableModelDropdown({
                         onClick={() => handleModelSelect(model.providerId, model.modelId)}
                         onMouseEnter={() => setSelectedIndex(index)}
                       >
+                        <ProviderIcon
+                          providerId={model.providerId}
+                          size={12}
+                          className="text-text-lighter"
+                        />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             <span className="ui-font truncate text-text text-xs">

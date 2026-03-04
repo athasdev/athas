@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronDown, Key, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { getAvailableProviders } from "@/features/ai/types/providers";
 import { cn } from "@/utils/cn";
@@ -183,6 +184,7 @@ export function ModelSelectorDropdown({
         onClick={() => setIsOpen(!isOpen)}
         className="ui-font flex h-8 items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
       >
+        <ProviderIcon providerId={currentProviderId} size={12} className="text-text-lighter" />
         <span className="max-w-[120px] truncate text-text">{currentModelName}</span>
         <ChevronDown
           size={12}
@@ -239,7 +241,12 @@ export function ModelSelectorDropdown({
                           key={`provider-${item.providerId}`}
                           className="flex items-center justify-between px-3 py-1.5"
                         >
-                          <span className="font-medium text-text-lighter text-xs">
+                          <span className="flex items-center gap-1.5 font-medium text-text-lighter text-xs">
+                            <ProviderIcon
+                              providerId={item.providerId}
+                              size={11}
+                              className="text-text-lighter"
+                            />
                             {item.providerName}
                           </span>
                           {item.requiresApiKey && !item.hasKey && (

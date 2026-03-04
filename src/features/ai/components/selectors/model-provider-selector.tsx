@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Check, ChevronDown, Key, Terminal } from "lucide-react";
+import { Check, ChevronDown, Key } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import type { AgentConfig } from "@/features/ai/types/acp";
 import {
   AI_AGENTS,
@@ -97,9 +98,7 @@ const ModelProviderSelector = ({
         onClick={() => setIsOpen(!isOpen)}
         className="ui-font flex min-w-40 items-center gap-1.5 rounded bg-transparent px-2 py-1 text-xs transition-colors hover:bg-hover"
       >
-        {isAgentProvider(currentProviderId) && (
-          <Terminal size={10} className="shrink-0 text-blue-400" />
-        )}
+        <ProviderIcon providerId={currentProviderId} size={10} className="text-text-lighter" />
         <div className="min-w-0 flex-1 text-left">
           <div className="truncate text-text text-xs">{getCurrentDisplayName()}</div>
         </div>
@@ -118,10 +117,7 @@ const ModelProviderSelector = ({
           {/* CLI Agents Section */}
           <div className="border-border border-b">
             <div className="bg-secondary-bg px-3 py-1.5">
-              <div className="flex items-center gap-2 font-medium text-text-lighter text-xs">
-                <Terminal size={10} />
-                CLI Agents
-              </div>
+              <div className="font-medium text-text-lighter text-xs">CLI Agents</div>
             </div>
             {agents.map((agent) => (
               <div
@@ -135,6 +131,7 @@ const ModelProviderSelector = ({
                 )}
                 onClick={() => handleAgentSelect(agent.id)}
               >
+                <ProviderIcon providerId={agent.id} size={14} className="text-text-lighter" />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <div className="font-medium text-text text-xs">{agent.name}</div>
@@ -173,6 +170,7 @@ const ModelProviderSelector = ({
                 )}
                 onClick={() => handleProviderSelect(provider.id)}
               >
+                <ProviderIcon providerId={provider.id} size={14} className="text-text-lighter" />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <div className="font-medium text-text text-xs">{provider.name}</div>
