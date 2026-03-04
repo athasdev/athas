@@ -1,4 +1,5 @@
 pub mod cli;
+pub mod cli_args;
 pub mod lsp;
 pub mod runtime;
 pub mod tools;

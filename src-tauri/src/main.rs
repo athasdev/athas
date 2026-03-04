@@ -162,6 +162,30 @@ fn main() {
             });
          }
 
+         // Process CLI arguments (file/folder paths passed on launch)
+         {
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let args: Vec<String> = std::env::args().skip(1).collect();
+            let open_requests: Vec<commands::development::cli_args::OpenRequest> = args
+               .iter()
+               .filter(|a| !a.starts_with('-'))
+               .filter_map(|a| commands::development::cli_args::parse_open_arg(a, &cwd))
+               .collect();
+
+            if !open_requests.is_empty() {
+               let app_handle = app.handle().clone();
+               tauri::async_runtime::spawn(async move {
+                  // Delay to ensure frontend is ready to receive events
+                  tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
+                  for req in open_requests {
+                     if let Err(e) = app_handle.emit("cli_open_request", &req) {
+                        log::error!("Failed to emit cli_open_request: {}", e);
+                     }
+                  }
+               });
+            }
+         }
+
          // Platform-specific window configuration
          if let Some(window) = app.get_webview_window("main") {
             #[cfg(target_os = "macos")]
