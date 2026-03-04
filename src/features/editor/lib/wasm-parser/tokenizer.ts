@@ -3,8 +3,9 @@
  * Provides tokenization API using Tree-sitter WASM parsers
  */
 
-import type { Tree } from "web-tree-sitter";
+import type { Node, Tree } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
+import { getDefaultParserWasmUrl } from "./extension-assets";
 import { wasmParserLoader } from "./loader";
 import type {
   HighlightToken,
@@ -13,6 +14,57 @@ import type {
   ParserConfig,
   TokenizeResult,
 } from "./types";
+
+/**
+ * Language injection rules for embedded languages (e.g. JS inside HTML <script>)
+ */
+interface InjectionRule {
+  parentType: string;
+  contentType: string;
+  language: string;
+}
+
+const LANGUAGE_INJECTIONS: Record<string, InjectionRule[]> = {
+  html: [
+    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
+    { parentType: "style_element", contentType: "raw_text", language: "css" },
+  ],
+  markdown: [{ parentType: "*", contentType: "html_block", language: "html" }],
+};
+
+/**
+ * Walk the tree to find nodes matching injection rules
+ */
+function findInjectionNodes(
+  rootNode: Node,
+  rules: InjectionRule[],
+): Array<{ rule: InjectionRule; node: Node }> {
+  const results: Array<{ rule: InjectionRule; node: Node }> = [];
+
+  function walk(node: Node) {
+    for (const rule of rules) {
+      if (rule.parentType === "*") {
+        if (node.type === rule.contentType) {
+          results.push({ rule, node });
+        }
+      } else if (node.type === rule.parentType) {
+        for (let i = 0; i < node.childCount; i++) {
+          const child = node.child(i);
+          if (child && child.type === rule.contentType) {
+            results.push({ rule, node: child });
+          }
+        }
+      }
+    }
+    for (let i = 0; i < node.childCount; i++) {
+      const child = node.child(i);
+      if (child) walk(child);
+    }
+  }
+
+  walk(rootNode);
+  return results;
+}
 
 /**
  * Map Tree-sitter capture names to CSS class names
@@ -232,10 +284,16 @@ export async function tokenizeCodeWithTree(
     // Get highlights
     const captures = highlightQuery.captures(tree.rootNode);
 
-    // Convert captures to tokens
-    const tokens: HighlightToken[] = captures.map((capture) => {
-      const { node, name } = capture;
-      return {
+    // Convert captures to tokens, filtering out Neovim-specific metadata
+    // captures that don't correspond to visual highlighting
+    const tokens: HighlightToken[] = [];
+    for (const capture of captures) {
+      const { name } = capture;
+      if (name === "none" || name === "spell" || name.startsWith("_")) {
+        continue;
+      }
+      const { node } = capture;
+      tokens.push({
         type: mapCaptureToClass(name),
         startIndex: node.startIndex,
         endIndex: node.endIndex,
@@ -247,10 +305,70 @@ export async function tokenizeCodeWithTree(
           row: node.endPosition.row,
           column: node.endPosition.column,
         },
-      };
-    });
+      });
+    }
 
-    return { tokens, tree };
+    // Process language injections (e.g. JS inside HTML <script>)
+    const injectionRules = LANGUAGE_INJECTIONS[languageId];
+    if (injectionRules) {
+      const injectionNodes = findInjectionNodes(tree.rootNode, injectionRules);
+
+      for (const { rule, node } of injectionNodes) {
+        try {
+          const embeddedContent = content.substring(node.startIndex, node.endIndex);
+          if (!embeddedContent.trim()) continue;
+
+          const wasmPath = getDefaultParserWasmUrl(rule.language);
+          const subTokens = await tokenizeCode(embeddedContent, rule.language, {
+            languageId: rule.language,
+            wasmPath,
+          });
+
+          const startOffset = node.startIndex;
+          const startRow = node.startPosition.row;
+          const startCol = node.startPosition.column;
+
+          for (const token of subTokens) {
+            if (token.startPosition.row === 0) {
+              token.startPosition.column += startCol;
+            }
+            if (token.endPosition.row === 0) {
+              token.endPosition.column += startCol;
+            }
+            token.startPosition.row += startRow;
+            token.endPosition.row += startRow;
+            token.startIndex += startOffset;
+            token.endIndex += startOffset;
+          }
+
+          tokens.push(...subTokens);
+        } catch (error) {
+          logger.warn(
+            "WasmTokenizer",
+            `Failed to tokenize embedded ${rule.language} in ${languageId}`,
+            error,
+          );
+        }
+      }
+    }
+
+    // Deduplicate tokens at the same range. Tree-sitter returns captures in
+    // pattern order for same-position nodes; later patterns are more specific
+    // (e.g. @tag.builtin overrides @variable). Keep the last capture per range.
+    const deduped: HighlightToken[] = [];
+    for (let i = 0; i < tokens.length; i++) {
+      const next = tokens[i + 1];
+      if (
+        next &&
+        next.startIndex === tokens[i].startIndex &&
+        next.endIndex === tokens[i].endIndex
+      ) {
+        continue;
+      }
+      deduped.push(tokens[i]);
+    }
+
+    return { tokens: deduped, tree };
   } catch (error) {
     logger.error("WasmTokenizer", `Failed to tokenize code for ${languageId}`, error);
     throw error;

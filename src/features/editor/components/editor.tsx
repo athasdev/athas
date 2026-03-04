@@ -114,6 +114,7 @@ export function Editor({
   const vimCursorRef = useRef<HTMLDivElement>(null);
   const autocompleteCompletionRef = useRef<HTMLDivElement>(null);
   const inlineEditOverlayRef = useRef<HTMLDivElement>(null);
+  const gitBlameRef = useRef<HTMLDivElement>(null);
   const inlineEditPopoverRef = useRef<HTMLDivElement>(null);
   const inlineEditInstructionRef = useRef<HTMLInputElement>(null);
 
@@ -1258,6 +1259,10 @@ export function Editor({
             inlineEditOverlayRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
+          if (gitBlameRef.current) {
+            gitBlameRef.current.style.transform = `translate(-${left}px, -${top}px)`;
+          }
+
           // Throttle store updates during active scrolling to reduce expensive
           // subscriber re-renders (notably on huge files).
           const now = performance.now();
@@ -1784,6 +1789,7 @@ export function Editor({
 
         {filePath && (
           <GitBlameLayer
+            ref={gitBlameRef}
             filePath={filePath}
             cursorLine={cursorPosition.line}
             visualCursorLine={visualCursorLine}
@@ -1792,7 +1798,6 @@ export function Editor({
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             tabSize={tabSize}
-            textareaRef={inputRef}
           />
         )}
 

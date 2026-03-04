@@ -3,7 +3,7 @@ const QUERY_FOLDER_BY_LANGUAGE: Record<string, string> = {
   javascriptreact: "tsx",
   typescript: "tsx",
   typescriptreact: "tsx",
-  mdx: "tsx",
+  mdx: "markdown",
   csharp: "c_sharp",
 };
 

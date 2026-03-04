@@ -26,6 +26,11 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   php: "php",
   html: "html",
   htm: "html",
+  xml: "html",
+  xsl: "html",
+  xslt: "html",
+  svg: "html",
+  plist: "html",
   css: "css",
   scss: "css",
   json: "json",
@@ -34,7 +39,7 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   yml: "yaml",
   toml: "toml",
   md: "markdown",
-  mdx: "tsx",
+  mdx: "markdown",
   markdown: "markdown",
   sh: "bash",
   bash: "bash",
@@ -73,7 +78,7 @@ export function normalizeLanguageId(languageId: string): string {
     case "c_sharp":
       return "csharp";
     case "mdx":
-      return "tsx";
+      return "markdown";
     default:
       return languageId;
   }
