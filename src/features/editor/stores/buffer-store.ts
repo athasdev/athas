@@ -167,6 +167,7 @@ interface BufferActions {
     }[],
   ) => void;
   markBufferDirty: (bufferId: string, isDirty: boolean) => void;
+  updateBufferPath: (bufferId: string, newPath: string) => void;
   updateBuffer: (updatedBuffer: Buffer) => void;
   handleTabClick: (bufferId: string) => void;
   handleTabClose: (bufferId: string) => void;
@@ -1028,6 +1029,20 @@ export const useBufferStore = createSelectors(
               if (!isDirty) {
                 buffer.savedContent = buffer.content;
               }
+            }
+          });
+        },
+
+        updateBufferPath: (bufferId: string, newPath: string) => {
+          const newName = newPath.split("/").pop() || newPath;
+          set((state) => {
+            const buffer = state.buffers.find((b) => b.id === bufferId);
+            if (buffer) {
+              buffer.path = newPath;
+              buffer.name = newName;
+              buffer.isVirtual = false;
+              buffer.savedContent = buffer.content;
+              buffer.language = detectLanguageFromFileName(newName);
             }
           });
         },

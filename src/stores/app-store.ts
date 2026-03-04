@@ -181,6 +181,21 @@ export const useAppStore = createSelectors(
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
           if (!activeBuffer) return;
 
+          if (activeBuffer.path.startsWith("untitled:")) {
+            const { save: saveDialog } = await import("@tauri-apps/plugin-dialog");
+            const result = await saveDialog({
+              title: "Save",
+              defaultPath: activeBuffer.name,
+              filters: [{ name: "All Files", extensions: ["*"] }],
+            });
+            if (result) {
+              await writeFile(result, activeBuffer.content);
+              useBufferStore.getState().actions.updateBufferPath(activeBuffer.id, result);
+              markBufferDirty(activeBuffer.id, false);
+            }
+            return;
+          }
+
           if (activeBuffer.isVirtual) {
             if (activeBuffer.path === "settings://user-settings.json") {
               const success = updateSettingsFromJSON(activeBuffer.content);

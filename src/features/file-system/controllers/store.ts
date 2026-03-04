@@ -760,7 +760,11 @@ export const useFileSystemStore = createSelectors(
         const { activePath } = useSidebarStore.getState();
 
         if (!rootFolderPath) {
-          alert("Please open a folder first");
+          const buffers = useBufferStore.getState().buffers;
+          const untitledCount = buffers.filter((b) => b.path.startsWith("untitled:")).length;
+          const name = untitledCount === 0 ? "Untitled" : `Untitled-${untitledCount + 1}`;
+          const path = `untitled:${name}`;
+          useBufferStore.getState().actions.openBuffer(path, name, "", false, false, false, true);
           return;
         }
 
