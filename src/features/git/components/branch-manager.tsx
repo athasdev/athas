@@ -279,7 +279,7 @@ const GitBranchManager = ({
         onClick={() => void handleToggleDropdown()}
         disabled={isLoading}
         className={cn(
-          "flex items-center",
+          "flex min-w-0 items-center",
           compact
             ? "gap-1 rounded-full px-1.5 py-0.5 text-text-lighter hover:bg-hover disabled:opacity-50"
             : "gap-1 rounded-full px-2 py-1 font-medium text-text text-xs hover:bg-hover disabled:opacity-50",
@@ -289,12 +289,7 @@ const GitBranchManager = ({
           size={compact ? 11 : 12}
           className={compact ? "shrink-0" : "text-text-lighter"}
         />
-        <span
-          className={cn(
-            "ui-font flex items-center truncate",
-            compact ? "max-w-20 pt-0.5 text-xs" : "max-w-32",
-          )}
-        >
+        <span className={cn("ui-font flex items-center truncate", compact ? "pt-0.5 text-xs" : "")}>
           {currentBranch}
         </span>
         <ChevronDown size={8} />
