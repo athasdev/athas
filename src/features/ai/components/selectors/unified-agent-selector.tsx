@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Check, ChevronDown, Key, Plus, Search } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAIChatStore } from "@/features/ai/store/store";
@@ -16,6 +16,13 @@ interface UnifiedAgentSelectorProps {
   onOpenSettings?: () => void;
 }
 
+interface DropdownPosition {
+  left: number;
+  top: number;
+  width: number;
+  maxHeight: number;
+}
+
 export function UnifiedAgentSelector({
   variant = "header",
   onOpenSettings,
@@ -25,12 +32,7 @@ export function UnifiedAgentSelector({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set(["custom"]));
   const [activeSection, setActiveSection] = useState<"agents" | "models">("agents");
-  const [dropdownPosition, setDropdownPosition] = useState({
-    top: 0,
-    left: 0,
-    width: 320,
-    maxHeight: 450,
-  });
+  const [position, setPosition] = useState<DropdownPosition | null>(null);
 
   const { settings, updateSetting } = useSettingsStore();
   const { dynamicModels, setDynamicModels } = useAIChatStore();
@@ -219,54 +221,71 @@ export function UnifiedAgentSelector({
   }, [isOpen]);
 
   const updateDropdownPosition = useCallback(() => {
-    if (!triggerRef.current) return;
+    const trigger = triggerRef.current;
+    if (!trigger) return;
 
-    const rect = triggerRef.current.getBoundingClientRect();
-    const padding = 8;
+    const rect = trigger.getBoundingClientRect();
+    const viewportPadding = 8;
     const width = 320;
-    const maxHeight = Math.min(450, window.innerHeight - padding * 2);
+    const estimatedHeight = 450;
+    const safeWidth = Math.min(width, window.innerWidth - viewportPadding * 2);
+    const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
+    const availableAbove = rect.top - viewportPadding;
+    const openUp =
+      variant !== "header" &&
+      availableBelow < Math.min(estimatedHeight, 280) &&
+      availableAbove > availableBelow;
+    const maxHeight = Math.max(
+      220,
+      Math.min(estimatedHeight, openUp ? availableAbove - 6 : availableBelow - 6),
+    );
+    const measuredHeight = dropdownRef.current?.getBoundingClientRect().height ?? estimatedHeight;
+    const visibleHeight = Math.min(maxHeight, measuredHeight);
 
-    let top = variant === "header" ? rect.bottom + 8 : rect.top - maxHeight - 8;
-    if (variant !== "header" && top < padding) {
-      top = rect.bottom + 8;
-    }
-    if (top + maxHeight > window.innerHeight - padding) {
-      top = window.innerHeight - maxHeight - padding;
-    }
-    if (top < padding) {
-      top = padding;
-    }
+    const desiredLeft = rect.right - safeWidth;
+    const left = Math.max(
+      viewportPadding,
+      Math.min(desiredLeft, window.innerWidth - safeWidth - viewportPadding),
+    );
+    const top = openUp ? Math.max(viewportPadding, rect.top - visibleHeight - 6) : rect.bottom + 6;
 
-    let left = rect.right - width;
-    if (left < padding) {
-      left = padding;
-    }
-    if (left + width > window.innerWidth - padding) {
-      left = window.innerWidth - width - padding;
-    }
-
-    setDropdownPosition({
-      top,
-      left,
-      width,
-      maxHeight,
-    });
+    setPosition({ left, top, width: safeWidth, maxHeight });
   }, [variant]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    updateDropdownPosition();
+  }, [isOpen, updateDropdownPosition, search, filteredItems.length, activeSection]);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    updateDropdownPosition();
+    const handleDocumentMouseDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (dropdownRef.current?.contains(target)) return;
+      if (triggerRef.current?.contains(target)) return;
+      setIsOpen(false);
+    };
 
-    const handleResize = () => updateDropdownPosition();
-    const handleScroll = () => updateDropdownPosition();
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsOpen(false);
+      }
+    };
 
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("scroll", handleScroll, true);
+    const handleReposition = () => updateDropdownPosition();
+
+    document.addEventListener("mousedown", handleDocumentMouseDown);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", handleScroll, true);
+      document.removeEventListener("mousedown", handleDocumentMouseDown);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", handleReposition);
+      window.removeEventListener("scroll", handleReposition, true);
     };
   }, [isOpen, updateDropdownPosition]);
 
@@ -359,7 +378,7 @@ export function UnifiedAgentSelector({
   let selectableIndex = -1;
 
   return (
-    <div className="relative">
+    <>
       {variant === "header" ? (
         <button
           ref={triggerRef}
@@ -391,174 +410,173 @@ export function UnifiedAgentSelector({
       )}
 
       {isOpen &&
+        position &&
         createPortal(
-          <>
-            <div className="fixed inset-0 z-[10020]" onClick={() => setIsOpen(false)} />
-            <div
-              ref={dropdownRef}
-              onKeyDown={handleKeyDown}
-              className={cn(
-                "fixed z-[10030] overflow-hidden rounded-2xl border border-border bg-primary-bg/95 shadow-lg backdrop-blur-sm",
-              )}
-              style={{
-                top: `${dropdownPosition.top}px`,
-                left: `${dropdownPosition.left}px`,
-                width: `${dropdownPosition.width}px`,
-                maxHeight: `${dropdownPosition.maxHeight}px`,
-              }}
-            >
-              {/* Search */}
-              <div className="border-border border-b p-2">
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-secondary-bg/80 px-2 py-1.5">
-                  <Search size={12} className="text-text-lighter" />
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Search agents or models..."
-                    className="flex-1 bg-transparent text-text text-xs outline-none placeholder:text-text-lighter"
-                  />
-                </div>
+          <div
+            ref={dropdownRef}
+            onKeyDown={handleKeyDown}
+            className="fixed z-[10030] flex flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 shadow-xl backdrop-blur-sm"
+            style={{
+              top: `${position.top}px`,
+              left: `${position.left}px`,
+              width: `${position.width}px`,
+              maxHeight: `${position.maxHeight}px`,
+            }}
+          >
+            {/* Search */}
+            <div className="border-border/60 border-b p-2.5">
+              <div className="relative">
+                <Search
+                  size={11}
+                  className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 text-text-lighter"
+                />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Search agents or models..."
+                  className="w-full rounded-lg border border-border bg-secondary-bg py-1.5 pr-2 pl-7 text-text text-xs placeholder:text-text-lighter focus:border-accent focus:outline-none"
+                />
               </div>
+            </div>
 
-              {/* Section tabs (only for custom agent) */}
-              {isCustomAgent && !search && (
-                <div className="flex border-border border-b px-2 py-1">
-                  <button
-                    onClick={() => setActiveSection("agents")}
-                    className={cn(
-                      "flex-1 rounded-lg px-2 py-1 text-xs transition-colors",
-                      activeSection === "agents"
-                        ? "bg-hover text-text"
-                        : "text-text-lighter hover:text-text",
-                    )}
-                  >
-                    Agents
-                  </button>
-                  <button
-                    onClick={() => setActiveSection("models")}
-                    className={cn(
-                      "flex-1 rounded-lg px-2 py-1 text-xs transition-colors",
-                      activeSection === "models"
-                        ? "bg-hover text-text"
-                        : "text-text-lighter hover:text-text",
-                    )}
-                  >
-                    Models
-                  </button>
-                </div>
-              )}
+            {/* Section tabs (only for custom agent) */}
+            {isCustomAgent && !search && (
+              <div className="flex border-border/60 border-b px-2 py-1">
+                <button
+                  onClick={() => setActiveSection("agents")}
+                  className={cn(
+                    "flex-1 rounded-lg px-2 py-1 text-xs transition-colors",
+                    activeSection === "agents"
+                      ? "bg-hover text-text"
+                      : "text-text-lighter hover:text-text",
+                  )}
+                >
+                  Agents
+                </button>
+                <button
+                  onClick={() => setActiveSection("models")}
+                  className={cn(
+                    "flex-1 rounded-lg px-2 py-1 text-xs transition-colors",
+                    activeSection === "models"
+                      ? "bg-hover text-text"
+                      : "text-text-lighter hover:text-text",
+                  )}
+                >
+                  Models
+                </button>
+              </div>
+            )}
 
-              {/* Items */}
-              <div className="max-h-[350px] overflow-y-auto p-1">
-                {filteredItems.length === 0 ? (
-                  <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
-                ) : (
-                  filteredItems.map((item) => {
-                    if (item.type === "section") {
-                      return (
-                        <div
-                          key={item.id}
-                          className="px-3 pt-2 pb-1 font-medium text-[10px] text-text-lighter uppercase tracking-wider"
-                        >
-                          {item.name}
-                        </div>
-                      );
-                    }
+            {/* Items */}
+            <div className="min-h-0 flex-1 overflow-y-auto p-2">
+              {filteredItems.length === 0 ? (
+                <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
+              ) : (
+                filteredItems.map((item) => {
+                  if (item.type === "section") {
+                    return (
+                      <div
+                        key={item.id}
+                        className="px-1 pt-2 pb-1 text-[10px] text-text-lighter uppercase tracking-wide"
+                      >
+                        {item.name}
+                      </div>
+                    );
+                  }
 
-                    if (item.type === "provider") {
-                      return (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between px-3 py-1.5"
-                        >
-                          <span className="flex items-center gap-1.5 font-medium text-text-lighter text-xs">
-                            <ProviderIcon
-                              providerId={item.providerId || item.id}
-                              size={11}
-                              className="text-text-lighter"
-                            />
-                            {item.name}
-                          </span>
-                          {item.requiresApiKey && !item.hasKey && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onOpenSettings?.();
-                                setIsOpen(false);
-                              }}
-                              className="flex items-center gap-1 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] text-red-400 transition-colors hover:bg-red-500/30"
-                            >
-                              <Key size={8} />
-                              Set Key
-                            </button>
-                          )}
-                        </div>
-                      );
-                    }
-
-                    if (item.type === "agent") {
-                      selectableIndex++;
-                      const itemIndex = selectableIndex;
-                      const isSelected = itemIndex === selectedIndex;
-
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => handleAgentChange(item.id as AgentType)}
-                          onMouseEnter={() => setSelectedIndex(itemIndex)}
-                          className={cn(
-                            "mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-xl px-3 py-1.5 text-left transition-colors",
-                            isSelected ? "bg-hover" : "bg-transparent",
-                            item.isCurrent && "bg-accent/10",
-                          )}
-                        >
+                  if (item.type === "provider") {
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between px-1 pt-2 pb-1"
+                      >
+                        <span className="flex items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-wide">
                           <ProviderIcon
-                            providerId={item.id}
+                            providerId={item.providerId || item.id}
                             size={10}
                             className="text-text-lighter"
                           />
-                          <span className="flex-1 truncate text-text text-xs">{item.name}</span>
-                          {item.isCurrent && <Check size={10} className="text-accent" />}
-                          {!item.isCurrent && item.isInstalled && item.id !== "custom" && (
-                            <Check size={10} className="text-green-500" />
-                          )}
-                        </button>
-                      );
-                    }
+                          {item.name}
+                        </span>
+                        {item.requiresApiKey && !item.hasKey && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenSettings?.();
+                              setIsOpen(false);
+                            }}
+                            className="flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[9px] text-red-400 transition-colors hover:bg-red-500/25"
+                          >
+                            <Key size={7} />
+                            Set Key
+                          </button>
+                        )}
+                      </div>
+                    );
+                  }
 
-                    if (item.type === "model") {
-                      selectableIndex++;
-                      const itemIndex = selectableIndex;
-                      const isSelected = itemIndex === selectedIndex;
+                  if (item.type === "agent") {
+                    selectableIndex++;
+                    const itemIndex = selectableIndex;
+                    const isSelected = itemIndex === selectedIndex;
 
-                      return (
-                        <button
-                          key={`${item.providerId}-${item.id}`}
-                          onClick={() => handleModelSelect(item.providerId!, item.id)}
-                          onMouseEnter={() => setSelectedIndex(itemIndex)}
-                          className={cn(
-                            "mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors",
-                            isSelected ? "bg-hover" : "bg-transparent",
-                            item.isCurrent && "bg-accent/10",
-                          )}
-                        >
-                          <span className="flex-1 truncate text-text text-xs">{item.name}</span>
-                          {item.isCurrent && <Check size={10} className="text-accent" />}
-                        </button>
-                      );
-                    }
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleAgentChange(item.id as AgentType)}
+                        onMouseEnter={() => setSelectedIndex(itemIndex)}
+                        className={cn(
+                          "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors",
+                          isSelected ? "bg-hover" : "bg-transparent",
+                          item.isCurrent && "bg-accent/10",
+                        )}
+                      >
+                        <ProviderIcon
+                          providerId={item.id}
+                          size={10}
+                          className="text-text-lighter"
+                        />
+                        <span className="flex-1 truncate text-text text-xs">{item.name}</span>
+                        {item.isCurrent && <Check size={10} className="text-accent" />}
+                        {!item.isCurrent && item.isInstalled && item.id !== "custom" && (
+                          <Check size={10} className="text-green-500" />
+                        )}
+                      </button>
+                    );
+                  }
 
-                    return null;
-                  })
-                )}
-              </div>
+                  if (item.type === "model") {
+                    selectableIndex++;
+                    const itemIndex = selectableIndex;
+                    const isSelected = itemIndex === selectedIndex;
+
+                    return (
+                      <button
+                        key={`${item.providerId}-${item.id}`}
+                        onClick={() => handleModelSelect(item.providerId!, item.id)}
+                        onMouseEnter={() => setSelectedIndex(itemIndex)}
+                        className={cn(
+                          "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors",
+                          isSelected ? "bg-hover" : "bg-transparent",
+                          item.isCurrent && "bg-accent/10",
+                        )}
+                      >
+                        <span className="flex-1 truncate text-text text-xs">{item.name}</span>
+                        {item.isCurrent && <Check size={10} className="text-accent" />}
+                      </button>
+                    );
+                  }
+
+                  return null;
+                })
+              )}
             </div>
-          </>,
+          </div>,
           document.body,
         )}
-    </div>
+    </>
   );
 }
