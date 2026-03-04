@@ -102,9 +102,9 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       },
     },
     {
-      id: "go-to-file",
-      label: "Go: Go to File",
-      description: "Open file picker",
+      id: "quick-open",
+      label: "Go: Quick Open",
+      description: "Jump to any file with fuzzy search",
       icon: <FileText size={14} />,
       category: "Navigation",
       keybinding: ["⌘", "P"],

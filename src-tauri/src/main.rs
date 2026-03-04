@@ -272,8 +272,8 @@ fn main() {
                   "toggle_vim" => {
                      let _ = window.emit("menu_toggle_vim", ());
                   }
-                  "go_to_file" => {
-                     let _ = window.emit("menu_go_to_file", ());
+                  "quick_open" => {
+                     let _ = window.emit("menu_quick_open", ());
                   }
                   "go_to_line" => {
                      let _ = window.emit("menu_go_to_line", ());

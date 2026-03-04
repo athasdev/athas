@@ -130,8 +130,8 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
       ),
       Go: (
         <Menu aria-label="Go">
-          <MenuItem shortcut="Ctrl+P" onClick={() => handleClickEmit("menu_go_to_file")}>
-            Go to File
+          <MenuItem shortcut="Ctrl+P" onClick={() => handleClickEmit("menu_quick_open")}>
+            Quick Open
           </MenuItem>
           <MenuItem shortcut="Ctrl+G" onClick={() => handleClickEmit("menu_go_to_line")}>
             Go to Line

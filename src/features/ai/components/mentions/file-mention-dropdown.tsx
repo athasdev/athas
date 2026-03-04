@@ -118,7 +118,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
     setSearchTerm(mentionState.search || "");
   }, [mentionState.search]);
 
-  // Get filtered files using fuzzy search (same logic as command bar)
+  // Get filtered files using fuzzy search (same logic as Quick Open)
   const filteredFiles = useMemo(() => {
     const availableFiles = allProjectFiles.filter(
       (file) => !file.isDir && !shouldIgnoreFile(file.path),

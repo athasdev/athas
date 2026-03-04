@@ -17,8 +17,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Quick Open File Limit",
     description: "Maximum files to index for quick file search. Increase for large monorepos.",
     keywords: [
-      "command",
-      "bar",
+      "quick",
+      "open",
       "file",
       "limit",
       "search",
@@ -249,7 +249,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     section: "Layout",
     label: "Quick Open Preview",
     description: "Show right-side file preview in quick open and global search",
-    keywords: ["quick", "open", "preview", "file", "command", "bar", "global", "search"],
+    keywords: ["quick", "open", "preview", "file", "global", "search"],
   },
 
   // AI Settings

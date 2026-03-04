@@ -135,7 +135,7 @@ export function useMenuEventsWrapper() {
       );
       // In a full implementation, this would toggle vim keybinding mode in the editor
     },
-    onGoToFile: () => uiState.setIsQuickOpenVisible(true),
+    onQuickOpen: () => uiState.setIsQuickOpenVisible(true),
     onGoToLine: () => {
       // Simple go to line implementation using browser prompt
       const line = prompt("Go to line:");
@@ -205,7 +205,7 @@ View:
 • Ctrl+R (Cmd+R): Toggle AI Chat
 
 Go:
-• Ctrl+P (Cmd+P): Go to File
+• Ctrl+P (Cmd+P): Quick Open
 • Ctrl+G (Cmd+G): Go to Line
 • Ctrl+Shift+P (Cmd+Shift+P): Command Palette
 

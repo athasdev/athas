@@ -227,8 +227,8 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    let go_menu = SubmenuBuilder::new(app, "Go")
       .item(&MenuItem::with_id(
          app,
-         "go_to_file",
-         "Go to File",
+         "quick_open",
+         "Quick Open",
          true,
          Some("CmdOrCtrl+P"),
       )?)

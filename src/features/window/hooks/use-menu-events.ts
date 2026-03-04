@@ -41,7 +41,7 @@ async function setupMenuListeners(handlers: any) {
     listen("menu_toggle_ai_chat", () => currentHandlers.current.onToggleAiChat()),
     listen("menu_split_editor", () => currentHandlers.current.onSplitEditor()),
     listen("menu_toggle_vim", () => currentHandlers.current.onToggleVim()),
-    listen("menu_go_to_file", () => currentHandlers.current.onGoToFile()),
+    listen("menu_quick_open", () => currentHandlers.current.onQuickOpen()),
     listen("menu_go_to_line", () => currentHandlers.current.onGoToLine()),
     listen("menu_next_tab", () => currentHandlers.current.onNextTab()),
     listen("menu_prev_tab", () => currentHandlers.current.onPrevTab()),
@@ -77,7 +77,7 @@ interface UseMenuEventsProps {
   onToggleAiChat: () => void;
   onSplitEditor: () => void;
   onToggleVim: () => void;
-  onGoToFile: () => void;
+  onQuickOpen: () => void;
   onGoToLine: () => void;
   onNextTab: () => void;
   onPrevTab: () => void;

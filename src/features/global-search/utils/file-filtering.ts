@@ -1,7 +1,7 @@
 import { shouldIgnoreInCommandPalette } from "../constants/ignored-patterns";
 
 /**
- * Check if a file should be ignored in the command bar
+ * Check if a file should be ignored in file search
  * @param filePath - The full file path
  * @returns true if the file should be ignored
  */
