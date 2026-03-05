@@ -6,7 +6,8 @@ import { cn } from "@/utils/cn";
 import { IS_MAC } from "@/utils/platform";
 import { useProjectStore } from "../../../../stores/project-store";
 import { useUIState } from "../../../../stores/ui-state-store";
-import DiagnosticsPane, { type Diagnostic } from "../../../diagnostics/diagnostics-pane";
+import DiagnosticsPane from "../../../diagnostics/diagnostics-pane";
+import type { Diagnostic } from "../../../diagnostics/types";
 
 interface BottomPaneProps {
   diagnostics: Diagnostic[];

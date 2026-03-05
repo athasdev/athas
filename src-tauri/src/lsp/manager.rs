@@ -488,6 +488,127 @@ impl LspManager {
       }
    }
 
+   pub async fn get_code_actions(
+      &self,
+      file_path: &str,
+      diagnostic: Diagnostic,
+   ) -> Result<Vec<CodeActionOrCommand>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(vec![]);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+      };
+
+      let params = CodeActionParams {
+         text_document,
+         range: diagnostic.range,
+         context: CodeActionContext {
+            diagnostics: vec![diagnostic],
+            only: None,
+            trigger_kind: Some(CodeActionTriggerKind::INVOKED),
+         },
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_code_action(params).await {
+         Ok(Some(actions)) => Ok(actions),
+         Ok(None) => Ok(vec![]),
+         Err(error) => {
+            let message = error.to_string();
+            if message.contains("-32601")
+               || message.contains("Method not found")
+               || message.contains("Unhandled method textDocument/codeAction")
+            {
+               log::debug!("CodeAction method is not supported by this language server");
+               return Ok(vec![]);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn apply_code_action(
+      &self,
+      file_path: &str,
+      action: CodeActionOrCommand,
+   ) -> Result<(bool, Option<String>)> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok((
+            false,
+            Some("No active LSP client for this file".to_string()),
+         ));
+      };
+
+      match action {
+         CodeActionOrCommand::Command(command) => {
+            let params = ExecuteCommandParams {
+               command: command.command,
+               arguments: command.arguments.unwrap_or_default(),
+               work_done_progress_params: Default::default(),
+            };
+
+            match client.workspace_execute_command(params).await {
+               Ok(_) => Ok((true, None)),
+               Err(error) => {
+                  let message = error.to_string();
+                  if message.contains("-32601")
+                     || message.contains("Method not found")
+                     || message.contains("Unhandled method workspace/executeCommand")
+                  {
+                     return Ok((
+                        false,
+                        Some("Server does not support workspace/executeCommand".to_string()),
+                     ));
+                  }
+                  Err(error)
+               }
+            }
+         }
+         CodeActionOrCommand::CodeAction(code_action) => {
+            if let Some(disabled) = code_action.disabled {
+               return Ok((false, Some(disabled.reason)));
+            }
+
+            if code_action.edit.is_some() && code_action.command.is_none() {
+               return Ok((
+                  false,
+                  Some("Edit-only actions are not supported yet in this menu".to_string()),
+               ));
+            }
+
+            if let Some(command) = code_action.command {
+               let params = ExecuteCommandParams {
+                  command: command.command,
+                  arguments: command.arguments.unwrap_or_default(),
+                  work_done_progress_params: Default::default(),
+               };
+
+               match client.workspace_execute_command(params).await {
+                  Ok(_) => Ok((true, None)),
+                  Err(error) => {
+                     let message = error.to_string();
+                     if message.contains("-32601")
+                        || message.contains("Method not found")
+                        || message.contains("Unhandled method workspace/executeCommand")
+                     {
+                        return Ok((
+                           false,
+                           Some("Server does not support workspace/executeCommand".to_string()),
+                        ));
+                     }
+                     Err(error)
+                  }
+               }
+            } else {
+               Ok((false, Some("Action has no executable command".to_string())))
+            }
+         }
+      }
+   }
+
    pub fn notify_document_open(
       &self,
       file_path: &str,

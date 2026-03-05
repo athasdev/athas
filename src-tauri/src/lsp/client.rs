@@ -238,6 +238,13 @@ impl LspClient {
          references: Some(DynamicRegistrationClientCapabilities {
             dynamic_registration: Some(true),
          }),
+         code_action: Some(CodeActionClientCapabilities {
+            dynamic_registration: Some(true),
+            is_preferred_support: Some(true),
+            disabled_support: Some(true),
+            data_support: Some(true),
+            ..Default::default()
+         }),
          publish_diagnostics: Some(PublishDiagnosticsClientCapabilities {
             related_information: Some(true),
             tag_support: Some(TagSupport {
@@ -256,6 +263,12 @@ impl LspClient {
          root_uri: Some(root_uri),
          capabilities: ClientCapabilities {
             text_document: Some(text_document_capabilities),
+            workspace: Some(WorkspaceClientCapabilities {
+               execute_command: Some(DynamicRegistrationClientCapabilities {
+                  dynamic_registration: Some(true),
+               }),
+               ..Default::default()
+            }),
             ..Default::default()
          },
          ..Default::default()
@@ -451,6 +464,20 @@ impl LspClient {
       params: GotoDefinitionParams,
    ) -> Result<Option<GotoDefinitionResponse>> {
       self.request::<request::GotoDefinition>(params).await
+   }
+
+   pub async fn text_document_code_action(
+      &self,
+      params: CodeActionParams,
+   ) -> Result<Option<CodeActionResponse>> {
+      self.request::<request::CodeActionRequest>(params).await
+   }
+
+   pub async fn workspace_execute_command(
+      &self,
+      params: ExecuteCommandParams,
+   ) -> Result<Option<Value>> {
+      self.request::<request::ExecuteCommand>(params).await
    }
 
    pub fn text_document_did_open(&self, params: DidOpenTextDocumentParams) -> Result<()> {

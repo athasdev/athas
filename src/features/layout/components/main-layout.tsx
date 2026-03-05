@@ -5,8 +5,8 @@ import { useChatInitialization } from "@/features/ai/hooks/use-chat-initializati
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
-import type { Diagnostic } from "@/features/diagnostics/diagnostics-pane";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
+import type { Diagnostic } from "@/features/diagnostics/types";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -49,6 +49,7 @@ export function MainLayout() {
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
   const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
+  const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const switchToProject = useFileSystemStore.use.switchToProject?.();
   const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
@@ -140,13 +141,28 @@ export function MainLayout() {
     updateSetting("iconTheme", iconTheme);
   };
 
-  const handleDiagnosticClick = useCallback((diagnostic: Diagnostic) => {
-    window.dispatchEvent(
-      new CustomEvent("menu-go-to-line", {
-        detail: { line: diagnostic.line + 1 },
-      }),
-    );
-  }, []);
+  const handleDiagnosticClick = useCallback(
+    (diagnostic: Diagnostic) => {
+      if (handleFileSelect && diagnostic.filePath) {
+        void handleFileSelect(
+          diagnostic.filePath,
+          false,
+          diagnostic.line + 1,
+          diagnostic.column + 1,
+          undefined,
+          false,
+        );
+        return;
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("menu-go-to-line", {
+          detail: { line: diagnostic.line + 1 },
+        }),
+      );
+    },
+    [handleFileSelect],
+  );
 
   // Initialize event listeners
   useMenuEventsWrapper();

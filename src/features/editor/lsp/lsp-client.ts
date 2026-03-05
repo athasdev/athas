@@ -9,6 +9,11 @@ import {
   convertLSPDiagnostic,
   useDiagnosticsStore,
 } from "@/features/diagnostics/stores/diagnostics-store";
+import type {
+  ApplyDiagnosticCodeActionResult,
+  Diagnostic,
+  DiagnosticCodeAction,
+} from "@/features/diagnostics/types";
 import { logger } from "../utils/logger";
 import { useLspStore } from "./lsp-store";
 
@@ -97,7 +102,9 @@ export class LspClient {
 
           // Convert LSP diagnostics to our internal format
           const diagnosticsList = diagnostics || [];
-          const convertedDiagnostics = diagnosticsList.map((d) => convertLSPDiagnostic(d));
+          const convertedDiagnostics = diagnosticsList.map((d) =>
+            convertLSPDiagnostic(filePath, d),
+          );
           logger.debug(
             "LSPClient",
             `Converted ${convertedDiagnostics.length} diagnostics for ${filePath}`,
@@ -457,6 +464,45 @@ export class LspClient {
     } catch (error) {
       logger.error("LSPClient", "LSP references error:", error);
       return null;
+    }
+  }
+
+  async getCodeActions(filePath: string, diagnostic: Diagnostic): Promise<DiagnosticCodeAction[]> {
+    try {
+      return await invoke<DiagnosticCodeAction[]>("lsp_get_code_actions", {
+        filePath,
+        diagnostic: {
+          line: diagnostic.line,
+          column: diagnostic.column,
+          endLine: diagnostic.endLine,
+          endColumn: diagnostic.endColumn,
+          message: diagnostic.message,
+          source: diagnostic.source,
+          code: diagnostic.code,
+          severity: diagnostic.severity,
+        },
+      });
+    } catch (error) {
+      logger.warn("LSPClient", "LSP code action request failed:", error);
+      return [];
+    }
+  }
+
+  async applyCodeAction(
+    filePath: string,
+    actionPayload: unknown,
+  ): Promise<ApplyDiagnosticCodeActionResult> {
+    try {
+      return await invoke<ApplyDiagnosticCodeActionResult>("lsp_apply_code_action", {
+        filePath,
+        actionPayload,
+      });
+    } catch (error) {
+      logger.warn("LSPClient", "LSP apply code action failed:", error);
+      return {
+        applied: false,
+        reason: stringifyLspError(error),
+      };
     }
   }
 

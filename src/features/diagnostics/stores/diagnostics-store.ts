@@ -1,7 +1,7 @@
 import type { Diagnostic as LSPDiagnostic } from "vscode-languageserver-protocol";
 import { create } from "zustand";
 import { createSelectors } from "@/utils/zustand-selectors";
-import type { Diagnostic } from "../diagnostics-pane";
+import type { Diagnostic } from "../types";
 
 interface DiagnosticsState {
   // Map of file path to diagnostics
@@ -17,9 +17,9 @@ interface DiagnosticsState {
 }
 
 /**
- * Convert LSP diagnostic to our internal diagnostic format
+ * Convert an LSP diagnostic into the UI-friendly diagnostics model.
  */
-export function convertLSPDiagnostic(lspDiag: LSPDiagnostic): Diagnostic {
+export function convertLSPDiagnostic(filePath: string, lspDiag: LSPDiagnostic): Diagnostic {
   let severity: Diagnostic["severity"] = "info";
 
   switch (lspDiag.severity) {
@@ -37,8 +37,11 @@ export function convertLSPDiagnostic(lspDiag: LSPDiagnostic): Diagnostic {
 
   return {
     severity,
+    filePath,
     line: lspDiag.range.start.line,
     column: lspDiag.range.start.character,
+    endLine: lspDiag.range.end.line,
+    endColumn: lspDiag.range.end.character,
     message: lspDiag.message,
     source: lspDiag.source,
     code: lspDiag.code?.toString(),
@@ -53,7 +56,10 @@ export const useDiagnosticsStore = createSelectors(
       setDiagnostics: (filePath: string, diagnostics: Diagnostic[]) => {
         set((state) => {
           const newMap = new Map(state.diagnosticsByFile);
-          newMap.set(filePath, diagnostics);
+          newMap.set(
+            filePath,
+            diagnostics.map((diagnostic) => ({ ...diagnostic, filePath })),
+          );
           return { diagnosticsByFile: newMap };
         });
       },
