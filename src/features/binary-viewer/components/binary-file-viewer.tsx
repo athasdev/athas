@@ -254,14 +254,14 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
                 </div>
 
                 {metadata.wasmMetadata.sections.length > 0 && (
-                  <div className="mt-3 rounded border border-border/40 overflow-hidden">
+                  <div className="mt-3 overflow-hidden rounded border border-border/40">
                     <table className="w-full">
                       <thead>
                         <tr className="border-border/40 border-b bg-primary-bg/50">
-                          <th className="ui-font px-3 py-1.5 text-left text-text-lighter text-xs font-normal">
+                          <th className="ui-font px-3 py-1.5 text-left font-normal text-text-lighter text-xs">
                             Section
                           </th>
-                          <th className="ui-font px-3 py-1.5 text-right text-text-lighter text-xs font-normal">
+                          <th className="ui-font px-3 py-1.5 text-right font-normal text-text-lighter text-xs">
                             Size
                           </th>
                         </tr>
@@ -297,7 +297,7 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
               <span className="ui-font font-medium text-text text-xs">Hex Preview</span>
             </div>
             <div className="overflow-auto p-4">
-              <pre className="font-mono text-[11px] leading-[18px] text-text-lighter">
+              <pre className="font-mono text-[11px] text-text-lighter leading-[18px]">
                 {metadata.hexPreview}
               </pre>
             </div>

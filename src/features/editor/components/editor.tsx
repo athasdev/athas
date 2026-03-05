@@ -162,13 +162,12 @@ export function Editor({
     lineHeight,
   });
 
-  const { tokens, tokenizedContent, tokenize, forceFullTokenize, resetForBufferSwitch } =
-    useTokenizer({
-      filePath,
-      bufferId: bufferId || undefined,
-      incremental: true,
-      enabled: hasSyntaxHighlighting,
-    });
+  const { tokens, tokenize, forceFullTokenize, resetForBufferSwitch } = useTokenizer({
+    filePath,
+    bufferId: bufferId || undefined,
+    incremental: true,
+    enabled: hasSyntaxHighlighting,
+  });
 
   // Atomic buffer switch — resets stores, syncs textarea, restores position
   const { switchGuardRef } = useBufferSwitch({
@@ -685,7 +684,7 @@ export function Editor({
         {hasSyntaxHighlighting && (
           <HighlightLayer
             ref={highlightRef}
-            content={tokenizedContent || displayContent}
+            content={displayContent}
             tokens={tokens}
             fontSize={fontSize}
             fontFamily={fontFamily}

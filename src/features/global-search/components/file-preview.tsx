@@ -362,7 +362,7 @@ export const FilePreview = ({ filePath }: FilePreviewProps) => {
   }
 
   return (
-    <div className="custom-scrollbar-thin h-full overflow-x-hidden overflow-y-auto bg-primary-bg py-3 pr-3">
+    <div className="custom-scrollbar-thin h-full overflow-y-auto overflow-x-hidden bg-primary-bg py-3 pr-3">
       <div className="space-y-0">
         {lineData.map((line) => (
           <PreviewLine key={line.lineNumber} {...line} />
