@@ -344,12 +344,25 @@ async function installLanguageTools(
   manifest?: ExtensionManifest,
 ): Promise<void> {
   try {
-    await invoke("install_language_tools", {
-      languageId,
-      tools: getLanguageToolConfigSet(manifest),
-    });
+    const status = await invoke<{ lsp?: string; formatter?: string; linter?: string }>(
+      "install_language_tools",
+      {
+        languageId,
+        tools: getLanguageToolConfigSet(manifest),
+      },
+    );
+
+    // Log any individual tool failures from the status
+    for (const [tool, toolStatus] of Object.entries(status)) {
+      if (typeof toolStatus === "object" && toolStatus && "Failed" in toolStatus) {
+        console.warn(
+          `Tool installation failed for ${languageId}/${tool}: ${(toolStatus as { Failed: string }).Failed}`,
+        );
+      }
+    }
   } catch (error) {
-    console.warn(`Failed to install tools for ${languageId}:`, error);
+    console.error(`Failed to install tools for ${languageId}:`, error);
+    throw error;
   }
 }
 
@@ -364,7 +377,8 @@ async function getToolPath(
       toolType,
       tools: getLanguageToolConfigSet(manifest),
     });
-  } catch {
+  } catch (error) {
+    console.warn(`Failed to resolve ${toolType} path for ${languageId}:`, error);
     return null;
   }
 }
@@ -383,6 +397,19 @@ async function resolveToolPaths(
     getToolPath(languageId, "formatter", manifest),
     getToolPath(languageId, "linter", manifest),
   ]);
+
+  const toolConfig = getLanguageToolConfigSet(manifest);
+  if (toolConfig) {
+    if (toolConfig.lsp && !lsp) {
+      console.warn(`LSP configured for ${languageId} but binary path could not be resolved`);
+    }
+    if (toolConfig.formatter && !formatter) {
+      console.warn(`Formatter configured for ${languageId} but binary path could not be resolved`);
+    }
+    if (toolConfig.linter && !linter) {
+      console.warn(`Linter configured for ${languageId} but binary path could not be resolved`);
+    }
+  }
 
   return {
     ...(lsp ? { lsp } : {}),

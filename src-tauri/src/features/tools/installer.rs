@@ -68,6 +68,18 @@ impl ToolInstaller {
       Ok(())
    }
 
+   /// Validate that a binary exists at the given path and ensure it is executable.
+   fn validate_and_prepare(path: &Path) -> Result<PathBuf, ToolError> {
+      if !path.exists() {
+         return Err(ToolError::InstallationFailed(format!(
+            "Binary not found at {:?} after installation",
+            path
+         )));
+      }
+      Self::ensure_executable(path)?;
+      Ok(path.to_path_buf())
+   }
+
    fn extract_archive(bytes: &[u8], url: &str, target_dir: &Path) -> Result<(), ToolError> {
       if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
          let decoder = GzDecoder::new(Cursor::new(bytes));
@@ -272,11 +284,22 @@ impl ToolInstaller {
          .join(".bin")
          .join(Self::node_bin_name(command_name));
       if bin_path.exists() {
-         Ok(bin_path)
-      } else {
-         // Try without .bin for packages that don't have a binary
-         Ok(package_dir.join("node_modules").join(package))
+         return Self::validate_and_prepare(&bin_path);
       }
+
+      // Try resolving via package.json bin field
+      if let Some(entrypoint) =
+         Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
+      {
+         if entrypoint.exists() {
+            return Self::validate_and_prepare(&entrypoint);
+         }
+      }
+
+      Err(ToolError::InstallationFailed(format!(
+         "Binary '{}' not found after installing package '{}' via Bun",
+         command_name, package
+      )))
    }
 
    /// Install a package via npm (global)
@@ -320,10 +343,22 @@ impl ToolInstaller {
          .join(".bin")
          .join(Self::node_bin_name(command_name));
       if bin_path.exists() {
-         Ok(bin_path)
-      } else {
-         Ok(package_dir.join("node_modules").join(package))
+         return Self::validate_and_prepare(&bin_path);
       }
+
+      // Try resolving via package.json bin field
+      if let Some(entrypoint) =
+         Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
+      {
+         if entrypoint.exists() {
+            return Self::validate_and_prepare(&entrypoint);
+         }
+      }
+
+      Err(ToolError::InstallationFailed(format!(
+         "Binary '{}' not found after installing package '{}' via npm",
+         command_name, package
+      )))
    }
 
    /// Install a package via pip (user)
@@ -389,7 +424,7 @@ impl ToolInstaller {
          venv_dir.join("bin").join(command_name)
       };
 
-      Ok(bin_path)
+      Self::validate_and_prepare(&bin_path)
    }
 
    /// Install a package via go install
@@ -428,7 +463,7 @@ impl ToolInstaller {
          gopath.join("bin").join(command_name)
       };
 
-      Ok(bin_path)
+      Self::validate_and_prepare(&bin_path)
    }
 
    /// Install a package via cargo install
@@ -469,7 +504,7 @@ impl ToolInstaller {
          cargo_home.join("bin").join(command_name)
       };
 
-      Ok(bin_path)
+      Self::validate_and_prepare(&bin_path)
    }
 
    /// Download a binary directly

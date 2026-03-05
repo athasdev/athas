@@ -12,12 +12,9 @@ pub async fn install_language_tools(
 ) -> Result<LanguageToolStatus, String> {
    let mut status = LanguageToolStatus::new(&language_id);
 
-   let resolved_tools = ToolRegistry::get_tools(&language_id, tools);
-   if resolved_tools.is_none() {
+   let Some(resolved_tools) = ToolRegistry::get_tools(&language_id, tools) else {
       return Ok(status);
-   }
-
-   let resolved_tools = resolved_tools.unwrap();
+   };
 
    // Install LSP
    if let Some(config) = resolved_tools.get(&ToolType::Lsp) {
@@ -84,12 +81,9 @@ pub async fn get_language_tool_status(
 ) -> Result<LanguageToolStatus, String> {
    let mut status = LanguageToolStatus::new(&language_id);
 
-   let resolved_tools = ToolRegistry::get_tools(&language_id, tools);
-   if resolved_tools.is_none() {
+   let Some(resolved_tools) = ToolRegistry::get_tools(&language_id, tools) else {
       return Ok(status);
-   }
-
-   let resolved_tools = resolved_tools.unwrap();
+   };
 
    // Check LSP
    if let Some(config) = resolved_tools.get(&ToolType::Lsp) {

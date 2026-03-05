@@ -151,7 +151,14 @@ export class LspClient {
 
       // If no LSP server is configured, return early
       if (!serverPath) {
-        logger.debug("LSPClient", `No LSP server configured for workspace ${workspacePath}`);
+        if (languageId) {
+          logger.warn(
+            "LSPClient",
+            `LSP configured for language '${languageId}' but server binary is missing (file: ${filePath})`,
+          );
+        } else {
+          logger.debug("LSPClient", `No LSP server configured for workspace ${workspacePath}`);
+        }
         return;
       }
 
@@ -222,7 +229,14 @@ export class LspClient {
 
       // If no LSP server is configured for this file type, return early
       if (!serverPath) {
-        logger.debug("LSPClient", `No LSP server configured for ${filePath}`);
+        if (languageId) {
+          logger.warn(
+            "LSPClient",
+            `LSP configured for language '${languageId}' but server binary is missing (file: ${filePath})`,
+          );
+        } else {
+          logger.debug("LSPClient", `No LSP server configured for ${filePath}`);
+        }
         return;
       }
 
