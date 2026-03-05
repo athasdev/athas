@@ -210,6 +210,10 @@ fn main() {
             }
          }
 
+         // Auto-fix CLI script if it contains wrong-platform commands
+         #[cfg(all(unix, not(target_os = "macos")))]
+         commands::development::cli::auto_fix_cli_on_startup();
+
          app.on_menu_event(move |_app_handle: &tauri::AppHandle, event| {
             if let Some(window) = _app_handle.get_webview_window("main") {
                match event.id().0.as_str() {

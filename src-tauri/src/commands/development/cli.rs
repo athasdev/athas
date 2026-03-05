@@ -23,10 +23,30 @@ fn get_cli_script_path() -> Result<std::path::PathBuf, String> {
       .join("athas.cmd"))
 }
 
+/// On Linux, check if an existing CLI script contains macOS-specific commands (`open -a`).
+/// Returns `false` if the script has wrong-platform content.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn validate_cli_script(path: &std::path::Path) -> bool {
+   match fs::read_to_string(path) {
+      Ok(content) => !content.contains("open -a"),
+      Err(_) => false,
+   }
+}
+
 #[command]
 pub fn check_cli_installed() -> Result<bool, String> {
    let cli_path = get_cli_script_path()?;
-   Ok(cli_path.exists())
+
+   if !cli_path.exists() {
+      return Ok(false);
+   }
+
+   #[cfg(all(unix, not(target_os = "macos")))]
+   if !validate_cli_script(&cli_path) {
+      return Ok(false);
+   }
+
+   Ok(true)
 }
 
 /// Shell script body shared by macOS install_cli_command and get_cli_install_command.
@@ -404,4 +424,32 @@ pub fn uninstall_cli_command() -> Result<String, String> {
    fs::remove_file(&cli_path).map_err(|e| format!("Failed to remove CLI script: {}", e))?;
 
    Ok("CLI command uninstalled successfully".to_string())
+}
+
+/// On Linux, silently fix a CLI script that contains macOS commands (`open -a`).
+/// Called once during app startup to auto-repair wrong-platform scripts.
+#[cfg(all(unix, not(target_os = "macos")))]
+pub fn auto_fix_cli_on_startup() {
+   let cli_path = match get_cli_script_path() {
+      Ok(p) => p,
+      Err(_) => return,
+   };
+
+   if !cli_path.exists() {
+      return;
+   }
+
+   if validate_cli_script(&cli_path) {
+      return;
+   }
+
+   log::info!(
+      "CLI script at {} contains macOS commands, rewriting with Linux version",
+      cli_path.display()
+   );
+
+   match install_cli_command() {
+      Ok(_) => log::info!("CLI script auto-fixed successfully"),
+      Err(e) => log::warn!("Failed to auto-fix CLI script: {}", e),
+   }
 }
