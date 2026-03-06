@@ -15,12 +15,12 @@ pub fn split_path_and_line(arg: &str) -> (&str, Option<u32>) {
    if let Some(pos) = arg.rfind(':') {
       let after = &arg[pos + 1..];
       // Only treat as line number if everything after the last colon is digits
-      if !after.is_empty() && after.chars().all(|c| c.is_ascii_digit()) {
-         if let Ok(line) = after.parse::<u32>() {
-            if line > 0 {
-               return (&arg[..pos], Some(line));
-            }
-         }
+      if !after.is_empty()
+         && after.chars().all(|c| c.is_ascii_digit())
+         && let Ok(line) = after.parse::<u32>()
+         && line > 0
+      {
+         return (&arg[..pos], Some(line));
       }
    }
    (arg, None)
@@ -47,36 +47,34 @@ pub fn parse_open_arg(arg: &str, cwd: &Path) -> Option<OpenRequest> {
    })
 }
 
-/// Builds a deep-link URL from an `OpenRequest`.
-pub fn to_deep_link_url(req: &OpenRequest) -> String {
-   let encoded_path = url_encode_path(&req.path);
-   let mut url = format!("athas://open?path={}", encoded_path);
-   if let Some(line) = req.line {
-      url.push_str(&format!("&line={}", line));
-   }
-   if req.is_directory {
-      url.push_str("&type=directory");
-   }
-   url
-}
-
-fn url_encode_path(path: &str) -> String {
-   let mut encoded = String::with_capacity(path.len() * 2);
-   for byte in path.bytes() {
-      match byte {
-         b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'/' | b'\\' => {
-            encoded.push(byte as char);
-         }
-         _ => {
-            encoded.push_str(&format!("%{:02X}", byte));
-         }
-      }
-   }
-   encoded
-}
-
 #[cfg(test)]
 mod tests {
+   fn to_deep_link_url(req: &OpenRequest) -> String {
+      let encoded_path = url_encode_path(&req.path);
+      let mut url = format!("athas://open?path={}", encoded_path);
+      if let Some(line) = req.line {
+         url.push_str(&format!("&line={}", line));
+      }
+      if req.is_directory {
+         url.push_str("&type=directory");
+      }
+      url
+   }
+
+   fn url_encode_path(path: &str) -> String {
+      let mut encoded = String::with_capacity(path.len() * 2);
+      for byte in path.bytes() {
+         match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'/' | b'\\' => {
+               encoded.push(byte as char);
+            }
+            _ => {
+               encoded.push_str(&format!("%{:02X}", byte));
+            }
+         }
+      }
+      encoded
+   }
    use super::*;
 
    #[test]

@@ -290,10 +290,9 @@ impl ToolInstaller {
       // Try resolving via package.json bin field
       if let Some(entrypoint) =
          Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
+         && entrypoint.exists()
       {
-         if entrypoint.exists() {
-            return Self::validate_and_prepare(&entrypoint);
-         }
+         return Self::validate_and_prepare(&entrypoint);
       }
 
       Err(ToolError::InstallationFailed(format!(
@@ -349,10 +348,9 @@ impl ToolInstaller {
       // Try resolving via package.json bin field
       if let Some(entrypoint) =
          Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
+         && entrypoint.exists()
       {
-         if entrypoint.exists() {
-            return Self::validate_and_prepare(&entrypoint);
-         }
+         return Self::validate_and_prepare(&entrypoint);
       }
 
       Err(ToolError::InstallationFailed(format!(
