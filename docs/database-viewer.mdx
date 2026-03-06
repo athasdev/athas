@@ -1,0 +1,62 @@
+# Database Viewer
+
+The Database Viewer provides a full-featured interface for exploring and managing SQLite databases directly within Athas.
+
+## Opening a Database
+
+Open any `.sqlite`, `.db`, or `.sqlite3` file from the file explorer. The database viewer will launch automatically.
+
+## Features
+
+### Table Browser
+
+The sidebar lists all tables in the database. Click a table to view its data. Right-click a table for options like adding rows or deleting the table.
+
+### Data View
+
+- **Sorting**: Click any column header to sort ascending/descending
+- **Inline editing**: Click any non-primary-key cell to edit its value directly
+- **Column resizing**: Drag column borders to resize columns
+- **Cell copy**: Right-click any cell to copy its value
+- **Row context menu**: Right-click a row to edit or delete it
+
+### Column Filters
+
+Add filters to narrow down displayed data:
+
+1. Click the filter icon on any column header
+2. Choose an operator (equals, contains, starts with, greater than, between, is null, etc.)
+3. Enter a value
+4. Add multiple filters -- they combine with AND logic
+
+Filters are parameterized server-side and safe from SQL injection.
+
+### Foreign Key Navigation
+
+Columns that are foreign keys display a link icon. Click a foreign key value to navigate directly to the referenced row in the target table.
+
+### Smart Cell Rendering
+
+The viewer automatically detects and formats:
+
+- **Dates**: ISO 8601 strings and Unix timestamps display as human-readable dates
+- **JSON**: JSON strings render with syntax highlighting; click to expand
+- **NULL values**: Displayed as a styled badge
+- **Long text**: Truncated with click-to-expand
+
+### Schema View
+
+Switch to the Schema tab to see column definitions, types, constraints, and foreign key relationships.
+
+### Custom SQL
+
+Click the SQL button to open a query editor. Write and execute arbitrary SQL queries against the database. Query history is preserved during the session.
+
+### Export
+
+- **CSV Export**: Download the current view as a CSV file
+- **JSON Copy**: Copy the current data to clipboard as formatted JSON
+
+## Search
+
+The search bar performs a full-text search across all columns of the selected table.

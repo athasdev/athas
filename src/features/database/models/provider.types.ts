@@ -1,4 +1,12 @@
-import type { ColumnInfo, DatabaseInfo, QueryResult, TableInfo } from "./common.types";
+import type {
+  ColumnFilter,
+  ColumnInfo,
+  DatabaseInfo,
+  FilteredQueryResult,
+  ForeignKeyInfo,
+  QueryResult,
+  TableInfo,
+} from "./common.types";
 
 export interface DatabaseProvider {
   // Connection
@@ -20,10 +28,24 @@ export interface DatabaseProvider {
     orderDirection?: "ASC" | "DESC",
   ): Promise<QueryResult>;
 
+  // Filtered data operations
+  getFilteredData?(
+    tableName: string,
+    filters: ColumnFilter[],
+    searchTerm: string | null,
+    sortColumn: string | null,
+    sortDirection: "ASC" | "DESC",
+    pageSize: number,
+    offset: number,
+  ): Promise<FilteredQueryResult>;
+
+  // Foreign key introspection
+  getForeignKeys?(tableName: string): Promise<ForeignKeyInfo[]>;
+
   // CRUD operations
-  insertRow(tableName: string, data: Record<string, any>): Promise<void>;
-  updateRow(tableName: string, rowId: any, data: Record<string, any>): Promise<void>;
-  deleteRow(tableName: string, rowId: any): Promise<void>;
+  insertRow(tableName: string, data: Record<string, unknown>): Promise<void>;
+  updateRow(tableName: string, rowId: unknown, data: Record<string, unknown>): Promise<void>;
+  deleteRow(tableName: string, rowId: unknown): Promise<void>;
 
   // Table operations
   createTable(tableName: string, columns: ColumnInfo[]): Promise<void>;

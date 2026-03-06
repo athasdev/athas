@@ -1,10 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { createSelectors } from "@/utils/zustand-selectors";
 import type {
   ColumnFilter,
   ColumnInfo,
   DatabaseInfo,
+  FilteredQueryResult,
+  ForeignKeyInfo,
   QueryResult,
   TableInfo,
 } from "../../../models/common.types";
@@ -16,6 +19,7 @@ interface SqliteState {
   selectedTable: string | null;
   queryResult: QueryResult | null;
   tableMeta: ColumnInfo[];
+  foreignKeys: ForeignKeyInfo[];
   dbInfo: DatabaseInfo | null;
   error: string | null;
   isLoading: boolean;
@@ -32,6 +36,8 @@ interface SqliteState {
   customQuery: string;
   isCustomQuery: boolean;
   sqlHistory: string[];
+
+  columnWidths: Record<string, Record<string, number>>;
 }
 
 interface SqliteActions {
@@ -64,6 +70,9 @@ interface SqliteActions {
     columns: { name: string; type: string; notnull: boolean }[],
   ) => Promise<void>;
   dropTable: (name: string) => Promise<void>;
+
+  setColumnWidth: (table: string, column: string, width: number) => void;
+  navigateToForeignKey: (toTable: string, toColumn: string, value: unknown) => Promise<void>;
 }
 
 const initialState: SqliteState = {
@@ -73,6 +82,7 @@ const initialState: SqliteState = {
   selectedTable: null,
   queryResult: null,
   tableMeta: [],
+  foreignKeys: [],
   dbInfo: null,
   error: null,
   isLoading: false,
@@ -86,9 +96,10 @@ const initialState: SqliteState = {
   customQuery: "",
   isCustomQuery: false,
   sqlHistory: [],
+  columnWidths: {},
 };
 
-export const useSqliteStore = create<SqliteState & { actions: SqliteActions }>()(
+const useSqliteStoreBase = create<SqliteState & { actions: SqliteActions }>()(
   immer((set, get) => ({
     ...initialState,
 
@@ -155,7 +166,7 @@ export const useSqliteStore = create<SqliteState & { actions: SqliteActions }>()
         try {
           const result = (await invoke("query_sqlite", {
             path: databasePath,
-            query: `PRAGMA table_info(${tableName})`,
+            query: `PRAGMA table_info("${tableName.replace(/"/g, '""')}")`,
           })) as QueryResult;
 
           const tableMeta: ColumnInfo[] = result.rows.map((row) => ({
@@ -167,6 +178,18 @@ export const useSqliteStore = create<SqliteState & { actions: SqliteActions }>()
           }));
 
           set({ tableMeta });
+
+          // Load foreign keys
+          try {
+            const foreignKeys = (await invoke("get_sqlite_foreign_keys", {
+              path: databasePath,
+              table: tableName,
+            })) as ForeignKeyInfo[];
+            set({ foreignKeys });
+          } catch {
+            set({ foreignKeys: [] });
+          }
+
           await get().actions.refresh();
         } catch (err) {
           set({ error: `Failed to load table: ${err}` });
@@ -182,64 +205,33 @@ export const useSqliteStore = create<SqliteState & { actions: SqliteActions }>()
         set({ isLoading: true, error: null });
 
         try {
-          const whereConditions: string[] = [];
-
-          if (state.searchTerm.trim() && state.tableMeta.length > 0) {
-            const cols = state.tableMeta.map((c) => `"${c.name}"`).join(' || " " || ');
-            whereConditions.push(`(${cols}) LIKE "%${state.searchTerm}%"`);
-          }
-
-          for (const filter of state.columnFilters) {
-            switch (filter.operator) {
-              case "equals":
-                whereConditions.push(`"${filter.column}" = "${filter.value}"`);
-                break;
-              case "contains":
-                whereConditions.push(`"${filter.column}" LIKE "%${filter.value}%"`);
-                break;
-              case "startsWith":
-                whereConditions.push(`"${filter.column}" LIKE "${filter.value}%"`);
-                break;
-              case "endsWith":
-                whereConditions.push(`"${filter.column}" LIKE "%${filter.value}"`);
-                break;
-              case "gt":
-                whereConditions.push(`"${filter.column}" > "${filter.value}"`);
-                break;
-              case "lt":
-                whereConditions.push(`"${filter.column}" < "${filter.value}"`);
-                break;
-              case "between":
-                if (filter.value2) {
-                  whereConditions.push(
-                    `"${filter.column}" BETWEEN "${filter.value}" AND "${filter.value2}"`,
-                  );
-                }
-                break;
-            }
-          }
-
-          const whereClause =
-            whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : "";
-          const orderClause = state.sortColumn
-            ? `ORDER BY "${state.sortColumn}" ${state.sortDirection.toUpperCase()}`
-            : "";
-
-          const countResult = (await invoke("query_sqlite", {
-            path: state.databasePath,
-            query: `SELECT COUNT(*) FROM "${state.selectedTable}" ${whereClause}`,
-          })) as QueryResult;
-
-          const totalRows = Number(countResult.rows[0][0]);
-          const totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
           const offset = (state.currentPage - 1) * state.pageSize;
 
-          const queryResult = (await invoke("query_sqlite", {
+          const result = (await invoke("query_sqlite_filtered", {
             path: state.databasePath,
-            query: `SELECT * FROM "${state.selectedTable}" ${whereClause} ${orderClause} LIMIT ${state.pageSize} OFFSET ${offset}`,
-          })) as QueryResult;
+            params: {
+              table: state.selectedTable,
+              filters: state.columnFilters.map((f) => ({
+                column: f.column,
+                operator: f.operator,
+                value: f.value,
+                value2: f.value2 ?? null,
+              })),
+              search_term: state.searchTerm.trim() || null,
+              search_columns: state.searchTerm.trim() ? state.tableMeta.map((c) => c.name) : [],
+              sort_column: state.sortColumn ?? null,
+              sort_direction: state.sortDirection.toUpperCase(),
+              page_size: state.pageSize,
+              offset,
+            },
+          })) as FilteredQueryResult;
 
-          set({ queryResult, totalPages });
+          const totalPages = Math.max(1, Math.ceil(result.total_count / state.pageSize));
+
+          set({
+            queryResult: { columns: result.columns, rows: result.rows },
+            totalPages,
+          });
         } catch (err) {
           set({ error: `Query failed: ${err}`, queryResult: null });
         } finally {
@@ -431,12 +423,12 @@ export const useSqliteStore = create<SqliteState & { actions: SqliteActions }>()
 
         try {
           const columnDefs = columns
-            .map((c) => `"${c.name}" ${c.type}${c.notnull ? " NOT NULL" : ""}`)
+            .map((c) => `"${c.name.replace(/"/g, '""')}" ${c.type}${c.notnull ? " NOT NULL" : ""}`)
             .join(", ");
 
           await invoke("execute_sqlite", {
             path: databasePath,
-            statement: `CREATE TABLE "${name}" (${columnDefs})`,
+            statement: `CREATE TABLE "${name.replace(/"/g, '""')}" (${columnDefs})`,
           });
 
           const tables = (await invoke("get_sqlite_tables", { path: databasePath })) as TableInfo[];
@@ -454,7 +446,7 @@ export const useSqliteStore = create<SqliteState & { actions: SqliteActions }>()
         try {
           await invoke("execute_sqlite", {
             path: databasePath,
-            statement: `DROP TABLE "${name}"`,
+            statement: `DROP TABLE "${name.replace(/"/g, '""')}"`,
           });
 
           const tables = (await invoke("get_sqlite_tables", { path: databasePath })) as TableInfo[];
@@ -464,13 +456,34 @@ export const useSqliteStore = create<SqliteState & { actions: SqliteActions }>()
             if (tables.length > 0) {
               await get().actions.selectTable(tables[0].name);
             } else {
-              set({ selectedTable: null, queryResult: null, tableMeta: [] });
+              set({ selectedTable: null, queryResult: null, tableMeta: [], foreignKeys: [] });
             }
           }
         } catch (err) {
           set({ error: `Drop table failed: ${err}` });
         }
       },
+
+      setColumnWidth: (table: string, column: string, width: number) => {
+        set((s) => {
+          if (!s.columnWidths[table]) {
+            s.columnWidths[table] = {};
+          }
+          s.columnWidths[table][column] = width;
+        });
+      },
+
+      navigateToForeignKey: async (toTable: string, toColumn: string, value: unknown) => {
+        const actions = get().actions;
+        await actions.selectTable(toTable);
+        set((s) => {
+          s.columnFilters = [{ column: toColumn, operator: "equals", value: String(value) }];
+          s.currentPage = 1;
+        });
+        await actions.refresh();
+      },
     },
   })),
 );
+
+export const useSqliteStore = createSelectors(useSqliteStoreBase);
