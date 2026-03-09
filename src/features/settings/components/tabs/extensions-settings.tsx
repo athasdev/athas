@@ -279,7 +279,7 @@ export const ExtensionsSettings = () => {
       }
     } else if (extension.category === "icon-theme") {
       if (extension.isInstalled) {
-        updateSetting("iconTheme", "seti");
+        updateSetting("iconTheme", "colorful-material");
       } else {
         updateSetting("iconTheme", extension.id);
       }
