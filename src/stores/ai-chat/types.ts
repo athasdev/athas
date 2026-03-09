@@ -74,7 +74,7 @@ export interface AIChatActions {
   hideMention: () => void;
   updateSearch: (search: string) => void;
   updatePosition: (position: { top: number; left: number }) => void;
-  selectNext: () => void;
+  selectNext: (totalItems: number) => void;
   selectPrevious: () => void;
   setSelectedIndex: (index: number) => void;
   getFilteredFiles: (allFiles: FileEntry[]) => FileEntry[];

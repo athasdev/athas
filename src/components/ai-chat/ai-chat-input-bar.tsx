@@ -156,7 +156,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
     if (mentionState.active) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        selectNext();
+        const filteredFiles = getFilteredFiles(allProjectFiles);
+        selectNext(filteredFiles.length);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         selectPrevious();
