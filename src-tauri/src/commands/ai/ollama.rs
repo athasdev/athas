@@ -103,14 +103,13 @@ pub async fn probe_ollama_endpoint(base_url: String) -> Result<OllamaProbeRespon
 
 #[cfg(test)]
 mod tests {
+   use super::{DEFAULT_OLLAMA_BASE_URL, normalize_ollama_base_url, validate_ollama_base_url};
+   use crate::commands::ai::ollama::probe_ollama_endpoint;
    use std::{
       io::{Read, Write},
       net::TcpListener,
       thread,
    };
-
-   use super::{DEFAULT_OLLAMA_BASE_URL, normalize_ollama_base_url, validate_ollama_base_url};
-   use crate::commands::ai::ollama::probe_ollama_endpoint;
 
    #[test]
    fn normalizes_empty_base_url_to_default() {
@@ -151,7 +150,8 @@ mod tests {
 
          let body = r#"{"models":[{"name":"llama3.2"}]}"#;
          let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: \
+             {}\r\nconnection: close\r\n\r\n{}",
             body.len(),
             body
          );
