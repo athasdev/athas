@@ -56,7 +56,7 @@ Thanks for helping improve Athas.
 
     ```bash
     sudo apt update
-    sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+    sudo apt install build-essential curl wget file libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev libayatana-appindicator3-dev librsvg2-dev pkg-config libxdo-dev
 
     # Install Rust
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -68,7 +68,7 @@ Thanks for helping improve Athas.
     **Fedora**
 
     ```bash
-    sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file libxdo-devel librsvg2-devel
+    sudo dnf install gcc gcc-c++ make curl wget file openssl-devel gtk3-devel webkit2gtk4.1-devel libsoup3-devel libayatana-appindicator-gtk3-devel librsvg2-devel pkgconf-pkg-config libxdo-devel
 
     # Install Rust
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -104,6 +104,60 @@ git clone https://github.com/athasdev/athas.git
 cd athas
 bun install
 bun dev
+```
+
+### Linux Virtual Desktop UI Testing
+
+If you're working on UI bugs in a headless Linux environment or VPS, Athas includes a repeatable virtual desktop launcher.
+
+Recommended extra packages:
+
+- `xvfb`
+- `openbox`
+- `xdotool`
+- `wmctrl`
+- `scrot`
+
+Start the session:
+
+```bash
+bun run athas-ui-test:check
+bun run athas-ui-test
+```
+
+Useful follow-up commands:
+
+```bash
+bun run athas-ui-test:status
+bun run athas-ui-test:screenshot -- /tmp/athas-ui.png
+bun run athas-ui-test:logs
+bun run athas-ui-test:stop
+```
+
+The launcher starts:
+
+- `Xvfb` on `:99` by default
+- `openbox`
+- `bun dev:app`
+
+You can override the defaults with environment variables:
+
+```bash
+ATHAS_UI_DISPLAY=:100 ATHAS_UI_SCREEN=1920x1080x24 bun run athas-ui-test
+ATHAS_UI_APP_CMD="bun tauri dev --no-watch" bun run athas-ui-test
+```
+
+If the preflight reports missing Tauri system libraries, install the Linux dependencies first:
+
+```bash
+bash scripts/linux/setup.sh
+```
+
+Once the session is running, desktop automation tools can target the virtual display directly:
+
+```bash
+DISPLAY=:99 XAUTHORITY=/tmp/athas-ui-test-$USER/Xauthority xdotool search --name Athas
+DISPLAY=:99 XAUTHORITY=/tmp/athas-ui-test-$USER/Xauthority wmctrl -lp
 ```
 
 ## Release Process
