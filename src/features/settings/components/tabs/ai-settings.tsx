@@ -14,9 +14,13 @@ import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/utils/autocomplete";
 import { cn } from "@/utils/cn";
+import {
+  DEFAULT_OLLAMA_BASE_URL,
+  getOllamaProbeErrorMessage,
+  probeOllamaEndpoint,
+} from "@/utils/ollama";
 import { setOllamaBaseUrl } from "@/utils/providers";
 
-const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
 
 const DEFAULT_AUTOCOMPLETE_MODELS = [
@@ -51,6 +55,7 @@ export const AISettings = () => {
   // Ollama URL state
   const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL);
   const [ollamaStatus, setOllamaStatus] = useState<"idle" | "checking" | "ok" | "error">("idle");
+  const [ollamaStatusMessage, setOllamaStatusMessage] = useState<string | null>(null);
   const ollamaDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
@@ -81,19 +86,26 @@ export const AISettings = () => {
 
   const checkOllamaConnection = useCallback(async (url: string) => {
     setOllamaStatus("checking");
+    setOllamaStatusMessage(null);
     try {
-      const response = await fetch(`${url}/api/tags`, {
-        signal: AbortSignal.timeout(3000),
-      });
-      setOllamaStatus(response.ok ? "ok" : "error");
-    } catch {
+      await probeOllamaEndpoint(url);
+      setOllamaStatus("ok");
+    } catch (error) {
       setOllamaStatus("error");
+      setOllamaStatusMessage(getOllamaProbeErrorMessage(error));
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (ollamaDebounceRef.current) clearTimeout(ollamaDebounceRef.current);
+    };
   }, []);
 
   const handleOllamaUrlChange = (value: string) => {
     setOllamaUrl(value);
     setOllamaStatus("idle");
+    setOllamaStatusMessage(null);
 
     if (ollamaDebounceRef.current) clearTimeout(ollamaDebounceRef.current);
     ollamaDebounceRef.current = setTimeout(() => {
@@ -208,7 +220,7 @@ export const AISettings = () => {
           {ollamaStatus === "error" && (
             <div className="flex items-center gap-1.5 px-1 text-red-400 text-xs">
               <AlertCircle size={11} className="shrink-0" />
-              <span>Could not connect. Check that Ollama is running at this address.</span>
+              <span>{ollamaStatusMessage || "Could not connect. Check the Ollama endpoint."}</span>
             </div>
           )}
         </Section>

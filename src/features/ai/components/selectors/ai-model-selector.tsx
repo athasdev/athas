@@ -24,6 +24,11 @@ import {
 } from "@/features/ai/types/providers";
 import { useSettingsStore } from "@/features/settings/store";
 import { cn } from "@/utils/cn";
+import {
+  DEFAULT_OLLAMA_BASE_URL,
+  getOllamaProbeErrorMessage,
+  probeOllamaEndpoint,
+} from "@/utils/ollama";
 import { getProvider, setOllamaBaseUrl } from "@/utils/providers";
 
 interface AIModelSelectorProps {
@@ -82,11 +87,12 @@ export function AIModelSelector({
   const { settings, updateSetting } = useSettingsStore();
 
   const [ollamaUrlInput, setOllamaUrlInput] = useState(
-    settings.ollamaBaseUrl || "http://localhost:11434",
+    settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL,
   );
   const [ollamaUrlStatus, setOllamaUrlStatus] = useState<"idle" | "checking" | "ok" | "error">(
     "idle",
   );
+  const [ollamaUrlMessage, setOllamaUrlMessage] = useState<string | null>(null);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -403,22 +409,19 @@ export function AIModelSelector({
   };
 
   const handleSaveOllamaUrl = async (url: string) => {
-    const trimmed = url.replace(/\/+$/, "") || "http://localhost:11434";
     setOllamaUrlStatus("checking");
+    setOllamaUrlMessage(null);
     try {
-      const response = await fetch(`${trimmed}/api/tags`, { signal: AbortSignal.timeout(3000) });
-      if (response.ok) {
-        setOllamaUrlStatus("ok");
-        updateSetting("ollamaBaseUrl", trimmed);
-        setOllamaBaseUrl(trimmed);
-        setOllamaUrlInput(trimmed);
-        fetchDynamicModels();
-        setTimeout(() => cancelEditing(), 1000);
-      } else {
-        setOllamaUrlStatus("error");
-      }
-    } catch {
+      const { normalizedUrl } = await probeOllamaEndpoint(url);
+      setOllamaUrlStatus("ok");
+      updateSetting("ollamaBaseUrl", normalizedUrl);
+      setOllamaBaseUrl(normalizedUrl);
+      setOllamaUrlInput(normalizedUrl);
+      await fetchDynamicModels();
+      setTimeout(() => cancelEditing(), 1000);
+    } catch (error) {
       setOllamaUrlStatus("error");
+      setOllamaUrlMessage(getOllamaProbeErrorMessage(error));
     }
   };
 
@@ -611,6 +614,7 @@ export function AIModelSelector({
                                             onChange={(e) => {
                                               setOllamaUrlInput(e.target.value);
                                               setOllamaUrlStatus("idle");
+                                              setOllamaUrlMessage(null);
                                             }}
                                             onKeyDown={(e) => {
                                               if (e.key === "Enter") {
@@ -657,7 +661,10 @@ export function AIModelSelector({
                                         </div>
                                         {ollamaUrlStatus === "error" && (
                                           <div className="flex items-center gap-1 px-3 pb-2 text-[10px] text-red-400">
-                                            <span>Could not connect to Ollama at this URL</span>
+                                            <span>
+                                              {ollamaUrlMessage ||
+                                                "Could not connect to Ollama at this URL"}
+                                            </span>
                                           </div>
                                         )}
                                       </>
