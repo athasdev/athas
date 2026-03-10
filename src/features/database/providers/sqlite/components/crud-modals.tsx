@@ -3,9 +3,11 @@ import { PlusIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
 import Button from "@/ui/button";
+import Checkbox from "@/ui/checkbox";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import type { ColumnInfo } from "../../../models/common.types";
+import { buildDatabaseRowValues } from "../utils/value-coercion";
 
 interface CreateRowModalProps {
   isOpen: boolean;
@@ -46,26 +48,7 @@ export const CreateRowModal = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Convert string values to appropriate types
-    const convertedValues: Record<string, any> = {};
-    for (const [key, value] of Object.entries(values)) {
-      const column = columns.find((col) => col.name === key);
-      if (!value || value === "") {
-        convertedValues[key] = null;
-      } else if (column?.type.toLowerCase().includes("int")) {
-        convertedValues[key] = parseInt(value, 10);
-      } else if (
-        column?.type.toLowerCase().includes("real") ||
-        column?.type.toLowerCase().includes("float")
-      ) {
-        convertedValues[key] = parseFloat(value);
-      } else {
-        convertedValues[key] = value;
-      }
-    }
-
-    onSubmit(convertedValues);
+    onSubmit(buildDatabaseRowValues(values, columns));
     setValues({});
     onClose();
   };
@@ -193,26 +176,7 @@ export const EditRowModal = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Convert string values to appropriate types
-    const convertedValues: Record<string, any> = {};
-    for (const [key, value] of Object.entries(values)) {
-      const column = columns.find((col) => col.name === key);
-      if (!value || value === "") {
-        convertedValues[key] = null;
-      } else if (column?.type.toLowerCase().includes("int")) {
-        convertedValues[key] = parseInt(value, 10);
-      } else if (
-        column?.type.toLowerCase().includes("real") ||
-        column?.type.toLowerCase().includes("float")
-      ) {
-        convertedValues[key] = parseFloat(value);
-      } else {
-        convertedValues[key] = value;
-      }
-    }
-
-    onSubmit(convertedValues);
+    onSubmit(buildDatabaseRowValues(values, columns));
     onClose();
   };
 
@@ -422,12 +386,15 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   <option value="REAL">REAL</option>
                   <option value="BLOB">BLOB</option>
                 </select>
-                <label className="ui-font flex items-center gap-1 text-text text-xs">
-                  <input
-                    type="checkbox"
+                <label
+                  htmlFor={`column-not-null-${index}`}
+                  className="ui-font flex items-center gap-1 text-text text-xs"
+                >
+                  <Checkbox
+                    id={`column-not-null-${index}`}
                     checked={column.notnull}
-                    onChange={(e) => updateColumn(index, "notnull", e.target.checked)}
-                    className="rounded"
+                    onChange={(checked) => updateColumn(index, "notnull", checked)}
+                    ariaLabel={`Set ${column.name || `column ${index + 1}`} as not null`}
                   />
                   NOT NULL
                 </label>

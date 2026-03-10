@@ -237,12 +237,11 @@ const AiUsageStatusIndicator = () => {
   const subscriptionStatus = subscription?.status ?? "free";
   const enterprisePolicy = subscription?.enterprise?.policy;
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-  const isPro = subscriptionStatus === "pro" || subscriptionStatus === "trial";
+  const isPro = subscriptionStatus === "pro";
   const aiAllowedByPolicy = managedPolicy ? managedPolicy.aiCompletionEnabled : true;
   const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
   const planLabel = (() => {
     if (!isAuthenticated) return "Guest";
-    if (subscriptionStatus === "trial") return "Trial";
     if (subscriptionStatus === "pro") return "Pro";
     return "Free";
   })();
@@ -464,7 +463,8 @@ const EditorFooter = () => {
   const settings = useSettingsStore((state) => state.settings);
   const uiState = useUIState();
   const { rootFolderPath } = useFileSystemStore();
-  const { gitStatus, actions } = useGitStore();
+  const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
+  const { actions } = useGitStore();
   const { available, downloading, installing, updateInfo, downloadAndInstall } = useUpdater(false);
   const cursorPosition = useEditorStateStore.use.cursorPosition();
 
@@ -482,15 +482,15 @@ const EditorFooter = () => {
     <div className="relative z-20 flex min-h-9 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
       <div className="ui-font flex items-center gap-1 text-text-lighter text-xs">
         {/* Git branch manager */}
-        {rootFolderPath && gitStatus?.branch && (
+        {rootFolderPath && workspaceGitStatus?.branch && (
           <GitBranchManager
-            currentBranch={gitStatus.branch}
+            currentBranch={workspaceGitStatus.branch}
             repoPath={rootFolderPath}
             paletteTarget
             placement="up"
             onBranchChange={async () => {
               const status = await getGitStatus(rootFolderPath);
-              actions.setGitStatus(status);
+              actions.setWorkspaceGitStatus(status, rootFolderPath);
             }}
             compact={true}
           />

@@ -103,7 +103,7 @@ const TabBarItem = memo(function TabBarItem({
             ) : (
               <Globe size={12} className="text-text-lighter" />
             )
-          ) : buffer.isSQLite ? (
+          ) : buffer.databaseType ? (
             <Database size={12} className="text-text-lighter" />
           ) : (
             <FileIcon

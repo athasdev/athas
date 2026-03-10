@@ -642,7 +642,7 @@ details: ${errorDetails || mainError}
 
   return (
     <div
-      className={`ui-font flex h-full flex-col bg-secondary-bg text-text text-xs ${className || ""}`}
+      className={`ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
     >
       <ChatHeader />
       {isAiChatBlockedByPolicy ? (

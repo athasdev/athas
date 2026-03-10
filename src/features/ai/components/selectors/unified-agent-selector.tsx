@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Check, ChevronDown, Key, Plus, Search } from "lucide-react";
+import { Check, ChevronDown, Key, Plus, Search, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
@@ -423,32 +423,54 @@ export function UnifiedAgentSelector({
               maxHeight: `${position.maxHeight}px`,
             }}
           >
-            {/* Search */}
-            <div className="border-border/60 border-b p-2.5">
-              <div className="relative">
-                <Search
-                  size={11}
-                  className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 text-text-lighter"
+            <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/75 px-3 py-2.5">
+              <div className="flex min-w-0 items-center gap-2">
+                <ProviderIcon
+                  providerId={currentAgentId}
+                  size={14}
+                  className="shrink-0 text-text-lighter"
                 />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Search agents or models..."
-                  className="w-full rounded-lg border border-border bg-secondary-bg py-1.5 pr-2 pl-7 text-text text-xs placeholder:text-text-lighter focus:border-accent focus:outline-none"
-                />
+                <span className="truncate font-medium text-text text-xs">
+                  {currentAgent?.name || "Custom"}
+                  {isCustomAgent && currentModelName ? (
+                    <span className="text-text-lighter"> / {currentModelName}</span>
+                  ) : null}
+                </span>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
+                aria-label="Close agent selector"
+              >
+                <X size={12} />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="relative border-border/60 border-b">
+              <Search
+                size={12}
+                className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-text-lighter"
+              />
+              <input
+                ref={inputRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Search agents or models..."
+                className="w-full bg-transparent py-2.5 pr-3 pl-8 text-text text-xs placeholder:text-text-lighter focus:outline-none"
+              />
             </div>
 
             {/* Section tabs (only for custom agent) */}
             {isCustomAgent && !search && (
-              <div className="flex border-border/60 border-b px-2 py-1">
+              <div className="flex border-border/60 border-b px-2 py-1.5">
                 <button
                   onClick={() => setActiveSection("agents")}
                   className={cn(
-                    "flex-1 rounded-lg px-2 py-1 text-xs transition-colors",
+                    "flex-1 rounded-lg px-2.5 py-1 text-xs transition-colors",
                     activeSection === "agents"
                       ? "bg-hover text-text"
                       : "text-text-lighter hover:text-text",
@@ -480,7 +502,7 @@ export function UnifiedAgentSelector({
                     return (
                       <div
                         key={item.id}
-                        className="px-1 pt-2 pb-1 text-[10px] text-text-lighter uppercase tracking-wide"
+                        className="px-1 pt-2.5 pb-1.5 text-[10px] text-text-lighter uppercase tracking-wide"
                       >
                         {item.name}
                       </div>
@@ -529,7 +551,7 @@ export function UnifiedAgentSelector({
                         onClick={() => handleAgentChange(item.id as AgentType)}
                         onMouseEnter={() => setSelectedIndex(itemIndex)}
                         className={cn(
-                          "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors",
+                          "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors",
                           isSelected ? "bg-hover" : "bg-transparent",
                           item.isCurrent && "bg-accent/10",
                         )}
@@ -559,7 +581,7 @@ export function UnifiedAgentSelector({
                         onClick={() => handleModelSelect(item.providerId!, item.id)}
                         onMouseEnter={() => setSelectedIndex(itemIndex)}
                         className={cn(
-                          "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors",
+                          "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors",
                           isSelected ? "bg-hover" : "bg-transparent",
                           item.isCurrent && "bg-accent/10",
                         )}

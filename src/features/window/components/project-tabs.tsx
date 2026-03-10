@@ -26,6 +26,7 @@ const ProjectTabs = () => {
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const { reorderProjectTabs } = useWorkspaceTabsStore.getState();
   const { switchToProject, closeProject } = useFileSystemStore();
+  const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
   const { isProjectPickerVisible, setIsProjectPickerVisible } = useUIState();
 
   const tabBarRef = useRef<HTMLDivElement>(null);
@@ -155,13 +156,9 @@ const ProjectTabs = () => {
   );
 
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent, index: number, tab: ProjectTab) => {
+    (e: React.MouseEvent, index: number, _tab: ProjectTab) => {
       if (e.button !== 0 || (e.target as HTMLElement).closest("button.close-button")) {
         return;
-      }
-
-      if (!tab.isActive) {
-        switchToProject(tab.id);
       }
 
       e.preventDefault();
@@ -175,6 +172,14 @@ const ProjectTabs = () => {
       });
     },
     [switchToProject],
+  );
+
+  const handleTabClick = useCallback(
+    async (tab: ProjectTab) => {
+      if (isSwitchingProject || tab.isActive) return;
+      await switchToProject(tab.id);
+    },
+    [isSwitchingProject, switchToProject],
   );
 
   const handleCloseTab = async (e: React.MouseEvent, projectId: string) => {
@@ -351,8 +356,10 @@ const ProjectTabs = () => {
                   tab.isActive
                     ? "border-border/80 bg-secondary-bg text-text"
                     : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",
+                  isSwitchingProject && "cursor-wait",
                   isDraggedTab && "opacity-30",
                 )}
+                onClick={() => void handleTabClick(tab)}
                 title={tab.path}
               >
                 <Folder size={12} />

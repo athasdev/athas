@@ -13,17 +13,16 @@ export interface AuthUser {
   avatar_url: string | null;
   provider: string | null;
   github_username: string | null;
-  subscription_status: "free" | "trial" | "pro";
+  subscription_status: "free" | "pro";
   created_at: string;
 }
 
 export interface SubscriptionInfo {
-  status: "free" | "trial" | "pro";
+  status: "free" | "pro";
   subscription: {
     plan: string;
     renews_at: string | null;
     ends_at: string | null;
-    trial_ends_at: string | null;
   } | null;
   enterprise: {
     has_access: boolean;

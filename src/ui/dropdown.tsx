@@ -13,6 +13,7 @@ interface DropdownProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  menuClassName?: string;
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
   searchable?: boolean;
@@ -29,6 +30,7 @@ const Dropdown = ({
   onChange,
   placeholder = "Select...",
   className = "",
+  menuClassName = "",
   disabled = false,
   size = "sm",
   searchable = false,
@@ -128,7 +130,10 @@ const Dropdown = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: openDirection === "up" ? 4 : -4 }}
           transition={{ duration: 0.15, ease: "easeOut" }}
-          className="fixed z-[10040] max-h-96 overflow-auto rounded-xl border border-border bg-primary-bg shadow-xl"
+          className={cn(
+            "fixed z-[10040] max-h-96 overflow-auto rounded-xl border border-border bg-primary-bg shadow-xl",
+            menuClassName,
+          )}
           style={{
             top: dropdownPosition.top,
             left: dropdownPosition.left,

@@ -371,7 +371,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
         useBufferStore
           .getState()
-          .actions.openBuffer(virtualPath, displayName, "", false, false, true, true, diff);
+          .actions.openBuffer(virtualPath, displayName, "", false, undefined, true, true, diff);
       } else {
         handleOpenOriginalFile(actualFilePath);
       }
@@ -395,7 +395,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
           useBufferStore
             .getState()
-            .actions.openBuffer(virtualPath, diffFileName, "", false, false, true, true, diff);
+            .actions.openBuffer(virtualPath, diffFileName, "", false, undefined, true, true, diff);
         } else {
           const { additions, deletions } = countDiffStats(diffs);
 
@@ -412,7 +412,16 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
           useBufferStore
             .getState()
-            .actions.openBuffer(virtualPath, displayName, "", false, false, true, true, multiDiff);
+            .actions.openBuffer(
+              virtualPath,
+              displayName,
+              "",
+              false,
+              undefined,
+              true,
+              true,
+              multiDiff,
+            );
         }
       } else {
         alert(`No changes in this commit${filePath ? ` for file ${filePath}` : ""}.`);
@@ -445,7 +454,16 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
         useBufferStore
           .getState()
-          .actions.openBuffer(virtualPath, displayName, "", false, false, true, true, multiDiff);
+          .actions.openBuffer(
+            virtualPath,
+            displayName,
+            "",
+            false,
+            undefined,
+            true,
+            true,
+            multiDiff,
+          );
       } else {
         alert("No changes in this stash.");
       }

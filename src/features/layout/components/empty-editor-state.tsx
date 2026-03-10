@@ -1,5 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
+  Database,
   FileText,
   FolderOpen,
   Globe,
@@ -16,6 +17,7 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
 import { useContextMenu } from "@/hooks/use-context-menu";
+import { useUIState } from "@/stores/ui-state-store";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
 
@@ -29,6 +31,7 @@ interface ActionItem {
 export function EmptyEditorState() {
   const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
     useBufferStore.use.actions();
+  const { setIsDatabaseConnectionVisible } = useUIState();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
 
   const customActions = useCustomActionsStore.use.actions();
@@ -52,6 +55,10 @@ export function EmptyEditorState() {
   const handleOpenWebViewer = useCallback(() => {
     openWebViewerBuffer("https://");
   }, [openWebViewerBuffer]);
+
+  const handleOpenDatabaseConnection = useCallback(() => {
+    setIsDatabaseConnectionVisible(true);
+  }, [setIsDatabaseConnectionVisible]);
 
   const handleOpenFile = useCallback(async () => {
     try {
@@ -155,8 +162,21 @@ export function EmptyEditorState() {
         icon: <Globe size={12} />,
         onClick: handleOpenWebViewer,
       },
+      {
+        id: "connect-database",
+        label: "Connect Database",
+        icon: <Database size={12} />,
+        onClick: handleOpenDatabaseConnection,
+      },
     ];
-  }, [handleOpenFolder, handleOpenFile, handleOpenTerminal, handleOpenAgent, handleOpenWebViewer]);
+  }, [
+    handleOpenFolder,
+    handleOpenFile,
+    handleOpenTerminal,
+    handleOpenAgent,
+    handleOpenWebViewer,
+    handleOpenDatabaseConnection,
+  ]);
 
   const actions: ActionItem[] = [
     {
@@ -188,6 +208,12 @@ export function EmptyEditorState() {
       label: "Open URL",
       icon: <Globe size={14} className="text-text-light" />,
       action: handleOpenWebViewer,
+    },
+    {
+      id: "database",
+      label: "Connect Database",
+      icon: <Database size={14} className="text-text-light" />,
+      action: handleOpenDatabaseConnection,
     },
   ];
 

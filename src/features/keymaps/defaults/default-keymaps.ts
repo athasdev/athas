@@ -91,6 +91,9 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "cmd+shift+m", command: "workbench.toggleMinimap", source: "default" },
   { key: "cmd+k cmd+s", command: "workbench.openKeyboardShortcuts", source: "default" },
 
+  // Database
+  { key: "cmd+shift+d", command: "database.connect", source: "default" },
+
   // Window Operations
   { key: "F11", command: "window.toggleFullscreen", source: "default" },
   { key: "cmd+ctrl+f", command: "window.toggleFullscreenMac", source: "default" },

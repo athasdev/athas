@@ -642,6 +642,17 @@ const navigationCommands: Command[] = [
   },
 ];
 
+const databaseCommands: Command[] = [
+  {
+    id: "database.connect",
+    title: "Connect to Database",
+    category: "Database",
+    execute: () => {
+      useUIState.getState().setIsDatabaseConnectionVisible(true);
+    },
+  },
+];
+
 const windowCommands: Command[] = [
   {
     id: "window.toggleFullscreen",
@@ -730,6 +741,7 @@ export const allCommands: Command[] = [
   ...editCommands,
   ...viewCommands,
   ...navigationCommands,
+  ...databaseCommands,
   ...windowCommands,
 ];
 

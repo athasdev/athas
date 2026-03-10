@@ -139,7 +139,16 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
 
         useBufferStore
           .getState()
-          .actions.openBuffer(virtualPath, displayName, "", false, false, true, true, multiDiff);
+          .actions.openBuffer(
+            virtualPath,
+            displayName,
+            "",
+            false,
+            undefined,
+            true,
+            true,
+            multiDiff,
+          );
       }
     } catch (error) {
       console.error("Error getting commit diff:", error);

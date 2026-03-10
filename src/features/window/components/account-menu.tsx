@@ -107,7 +107,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     },
     {
       id: "subscription",
-      label: `Plan: ${isEnterprise ? "Enterprise" : subscriptionStatus === "pro" ? "Pro" : subscriptionStatus === "trial" ? "Trial" : "Free"}`,
+      label: `Plan: ${isEnterprise ? "Enterprise" : subscriptionStatus === "pro" ? "Pro" : "Free"}`,
       icon: <CreditCard size={12} />,
       onClick: handleViewPricing,
     },

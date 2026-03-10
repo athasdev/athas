@@ -260,6 +260,43 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["quick", "open", "preview", "file", "global", "search"],
   },
 
+  // Database Settings
+  {
+    id: "databases-new-connection",
+    tab: "databases",
+    section: "Connections",
+    label: "New Connection",
+    description:
+      "Open the database connection dialog to connect to SQLite, PostgreSQL, MySQL, MongoDB, or Redis",
+    keywords: [
+      "database",
+      "connection",
+      "sqlite",
+      "postgres",
+      "mysql",
+      "mongodb",
+      "redis",
+      "connect",
+    ],
+  },
+  {
+    id: "databases-saved-connections",
+    tab: "databases",
+    section: "Connections",
+    label: "Saved Connections",
+    description: "Manage saved network database connections",
+    keywords: [
+      "database",
+      "saved",
+      "connections",
+      "postgres",
+      "mysql",
+      "mongodb",
+      "redis",
+      "remove",
+    ],
+  },
+
   // AI Settings
   {
     id: "ai-provider",

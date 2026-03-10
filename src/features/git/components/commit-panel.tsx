@@ -46,7 +46,7 @@ const GitCommitPanel = ({
     const subscriptionStatus = subscription?.status ?? "free";
     const enterprisePolicy = subscription?.enterprise?.policy;
     const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-    const isPro = subscriptionStatus === "pro" || subscriptionStatus === "trial";
+    const isPro = subscriptionStatus === "pro";
 
     if (managedPolicy && !managedPolicy.aiCompletionEnabled) {
       setError("AI commit message generation is disabled by your organization policy.");

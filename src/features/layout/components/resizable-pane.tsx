@@ -192,7 +192,13 @@ export function ResizablePane({
         tabIndex={0}
       />
       {isResizing && <div className="pointer-events-none fixed inset-0 z-40 cursor-col-resize" />}
-      {children}
+      <div
+        className={cn("flex min-h-0 flex-1 flex-col py-2", position === "left" ? "pl-2" : "pr-2")}
+      >
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-primary-bg">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }

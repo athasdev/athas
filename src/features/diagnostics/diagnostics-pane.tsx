@@ -190,7 +190,7 @@ const DiagnosticsPane = ({
       activeBuffer.isVirtual ||
       activeBuffer.isDiff ||
       activeBuffer.isImage ||
-      activeBuffer.isSQLite
+      activeBuffer.databaseType
     ) {
       return null;
     }

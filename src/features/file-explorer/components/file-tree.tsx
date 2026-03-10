@@ -30,8 +30,8 @@ import { findFileInTree } from "@/features/file-system/controllers/file-tree-uti
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { ContextMenuState, FileEntry } from "@/features/file-system/types/app";
-import { getGitStatus } from "@/features/git/api/status";
-import type { GitFile, GitStatus } from "@/features/git/types/git";
+import { useGitStore } from "@/features/git/stores/git-store";
+import type { GitFile } from "@/features/git/types/git";
 import { useSettingsStore } from "@/features/settings/store";
 import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
@@ -42,7 +42,6 @@ import { FileTreeItem } from "./file-tree-item";
 import "../styles/file-tree.css";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-const GIT_STATUS_DEBOUNCE_MS = 500;
 const ALWAYS_HIDDEN_FILE_NAMES = new Set([".ds_store"]);
 
 const isAlwaysHiddenFileName = (name: string): boolean =>
@@ -105,7 +104,8 @@ function FileTreeComponent({
   const documentRef = useRef<Document>(document);
 
   const [gitIgnore, setGitIgnore] = useState<ReturnType<typeof ignore> | null>(null);
-  const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
+  const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
+  const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
   // sticky handled purely by CSS; no JS scanning
 
   const { settings } = useSettingsStore();
@@ -171,53 +171,10 @@ function FileTreeComponent({
     loadGitignore();
   }, [rootFolderPath]);
 
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      const loadGitStatus = async () => {
-        if (!rootFolderPath) {
-          setGitStatus(null);
-          return;
-        }
-
-        try {
-          const status = await getGitStatus(rootFolderPath);
-          setGitStatus(status);
-        } catch {
-          setGitStatus(null);
-        }
-      };
-
-      loadGitStatus();
-    }, GIT_STATUS_DEBOUNCE_MS);
-
-    return () => clearTimeout(debounceTimer);
-  }, [rootFolderPath]);
-
-  useEffect(() => {
-    if (!rootFolderPath) return;
-
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-    const handleGitStatusUpdated = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(async () => {
-        try {
-          const status = await getGitStatus(rootFolderPath);
-          setGitStatus(status);
-        } catch {
-          // Silently ignore errors
-        }
-      }, GIT_STATUS_DEBOUNCE_MS);
-    };
-
-    window.addEventListener("git-status-updated", handleGitStatusUpdated);
-    window.addEventListener("git-status-changed", handleGitStatusUpdated);
-    return () => {
-      window.removeEventListener("git-status-updated", handleGitStatusUpdated);
-      window.removeEventListener("git-status-changed", handleGitStatusUpdated);
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [rootFolderPath]);
+  const gitStatus =
+    currentWorkspaceRepoPath && currentWorkspaceRepoPath === rootFolderPath
+      ? workspaceGitStatus
+      : null;
 
   const isGitIgnored = useCallback(
     (fullPath: string, isDir: boolean): boolean => {
@@ -231,47 +188,62 @@ function FileTreeComponent({
     [gitIgnore, rootFolderPath],
   );
 
-  // Precompute git status map for O(1) lookups
-  const gitPathMap = useMemo(() => {
-    if (!gitStatus) return null as null | Map<string, GitFile>;
-    const m = new Map<string, GitFile>();
-    for (const f of gitStatus.files) m.set(f.path, f);
-    return m;
+  const gitStatusClassLookup = useMemo(() => {
+    if (!gitStatus)
+      return null as null | { files: Map<string, string>; directories: Map<string, string> };
+
+    const mapStatus = (status: GitFile): string => {
+      switch (status.status) {
+        case "modified":
+          return status.staged ? "text-git-modified-staged" : "text-git-modified";
+        case "added":
+          return "text-git-added";
+        case "deleted":
+          return "text-git-deleted";
+        case "untracked":
+          return "text-git-untracked";
+        case "renamed":
+          return "text-git-renamed";
+        default:
+          return "";
+      }
+    };
+
+    const files = new Map<string, string>();
+    const directories = new Map<string, string>();
+
+    for (const gitFile of gitStatus.files) {
+      const statusClass = mapStatus(gitFile);
+      if (!statusClass) continue;
+
+      files.set(gitFile.path, statusClass);
+
+      const segments = gitFile.path.split("/");
+      let currentPath = "";
+      for (let index = 0; index < segments.length - 1; index++) {
+        currentPath = currentPath ? `${currentPath}/${segments[index]}` : segments[index];
+        if (!directories.has(currentPath)) {
+          directories.set(currentPath, statusClass);
+        }
+      }
+    }
+
+    return { files, directories };
   }, [gitStatus]);
 
   const getGitStatusClass = useCallback(
     (file: FileEntry): string => {
-      if (!rootFolderPath || !gitPathMap) return "";
+      if (!rootFolderPath || !gitStatusClassLookup) return "";
       const rel = getRelativePath(file.path, rootFolderPath);
       if (!rel) return "";
-      const fileStatus = gitPathMap.get(rel);
-      const mapStatus = (s: GitFile | null | undefined) => {
-        if (!s) return "";
-        switch (s.status) {
-          case "modified":
-            return s.staged ? "text-git-modified-staged" : "text-git-modified";
-          case "added":
-            return "text-git-added";
-          case "deleted":
-            return "text-git-deleted";
-          case "untracked":
-            return "text-git-untracked";
-          case "renamed":
-            return "text-git-renamed";
-          default:
-            return "";
-        }
-      };
-      if (fileStatus) return mapStatus(fileStatus);
+      const fileStatus = gitStatusClassLookup.files.get(rel);
+      if (fileStatus) return fileStatus;
       if (file.isDir) {
-        // Any change under directory
-        for (const [p, s] of gitPathMap) {
-          if (p === rel || p.startsWith(`${rel}/`)) return mapStatus(s);
-        }
+        return gitStatusClassLookup.directories.get(rel) || "";
       }
       return "";
     },
-    [gitPathMap, rootFolderPath],
+    [gitStatusClassLookup, rootFolderPath],
   );
 
   const filteredFiles = useMemo(() => {

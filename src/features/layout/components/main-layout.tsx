@@ -5,11 +5,13 @@ import { useChatInitialization } from "@/features/ai/hooks/use-chat-initializati
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
+import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import type { Diagnostic } from "@/features/diagnostics/types";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useGitStore } from "@/features/git/stores/git-store";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { SplitViewRoot } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
@@ -65,6 +67,8 @@ export function MainLayout() {
     setIsThemeSelectorVisible,
     isIconThemeSelectorVisible,
     setIsIconThemeSelectorVisible,
+    isDatabaseConnectionVisible,
+    setIsDatabaseConnectionVisible,
   } = useUIState();
   const { settings, updateSetting } = useSettingsStore();
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
@@ -72,8 +76,11 @@ export function MainLayout() {
   const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
+  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const switchToProject = useFileSystemStore.use.switchToProject?.();
   const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
+  const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
+  const setWorkspaceGitStatus = useGitStore((state) => state.actions.setWorkspaceGitStatus);
 
   const hasRestoredWorkspace = useRef(false);
   const [viewportWidth, setViewportWidth] = useState(() =>
@@ -231,6 +238,40 @@ export function MainLayout() {
     restoreWorkspace();
   }, [switchToProject, setIsSwitchingProject]);
 
+  useEffect(() => {
+    if (!rootFolderPath) {
+      setWorkspaceGitStatus(null, null);
+      return;
+    }
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const refreshGitState = (event?: Event) => {
+      const filePath =
+        event instanceof CustomEvent && typeof event.detail?.filePath === "string"
+          ? event.detail.filePath
+          : null;
+
+      if (filePath && !filePath.startsWith(rootFolderPath)) {
+        return;
+      }
+
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        void refreshWorkspaceGitStatus(rootFolderPath);
+      }, 300);
+    };
+
+    window.addEventListener("git-status-updated", refreshGitState);
+    window.addEventListener("git-status-changed", refreshGitState);
+
+    return () => {
+      window.removeEventListener("git-status-updated", refreshGitState);
+      window.removeEventListener("git-status-changed", refreshGitState);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [rootFolderPath, refreshWorkspaceGitStatus, setWorkspaceGitStatus]);
+
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden bg-secondary-bg">
       {/* Drag-and-drop overlay */}
@@ -279,13 +320,11 @@ export function MainLayout() {
           )}
 
           {/* Main content area with split view */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col px-2 py-2">
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-primary-bg">
-              <div className="relative min-h-0 flex-1 overflow-hidden">
-                <SplitViewRoot />
-              </div>
-              <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-2 py-2">
+            <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-primary-bg">
+              <SplitViewRoot />
             </div>
+            <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
           </div>
 
           {/* Right sidebar or AI chat based on settings */}
@@ -369,6 +408,10 @@ export function MainLayout() {
         onClose={() => setIsIconThemeSelectorVisible(false)}
         onThemeChange={handleIconThemeChange}
         currentTheme={settings.iconTheme}
+      />
+      <ConnectionDialog
+        isOpen={isDatabaseConnectionVisible}
+        onClose={() => setIsDatabaseConnectionVisible(false)}
       />
     </div>
   );

@@ -35,16 +35,17 @@ import {
   updateFileInTree,
 } from "./file-tree-utils";
 import {
+  getDatabaseTypeFromPath,
   getFilenameFromPath,
   isBinaryFile,
   isImageFile,
   isPdfFile,
-  isSQLiteFile,
 } from "./file-utils";
 import { useFileWatcherStore } from "./file-watcher-store";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "./platform";
 import { useRecentFoldersStore } from "./recent-folders-store";
 import { shouldIgnore, updateDirectoryContents } from "./utils";
+import { buildWorkspaceRestorePlan } from "./workspace-session";
 
 /**
  * Wraps the file tree with a root folder entry
@@ -119,7 +120,7 @@ export const useFileSystemStore = createSelectors(
 
         // Initialize git status
         const gitStatus = await getGitStatus(selected);
-        useGitStore.getState().actions.setGitStatus(gitStatus);
+        useGitStore.getState().actions.setWorkspaceGitStatus(gitStatus, selected);
 
         // Clear git diff cache for new project
         gitDiffCache.clear();
@@ -174,13 +175,22 @@ export const useFileSystemStore = createSelectors(
         useGitBlameStore.getState().clearAllBlame();
       },
 
-      restoreSession: async (projectPath: string) => {
+      restoreSession: async (projectPath: string, skipBufferPath?: string) => {
         const session = useSessionStore.getState().getSession(projectPath);
         if (session) {
           const { actions: bufferActions } = useBufferStore.getState();
+          const restorePlan = buildWorkspaceRestorePlan(session);
+
+          const buffersToRestore = [
+            restorePlan.initialBuffer,
+            ...restorePlan.remainingBuffers,
+          ].filter(
+            (buffer): buffer is NonNullable<typeof buffer> =>
+              !!buffer && buffer.path !== skipBufferPath,
+          );
 
           // Restore buffers
-          for (const buffer of session.buffers) {
+          for (const buffer of buffersToRestore) {
             // Use handleFileSelect to open the file (it handles reading content)
             await get().handleFileSelect(buffer.path, false);
 
@@ -196,9 +206,9 @@ export const useFileSystemStore = createSelectors(
           }
 
           // Restore active buffer
-          if (session.activeBufferPath) {
+          if (restorePlan.activeBufferPath) {
             const { buffers } = useBufferStore.getState();
-            const activeBuffer = buffers.find((b) => b.path === session.activeBufferPath);
+            const activeBuffer = buffers.find((b) => b.path === restorePlan.activeBufferPath);
             if (activeBuffer) {
               useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
             }
@@ -260,7 +270,7 @@ export const useFileSystemStore = createSelectors(
 
         // Initialize git status
         const gitStatus = await getGitStatus(path);
-        useGitStore.getState().actions.setGitStatus(gitStatus);
+        useGitStore.getState().actions.setWorkspaceGitStatus(gitStatus, path);
 
         // Clear git diff cache for new project
         gitDiffCache.clear();
@@ -411,20 +421,29 @@ export const useFileSystemStore = createSelectors(
 
           const diffContent = localStorage.getItem(`diff-content-${path}`);
           if (diffContent) {
-            openBuffer(path, displayName, diffContent, false, false, true, true);
+            openBuffer(path, displayName, diffContent, false, undefined, true, true);
           } else {
-            openBuffer(path, displayName, "No diff content available", false, false, true, true);
+            openBuffer(
+              path,
+              displayName,
+              "No diff content available",
+              false,
+              undefined,
+              true,
+              true,
+            );
           }
           return;
         }
 
         // Handle special file types
-        if (isSQLiteFile(resolvedPath)) {
+        const dbType = getDatabaseTypeFromPath(resolvedPath);
+        if (dbType) {
           if (isStaleRequest()) return;
-          openBuffer(path, fileName, "", false, true, false, false);
+          openBuffer(path, fileName, "", false, dbType, false, false);
         } else if (isImageFile(resolvedPath)) {
           if (isStaleRequest()) return;
-          openBuffer(path, fileName, "", true, false, false, false);
+          openBuffer(path, fileName, "", true, undefined, false, false);
         } else if (isPdfFile(resolvedPath)) {
           if (isStaleRequest()) return;
           openBuffer(
@@ -432,7 +451,7 @@ export const useFileSystemStore = createSelectors(
             fileName,
             "",
             false,
-            false,
+            undefined,
             false,
             false,
             undefined,
@@ -450,7 +469,7 @@ export const useFileSystemStore = createSelectors(
             fileName,
             "",
             false,
-            false,
+            undefined,
             false,
             false,
             undefined,
@@ -515,14 +534,14 @@ export const useFileSystemStore = createSelectors(
           if (isDiffFile(path, content)) {
             const parsedDiff = parseRawDiffContent(content, path);
             const diffJson = JSON.stringify(parsedDiff);
-            openBuffer(path, fileName, diffJson, false, false, true, false);
+            openBuffer(path, fileName, diffJson, false, undefined, true, false);
           } else {
             openBuffer(
               path,
               fileName,
               content,
               false,
-              false,
+              undefined,
               false,
               false,
               undefined,
@@ -764,7 +783,9 @@ export const useFileSystemStore = createSelectors(
           const untitledCount = buffers.filter((b) => b.path.startsWith("untitled:")).length;
           const name = untitledCount === 0 ? "Untitled" : `Untitled-${untitledCount + 1}`;
           const path = `untitled:${name}`;
-          useBufferStore.getState().actions.openBuffer(path, name, "", false, false, false, true);
+          useBufferStore
+            .getState()
+            .actions.openBuffer(path, name, "", false, undefined, false, true);
           return;
         }
 
@@ -1264,80 +1285,115 @@ export const useFileSystemStore = createSelectors(
           return false;
         }
 
-        // Set switching flag to prevent tab bar from hiding
+        const currentRootPath = get().rootFolderPath;
+        if (currentRootPath === tab.path) {
+          useWorkspaceTabsStore.getState().setActiveProjectTab(projectId);
+          return true;
+        }
+
+        const { buffers, activeBufferId, actions: bufferActions } = useBufferStore.getState();
+        const currentBuffers = [...buffers];
+        const currentBufferIds = currentBuffers.map((buffer) => buffer.id);
+        const activeBuffer = currentBuffers.find((buffer) => buffer.id === activeBufferId);
+        const session = useSessionStore.getState().getSession(tab.path);
+        const restorePlan = buildWorkspaceRestorePlan(session);
+
         set((state) => {
           state.isSwitchingProject = true;
           state.isFileTreeLoading = true;
         });
 
-        // Save current project's session before switching
-        const currentRootPath = get().rootFolderPath;
-        if (currentRootPath) {
-          const { buffers, activeBufferId } = useBufferStore.getState();
-          const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-          useSessionStore.getState().saveSession(
-            currentRootPath,
-            buffers.map((b) => ({
-              id: b.id,
-              name: b.name,
-              path: b.path,
-              isPinned: b.isPinned,
-            })),
-            activeBuffer?.path || null,
-          );
+        try {
+          if (currentRootPath) {
+            useSessionStore.getState().saveSession(
+              currentRootPath,
+              currentBuffers.map((buffer) => ({
+                id: buffer.id,
+                name: buffer.name,
+                path: buffer.path,
+                isPinned: buffer.isPinned,
+              })),
+              activeBuffer?.path || null,
+            );
+          }
 
-          const { actions: bufferActions } = useBufferStore.getState();
-          bufferActions.closeBuffersBatch(
-            buffers.map((b) => b.id),
-            true,
-          );
+          const entries = await readDirectoryContents(tab.path);
+          const fileTree = sortFileEntries(entries);
+          const wrappedFileTree = wrapWithRootFolder(fileTree, tab.path, tab.name);
+
+          useFileTreeStore.getState().setExpandedPaths(new Set([tab.path]));
+
+          const { setRootFolderPath, setProjectName, setActiveProjectId } =
+            useProjectStore.getState();
+          setRootFolderPath(tab.path);
+          setProjectName(tab.name);
+          setActiveProjectId(projectId);
+
+          useWorkspaceTabsStore.getState().setActiveProjectTab(projectId);
+
+          gitDiffCache.clear();
+
+          set((state) => {
+            state.isFileTreeLoading = false;
+            state.files = wrappedFileTree;
+            state.rootFolderPath = tab.path;
+            state.filesVersion++;
+            state.projectFilesCache = undefined;
+          });
+
+          useGitStore.getState().actions.setWorkspaceGitStatus(null, tab.path);
+
+          void (async () => {
+            try {
+              await useFileWatcherStore.getState().setProjectRoot(tab.path);
+              const gitStatus = await getGitStatus(tab.path);
+
+              if (get().rootFolderPath !== tab.path) {
+                return;
+              }
+
+              useGitStore.getState().actions.setWorkspaceGitStatus(gitStatus, tab.path);
+            } catch (error) {
+              if (get().rootFolderPath === tab.path) {
+                useGitStore.getState().actions.setWorkspaceGitStatus(null, tab.path);
+              }
+              console.error("Failed to refresh workspace git state:", error);
+            }
+          })();
+
+          const activeSessionBuffer = restorePlan.initialBuffer;
+
+          if (activeSessionBuffer) {
+            await get().handleFileSelect(activeSessionBuffer.path, false);
+            if (activeSessionBuffer.isPinned) {
+              const openedBuffer = useBufferStore
+                .getState()
+                .buffers.find((buffer) => buffer.path === activeSessionBuffer.path);
+              if (openedBuffer && !openedBuffer.isPinned) {
+                bufferActions.handleTabPin(openedBuffer.id);
+              }
+            }
+          }
+
+          if (currentBufferIds.length > 0) {
+            bufferActions.closeBuffersBatch(currentBufferIds, true);
+          }
+
+          set((state) => {
+            state.isSwitchingProject = false;
+          });
+
+          void get().restoreSession(tab.path, activeSessionBuffer?.path);
+
+          return true;
+        } catch (error) {
+          console.error("Failed to switch project:", error);
+          set((state) => {
+            state.isFileTreeLoading = false;
+            state.isSwitchingProject = false;
+          });
+          return false;
         }
-
-        // Load new project's file tree
-        const entries = await readDirectoryContents(tab.path);
-        const fileTree = sortFileEntries(entries);
-        const wrappedFileTree = wrapWithRootFolder(fileTree, tab.path, tab.name);
-
-        // Initialize tree UI state: expand root
-        useFileTreeStore.getState().setExpandedPaths(new Set([tab.path]));
-
-        // Update project store
-        const { setRootFolderPath, setProjectName, setActiveProjectId } =
-          useProjectStore.getState();
-        setRootFolderPath(tab.path);
-        setProjectName(tab.name);
-        setActiveProjectId(projectId);
-
-        // Update workspace tabs
-        useWorkspaceTabsStore.getState().setActiveProjectTab(projectId);
-
-        // Start file watching
-        await useFileWatcherStore.getState().setProjectRoot(tab.path);
-
-        // Initialize git status
-        const gitStatus = await getGitStatus(tab.path);
-        useGitStore.getState().actions.setGitStatus(gitStatus);
-
-        // Clear git diff cache for new project
-        gitDiffCache.clear();
-
-        set((state) => {
-          state.isFileTreeLoading = false;
-          state.files = wrappedFileTree;
-          state.rootFolderPath = tab.path;
-          state.filesVersion++;
-          state.projectFilesCache = undefined;
-        });
-
-        // Restore session tabs for this project
-        await get().restoreSession(tab.path);
-
-        // Clear switching flag
-        set((state) => {
-          state.isSwitchingProject = false;
-        });
-
-        return true;
       },
 
       closeProject: async (projectId: string) => {
@@ -1396,7 +1452,7 @@ export const useFileSystemStore = createSelectors(
 
           // Clear git state
           const gitActions = useGitStore.getState().actions;
-          gitActions.setGitStatus(null);
+          gitActions.setWorkspaceGitStatus(null, null);
           gitActions.setCommits([]);
 
           // Clear project store

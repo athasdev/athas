@@ -29,6 +29,7 @@ export const MainSidebar = memo(() => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const files = useFileSystemStore.use.files();
   const isFileTreeLoading = useFileSystemStore.use.isFileTreeLoading();
+  const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
 
   // sidebar store
   const activePath = useSidebarStore.use.activePath?.();
@@ -55,14 +56,10 @@ export const MainSidebar = memo(() => {
           </div>
         )}
 
-        <div className={cn("h-full", (isGitViewActive || isGitHubPRsViewActive) && "hidden")}>
-          {isFileTreeLoading ? (
-            <div className="flex h-full flex-1 items-center justify-center p-4">
-              <div className="rounded-lg border border-border/60 bg-secondary-bg px-3 py-2 text-text-lighter text-xs">
-                Loading files...
-              </div>
-            </div>
-          ) : (
+        <div
+          className={cn("relative h-full", (isGitViewActive || isGitHubPRsViewActive) && "hidden")}
+        >
+          {(!isFileTreeLoading || isSwitchingProject) && (
             <FileTree
               files={files}
               activePath={activePath}
@@ -80,6 +77,14 @@ export const MainSidebar = memo(() => {
               onFileMove={handleFileMove}
               onDuplicatePath={handleDuplicatePath}
             />
+          )}
+
+          {isFileTreeLoading && !isSwitchingProject && (
+            <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-3">
+              <div className="rounded-full border border-border/60 bg-secondary-bg/92 px-3 py-1.5 text-text-lighter text-xs shadow-lg backdrop-blur-sm">
+                Loading files...
+              </div>
+            </div>
           )}
         </div>
       </div>
