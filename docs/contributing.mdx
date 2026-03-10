@@ -120,6 +120,13 @@ The release workflow automatically:
 - Creates GitHub release
 - Uploads installers and binaries
 
+For signed Windows releases, add these GitHub Actions secrets before tagging a release:
+
+- `WINDOWS_CERTIFICATE`: Base64-encoded `.pfx` certificate bundle
+- `WINDOWS_CERTIFICATE_PASSWORD`: Password for the `.pfx` bundle
+- `WINDOWS_TIMESTAMP_URL`: Optional override for the timestamp server
+- `WINDOWS_TIMESTAMP_USE_TSP`: Optional `true` or `false` for RFC 3161 / TSP timestamps
+
 ### Versioning
 
 We use semantic versioning: `MAJOR.MINOR.PATCH`.
