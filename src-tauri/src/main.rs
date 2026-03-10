@@ -420,6 +420,7 @@ fn main() {
          store_ai_provider_token,
          get_ai_provider_token,
          remove_ai_provider_token,
+         probe_ollama_endpoint,
          // Auth token commands
          store_auth_token,
          get_auth_token,
