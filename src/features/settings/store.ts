@@ -119,7 +119,7 @@ const defaultSettings: Settings = {
   compactMenuBar: true,
   // AI
   aiProviderId: "anthropic",
-  aiModelId: "claude-sonnet-4-5",
+  aiModelId: "claude-sonnet-4-6",
   aiChatWidth: 400,
   isAIChatVisible: false,
   aiCompletion: true,

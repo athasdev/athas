@@ -79,8 +79,8 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 200000,
       },
       {
-        id: "claude-sonnet-4-5",
-        name: "Claude Sonnet 4.5",
+        id: "claude-sonnet-4-6",
+        name: "Claude Sonnet 4.6",
         maxTokens: 200000,
       },
       {
@@ -185,8 +185,8 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 200000,
       },
       {
-        id: "anthropic/claude-sonnet-4.5",
-        name: "Claude Sonnet 4.5",
+        id: "anthropic/claude-sonnet-4.6",
+        name: "Claude Sonnet 4.6",
         maxTokens: 200000,
       },
       {
@@ -210,8 +210,8 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 400000,
       },
       {
-        id: "google/gemini-3-pro-preview",
-        name: "Gemini 3 Pro Preview",
+        id: "google/gemini-3.1-pro-preview",
+        name: "Gemini 3.1 Pro Preview",
         maxTokens: 1048576,
       },
       {
@@ -253,8 +253,8 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "gemini-3-pro-preview",
-        name: "Gemini 3 Pro Preview",
+        id: "gemini-3.1-pro-preview",
+        name: "Gemini 3.1 Pro Preview",
         maxTokens: 1048576,
       },
       {
@@ -275,11 +275,6 @@ export const AI_PROVIDERS: ModelProvider[] = [
       {
         id: "gemini-2.5-flash-lite",
         name: "Gemini 2.5 Flash Lite",
-        maxTokens: 1048576,
-      },
-      {
-        id: "gemini-2.0-flash",
-        name: "Gemini 2.0 Flash",
         maxTokens: 1048576,
       },
     ],
