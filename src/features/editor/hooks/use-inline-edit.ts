@@ -16,7 +16,7 @@ const DEFAULT_INLINE_EDIT_MODELS: AutocompleteModel[] = [
   { id: "mistralai/devstral-small", name: "Devstral Small 1.1" },
   { id: "moonshotai/kimi-k2.5", name: "Kimi K2.5" },
   { id: "openai/gpt-5-nano", name: "GPT-5 Nano" },
-  { id: "google/gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite" },
+  { id: "google/gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
 ];
 const INLINE_EDIT_POPOVER_WIDTH = 320;
 const INLINE_EDIT_POPOVER_ESTIMATED_HEIGHT = 170;
