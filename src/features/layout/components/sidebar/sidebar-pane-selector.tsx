@@ -3,12 +3,13 @@ import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import Button from "../../../../ui/button";
+import type { SidebarView } from "./sidebar-pane-utils";
 
 interface SidebarPaneSelectorProps {
   isGitViewActive: boolean;
   isGitHubPRsViewActive: boolean;
   coreFeatures: CoreFeaturesState;
-  onViewChange: (view: "files" | "git" | "github-prs") => void;
+  onViewChange: (view: SidebarView) => void;
   onSearchClick?: () => void;
   compact?: boolean;
 }
