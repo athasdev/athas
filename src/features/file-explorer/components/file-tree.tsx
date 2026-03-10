@@ -38,6 +38,7 @@ import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
 import { IS_MAC } from "@/utils/platform";
 import { useDragDrop } from "../hooks/use-drag-drop";
+import { buildVisibleFileTreeRows } from "../lib/visible-file-tree-rows";
 import { FileTreeItem } from "./file-tree-item";
 import "../styles/file-tree.css";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -60,8 +61,8 @@ interface FileTreeProps {
   activePath?: string;
   updateActivePath?: (path: string) => void;
   rootFolderPath?: string;
-  onFileSelect: (path: string, isDir: boolean) => void;
-  onFileOpen?: (path: string, isDir: boolean) => void;
+  onFileSelect: (path: string, isDir: boolean) => void | Promise<void>;
+  onFileOpen?: (path: string, isDir: boolean) => void | Promise<void>;
   onCreateNewFileInDirectory: (directoryPath: string, fileName: string) => void;
   onCreateNewFolderInDirectory?: (directoryPath: string, folderName: string) => void;
   onDeletePath?: (path: string, isDir: boolean) => void;
@@ -291,18 +292,10 @@ function FileTreeComponent({
 
   // Compute visible rows based on expansion state in the UI store
   const expandedPaths = useFileTreeStore((s) => s.expandedPaths);
-  const visibleRows = useMemo(() => {
-    const rows: Array<{ file: FileEntry; depth: number; isExpanded: boolean }> = [];
-    const walk = (items: FileEntry[], depth: number) => {
-      for (const item of items) {
-        const isExpanded = item.isDir && expandedPaths.has(item.path);
-        rows.push({ file: item, depth, isExpanded });
-        if (item.isDir && isExpanded && item.children) walk(item.children, depth + 1);
-      }
-    };
-    walk(filteredFiles, 0);
-    return rows;
-  }, [filteredFiles, expandedPaths]);
+  const visibleRows = useMemo(
+    () => buildVisibleFileTreeRows(filteredFiles, expandedPaths),
+    [filteredFiles, expandedPaths],
+  );
 
   // Virtualizer setup
   const rowVirtualizer = useVirtualizer({
@@ -468,6 +461,13 @@ function FileTreeComponent({
     return { path, isDir, file };
   };
 
+  const toggleDirectory = useCallback(
+    async (path: string) => {
+      await Promise.resolve(onFileSelect(path, true));
+    },
+    [onFileSelect],
+  );
+
   const handleContainerClick = useCallback(
     (e: React.MouseEvent) => {
       const t = getTargetItem(e.target);
@@ -480,10 +480,14 @@ function FileTreeComponent({
       }
       e.preventDefault();
       e.stopPropagation();
-      onFileSelect(t.path, t.isDir);
+      if (t.isDir) {
+        void toggleDirectory(t.path);
+      } else {
+        void Promise.resolve(onFileSelect(t.path, false));
+      }
       updateActivePath?.(t.path);
     },
-    [onFileSelect, updateActivePath, pathToFile],
+    [onFileSelect, toggleDirectory, updateActivePath, pathToFile],
   );
 
   const handleContainerDoubleClick = useCallback(
@@ -492,7 +496,7 @@ function FileTreeComponent({
       if (!t) return;
       e.preventDefault();
       e.stopPropagation();
-      onFileOpen?.(t.path, t.isDir);
+      void Promise.resolve(onFileOpen?.(t.path, t.isDir));
       updateActivePath?.(t.path);
     },
     [onFileOpen, updateActivePath, pathToFile],
@@ -704,8 +708,6 @@ function FileTreeComponent({
         const current = visibleRows[curIndex]?.file;
         const isDir = visibleRows[curIndex]?.file.isDir;
 
-        const toggle = (path: string) => useFileTreeStore.getState().toggleFolder(path);
-
         const mod = e.metaKey || e.ctrlKey;
         if (mod && current) {
           if (e.key === "c") {
@@ -775,7 +777,7 @@ function FileTreeComponent({
             if (isDir) {
               const expanded = useFileTreeStore.getState().isExpanded(current.path);
               if (!expanded) {
-                toggle(current.path);
+                void toggleDirectory(current.path);
               } else {
                 const child = visibleRows[curIndex + 1];
                 if (child && child.depth === visibleRows[curIndex].depth + 1) {
@@ -790,7 +792,7 @@ function FileTreeComponent({
             if (!current) break;
             e.preventDefault();
             if (isDir && useFileTreeStore.getState().isExpanded(current.path)) {
-              toggle(current.path);
+              void toggleDirectory(current.path);
             } else {
               const sep = current.path.includes("\\") ? "\\" : "/";
               const parentPath = current.path.split(sep).slice(0, -1).join(sep);
@@ -806,9 +808,9 @@ function FileTreeComponent({
             if (!current) break;
             e.preventDefault();
             if (isDir) {
-              toggle(current.path);
+              void toggleDirectory(current.path);
             } else {
-              onFileOpen?.(current.path, false);
+              void Promise.resolve(onFileOpen?.(current.path, false));
             }
             break;
           }

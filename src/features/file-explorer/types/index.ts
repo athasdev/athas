@@ -6,8 +6,8 @@ export interface FileTreeProps {
   activePath?: string;
   updateActivePath?: (path: string) => void;
   rootFolderPath?: string;
-  onFileSelect: (path: string, isDir: boolean) => void;
-  onFileOpen?: (path: string, isDir: boolean) => void;
+  onFileSelect: (path: string, isDir: boolean) => void | Promise<void>;
+  onFileOpen?: (path: string, isDir: boolean) => void | Promise<void>;
   onCreateNewFileInDirectory: (directoryPath: string, fileName: string) => void;
   onCreateNewFolderInDirectory?: (directoryPath: string, folderName: string) => void;
   onDeletePath?: (path: string, isDir: boolean) => void;
