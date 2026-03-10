@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
 import { cn } from "@/utils/cn";
+import { shouldRequestPaneCollapse } from "./resizable-pane-utils";
 
 type WidthSettingKey = "sidebarWidth" | "aiChatWidth";
 
@@ -117,9 +118,16 @@ export function ResizablePane({
         const deltaX = position === "right" ? startX - e.clientX : e.clientX - startX;
         const rawWidth = startWidth + deltaX;
         const minWidth = getMinWidth();
-        const isClosingDrag = rawWidth < startWidth;
-        const pushedPastMin = rawWidth <= minWidth - collapseThreshold;
-        if (!collapseRequested && collapsible && isClosingDrag && pushedPastMin) {
+        if (
+          !collapseRequested &&
+          shouldRequestPaneCollapse({
+            collapsible,
+            rawWidth,
+            startWidth,
+            minWidth,
+            collapseThreshold,
+          })
+        ) {
           // Keep this sticky once user intentionally pushes past minimum.
           collapseRequested = true;
         }
