@@ -4,6 +4,7 @@ import { load, type Store } from "@tauri-apps/plugin-store";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import { getProviderById } from "@/features/ai/types/providers";
 import { settingsSearchIndex } from "./config/search-index";
 import { cacheFontsForBootstrap, cacheThemeForBootstrap } from "./lib/appearance-bootstrap";
 import { normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "./lib/ui-font-size";
@@ -11,6 +12,36 @@ import type { CoreFeaturesState } from "./types/feature";
 import type { SearchResult, SearchState } from "./types/search";
 
 type Theme = string;
+
+const DEFAULT_AI_PROVIDER_ID = "anthropic";
+const DEFAULT_AI_MODEL_ID = "claude-sonnet-4-6";
+const DEFAULT_AI_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
+
+const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
+  anthropic: {
+    "claude-sonnet-4-5": "claude-sonnet-4-6",
+  },
+  gemini: {
+    "gemini-3-pro-preview": "gemini-3.1-pro-preview",
+    "gemini-2.5-pro": "gemini-3.1-pro-preview",
+    "gemini-2.5-flash": "gemini-3-flash-preview",
+    "gemini-2.5-flash-lite": "gemini-3-flash-preview",
+    "gemini-2.0-flash": "gemini-3-flash-preview",
+  },
+  openai: {
+    "o1-mini": "o3-mini",
+  },
+  openrouter: {
+    "anthropic/claude-sonnet-4.5": "anthropic/claude-sonnet-4.6",
+    "google/gemini-3-pro-preview": "google/gemini-3.1-pro-preview",
+    "google/gemini-2.5-pro": "google/gemini-3.1-pro-preview",
+    "google/gemini-2.5-flash": "google/gemini-3-flash-preview",
+  },
+};
+
+const AI_AUTOCOMPLETE_MODEL_MIGRATIONS: Record<string, string> = {
+  "google/gemini-2.5-flash-lite": "google/gemini-3-flash-preview",
+};
 
 interface Settings {
   // General
@@ -88,6 +119,43 @@ interface Settings {
   gitChangesFolderView: boolean;
 }
 
+const normalizeAISettings = (settings: Settings): Settings => {
+  const normalizedSettings = { ...settings };
+  const provider =
+    getProviderById(normalizedSettings.aiProviderId) || getProviderById(DEFAULT_AI_PROVIDER_ID);
+
+  if (!provider) {
+    return {
+      ...normalizedSettings,
+      aiProviderId: DEFAULT_AI_PROVIDER_ID,
+      aiModelId: DEFAULT_AI_MODEL_ID,
+      aiAutocompleteModelId:
+        AI_AUTOCOMPLETE_MODEL_MIGRATIONS[normalizedSettings.aiAutocompleteModelId] ||
+        normalizedSettings.aiAutocompleteModelId ||
+        DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
+    };
+  }
+
+  normalizedSettings.aiProviderId = provider.id;
+  normalizedSettings.aiModelId =
+    AI_MODEL_MIGRATIONS[provider.id]?.[normalizedSettings.aiModelId] ||
+    normalizedSettings.aiModelId;
+
+  if (
+    provider.models.length > 0 &&
+    !provider.models.some((model) => model.id === normalizedSettings.aiModelId)
+  ) {
+    normalizedSettings.aiModelId = provider.models[0].id;
+  }
+
+  normalizedSettings.aiAutocompleteModelId =
+    AI_AUTOCOMPLETE_MODEL_MIGRATIONS[normalizedSettings.aiAutocompleteModelId] ||
+    normalizedSettings.aiAutocompleteModelId ||
+    DEFAULT_AI_AUTOCOMPLETE_MODEL_ID;
+
+  return normalizedSettings;
+};
+
 const defaultSettings: Settings = {
   // General
   autoSave: true,
@@ -118,12 +186,12 @@ const defaultSettings: Settings = {
   nativeMenuBar: false,
   compactMenuBar: true,
   // AI
-  aiProviderId: "anthropic",
-  aiModelId: "claude-sonnet-4-6",
+  aiProviderId: DEFAULT_AI_PROVIDER_ID,
+  aiModelId: DEFAULT_AI_MODEL_ID,
   aiChatWidth: 400,
   isAIChatVisible: false,
   aiCompletion: true,
-  aiAutocompleteModelId: "mistralai/devstral-small",
+  aiAutocompleteModelId: DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   aiDefaultSessionMode: "",
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
@@ -313,27 +381,28 @@ const initializeSettings = async () => {
       loadedSettings.theme = detectedTheme;
     }
 
-    loadedSettings.uiFontSize = normalizeUiFontSize(loadedSettings.uiFontSize);
+    const normalizedSettings = normalizeAISettings(loadedSettings);
+    normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
 
-    applyTheme(loadedSettings.theme);
+    applyTheme(normalizedSettings.theme);
     cacheFontsForBootstrap(
-      loadedSettings.fontFamily,
-      loadedSettings.uiFontFamily,
-      loadedSettings.uiFontSize,
+      normalizedSettings.fontFamily,
+      normalizedSettings.uiFontFamily,
+      normalizedSettings.uiFontSize,
     );
 
     // Sync Ollama base URL with provider
-    if (loadedSettings.ollamaBaseUrl) {
+    if (normalizedSettings.ollamaBaseUrl) {
       import("@/utils/providers").then(({ setOllamaBaseUrl }) => {
-        setOllamaBaseUrl(loadedSettings.ollamaBaseUrl);
+        setOllamaBaseUrl(normalizedSettings.ollamaBaseUrl);
       });
     }
 
     // Update Zustand store
-    useSettingsStore.getState().initializeSettings(loadedSettings);
-    await saveSettingsToStore(loadedSettings);
+    useSettingsStore.getState().initializeSettings(normalizedSettings);
+    await saveSettingsToStore(normalizedSettings);
 
-    return loadedSettings;
+    return normalizedSettings;
   } catch (error) {
     console.error("Failed to initialize settings:", error);
     return defaultSettings;
@@ -360,7 +429,10 @@ export const useSettingsStore = create(
         updateSettingsFromJSON: (jsonString: string): boolean => {
           try {
             const parsedSettings = JSON.parse(jsonString);
-            const validatedSettings = { ...defaultSettings, ...parsedSettings };
+            const validatedSettings = normalizeAISettings({
+              ...defaultSettings,
+              ...parsedSettings,
+            });
 
             set((state) => {
               state.settings = validatedSettings;

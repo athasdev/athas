@@ -166,11 +166,6 @@ export const AI_PROVIDERS: ModelProvider[] = [
         name: "o1",
         maxTokens: 200000,
       },
-      {
-        id: "o1-mini",
-        name: "o1 Mini",
-        maxTokens: 128000,
-      },
     ],
   },
   {
@@ -220,16 +215,6 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 1048576,
       },
       {
-        id: "google/gemini-2.5-pro",
-        name: "Gemini 2.5 Pro",
-        maxTokens: 1048576,
-      },
-      {
-        id: "google/gemini-2.5-flash",
-        name: "Gemini 2.5 Flash",
-        maxTokens: 1048576,
-      },
-      {
         id: "deepseek/deepseek-v3.2",
         name: "DeepSeek V3.2",
         maxTokens: 163840,
@@ -260,21 +245,6 @@ export const AI_PROVIDERS: ModelProvider[] = [
       {
         id: "gemini-3-flash-preview",
         name: "Gemini 3 Flash Preview",
-        maxTokens: 1048576,
-      },
-      {
-        id: "gemini-2.5-pro",
-        name: "Gemini 2.5 Pro",
-        maxTokens: 1048576,
-      },
-      {
-        id: "gemini-2.5-flash",
-        name: "Gemini 2.5 Flash",
-        maxTokens: 1048576,
-      },
-      {
-        id: "gemini-2.5-flash-lite",
-        name: "Gemini 2.5 Flash Lite",
         maxTokens: 1048576,
       },
     ],
