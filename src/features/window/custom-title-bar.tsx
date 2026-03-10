@@ -2,6 +2,10 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Maximize2, MenuIcon, Minimize2, Minus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
+import {
+  resolveSidebarPaneClick,
+  type SidebarView,
+} from "@/features/layout/components/sidebar/sidebar-pane-utils";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/stores/ui-state-store";
@@ -22,7 +26,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const {
     isGitViewActive,
     isGitHubPRsViewActive,
+    isSidebarVisible,
     setActiveView,
+    setIsSidebarVisible,
     setIsGlobalSearchVisible,
     isGlobalSearchVisible,
   } = useUIState();
@@ -74,6 +80,20 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     } catch (error) {
       console.error("Error closing window:", error);
     }
+  };
+
+  const handleSidebarViewChange = (view: SidebarView) => {
+    const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
+      {
+        isSidebarVisible,
+        isGitViewActive,
+        isGitHubPRsViewActive,
+      },
+      view,
+    );
+
+    setActiveView(nextView);
+    setIsSidebarVisible(nextIsSidebarVisible);
   };
 
   if (showMinimal) {
@@ -139,7 +159,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             isGitViewActive={isGitViewActive}
             isGitHubPRsViewActive={isGitHubPRsViewActive}
             coreFeatures={settings.coreFeatures}
-            onViewChange={setActiveView}
+            onViewChange={handleSidebarViewChange}
             onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
             compact
           />
@@ -189,7 +209,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             isGitViewActive={isGitViewActive}
             isGitHubPRsViewActive={isGitHubPRsViewActive}
             coreFeatures={settings.coreFeatures}
-            onViewChange={setActiveView}
+            onViewChange={handleSidebarViewChange}
             onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
             compact
           />
