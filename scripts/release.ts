@@ -130,6 +130,14 @@ async function release() {
     error("Please specify bump type: patch, minor, major, or a version number (e.g., 1.2.3)");
   }
 
+  if (!process.env.RELEASE_SKIP_CHECKS) {
+    log("Running pre-release checks...\n", "magenta");
+    await $`bun pre-release`;
+    success("Pre-release checks passed");
+  } else {
+    info("Skipping pre-release checks because RELEASE_SKIP_CHECKS is set");
+  }
+
   // Check if working directory is clean
   await checkWorkingDirectory();
 

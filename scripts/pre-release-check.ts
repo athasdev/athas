@@ -149,6 +149,23 @@ async function main() {
     return { passed: true };
   });
 
+  await runCheck("Origin remote targets athasdev/athas", async () => {
+    const remoteUrl = (await $`git remote get-url origin`.text()).trim();
+    const isExpectedRemote =
+      remoteUrl.includes("github.com/athasdev/athas") ||
+      remoteUrl.includes("github.com:athasdev/athas");
+
+    if (!isExpectedRemote) {
+      return {
+        passed: true,
+        warning: true,
+        message: `origin is '${remoteUrl}'`,
+      };
+    }
+
+    return { passed: true };
+  });
+
   // Check: Up to date with remote
   await runCheck("Up to date with remote", async () => {
     await $`git fetch origin master`.quiet();
@@ -221,6 +238,14 @@ async function main() {
     const result = await $`bun check`.quiet().nothrow();
     if (result.exitCode !== 0) {
       return { passed: false, message: "Lint errors found" };
+    }
+    return { passed: true };
+  });
+
+  await runCheck("Bun test suite", async () => {
+    const result = await $`bun test`.quiet().nothrow();
+    if (result.exitCode !== 0) {
+      return { passed: false, message: "Tests failed" };
     }
     return { passed: true };
   });
@@ -342,6 +367,25 @@ async function main() {
         }
       }
     }
+    return { passed: true };
+  });
+
+  header("Release Readiness");
+
+  await runCheck("GitHub release workflow exists", async () => {
+    const workflowPath = join(process.cwd(), ".github/workflows");
+    if (!existsSync(workflowPath)) {
+      return { passed: false, message: "Missing .github/workflows directory" };
+    }
+
+    const releaseWorkflow = join(workflowPath, "release.yml");
+    const releaseAltWorkflow = join(workflowPath, "release.yaml");
+    const hasReleaseWorkflow = existsSync(releaseWorkflow) || existsSync(releaseAltWorkflow);
+
+    if (!hasReleaseWorkflow) {
+      return { passed: true, warning: true, message: "No release workflow file found" };
+    }
+
     return { passed: true };
   });
 
