@@ -21,7 +21,7 @@ const TextDiffViewer = memo(
     const settings = useSettingsStore((state) => state.settings);
     const zoomLevel = useZoomStore.use.editorZoomLevel();
     const fontSize = settings.fontSize * zoomLevel;
-    const lineHeight = Math.max(14, Math.round(calculateLineHeight(fontSize) * 0.92));
+    const lineHeight = calculateLineHeight(fontSize);
     const tabSize = settings.tabSize;
 
     const hunks = useMemo(() => groupLinesIntoHunks(diff.lines), [diff.lines]);

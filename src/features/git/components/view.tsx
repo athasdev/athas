@@ -31,6 +31,11 @@ interface GitViewProps {
   isActive?: boolean;
 }
 
+interface GitFileDiffStats {
+  additions: number;
+  deletions: number;
+}
+
 interface DropdownPosition {
   left: number;
   top: number;
@@ -64,6 +69,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [showRemoteManager, setShowRemoteManager] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
   const [openBottomSection, setOpenBottomSection] = useState<"stash" | "history" | null>(null);
+  const [fileDiffStats, setFileDiffStats] = useState<Record<string, GitFileDiffStats>>({});
 
   const wasActiveRef = useRef(isActive);
   const repoTriggerRef = useRef<HTMLButtonElement>(null);
@@ -257,6 +263,49 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       }
     };
   }, [activeRepoPath, refreshGitData]);
+
+  useEffect(() => {
+    if (!activeRepoPath || !gitStatus?.files.length) {
+      setFileDiffStats({});
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadFileDiffStats = async () => {
+      const uniqueFiles = Array.from(
+        new Map(
+          gitStatus.files.map((file) => [
+            `${file.staged ? "staged" : "unstaged"}:${file.path}`,
+            file,
+          ]),
+        ).values(),
+      );
+
+      const statsEntries = await Promise.all(
+        uniqueFiles.map(async (file) => {
+          const diff = await getFileDiff(activeRepoPath, file.path, file.staged);
+          const { additions, deletions } = diff
+            ? countDiffStats([diff])
+            : { additions: 0, deletions: 0 };
+          return [
+            `${file.staged ? "staged" : "unstaged"}:${file.path}`,
+            { additions, deletions },
+          ] as const;
+        }),
+      );
+
+      if (!isCancelled) {
+        setFileDiffStats(Object.fromEntries(statsEntries));
+      }
+    };
+
+    void loadFileDiffStats();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeRepoPath, gitStatus?.files]);
 
   useEffect(() => {
     if (!showGitActionsMenu) return;
@@ -664,6 +713,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <div className="scrollbar-none min-h-0 overflow-y-auto">
             <GitStatusPanel
               files={gitStatus.files}
+              fileDiffStats={fileDiffStats}
               onFileSelect={handleViewFileDiff}
               onOpenFile={handleOpenOriginalFile}
               onRefresh={handleManualRefresh}

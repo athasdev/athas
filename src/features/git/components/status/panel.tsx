@@ -16,8 +16,14 @@ import type { GitFile } from "../../types/git";
 import { StashMessageModal } from "../stash/modal";
 import { GitFileItem } from "./file-item";
 
+interface GitFileDiffStats {
+  additions: number;
+  deletions: number;
+}
+
 interface GitStatusPanelProps {
   files: GitFile[];
+  fileDiffStats?: Record<string, GitFileDiffStats>;
   onFileSelect?: (path: string, staged: boolean) => void;
   onOpenFile?: (path: string) => void;
   onRefresh?: () => void;
@@ -106,6 +112,7 @@ const sortFilesByPath = (fileList: GitFile[]) =>
 
 const GitStatusPanel = ({
   files,
+  fileDiffStats,
   onFileSelect,
   onOpenFile,
   onRefresh,
@@ -132,6 +139,8 @@ const GitStatusPanel = ({
   const unstagedFiles = useMemo(() => files.filter((f) => !f.staged), [files]);
   const groupedStagedFiles = useMemo(() => groupFilesByStatus(stagedFiles), [stagedFiles]);
   const groupedUnstagedFiles = useMemo(() => groupFilesByStatus(unstagedFiles), [unstagedFiles]);
+  const getDiffStats = (file: GitFile) =>
+    fileDiffStats?.[`${file.staged ? "staged" : "unstaged"}:${file.path}`];
 
   const handleStageFile = async (filePath: string) => {
     if (!repoPath) return;
@@ -259,6 +268,7 @@ const GitStatusPanel = ({
             <GitFileItem
               key={`${file.path}-${index}`}
               file={file}
+              diffStats={getDiffStats(file)}
               onClick={() => onFileSelect?.(file.path, file.staged)}
               onContextMenu={(e) => handleContextMenu(e, file.path, file.staged)}
               onStage={() => handleStageFile(file.path)}
@@ -313,6 +323,7 @@ const GitStatusPanel = ({
         <GitFileItem
           key={file.path}
           file={file}
+          diffStats={getDiffStats(file)}
           onClick={() => onFileSelect?.(file.path, file.staged)}
           onContextMenu={(e) => handleContextMenu(e, file.path, file.staged)}
           onStage={() => handleStageFile(file.path)}
