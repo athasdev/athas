@@ -1,7 +1,5 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
 
 // Parse CLI flags
 const args = process.argv.slice(2);
@@ -85,12 +83,15 @@ async function runCheck(
 
 function getDirSize(dirPath: string): number {
   let size = 0;
-  if (!existsSync(dirPath)) return 0;
+  if (!Bun.file(dirPath).size && !(dirPath === process.cwd())) {
+    // Keep missing directories as zero-sized.
+    // Bun.file().size is 0 for missing files, so directory probing still relies on find below.
+  }
 
   const files = Bun.spawnSync(["find", dirPath, "-type", "f"]).stdout.toString().trim().split("\n");
   for (const file of files) {
-    if (file && existsSync(file)) {
-      size += statSync(file).size;
+    if (file) {
+      size += Bun.file(file).size;
     }
   }
   return size;
@@ -111,14 +112,18 @@ async function main() {
   }
 
   // Get current version from package.json
-  const pkgPath = join(process.cwd(), "package.json");
-  const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+  const pkgPath = `${process.cwd()}/package.json`;
+  const pkg = JSON.parse(await Bun.file(pkgPath).text());
   const currentVersion = pkg.version;
 
   // Get version from tauri.conf.json
-  const tauriConfigPath = join(process.cwd(), "src-tauri/tauri.conf.json");
-  const tauriConfig = JSON.parse(readFileSync(tauriConfigPath, "utf-8"));
+  const tauriConfigPath = `${process.cwd()}/src-tauri/tauri.conf.json`;
+  const tauriConfig = JSON.parse(await Bun.file(tauriConfigPath).text());
   const tauriVersion = tauriConfig.version;
+  const cargoTomlPath = `${process.cwd()}/src-tauri/Cargo.toml`;
+  const cargoToml = await Bun.file(cargoTomlPath).text();
+  const cargoVersionMatch = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
+  const cargoVersion = cargoVersionMatch?.[1];
 
   header("Version Info");
   log(`  Current version: v${currentVersion}`, "blue");
@@ -181,12 +186,19 @@ async function main() {
 
   header("Version Consistency");
 
-  // Check: Version consistency between package.json and tauri.conf.json
-  await runCheck("package.json matches tauri.conf.json", async () => {
-    if (currentVersion !== tauriVersion) {
+  // Check: Version consistency between versioned app files
+  await runCheck("Version files stay in sync", async () => {
+    if (!cargoVersion) {
       return {
         passed: false,
-        message: `package.json (${currentVersion}) != tauri.conf.json (${tauriVersion})`,
+        message: "Could not find version in src-tauri/Cargo.toml",
+      };
+    }
+
+    if (currentVersion !== tauriVersion || currentVersion !== cargoVersion) {
+      return {
+        passed: false,
+        message: `package.json (${currentVersion}), tauri.conf.json (${tauriVersion}), Cargo.toml (${cargoVersion})`,
       };
     }
     return { passed: true };
@@ -196,7 +208,7 @@ async function main() {
 
   // Check: Tree-sitter parsers are present
   await runCheck("Tree-sitter parsers", async () => {
-    const parsersDir = join(process.cwd(), "public/tree-sitter/parsers");
+    const parsersDir = `${process.cwd()}/public/tree-sitter/parsers`;
     const expectedLangs = [
       "bash", "c", "c_sharp", "cpp", "css", "dart", "elisp", "elixir",
       "go", "html", "java", "javascript", "json", "kotlin", "lua",
@@ -207,10 +219,10 @@ async function main() {
 
     const missing: string[] = [];
     for (const lang of expectedLangs) {
-      const wasmPath = join(parsersDir, lang, "parser.wasm");
-      const queryPath = join(parsersDir, lang, "highlights.scm");
-      if (!existsSync(wasmPath)) missing.push(`${lang}/parser.wasm`);
-      if (!existsSync(queryPath)) missing.push(`${lang}/highlights.scm`);
+      const wasmPath = `${parsersDir}/${lang}/parser.wasm`;
+      const queryPath = `${parsersDir}/${lang}/highlights.scm`;
+      if (!(await Bun.file(wasmPath).exists())) missing.push(`${lang}/parser.wasm`);
+      if (!(await Bun.file(queryPath).exists())) missing.push(`${lang}/highlights.scm`);
     }
 
     if (missing.length > 0) {
@@ -262,7 +274,7 @@ async function main() {
 
     // Check: Bundle size
     await runCheck("Bundle size < 5MB", async () => {
-      const distPath = join(process.cwd(), "dist");
+      const distPath = `${process.cwd()}/dist`;
       const size = getDirSize(distPath);
       const sizeStr = formatBytes(size);
       const maxSize = 5 * 1024 * 1024; // 5MB
@@ -373,14 +385,15 @@ async function main() {
   header("Release Readiness");
 
   await runCheck("GitHub release workflow exists", async () => {
-    const workflowPath = join(process.cwd(), ".github/workflows");
-    if (!existsSync(workflowPath)) {
+    const workflowPath = `${process.cwd()}/.github/workflows`;
+    if (!(await Bun.file(workflowPath).exists())) {
       return { passed: false, message: "Missing .github/workflows directory" };
     }
 
-    const releaseWorkflow = join(workflowPath, "release.yml");
-    const releaseAltWorkflow = join(workflowPath, "release.yaml");
-    const hasReleaseWorkflow = existsSync(releaseWorkflow) || existsSync(releaseAltWorkflow);
+    const releaseWorkflow = `${workflowPath}/release.yml`;
+    const releaseAltWorkflow = `${workflowPath}/release.yaml`;
+    const hasReleaseWorkflow =
+      (await Bun.file(releaseWorkflow).exists()) || (await Bun.file(releaseAltWorkflow).exists());
 
     if (!hasReleaseWorkflow) {
       return { passed: true, warning: true, message: "No release workflow file found" };
