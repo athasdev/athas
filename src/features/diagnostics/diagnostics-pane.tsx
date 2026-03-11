@@ -19,6 +19,7 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { useContextMenu } from "@/hooks/use-context-menu";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import type { Diagnostic, DiagnosticCodeAction } from "./types";
 
@@ -709,12 +710,12 @@ const DiagnosticsPane = ({
               size={12}
               className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-text-lighter"
             />
-            <input
+            <Input
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search problems"
-              className="w-full rounded-full border border-border/80 bg-primary-bg py-1.5 pr-10 pl-8 text-text text-xs outline-none transition-colors focus:border-accent/70 focus:ring-1 focus:ring-accent/25"
+              className="w-full rounded-full border-border/80 bg-primary-bg py-1.5 pr-10 pl-8 focus:border-accent/70 focus:ring-accent/25"
             />
             <button
               type="button"

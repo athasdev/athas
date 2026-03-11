@@ -75,7 +75,7 @@ const TabBarItem = memo(function TabBarItem({
             : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",
           isDraggedTab ? "opacity-30" : "opacity-100",
         )}
-        style={{ minWidth: 104, maxWidth: 290 }}
+        style={{ maxWidth: 290 }}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
@@ -153,7 +153,7 @@ const TabBarItem = memo(function TabBarItem({
           draggable={false}
         >
           {buffer.isPinned ? (
-            <Pin className="pointer-events-none select-none text-accent" size={10} />
+            <Pin className="pointer-events-none select-none fill-current text-accent" size={10} />
           ) : (
             <X className="pointer-events-none select-none" size={10} />
           )}

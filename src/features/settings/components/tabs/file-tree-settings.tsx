@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
+import Input from "@/ui/input";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
 
@@ -80,7 +81,7 @@ export const FileTreeSettings = () => {
           description="Files matching these glob patterns will be hidden from the file tree"
           className="flex-col items-start gap-2"
         >
-          <input
+          <Input
             id="hiddenFilePatterns"
             type="text"
             value={filePatternsInput}
@@ -88,7 +89,7 @@ export const FileTreeSettings = () => {
             onBlur={handleFilePatternsBlur}
             onKeyDown={(e) => handlePatternInputEnter(e, handleFilePatternsBlur)}
             placeholder="e.g., *.log, *.tmp, **/*.bak"
-            className="ui-font h-9 w-full rounded-xl border border-border bg-secondary-bg/80 px-3 text-text text-xs placeholder:text-text-lighter focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
+            className="h-9 w-full rounded-xl border-border bg-secondary-bg/80 focus:border-accent focus:ring-accent/30"
           />
           <p className="text-[11px] text-text-lighter">Use comma-separated glob patterns.</p>
           {renderPatternPills(settings.hiddenFilePatterns)}
@@ -99,7 +100,7 @@ export const FileTreeSettings = () => {
           description="Directories matching these glob patterns will be hidden from the file tree"
           className="flex-col items-start gap-2"
         >
-          <input
+          <Input
             id="hiddenDirectoryPatterns"
             type="text"
             value={directoryPatternsInput}
@@ -107,7 +108,7 @@ export const FileTreeSettings = () => {
             onBlur={handleDirectoryPatternsBlur}
             onKeyDown={(e) => handlePatternInputEnter(e, handleDirectoryPatternsBlur)}
             placeholder="e.g., node_modules, .git, build/"
-            className="ui-font h-9 w-full rounded-xl border border-border bg-secondary-bg/80 px-3 text-text text-xs placeholder:text-text-lighter focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
+            className="h-9 w-full rounded-xl border-border bg-secondary-bg/80 focus:border-accent focus:ring-accent/30"
           />
           <p className="text-[11px] text-text-lighter">Use comma-separated glob patterns.</p>
           {renderPatternPills(settings.hiddenDirectoryPatterns)}

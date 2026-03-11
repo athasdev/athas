@@ -2,6 +2,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "@/ui/button";
 import Dialog from "@/ui/dialog";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import type { RemoteConnection } from "./types";
 
@@ -113,7 +114,7 @@ const PasswordPromptDialog = ({
             Password
           </label>
           <div className="relative">
-            <input
+            <Input
               id="password-prompt"
               type={showPassword ? "text" : "password"}
               value={password}
@@ -123,11 +124,7 @@ const PasswordPromptDialog = ({
               }}
               placeholder="Enter password"
               autoFocus
-              className={cn(
-                "w-full rounded border border-border bg-secondary-bg",
-                "px-3 py-2 pr-10 text-text text-xs placeholder-text-lighter",
-                "focus:border-accent focus:outline-none",
-              )}
+              className={cn("w-full pr-10", "focus:border-accent focus:ring-accent/30")}
               disabled={isConnecting}
             />
             <button

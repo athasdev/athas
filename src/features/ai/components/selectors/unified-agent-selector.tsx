@@ -8,6 +8,7 @@ import type { AgentConfig } from "@/features/ai/types/acp";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import { getAvailableProviders } from "@/features/ai/types/providers";
 import { useSettingsStore } from "@/features/settings/store";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { getProvider } from "@/utils/providers";
 
@@ -453,14 +454,16 @@ export function UnifiedAgentSelector({
                 size={12}
                 className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-text-lighter"
               />
-              <input
+              <Input
                 ref={inputRef}
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search agents or models..."
-                className="w-full bg-transparent py-2.5 pr-3 pl-8 text-text text-xs placeholder:text-text-lighter focus:outline-none"
+                variant="ghost"
+                leftIcon={Search}
+                className="w-full py-2.5 pr-3"
               />
             </div>
 

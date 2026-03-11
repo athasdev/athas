@@ -1,5 +1,12 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/utils/cn";
 
@@ -10,7 +17,8 @@ export interface ContextMenuItem {
   onClick: () => void;
   disabled?: boolean;
   separator?: boolean;
-  keybinding?: string;
+  keybinding?: ReactNode;
+  className?: string;
 }
 
 interface ContextMenuProps {
@@ -19,9 +27,17 @@ interface ContextMenuProps {
   items: ContextMenuItem[];
   onClose: () => void;
   className?: string;
+  style?: CSSProperties;
 }
 
-export const ContextMenu = ({ isOpen, position, items, onClose, className }: ContextMenuProps) => {
+export const ContextMenu = ({
+  isOpen,
+  position,
+  items,
+  onClose,
+  className,
+  style,
+}: ContextMenuProps) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const getViewportBounds = useCallback(() => {
@@ -154,6 +170,7 @@ export const ContextMenu = ({ isOpen, position, items, onClose, className }: Con
         left: `${position.x}px`,
         top: `${position.y}px`,
         transformOrigin: "top left",
+        ...style,
       }}
     >
       {items.map((item) => {
@@ -175,12 +192,13 @@ export const ContextMenu = ({ isOpen, position, items, onClose, className }: Con
             className={cn(
               "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs",
               item.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
+              item.className,
             )}
           >
             {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
             <span className="flex-1">{item.label}</span>
             {item.keybinding && (
-              <span className="text-text-lighter text-xs">{item.keybinding}</span>
+              <span className="shrink-0 text-text-lighter text-xs">{item.keybinding}</span>
             )}
           </button>
         );

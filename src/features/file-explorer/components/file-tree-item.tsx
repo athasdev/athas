@@ -2,6 +2,7 @@ import type React from "react";
 import { memo } from "react";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-clipboard-store";
 import type { FileEntry } from "@/features/file-system/types/app";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { FileIcon } from "./file-icon";
 
@@ -52,7 +53,7 @@ function FileTreeItemComponent({
             isExpanded={false}
             className="shrink-0 text-text-lighter"
           />
-          <input
+          <Input
             ref={(el) => {
               if (el) {
                 el.focus();
@@ -77,7 +78,8 @@ function FileTreeItemComponent({
             onChange={(e) => onEditingValueChange(e.target.value)}
             onKeyDown={(e) => onKeyDown(e, file)}
             onBlur={() => onBlur(file)}
-            className="ui-font flex-1 border-text border-b border-none bg-transparent text-text text-xs outline-none focus:border-text-lighter"
+            variant="ghost"
+            className="ui-font flex-1 border-text border-b px-0 focus:border-text-lighter"
             placeholder={file.isDir ? "folder name" : "file name"}
           />
         </div>

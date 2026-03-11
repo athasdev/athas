@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { useCellCopy } from "../hooks/use-cell-copy";
 import { useColumnResize } from "../hooks/use-column-resize";
@@ -233,7 +234,7 @@ export default function DataGrid({
                       onClick={() => !isPK && !fk && handleCellClick(ri, col, cell)}
                     >
                       {isEditing ? (
-                        <input
+                        <Input
                           ref={(el) => el?.focus()}
                           type={info?.type.toLowerCase().includes("int") ? "number" : "text"}
                           value={editValue}
@@ -243,7 +244,7 @@ export default function DataGrid({
                             if (e.key === "Escape") setEditing(null);
                           }}
                           onBlur={handleSubmit}
-                          className="w-full rounded-lg border border-border/70 bg-secondary-bg/80 px-2 py-1 text-text text-xs outline-none transition-colors focus:border-accent/60"
+                          className="w-full rounded-lg border-border/70 bg-secondary-bg/80 text-xs focus:border-accent/60"
                         />
                       ) : (
                         <CellRenderer

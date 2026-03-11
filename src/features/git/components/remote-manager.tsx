@@ -1,5 +1,6 @@
 import { Globe, Plus, Server, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { addRemote, getRemotes, removeRemote } from "../api/remotes";
 import type { GitRemote } from "../types/git";
@@ -110,28 +111,20 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
               <span className="font-medium text-text text-xs">Add New Remote</span>
             </div>
 
-            <input
+            <Input
               type="text"
               placeholder="Remote name (e.g., origin)"
               value={newRemoteName}
               onChange={(e) => setNewRemoteName(e.target.value)}
-              className={cn(
-                "w-full rounded border border-border bg-primary-bg",
-                "px-2 py-1 text-text text-xs",
-                "focus:border-blue-500 focus:outline-none",
-              )}
+              className={cn("w-full bg-primary-bg")}
             />
 
-            <input
+            <Input
               type="text"
               placeholder="Remote URL (e.g., https://github.com/user/repo.git)"
               value={newRemoteUrl}
               onChange={(e) => setNewRemoteUrl(e.target.value)}
-              className={cn(
-                "w-full rounded border border-border bg-primary-bg",
-                "px-2 py-1 text-text text-xs",
-                "focus:border-blue-500 focus:outline-none",
-              )}
+              className={cn("w-full bg-primary-bg")}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   handleAddRemote();

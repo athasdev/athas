@@ -1,9 +1,10 @@
 import { Archive, Check, ChevronDown, ChevronRight, FileText, Minus, Plus } from "lucide-react";
 import type React from "react";
-import { type RefObject, useMemo, useRef, useState } from "react";
-import { useOnClickOutside } from "usehooks-ts";
+import { useMemo, useState } from "react";
 import { FileIcon } from "@/features/file-explorer/components/file-icon";
 import { useSettingsStore } from "@/features/settings/store";
+import { useContextMenu } from "@/hooks/use-context-menu";
+import { ContextMenu } from "@/ui/context-menu";
 import { createStash } from "../../api/stash";
 import {
   discardFileChanges,
@@ -119,9 +120,8 @@ const GitStatusPanel = ({
   repoPath,
 }: GitStatusPanelProps) => {
   const gitChangesFolderView = useSettingsStore((state) => state.settings.gitChangesFolderView);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
+  const contextMenu = useContextMenu<ContextMenuState>();
   const [isLoading, setIsLoading] = useState(false);
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [isStagedCollapsed, setIsStagedCollapsed] = useState(true);
   const [isChangesCollapsed, setIsChangesCollapsed] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
@@ -230,19 +230,13 @@ const GitStatusPanel = ({
   };
 
   const handleContextMenu = (e: React.MouseEvent, filePath: string, isStaged: boolean) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({
+    contextMenu.open(e, {
       x: e.clientX,
       y: e.clientY,
       filePath,
       isStaged,
     });
   };
-
-  useOnClickOutside(contextMenuRef as RefObject<HTMLElement>, () => {
-    setContextMenu(null);
-  });
 
   const toggleFolderCollapsed = (section: "changes", folderPath: string) => {
     const key = `${section}:${folderPath}`;
@@ -445,27 +439,24 @@ const GitStatusPanel = ({
         )}
       </div>
 
-      {contextMenu && onOpenFile && (
-        <div
-          ref={contextMenuRef}
-          className="fixed z-50 min-w-[120px] rounded-md border border-border bg-secondary-bg py-1"
-          style={{
-            left: contextMenu.x,
-            top: contextMenu.y,
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => {
-              onOpenFile(contextMenu.filePath);
-              setContextMenu(null);
-            }}
-            className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
-          >
-            <FileText size={12} />
-            Open File
-          </button>
-        </div>
+      {onOpenFile && (
+        <ContextMenu
+          isOpen={contextMenu.isOpen}
+          position={contextMenu.position}
+          items={
+            contextMenu.data
+              ? [
+                  {
+                    id: "open-file",
+                    label: "Open File",
+                    icon: <FileText size={12} />,
+                    onClick: () => onOpenFile(contextMenu.data!.filePath),
+                  },
+                ]
+              : []
+          }
+          onClose={contextMenu.close}
+        />
       )}
 
       <StashMessageModal

@@ -1,5 +1,6 @@
 import { Calendar, GitCommit, Plus, Tag, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { formatShortDate } from "@/utils/date";
 import { createTag, deleteTag, getTags } from "../api/tags";
@@ -115,40 +116,28 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
               <span className="font-medium text-text text-xs">Create New Tag</span>
             </div>
 
-            <input
+            <Input
               type="text"
               placeholder="Tag name (e.g., v1.0.0)"
               value={newTagName}
               onChange={(e) => setNewTagName(e.target.value)}
-              className={cn(
-                "w-full rounded border border-border bg-primary-bg",
-                "px-2 py-1 text-text text-xs",
-                "focus:border-blue-500 focus:outline-none",
-              )}
+              className={cn("w-full bg-primary-bg")}
             />
 
-            <input
+            <Input
               type="text"
               placeholder="Tag message (optional)"
               value={newTagMessage}
               onChange={(e) => setNewTagMessage(e.target.value)}
-              className={cn(
-                "w-full rounded border border-border bg-primary-bg",
-                "px-2 py-1 text-text text-xs",
-                "focus:border-blue-500 focus:outline-none",
-              )}
+              className={cn("w-full bg-primary-bg")}
             />
 
-            <input
+            <Input
               type="text"
               placeholder="Commit SHA (optional, defaults to HEAD)"
               value={newTagCommit}
               onChange={(e) => setNewTagCommit(e.target.value)}
-              className={cn(
-                "w-full rounded border border-border bg-primary-bg",
-                "px-2 py-1 text-text text-xs",
-                "focus:border-blue-500 focus:outline-none",
-              )}
+              className={cn("w-full bg-primary-bg")}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   handleCreateTag();

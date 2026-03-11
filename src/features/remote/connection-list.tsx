@@ -1,7 +1,9 @@
 import { Edit, FolderOpen, Loader2, Plus, Server, Trash2, Wifi, WifiOff } from "lucide-react";
-import React, { useState } from "react";
-import { createPortal } from "react-dom";
+import type React from "react";
+import { useContextMenu } from "@/hooks/use-context-menu";
 import Button from "@/ui/button";
+import type { ContextMenuItem } from "@/ui/context-menu";
+import { ContextMenu } from "@/ui/context-menu";
 import { cn } from "@/utils/cn";
 import type { RemoteConnection } from "./types";
 
@@ -24,11 +26,7 @@ const ConnectionList = ({
   onAddNew,
   connectingMap = {},
 }: ConnectionListProps) => {
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    connectionId: string;
-  } | null>(null);
+  const contextMenu = useContextMenu<string>();
 
   const formatLastConnected = (dateString?: string): string => {
     if (!dateString) return "Never";
@@ -43,37 +41,32 @@ const ConnectionList = ({
     return `${Math.floor(diffMinutes / 1440)}d ago`;
   };
 
-  // Handle click outside to close menu
-  React.useEffect(() => {
-    const handleClickOutside = () => {
-      setContextMenu(null);
-    };
-
-    if (contextMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [contextMenu]);
-
   const handleContextMenu = (e: React.MouseEvent, connectionId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    let x = e.pageX;
-    let y = e.pageY;
-
-    const menuWidth = 150;
-    const menuHeight = 100;
-
-    if (x + menuWidth > window.innerWidth) {
-      x = window.innerWidth - menuWidth;
-    }
-    if (y + menuHeight > window.innerHeight) {
-      y = window.innerHeight - menuHeight;
-    }
-
-    setContextMenu({ x, y, connectionId });
+    contextMenu.open(e, connectionId);
   };
+
+  const contextMenuItems: ContextMenuItem[] = contextMenu.data
+    ? [
+        {
+          id: "edit",
+          label: "Edit",
+          icon: <Edit size={12} />,
+          onClick: () => {
+            const connection = connections.find((c) => c.id === contextMenu.data);
+            if (connection) {
+              onEdit(connection);
+            }
+          },
+        },
+        {
+          id: "delete",
+          label: "Delete",
+          icon: <Trash2 size={12} />,
+          className: "hover:text-red-500",
+          onClick: () => onDelete(contextMenu.data),
+        },
+      ]
+    : [];
 
   return (
     <div className="flex h-full select-none flex-col bg-secondary-bg">
@@ -217,58 +210,12 @@ const ConnectionList = ({
         )}
       </div>
 
-      {/* Context Menu */}
-      {contextMenu &&
-        createPortal(
-          <div
-            className={cn(
-              "fixed z-100 min-w-[140px] rounded-md border",
-              "border-border bg-secondary-bg py-1 shadow-lg",
-            )}
-            style={{
-              left: contextMenu.x,
-              top: contextMenu.y,
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const connection = connections.find((c) => c.id === contextMenu.connectionId);
-                if (connection) {
-                  onEdit(connection);
-                }
-                setContextMenu(null);
-              }}
-              className={cn(
-                "flex w-full items-center gap-2 px-3 py-1.5",
-                "ui-font text-left text-text text-xs hover:bg-hover",
-              )}
-            >
-              <Edit size={12} />
-              Edit
-            </button>
-            <button
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onDelete(contextMenu.connectionId);
-                setContextMenu(null);
-              }}
-              className={cn(
-                "flex w-full items-center gap-2 px-3 py-1.5",
-                "ui-font text-left text-xs hover:bg-hover hover:text-red-500",
-              )}
-            >
-              <Trash2 size={12} />
-              Delete
-            </button>
-          </div>,
-          document.body,
-        )}
+      <ContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        items={contextMenuItems}
+        onClose={contextMenu.close}
+      />
     </div>
   );
 };

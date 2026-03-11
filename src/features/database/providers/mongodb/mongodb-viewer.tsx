@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from "react";
 import Button from "@/ui/button";
 import Input from "@/ui/input";
+import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import { useMongoDbStore } from "./stores/mongodb-store";
 
@@ -45,18 +46,19 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           {store.selectedDatabase && (
             <>
               <span className="text-text-lighter text-xs">Database</span>
-              <select
-                className="ui-font rounded-full border border-border/70 bg-secondary-bg/70 px-2.5 py-1 text-text text-xs outline-none transition-colors focus:border-accent/60"
+              <Select
                 value={store.selectedDatabase}
                 onChange={(e) => actions.selectDatabase(e.target.value)}
                 aria-label="Select database"
+                size="xs"
+                className="rounded-full border-border/70 bg-secondary-bg/70 px-2.5 focus:border-accent/60 focus:ring-accent/30"
               >
                 {store.databases.map((db) => (
                   <option key={db} value={db}>
                     {db}
                   </option>
                 ))}
-              </select>
+              </Select>
             </>
           )}
           <div className="ml-auto flex items-center gap-1 text-text-lighter text-xs">

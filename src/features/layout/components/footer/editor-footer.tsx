@@ -25,6 +25,7 @@ import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
 import { toast } from "@/stores/toast-store";
+import Select from "@/ui/select";
 import {
   beginDesktopAuthSession,
   DesktopAuthError,
@@ -415,19 +416,20 @@ const AiUsageStatusIndicator = () => {
               >
                 Model
               </label>
-              <select
+              <Select
                 id="footer-ai-model-select"
                 value={aiAutocompleteModelId}
                 onChange={(e) => updateSetting("aiAutocompleteModelId", e.target.value)}
                 disabled={isLoadingModels}
-                className="ui-font w-full rounded-lg border border-border bg-secondary-bg px-2 py-1.5 text-text text-xs outline-none focus:border-accent disabled:opacity-60"
+                size="sm"
+                className="focus:border-accent focus:ring-accent/30"
               >
                 {autocompleteModels.map((model) => (
                   <option key={model.id} value={model.id}>
                     {model.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </>
         )}

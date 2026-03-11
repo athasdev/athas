@@ -2,8 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Server } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "@/ui/button";
+import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Dropdown from "@/ui/dropdown";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import type { RemoteConnection, RemoteConnectionFormData } from "./types";
 
@@ -215,7 +217,7 @@ const ConnectionDialog = ({
           <label htmlFor="connection-name" className="font-medium text-text text-xs">
             Connection Name <span className="text-text-lighter">*</span>
           </label>
-          <input
+          <Input
             id="connection-name"
             type="text"
             value={formData.name}
@@ -232,7 +234,7 @@ const ConnectionDialog = ({
             <label htmlFor="host" className="font-medium text-text text-xs">
               Host <span className="text-text-lighter">*</span>
             </label>
-            <input
+            <Input
               id="host"
               type="text"
               value={formData.host}
@@ -246,7 +248,7 @@ const ConnectionDialog = ({
             <label htmlFor="port" className="font-medium text-text text-xs">
               Port
             </label>
-            <input
+            <Input
               id="port"
               type="number"
               value={formData.port}
@@ -278,7 +280,7 @@ const ConnectionDialog = ({
           <label htmlFor="username" className="font-medium text-text text-xs">
             Username <span className="text-text-lighter">*</span>
           </label>
-          <input
+          <Input
             id="username"
             type="text"
             value={formData.username}
@@ -295,7 +297,7 @@ const ConnectionDialog = ({
             Password <span className="text-text-lighter">(optional)</span>
           </label>
           <div className="relative">
-            <input
+            <Input
               id="password"
               type={showPassword ? "text" : "password"}
               value={formData.password}
@@ -317,12 +319,11 @@ const ConnectionDialog = ({
 
         {/* Save Credentials Option */}
         {formData.password && (
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
+          <label htmlFor="save-credentials" className="flex cursor-pointer items-center gap-2">
+            <Checkbox
+              id="save-credentials"
               checked={formData.saveCredentials}
-              onChange={(e) => updateFormData({ saveCredentials: e.target.checked })}
-              className="rounded border-border bg-secondary-bg text-accent focus:ring-accent"
+              onChange={(checked) => updateFormData({ saveCredentials: checked })}
               disabled={isValidating}
             />
             <span className="text-text text-xs">Save password for future connections</span>
@@ -334,7 +335,7 @@ const ConnectionDialog = ({
           <label htmlFor="keypath" className="font-medium text-text text-xs">
             Private Key Path <span className="text-text-lighter">(optional)</span>
           </label>
-          <input
+          <Input
             id="keypath"
             type="text"
             value={formData.keyPath}

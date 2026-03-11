@@ -23,6 +23,7 @@ import {
   getProviderById,
 } from "@/features/ai/types/providers";
 import { useSettingsStore } from "@/features/settings/store";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { getProvider, setOllamaBaseUrl } from "@/utils/providers";
 import { checkOllamaConnection } from "@/utils/providers/ollama-provider";
@@ -499,14 +500,16 @@ export function AIModelSelector({
                     size={12}
                     className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-text-lighter"
                   />
-                  <input
+                  <Input
                     ref={inputRef}
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Search providers and models..."
-                    className="w-full bg-transparent py-2.5 pr-3 pl-8 text-text text-xs placeholder:text-text-lighter focus:outline-none"
+                    variant="ghost"
+                    leftIcon={Search}
+                    className="w-full py-2.5 pr-3"
                   />
                 </div>
 
@@ -601,7 +604,7 @@ export function AIModelSelector({
                                             size={12}
                                             className="ml-3 shrink-0 text-text-lighter"
                                           />
-                                          <input
+                                          <Input
                                             ref={apiKeyInputRef}
                                             type="text"
                                             value={ollamaUrlInput}
@@ -622,7 +625,8 @@ export function AIModelSelector({
                                             }}
                                             placeholder="http://localhost:11434"
                                             spellCheck={false}
-                                            className="min-w-0 flex-1 bg-transparent py-2 text-text text-xs placeholder:text-text-lighter focus:outline-none"
+                                            variant="ghost"
+                                            className="min-w-0 flex-1 py-2"
                                             disabled={ollamaUrlStatus === "checking"}
                                           />
                                           {ollamaUrlStatus === "ok" && (
@@ -666,7 +670,7 @@ export function AIModelSelector({
                                             className="ml-3 shrink-0 text-text-lighter"
                                           />
                                           <div className="relative min-w-0 flex-1">
-                                            <input
+                                            <Input
                                               ref={apiKeyInputRef}
                                               type={showKey ? "text" : "password"}
                                               value={apiKeyInput}
@@ -683,7 +687,8 @@ export function AIModelSelector({
                                                 }
                                               }}
                                               placeholder={`${item.name} API key...`}
-                                              className="w-full bg-transparent py-2 pr-6 text-text text-xs placeholder:text-text-lighter focus:outline-none"
+                                              variant="ghost"
+                                              className="w-full py-2 pr-6"
                                               disabled={isValidating}
                                             />
                                             <button

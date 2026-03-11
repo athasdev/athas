@@ -20,6 +20,7 @@ import { useContextMenu } from "@/hooks/use-context-menu";
 import { useUIState } from "@/stores/ui-state-store";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
+import Input from "@/ui/input";
 
 interface ActionItem {
   id: string;
@@ -241,7 +242,7 @@ export function EmptyEditorState() {
             {customActions.map((action) =>
               editingActionId === action.id ? (
                 <div key={action.id} className="px-1">
-                  <input
+                  <Input
                     ref={inputRef}
                     type="text"
                     placeholder="command"
@@ -249,7 +250,7 @@ export function EmptyEditorState() {
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onBlur={handleSave}
-                    className="w-full rounded border border-border bg-secondary-bg px-2 py-1 text-text text-xs outline-none focus:border-accent"
+                    className="w-full bg-secondary-bg"
                   />
                 </div>
               ) : (
@@ -291,7 +292,7 @@ export function EmptyEditorState() {
 
         {isAddingAction ? (
           <div className="px-1">
-            <input
+            <Input
               ref={inputRef}
               type="text"
               placeholder="command"
@@ -299,7 +300,7 @@ export function EmptyEditorState() {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleSave}
-              className="w-full rounded border border-border bg-secondary-bg px-2 py-1 text-text text-xs outline-none focus:border-accent"
+              className="w-full bg-secondary-bg"
             />
           </div>
         ) : (

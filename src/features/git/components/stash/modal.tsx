@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
 interface StashMessageModalProps {
@@ -62,16 +63,13 @@ export const StashMessageModal = ({
         className="w-80 rounded-lg border border-border bg-secondary-bg p-4"
       >
         <h3 className="mb-3 font-medium text-sm text-text">{title}</h3>
-        <input
+        <Input
           ref={inputRef}
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder={placeholder}
-          className={cn(
-            "mb-4 w-full rounded border border-border bg-primary-bg px-2 py-1.5",
-            "text-sm text-text focus:border-blue-500 focus:outline-none",
-          )}
+          className={cn("mb-4 w-full bg-primary-bg text-sm")}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleConfirm();
             if (e.key === "Escape") onClose();

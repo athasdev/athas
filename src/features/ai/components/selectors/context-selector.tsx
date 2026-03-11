@@ -6,6 +6,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
 import type { FileEntry } from "@/features/file-system/types/app";
 import { useProjectStore } from "@/stores/project-store";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
 
@@ -355,12 +356,14 @@ export function ContextSelector({
                 size={12}
                 className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-text-lighter"
               />
-              <input
+              <Input
                 type="text"
                 placeholder="Search files..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-transparent py-2.5 pr-3 pl-8 text-text text-xs placeholder:text-text-lighter focus:outline-none"
+                variant="ghost"
+                leftIcon={Search}
+                className="w-full py-2.5 pr-3"
                 aria-label="Search files"
               />
             </div>

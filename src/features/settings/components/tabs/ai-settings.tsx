@@ -10,6 +10,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
 import Button from "@/ui/button";
 import Dropdown from "@/ui/dropdown";
+import Input from "@/ui/input";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/utils/autocomplete";
@@ -165,24 +166,19 @@ export const AISettings = () => {
         <Section title="Ollama">
           <SettingRow label="Endpoint" description="Base URL for Ollama API (local, LAN, or cloud)">
             <div className="flex items-center gap-1.5">
-              <div className="relative">
-                <Globe
-                  size={11}
-                  className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 text-text-lighter"
-                />
-                <input
-                  type="text"
-                  value={ollamaUrl}
-                  onChange={(e) => handleOllamaUrlChange(e.target.value)}
-                  placeholder={DEFAULT_OLLAMA_BASE_URL}
-                  spellCheck={false}
-                  className={cn(
-                    "w-56 rounded-lg border bg-secondary-bg py-1.5 pr-2 pl-7 text-text text-xs",
-                    "focus:border-accent focus:outline-none",
-                    ollamaStatus === "error" ? "border-red-500/60" : "border-border",
-                  )}
-                />
-              </div>
+              <Input
+                type="text"
+                value={ollamaUrl}
+                onChange={(e) => handleOllamaUrlChange(e.target.value)}
+                placeholder={DEFAULT_OLLAMA_BASE_URL}
+                spellCheck={false}
+                leftIcon={Globe}
+                className={cn(
+                  "w-56 pr-2",
+                  "focus:border-accent focus:ring-accent/30",
+                  ollamaStatus === "error" ? "border-red-500/60" : "border-border",
+                )}
+              />
               {ollamaStatus === "checking" && (
                 <RefreshCw size={12} className="animate-spin text-text-lighter" />
               )}

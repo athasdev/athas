@@ -11,6 +11,7 @@ import * as React from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
 import type { SettingsTab } from "@/stores/ui-state-store";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
 interface SettingsVerticalTabsProps {
@@ -149,12 +150,13 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
             className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
             size={12}
           />
-          <input
+          <Input
             type="text"
             placeholder="Search settings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="ui-font w-full rounded-full border border-border bg-secondary-bg/80 py-2 pr-3 pl-7 text-text text-xs placeholder:text-text-lighter focus:border-border focus:outline-none focus:ring-1 focus:ring-accent/20"
+            leftIcon={Search}
+            className="w-full rounded-full border-border bg-secondary-bg/80 py-2 pr-3 focus:border-border focus:ring-accent/20"
           />
         </div>
       </div>

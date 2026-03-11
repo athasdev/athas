@@ -13,6 +13,7 @@ import type React from "react";
 import { useEffect, useRef } from "react";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useUIState } from "@/stores/ui-state-store";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
 const FindBar = () => {
@@ -134,14 +135,15 @@ const FindBar = () => {
 
         <div className="flex flex-1 items-center gap-2">
           <Search size={12} className="text-text-lighter" />
-          <input
+          <Input
             ref={inputRef}
             type="text"
             value={searchQuery}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="Find in file..."
-            className="ui-font flex-1 border-none bg-transparent text-text text-xs focus:outline-none focus:ring-0"
+            variant="ghost"
+            className="ui-font flex-1 px-0 text-xs"
             style={{ outline: "none", boxShadow: "none" }}
             aria-label="Search query"
           />
@@ -244,14 +246,15 @@ const FindBar = () => {
 
           <div className="flex flex-1 items-center gap-2">
             <Replace size={12} className="text-text-lighter" />
-            <input
+            <Input
               ref={replaceInputRef}
               type="text"
               value={replaceQuery}
               onChange={handleReplaceInputChange}
               onKeyDown={handleReplaceKeyDown}
               placeholder="Replace with..."
-              className="ui-font flex-1 border-none bg-transparent text-text text-xs focus:outline-none focus:ring-0"
+              variant="ghost"
+              className="ui-font flex-1 px-0 text-xs"
               style={{ outline: "none", boxShadow: "none" }}
               aria-label="Replace text"
             />

@@ -5,6 +5,7 @@ import { useOnClickOutside } from "usehooks-ts";
 import Button from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Input from "@/ui/input";
+import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import type { ColumnInfo } from "../../../models/common.types";
 import { buildDatabaseRowValues } from "../utils/value-coercion";
@@ -376,16 +377,17 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   className="flex-1"
                   required
                 />
-                <select
+                <Select
                   value={column.type}
                   onChange={(e) => updateColumn(index, "type", e.target.value)}
-                  className="ui-font rounded-lg border border-border bg-input px-2 py-1 text-sm text-text"
+                  size="md"
+                  className="bg-input"
                 >
                   <option value="TEXT">TEXT</option>
                   <option value="INTEGER">INTEGER</option>
                   <option value="REAL">REAL</option>
                   <option value="BLOB">BLOB</option>
-                </select>
+                </Select>
                 <label
                   htmlFor={`column-not-null-${index}`}
                   className="ui-font flex items-center gap-1 text-text text-xs"
