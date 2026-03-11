@@ -322,8 +322,8 @@ const ConnectionDialog = ({
           <label htmlFor="save-credentials" className="flex cursor-pointer items-center gap-2">
             <Checkbox
               id="save-credentials"
-              checked={formData.saveCredentials}
-              onChange={(checked) => updateFormData({ saveCredentials: checked })}
+              checked={!!formData.saveCredentials}
+              onChange={(checked) => updateFormData({ saveCredentials: !!checked })}
               disabled={isValidating}
             />
             <span className="text-text text-xs">Save password for future connections</span>

@@ -63,7 +63,11 @@ const ConnectionList = ({
           label: "Delete",
           icon: <Trash2 size={12} />,
           className: "hover:text-red-500",
-          onClick: () => onDelete(contextMenu.data),
+          onClick: () => {
+            if (contextMenu.data) {
+              onDelete(contextMenu.data);
+            }
+          },
         },
       ]
     : [];

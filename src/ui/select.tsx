@@ -2,7 +2,7 @@ import { ChevronDown, type LucideIcon } from "lucide-react";
 import type React from "react";
 import { cn } from "@/utils/cn";
 
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "size"> {
   size?: "xs" | "sm" | "md";
   leftIcon?: LucideIcon;
   rightIcon?: LucideIcon;
