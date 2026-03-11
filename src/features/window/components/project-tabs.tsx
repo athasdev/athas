@@ -1,5 +1,5 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { Copy, Folder, FolderOpen, Plus, X } from "lucide-react";
+import { Copy, Folder, FolderOpen, Plus, Server, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -13,6 +13,8 @@ import { cn } from "@/utils/cn";
 import ProjectPickerDialog from "./project-picker-dialog";
 
 const DRAG_THRESHOLD = 5;
+
+const isRemoteProjectTab = (tab: ProjectTab) => tab.path.startsWith("remote://");
 
 interface TabPosition {
   index: number;
@@ -335,6 +337,7 @@ const ProjectTabs = () => {
         className="flex items-center gap-1 rounded-lg border border-border bg-primary-bg/70 px-1 py-0.5"
       >
         {projectTabs.map((tab: ProjectTab, index: number) => {
+          const isRemote = isRemoteProjectTab(tab);
           const isDraggedTab = isDragging && draggedIndex === index;
           const showDropIndicatorBefore =
             isDragging && dropTargetIndex === index && draggedIndex !== index;
@@ -356,13 +359,17 @@ const ProjectTabs = () => {
                   tab.isActive
                     ? "border-border/80 bg-secondary-bg text-text"
                     : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",
+                  isRemote &&
+                    (tab.isActive
+                      ? "border-sky-500/30 bg-sky-500/8 text-sky-100"
+                      : "text-sky-200/85 hover:border-sky-500/20 hover:bg-sky-500/10 hover:text-sky-100"),
                   isSwitchingProject && "cursor-wait",
                   isDraggedTab && "opacity-30",
                 )}
                 onClick={() => void handleTabClick(tab)}
                 title={tab.path}
               >
-                <Folder size={12} />
+                {isRemote ? <Server size={12} /> : <Folder size={12} />}
                 <span className="max-w-32 truncate">{tab.name}</span>
                 <button
                   onClick={(e) => handleCloseTab(e, tab.id)}
