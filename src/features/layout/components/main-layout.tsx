@@ -303,20 +303,23 @@ export function MainLayout() {
               </ResizablePane>
             </div>
           ) : (
-            sidebarPosition === "left" &&
-            (isSidebarVisible ? (
-              <ResizablePane
-                position="left"
-                widthKey="sidebarWidth"
-                collapsible
-                collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
-                onCollapse={() => setIsSidebarVisible(false)}
-              >
-                <MainSidebar />
-              </ResizablePane>
-            ) : (
-              <SidebarRestoreHandle side="left" onClick={() => setIsSidebarVisible(true)} />
-            ))
+            sidebarPosition === "left" && (
+              <>
+                <ResizablePane
+                  position="left"
+                  widthKey="sidebarWidth"
+                  hidden={!isSidebarVisible}
+                  collapsible
+                  collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
+                  onCollapse={() => setIsSidebarVisible(false)}
+                >
+                  <MainSidebar />
+                </ResizablePane>
+                {!isSidebarVisible && (
+                  <SidebarRestoreHandle side="left" onClick={() => setIsSidebarVisible(true)} />
+                )}
+              </>
+            )
           )}
 
           {/* Main content area with split view */}
@@ -329,19 +332,21 @@ export function MainLayout() {
 
           {/* Right sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
-            isSidebarVisible ? (
+            <>
               <ResizablePane
                 position="right"
                 widthKey="sidebarWidth"
+                hidden={!isSidebarVisible}
                 collapsible
                 collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
                 onCollapse={() => setIsSidebarVisible(false)}
               >
                 <MainSidebar />
               </ResizablePane>
-            ) : (
-              <SidebarRestoreHandle side="right" onClick={() => setIsSidebarVisible(true)} />
-            )
+              {!isSidebarVisible && (
+                <SidebarRestoreHandle side="right" onClick={() => setIsSidebarVisible(true)} />
+              )}
+            </>
           ) : (
             <div className={!showInlineAiChat ? "hidden" : undefined}>
               <ResizablePane

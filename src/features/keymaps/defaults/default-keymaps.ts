@@ -11,7 +11,7 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "cmd+shift+s", command: "file.saveAs", source: "default", when: "editorFocus" },
   { key: "cmd+w", command: "file.close", source: "default", when: "!terminalFocus" },
   { key: "cmd+shift+t", command: "file.reopenClosed", source: "default" },
-  { key: "cmd+n", command: "file.new", source: "default" },
+  { key: "cmd+n", command: "file.new", source: "default", when: "!terminalFocus" },
   { key: "cmd+o", command: "file.open", source: "default" },
   // Note: cmd+p is handled by the global keyboard shortcuts to avoid race conditions with command context
 

@@ -2,7 +2,7 @@ import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { exit } from "@tauri-apps/plugin-process";
 import type React from "react";
-import { isValidElement, type JSX, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
 import { useSettingsStore } from "@/features/settings/store";
@@ -194,37 +194,6 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
     [handleClickEmit, setActiveMenu, themes],
   );
 
-  // Extract shortcuts from menus
-  const shortcuts = useMemo(() => {
-    const extractShortcuts = (
-      element: JSX.Element,
-    ): { shortcut: string; onClick: () => void }[] => {
-      const result: { shortcut: string; onClick: () => void }[] = [];
-
-      if (element.props.shortcut && element.props.onClick) {
-        result.push({
-          shortcut: element.props.shortcut,
-          onClick: element.props.onClick,
-        });
-      }
-
-      // Handle children (including nested submenus)
-      const children = element.props.children;
-      if (children) {
-        const childArray = Array.isArray(children) ? children : [children];
-        childArray.forEach((child) => {
-          if (isValidElement(child)) {
-            result.push(...extractShortcuts(child));
-          }
-        });
-      }
-
-      return result;
-    };
-
-    return Object.values(menus).flatMap((menu) => extractShortcuts(menu));
-  }, [menus]);
-
   // Close menu when clicking outside the menu bar
   useEffect(() => {
     if (!activeMenu) return;
@@ -238,39 +207,6 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
     document.addEventListener("mousedown", handleMouseDown);
     return () => document.removeEventListener("mousedown", handleMouseDown);
   }, [activeMenu, setActiveMenu]);
-
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Check if a shortcut combination was pressed
-      shortcuts.forEach(({ shortcut, onClick }) => {
-        const parts = shortcut.split("+");
-        const requiredCtrl = parts.includes("Ctrl");
-        const requiredAlt = parts.includes("Alt");
-        const requiredShift = parts.includes("Shift");
-        const keyPart = parts[parts.length - 1];
-
-        let expectedKey = keyPart.toLowerCase();
-        if (keyPart === "Left") expectedKey = "arrowleft";
-        if (keyPart === "Right") expectedKey = "arrowright";
-
-        const keyMatches = e.key.toLowerCase() === expectedKey;
-
-        const modifiersMatch =
-          (requiredCtrl ? e.ctrlKey || e.metaKey : !e.ctrlKey && !e.metaKey) &&
-          (requiredAlt ? e.altKey : !e.altKey) &&
-          (requiredShift ? e.shiftKey : !e.shiftKey);
-
-        if (keyMatches && modifiersMatch) {
-          e.preventDefault();
-          onClick();
-        }
-      });
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [shortcuts]);
 
   if (settings.compactMenuBar && !activeMenu) return null;
 

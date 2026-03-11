@@ -9,6 +9,7 @@ import { useAppStore } from "@/stores/app-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { useZoomStore } from "@/stores/zoom-store";
 import { isMac } from "@/utils/platform";
+import { useKeymapStore } from "../stores/store";
 import type { Command } from "../types";
 import { keymapRegistry } from "../utils/registry";
 
@@ -68,8 +69,7 @@ const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+w",
     execute: () => {
-      const terminalContainer = document.querySelector('[data-terminal-container="active"]');
-      if (terminalContainer?.contains(document.activeElement)) return;
+      if (useKeymapStore.getState().contexts.terminalFocus) return;
 
       const bufferStore = useBufferStore.getState();
       const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
@@ -105,6 +105,8 @@ const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+n",
     execute: () => {
+      if (useKeymapStore.getState().contexts.terminalFocus) return;
+
       useFileSystemStore.getState().handleCreateNewFile();
     },
   },
