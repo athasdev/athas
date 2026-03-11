@@ -25,7 +25,7 @@ interface XtermTerminalProps {
   sessionId: string;
   isActive: boolean;
   onReady?: () => void;
-  onTerminalRef?: (ref: { focus: () => void; terminal: Terminal }) => void;
+  onTerminalRef?: (ref: { focus: () => void; showSearch: () => void; terminal: Terminal }) => void;
   onTerminalExit?: (sessionId: string) => void;
   initialCommand?: string;
   workingDirectory?: string;
@@ -104,6 +104,9 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
       terminal.attachCustomKeyEventHandler((e) => {
         if (e.ctrlKey && !e.metaKey) return true;
+        if (e.metaKey && ["Backspace", "k", "a", "e", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+          return true;
+        }
         if (e.metaKey) return false;
         return true;
       });
@@ -247,7 +250,11 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         }, 300);
       }
 
-      onTerminalRef?.({ focus: () => terminal.focus(), terminal });
+      onTerminalRef?.({
+        focus: () => terminal.focus(),
+        showSearch: () => setIsSearchVisible(true),
+        terminal,
+      });
       onReady?.();
     } catch (error) {
       console.error("Failed to initialize terminal:", error);
@@ -524,6 +531,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       terminal: xtermRef.current,
       searchAddon: addonsRef.current?.searchAddon,
       focus: () => xtermRef.current?.focus(),
+      showSearch: () => setIsSearchVisible(true),
       blur: () => xtermRef.current?.blur(),
       clear: () => xtermRef.current?.clear(),
       selectAll: () => xtermRef.current?.selectAll(),

@@ -8,7 +8,10 @@ interface TerminalSessionProps {
   isActive: boolean;
   onDirectoryChange?: (terminalId: string, directory: string) => void;
   onActivity?: (terminalId: string) => void;
-  onRegisterRef?: (terminalId: string, ref: { focus: () => void } | null) => void;
+  onRegisterRef?: (
+    terminalId: string,
+    ref: { focus: () => void; showSearch: () => void } | null,
+  ) => void;
   onTerminalExit?: (terminalId: string) => void;
 }
 
@@ -32,15 +35,24 @@ const TerminalSession = ({
     }
   }, []);
 
+  const showSearch = useCallback(() => {
+    if (xtermInstanceRef.current?.showSearch) {
+      xtermInstanceRef.current.showSearch();
+      return;
+    }
+
+    focusTerminal();
+  }, [focusTerminal]);
+
   // Register ref with parent
   useEffect(() => {
     if (onRegisterRef) {
-      onRegisterRef(terminal.id, { focus: focusTerminal });
+      onRegisterRef(terminal.id, { focus: focusTerminal, showSearch });
       return () => {
         onRegisterRef(terminal.id, null);
       };
     }
-  }, [terminal.id, onRegisterRef, focusTerminal]);
+  }, [terminal.id, onRegisterRef, focusTerminal, showSearch]);
 
   // Handle activity tracking
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
 import { useUIState } from "@/stores/ui-state-store";
 import { useZoomStore } from "@/stores/zoom-store";
@@ -50,11 +50,11 @@ const TerminalContainer = ({
 
   const zoomLevel = useZoomStore.use.terminalZoomLevel();
 
-  const [renamingTerminalId, setRenamingTerminalId] = useState<string | null>(null);
-  const [newTerminalName, setNewTerminalName] = useState("");
   const hasInitializedRef = useRef(false);
   const wasVisibleRef = useRef(false);
-  const terminalSessionRefs = useRef<Map<string, { focus: () => void }>>(new Map());
+  const terminalSessionRefs = useRef<Map<string, { focus: () => void; showSearch: () => void }>>(
+    new Map(),
+  );
   const tabFocusTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const {
     registerTerminalFocus,
@@ -173,14 +173,13 @@ const TerminalContainer = ({
   );
 
   const handleTabRename = useCallback(
-    (terminalId: string) => {
-      const terminal = terminals.find((t) => t.id === terminalId);
-      if (terminal) {
-        setRenamingTerminalId(terminalId);
-        setNewTerminalName(terminal.name);
-      }
+    (terminalId: string, name: string) => {
+      const trimmedName = name.trim();
+      if (!trimmedName) return;
+
+      updateTerminalName(terminalId, trimmedName);
     },
-    [terminals],
+    [updateTerminalName],
   );
 
   const handleCloseOtherTabs = useCallback(
@@ -216,19 +215,6 @@ const TerminalContainer = ({
     [terminals, closeTerminal],
   );
 
-  const confirmRename = useCallback(() => {
-    if (renamingTerminalId && newTerminalName.trim()) {
-      updateTerminalName(renamingTerminalId, newTerminalName.trim());
-    }
-    setRenamingTerminalId(null);
-    setNewTerminalName("");
-  }, [renamingTerminalId, newTerminalName, updateTerminalName]);
-
-  const cancelRename = useCallback(() => {
-    setRenamingTerminalId(null);
-    setNewTerminalName("");
-  }, []);
-
   const handleSplitView = useCallback(() => {
     if (!activeTerminalId) return;
 
@@ -253,6 +239,11 @@ const TerminalContainer = ({
       setTerminalSplitMode(activeTerminalId, true, companionId);
     }
   }, [activeTerminalId, terminals, setTerminalSplitMode, createTerminal, closeTerminal]);
+
+  const handleSearchTerminal = useCallback(() => {
+    if (!activeTerminalId) return;
+    terminalSessionRefs.current.get(activeTerminalId)?.showSearch();
+  }, [activeTerminalId]);
 
   const handleDirectoryChange = useCallback(
     (terminalId: string, directory: string) => {
@@ -280,7 +271,7 @@ const TerminalContainer = ({
 
   // Register terminal session ref
   const registerTerminalRef = useCallback(
-    (terminalId: string, ref: { focus: () => void } | null) => {
+    (terminalId: string, ref: { focus: () => void; showSearch: () => void } | null) => {
       if (ref) {
         terminalSessionRefs.current.set(terminalId, ref);
       } else {
@@ -547,6 +538,7 @@ const TerminalContainer = ({
         onCloseAllTabs={handleCloseAllTabs}
         onCloseTabsToRight={handleCloseTabsToRight}
         onSplitView={handleSplitView}
+        onSearchTerminal={handleSearchTerminal}
         onFullScreen={onFullScreen}
         isFullScreen={isFullScreen}
         isSplitView={terminals.find((t) => t.id === activeTerminalId)?.splitMode || false}
@@ -613,43 +605,6 @@ const TerminalContainer = ({
           );
         })()}
       </div>
-
-      {/* Rename Modal */}
-      {renamingTerminalId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="min-w-[300px] rounded-lg border border-border bg-secondary-bg p-4">
-            <h3 className="mb-3 font-medium text-sm text-text">Rename Terminal</h3>
-            <input
-              type="text"
-              value={newTerminalName}
-              onChange={(e) => setNewTerminalName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  confirmRename();
-                } else if (e.key === "Escape") {
-                  cancelRename();
-                }
-              }}
-              className="w-full rounded border border-border bg-primary-bg px-3 py-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Terminal name"
-            />
-            <div className="mt-3 flex justify-end gap-2">
-              <button
-                onClick={cancelRename}
-                className="px-3 py-1.5 text-text-lighter text-xs transition-colors hover:text-text"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmRename}
-                className="rounded bg-blue-500 px-3 py-1.5 text-white text-xs transition-colors hover:bg-blue-600"
-              >
-                Rename
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

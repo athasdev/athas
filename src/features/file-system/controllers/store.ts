@@ -4,6 +4,7 @@ import { copyFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { useAIChatStore } from "@/features/ai/store/store";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-tree-store";
@@ -66,6 +67,19 @@ const wrapWithRootFolder = (
 };
 
 let latestFileOpenRequestId = 0;
+
+const readPersistedTerminalSessions = () => {
+  try {
+    const stored = localStorage.getItem("terminal-sessions");
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error("Failed to read terminal sessions", error);
+    return [];
+  }
+};
+
+const readPersistedAiWorkspaceSession = () =>
+  useAIChatStore.getState().getWorkspaceSessionSnapshot(useBufferStore.getState().buffers);
 
 export const useFileSystemStore = createSelectors(
   create<FsState & FsActions>()(
@@ -177,6 +191,12 @@ export const useFileSystemStore = createSelectors(
 
       restoreSession: async (projectPath: string, skipBufferPath?: string) => {
         const session = useSessionStore.getState().getSession(projectPath);
+        window.dispatchEvent(
+          new CustomEvent("restore-terminals", {
+            detail: { terminals: session?.terminals || [] },
+          }),
+        );
+
         if (session) {
           const { actions: bufferActions } = useBufferStore.getState();
           const restorePlan = buildWorkspaceRestorePlan(session);
@@ -213,16 +233,11 @@ export const useFileSystemStore = createSelectors(
               useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
             }
           }
-
-          // Restore terminals
-          if (session.terminals && session.terminals.length > 0) {
-            window.dispatchEvent(
-              new CustomEvent("restore-terminals", {
-                detail: { terminals: session.terminals },
-              }),
-            );
-          }
         }
+
+        useAIChatStore
+          .getState()
+          .restoreWorkspaceSession(session?.aiSession, useBufferStore.getState().buffers);
       },
 
       closeFolder: async () => {
@@ -1314,6 +1329,8 @@ export const useFileSystemStore = createSelectors(
                 isPinned: buffer.isPinned,
               })),
               activeBuffer?.path || null,
+              readPersistedTerminalSessions(),
+              readPersistedAiWorkspaceSession(),
             );
           }
 
@@ -1413,17 +1430,6 @@ export const useFileSystemStore = createSelectors(
           const { buffers, activeBufferId } = useBufferStore.getState();
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
 
-          // Get current terminals from local storage (temporary persistence)
-          let terminals: any[] = [];
-          try {
-            const storedTerminals = localStorage.getItem("terminal-sessions");
-            if (storedTerminals) {
-              terminals = JSON.parse(storedTerminals);
-            }
-          } catch (e) {
-            console.error("Failed to read terminal sessions", e);
-          }
-
           useSessionStore.getState().saveSession(
             tab.path,
             buffers.map((b) => ({
@@ -1433,7 +1439,8 @@ export const useFileSystemStore = createSelectors(
               isPinned: b.isPinned,
             })),
             activeBuffer?.path || null,
-            terminals,
+            readPersistedTerminalSessions(),
+            readPersistedAiWorkspaceSession(),
           );
         }
 

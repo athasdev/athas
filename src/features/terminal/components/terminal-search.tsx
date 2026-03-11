@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
 interface TerminalSearchProps {
@@ -68,18 +69,15 @@ export const TerminalSearch: React.FC<TerminalSearchProps> = ({
 
   return (
     <div className="absolute top-1.5 right-10 z-50 flex items-center gap-1 border border-border bg-secondary-bg px-1.5 py-1 shadow-lg">
-      <input
+      <Input
         ref={inputRef}
         type="text"
         value={searchTerm}
         onChange={handleSearchChange}
         onKeyDown={handleKeyDown}
         placeholder="Find..."
-        className={cn(
-          "ui-font w-32 bg-transparent px-1.5 py-0.5 text-text text-xs",
-          "border-none outline-none focus:outline-none",
-          "placeholder:text-text-lighter",
-        )}
+        variant="ghost"
+        className={cn("ui-font w-32 px-1.5 py-0.5")}
       />
 
       {searchTerm && totalMatches > 0 && (
