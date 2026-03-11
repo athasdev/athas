@@ -63,7 +63,12 @@ export type StopReason = "end_turn" | "max_tokens" | "max_turn_requests" | "refu
 // UI action types that agents can request
 export type UiAction =
   | { action: "open_web_viewer"; url: string }
-  | { action: "open_terminal"; command: string | null };
+  | { action: "open_terminal"; command: string | null }
+  | { action: "navigate_web_viewer"; url: string }
+  | { action: "go_back_web_viewer" }
+  | { action: "go_forward_web_viewer" }
+  | { action: "set_viewport"; width: number; height: number }
+  | { action: "get_page_info" };
 
 export type AcpEvent =
   | {

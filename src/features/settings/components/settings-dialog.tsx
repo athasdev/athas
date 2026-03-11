@@ -17,6 +17,7 @@ import { GeneralSettings } from "./tabs/general-settings";
 import { KeyboardSettings } from "./tabs/keyboard-settings";
 import { LanguageSettings } from "./tabs/language-settings";
 import { TerminalSettings } from "./tabs/terminal-settings";
+import { WebViewerSettings } from "./tabs/web-viewer-settings";
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -75,6 +76,8 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         return <AdvancedSettings />;
       case "terminal":
         return <TerminalSettings />;
+      case "web-viewer":
+        return <WebViewerSettings />;
       default:
         return <GeneralSettings />;
     }

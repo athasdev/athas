@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useWebViewerStore } from "@/features/web-viewer/stores/web-viewer-store";
 import { useProjectStore } from "@/stores/project-store";
 import { buildContextPrompt } from "./context-builder";
 import type { ContextInfo } from "./types";
@@ -238,6 +239,30 @@ export class AcpStreamHandler {
           command: action.command ?? undefined,
           name: action.command ?? undefined,
         });
+        break;
+
+      case "navigate_web_viewer":
+        console.log("Navigating web viewer:", action.url);
+        window.dispatchEvent(new CustomEvent("webviewer-navigate", { detail: action.url }));
+        break;
+
+      case "go_back_web_viewer":
+        window.dispatchEvent(new CustomEvent("webviewer-go-back"));
+        break;
+
+      case "go_forward_web_viewer":
+        window.dispatchEvent(new CustomEvent("webviewer-go-forward"));
+        break;
+
+      case "set_viewport": {
+        const webViewerActions = useWebViewerStore.getState().actions;
+        webViewerActions.setResponsiveMode(true);
+        webViewerActions.setActiveDevicePreset(null);
+        webViewerActions.setCustomDimensions({ width: action.width, height: action.height });
+        break;
+      }
+
+      case "get_page_info":
         break;
     }
   }

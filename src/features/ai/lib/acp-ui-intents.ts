@@ -1,7 +1,9 @@
 export interface DirectAcpUiAction {
-  kind: "open_web_viewer" | "open_terminal";
+  kind: "open_web_viewer" | "open_terminal" | "navigate_web_viewer" | "go_back_web_viewer" | "go_forward_web_viewer" | "set_viewport";
   url?: string;
   command?: string;
+  width?: number;
+  height?: number;
 }
 
 const stripWrappingChars = (value: string): string =>
@@ -49,6 +51,29 @@ export const parseDirectAcpUiAction = (message: string): DirectAcpUiAction | nul
   if (terminalMatch?.[1]) {
     const command = stripWrappingChars(terminalMatch[1]);
     if (command) return { kind: "open_terminal", command };
+  }
+
+  const navigateMatch = text.match(/\bnavigate\s+(?:to\s+)?(.+?)\s+(?:in\s+)?(?:web|browser)\b/i);
+  if (navigateMatch?.[1]) {
+    const url = normalizeWebUrl(navigateMatch[1]);
+    if (url) return { kind: "navigate_web_viewer", url };
+  }
+
+  if (/\bgo\s+back\s+(?:in\s+)?(?:the\s+)?(?:web|browser)\b/i.test(text)) {
+    return { kind: "go_back_web_viewer" };
+  }
+
+  if (/\bgo\s+forward\s+(?:in\s+)?(?:the\s+)?(?:web|browser)\b/i.test(text)) {
+    return { kind: "go_forward_web_viewer" };
+  }
+
+  const viewportMatch = text.match(/\bset\s+viewport\s+(?:to\s+)?(\d+)\s*[x×]\s*(\d+)/i);
+  if (viewportMatch?.[1] && viewportMatch?.[2]) {
+    return {
+      kind: "set_viewport",
+      width: parseInt(viewportMatch[1], 10),
+      height: parseInt(viewportMatch[2], 10),
+    };
   }
 
   return null;
