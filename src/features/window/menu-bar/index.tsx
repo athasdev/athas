@@ -15,9 +15,10 @@ import Submenu from "./submenu";
 interface Props {
   activeMenu: string | null;
   setActiveMenu: React.Dispatch<React.SetStateAction<string | null>>;
+  compactFloating?: boolean;
 }
 
-const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
+const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: Props) => {
   const { settings } = useSettingsStore();
   const [themes, setThemes] = useState<ThemeDefinition[]>([]);
   const menuBarRef = useRef<HTMLDivElement>(null);
@@ -280,6 +281,10 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
       className={cn(
         "z-[10030] flex h-7 items-center gap-1 rounded-full border border-border bg-primary-bg/70 px-1 py-0.5",
         settings.compactMenuBar &&
+          compactFloating &&
+          "absolute top-[calc(100%+4px)] left-0 rounded-2xl border-border bg-primary-bg/95 shadow-xl backdrop-blur-sm",
+        settings.compactMenuBar &&
+          !compactFloating &&
           "absolute inset-0 h-full rounded-none border-none bg-transparent px-2 py-0",
       )}
     >

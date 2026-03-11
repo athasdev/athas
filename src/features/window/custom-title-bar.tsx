@@ -152,8 +152,27 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       >
         {/* Left side: keep clear of traffic lights */}
         <div className="pointer-events-auto flex min-w-0 items-center gap-2">
-          {!settings.nativeMenuBar && (
+          {!settings.nativeMenuBar && !settings.compactMenuBar && (
             <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
+          )}
+          {!settings.nativeMenuBar && settings.compactMenuBar && (
+            <div className="relative">
+              <Tooltip content="Menu" side="bottom">
+                <button
+                  onClick={() => {
+                    setMenuBarActiveMenu("File");
+                  }}
+                  className="flex h-6 w-8 items-center justify-center rounded-full border border-border bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                >
+                  <MenuIcon size={16} />
+                </button>
+              </Tooltip>
+              <CustomMenuBar
+                activeMenu={menuBarActiveMenu}
+                setActiveMenu={setMenuBarActiveMenu}
+                compactFloating
+              />
+            </div>
           )}
           <SidebarPaneSelector
             isGitViewActive={isGitViewActive}
@@ -186,22 +205,29 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     >
       {/* Left side */}
       <div data-tauri-drag-region className="flex flex-1 items-center px-1">
-        {!settings.nativeMenuBar && (
+        {!settings.nativeMenuBar && !settings.compactMenuBar && (
           <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
         )}
 
         {/* Menu bar button */}
         {!settings.nativeMenuBar && settings.compactMenuBar && (
-          <Tooltip content="Menu" side="bottom">
-            <button
-              onClick={() => {
-                setMenuBarActiveMenu("File");
-              }}
-              className="mr-2 flex h-6 w-8 items-center justify-center rounded-full border border-border bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-            >
-              <MenuIcon size={16} />
-            </button>
-          </Tooltip>
+          <div className="relative mr-2">
+            <Tooltip content="Menu" side="bottom">
+              <button
+                onClick={() => {
+                  setMenuBarActiveMenu("File");
+                }}
+                className="flex h-6 w-8 items-center justify-center rounded-full border border-border bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              >
+                <MenuIcon size={16} />
+              </button>
+            </Tooltip>
+            <CustomMenuBar
+              activeMenu={menuBarActiveMenu}
+              setActiveMenu={setMenuBarActiveMenu}
+              compactFloating
+            />
+          </div>
         )}
 
         <div className="pointer-events-auto mr-2">
