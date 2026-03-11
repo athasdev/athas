@@ -15,6 +15,7 @@ import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/utils/autocomplete";
 import { cn } from "@/utils/cn";
 import { setOllamaBaseUrl } from "@/utils/providers";
+import { checkOllamaConnection } from "@/utils/providers/ollama-provider";
 
 const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
@@ -79,16 +80,10 @@ export const AISettings = () => {
     setOllamaBaseUrl(url);
   }, []);
 
-  const checkOllamaConnection = useCallback(async (url: string) => {
+  const validateOllamaConnection = useCallback(async (url: string) => {
     setOllamaStatus("checking");
-    try {
-      const response = await fetch(`${url}/api/tags`, {
-        signal: AbortSignal.timeout(3000),
-      });
-      setOllamaStatus(response.ok ? "ok" : "error");
-    } catch {
-      setOllamaStatus("error");
-    }
+    const ok = await checkOllamaConnection(url);
+    setOllamaStatus(ok ? "ok" : "error");
   }, []);
 
   const handleOllamaUrlChange = (value: string) => {
@@ -100,7 +95,7 @@ export const AISettings = () => {
       const trimmed = value.replace(/\/+$/, "") || DEFAULT_OLLAMA_BASE_URL;
       updateSetting("ollamaBaseUrl", trimmed);
       setOllamaBaseUrl(trimmed);
-      checkOllamaConnection(trimmed);
+      validateOllamaConnection(trimmed);
     }, 600);
   };
 
@@ -108,7 +103,7 @@ export const AISettings = () => {
     setOllamaUrl(DEFAULT_OLLAMA_BASE_URL);
     updateSetting("ollamaBaseUrl", DEFAULT_OLLAMA_BASE_URL);
     setOllamaBaseUrl(DEFAULT_OLLAMA_BASE_URL);
-    checkOllamaConnection(DEFAULT_OLLAMA_BASE_URL);
+    validateOllamaConnection(DEFAULT_OLLAMA_BASE_URL);
   };
 
   const providers = getAvailableProviders();

@@ -25,6 +25,7 @@ import {
 import { useSettingsStore } from "@/features/settings/store";
 import { cn } from "@/utils/cn";
 import { getProvider, setOllamaBaseUrl } from "@/utils/providers";
+import { checkOllamaConnection } from "@/utils/providers/ollama-provider";
 
 interface AIModelSelectorProps {
   providerId: string;
@@ -405,19 +406,15 @@ export function AIModelSelector({
   const handleSaveOllamaUrl = async (url: string) => {
     const trimmed = url.replace(/\/+$/, "") || "http://localhost:11434";
     setOllamaUrlStatus("checking");
-    try {
-      const response = await fetch(`${trimmed}/api/tags`, { signal: AbortSignal.timeout(3000) });
-      if (response.ok) {
-        setOllamaUrlStatus("ok");
-        updateSetting("ollamaBaseUrl", trimmed);
-        setOllamaBaseUrl(trimmed);
-        setOllamaUrlInput(trimmed);
-        fetchDynamicModels();
-        setTimeout(() => cancelEditing(), 1000);
-      } else {
-        setOllamaUrlStatus("error");
-      }
-    } catch {
+    const ok = await checkOllamaConnection(trimmed);
+    if (ok) {
+      setOllamaUrlStatus("ok");
+      updateSetting("ollamaBaseUrl", trimmed);
+      setOllamaBaseUrl(trimmed);
+      setOllamaUrlInput(trimmed);
+      fetchDynamicModels();
+      setTimeout(() => cancelEditing(), 1000);
+    } else {
       setOllamaUrlStatus("error");
     }
   };
