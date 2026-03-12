@@ -148,10 +148,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     return (
       <div
         data-tauri-drag-region
-        className="relative z-50 flex h-10 select-none items-center justify-between bg-secondary-bg/70 pr-2 pl-[96px] backdrop-blur-sm"
+        className="relative z-50 flex h-10 select-none items-start justify-between bg-secondary-bg/70 pt-2 pr-3 pl-[96px] backdrop-blur-sm"
       >
         {/* Left side: keep clear of traffic lights */}
-        <div className="pointer-events-auto flex min-w-0 items-center gap-2">
+        <div className="pointer-events-auto flex h-7 min-w-0 items-center gap-2.5">
           {!settings.nativeMenuBar && (
             <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
           )}
@@ -166,12 +166,12 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         </div>
 
         {/* Center - Project tabs for macOS */}
-        <div className="-translate-x-1/2 pointer-events-auto absolute left-1/2 flex transform items-center">
+        <div className="-translate-x-1/2 pointer-events-auto absolute top-2 left-1/2 flex h-7 transform items-center">
           <ProjectTabs />
         </div>
 
         {/* Account menu */}
-        <div className="mr-2 flex items-center gap-1">
+        <div className="mr-1 flex h-7 items-center">
           <AccountMenu iconSize={14} />
         </div>
       </div>

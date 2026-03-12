@@ -1,25 +1,7 @@
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  type CSSProperties,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-} from "react";
-import { createPortal } from "react-dom";
-import { cn } from "@/utils/cn";
+import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { type MenuItem, MenuItemsList, MenuPopover } from "@/ui/menu";
 
-export interface ContextMenuItem {
-  id: string;
-  label: string;
-  icon?: ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  separator?: boolean;
-  keybinding?: ReactNode;
-  className?: string;
-}
+export type ContextMenuItem = MenuItem;
 
 interface ContextMenuProps {
   isOpen: boolean;
@@ -155,17 +137,11 @@ export const ContextMenu = ({
     };
   }, [isOpen, onClose, adjustMenuPosition]);
 
-  const menuNode = isOpen ? (
-    <motion.div
-      ref={menuRef}
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.12, ease: "easeOut" }}
-      className={cn(
-        "fixed z-[10040] min-w-[190px] max-w-[min(420px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
-        className,
-      )}
+  return (
+    <MenuPopover
+      isOpen={isOpen}
+      menuRef={menuRef}
+      className={className}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -173,40 +149,7 @@ export const ContextMenu = ({
         ...style,
       }}
     >
-      {items.map((item) => {
-        if (item.separator) {
-          return <div key={item.id} className="my-0.5 border-border/70 border-t" />;
-        }
-
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => {
-              if (!item.disabled) {
-                item.onClick();
-                onClose();
-              }
-            }}
-            disabled={item.disabled}
-            className={cn(
-              "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs",
-              item.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
-              item.className,
-            )}
-          >
-            {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
-            <span className="flex-1">{item.label}</span>
-            {item.keybinding && (
-              <span className="shrink-0 text-text-lighter text-xs">{item.keybinding}</span>
-            )}
-          </button>
-        );
-      })}
-    </motion.div>
-  ) : null;
-
-  if (typeof document === "undefined") return null;
-
-  return createPortal(<AnimatePresence>{menuNode}</AnimatePresence>, document.body);
+      <MenuItemsList items={items} onItemSelect={onClose} />
+    </MenuPopover>
+  );
 };
