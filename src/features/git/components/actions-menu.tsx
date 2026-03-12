@@ -9,16 +9,20 @@ import {
   Tag,
   Upload,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { fetchChanges, pullChanges, pushChanges } from "../api/remotes";
 import { discardAllChanges, initRepository } from "../api/status";
 import { useGitStore } from "../stores/git-store";
+import {
+  type GitActionsMenuAnchorRect,
+  resolveGitActionsMenuPosition,
+} from "./actions-menu-position";
 
 interface GitActionsMenuProps {
   isOpen: boolean;
-  position: { x: number; y: number } | null;
+  anchorRect: GitActionsMenuAnchorRect | null;
   onClose: () => void;
   hasGitRepo: boolean;
   repoPath?: string;
@@ -31,7 +35,7 @@ interface GitActionsMenuProps {
 
 const GitActionsMenu = ({
   isOpen,
-  position,
+  anchorRect,
   onClose,
   hasGitRepo,
   repoPath,
@@ -42,8 +46,46 @@ const GitActionsMenu = ({
   isSelectingRepository,
 }: GitActionsMenuProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const { isRefreshing } = useGitStore();
   const confirmBeforeDiscard = useSettingsStore((state) => state.settings.confirmBeforeDiscard);
+
+  const updateMenuPosition = useCallback(() => {
+    if (!anchorRect || !menuRef.current) {
+      return;
+    }
+
+    const rect = menuRef.current.getBoundingClientRect();
+    const resolved = resolveGitActionsMenuPosition({
+      anchorRect,
+      menuSize: { width: rect.width, height: rect.height },
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+    });
+
+    setMenuPosition({
+      left: resolved.left,
+      top: resolved.top,
+    });
+  }, [anchorRect]);
+
+  useLayoutEffect(() => {
+    if (!isOpen || !anchorRect) {
+      setMenuPosition(null);
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(updateMenuPosition);
+    window.addEventListener("resize", updateMenuPosition);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updateMenuPosition);
+    };
+  }, [isOpen, anchorRect, updateMenuPosition, hasGitRepo, isLoading, isRefreshing]);
 
   const handleAction = async (action: () => Promise<boolean>, actionName: string) => {
     if (!repoPath) return;
@@ -109,7 +151,7 @@ const GitActionsMenu = ({
     onClose();
   };
 
-  if (!isOpen || !position) {
+  if (!isOpen || !anchorRect) {
     return null;
   }
 
@@ -194,7 +236,20 @@ const GitActionsMenu = ({
         },
       ];
 
-  return <ContextMenu isOpen={isOpen} position={position} items={items} onClose={onClose} />;
+  return (
+    <ContextMenu
+      isOpen={isOpen}
+      position={{
+        x: menuPosition?.left ?? anchorRect.left,
+        y: menuPosition?.top ?? anchorRect.bottom + 6,
+      }}
+      items={items}
+      onClose={onClose}
+      style={{
+        visibility: menuPosition ? "visible" : "hidden",
+      }}
+    />
+  );
 };
 
 export default GitActionsMenu;

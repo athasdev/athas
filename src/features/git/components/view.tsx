@@ -18,6 +18,7 @@ import type { MultiFileDiff } from "../types/diff";
 import type { GitFile } from "../types/git";
 import { countDiffStats } from "../utils/diff-helpers";
 import GitActionsMenu from "./actions-menu";
+import type { GitActionsMenuAnchorRect } from "./actions-menu-position";
 import GitBranchManager from "./branch-manager";
 import GitCommitHistory from "./commit-history";
 import GitCommitPanel from "./commit-panel";
@@ -62,10 +63,9 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
   const [repoMenuPosition, setRepoMenuPosition] = useState<DropdownPosition | null>(null);
-  const [gitActionsMenuPosition, setGitActionsMenuPosition] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
+  const [gitActionsMenuAnchor, setGitActionsMenuAnchor] = useState<GitActionsMenuAnchorRect | null>(
+    null,
+  );
 
   const [showRemoteManager, setShowRemoteManager] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
@@ -345,7 +345,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
     const handleClickOutside = () => {
       setShowGitActionsMenu(false);
-      setGitActionsMenuPosition(null);
+      setGitActionsMenuAnchor(null);
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -559,9 +559,13 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     <button
       onClick={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
-        setGitActionsMenuPosition({
-          x: rect.left,
-          y: rect.bottom + 5,
+        setGitActionsMenuAnchor({
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
         });
         setShowGitActionsMenu(!showGitActionsMenu);
         setIsRepoMenuOpen(false);
@@ -897,10 +901,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
       <GitActionsMenu
         isOpen={showGitActionsMenu}
-        position={gitActionsMenuPosition}
+        anchorRect={gitActionsMenuAnchor}
         onClose={() => {
           setShowGitActionsMenu(false);
-          setGitActionsMenuPosition(null);
+          setGitActionsMenuAnchor(null);
         }}
         hasGitRepo={!!gitStatus}
         repoPath={activeRepoPath}
