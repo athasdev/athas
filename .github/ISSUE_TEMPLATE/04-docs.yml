@@ -1,0 +1,33 @@
+name: Documentation
+description: Report missing, unclear, or incorrect documentation
+title: "[Docs]: "
+type: Docs
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Documentation Location
+      description: Which page, file, or topic is affected?
+      placeholder: docs/installation.mdx, README, website page, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: issue
+    attributes:
+      label: Issue
+      description: What is missing, unclear, or incorrect?
+      placeholder: Describe the documentation problem.
+    validations:
+      required: true
+  - type: textarea
+    id: suggested_change
+    attributes:
+      label: Suggested Change
+      placeholder: What should the documentation say or cover instead?
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I checked the existing docs first.
+          required: true
