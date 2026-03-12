@@ -7,6 +7,7 @@ import { useRemoteConnection } from "@/features/remote/hooks/use-remote-connecti
 import { useRemoteWindowClose } from "@/features/remote/hooks/use-remote-window-close";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 
 const UpdateDialog = lazy(() => import("@/features/settings/components/update-dialog"));
 
@@ -64,6 +65,7 @@ function App() {
     onDismiss: dismissUpdate,
     onDownload: downloadUpdate,
   } = useAutoUpdate();
+  const initializeWhatsNew = useWhatsNewStore((state) => state.initialize);
 
   // App initialization and setup hooks
   usePlatformSetup();
@@ -82,6 +84,10 @@ function App() {
   useEffect(() => {
     useAuthStore.getState().initialize();
   }, []);
+
+  useEffect(() => {
+    void initializeWhatsNew();
+  }, [initializeWhatsNew]);
 
   // File watcher setup
   useEffect(() => {

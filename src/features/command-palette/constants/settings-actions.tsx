@@ -48,6 +48,7 @@ interface SettingsActionsParams {
   updateSetting: (key: string, value: any) => void | Promise<void>;
   handleFileSelect: ((path: string, isDir: boolean) => void) | undefined;
   getAppDataDir: () => Promise<string>;
+  openWhatsNew: () => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -60,6 +61,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     updateSetting,
     handleFileSelect,
     getAppDataDir,
+    openWhatsNew,
     onClose,
   } = params;
 
@@ -111,6 +113,17 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         } catch (e) {
           console.error("Failed to prepare bug report:", e);
         }
+      },
+    },
+    {
+      id: "show-whats-new",
+      label: "Help: What's New",
+      description: "Open the latest release notes for this version",
+      icon: <Sparkles size={14} />,
+      category: "Settings",
+      action: () => {
+        onClose();
+        void openWhatsNew();
       },
     },
     {

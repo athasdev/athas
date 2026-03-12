@@ -5,6 +5,7 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useAppStore } from "@/stores/app-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { useZoomStore } from "@/stores/zoom-store";
@@ -356,6 +357,14 @@ const viewCommands: Command[] = [
     keybinding: "cmd+k cmd+t",
     execute: () => {
       useUIState.getState().setIsThemeSelectorVisible(true);
+    },
+  },
+  {
+    id: "help.showWhatsNew",
+    title: "What's New",
+    category: "Help",
+    execute: async () => {
+      await useWhatsNewStore.getState().open();
     },
   },
   {

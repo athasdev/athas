@@ -10,6 +10,7 @@ import { discardAllChanges, stageAllFiles, unstageAllFiles } from "@/features/gi
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { vimCommands } from "@/features/vim/stores/vim-commands";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useAppStore } from "@/stores/app-store";
@@ -76,6 +77,7 @@ const CommandPalette = () => {
   const { rootFolderPath } = useFileSystemStore();
   const gitStore = useGitStore();
   const { showToast } = useToast();
+  const openWhatsNew = useWhatsNewStore((state) => state.open);
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
@@ -141,6 +143,7 @@ const CommandPalette = () => {
       ) => void | Promise<void>,
       handleFileSelect,
       getAppDataDir: appDataDir,
+      openWhatsNew,
       onClose,
     }),
     ...createNavigationActions({
@@ -249,7 +252,7 @@ const CommandPalette = () => {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isVisible, filteredActions, selectedIndex, prioritizedActions]);
+  }, [isVisible, selectedIndex, prioritizedActions, pushAction]);
 
   // Reset state when visibility changes
   useEffect(() => {
