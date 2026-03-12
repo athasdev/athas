@@ -63,6 +63,7 @@ const TerminalContainer = ({
     isBottomPaneVisible,
     bottomPaneActiveTab,
   } = useUIState();
+  const isTerminalPaneVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
 
   const handleNewTerminal = useCallback(() => {
     const dirName = currentDirectory.split("/").pop() || "terminal";
@@ -307,7 +308,10 @@ const TerminalContainer = ({
   // Listen for create-terminal-with-command event (used by agent install buttons)
   useEffect(() => {
     const handleCreateTerminalWithCommand = (event: Event) => {
-      const customEvent = event as CustomEvent<{ command: string; name?: string }>;
+      const customEvent = event as CustomEvent<{
+        command: string;
+        name?: string;
+      }>;
       const { command, name } = customEvent.detail;
 
       // Show bottom pane and switch to terminal tab
@@ -339,14 +343,20 @@ const TerminalContainer = ({
   // Listen for terminal-ready events to execute pending commands
   useEffect(() => {
     const handleTerminalReady = (event: Event) => {
-      const customEvent = event as CustomEvent<{ terminalId: string; connectionId: string }>;
+      const customEvent = event as CustomEvent<{
+        terminalId: string;
+        connectionId: string;
+      }>;
       const { terminalId, connectionId } = customEvent.detail;
 
       const pendingCommand = pendingCommandsRef.current.get(terminalId);
       if (pendingCommand && connectionId) {
         // Small delay to ensure shell prompt is ready
         setTimeout(() => {
-          invoke("terminal_write", { id: connectionId, data: pendingCommand }).catch(() => {});
+          invoke("terminal_write", {
+            id: connectionId,
+            data: pendingCommand,
+          }).catch(() => {});
           pendingCommandsRef.current.delete(terminalId);
         }, 300);
       }
@@ -560,11 +570,13 @@ const TerminalContainer = ({
                 <div
                   key={terminal.id}
                   className="h-full"
-                  style={{ display: terminal.id === activeTerminalId ? "flex" : "none" }}
+                  style={{
+                    display: terminal.id === activeTerminalId ? "flex" : "none",
+                  }}
                 >
                   <div
                     className={cn(
-                      "w-full pl-[16px]",
+                      "w-full",
                       terminal.splitMode && terminal.splitWithId && "w-1/2 border-border border-r",
                     )}
                   >
@@ -572,6 +584,7 @@ const TerminalContainer = ({
                       key={terminal.id}
                       terminal={terminal}
                       isActive={terminal.id === activeTerminalId}
+                      isVisible={isTerminalPaneVisible && terminal.id === activeTerminalId}
                       onDirectoryChange={handleDirectoryChange}
                       onActivity={handleActivity}
                       onRegisterRef={registerTerminalRef}
@@ -586,11 +599,12 @@ const TerminalContainer = ({
                       );
                       if (!companionTerminal) return null;
                       return (
-                        <div className="w-1/2 pl-[16px]">
+                        <div className="w-1/2">
                           <TerminalSession
                             key={companionTerminal.id}
                             terminal={companionTerminal}
                             isActive={false}
+                            isVisible={isTerminalPaneVisible}
                             onDirectoryChange={handleDirectoryChange}
                             onActivity={handleActivity}
                             onRegisterRef={registerTerminalRef}

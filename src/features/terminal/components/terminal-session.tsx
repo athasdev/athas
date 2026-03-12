@@ -6,6 +6,7 @@ import { TerminalErrorBoundary } from "./terminal-error-boundary";
 interface TerminalSessionProps {
   terminal: TerminalType;
   isActive: boolean;
+  isVisible?: boolean;
   onDirectoryChange?: (terminalId: string, directory: string) => void;
   onActivity?: (terminalId: string) => void;
   onRegisterRef?: (
@@ -18,6 +19,7 @@ interface TerminalSessionProps {
 const TerminalSession = ({
   terminal,
   isActive,
+  isVisible = true,
   onActivity,
   onRegisterRef,
   onTerminalExit,
@@ -67,6 +69,7 @@ const TerminalSession = ({
         <XtermTerminal
           sessionId={terminal.id}
           isActive={isActive}
+          isVisible={isVisible}
           onReady={() => {
             // Additional ready callback if needed
           }}
