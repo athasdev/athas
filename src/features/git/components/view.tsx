@@ -1,8 +1,9 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { Check, ChevronDown, FolderOpen, MoreHorizontal, RefreshCw, X } from "lucide-react";
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useSettingsStore } from "@/features/settings/store";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";
 import { getBranches } from "../api/branches";
@@ -68,12 +69,22 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   const [showRemoteManager, setShowRemoteManager] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
+  const settings = useSettingsStore((state) => state.settings);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const [openBottomSection, setOpenBottomSection] = useState<"stash" | "history" | null>(null);
   const [fileDiffStats, setFileDiffStats] = useState<Record<string, GitFileDiffStats>>({});
 
   const wasActiveRef = useRef(isActive);
   const repoTriggerRef = useRef<HTMLButtonElement>(null);
   const repoMenuRef = useRef<HTMLDivElement>(null);
+
+  const visibleGitFiles = useMemo(
+    () =>
+      settings.showUntrackedFiles
+        ? (gitStatus?.files ?? [])
+        : (gitStatus?.files ?? []).filter((file) => file.status !== "untracked"),
+    [gitStatus?.files, settings.showUntrackedFiles],
+  );
 
   const updateRepoMenuPosition = useCallback(() => {
     const trigger = repoTriggerRef.current;
@@ -220,13 +231,15 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   }, [repoPath]);
 
   useEffect(() => {
-    if (isActive && !wasActiveRef.current && gitStatus) {
+    if (settings.autoRefreshGitStatus && isActive && !wasActiveRef.current && gitStatus) {
       refreshGitData();
     }
     wasActiveRef.current = isActive;
-  }, [isActive, gitStatus, refreshGitData]);
+  }, [settings.autoRefreshGitStatus, isActive, gitStatus, refreshGitData]);
 
   useEffect(() => {
+    if (!settings.autoRefreshGitStatus) return;
+
     const handleGitStatusChanged = () => {
       refreshGitData();
     };
@@ -235,9 +248,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return () => {
       window.removeEventListener("git-status-changed", handleGitStatusChanged);
     };
-  }, [refreshGitData]);
+  }, [settings.autoRefreshGitStatus, refreshGitData]);
 
   useEffect(() => {
+    if (!settings.autoRefreshGitStatus) return;
+
     let refreshTimeout: NodeJS.Timeout | null = null;
 
     const handleFileChange = (event: CustomEvent) => {
@@ -262,10 +277,28 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         clearTimeout(refreshTimeout);
       }
     };
-  }, [activeRepoPath, refreshGitData]);
+  }, [settings.autoRefreshGitStatus, activeRepoPath, refreshGitData]);
 
   useEffect(() => {
-    if (!activeRepoPath || !gitStatus?.files.length) {
+    if (!settings.rememberLastGitPanelMode) return;
+    setOpenBottomSection(settings.gitLastPanelMode === "none" ? null : settings.gitLastPanelMode);
+  }, [settings.rememberLastGitPanelMode, settings.gitLastPanelMode]);
+
+  useEffect(() => {
+    if (!settings.rememberLastGitPanelMode) return;
+    const nextValue = openBottomSection ?? "none";
+    if (settings.gitLastPanelMode !== nextValue) {
+      void updateSetting("gitLastPanelMode", nextValue);
+    }
+  }, [
+    openBottomSection,
+    settings.rememberLastGitPanelMode,
+    settings.gitLastPanelMode,
+    updateSetting,
+  ]);
+
+  useEffect(() => {
+    if (!activeRepoPath || !visibleGitFiles.length) {
       setFileDiffStats({});
       return;
     }
@@ -275,7 +308,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     const loadFileDiffStats = async () => {
       const uniqueFiles = Array.from(
         new Map(
-          gitStatus.files.map((file) => [
+          visibleGitFiles.map((file) => [
             `${file.staged ? "staged" : "unstaged"}:${file.path}`,
             file,
           ]),
@@ -305,7 +338,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return () => {
       isCancelled = true;
     };
-  }, [activeRepoPath, gitStatus?.files]);
+  }, [activeRepoPath, visibleGitFiles]);
 
   useEffect(() => {
     if (!showGitActionsMenu) return;
@@ -643,7 +676,9 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     );
   }
 
-  const stagedFiles = gitStatus.files.filter((f) => f.staged);
+  const stagedFiles = visibleGitFiles.filter((f) => f.staged);
+  const refreshAfterAction = settings.autoRefreshGitStatus ? handleManualRefresh : undefined;
+  const handleGitFileClick = settings.openDiffOnClick ? handleViewFileDiff : handleOpenOriginalFile;
 
   return (
     <>
@@ -653,7 +688,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             <GitBranchManager
               currentBranch={gitStatus.branch}
               repoPath={activeRepoPath}
-              onBranchChange={refreshGitData}
+              onBranchChange={refreshAfterAction}
               compact
             />
             {(gitStatus.ahead > 0 || gitStatus.behind > 0) && (
@@ -712,11 +747,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
           <div className="scrollbar-none min-h-0 overflow-y-auto">
             <GitStatusPanel
-              files={gitStatus.files}
+              files={visibleGitFiles}
               fileDiffStats={fileDiffStats}
-              onFileSelect={handleViewFileDiff}
+              onFileSelect={handleGitFileClick}
               onOpenFile={handleOpenOriginalFile}
-              onRefresh={handleManualRefresh}
+              onRefresh={refreshAfterAction}
               repoPath={activeRepoPath}
             />
           </div>
@@ -725,7 +760,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             isCollapsed={openBottomSection !== "stash"}
             onToggle={() => setOpenBottomSection(openBottomSection === "stash" ? null : "stash")}
             repoPath={activeRepoPath}
-            onRefresh={handleManualRefresh}
+            onRefresh={refreshAfterAction}
             onViewStashDiff={handleViewStashDiff}
           />
 
@@ -745,7 +780,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             stagedFiles={stagedFiles}
             currentBranch={gitStatus.branch}
             repoPath={activeRepoPath}
-            onCommitSuccess={refreshGitData}
+            onCommitSuccess={refreshAfterAction}
           />
         </div>
       </div>
@@ -869,7 +904,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         }}
         hasGitRepo={!!gitStatus}
         repoPath={activeRepoPath}
-        onRefresh={handleManualRefresh}
+        onRefresh={refreshAfterAction}
         onOpenRemoteManager={() => setShowRemoteManager(true)}
         onOpenTagManager={() => setShowTagManager(true)}
         onSelectRepository={handleSelectRepository}
@@ -880,14 +915,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         isOpen={showRemoteManager}
         onClose={() => setShowRemoteManager(false)}
         repoPath={activeRepoPath}
-        onRefresh={handleManualRefresh}
+        onRefresh={refreshAfterAction}
       />
 
       <GitTagManager
         isOpen={showTagManager}
         onClose={() => setShowTagManager(false)}
         repoPath={activeRepoPath}
-        onRefresh={handleManualRefresh}
+        onRefresh={refreshAfterAction}
       />
     </>
   );

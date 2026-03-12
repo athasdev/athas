@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import Input from "@/ui/input";
 import Section, { SettingRow } from "@/ui/section";
-import Switch from "@/ui/switch";
 
 export const FileTreeSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
@@ -80,6 +79,13 @@ export const FileTreeSettings = () => {
           label="Hidden File Patterns"
           description="Files matching these glob patterns will be hidden from the file tree"
           className="flex-col items-start gap-2"
+          onReset={() =>
+            updateSetting("hiddenFilePatterns", getDefaultSetting("hiddenFilePatterns"))
+          }
+          canReset={
+            settings.hiddenFilePatterns.join(",") !==
+            getDefaultSetting("hiddenFilePatterns").join(",")
+          }
         >
           <Input
             id="hiddenFilePatterns"
@@ -99,6 +105,13 @@ export const FileTreeSettings = () => {
           label="Hidden Directory Patterns"
           description="Directories matching these glob patterns will be hidden from the file tree"
           className="flex-col items-start gap-2"
+          onReset={() =>
+            updateSetting("hiddenDirectoryPatterns", getDefaultSetting("hiddenDirectoryPatterns"))
+          }
+          canReset={
+            settings.hiddenDirectoryPatterns.join(",") !==
+            getDefaultSetting("hiddenDirectoryPatterns").join(",")
+          }
         >
           <Input
             id="hiddenDirectoryPatterns"
@@ -112,19 +125,6 @@ export const FileTreeSettings = () => {
           />
           <p className="text-[11px] text-text-lighter">Use comma-separated glob patterns.</p>
           {renderPatternPills(settings.hiddenDirectoryPatterns)}
-        </SettingRow>
-      </Section>
-
-      <Section title="Git View">
-        <SettingRow
-          label="Folder-Based Changes"
-          description="Show Git changes in a folder tree, similar to File Explorer"
-        >
-          <Switch
-            checked={settings.gitChangesFolderView}
-            onChange={(checked) => updateSetting("gitChangesFolderView", checked)}
-            size="sm"
-          />
         </SettingRow>
       </Section>
     </div>

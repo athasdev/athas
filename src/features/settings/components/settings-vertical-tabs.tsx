@@ -48,6 +48,7 @@ const tabGroups: TabGroup[] = [
     icon: PenTool,
     items: [
       { id: "editor", label: "Editor" },
+      { id: "git", label: "Git" },
       { id: "terminal", label: "Terminal" },
       { id: "language", label: "Language" },
       { id: "keyboard", label: "Keybindings" },

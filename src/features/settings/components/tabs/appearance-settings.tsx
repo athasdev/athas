@@ -11,11 +11,11 @@ import {
   UI_FONT_SIZE_MAX,
   UI_FONT_SIZE_MIN,
 } from "@/features/settings/lib/ui-font-size";
-import { useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
-import Dropdown from "@/ui/dropdown";
 import { FontSelector } from "@/ui/font-selector";
 import Section, { SettingRow } from "@/ui/section";
+import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 
 export const AppearanceSettings = () => {
@@ -130,9 +130,14 @@ export const AppearanceSettings = () => {
   return (
     <div className="space-y-4">
       <Section title="Theme">
-        <SettingRow label="Color Theme" description={getThemeDescription()}>
+        <SettingRow
+          label="Color Theme"
+          description={getThemeDescription()}
+          onReset={() => updateSetting("theme", getDefaultSetting("theme"))}
+          canReset={settings.theme !== getDefaultSetting("theme")}
+        >
           <div className="flex items-center gap-2">
-            <Dropdown
+            <Select
               value={settings.theme}
               options={normalizedThemeOptions}
               onChange={(value) => updateSetting("theme", value)}
@@ -147,8 +152,13 @@ export const AppearanceSettings = () => {
           </div>
         </SettingRow>
 
-        <SettingRow label="Icon Theme" description="Icons displayed in the file tree and tabs">
-          <Dropdown
+        <SettingRow
+          label="Icon Theme"
+          description="Icons displayed in the file tree and tabs"
+          onReset={() => updateSetting("iconTheme", getDefaultSetting("iconTheme"))}
+          canReset={settings.iconTheme !== getDefaultSetting("iconTheme")}
+        >
+          <Select
             value={settings.iconTheme}
             options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
@@ -163,6 +173,8 @@ export const AppearanceSettings = () => {
         <SettingRow
           label="UI Font Family"
           description="Font family for UI elements (file tree, markdown, etc.)"
+          onReset={() => updateSetting("uiFontFamily", getDefaultSetting("uiFontFamily"))}
+          canReset={settings.uiFontFamily !== getDefaultSetting("uiFontFamily")}
         >
           <FontSelector
             value={settings.uiFontFamily}
@@ -172,7 +184,12 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow label="UI Font Size" description="Adjust UI text and icon scale in 0.5px steps">
+        <SettingRow
+          label="UI Font Size"
+          description="Adjust UI text and icon scale in 0.5px steps"
+          onReset={() => updateSetting("uiFontSize", getDefaultSetting("uiFontSize"))}
+          canReset={settings.uiFontSize !== getDefaultSetting("uiFontSize")}
+        >
           <div className="flex items-center gap-1.5">
             <Button
               type="button"
@@ -206,8 +223,13 @@ export const AppearanceSettings = () => {
       </Section>
 
       <Section title="Layout">
-        <SettingRow label="Sidebar Position" description="Choose where to position the sidebar">
-          <Dropdown
+        <SettingRow
+          label="Sidebar Position"
+          description="Choose where to position the sidebar"
+          onReset={() => updateSetting("sidebarPosition", getDefaultSetting("sidebarPosition"))}
+          canReset={settings.sidebarPosition !== getDefaultSetting("sidebarPosition")}
+        >
+          <Select
             value={settings.sidebarPosition}
             options={sidebarOptions}
             onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
@@ -219,6 +241,8 @@ export const AppearanceSettings = () => {
         <SettingRow
           label="Native Menu Bar"
           description="Use the native menu bar or a custom UI menu bar"
+          onReset={() => updateSetting("nativeMenuBar", getDefaultSetting("nativeMenuBar"))}
+          canReset={settings.nativeMenuBar !== getDefaultSetting("nativeMenuBar")}
         >
           <Switch
             checked={settings.nativeMenuBar}
@@ -233,6 +257,8 @@ export const AppearanceSettings = () => {
         <SettingRow
           label="Compact Menu Bar"
           description="Requires UI menu bar; compact hamburger or full UI menu"
+          onReset={() => updateSetting("compactMenuBar", getDefaultSetting("compactMenuBar"))}
+          canReset={settings.compactMenuBar !== getDefaultSetting("compactMenuBar")}
         >
           <Switch
             checked={settings.compactMenuBar}
@@ -245,6 +271,8 @@ export const AppearanceSettings = () => {
         <SettingRow
           label="Quick Open Preview"
           description="Show right-side file preview in quick open and global search"
+          onReset={() => updateSetting("quickOpenPreview", getDefaultSetting("quickOpenPreview"))}
+          canReset={settings.quickOpenPreview !== getDefaultSetting("quickOpenPreview")}
         >
           <Switch
             checked={settings.quickOpenPreview}

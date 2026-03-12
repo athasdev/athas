@@ -1,9 +1,9 @@
-import { useSettingsStore } from "@/features/settings/store";
-import Dropdown from "@/ui/dropdown";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { FontSelector } from "@/ui/font-selector";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
 import Section, { SettingRow } from "@/ui/section";
+import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 
 export const EditorSettings = () => {
@@ -12,7 +12,12 @@ export const EditorSettings = () => {
   return (
     <div className="space-y-4">
       <Section title="Typography">
-        <SettingRow label="Editor Font Family" description="Font family for code editor">
+        <SettingRow
+          label="Editor Font Family"
+          description="Font family for code editor"
+          onReset={() => updateSetting("fontFamily", getDefaultSetting("fontFamily"))}
+          canReset={settings.fontFamily !== getDefaultSetting("fontFamily")}
+        >
           <FontSelector
             value={settings.fontFamily}
             onChange={(fontFamily) => updateSetting("fontFamily", fontFamily)}
@@ -21,7 +26,12 @@ export const EditorSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow label="Font Size" description="Editor font size in pixels">
+        <SettingRow
+          label="Font Size"
+          description="Editor font size in pixels"
+          onReset={() => updateSetting("fontSize", getDefaultSetting("fontSize"))}
+          canReset={settings.fontSize !== getDefaultSetting("fontSize")}
+        >
           <NumberInput
             min="8"
             max="32"
@@ -32,7 +42,12 @@ export const EditorSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow label="Tab Size" description="Number of spaces per tab">
+        <SettingRow
+          label="Tab Size"
+          description="Number of spaces per tab"
+          onReset={() => updateSetting("tabSize", getDefaultSetting("tabSize"))}
+          canReset={settings.tabSize !== getDefaultSetting("tabSize")}
+        >
           <NumberInput
             min="1"
             max="8"
@@ -45,7 +60,12 @@ export const EditorSettings = () => {
       </Section>
 
       <Section title="Display">
-        <SettingRow label="Word Wrap" description="Wrap lines that exceed viewport width">
+        <SettingRow
+          label="Word Wrap"
+          description="Wrap lines that exceed viewport width"
+          onReset={() => updateSetting("wordWrap", getDefaultSetting("wordWrap"))}
+          canReset={settings.wordWrap !== getDefaultSetting("wordWrap")}
+        >
           <Switch
             checked={settings.wordWrap}
             onChange={(checked) => updateSetting("wordWrap", checked)}
@@ -53,7 +73,12 @@ export const EditorSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow label="Line Numbers" description="Show line numbers in the editor">
+        <SettingRow
+          label="Line Numbers"
+          description="Show line numbers in the editor"
+          onReset={() => updateSetting("lineNumbers", getDefaultSetting("lineNumbers"))}
+          canReset={settings.lineNumbers !== getDefaultSetting("lineNumbers")}
+        >
           <Switch
             checked={settings.lineNumbers}
             onChange={(checked) => updateSetting("lineNumbers", checked)}
@@ -64,6 +89,10 @@ export const EditorSettings = () => {
         <SettingRow
           label="Relative Line Numbers"
           description="Show relative numbers when Vim mode is active"
+          onReset={() =>
+            updateSetting("vimRelativeLineNumbers", getDefaultSetting("vimRelativeLineNumbers"))
+          }
+          canReset={settings.vimRelativeLineNumbers !== getDefaultSetting("vimRelativeLineNumbers")}
         >
           <Switch
             checked={settings.vimRelativeLineNumbers}
@@ -76,6 +105,8 @@ export const EditorSettings = () => {
         <SettingRow
           label="Show Minimap"
           description="Show a minimap overview on the right side of the editor"
+          onReset={() => updateSetting("showMinimap", getDefaultSetting("showMinimap"))}
+          canReset={settings.showMinimap !== getDefaultSetting("showMinimap")}
         >
           <Switch
             checked={settings.showMinimap}
@@ -86,7 +117,12 @@ export const EditorSettings = () => {
       </Section>
 
       <Section title="Input">
-        <SettingRow label="Vim Mode" description="Enable vim keybindings and commands">
+        <SettingRow
+          label="Vim Mode"
+          description="Enable vim keybindings and commands"
+          onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
+          canReset={settings.vimMode !== getDefaultSetting("vimMode")}
+        >
           <Switch
             checked={settings.vimMode}
             onChange={(checked) => updateSetting("vimMode", checked)}
@@ -96,7 +132,12 @@ export const EditorSettings = () => {
       </Section>
 
       <Section title="Tabs">
-        <SettingRow label="Max Open Tabs" description="Maximum number of tabs before oldest closes">
+        <SettingRow
+          label="Max Open Tabs"
+          description="Maximum number of tabs before oldest closes"
+          onReset={() => updateSetting("maxOpenTabs", getDefaultSetting("maxOpenTabs"))}
+          canReset={settings.maxOpenTabs !== getDefaultSetting("maxOpenTabs")}
+        >
           <NumberInput
             min="1"
             max="50"
@@ -109,7 +150,12 @@ export const EditorSettings = () => {
       </Section>
 
       <Section title="Saving">
-        <SettingRow label="Auto Save" description="Automatically save files when editing">
+        <SettingRow
+          label="Auto Save"
+          description="Automatically save files when editing"
+          onReset={() => updateSetting("autoSave", getDefaultSetting("autoSave"))}
+          canReset={settings.autoSave !== getDefaultSetting("autoSave")}
+        >
           <Switch
             checked={settings.autoSave}
             onChange={(checked) => updateSetting("autoSave", checked)}
@@ -122,8 +168,10 @@ export const EditorSettings = () => {
         <SettingRow
           label="Default Editor"
           description="Open files in an external terminal editor instead of the built-in editor"
+          onReset={() => updateSetting("externalEditor", getDefaultSetting("externalEditor"))}
+          canReset={settings.externalEditor !== getDefaultSetting("externalEditor")}
         >
-          <Dropdown
+          <Select
             value={settings.externalEditor}
             options={[
               { value: "none", label: "None (Use Built-in)" },
@@ -149,6 +197,10 @@ export const EditorSettings = () => {
           <SettingRow
             label="Custom Command"
             description="Command to run (use $FILE for the file path, e.g., 'micro $FILE')"
+            onReset={() =>
+              updateSetting("customEditorCommand", getDefaultSetting("customEditorCommand"))
+            }
+            canReset={settings.customEditorCommand !== getDefaultSetting("customEditorCommand")}
           >
             <Input
               type="text"

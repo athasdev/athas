@@ -1,6 +1,7 @@
 import { Archive, Minus, Plus, Trash2 } from "lucide-react";
 import type { MouseEvent } from "react";
 import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { useSettingsStore } from "@/features/settings/store";
 import { cn } from "@/utils/cn";
 import type { GitFile } from "../../types/git";
 
@@ -38,6 +39,7 @@ export const GitFileItem = ({
   indentLevel = 0,
   className,
 }: GitFileItemProps) => {
+  const compactGitStatusBadges = useSettingsStore((state) => state.settings.compactGitStatusBadges);
   const pathParts = file.path.split("/");
   const fileName = pathParts.pop() || file.path;
   const directory = pathParts.join("/");
@@ -83,7 +85,12 @@ export const GitFileItem = ({
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {hasDiffStats && (
-          <div className="hidden items-center gap-1 text-[9px] leading-none sm:flex">
+          <div
+            className={cn(
+              "hidden items-center leading-none sm:flex",
+              compactGitStatusBadges ? "gap-0.5 text-[8px]" : "gap-1 text-[9px]",
+            )}
+          >
             {diffStats.additions > 0 && (
               <span className="text-git-added">+{diffStats.additions}</span>
             )}
@@ -92,7 +99,7 @@ export const GitFileItem = ({
             )}
           </div>
         )}
-        {file.staged && (
+        {file.staged && !compactGitStatusBadges && (
           <span className="hidden shrink-0 text-[8px] text-git-added opacity-60 md:inline">
             staged
           </span>

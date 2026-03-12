@@ -1,6 +1,7 @@
 export type SettingsTab =
   | "general"
   | "editor"
+  | "git"
   | "appearance"
   | "databases"
   | "extensions"

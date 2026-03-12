@@ -188,7 +188,7 @@ function FileTreeComponent({
   );
 
   const gitStatusClassLookup = useMemo(() => {
-    if (!gitStatus)
+    if (!gitStatus || !settings.showGitStatusInFileTree)
       return null as null | { files: Map<string, string>; directories: Map<string, string> };
 
     const mapStatus = (status: GitFile): string => {
@@ -228,7 +228,7 @@ function FileTreeComponent({
     }
 
     return { files, directories };
-  }, [gitStatus]);
+  }, [gitStatus, settings.showGitStatusInFileTree]);
 
   const getGitStatusClass = useCallback(
     (file: FileEntry): string => {

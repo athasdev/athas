@@ -10,6 +10,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useState } from "react";
+import { useSettingsStore } from "@/features/settings/store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { fetchChanges, pullChanges, pushChanges } from "../api/remotes";
 import { discardAllChanges, initRepository } from "../api/status";
@@ -42,6 +43,7 @@ const GitActionsMenu = ({
 }: GitActionsMenuProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { isRefreshing } = useGitStore();
+  const confirmBeforeDiscard = useSettingsStore((state) => state.settings.confirmBeforeDiscard);
 
   const handleAction = async (action: () => Promise<boolean>, actionName: string) => {
     if (!repoPath) return;
@@ -75,6 +77,12 @@ const GitActionsMenu = ({
 
   const handleDiscardAllChanges = async () => {
     if (!repoPath) return;
+    if (
+      confirmBeforeDiscard &&
+      !window.confirm("Discard all unstaged changes? This cannot be undone.")
+    ) {
+      return;
+    }
     handleAction(() => discardAllChanges(repoPath!), "Discard all changes");
   };
 

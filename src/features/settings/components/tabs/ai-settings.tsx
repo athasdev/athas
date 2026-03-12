@@ -6,12 +6,12 @@ import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionMode } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
 import Button from "@/ui/button";
-import Dropdown from "@/ui/dropdown";
 import Input from "@/ui/input";
 import Section, { SettingRow } from "@/ui/section";
+import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/utils/autocomplete";
 import { cn } from "@/utils/cn";
@@ -152,7 +152,18 @@ export const AISettings = () => {
   return (
     <div className="space-y-4">
       <Section title="Provider & Model">
-        <SettingRow label="Model" description="Choose your AI provider and model">
+        <SettingRow
+          label="Model"
+          description="Choose your AI provider and model"
+          onReset={() => {
+            updateSetting("aiProviderId", getDefaultSetting("aiProviderId"));
+            updateSetting("aiModelId", getDefaultSetting("aiModelId"));
+          }}
+          canReset={
+            settings.aiProviderId !== getDefaultSetting("aiProviderId") ||
+            settings.aiModelId !== getDefaultSetting("aiModelId")
+          }
+        >
           <AIModelSelector
             providerId={settings.aiProviderId}
             modelId={settings.aiModelId}
@@ -164,7 +175,12 @@ export const AISettings = () => {
 
       {(isOllamaSelected || settings.ollamaBaseUrl !== DEFAULT_OLLAMA_BASE_URL) && (
         <Section title="Ollama">
-          <SettingRow label="Endpoint" description="Base URL for Ollama API (local, LAN, or cloud)">
+          <SettingRow
+            label="Endpoint"
+            description="Base URL for Ollama API (local, LAN, or cloud)"
+            onReset={handleResetOllamaUrl}
+            canReset={settings.ollamaBaseUrl !== getDefaultSetting("ollamaBaseUrl")}
+          >
             <div className="flex items-center gap-1.5">
               <Input
                 type="text"
@@ -226,8 +242,12 @@ export const AISettings = () => {
           <SettingRow
             label="Default Session Mode"
             description="Default mode for ACP agent sessions"
+            onReset={() =>
+              updateSetting("aiDefaultSessionMode", getDefaultSetting("aiDefaultSessionMode"))
+            }
+            canReset={settings.aiDefaultSessionMode !== getDefaultSetting("aiDefaultSessionMode")}
           >
-            <Dropdown
+            <Select
               value={settings.aiDefaultSessionMode || ""}
               options={[
                 { value: "", label: "None" },
@@ -244,7 +264,12 @@ export const AISettings = () => {
       )}
 
       <Section title="Autocomplete">
-        <SettingRow label="AI Completion" description="Enable AI autocomplete while typing">
+        <SettingRow
+          label="AI Completion"
+          description="Enable AI autocomplete while typing"
+          onReset={() => updateSetting("aiCompletion", getDefaultSetting("aiCompletion"))}
+          canReset={settings.aiCompletion !== getDefaultSetting("aiCompletion")}
+        >
           <Switch
             checked={aiCompletionAllowedByPolicy ? settings.aiCompletion : false}
             onChange={(checked) => updateSetting("aiCompletion", checked)}
@@ -255,9 +280,13 @@ export const AISettings = () => {
         <SettingRow
           label="Autocomplete Model"
           description="Choose any OpenRouter model for autocomplete"
+          onReset={() =>
+            updateSetting("aiAutocompleteModelId", getDefaultSetting("aiAutocompleteModelId"))
+          }
+          canReset={settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")}
         >
           <div className="flex items-center gap-2">
-            <Dropdown
+            <Select
               value={settings.aiAutocompleteModelId}
               options={autocompleteModels.map((model) => ({
                 value: model.id,

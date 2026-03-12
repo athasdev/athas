@@ -99,6 +99,8 @@ export function Editor({
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const aiCompletionEnabled = useSettingsStore((state) => state.settings.aiCompletion);
   const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
+  const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
+  const gitGutterEnabled = useSettingsStore((state) => state.settings.enableGitGutter);
   const vimMode = useVimStore.use.mode();
 
   const fontSize = baseFontSize * zoomLevel;
@@ -114,7 +116,7 @@ export function Editor({
   useGitGutter({
     filePath: filePath || "",
     content,
-    enabled: !!filePath,
+    enabled: !!filePath && gitGutterEnabled,
   });
 
   const foldActions = useFoldStore.use.actions();
@@ -855,7 +857,7 @@ export function Editor({
           textareaRef={inputRef}
         />
 
-        {filePath && (
+        {filePath && inlineGitBlameEnabled && (
           <GitBlameLayer
             ref={gitBlameRef}
             filePath={filePath}

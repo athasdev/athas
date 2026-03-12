@@ -14,6 +14,7 @@ import { EnterpriseSettings } from "./tabs/enterprise-settings";
 import { ExtensionsSettings } from "./tabs/extensions-settings";
 import { FeaturesSettings } from "./tabs/features-settings";
 import { GeneralSettings } from "./tabs/general-settings";
+import { GitSettings } from "./tabs/git-settings";
 import { KeyboardSettings } from "./tabs/keyboard-settings";
 import { LanguageSettings } from "./tabs/language-settings";
 import { TerminalSettings } from "./tabs/terminal-settings";
@@ -55,6 +56,8 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         return <GeneralSettings />;
       case "editor":
         return <EditorSettings />;
+      case "git":
+        return <GitSettings />;
       case "appearance":
         return <AppearanceSettings />;
       case "databases":

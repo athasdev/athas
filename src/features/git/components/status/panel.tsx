@@ -120,6 +120,11 @@ const GitStatusPanel = ({
   repoPath,
 }: GitStatusPanelProps) => {
   const gitChangesFolderView = useSettingsStore((state) => state.settings.gitChangesFolderView);
+  const confirmBeforeDiscard = useSettingsStore((state) => state.settings.confirmBeforeDiscard);
+  const showStagedFirst = useSettingsStore((state) => state.settings.showStagedFirst);
+  const collapseEmptyGitSections = useSettingsStore(
+    (state) => state.settings.collapseEmptyGitSections,
+  );
   const contextMenu = useContextMenu<ContextMenuState>();
   const [isLoading, setIsLoading] = useState(false);
   const [isStagedCollapsed, setIsStagedCollapsed] = useState(true);
@@ -188,6 +193,12 @@ const GitStatusPanel = ({
 
   const handleDiscardFile = async (filePath: string) => {
     if (!repoPath) return;
+    if (
+      confirmBeforeDiscard &&
+      !window.confirm(`Discard changes for "${filePath}"? This cannot be undone.`)
+    ) {
+      return;
+    }
     setIsLoading(true);
     try {
       await discardFileChanges(repoPath, filePath);
@@ -342,21 +353,36 @@ const GitStatusPanel = ({
     return renderNode(rootNode, 0);
   };
 
-  return (
-    <div className="select-none p-1">
-      {stagedFiles.length > 0 && (
-        <div className="mb-2 overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
-          <div
-            className="sticky top-0 z-20 flex cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
-            onClick={() => setIsStagedCollapsed(!isStagedCollapsed)}
-          >
-            {isStagedCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-            <span className="font-bold text-[10px] uppercase tracking-wide">Staged Changes</span>
-            <div className="flex-1" />
-            <div className="flex items-center gap-1">
+  const hasVisibleStagedFiles = stagedFiles.length > 0;
+  const hasVisibleUnstagedFiles = unstagedFiles.length > 0;
+  const shouldShowStagedSection = showStagedFirst
+    ? hasVisibleStagedFiles || !collapseEmptyGitSections
+    : hasVisibleStagedFiles;
+  const shouldShowChangesSection = hasVisibleUnstagedFiles || !collapseEmptyGitSections;
+
+  const renderStagedSection = (className?: string) => {
+    if (!shouldShowStagedSection) return null;
+
+    return (
+      <div
+        className={
+          className ?? "overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55"
+        }
+      >
+        <div
+          className="sticky top-0 z-20 flex cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
+          onClick={() => setIsStagedCollapsed(!isStagedCollapsed)}
+        >
+          {isStagedCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
+          <span className="font-bold text-[10px] uppercase tracking-wide">Staged Changes</span>
+          <div className="flex-1" />
+          <div className="flex items-center gap-1">
+            {hasVisibleStagedFiles && (
               <span className="rounded-full bg-primary-bg px-1.5 text-[9px]">
                 {stagedFiles.length}
               </span>
+            )}
+            {hasVisibleStagedFiles && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -369,75 +395,109 @@ const GitStatusPanel = ({
               >
                 <Minus size={10} />
               </button>
-            </div>
-          </div>
-
-          {!isStagedCollapsed && (
-            <div className="bg-primary-bg/70 p-1">{renderFlatFileList(groupedStagedFiles)}</div>
-          )}
-        </div>
-      )}
-
-      <div className="overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
-        <div
-          className="sticky top-0 z-20 flex cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
-          onClick={() => setIsChangesCollapsed(!isChangesCollapsed)}
-        >
-          {isChangesCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-          <span className="font-bold text-[10px] uppercase tracking-wide">Changes</span>
-          <div className="flex-1" />
-          <div className="flex items-center gap-1">
-            {unstagedFiles.length > 0 && (
-              <span className="rounded-full bg-primary-bg px-1.5 text-[9px]">
-                {unstagedFiles.length}
-              </span>
-            )}
-            {unstagedFiles.length > 0 && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleStashAllUnstaged();
-                  }}
-                  disabled={isLoading}
-                  className="rounded p-0.5 text-text-lighter transition-colors hover:bg-primary-bg hover:text-text disabled:opacity-50"
-                  title="Stash all changes"
-                  aria-label="Stash all unstaged changes"
-                >
-                  <Archive size={10} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleStageAll();
-                  }}
-                  disabled={isLoading}
-                  className="rounded p-0.5 text-text-lighter transition-colors hover:bg-primary-bg hover:text-text disabled:opacity-50"
-                  title="Stage all"
-                  aria-label="Stage all changes"
-                >
-                  <Plus size={10} />
-                </button>
-              </>
             )}
           </div>
         </div>
 
-        {!isChangesCollapsed && (
+        {!isStagedCollapsed && (
           <div className="bg-primary-bg/70 p-1">
-            {unstagedFiles.length === 0 ? (
+            {hasVisibleStagedFiles ? (
+              renderFlatFileList(groupedStagedFiles)
+            ) : (
               <div className="flex items-center gap-2 px-2.5 py-2 text-[10px] text-text-lighter">
                 <Check size={10} className="text-success" />
-                <span className="italic">No changes</span>
+                <span className="italic">No staged changes</span>
               </div>
-            ) : gitChangesFolderView ? (
-              renderFolderTree(unstagedFiles, "changes")
-            ) : (
-              renderFlatFileList(groupedUnstagedFiles)
             )}
           </div>
         )}
       </div>
+    );
+  };
+
+  return (
+    <div className="select-none p-1">
+      {showStagedFirst &&
+        renderStagedSection(
+          "mb-2 overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55",
+        )}
+
+      {shouldShowChangesSection && (
+        <div className="overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
+          <div
+            className="sticky top-0 z-20 flex cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
+            onClick={() => setIsChangesCollapsed(!isChangesCollapsed)}
+          >
+            {isChangesCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
+            <span className="font-bold text-[10px] uppercase tracking-wide">Changes</span>
+            <div className="flex-1" />
+            <div className="flex items-center gap-1">
+              {hasVisibleUnstagedFiles && (
+                <span className="rounded-full bg-primary-bg px-1.5 text-[9px]">
+                  {unstagedFiles.length}
+                </span>
+              )}
+              {hasVisibleUnstagedFiles && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStashAllUnstaged();
+                    }}
+                    disabled={isLoading}
+                    className="rounded p-0.5 text-text-lighter transition-colors hover:bg-primary-bg hover:text-text disabled:opacity-50"
+                    title="Stash all changes"
+                    aria-label="Stash all unstaged changes"
+                  >
+                    <Archive size={10} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStageAll();
+                    }}
+                    disabled={isLoading}
+                    className="rounded p-0.5 text-text-lighter transition-colors hover:bg-primary-bg hover:text-text disabled:opacity-50"
+                    title="Stage all"
+                    aria-label="Stage all changes"
+                  >
+                    <Plus size={10} />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {!isChangesCollapsed && (
+            <div className="bg-primary-bg/70 p-1">
+              {hasVisibleUnstagedFiles ? (
+                gitChangesFolderView ? (
+                  renderFolderTree(unstagedFiles, "changes")
+                ) : (
+                  renderFlatFileList(groupedUnstagedFiles)
+                )
+              ) : (
+                <div className="flex items-center gap-2 px-2.5 py-2 text-[10px] text-text-lighter">
+                  <Check size={10} className="text-success" />
+                  <span className="italic">No changes</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!showStagedFirst &&
+        renderStagedSection(
+          "mt-2 overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55",
+        )}
+
+      {collapseEmptyGitSections && !hasVisibleStagedFiles && !hasVisibleUnstagedFiles && (
+        <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-primary-bg/55 px-3 py-2 text-[10px] text-text-lighter">
+          <Check size={10} className="text-success" />
+          <span className="italic">Working tree clean</span>
+        </div>
+      )}
 
       {onOpenFile && (
         <ContextMenu
