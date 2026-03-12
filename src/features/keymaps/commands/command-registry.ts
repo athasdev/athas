@@ -59,7 +59,10 @@ const fileCommands: Command[] = [
       });
 
       if (result) {
-        await invoke("write_file", { path: result, contents: activeBuffer.content || "" });
+        await invoke("write_file", {
+          path: result,
+          contents: activeBuffer.content || "",
+        });
       }
     },
   },
@@ -308,6 +311,10 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+f",
     execute: () => {
+      if (useKeymapStore.getState().contexts.terminalFocus) {
+        window.dispatchEvent(new CustomEvent("terminal-open-search"));
+        return;
+      }
       const state = useUIState.getState();
       state.setIsFindVisible(!state.isFindVisible);
     },

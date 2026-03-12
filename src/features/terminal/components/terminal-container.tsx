@@ -366,6 +366,16 @@ const TerminalContainer = ({
     return () => window.removeEventListener("terminal-ready", handleTerminalReady);
   }, []);
 
+  useEffect(() => {
+    const handleTerminalOpenSearch = () => {
+      if (!activeTerminalId) return;
+      terminalSessionRefs.current.get(activeTerminalId)?.showSearch();
+    };
+
+    window.addEventListener("terminal-open-search", handleTerminalOpenSearch);
+    return () => window.removeEventListener("terminal-open-search", handleTerminalOpenSearch);
+  }, [activeTerminalId]);
+
   // Listen for terminal tab switch events from the keymaps system
   useEffect(() => {
     const handleTerminalSwitchTab = (e: Event) => {
