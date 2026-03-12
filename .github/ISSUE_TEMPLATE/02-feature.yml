@@ -1,6 +1,6 @@
 name: Feature Request
 description: Propose a new capability for Athas
-title: "[Feature]: "
+title: ""
 type: Feature
 body:
   - type: textarea

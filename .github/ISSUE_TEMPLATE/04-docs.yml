@@ -1,6 +1,6 @@
 name: Documentation
 description: Report missing, unclear, or incorrect documentation
-title: "[Docs]: "
+title: ""
 type: Docs
 body:
   - type: input
