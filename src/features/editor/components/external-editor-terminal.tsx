@@ -154,7 +154,10 @@ export const ExternalEditorTerminal = ({
       }
     });
 
-    terminal.attachCustomKeyEventHandler(() => {
+    terminal.attachCustomKeyEventHandler((e) => {
+      if (e.metaKey && ["Backspace", "k", "a", "e", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        return true;
+      }
       return true;
     });
 

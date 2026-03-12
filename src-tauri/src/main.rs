@@ -5,7 +5,7 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use commands::*;
+use commands::{database::connection_manager::ConnectionManager, *};
 use features::{AcpAgentBridge, ClaudeCodeBridge, FileWatcher};
 use log::{debug, info};
 use lsp::LspManager;
@@ -144,6 +144,9 @@ fn main() {
 
          // Set up file clipboard
          app.manage(FileClipboard::new(None));
+
+         // Set up database connection manager
+         app.manage(Arc::new(ConnectionManager::new()));
 
          // Auto-start interceptor on app launch
          {
@@ -496,6 +499,59 @@ fn main() {
          update_sqlite_row,
          delete_sqlite_row,
          get_sqlite_foreign_keys,
+         // DuckDB commands
+         get_duckdb_tables,
+         query_duckdb,
+         query_duckdb_filtered,
+         execute_duckdb,
+         insert_duckdb_row,
+         update_duckdb_row,
+         delete_duckdb_row,
+         get_duckdb_foreign_keys,
+         // Connection management
+         connect_database,
+         disconnect_database,
+         test_connection,
+         // Credentials
+         store_db_credential,
+         get_db_credential,
+         remove_db_credential,
+         save_connection,
+         list_saved_connections,
+         delete_saved_connection,
+         // PostgreSQL commands
+         get_postgres_tables,
+         query_postgres,
+         query_postgres_filtered,
+         execute_postgres,
+         get_postgres_foreign_keys,
+         get_postgres_table_schema,
+         insert_postgres_row,
+         update_postgres_row,
+         delete_postgres_row,
+         // MySQL commands
+         get_mysql_tables,
+         query_mysql,
+         query_mysql_filtered,
+         execute_mysql,
+         get_mysql_foreign_keys,
+         get_mysql_table_schema,
+         insert_mysql_row,
+         update_mysql_row,
+         delete_mysql_row,
+         // MongoDB commands
+         get_mongo_databases,
+         get_mongo_collections,
+         query_mongo_documents,
+         insert_mongo_document,
+         update_mongo_document,
+         delete_mongo_document,
+         // Redis commands
+         redis_scan_keys,
+         redis_get_value,
+         redis_set_value,
+         redis_delete_key,
+         redis_get_info,
          // LSP commands
          lsp_start,
          lsp_stop,

@@ -124,7 +124,7 @@ export function useAutocomplete({
   const subscriptionStatus = subscription?.status ?? "free";
   const enterprisePolicy = subscription?.enterprise?.policy;
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-  const isPro = subscriptionStatus === "pro" || subscriptionStatus === "trial";
+  const isPro = subscriptionStatus === "pro";
   const useByok = managedPolicy ? managedPolicy.allowByok && !isPro : !isPro;
 
   useEffect(() => {

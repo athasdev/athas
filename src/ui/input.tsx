@@ -1,22 +1,28 @@
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
+import { forwardRef } from "react";
 import { cn } from "@/utils/cn";
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   size?: "xs" | "sm" | "md";
+  variant?: "default" | "ghost";
   leftIcon?: LucideIcon;
   rightIcon?: LucideIcon;
   containerClassName?: string;
 }
 
-export default function Input({
-  size = "sm",
-  className,
-  leftIcon: LeftIcon,
-  rightIcon: RightIcon,
-  containerClassName,
-  ...props
-}: InputProps) {
+const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  {
+    size = "sm",
+    variant = "default",
+    className,
+    leftIcon: LeftIcon,
+    rightIcon: RightIcon,
+    containerClassName,
+    ...props
+  },
+  ref,
+) {
   const sizeClasses = {
     xs: "h-6 text-xs",
     sm: "h-7 text-xs",
@@ -47,14 +53,27 @@ export default function Input({
     md: "right-2.5",
   };
 
+  const variantClasses = {
+    default: cn(
+      "rounded-lg border border-border bg-secondary-bg text-text transition-colors",
+      "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
+    ),
+    ghost: "border-none bg-transparent text-text focus:outline-none focus:ring-0",
+  };
+
+  const sharedClasses = cn(
+    "w-full disabled:cursor-not-allowed disabled:opacity-50",
+    "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+    "placeholder:text-text-lighter",
+  );
+
   if (!LeftIcon && !RightIcon) {
     return (
       <input
+        ref={ref}
         className={cn(
-          "rounded-lg border border-border bg-secondary-bg text-text transition-colors",
-          "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          "placeholder:text-text-lighter",
+          sharedClasses,
+          variantClasses[variant],
           "px-2 py-1",
           sizeClasses[size],
           className,
@@ -73,11 +92,10 @@ export default function Input({
         />
       )}
       <input
+        ref={ref}
         className={cn(
-          "w-full rounded-lg border border-border bg-secondary-bg text-text transition-colors",
-          "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          "placeholder:text-text-lighter",
+          sharedClasses,
+          variantClasses[variant],
           "py-1",
           paddingClasses[size],
           sizeClasses[size],
@@ -96,4 +114,6 @@ export default function Input({
       )}
     </div>
   );
-}
+});
+
+export default Input;

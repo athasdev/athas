@@ -107,7 +107,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
           }
 
           const { openUrl } = await import("@tauri-apps/plugin-opener");
-          await openUrl("https://github.com/athasdev/athas/issues/new?template=bug_report.md");
+          await openUrl("https://github.com/athasdev/athas/issues/new?template=01-bug.yml");
         } catch (e) {
           console.error("Failed to prepare bug report:", e);
         }

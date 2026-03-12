@@ -1,7 +1,7 @@
 import { ChevronsUpDown } from "lucide-react";
 import { memo, useMemo } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
-import Dropdown from "@/ui/dropdown";
+import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 
 interface SessionModeSelectorProps {
@@ -36,7 +36,7 @@ export const SessionModeSelector = memo(function SessionModeSelector({
 
   return (
     <div className={cn("flex items-center", className)}>
-      <Dropdown
+      <Select
         value={sessionModeState.currentModeId || ""}
         options={modeOptions}
         onChange={handleModeChange}

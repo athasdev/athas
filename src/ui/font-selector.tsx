@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useFontStore } from "@/stores/font-store";
 import type { FontInfo } from "@/stores/types/font";
-import Dropdown from "@/ui/dropdown";
+import Select from "@/ui/select";
 
 // Bundled fonts that are always available
 const BUNDLED_FONTS: FontInfo[] = [
@@ -91,7 +91,7 @@ export const FontSelector = ({
   }
 
   return (
-    <Dropdown
+    <Select
       value={selectedFont}
       options={fontOptions}
       onChange={handleFontChange}

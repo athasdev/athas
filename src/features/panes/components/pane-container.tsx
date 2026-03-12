@@ -1,4 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { DatabaseType } from "@/features/database/models/provider.types";
+import { PROVIDER_REGISTRY } from "@/features/database/providers/provider-registry";
 import CodeEditor from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -14,7 +16,17 @@ import type { PaneGroup } from "../types/pane";
 const AgentTab = lazy(() =>
   import("@/features/ai/components/agent-tab").then((m) => ({ default: m.AgentTab })),
 );
-const SQLiteViewer = lazy(() => import("@/features/database/providers/sqlite/sqlite-viewer"));
+
+const databaseViewerCache = new Map<
+  DatabaseType,
+  React.LazyExoticComponent<React.ComponentType<any>>
+>();
+function getDatabaseViewer(dbType: DatabaseType) {
+  if (!databaseViewerCache.has(dbType)) {
+    databaseViewerCache.set(dbType, lazy(PROVIDER_REGISTRY[dbType].viewerComponent));
+  }
+  return databaseViewerCache.get(dbType)!;
+}
 const ExternalEditorTerminal = lazy(() =>
   import("@/features/editor/components/external-editor-terminal").then((m) => ({
     default: m.ExternalEditorTerminal,
@@ -152,7 +164,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
             setActivePaneBuffer(pane.id, existingBuffer.id);
           }
         } else {
-          const bufferId = openBuffer(path, name, content, false, false, false, false);
+          const bufferId = openBuffer(path, name, content, false, undefined, false, false);
           if (!pane.bufferIds.includes(bufferId)) {
             addBufferToPane(pane.id, bufferId, true);
           }
@@ -241,7 +253,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           fileDragData.name,
           content,
           false,
-          false,
+          undefined,
           false,
           false,
         );
@@ -403,8 +415,13 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     bufferId={activeBuffer.id}
                   />
                 );
-              } else if (activeBuffer.isSQLite) {
-                return <SQLiteViewer databasePath={activeBuffer.path} />;
+              } else if (activeBuffer.databaseType) {
+                const config = PROVIDER_REGISTRY[activeBuffer.databaseType];
+                const DatabaseViewer = getDatabaseViewer(activeBuffer.databaseType);
+                const viewerProps = config.isFileBased
+                  ? { databasePath: activeBuffer.path }
+                  : { connectionId: activeBuffer.connectionId };
+                return <DatabaseViewer {...viewerProps} />;
               } else if (activeBuffer.isBinary) {
                 return (
                   <BinaryFileViewer

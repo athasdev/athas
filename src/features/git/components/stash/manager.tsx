@@ -1,5 +1,7 @@
 import { Archive, Clock, Download, Plus, Trash2, Upload, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import Checkbox from "@/ui/checkbox";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { applyStash, createStash, dropStash, getStashes, popStash } from "../../api/stash";
@@ -129,16 +131,12 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
               <span className="font-medium text-text text-xs">Create New Stash</span>
             </div>
 
-            <input
+            <Input
               type="text"
               placeholder="Stash message (optional)..."
               value={newStashMessage}
               onChange={(e) => setNewStashMessage(e.target.value)}
-              className={cn(
-                "w-full rounded border border-border bg-primary-bg",
-                "px-2 py-1 text-text text-xs",
-                "focus:border-blue-500 focus:outline-none",
-              )}
+              className={cn("w-full bg-primary-bg")}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   handleCreateStash();
@@ -147,12 +145,14 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
             />
 
             <div className="flex items-center gap-2">
-              <label className="flex cursor-pointer items-center gap-1 text-text text-xs">
-                <input
-                  type="checkbox"
+              <label
+                htmlFor="include-untracked-stash"
+                className="flex cursor-pointer items-center gap-1 text-text text-xs"
+              >
+                <Checkbox
+                  id="include-untracked-stash"
                   checked={includeUntracked}
-                  onChange={(e) => setIncludeUntracked(e.target.checked)}
-                  className="h-3 w-3"
+                  onChange={setIncludeUntracked}
                 />
                 Include untracked files
               </label>

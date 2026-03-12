@@ -7,6 +7,7 @@ import { useGitGutter } from "@/features/git/hooks/use-gutter";
 import { useSettingsStore } from "@/features/settings/store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/stores/zoom-store";
+import Input from "@/ui/input";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
@@ -98,6 +99,8 @@ export function Editor({
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const aiCompletionEnabled = useSettingsStore((state) => state.settings.aiCompletion);
   const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
+  const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
+  const gitGutterEnabled = useSettingsStore((state) => state.settings.enableGitGutter);
   const vimMode = useVimStore.use.mode();
 
   const fontSize = baseFontSize * zoomLevel;
@@ -113,7 +116,7 @@ export function Editor({
   useGitGutter({
     filePath: filePath || "",
     content,
-    enabled: !!filePath,
+    enabled: !!filePath && gitGutterEnabled,
   });
 
   const foldActions = useFoldStore.use.actions();
@@ -732,7 +735,7 @@ export function Editor({
             >
               <div className="p-1.5">
                 <div className="flex items-center gap-1.5">
-                  <input
+                  <Input
                     ref={inlineEditState.inlineEditInstructionRef}
                     value={inlineEditState.inlineEditInstruction}
                     onChange={(e) => inlineEditState.setInlineEditInstruction(e.target.value)}
@@ -748,7 +751,8 @@ export function Editor({
                         }
                       }
                     }}
-                    className="ui-font h-8 flex-1 bg-transparent px-1.5 text-text text-xs outline-none placeholder:text-text-lighter/80"
+                    variant="ghost"
+                    className="ui-font h-8 flex-1 px-1.5 text-xs placeholder:text-text-lighter/80"
                     placeholder="Describe the edit you want..."
                   />
                   <InlineEditModelSelector
@@ -853,7 +857,7 @@ export function Editor({
           textareaRef={inputRef}
         />
 
-        {filePath && (
+        {filePath && inlineGitBlameEnabled && (
           <GitBlameLayer
             ref={gitBlameRef}
             filePath={filePath}

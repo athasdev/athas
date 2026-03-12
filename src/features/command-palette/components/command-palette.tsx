@@ -24,6 +24,7 @@ import Command, {
 } from "@/ui/command";
 import KeybindingBadge from "@/ui/keybinding-badge";
 import { createAdvancedActions } from "../constants/advanced-actions";
+import { createDatabaseActions } from "../constants/database-actions";
 import { createFileActions } from "../constants/file-actions";
 import { createGitActions } from "../constants/git-actions";
 import { createMarkdownActions } from "../constants/markdown-actions";
@@ -53,6 +54,7 @@ const CommandPalette = () => {
     setActiveView,
     setIsQuickOpenVisible,
     setIsGlobalSearchVisible,
+    setIsDatabaseConnectionVisible,
     openSettingsDialog,
   } = useUIState();
   const { openQuickEdit } = useAppStore.use.actions();
@@ -176,6 +178,10 @@ const CommandPalette = () => {
         discardAllChanges,
       },
       onClose,
+    }),
+    ...createDatabaseActions({
+      onClose,
+      setIsDatabaseConnectionVisible,
     }),
     ...createAdvancedActions({
       lspStatus,

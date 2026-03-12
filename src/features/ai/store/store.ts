@@ -784,6 +784,44 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           // No-op: settings that were applied here have been removed
         },
 
+        getWorkspaceSessionSnapshot: (buffers) => {
+          const state = get();
+          const selectedBufferPaths = buffers
+            .filter((buffer) => state.selectedBufferIds.has(buffer.id))
+            .map((buffer) => buffer.path);
+
+          return {
+            currentChatId: state.currentChatId,
+            selectedAgentId: state.selectedAgentId,
+            isChatHistoryVisible: state.isChatHistoryVisible,
+            selectedBufferPaths,
+            selectedFilesPaths: Array.from(state.selectedFilesPaths),
+          };
+        },
+
+        restoreWorkspaceSession: (snapshot, buffers) => {
+          const selectedBufferIds = new Set(
+            buffers
+              .filter((buffer) => snapshot?.selectedBufferPaths.includes(buffer.path))
+              .map((buffer) => buffer.id),
+          );
+
+          set((state) => {
+            state.currentChatId = snapshot?.currentChatId || null;
+            state.selectedAgentId = snapshot?.selectedAgentId || "custom";
+            state.isChatHistoryVisible = snapshot?.isChatHistoryVisible || false;
+            state.selectedBufferIds = selectedBufferIds;
+            state.selectedFilesPaths = new Set(snapshot?.selectedFilesPaths || []);
+            state.input = "";
+            state.isTyping = false;
+            state.streamingMessageId = null;
+          });
+
+          if (snapshot?.currentChatId) {
+            void get().loadChatMessages(snapshot.currentChatId);
+          }
+        },
+
         // Helper getters
         getCurrentChat: () => {
           const state = get();

@@ -4,13 +4,13 @@ import type { ColumnInfo, ForeignKeyInfo } from "../types";
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
   int: { icon: Hash, color: "text-accent" },
   num: { icon: Hash, color: "text-accent" },
-  text: { icon: Type, color: "text-green-500" },
-  varchar: { icon: Type, color: "text-green-500" },
-  char: { icon: Type, color: "text-green-500" },
-  date: { icon: Calendar, color: "text-purple-500" },
-  time: { icon: Calendar, color: "text-purple-500" },
-  blob: { icon: FileText, color: "text-red-500" },
-  binary: { icon: FileText, color: "text-red-500" },
+  text: { icon: Type, color: "text-text-lighter" },
+  varchar: { icon: Type, color: "text-text-lighter" },
+  char: { icon: Type, color: "text-text-lighter" },
+  date: { icon: Calendar, color: "text-accent" },
+  time: { icon: Calendar, color: "text-accent" },
+  blob: { icon: FileText, color: "text-text-lighter" },
+  binary: { icon: FileText, color: "text-text-lighter" },
 };
 
 function getColumnIcon(type: string, isPrimaryKey: boolean, isForeignKey: boolean) {

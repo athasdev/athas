@@ -136,7 +136,7 @@ export default function Breadcrumb() {
       previewName,
       activeBuffer.content,
       false, // isImage
-      false, // isSQLite
+      undefined, // databaseType
       false, // isDiff
       true, // isVirtual
       undefined, // diffData

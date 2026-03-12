@@ -1,0 +1,24 @@
+name: Question
+description: Ask for clarification about Athas behavior or usage
+title: ""
+type: Question
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      placeholder: What would you like clarified?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      placeholder: What were you trying to do? Include examples if helpful.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I checked the docs and existing issues first.
+          required: true

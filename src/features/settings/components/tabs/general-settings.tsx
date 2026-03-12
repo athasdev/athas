@@ -100,7 +100,7 @@ export const GeneralSettings = () => {
       const report = `Environment\n\n- App: Athas ${version}\n- OS: ${plat} ${ver}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
       await writeText(report);
       const { openUrl } = await import("@tauri-apps/plugin-opener");
-      await openUrl("https://github.com/athasdev/athas/issues/new?template=bug_report.md");
+      await openUrl("https://github.com/athasdev/athas/issues/new?template=01-bug.yml");
       showToast({ message: "Report template copied", type: "success" });
     } catch (err) {
       console.error("Failed to prepare bug report:", err);

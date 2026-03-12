@@ -10,6 +10,8 @@ import {
   Upload,
 } from "lucide-react";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useSettingsStore } from "@/features/settings/store";
+import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { fetchChanges, pullChanges, pushChanges } from "../api/remotes";
 import { discardAllChanges, initRepository } from "../api/status";
 import { useGitStore } from "../stores/git-store";
@@ -50,6 +52,7 @@ const GitActionsMenu = ({
   } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const { isRefreshing } = useGitStore();
+  const confirmBeforeDiscard = useSettingsStore((state) => state.settings.confirmBeforeDiscard);
 
   const updateMenuPosition = useCallback(() => {
     if (!anchorRect || !menuRef.current) {
@@ -100,7 +103,6 @@ const GitActionsMenu = ({
     } finally {
       setIsLoading(false);
     }
-    onClose();
   };
 
   const handlePush = () => {
@@ -117,6 +119,12 @@ const GitActionsMenu = ({
 
   const handleDiscardAllChanges = async () => {
     if (!repoPath) return;
+    if (
+      confirmBeforeDiscard &&
+      !window.confirm("Discard all unstaged changes? This cannot be undone.")
+    ) {
+      return;
+    }
     handleAction(() => discardAllChanges(repoPath!), "Discard all changes");
   };
 
@@ -147,165 +155,100 @@ const GitActionsMenu = ({
     return null;
   }
 
+  const items: ContextMenuItem[] = hasGitRepo
+    ? [
+        {
+          id: "select-repository",
+          label: isSelectingRepository ? "Selecting..." : "Select Repository",
+          icon: <FolderOpen size={12} />,
+          disabled: isSelectingRepository,
+          onClick: () => void handleSelectRepository(),
+        },
+        { id: "sep-1", label: "", separator: true, onClick: () => {} },
+        {
+          id: "push",
+          label: "Push Changes",
+          icon: <Upload size={12} />,
+          disabled: isLoading,
+          onClick: handlePush,
+        },
+        { id: "sep-2", label: "", separator: true, onClick: () => {} },
+        {
+          id: "pull",
+          label: "Pull Changes",
+          icon: <Download size={12} />,
+          disabled: isLoading,
+          onClick: handlePull,
+        },
+        {
+          id: "fetch",
+          label: "Fetch",
+          icon: <GitPullRequest size={12} />,
+          disabled: isLoading,
+          onClick: handleFetch,
+        },
+        { id: "sep-3", label: "", separator: true, onClick: () => {} },
+        {
+          id: "manage-remotes",
+          label: "Manage Remotes",
+          icon: <Server size={12} />,
+          onClick: handleRemoteManager,
+        },
+        {
+          id: "manage-tags",
+          label: "Manage Tags",
+          icon: <Tag size={12} />,
+          onClick: handleTagManager,
+        },
+        { id: "sep-4", label: "", separator: true, onClick: () => {} },
+        {
+          id: "refresh",
+          label: "Refresh Status",
+          icon: <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />,
+          disabled: isRefreshing,
+          onClick: () => void handleRefresh(),
+        },
+        { id: "sep-5", label: "", separator: true, onClick: () => {} },
+        {
+          id: "discard-all",
+          label: "Discard All Changes",
+          icon: <RotateCcw size={12} />,
+          disabled: isLoading,
+          className: "text-red-400",
+          onClick: () => void handleDiscardAllChanges(),
+        },
+      ]
+    : [
+        {
+          id: "init-repository",
+          label: "Initialize Repository",
+          icon: <Settings size={12} />,
+          disabled: isLoading,
+          onClick: handleInitRepository,
+        },
+        { id: "sep-1", label: "", separator: true, onClick: () => {} },
+        {
+          id: "refresh",
+          label: "Refresh Status",
+          icon: <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />,
+          disabled: isRefreshing,
+          onClick: () => void handleRefresh(),
+        },
+      ];
+
   return (
-    <div
-      ref={menuRef}
-      className="fixed z-[10040] min-w-[200px] select-none rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+    <ContextMenu
+      isOpen={isOpen}
+      position={{
+        x: menuPosition?.left ?? anchorRect.left,
+        y: menuPosition?.top ?? anchorRect.bottom + 6,
+      }}
+      items={items}
+      onClose={onClose}
       style={{
-        left: menuPosition?.left ?? anchorRect.left,
-        top: menuPosition?.top ?? anchorRect.bottom + 6,
         visibility: menuPosition ? "visible" : "hidden",
       }}
-      onMouseDown={(e) => {
-        e.stopPropagation();
-      }}
-    >
-      {hasGitRepo ? (
-        <>
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleSelectRepository();
-            }}
-            disabled={isSelectingRepository}
-            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
-          >
-            <FolderOpen size={12} />
-            {isSelectingRepository ? "Selecting..." : "Select Repository"}
-          </button>
-
-          <div className="my-0.5 border-border/70 border-t" />
-
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handlePush();
-            }}
-            disabled={isLoading}
-            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
-          >
-            <Upload size={12} />
-            Push Changes
-          </button>
-
-          <div className="my-0.5 border-border/70 border-t" />
-
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handlePull();
-            }}
-            disabled={isLoading}
-            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
-          >
-            <Download size={12} />
-            Pull Changes
-          </button>
-
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleFetch();
-            }}
-            disabled={isLoading}
-            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
-          >
-            <GitPullRequest size={12} />
-            Fetch
-          </button>
-
-          <div className="my-0.5 border-border/70 border-t" />
-
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleRemoteManager();
-            }}
-            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
-          >
-            <Server size={12} />
-            Manage Remotes
-          </button>
-
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleTagManager();
-            }}
-            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
-          >
-            <Tag size={12} />
-            Manage Tags
-          </button>
-
-          <div className="my-0.5 border-border/70 border-t" />
-
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleRefresh();
-            }}
-            disabled={isRefreshing}
-            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
-          >
-            <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
-            Refresh Status
-          </button>
-
-          <div className="my-0.5 border-border/70 border-t" />
-
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleDiscardAllChanges();
-            }}
-            disabled={isLoading}
-            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-red-400 text-xs hover:bg-hover disabled:opacity-50"
-          >
-            <RotateCcw size={12} />
-            Discard All Changes
-          </button>
-        </>
-      ) : (
-        <>
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleInitRepository();
-            }}
-            disabled={isLoading}
-            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
-          >
-            <Settings size={12} />
-            Initialize Repository
-          </button>
-
-          <div className="my-0.5 border-border/70 border-t" />
-
-          <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleRefresh();
-            }}
-            disabled={isRefreshing}
-            className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover disabled:opacity-50"
-          >
-            <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
-            Refresh Status
-          </button>
-        </>
-      )}
-    </div>
+    />
   );
 };
 

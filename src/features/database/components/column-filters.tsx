@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import Dropdown from "@/ui/dropdown";
+import Input from "@/ui/input";
 import type { ColumnFilter, ColumnInfo } from "../models/common.types";
 
 interface ColumnFiltersProps {
@@ -56,21 +57,21 @@ export default function ColumnFilters({
               className="min-w-12"
             />
 
-            <input
+            <Input
               type="text"
               value={filter.value}
               onChange={(e) => onUpdateFilter(index, { value: e.target.value })}
               placeholder="value"
-              className="ui-font flex-1 border border-border bg-primary-bg px-1 py-0.5 text-xs"
+              className="flex-1 rounded-none bg-primary-bg px-1 py-0.5"
             />
 
             {filter.operator === "between" && (
-              <input
+              <Input
                 type="text"
                 value={filter.value2 || ""}
                 onChange={(e) => onUpdateFilter(index, { value2: e.target.value })}
                 placeholder="value2"
-                className="ui-font flex-1 border border-border bg-primary-bg px-1 py-0.5 text-xs"
+                className="flex-1 rounded-none bg-primary-bg px-1 py-0.5"
               />
             )}
 

@@ -60,7 +60,7 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
   return (
     <div
       className={cn(
-        "relative flex flex-col overflow-hidden border-border border-t bg-secondary-bg",
+        "relative flex flex-col overflow-hidden rounded-2xl bg-primary-bg",
         isFullScreen && "fixed inset-x-0 z-[100]",
         !isBottomPaneVisible && "hidden",
       )}

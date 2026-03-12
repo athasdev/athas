@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useSettingsStore } from "@/features/settings/store";
+import Select from "@/ui/select";
 import { TableView } from "@/ui/table-view";
 import { parseCsv } from "./csv-utils";
 
@@ -88,11 +89,12 @@ export function CsvPreview() {
             <label htmlFor="csv-delimiter" className="ui-font mr-1 text-text-lighter text-xs">
               Delimiter
             </label>
-            <select
+            <Select
               id="csv-delimiter"
               value={delimiter}
               onChange={(e) => setDelimiter(e.target.value as any)}
-              className="ui-font rounded border border-border bg-secondary-bg px-1 py-0.5 text-text text-xs"
+              size="xs"
+              className="min-w-24 rounded border-border px-1"
               title="Change delimiter"
             >
               <option value="auto">Auto</option>
@@ -100,7 +102,7 @@ export function CsvPreview() {
               <option value="\t">Tab</option>
               <option value=";">Semicolon</option>
               <option value="|">Pipe</option>
-            </select>
+            </Select>
 
             {/* Header toggle */}
             <button

@@ -20,9 +20,8 @@ import {
   Upload,
 } from "lucide-react";
 import type React from "react";
-import { memo, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { useEventListener, useOnClickOutside } from "usehooks-ts";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEventListener } from "usehooks-ts";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-clipboard-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-tree-store";
@@ -30,9 +29,10 @@ import { findFileInTree } from "@/features/file-system/controllers/file-tree-uti
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { ContextMenuState, FileEntry } from "@/features/file-system/types/app";
-import { getGitStatus } from "@/features/git/api/status";
-import type { GitFile, GitStatus } from "@/features/git/types/git";
+import { useGitStore } from "@/features/git/stores/git-store";
+import type { GitFile } from "@/features/git/types/git";
 import { useSettingsStore } from "@/features/settings/store";
+import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
@@ -42,7 +42,6 @@ import { FileTreeItem } from "./file-tree-item";
 import "../styles/file-tree.css";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-const GIT_STATUS_DEBOUNCE_MS = 500;
 const ALWAYS_HIDDEN_FILE_NAMES = new Set([".ds_store"]);
 
 const isAlwaysHiddenFileName = (name: string): boolean =>
@@ -101,11 +100,11 @@ function FileTreeComponent({
   const [isDeletingPath, setIsDeletingPath] = useState(false);
   const [editingValue, setEditingValue] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<Document>(document);
 
   const [gitIgnore, setGitIgnore] = useState<ReturnType<typeof ignore> | null>(null);
-  const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
+  const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
+  const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
   // sticky handled purely by CSS; no JS scanning
 
   const { settings } = useSettingsStore();
@@ -171,53 +170,10 @@ function FileTreeComponent({
     loadGitignore();
   }, [rootFolderPath]);
 
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      const loadGitStatus = async () => {
-        if (!rootFolderPath) {
-          setGitStatus(null);
-          return;
-        }
-
-        try {
-          const status = await getGitStatus(rootFolderPath);
-          setGitStatus(status);
-        } catch {
-          setGitStatus(null);
-        }
-      };
-
-      loadGitStatus();
-    }, GIT_STATUS_DEBOUNCE_MS);
-
-    return () => clearTimeout(debounceTimer);
-  }, [rootFolderPath]);
-
-  useEffect(() => {
-    if (!rootFolderPath) return;
-
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-    const handleGitStatusUpdated = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(async () => {
-        try {
-          const status = await getGitStatus(rootFolderPath);
-          setGitStatus(status);
-        } catch {
-          // Silently ignore errors
-        }
-      }, GIT_STATUS_DEBOUNCE_MS);
-    };
-
-    window.addEventListener("git-status-updated", handleGitStatusUpdated);
-    window.addEventListener("git-status-changed", handleGitStatusUpdated);
-    return () => {
-      window.removeEventListener("git-status-updated", handleGitStatusUpdated);
-      window.removeEventListener("git-status-changed", handleGitStatusUpdated);
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [rootFolderPath]);
+  const gitStatus =
+    currentWorkspaceRepoPath && currentWorkspaceRepoPath === rootFolderPath
+      ? workspaceGitStatus
+      : null;
 
   const isGitIgnored = useCallback(
     (fullPath: string, isDir: boolean): boolean => {
@@ -231,47 +187,62 @@ function FileTreeComponent({
     [gitIgnore, rootFolderPath],
   );
 
-  // Precompute git status map for O(1) lookups
-  const gitPathMap = useMemo(() => {
-    if (!gitStatus) return null as null | Map<string, GitFile>;
-    const m = new Map<string, GitFile>();
-    for (const f of gitStatus.files) m.set(f.path, f);
-    return m;
-  }, [gitStatus]);
+  const gitStatusClassLookup = useMemo(() => {
+    if (!gitStatus || !settings.showGitStatusInFileTree)
+      return null as null | { files: Map<string, string>; directories: Map<string, string> };
+
+    const mapStatus = (status: GitFile): string => {
+      switch (status.status) {
+        case "modified":
+          return status.staged ? "text-git-modified-staged" : "text-git-modified";
+        case "added":
+          return "text-git-added";
+        case "deleted":
+          return "text-git-deleted";
+        case "untracked":
+          return "text-git-untracked";
+        case "renamed":
+          return "text-git-renamed";
+        default:
+          return "";
+      }
+    };
+
+    const files = new Map<string, string>();
+    const directories = new Map<string, string>();
+
+    for (const gitFile of gitStatus.files) {
+      const statusClass = mapStatus(gitFile);
+      if (!statusClass) continue;
+
+      files.set(gitFile.path, statusClass);
+
+      const segments = gitFile.path.split("/");
+      let currentPath = "";
+      for (let index = 0; index < segments.length - 1; index++) {
+        currentPath = currentPath ? `${currentPath}/${segments[index]}` : segments[index];
+        if (!directories.has(currentPath)) {
+          directories.set(currentPath, statusClass);
+        }
+      }
+    }
+
+    return { files, directories };
+  }, [gitStatus, settings.showGitStatusInFileTree]);
 
   const getGitStatusClass = useCallback(
     (file: FileEntry): string => {
-      if (!rootFolderPath || !gitPathMap) return "";
+      if (!rootFolderPath || !gitStatusClassLookup) return "";
       const rel = getRelativePath(file.path, rootFolderPath);
       if (!rel) return "";
-      const fileStatus = gitPathMap.get(rel);
-      const mapStatus = (s: GitFile | null | undefined) => {
-        if (!s) return "";
-        switch (s.status) {
-          case "modified":
-            return s.staged ? "text-git-modified-staged" : "text-git-modified";
-          case "added":
-            return "text-git-added";
-          case "deleted":
-            return "text-git-deleted";
-          case "untracked":
-            return "text-git-untracked";
-          case "renamed":
-            return "text-git-renamed";
-          default:
-            return "";
-        }
-      };
-      if (fileStatus) return mapStatus(fileStatus);
+      const fileStatus = gitStatusClassLookup.files.get(rel);
+      if (fileStatus) return fileStatus;
       if (file.isDir) {
-        // Any change under directory
-        for (const [p, s] of gitPathMap) {
-          if (p === rel || p.startsWith(`${rel}/`)) return mapStatus(s);
-        }
+        return gitStatusClassLookup.directories.get(rel) || "";
       }
       return "";
     },
-    [gitPathMap, rootFolderPath],
+    [gitStatusClassLookup, rootFolderPath],
   );
 
   const filteredFiles = useMemo(() => {
@@ -436,8 +407,6 @@ function FileTreeComponent({
 
     setContextMenu({ x, y, path: filePath, isDir });
   };
-
-  useOnClickOutside(contextMenuRef as RefObject<HTMLElement>, () => setContextMenu(null));
 
   useEventListener(
     "keydown",
@@ -657,6 +626,227 @@ function FileTreeComponent({
     [collectLoadedFilesInDirectory, collectLocalFilesInDirectory, openPathInTab, updateActivePath],
   );
 
+  const contextMenuItems = useMemo<ContextMenuItem[]>(() => {
+    if (!contextMenu) return [];
+
+    const items: ContextMenuItem[] = [];
+
+    if (contextMenu.isDir) {
+      items.push(
+        {
+          id: "new-file",
+          label: "New File",
+          icon: <FilePlus size={12} />,
+          onClick: () => startInlineEditing(contextMenu.path, false),
+        },
+        {
+          id: "new-folder",
+          label: "New Folder",
+          icon: <FolderPlus size={12} />,
+          onClick: () => {
+            if (onCreateNewFolderInDirectory) startInlineEditing(contextMenu.path, true);
+          },
+        },
+        {
+          id: "upload-files",
+          label: "Upload Files",
+          icon: <Upload size={12} />,
+          onClick: () => onUploadFile?.(contextMenu.path),
+        },
+        {
+          id: "refresh",
+          label: "Refresh",
+          icon: <RefreshCw size={12} />,
+          onClick: () => onRefreshDirectory?.(contextMenu.path),
+        },
+        {
+          id: "open-all-files",
+          label: "Open All Files",
+          icon: <FolderOpen size={12} />,
+          onClick: () => void handleOpenAllFilesInDirectory(contextMenu.path),
+        },
+        {
+          id: "open-terminal",
+          label: "Open in Terminal",
+          icon: <Terminal size={12} />,
+          onClick: () => {
+            const folderName = contextMenu.path.split("/").pop() || "terminal";
+            const { openTerminalBuffer } = useBufferStore.getState().actions;
+            openTerminalBuffer({
+              name: folderName,
+              workingDirectory: contextMenu.path,
+            });
+          },
+        },
+        {
+          id: "find-in-folder",
+          label: "Find in Folder",
+          icon: <Search size={12} />,
+          onClick: () => {},
+        },
+      );
+
+      if (onGenerateImage) {
+        items.push({
+          id: "generate-image",
+          label: "Generate Image",
+          icon: <ImageIcon size={12} />,
+          onClick: () => onGenerateImage(contextMenu.path),
+        });
+      }
+
+      items.push({ id: "sep-dir", label: "", separator: true, onClick: () => {} });
+    } else {
+      items.push(
+        {
+          id: "open",
+          label: "Open",
+          icon: <FolderOpen size={12} />,
+          onClick: () => onFileSelect(contextMenu.path, false),
+        },
+        {
+          id: "copy-content",
+          label: "Copy Content",
+          icon: <Copy size={12} />,
+          onClick: async () => {
+            try {
+              const response = await fetch(contextMenu.path);
+              const content = await response.text();
+              await navigator.clipboard.writeText(content);
+            } catch {}
+          },
+        },
+        {
+          id: "duplicate-file",
+          label: "Duplicate",
+          icon: <FileText size={12} />,
+          onClick: () => onDuplicatePath?.(contextMenu.path),
+        },
+        {
+          id: "properties",
+          label: "Properties",
+          icon: <Info size={12} />,
+          onClick: async () => {
+            try {
+              const stats = await fetch(`file://${contextMenu.path}`, { method: "HEAD" });
+              const size = stats.headers.get("content-length") || "Unknown";
+              const fileName = contextMenu.path.split("/").pop() || "";
+              const extension = fileName.includes(".") ? fileName.split(".").pop() : "No extension";
+              alert(
+                `File: ${fileName}\nPath: ${contextMenu.path}\nSize: ${size} bytes\nType: ${extension}`,
+              );
+            } catch {
+              const fileName = contextMenu.path.split("/").pop() || "";
+              alert(`File: ${fileName}\nPath: ${contextMenu.path}`);
+            }
+          },
+        },
+        { id: "sep-file", label: "", separator: true, onClick: () => {} },
+      );
+    }
+
+    items.push(
+      {
+        id: "copy-path",
+        label: "Copy Path",
+        icon: <Link size={12} />,
+        onClick: async () => {
+          try {
+            await navigator.clipboard.writeText(contextMenu.path);
+          } catch {}
+        },
+      },
+      {
+        id: "copy-relative-path",
+        label: "Copy Relative Path",
+        icon: <FileText size={12} />,
+        onClick: async () => {
+          try {
+            let relativePath = contextMenu.path;
+            if (rootFolderPath && contextMenu.path.startsWith(rootFolderPath)) {
+              relativePath = contextMenu.path.substring(rootFolderPath.length + 1);
+            }
+            await navigator.clipboard.writeText(relativePath);
+          } catch {}
+        },
+      },
+      {
+        id: "copy",
+        label: "Copy",
+        icon: <Copy size={12} />,
+        onClick: () =>
+          clipboardActions.copy([{ path: contextMenu.path, is_dir: contextMenu.isDir }]),
+      },
+      {
+        id: "cut",
+        label: "Cut",
+        icon: <Scissors size={12} />,
+        onClick: () =>
+          clipboardActions.cut([{ path: contextMenu.path, is_dir: contextMenu.isDir }]),
+      },
+    );
+
+    if (clipboard && contextMenu.isDir) {
+      items.push({
+        id: "paste",
+        label: "Paste",
+        icon: <Clipboard size={12} />,
+        onClick: () => {
+          clipboardActions.paste(contextMenu.path).then(() => {
+            onRefreshDirectory?.(contextMenu.path);
+          });
+        },
+      });
+    }
+
+    items.push(
+      {
+        id: "rename",
+        label: "Rename",
+        icon: <Edit size={12} />,
+        onClick: () => onRenamePath?.(contextMenu.path),
+      },
+      {
+        id: "reveal",
+        label: "Reveal in Finder",
+        icon: <Eye size={12} />,
+        onClick: () => {
+          if (onRevealInFinder) onRevealInFinder(contextMenu.path);
+          else if (window.electron) window.electron.shell.showItemInFolder(contextMenu.path);
+          else {
+            const parentDir = contextMenu.path.substring(0, contextMenu.path.lastIndexOf("/"));
+            window.open(`file://${parentDir}`, "_blank");
+          }
+        },
+      },
+      { id: "sep-end", label: "", separator: true, onClick: () => {} },
+      {
+        id: "delete",
+        label: "Delete",
+        icon: <Trash size={12} />,
+        className: "text-red-400",
+        onClick: () => setDeleteCandidate({ path: contextMenu.path, isDir: contextMenu.isDir }),
+      },
+    );
+
+    return items;
+  }, [
+    clipboard,
+    clipboardActions,
+    contextMenu,
+    handleOpenAllFilesInDirectory,
+    onCreateNewFolderInDirectory,
+    onDuplicatePath,
+    onFileSelect,
+    onGenerateImage,
+    onRefreshDirectory,
+    onRenamePath,
+    onRevealInFinder,
+    onUploadFile,
+    rootFolderPath,
+    startInlineEditing,
+  ]);
+
   // No recursive render; rows are virtualized
 
   const handleRootDrop = async (e: React.DragEvent) => {
@@ -732,6 +922,17 @@ function FileTreeComponent({
         }
 
         switch (e.key) {
+          case "Escape": {
+            e.preventDefault();
+            e.stopPropagation();
+            setContextMenu(null);
+            updateActivePath?.("");
+            if (document.activeElement instanceof HTMLElement) {
+              document.activeElement.blur();
+            }
+            containerRef.current?.focus();
+            break;
+          }
           case "ArrowDown": {
             e.preventDefault();
             const next = Math.min(visibleRows.length - 1, curIndex + 1);
@@ -883,232 +1084,15 @@ function FileTreeComponent({
         </div>
       )}
 
-      {contextMenu &&
-        createPortal(
-          <div
-            ref={contextMenuRef}
-            className="context-menu fixed z-100 rounded-md border border-border bg-secondary-bg py-1"
-            style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px`, minWidth: "220px" }}
-          >
-            {contextMenu.isDir && (
-              <>
-                <ContextMenuItem
-                  icon={FilePlus}
-                  label="New File"
-                  onClick={() => {
-                    startInlineEditing(contextMenu.path, false);
-                    setContextMenu(null);
-                  }}
-                />
-                <ContextMenuItem
-                  icon={FolderPlus}
-                  label="New Folder"
-                  onClick={() => {
-                    if (onCreateNewFolderInDirectory) startInlineEditing(contextMenu.path, true);
-                    setContextMenu(null);
-                  }}
-                />
-                <ContextMenuItem
-                  icon={Upload}
-                  label="Upload Files"
-                  onClick={() => {
-                    onUploadFile?.(contextMenu.path);
-                    setContextMenu(null);
-                  }}
-                />
-                <ContextMenuItem
-                  icon={RefreshCw}
-                  label="Refresh"
-                  onClick={() => {
-                    onRefreshDirectory?.(contextMenu.path);
-                    setContextMenu(null);
-                  }}
-                />
-                <ContextMenuItem
-                  icon={FolderOpen}
-                  label="Open All Files"
-                  onClick={() => {
-                    const targetPath = contextMenu.path;
-                    setContextMenu(null);
-                    void handleOpenAllFilesInDirectory(targetPath);
-                  }}
-                />
-                <ContextMenuItem
-                  icon={Terminal}
-                  label="Open in Terminal"
-                  onClick={() => {
-                    const folderName = contextMenu.path.split("/").pop() || "terminal";
-                    const { openTerminalBuffer } = useBufferStore.getState().actions;
-                    openTerminalBuffer({
-                      name: folderName,
-                      workingDirectory: contextMenu.path,
-                    });
-                    setContextMenu(null);
-                  }}
-                />
-                <ContextMenuItem
-                  icon={Search}
-                  label="Find in Folder"
-                  onClick={() => setContextMenu(null)}
-                />
-                {onGenerateImage && (
-                  <ContextMenuItem
-                    icon={ImageIcon}
-                    label="Generate Image"
-                    onClick={() => {
-                      onGenerateImage(contextMenu.path);
-                      setContextMenu(null);
-                    }}
-                  />
-                )}
-                <div className="my-1 border-border border-t" />
-              </>
-            )}
-
-            {!contextMenu.isDir && (
-              <>
-                <ContextMenuItem
-                  icon={FolderOpen}
-                  label="Open"
-                  onClick={() => {
-                    onFileSelect(contextMenu.path, false);
-                    setContextMenu(null);
-                  }}
-                />
-                <ContextMenuItem
-                  icon={Copy}
-                  label="Copy Content"
-                  onClick={async () => {
-                    try {
-                      const response = await fetch(contextMenu.path);
-                      const content = await response.text();
-                      await navigator.clipboard.writeText(content);
-                    } catch {}
-                    setContextMenu(null);
-                  }}
-                />
-                <ContextMenuItem
-                  icon={FileText}
-                  label="Duplicate"
-                  onClick={() => {
-                    onDuplicatePath?.(contextMenu.path);
-                    setContextMenu(null);
-                  }}
-                />
-                <ContextMenuItem
-                  icon={Info}
-                  label="Properties"
-                  onClick={async () => {
-                    try {
-                      const stats = await fetch(`file://${contextMenu.path}`, { method: "HEAD" });
-                      const size = stats.headers.get("content-length") || "Unknown";
-                      const fileName = contextMenu.path.split("/").pop() || "";
-                      const extension = fileName.includes(".")
-                        ? fileName.split(".").pop()
-                        : "No extension";
-                      alert(
-                        `File: ${fileName}\nPath: ${contextMenu.path}\nSize: ${size} bytes\nType: ${extension}`,
-                      );
-                    } catch {
-                      const fileName = contextMenu.path.split("/").pop() || "";
-                      alert(`File: ${fileName}\nPath: ${contextMenu.path}`);
-                    }
-                    setContextMenu(null);
-                  }}
-                />
-                <div className="my-1 border-border border-t" />
-              </>
-            )}
-
-            <ContextMenuItem
-              icon={Link}
-              label="Copy Path"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(contextMenu.path);
-                } catch {}
-                setContextMenu(null);
-              }}
-            />
-            <ContextMenuItem
-              icon={FileText}
-              label="Copy Relative Path"
-              onClick={async () => {
-                try {
-                  let relativePath = contextMenu.path;
-                  if (rootFolderPath && contextMenu.path.startsWith(rootFolderPath)) {
-                    relativePath = contextMenu.path.substring(rootFolderPath.length + 1);
-                  }
-                  await navigator.clipboard.writeText(relativePath);
-                } catch {}
-                setContextMenu(null);
-              }}
-            />
-            <ContextMenuItem
-              icon={Copy}
-              label="Copy"
-              onClick={() => {
-                clipboardActions.copy([{ path: contextMenu.path, is_dir: contextMenu.isDir }]);
-                setContextMenu(null);
-              }}
-            />
-            <ContextMenuItem
-              icon={Scissors}
-              label="Cut"
-              onClick={() => {
-                clipboardActions.cut([{ path: contextMenu.path, is_dir: contextMenu.isDir }]);
-                setContextMenu(null);
-              }}
-            />
-            {clipboard && contextMenu.isDir && (
-              <ContextMenuItem
-                icon={Clipboard}
-                label="Paste"
-                onClick={() => {
-                  clipboardActions.paste(contextMenu.path).then(() => {
-                    onRefreshDirectory?.(contextMenu.path);
-                  });
-                  setContextMenu(null);
-                }}
-              />
-            )}
-            <ContextMenuItem
-              icon={Edit}
-              label="Rename"
-              onClick={() => {
-                onRenamePath?.(contextMenu.path);
-                setContextMenu(null);
-              }}
-            />
-            <ContextMenuItem
-              icon={Eye}
-              label="Reveal in Finder"
-              onClick={() => {
-                if (onRevealInFinder) onRevealInFinder(contextMenu.path);
-                else if (window.electron) window.electron.shell.showItemInFolder(contextMenu.path);
-                else {
-                  const parentDir = contextMenu.path.substring(
-                    0,
-                    contextMenu.path.lastIndexOf("/"),
-                  );
-                  window.open(`file://${parentDir}`, "_blank");
-                }
-                setContextMenu(null);
-              }}
-            />
-            <div className="my-1 border-border border-t" />
-            <ContextMenuItem
-              icon={Trash}
-              label="Delete"
-              className="hover:text-red-500"
-              onClick={() => {
-                setDeleteCandidate({ path: contextMenu.path, isDir: contextMenu.isDir });
-                setContextMenu(null);
-              }}
-            />
-          </div>,
-          document.body,
-        )}
+      {contextMenu && (
+        <ContextMenu
+          isOpen
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          items={contextMenuItems}
+          onClose={() => setContextMenu(null)}
+          className="min-w-[220px]"
+        />
+      )}
       {deleteCandidate && (
         <Dialog
           title={deleteCandidate.isDir ? "Delete Folder" : "Delete File"}
@@ -1144,33 +1128,6 @@ function FileTreeComponent({
         </Dialog>
       )}
     </div>
-  );
-}
-
-interface ContextMenuItemProps {
-  icon: React.ComponentType<{ size: number }>;
-  label: string;
-  onClick: (e: React.MouseEvent) => void;
-  className?: string;
-}
-
-function ContextMenuItem({ icon: Icon, label, onClick, className }: ContextMenuItemProps) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClick(e);
-      }}
-      className={cn(
-        "ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover",
-        className,
-      )}
-    >
-      <Icon size={12} />
-      {label}
-    </button>
   );
 }
 

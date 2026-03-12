@@ -6,15 +6,17 @@ import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionMode } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
 import Button from "@/ui/button";
-import Dropdown from "@/ui/dropdown";
+import Input from "@/ui/input";
 import Section, { SettingRow } from "@/ui/section";
+import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/utils/autocomplete";
 import { cn } from "@/utils/cn";
 import { setOllamaBaseUrl } from "@/utils/providers";
+import { checkOllamaConnection } from "@/utils/providers/ollama-provider";
 
 const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
@@ -79,16 +81,10 @@ export const AISettings = () => {
     setOllamaBaseUrl(url);
   }, []);
 
-  const checkOllamaConnection = useCallback(async (url: string) => {
+  const validateOllamaConnection = useCallback(async (url: string) => {
     setOllamaStatus("checking");
-    try {
-      const response = await fetch(`${url}/api/tags`, {
-        signal: AbortSignal.timeout(3000),
-      });
-      setOllamaStatus(response.ok ? "ok" : "error");
-    } catch {
-      setOllamaStatus("error");
-    }
+    const ok = await checkOllamaConnection(url);
+    setOllamaStatus(ok ? "ok" : "error");
   }, []);
 
   const handleOllamaUrlChange = (value: string) => {
@@ -100,7 +96,7 @@ export const AISettings = () => {
       const trimmed = value.replace(/\/+$/, "") || DEFAULT_OLLAMA_BASE_URL;
       updateSetting("ollamaBaseUrl", trimmed);
       setOllamaBaseUrl(trimmed);
-      checkOllamaConnection(trimmed);
+      validateOllamaConnection(trimmed);
     }, 600);
   };
 
@@ -108,7 +104,7 @@ export const AISettings = () => {
     setOllamaUrl(DEFAULT_OLLAMA_BASE_URL);
     updateSetting("ollamaBaseUrl", DEFAULT_OLLAMA_BASE_URL);
     setOllamaBaseUrl(DEFAULT_OLLAMA_BASE_URL);
-    checkOllamaConnection(DEFAULT_OLLAMA_BASE_URL);
+    validateOllamaConnection(DEFAULT_OLLAMA_BASE_URL);
   };
 
   const providers = getAvailableProviders();
@@ -156,7 +152,18 @@ export const AISettings = () => {
   return (
     <div className="space-y-4">
       <Section title="Provider & Model">
-        <SettingRow label="Model" description="Choose your AI provider and model">
+        <SettingRow
+          label="Model"
+          description="Choose your AI provider and model"
+          onReset={() => {
+            updateSetting("aiProviderId", getDefaultSetting("aiProviderId"));
+            updateSetting("aiModelId", getDefaultSetting("aiModelId"));
+          }}
+          canReset={
+            settings.aiProviderId !== getDefaultSetting("aiProviderId") ||
+            settings.aiModelId !== getDefaultSetting("aiModelId")
+          }
+        >
           <AIModelSelector
             providerId={settings.aiProviderId}
             modelId={settings.aiModelId}
@@ -168,26 +175,26 @@ export const AISettings = () => {
 
       {(isOllamaSelected || settings.ollamaBaseUrl !== DEFAULT_OLLAMA_BASE_URL) && (
         <Section title="Ollama">
-          <SettingRow label="Endpoint" description="Base URL for Ollama API (local, LAN, or cloud)">
+          <SettingRow
+            label="Endpoint"
+            description="Base URL for Ollama API (local, LAN, or cloud)"
+            onReset={handleResetOllamaUrl}
+            canReset={settings.ollamaBaseUrl !== getDefaultSetting("ollamaBaseUrl")}
+          >
             <div className="flex items-center gap-1.5">
-              <div className="relative">
-                <Globe
-                  size={11}
-                  className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 text-text-lighter"
-                />
-                <input
-                  type="text"
-                  value={ollamaUrl}
-                  onChange={(e) => handleOllamaUrlChange(e.target.value)}
-                  placeholder={DEFAULT_OLLAMA_BASE_URL}
-                  spellCheck={false}
-                  className={cn(
-                    "w-56 rounded-lg border bg-secondary-bg py-1.5 pr-2 pl-7 text-text text-xs",
-                    "focus:border-accent focus:outline-none",
-                    ollamaStatus === "error" ? "border-red-500/60" : "border-border",
-                  )}
-                />
-              </div>
+              <Input
+                type="text"
+                value={ollamaUrl}
+                onChange={(e) => handleOllamaUrlChange(e.target.value)}
+                placeholder={DEFAULT_OLLAMA_BASE_URL}
+                spellCheck={false}
+                leftIcon={Globe}
+                className={cn(
+                  "w-56 pr-2",
+                  "focus:border-accent focus:ring-accent/30",
+                  ollamaStatus === "error" ? "border-red-500/60" : "border-border",
+                )}
+              />
               {ollamaStatus === "checking" && (
                 <RefreshCw size={12} className="animate-spin text-text-lighter" />
               )}
@@ -235,8 +242,12 @@ export const AISettings = () => {
           <SettingRow
             label="Default Session Mode"
             description="Default mode for ACP agent sessions"
+            onReset={() =>
+              updateSetting("aiDefaultSessionMode", getDefaultSetting("aiDefaultSessionMode"))
+            }
+            canReset={settings.aiDefaultSessionMode !== getDefaultSetting("aiDefaultSessionMode")}
           >
-            <Dropdown
+            <Select
               value={settings.aiDefaultSessionMode || ""}
               options={[
                 { value: "", label: "None" },
@@ -253,7 +264,12 @@ export const AISettings = () => {
       )}
 
       <Section title="Autocomplete">
-        <SettingRow label="AI Completion" description="Enable AI autocomplete while typing">
+        <SettingRow
+          label="AI Completion"
+          description="Enable AI autocomplete while typing"
+          onReset={() => updateSetting("aiCompletion", getDefaultSetting("aiCompletion"))}
+          canReset={settings.aiCompletion !== getDefaultSetting("aiCompletion")}
+        >
           <Switch
             checked={aiCompletionAllowedByPolicy ? settings.aiCompletion : false}
             onChange={(checked) => updateSetting("aiCompletion", checked)}
@@ -264,9 +280,13 @@ export const AISettings = () => {
         <SettingRow
           label="Autocomplete Model"
           description="Choose any OpenRouter model for autocomplete"
+          onReset={() =>
+            updateSetting("aiAutocompleteModelId", getDefaultSetting("aiAutocompleteModelId"))
+          }
+          canReset={settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")}
         >
           <div className="flex items-center gap-2">
-            <Dropdown
+            <Select
               value={settings.aiAutocompleteModelId}
               options={autocompleteModels.map((model) => ({
                 value: model.id,
