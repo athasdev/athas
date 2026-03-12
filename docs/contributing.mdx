@@ -108,9 +108,18 @@ bun dev
 
 ## Release Process
 
-1. Update version in `package.json` and `src-tauri/Cargo.toml`.
-2. Create a git tag: `git tag v1.0.0`.
-3. Push the tag: `git push origin v1.0.0`.
+1. Run release checks:
+   ```bash
+   bun release:check
+   bun pre-release:full
+   ```
+2. Bump and publish using one of:
+   ```bash
+   bun release:patch
+   bun release:minor
+   bun release:major
+   ```
+3. The release script updates `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, creates the release commit, and pushes the tag.
 
 ### GitHub Actions
 

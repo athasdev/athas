@@ -5,9 +5,9 @@ import { memo, useEffect, useMemo, useState } from "react";
 import type { Token } from "@/features/editor/extensions/types";
 import type { LineToken } from "@/features/editor/types/editor";
 import {
+  getDatabaseTypeFromPath,
   isBinaryFile,
   isImageFile,
-  isSQLiteFile,
 } from "@/features/file-system/controllers/file-utils";
 import { useFilePreview } from "../hooks/use-file-preview";
 
@@ -268,7 +268,11 @@ const PreviewLine = memo(({ lineNumber, content, tokens }: LineData) => {
 
 export const FilePreview = ({ filePath }: FilePreviewProps) => {
   const isImage = !!(filePath && isImageFile(filePath));
-  const isBinary = !!(filePath && !isImage && (isBinaryFile(filePath) || isSQLiteFile(filePath)));
+  const isBinary = !!(
+    filePath &&
+    !isImage &&
+    (isBinaryFile(filePath) || getDatabaseTypeFromPath(filePath))
+  );
   const { content, tokens, isLoading, error } = useFilePreview(
     isImage || isBinary ? null : filePath,
   );

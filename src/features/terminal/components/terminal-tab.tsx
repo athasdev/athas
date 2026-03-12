@@ -28,6 +28,7 @@ export function TerminalTab({
       <XtermTerminal
         sessionId={sessionId}
         isActive={isActive}
+        isVisible={isActive}
         onTerminalExit={handleTerminalExit}
         initialCommand={initialCommand}
         workingDirectory={workingDirectory}

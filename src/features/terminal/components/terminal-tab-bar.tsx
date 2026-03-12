@@ -7,6 +7,7 @@ import {
   Minimize2,
   Pin,
   Plus,
+  Search,
   SplitSquareHorizontal,
   Terminal as TerminalIcon,
 } from "lucide-react";
@@ -99,13 +100,14 @@ interface TerminalTabBarProps {
   onTabClose: (terminalId: string, event?: React.MouseEvent) => void;
   onTabReorder?: (fromIndex: number, toIndex: number) => void;
   onTabPin?: (terminalId: string) => void;
-  onTabRename?: (terminalId: string) => void;
+  onTabRename?: (terminalId: string, name: string) => void;
   onNewTerminal?: () => void;
   onTabCreate?: (directory: string, shell?: string) => void;
   onCloseOtherTabs?: (terminalId: string) => void;
   onCloseAllTabs?: () => void;
   onCloseTabsToRight?: (terminalId: string) => void;
   onSplitView?: () => void;
+  onSearchTerminal?: () => void;
   onFullScreen?: () => void;
   isFullScreen?: boolean;
   isSplitView?: boolean;
@@ -125,10 +127,14 @@ const TerminalTabBar = ({
   onCloseAllTabs,
   onCloseTabsToRight,
   onSplitView,
+  onSearchTerminal,
   onFullScreen,
   isFullScreen = false,
   isSplitView = false,
 }: TerminalTabBarProps) => {
+  const renameStartedAtRef = useRef<number>(0);
+  const [editingTerminalId, setEditingTerminalId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dropTarget, setDropTarget] = useState<number | null>(null);
@@ -279,8 +285,12 @@ const TerminalTabBar = ({
     // Cleanup is handled in handleMouseUp
   };
 
-  const handleKeyDown = (_e: React.KeyboardEvent) => {
-    // TODO: Add keyboard navigation support
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "F2" && activeTerminalId) {
+      e.preventDefault();
+      e.stopPropagation();
+      startRename(activeTerminalId);
+    }
   };
 
   const handleTabCloseWrapper = (terminalId: string) => {
@@ -289,6 +299,44 @@ const TerminalTabBar = ({
 
   const handleTabPin = (terminalId: string) => {
     onTabPin?.(terminalId);
+  };
+
+  const startRename = (terminalId: string) => {
+    const terminal = sortedTerminals.find((item) => item.id === terminalId);
+    if (!terminal) return;
+
+    closeContextMenu();
+    requestAnimationFrame(() => {
+      renameStartedAtRef.current = Date.now();
+      onTabClick(terminalId);
+      setEditingTerminalId(terminalId);
+      setEditingName(terminal.name);
+    });
+  };
+
+  const cancelRename = () => {
+    setEditingTerminalId(null);
+    setEditingName("");
+  };
+
+  const commitRename = () => {
+    if (!editingTerminalId) return;
+
+    const trimmedName = editingName.trim();
+    if (!trimmedName) {
+      cancelRename();
+      return;
+    }
+
+    onTabRename?.(editingTerminalId, trimmedName);
+    cancelRename();
+  };
+
+  const handleRenameBlur = () => {
+    if (Date.now() - renameStartedAtRef.current < 150) {
+      return;
+    }
+    commitRename();
   };
 
   const closeContextMenu = () => {
@@ -320,6 +368,8 @@ const TerminalTabBar = ({
     if (!a.isPinned && b.isPinned) return 1;
     return 0;
   });
+  const pinnedTerminals = sortedTerminals.filter((terminal) => terminal.isPinned);
+  const regularTerminals = sortedTerminals.filter((terminal) => !terminal.isPinned);
 
   useEffect(() => {
     if (draggedIndex === null) return;
@@ -335,6 +385,15 @@ const TerminalTabBar = ({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggedIndex, dragStartPosition, isDragging, dropTarget]);
+
+  useEffect(() => {
+    if (
+      editingTerminalId &&
+      !sortedTerminals.some((terminal) => terminal.id === editingTerminalId)
+    ) {
+      cancelRename();
+    }
+  }, [editingTerminalId, sortedTerminals]);
 
   if (terminals.length === 0) {
     return (
@@ -370,75 +429,128 @@ const TerminalTabBar = ({
       <div
         ref={tabBarRef}
         className={cn(
-          "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border",
-          "flex min-h-8 items-center justify-between overflow-hidden",
-          "border-border border-b bg-secondary-bg px-1.5 py-1",
+          "relative flex min-h-8 items-center justify-between gap-1 overflow-hidden px-1.5 py-1",
+          "[-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         )}
         style={{
-          scrollbarWidth: "thin",
           scrollbarGutter: "stable",
         }}
+        role="tablist"
+        aria-label="Terminal tabs"
         onContextMenu={handleToolbarContextMenu}
       >
         {/* Left side - Terminal tabs */}
-        <div
-          className="scrollbar-hidden flex min-w-0 flex-1 gap-1 overflow-x-auto"
-          data-tab-container
-          onWheel={(e) => {
-            // Handle horizontal wheel scrolling with native delta values for natural acceleration
-            const container = e.currentTarget;
-            if (!container) return;
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+          {pinnedTerminals.length > 0 && (
+            <div className="flex shrink-0 items-center gap-1 pr-1">
+              {pinnedTerminals.map((terminal, index) => {
+                const isActive = terminal.id === activeTerminalId;
+                const isDraggedTab = isDragging && draggedIndex === index;
+                const showDropIndicatorBefore =
+                  dropTarget === index && draggedIndex !== null && !isDraggedOutside;
 
-            // Use deltaY for horizontal scrolling (common pattern for horizontal scrollable areas)
-            // Also support deltaX for devices that support horizontal scrolling directly
-            const deltaX = e.deltaX !== 0 ? e.deltaX : e.deltaY;
-
-            container.scrollLeft += deltaX;
-
-            // Prevent default to avoid any browser interference
-            e.preventDefault();
-          }}
-        >
-          {sortedTerminals.map((terminal, index) => {
-            const isActive = terminal.id === activeTerminalId;
-            const isDraggedTab = isDragging && draggedIndex === index;
-            const showDropIndicatorBefore =
-              dropTarget === index && draggedIndex !== null && !isDraggedOutside;
-
-            return (
-              <TerminalTabBarItem
-                key={terminal.id}
-                terminal={terminal}
-                index={index}
-                isActive={isActive}
-                isDraggedTab={isDraggedTab}
-                showDropIndicatorBefore={showDropIndicatorBefore}
-                tabRef={(el) => {
-                  tabRefs.current[index] = el;
-                }}
-                onMouseDown={(e) => handleMouseDown(e, index)}
-                onContextMenu={(e) => handleContextMenu(e, terminal)}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onKeyDown={handleKeyDown}
-                handleTabClose={handleTabCloseWrapper}
-                handleTabPin={handleTabPin}
-              />
-            );
-          })}
-          {/* Drop indicator after the last tab */}
-          {dropTarget === sortedTerminals.length && draggedIndex !== null && !isDraggedOutside && (
-            <div className="relative flex items-center">
-              <div
-                className="absolute top-0 bottom-0 z-10 w-0.5 bg-accent"
-                style={{ height: "100%" }}
-              />
+                return (
+                  <TerminalTabBarItem
+                    key={terminal.id}
+                    terminal={terminal}
+                    isActive={isActive}
+                    isDraggedTab={isDraggedTab}
+                    showDropIndicatorBefore={showDropIndicatorBefore}
+                    tabRef={(el) => {
+                      tabRefs.current[index] = el;
+                    }}
+                    onMouseDown={(e) => handleMouseDown(e, index)}
+                    onContextMenu={(e) => handleContextMenu(e, terminal)}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onKeyDown={handleKeyDown}
+                    handleTabClose={handleTabCloseWrapper}
+                    handleTabPin={handleTabPin}
+                    isEditing={editingTerminalId === terminal.id}
+                    editingName={editingName}
+                    onEditingNameChange={setEditingName}
+                    onRenameSubmit={commitRename}
+                    onRenameCancel={cancelRename}
+                    onRenameBlur={handleRenameBlur}
+                  />
+                );
+              })}
             </div>
           )}
+
+          <div
+            className="scrollbar-hidden flex min-w-0 flex-1 gap-1 overflow-x-auto"
+            data-tab-container
+            onWheel={(e) => {
+              const container = e.currentTarget;
+              if (!container) return;
+
+              const deltaX = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+              container.scrollLeft += deltaX;
+              e.preventDefault();
+            }}
+          >
+            {regularTerminals.map((terminal, regularIndex) => {
+              const index = pinnedTerminals.length + regularIndex;
+              const isActive = terminal.id === activeTerminalId;
+              const isDraggedTab = isDragging && draggedIndex === index;
+              const showDropIndicatorBefore =
+                dropTarget === index && draggedIndex !== null && !isDraggedOutside;
+
+              return (
+                <TerminalTabBarItem
+                  key={terminal.id}
+                  terminal={terminal}
+                  isActive={isActive}
+                  isDraggedTab={isDraggedTab}
+                  showDropIndicatorBefore={showDropIndicatorBefore}
+                  tabRef={(el) => {
+                    tabRefs.current[index] = el;
+                  }}
+                  onMouseDown={(e) => handleMouseDown(e, index)}
+                  onContextMenu={(e) => handleContextMenu(e, terminal)}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onKeyDown={handleKeyDown}
+                  handleTabClose={handleTabCloseWrapper}
+                  handleTabPin={handleTabPin}
+                  isEditing={editingTerminalId === terminal.id}
+                  editingName={editingName}
+                  onEditingNameChange={setEditingName}
+                  onRenameSubmit={commitRename}
+                  onRenameCancel={cancelRename}
+                  onRenameBlur={handleRenameBlur}
+                />
+              );
+            })}
+            {dropTarget === sortedTerminals.length &&
+              draggedIndex !== null &&
+              !isDraggedOutside && (
+                <div className="relative flex items-center">
+                  <div
+                    className="absolute top-0 bottom-0 z-10 w-0.5 bg-accent"
+                    style={{ height: "100%" }}
+                  />
+                </div>
+              )}
+          </div>
         </div>
 
         {/* Right side - Action buttons */}
         <div className="flex shrink-0 items-center gap-1 px-1">
+          {onSearchTerminal && (
+            <Tooltip content="Find in Terminal (Cmd/Ctrl+F)" side="bottom">
+              <button
+                onClick={onSearchTerminal}
+                className={cn(
+                  "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1",
+                  "text-text-lighter transition-colors hover:border-border/70 hover:bg-hover",
+                )}
+              >
+                <Search size={12} />
+              </button>
+            </Tooltip>
+          )}
           <Tooltip content="New Terminal (Cmd+T)" side="bottom">
             <button
               onClick={onNewTerminal}
@@ -514,7 +626,7 @@ const TerminalTabBar = ({
             </span>
             {/* Pin indicator */}
             {sortedTerminals[draggedIndex].isPinned && (
-              <Pin size={8} className="shrink-0 text-blue-500" />
+              <Pin size={8} className="shrink-0 fill-current text-accent" />
             )}
             <span className="truncate">{sortedTerminals[draggedIndex].name}</span>
           </div>
@@ -550,7 +662,7 @@ const TerminalTabBar = ({
               }
             }}
             onRename={(terminalId) => {
-              onTabRename?.(terminalId);
+              startRename(terminalId);
             }}
             onExport={async (terminalId) => {
               const session = useTerminalStore.getState().getSession(terminalId);

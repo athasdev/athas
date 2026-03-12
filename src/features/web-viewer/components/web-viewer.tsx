@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import Input from "@/ui/input";
 
 interface WebViewerProps {
   url: string;
@@ -517,13 +518,13 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
             >
               <SecurityIcon size={14} />
             </div>
-            <input
+            <Input
               ref={urlInputRef}
               type="text"
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
               placeholder="Enter URL..."
-              className="h-7 w-full rounded-md border border-border bg-primary-bg pr-8 pl-8 text-[13px] text-text placeholder:text-text-lighter focus:border-accent focus:outline-none"
+              className="h-7 w-full rounded-md border-border bg-primary-bg pr-8 pl-8 text-[13px] focus:border-accent focus:ring-accent/30"
             />
             <button
               type="button"

@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useSettingsStore } from "@/features/settings/store";
 
 interface UseDiffViewStateReturn {
   viewMode: "unified" | "split";
@@ -8,7 +9,8 @@ interface UseDiffViewStateReturn {
 }
 
 export const useDiffViewState = (): UseDiffViewStateReturn => {
-  const [viewMode, setViewMode] = useState<"unified" | "split">("unified");
+  const defaultViewMode = useSettingsStore((state) => state.settings.gitDefaultDiffView);
+  const [viewMode, setViewMode] = useState<"unified" | "split">(defaultViewMode);
   const [showWhitespace, setShowWhitespace] = useState(true);
 
   const stableSetViewMode = useCallback((mode: "unified" | "split") => {

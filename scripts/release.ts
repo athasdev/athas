@@ -1,7 +1,5 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 
 // ANSI colors for pretty output
 const colors = {
@@ -32,7 +30,11 @@ function info(message: string) {
 }
 
 // Parse semver version
-function parseVersion(version: string): { major: number; minor: number; patch: number } {
+function parseVersion(version: string): {
+  major: number;
+  minor: number;
+  patch: number;
+} {
   const match = version.match(/^(\d+)\.(\d+)\.(\d+)/);
   if (!match) {
     error(`Invalid version format: ${version}`);
@@ -95,28 +97,47 @@ async function getCommitsSinceLastTag(): Promise<string[]> {
 }
 
 // Update package.json version
-function updatePackageJson(newVersion: string) {
-  const pkgPath = join(process.cwd(), "package.json");
-  const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+async function updatePackageJson(newVersion: string) {
+  const pkgPath = `${process.cwd()}/package.json`;
+  const pkg = JSON.parse(await Bun.file(pkgPath).text());
   pkg.version = newVersion;
-  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+  await Bun.write(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
   success(`Updated package.json to v${newVersion}`);
 }
 
 // Update tauri.conf.json version
-function updateTauriConfig(newVersion: string) {
-  const configPath = join(process.cwd(), "src-tauri/tauri.conf.json");
-  const config = JSON.parse(readFileSync(configPath, "utf-8"));
+async function updateTauriConfig(newVersion: string) {
+  const configPath = `${process.cwd()}/src-tauri/tauri.conf.json`;
+  const config = JSON.parse(await Bun.file(configPath).text());
   config.version = newVersion;
-  writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
+  await Bun.write(configPath, JSON.stringify(config, null, 2) + "\n");
   success(`Updated tauri.conf.json to v${newVersion}`);
+}
+
+// Update Cargo.toml version
+async function updateCargoToml(newVersion: string) {
+  const cargoPath = `${process.cwd()}/src-tauri/Cargo.toml`;
+  const cargoToml = await Bun.file(cargoPath).text();
+  const updatedCargoToml = cargoToml.replace(
+    /^version\s*=\s*"[^"]+"/m,
+    `version = "${newVersion}"`,
+  );
+
+  if (updatedCargoToml === cargoToml) {
+    error("Could not update version in src-tauri/Cargo.toml");
+  }
+
+  await Bun.write(cargoPath, updatedCargoToml);
+  success(`Updated src-tauri/Cargo.toml to v${newVersion}`);
 }
 
 // Check if working directory is clean
 async function checkWorkingDirectory() {
   const status = await $`git status --porcelain`.text();
   if (status.trim().length > 0) {
-    error("Working directory is not clean. Please commit or stash your changes first.");
+    error(
+      "Working directory is not clean. Please commit or stash your changes first.",
+    );
   }
 }
 
@@ -127,15 +148,25 @@ async function release() {
   // Get bump type from command line args
   const bumpType = process.argv[2];
   if (!bumpType) {
-    error("Please specify bump type: patch, minor, major, or a version number (e.g., 1.2.3)");
+    error(
+      "Please specify bump type: patch, minor, major, or a version number (e.g., 1.2.3)",
+    );
+  }
+
+  if (!process.env.RELEASE_SKIP_CHECKS) {
+    log("Running pre-release checks...\n", "magenta");
+    await $`bun pre-release`;
+    success("Pre-release checks passed");
+  } else {
+    info("Skipping pre-release checks because RELEASE_SKIP_CHECKS is set");
   }
 
   // Check if working directory is clean
   await checkWorkingDirectory();
 
   // Read current version
-  const pkgPath = join(process.cwd(), "package.json");
-  const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+  const pkgPath = `${process.cwd()}/package.json`;
+  const pkg = JSON.parse(await Bun.file(pkgPath).text());
   const currentVersion = pkg.version;
 
   info(`Current version: ${currentVersion}`);
@@ -161,8 +192,11 @@ async function release() {
   }
 
   // Confirm release
-  log("\n⚠️  This will:", "yellow");
-  log(`  1. Update package.json and tauri.conf.json to v${newVersion}`, "yellow");
+  log("\n  This will:", "yellow");
+  log(
+    `  1. Update package.json, tauri.conf.json, and Cargo.toml to v${newVersion}`,
+    "yellow",
+  );
   log(`  2. Create a commit with these changes`, "yellow");
   log(`  3. Create and push tag v${newVersion}`, "yellow");
   log(`  4. Trigger GitHub Actions to build and release\n`, "yellow");
@@ -181,11 +215,12 @@ async function release() {
   log("\n📦 Updating version files...\n", "magenta");
 
   // Update versions
-  updatePackageJson(newVersion);
-  updateTauriConfig(newVersion);
+  await updatePackageJson(newVersion);
+  await updateTauriConfig(newVersion);
+  await updateCargoToml(newVersion);
 
   // Git add
-  await $`git add package.json src-tauri/tauri.conf.json`;
+  await $`git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml`;
   success("Staged version changes");
 
   // Create commit
@@ -207,7 +242,10 @@ async function release() {
 
   log("\n✨ Release process complete!\n", "green");
   log(`GitHub Actions will now build and release v${newVersion}`, "cyan");
-  log(`View the progress at: https://github.com/athasdev/athas/actions\n`, "cyan");
+  log(
+    `View the progress at: https://github.com/athasdev/athas/actions\n`,
+    "cyan",
+  );
 }
 
 // Run the release

@@ -10,7 +10,7 @@ interface MarkdownActionsParams {
     name: string,
     content: string,
     isImage?: boolean,
-    isSQLite?: boolean,
+    databaseType?: any,
     isDiff?: boolean,
     isVirtual?: boolean,
     diffData?: any,
@@ -47,7 +47,7 @@ export const createMarkdownActions = (params: MarkdownActionsParams): Action[] =
           previewName,
           activeBuffer.content,
           false, // isImage
-          false, // isSQLite
+          undefined, // databaseType
           false, // isDiff
           true, // isVirtual
           undefined, // diffData

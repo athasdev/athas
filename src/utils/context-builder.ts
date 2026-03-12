@@ -57,7 +57,7 @@ export const buildContextPrompt = (context: ContextInfo): string => {
       }
 
       // Include relevant portions of the active file content
-      if (context.activeBuffer.content && !context.activeBuffer.isSQLite) {
+      if (context.activeBuffer.content && !context.activeBuffer.isDatabase) {
         const lines = context.activeBuffer.content.split("\n");
         if (lines.length <= 100) {
           // Include the whole file if it's small

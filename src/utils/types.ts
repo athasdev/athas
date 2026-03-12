@@ -7,7 +7,7 @@ export interface ContextInfo {
     name: string;
     content: string;
     isDirty: boolean;
-    isSQLite: boolean;
+    isDatabase?: boolean;
     isActive: boolean;
     isWebViewer?: boolean;
     webViewerUrl?: string;
@@ -19,7 +19,7 @@ export interface ContextInfo {
     name: string;
     content: string;
     isDirty: boolean;
-    isSQLite: boolean;
+    isDatabase?: boolean;
     isActive: boolean;
     isWebViewer?: boolean;
     webViewerUrl?: string;

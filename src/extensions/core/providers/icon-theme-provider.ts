@@ -196,7 +196,7 @@ export const iconThemeProvider = new IconThemeProvider();
 /**
  * Initialize icon theme provider with default or persisted theme
  */
-export function initializeIconThemeProvider(defaultThemeId = "athas.material-icons"): void {
+export function initializeIconThemeProvider(defaultThemeId = "colorful-material"): void {
   // Wait for registry to be initialized
   extensionRegistry.ensureInitialized().then(() => {
     // Load persisted preference

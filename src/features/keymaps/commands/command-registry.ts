@@ -9,6 +9,7 @@ import { useAppStore } from "@/stores/app-store";
 import { useUIState } from "@/stores/ui-state-store";
 import { useZoomStore } from "@/stores/zoom-store";
 import { isMac } from "@/utils/platform";
+import { useKeymapStore } from "../stores/store";
 import type { Command } from "../types";
 import { keymapRegistry } from "../utils/registry";
 
@@ -58,7 +59,10 @@ const fileCommands: Command[] = [
       });
 
       if (result) {
-        await invoke("write_file", { path: result, contents: activeBuffer.content || "" });
+        await invoke("write_file", {
+          path: result,
+          contents: activeBuffer.content || "",
+        });
       }
     },
   },
@@ -68,8 +72,7 @@ const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+w",
     execute: () => {
-      const terminalContainer = document.querySelector('[data-terminal-container="active"]');
-      if (terminalContainer?.contains(document.activeElement)) return;
+      if (useKeymapStore.getState().contexts.terminalFocus) return;
 
       const bufferStore = useBufferStore.getState();
       const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
@@ -105,6 +108,8 @@ const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+n",
     execute: () => {
+      if (useKeymapStore.getState().contexts.terminalFocus) return;
+
       useFileSystemStore.getState().handleCreateNewFile();
     },
   },
@@ -306,6 +311,10 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+f",
     execute: () => {
+      if (useKeymapStore.getState().contexts.terminalFocus) {
+        window.dispatchEvent(new CustomEvent("terminal-open-search"));
+        return;
+      }
       const state = useUIState.getState();
       state.setIsFindVisible(!state.isFindVisible);
     },
@@ -642,6 +651,17 @@ const navigationCommands: Command[] = [
   },
 ];
 
+const databaseCommands: Command[] = [
+  {
+    id: "database.connect",
+    title: "Connect to Database",
+    category: "Database",
+    execute: () => {
+      useUIState.getState().setIsDatabaseConnectionVisible(true);
+    },
+  },
+];
+
 const windowCommands: Command[] = [
   {
     id: "window.toggleFullscreen",
@@ -730,6 +750,7 @@ export const allCommands: Command[] = [
   ...editCommands,
   ...viewCommands,
   ...navigationCommands,
+  ...databaseCommands,
   ...windowCommands,
 ];
 

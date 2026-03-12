@@ -100,7 +100,7 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "new_file",
          "New File",
          true,
-         Some("CmdOrCtrl+N"),
+         None::<String>,
       )?)
       .item(&MenuItem::with_id(
          app,
@@ -137,7 +137,7 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "close_tab",
          "Close Tab",
          true,
-         Some("CmdOrCtrl+W"),
+         None::<String>,
       )?)
       .separator()
       .item(&MenuItem::with_id(

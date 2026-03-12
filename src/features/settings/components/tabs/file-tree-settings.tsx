@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import Input from "@/ui/input";
 import Section, { SettingRow } from "@/ui/section";
-import Switch from "@/ui/switch";
 
 export const FileTreeSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
@@ -79,8 +79,15 @@ export const FileTreeSettings = () => {
           label="Hidden File Patterns"
           description="Files matching these glob patterns will be hidden from the file tree"
           className="flex-col items-start gap-2"
+          onReset={() =>
+            updateSetting("hiddenFilePatterns", getDefaultSetting("hiddenFilePatterns"))
+          }
+          canReset={
+            settings.hiddenFilePatterns.join(",") !==
+            getDefaultSetting("hiddenFilePatterns").join(",")
+          }
         >
-          <input
+          <Input
             id="hiddenFilePatterns"
             type="text"
             value={filePatternsInput}
@@ -88,7 +95,7 @@ export const FileTreeSettings = () => {
             onBlur={handleFilePatternsBlur}
             onKeyDown={(e) => handlePatternInputEnter(e, handleFilePatternsBlur)}
             placeholder="e.g., *.log, *.tmp, **/*.bak"
-            className="ui-font h-9 w-full rounded-xl border border-border bg-secondary-bg/80 px-3 text-text text-xs placeholder:text-text-lighter focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
+            className="h-9 w-full rounded-xl border-border bg-secondary-bg/80 focus:border-accent focus:ring-accent/30"
           />
           <p className="text-[11px] text-text-lighter">Use comma-separated glob patterns.</p>
           {renderPatternPills(settings.hiddenFilePatterns)}
@@ -98,8 +105,15 @@ export const FileTreeSettings = () => {
           label="Hidden Directory Patterns"
           description="Directories matching these glob patterns will be hidden from the file tree"
           className="flex-col items-start gap-2"
+          onReset={() =>
+            updateSetting("hiddenDirectoryPatterns", getDefaultSetting("hiddenDirectoryPatterns"))
+          }
+          canReset={
+            settings.hiddenDirectoryPatterns.join(",") !==
+            getDefaultSetting("hiddenDirectoryPatterns").join(",")
+          }
         >
-          <input
+          <Input
             id="hiddenDirectoryPatterns"
             type="text"
             value={directoryPatternsInput}
@@ -107,23 +121,10 @@ export const FileTreeSettings = () => {
             onBlur={handleDirectoryPatternsBlur}
             onKeyDown={(e) => handlePatternInputEnter(e, handleDirectoryPatternsBlur)}
             placeholder="e.g., node_modules, .git, build/"
-            className="ui-font h-9 w-full rounded-xl border border-border bg-secondary-bg/80 px-3 text-text text-xs placeholder:text-text-lighter focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
+            className="h-9 w-full rounded-xl border-border bg-secondary-bg/80 focus:border-accent focus:ring-accent/30"
           />
           <p className="text-[11px] text-text-lighter">Use comma-separated glob patterns.</p>
           {renderPatternPills(settings.hiddenDirectoryPatterns)}
-        </SettingRow>
-      </Section>
-
-      <Section title="Git View">
-        <SettingRow
-          label="Folder-Based Changes"
-          description="Show Git changes in a folder tree, similar to File Explorer"
-        >
-          <Switch
-            checked={settings.gitChangesFolderView}
-            onChange={(checked) => updateSetting("gitChangesFolderView", checked)}
-            size="sm"
-          />
         </SettingRow>
       </Section>
     </div>

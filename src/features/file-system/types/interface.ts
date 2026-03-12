@@ -75,5 +75,5 @@ export interface FsActions {
   setIsSwitchingProject: (value: boolean) => void;
 
   // Session restoration
-  restoreSession: (projectPath: string) => Promise<void>;
+  restoreSession: (projectPath: string, skipBufferPath?: string) => Promise<void>;
 }

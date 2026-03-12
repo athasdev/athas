@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
+import type { DatabaseType } from "@/features/database/models/provider.types";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
 import { logger } from "@/features/editor/utils/logger";
@@ -56,7 +57,8 @@ export interface Buffer {
   isPinned: boolean;
   isPreview: boolean;
   isImage: boolean;
-  isSQLite: boolean;
+  databaseType?: DatabaseType;
+  connectionId?: string;
   isDiff: boolean;
   isMarkdownPreview: boolean;
   isHtmlPreview: boolean;
@@ -124,7 +126,7 @@ interface BufferActions {
     name: string,
     content: string,
     isImage?: boolean,
-    isSQLite?: boolean,
+    databaseType?: DatabaseType,
     isDiff?: boolean,
     isVirtual?: boolean,
     diffData?: GitDiff | MultiFileDiff,
@@ -135,6 +137,13 @@ interface BufferActions {
     isPreview?: boolean,
     isPdf?: boolean,
     isBinary?: boolean,
+    connectionId?: string,
+  ) => string;
+  openDatabaseBuffer: (
+    path: string,
+    name: string,
+    databaseType: DatabaseType,
+    connectionId?: string,
   ) => string;
   convertPreviewToDefinite: (bufferId: string) => void;
   openExternalEditorBuffer: (path: string, name: string, terminalConnectionId: string) => string;
@@ -218,7 +227,7 @@ const saveSessionToStoreImmediate = (buffers: Buffer[], activeBufferId: string |
           !b.isVirtual &&
           !b.isDiff &&
           !b.isImage &&
-          !b.isSQLite &&
+          !b.databaseType &&
           !b.isMarkdownPreview &&
           !b.isHtmlPreview &&
           !b.isCsvPreview &&
@@ -242,7 +251,7 @@ const saveSessionToStoreImmediate = (buffers: Buffer[], activeBufferId: string |
       !activeBuffer.isVirtual &&
       !activeBuffer.isDiff &&
       !activeBuffer.isImage &&
-      !activeBuffer.isSQLite &&
+      !activeBuffer.databaseType &&
       !activeBuffer.isMarkdownPreview &&
       !activeBuffer.isHtmlPreview &&
       !activeBuffer.isCsvPreview &&
@@ -273,7 +282,7 @@ export const useBufferStore = createSelectors(
           name: string,
           content: string,
           isImage = false,
-          isSQLite = false,
+          databaseType?: DatabaseType,
           isDiff = false,
           isVirtual = false,
           diffData?: GitDiff | MultiFileDiff,
@@ -284,6 +293,7 @@ export const useBufferStore = createSelectors(
           isPreview = false,
           isPdf = false,
           isBinary = false,
+          connectionId?: string,
         ) => {
           const { buffers, maxOpenTabs } = get();
 
@@ -291,7 +301,7 @@ export const useBufferStore = createSelectors(
           const shouldBePreview =
             isPreview &&
             !isImage &&
-            !isSQLite &&
+            !databaseType &&
             !isDiff &&
             !isVirtual &&
             !isMarkdownPreview &&
@@ -344,7 +354,8 @@ export const useBufferStore = createSelectors(
             isPinned: false,
             isPreview: shouldBePreview,
             isImage,
-            isSQLite,
+            databaseType,
+            connectionId,
             isDiff,
             isMarkdownPreview,
             isHtmlPreview,
@@ -376,7 +387,7 @@ export const useBufferStore = createSelectors(
             !isHtmlPreview &&
             !isCsvPreview &&
             !isImage &&
-            !isSQLite &&
+            !databaseType &&
             !isPdf &&
             !isBinary
           ) {
@@ -507,7 +518,7 @@ export const useBufferStore = createSelectors(
             isPinned: false,
             isPreview: false, // External editor buffers are never preview
             isImage: false,
-            isSQLite: false,
+            databaseType: undefined,
             isDiff: false,
             isMarkdownPreview: false,
             isHtmlPreview: false,
@@ -587,7 +598,7 @@ export const useBufferStore = createSelectors(
             isPinned: false,
             isPreview: false, // Web viewer buffers are never preview
             isImage: false,
-            isSQLite: false,
+            databaseType: undefined,
             isDiff: false,
             isMarkdownPreview: false,
             isHtmlPreview: false,
@@ -649,7 +660,7 @@ export const useBufferStore = createSelectors(
             isPinned: false,
             isPreview: false,
             isImage: false,
-            isSQLite: false,
+            databaseType: undefined,
             isDiff: false,
             isMarkdownPreview: false,
             isHtmlPreview: false,
@@ -706,7 +717,7 @@ export const useBufferStore = createSelectors(
             isPinned: false,
             isPreview: false,
             isImage: false,
-            isSQLite: false,
+            databaseType: undefined,
             isDiff: false,
             isMarkdownPreview: false,
             isHtmlPreview: false,
@@ -778,7 +789,7 @@ export const useBufferStore = createSelectors(
             isPinned: false,
             isPreview: false,
             isImage: false,
-            isSQLite: false,
+            databaseType: undefined,
             isDiff: false,
             isMarkdownPreview: false,
             isHtmlPreview: false,
@@ -862,7 +873,7 @@ export const useBufferStore = createSelectors(
             !closedBuffer.isVirtual &&
             !closedBuffer.isDiff &&
             !closedBuffer.isImage &&
-            !closedBuffer.isSQLite &&
+            !closedBuffer.databaseType &&
             !closedBuffer.isMarkdownPreview &&
             !closedBuffer.isHtmlPreview &&
             !closedBuffer.isCsvPreview &&
@@ -1080,6 +1091,32 @@ export const useBufferStore = createSelectors(
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
+        openDatabaseBuffer: (
+          path: string,
+          name: string,
+          databaseType: DatabaseType,
+          connectionId?: string,
+        ) => {
+          return get().actions.openBuffer(
+            path,
+            name,
+            "",
+            false,
+            databaseType,
+            false,
+            false,
+            undefined,
+            false,
+            false,
+            false,
+            undefined,
+            false,
+            false,
+            false,
+            connectionId,
+          );
+        },
+
         convertPreviewToDefinite: (bufferId: string) => {
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
@@ -1241,7 +1278,7 @@ export const useBufferStore = createSelectors(
             !buffer ||
             buffer.isVirtual ||
             buffer.isImage ||
-            buffer.isSQLite ||
+            buffer.databaseType ||
             buffer.isMarkdownPreview ||
             buffer.isHtmlPreview ||
             buffer.isCsvPreview ||
@@ -1342,7 +1379,7 @@ export const useBufferStore = createSelectors(
               closedBuffer.name,
               content,
               false,
-              false,
+              undefined,
               false,
               false,
             );

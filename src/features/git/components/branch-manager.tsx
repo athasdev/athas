@@ -2,6 +2,7 @@ import { Check, ChevronDown, GitBranch, Plus, Search, Trash2, X } from "lucide-r
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../api/branches";
 import { createStash } from "../api/stash";
@@ -330,16 +331,13 @@ const GitBranchManager = ({
                 Create Branch
               </div>
               <div className="flex gap-1.5">
-                <input
+                <Input
                   id="new-branch-name"
                   type="text"
                   placeholder="feature/new-branch"
                   value={newBranchName}
                   onChange={(e) => setNewBranchName(e.target.value)}
-                  className={cn(
-                    "flex-1 rounded-lg border border-border bg-secondary-bg",
-                    "px-2 py-1.5 text-text text-xs focus:border-accent focus:outline-none",
-                  )}
+                  className="flex-1"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newBranchName.trim()) {
                       e.preventDefault();
@@ -374,17 +372,15 @@ const GitBranchManager = ({
                   size={11}
                   className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 text-text-lighter"
                 />
-                <input
+                <Input
                   id="branch-search"
                   type="text"
                   placeholder="Search by branch name"
                   value={branchQuery}
                   onChange={(e) => setBranchQuery(e.target.value)}
                   disabled={isLoading}
-                  className={cn(
-                    "w-full rounded-lg border border-border bg-secondary-bg py-1.5 pr-2 pl-7 text-text text-xs",
-                    "focus:border-accent focus:outline-none disabled:opacity-50",
-                  )}
+                  leftIcon={Search}
+                  className="w-full"
                 />
               </div>
             </div>

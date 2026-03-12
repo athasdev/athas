@@ -1,9 +1,11 @@
 import { create } from "zustand";
 import { getGitLog } from "../api/commits";
+import { getGitStatus } from "../api/status";
 import type { GitCommit, GitStash, GitStatus } from "../types/git";
 
 interface GitState {
   gitStatus: GitStatus | null;
+  workspaceGitStatus: GitStatus | null;
   commits: GitCommit[];
   branches: string[];
   stashes: GitStash[];
@@ -12,6 +14,7 @@ interface GitState {
   isLoadingGitData: boolean;
   isRefreshing: boolean;
   currentRepoPath: string | null;
+  currentWorkspaceRepoPath: string | null;
 
   actions: {
     loadFreshGitData: (data: {
@@ -26,8 +29,10 @@ interface GitState {
       branches: string[];
       repoPath: string;
     }) => Promise<void>;
+    refreshWorkspaceGitStatus: (repoPath: string) => Promise<void>;
     loadMoreCommits: (repoPath: string) => Promise<void>;
     setGitStatus: (status: GitStatus | null) => void;
+    setWorkspaceGitStatus: (status: GitStatus | null, repoPath: string | null) => void;
     setCommits: (commits: GitCommit[]) => void;
     setBranches: (branches: string[]) => void;
     setStashes: (stashes: GitStash[]) => void;
@@ -41,6 +46,7 @@ const COMMITS_PER_PAGE = 50;
 
 export const useGitStore = create<GitState>((set, get) => ({
   gitStatus: null,
+  workspaceGitStatus: null,
   commits: [],
   branches: [],
   stashes: [],
@@ -49,6 +55,7 @@ export const useGitStore = create<GitState>((set, get) => ({
   isLoadingGitData: false,
   isRefreshing: false,
   currentRepoPath: null,
+  currentWorkspaceRepoPath: null,
 
   actions: {
     loadFreshGitData: ({ gitStatus, commits, branches, stashes, repoPath }) => {
@@ -90,6 +97,18 @@ export const useGitStore = create<GitState>((set, get) => ({
       }
     },
 
+    refreshWorkspaceGitStatus: async (repoPath) => {
+      const status = await getGitStatus(repoPath);
+
+      if (get().currentWorkspaceRepoPath !== repoPath) {
+        return;
+      }
+
+      set({
+        workspaceGitStatus: status,
+      });
+    },
+
     loadMoreCommits: async (repoPath) => {
       const { commits, hasMoreCommits, isLoadingMoreCommits } = get();
 
@@ -117,6 +136,11 @@ export const useGitStore = create<GitState>((set, get) => ({
     },
 
     setGitStatus: (status) => set({ gitStatus: status }),
+    setWorkspaceGitStatus: (status, repoPath) =>
+      set({
+        workspaceGitStatus: status,
+        currentWorkspaceRepoPath: repoPath,
+      }),
     setCommits: (commits) => set({ commits }),
     setBranches: (branches) => set({ branches }),
     setStashes: (stashes) => set({ stashes }),
@@ -134,6 +158,8 @@ export const useGitStore = create<GitState>((set, get) => ({
         isLoadingGitData: false,
         isRefreshing: false,
         currentRepoPath: null,
+        currentWorkspaceRepoPath: null,
+        workspaceGitStatus: null,
       }),
   },
 }));
