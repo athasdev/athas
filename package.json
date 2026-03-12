@@ -27,7 +27,10 @@
     "release": "bun scripts/release.ts",
     "release:patch": "bun scripts/release.ts patch",
     "release:minor": "bun scripts/release.ts minor",
-    "release:major": "bun scripts/release.ts major"
+    "release:major": "bun scripts/release.ts major",
+    "release:alpha": "bun scripts/release.ts alpha",
+    "release:beta": "bun scripts/release.ts beta",
+    "release:rc": "bun scripts/release.ts rc"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",

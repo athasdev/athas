@@ -45,6 +45,31 @@ function info(message: string) {
   log(`  ${message}`, "dim");
 }
 
+function parseStableVersion(version: string): { major: number; minor: number; patch: number } | null {
+  const match = version.match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    major: parseInt(match[1]),
+    minor: parseInt(match[2]),
+    patch: parseInt(match[3]),
+  };
+}
+
+function parsePrerelease(version: string): { channel: string; number: number } | null {
+  const match = version.match(/-(alpha|beta|rc)\.(\d+)$/);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    channel: match[1],
+    number: parseInt(match[2]),
+  };
+}
+
 interface CheckResult {
   name: string;
   passed: boolean;
@@ -128,11 +153,27 @@ async function main() {
   header("Version Info");
   log(`  Current version: v${currentVersion}`, "blue");
 
-  // Calculate next versions
-  const [major, minor, patch] = currentVersion.split(".").map(Number);
+  const stableVersion = parseStableVersion(currentVersion);
+  if (!stableVersion) {
+    throw new Error(`Invalid version in package.json: ${currentVersion}`);
+  }
+
+  const prerelease = parsePrerelease(currentVersion);
+  const { major, minor, patch } = stableVersion;
   log(`  Next patch:      v${major}.${minor}.${patch + 1}`, "dim");
   log(`  Next minor:      v${major}.${minor + 1}.0`, "dim");
   log(`  Next major:      v${major + 1}.0.0`, "dim");
+  if (prerelease) {
+    log(
+      `  Continue ${prerelease.channel}: v${major}.${minor}.${patch}-${prerelease.channel}.${prerelease.number + 1}`,
+      "dim",
+    );
+    log(`  Promote to rc:   v${major}.${minor}.${patch}-rc.1`, "dim");
+    log(`  Finalize patch:  v${major}.${minor}.${patch}`, "dim");
+  } else {
+    log(`  Next beta:       v${major}.${minor}.${patch + 1}-beta.1`, "dim");
+    log(`  Next rc:         v${major}.${minor}.${patch + 1}-rc.1`, "dim");
+  }
 
   header("Git Checks");
 
@@ -441,7 +482,9 @@ async function main() {
     log("  Ready to release. Run one of:", "cyan");
     log("    bun release:patch  # Bug fixes", "dim");
     log("    bun release:minor  # New features", "dim");
-    log("    bun release:major  # Breaking changes\n", "dim");
+    log("    bun release:major  # Breaking changes", "dim");
+    log("    bun release:beta   # Next patch prerelease", "dim");
+    log("    bun release:rc     # Release candidate for current patch\n", "dim");
     process.exit(0);
   } else {
     log(`\n  ${passed} passed, ${warned} warnings, ${failed} failed\n`, "red");
