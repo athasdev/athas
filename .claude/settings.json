@@ -1,22 +1,7 @@
 {
   "includeCoAuthoredBy": false,
   "permissions": {
-    "allow": [
-      "Bash(bun run:*)",
-      "Bash(bun check:*)",
-      "Bash(bun knip)",
-      "Bash(bun typecheck)",
-      "Bash(bun format)",
-      "Bash(mv:*)",
-      "Bash(rm:*)",
-      "Bash(sed:*)",
-      "Bash(bun add:*)",
-      "Bash(find:*)",
-      "Bash(mkdir:*)",
-      "Bash(cp:*)",
-      "Bash(ls:*)",
-      "Bash(bun remove:*)"
-    ],
+    "allow": [],
     "deny": []
   },
   "hooks": {
