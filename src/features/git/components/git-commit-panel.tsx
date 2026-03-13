@@ -6,7 +6,10 @@ import { useAuthStore } from "@/features/window/stores/auth-store";
 import Textarea from "@/ui/textarea";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-import { InlineEditError, requestInlineEdit } from "@/utils/inline-edit";
+import {
+  InlineEditError,
+  requestInlineEdit,
+} from "@/features/editor/services/editor-inline-edit-service";
 import { commitChanges } from "../api/git-commits-api";
 import type { GitFile } from "../types/git-types";
 

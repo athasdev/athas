@@ -30,8 +30,11 @@ import {
   beginDesktopAuthSession,
   DesktopAuthError,
   waitForDesktopAuthToken,
-} from "@/utils/auth-api";
-import { type AutocompleteModel, fetchAutocompleteModels } from "@/utils/autocomplete";
+} from "@/features/window/services/auth-api";
+import {
+  type AutocompleteModel,
+  fetchAutocompleteModels,
+} from "@/features/editor/services/editor-autocomplete-service";
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { getFilenameFromPath } from "../../../file-system/controllers/file-utils";

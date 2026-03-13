@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/features/window/stores/auth-store";
-import { AutocompleteError, requestAutocomplete } from "@/utils/autocomplete";
+import {
+  AutocompleteError,
+  requestAutocomplete,
+} from "@/features/editor/services/editor-autocomplete-service";
 
 interface UseAutocompleteOptions {
   enabled: boolean;

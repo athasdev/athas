@@ -10,7 +10,7 @@ import {
   beginDesktopAuthSession,
   DesktopAuthError,
   waitForDesktopAuthToken,
-} from "@/utils/auth-api";
+} from "@/features/window/services/auth-api";
 import { cn } from "@/utils/cn";
 
 interface AccountMenuProps {

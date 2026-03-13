@@ -2,7 +2,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useHistoryStore } from "@/features/editor/stores/history-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import { useEditorStateStore } from "@/stores/editor-cursor-store";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
 
 interface VimClipboard {
   content: string;

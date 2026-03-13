@@ -8,7 +8,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
 import type { GitHunk } from "@/features/git/types/git-types";
 import TabBar from "@/features/tabs/components/tab-bar";
-import { extractDroppedFilePaths } from "@/utils/dropped-file-paths";
+import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { EmptyEditorState } from "../../layout/components/empty-editor-state";
 import { usePaneStore } from "../stores/pane-store";
 import type { PaneGroup } from "../types/pane";

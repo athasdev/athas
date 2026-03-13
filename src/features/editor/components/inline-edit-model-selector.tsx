@@ -2,7 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { useMemo } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import Dropdown from "@/ui/dropdown";
-import type { AutocompleteModel } from "@/utils/autocomplete";
+import type { AutocompleteModel } from "@/features/editor/services/editor-autocomplete-service";
 import { cn } from "@/utils/cn";
 
 interface InlineEditModelSelectorProps {

@@ -13,7 +13,7 @@ import Input from "@/ui/input";
 import Section, { SettingRow } from "@/ui/section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
-import { fetchAutocompleteModels } from "@/utils/autocomplete";
+import { fetchAutocompleteModels } from "@/features/editor/services/editor-autocomplete-service";
 import { cn } from "@/utils/cn";
 import { setOllamaBaseUrl } from "@/utils/providers";
 import { checkOllamaConnection } from "@/utils/providers/ollama-provider";

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { AuthUser, SubscriptionInfo } from "@/utils/auth-api";
+import type { AuthUser, SubscriptionInfo } from "@/features/window/services/auth-api";
 import {
   fetchCurrentUser,
   fetchSubscriptionStatus,
@@ -8,7 +8,7 @@ import {
   logoutFromServer,
   removeAuthToken,
   storeAuthToken,
-} from "@/utils/auth-api";
+} from "@/features/window/services/auth-api";
 
 interface AuthState {
   user: AuthUser | null;

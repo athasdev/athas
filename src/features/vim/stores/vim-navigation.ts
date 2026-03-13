@@ -1,6 +1,6 @@
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import { useEditorStateStore } from "@/stores/editor-cursor-store";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useVimStore } from "./vim-store";
 
 export interface VimNavigationCommands {

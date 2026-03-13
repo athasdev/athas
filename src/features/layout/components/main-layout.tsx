@@ -25,7 +25,7 @@ import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { parseDroppedPaths } from "@/utils/dropped-file-paths";
+import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";

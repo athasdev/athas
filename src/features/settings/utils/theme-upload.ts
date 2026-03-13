@@ -1,5 +1,5 @@
-import { themeRegistry } from "../extensions/themes/theme-registry";
-import type { ThemeDefinition } from "../extensions/themes/types";
+import { themeRegistry } from "@/extensions/themes/theme-registry";
+import type { ThemeDefinition } from "@/extensions/themes/types";
 
 /**
  * New theme format (recommended)

@@ -178,7 +178,7 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        const { uploadTheme } = await import("../../../utils/theme-upload");
+        const { uploadTheme } = await import("@/features/settings/utils/theme-upload");
         const result = await uploadTheme(file);
         if (result.success) {
           console.log("Theme uploaded successfully:", result.theme?.name);

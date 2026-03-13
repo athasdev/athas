@@ -5,7 +5,7 @@ import Button from "@/ui/button";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
-import { updateEnterprisePolicy } from "@/utils/auth-api";
+import { updateEnterprisePolicy } from "@/features/window/services/auth-api";
 
 const parseAllowlistInput = (value: string): string[] =>
   Array.from(

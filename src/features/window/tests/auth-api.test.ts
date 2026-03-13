@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { __test__ } from "./auth-api";
+import { __test__ } from "../services/auth-api";
 
 describe("auth-api desktop auth parsers", () => {
   it("parses valid desktop auth init response", () => {

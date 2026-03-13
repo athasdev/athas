@@ -16,7 +16,7 @@ import { isDiffFile, parseRawDiffContent } from "@/features/git/utils/git-diff-p
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
-import { useSessionStore } from "@/stores/session-store";
+import { useSessionStore } from "@/features/window/stores/session-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { FileEntry } from "../types/app";

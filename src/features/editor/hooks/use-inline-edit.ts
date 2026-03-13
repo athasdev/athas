@@ -2,10 +2,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
-import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
 import { toast } from "@/ui/toast-store";
-import { type AutocompleteModel, fetchAutocompleteModels } from "@/utils/autocomplete";
-import { InlineEditError, requestInlineEdit } from "@/utils/inline-edit";
+import {
+  type AutocompleteModel,
+  fetchAutocompleteModels,
+} from "@/features/editor/services/editor-autocomplete-service";
+import {
+  InlineEditError,
+  requestInlineEdit,
+} from "@/features/editor/services/editor-inline-edit-service";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import type { Position, Range } from "../types/editor";
 import { splitLines } from "../utils/lines";

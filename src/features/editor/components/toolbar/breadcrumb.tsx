@@ -12,7 +12,7 @@ import { FileExplorerIcon } from "@/features/file-explorer/components/file-explo
 import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
-import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
 import { toast } from "@/ui/toast-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";

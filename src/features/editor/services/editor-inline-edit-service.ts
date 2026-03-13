@@ -1,5 +1,5 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import { getAuthToken } from "@/utils/auth-api";
+import { getAuthToken } from "@/features/window/services/auth-api";
 import { getProviderApiToken } from "@/utils/token-manager";
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://athas.dev";
