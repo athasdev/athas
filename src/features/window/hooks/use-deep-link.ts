@@ -2,7 +2,7 @@ import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { useEffect } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { toast } from "@/stores/toast-store";
-import { handleOpenRequest, parseOpenUrl } from "@/utils/open-request";
+import { handleWindowOpenRequest, parseWindowOpenUrl } from "../utils/window-open-request";
 
 /**
  * Hook to handle deep link URLs
@@ -32,14 +32,12 @@ function handleDeepLink(url: string) {
       return;
     }
 
-    // Handle athas://open?path=...
-    const openReq = parseOpenUrl(parsed);
-    if (openReq) {
-      handleOpenRequest(openReq);
+    const openRequest = parseWindowOpenUrl(parsed);
+    if (openRequest) {
+      handleWindowOpenRequest(openRequest);
       return;
     }
 
-    // Handle athas://extension/install/{extensionId}
     const path = parsed.pathname.replace(/^\/\//, "");
     const segments = path.split("/").filter(Boolean);
 

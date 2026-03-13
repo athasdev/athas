@@ -11,6 +11,7 @@ import type { Diagnostic } from "@/features/diagnostics/types";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
 import { useGitStore } from "@/features/git/stores/git-store";
 import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { SplitViewRoot } from "@/features/panes/components/split-view-root";
@@ -22,7 +23,6 @@ import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
-import { useFolderDrop } from "@/hooks/use-folder-drop";
 import { useUIState } from "@/stores/ui-state-store";
 import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
 import { parseDroppedPaths } from "@/utils/dropped-file-paths";
@@ -87,7 +87,7 @@ export function MainLayout() {
     typeof window !== "undefined" ? window.innerWidth : 1440,
   );
 
-  const { isDraggingOver } = useFolderDrop(async (paths) => {
+  const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
 
     const droppedPaths = parseDroppedPaths(paths);

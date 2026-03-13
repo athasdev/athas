@@ -3,7 +3,7 @@ import { cloneElement, isValidElement } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useSettingsStore } from "@/features/settings/store";
 
-interface FileIconProps {
+interface FileExplorerIconProps {
   fileName: string;
   isDir: boolean;
   isExpanded?: boolean;
@@ -12,14 +12,14 @@ interface FileIconProps {
   className?: string;
 }
 
-export function FileIcon({
+export function FileExplorerIcon({
   fileName,
   isDir,
   isExpanded = false,
   isSymlink = false,
   size = 14,
   className = "text-text-lighter",
-}: FileIconProps) {
+}: FileExplorerIconProps) {
   const { settings } = useSettingsStore();
   const iconTheme = iconThemeRegistry.getTheme(settings.iconTheme);
 

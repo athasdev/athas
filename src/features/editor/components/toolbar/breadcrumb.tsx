@@ -8,7 +8,7 @@ import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { logger } from "@/features/editor/utils/logger";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
@@ -437,7 +437,7 @@ export default function Breadcrumb() {
                 }}
                 className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
               >
-                <FileIcon
+                <FileExplorerIcon
                   fileName={item.name}
                   isDir={item.isDir}
                   isExpanded={false}

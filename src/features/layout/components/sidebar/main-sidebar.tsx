@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { FileTree } from "@/features/file-explorer/components/file-tree";
+import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
@@ -60,7 +60,7 @@ export const MainSidebar = memo(() => {
           className={cn("relative h-full", (isGitViewActive || isGitHubPRsViewActive) && "hidden")}
         >
           {(!isFileTreeLoading || isSwitchingProject) && (
-            <FileTree
+            <FileExplorerTree
               files={files}
               activePath={activePath}
               updateActivePath={updateActivePath}

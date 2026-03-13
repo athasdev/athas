@@ -1,10 +1,10 @@
-export interface OpenRequest {
+export interface WindowOpenRequest {
   path: string;
   isDirectory: boolean;
   line?: number;
 }
 
-export function parseOpenUrl(url: URL): OpenRequest | null {
+export function parseWindowOpenUrl(url: URL): WindowOpenRequest | null {
   if (url.host !== "open") return null;
 
   const path = url.searchParams.get("path");
@@ -21,15 +21,15 @@ export function parseOpenUrl(url: URL): OpenRequest | null {
   };
 }
 
-export async function handleOpenRequest(req: OpenRequest) {
+export async function handleWindowOpenRequest(request: WindowOpenRequest) {
   const { useFileSystemStore } = await import("@/features/file-system/controllers/store");
   const { handleOpenFolderByPath, handleFileSelect } = useFileSystemStore.getState();
 
-  if (req.isDirectory) {
-    await handleOpenFolderByPath(req.path);
+  if (request.isDirectory) {
+    await handleOpenFolderByPath(request.path);
   } else {
-    await handleFileSelect(req.path, false, req.line);
+    await handleFileSelect(request.path, false, request.line);
   }
 }
 
-export const __test__ = { parseOpenUrl };
+export const __test__ = { parseWindowOpenUrl };

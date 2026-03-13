@@ -22,25 +22,25 @@ import {
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEventListener } from "usehooks-ts";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileClipboardStore } from "@/features/file-explorer/stores/file-clipboard-store";
-import { useFileTreeStore } from "@/features/file-explorer/stores/file-tree-store";
+import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
+import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { ContextMenuState, FileEntry } from "@/features/file-system/types/app";
 import { useGitStore } from "@/features/git/stores/git-store";
-import type { GitFile } from "@/features/git/types/git";
+import type { GitFile } from "@/features/git/types/git-types";
 import { useSettingsStore } from "@/features/settings/store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
 import { IS_MAC } from "@/utils/platform";
-import { useDragDrop } from "../hooks/use-drag-drop";
-import { FileTreeItem } from "./file-tree-item";
-import "../styles/file-tree.css";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
+import { FileExplorerTreeItem } from "./file-explorer-tree-item";
+import "../styles/file-explorer-tree.css";
 
 const ALWAYS_HIDDEN_FILE_NAMES = new Set([".ds_store"]);
 
@@ -54,7 +54,7 @@ const getPathBaseName = (path: string): string => {
   return segments[segments.length - 1] || path;
 };
 
-interface FileTreeProps {
+interface FileExplorerTreeProps {
   files: FileEntry[];
   activePath?: string;
   updateActivePath?: (path: string) => void;
@@ -74,7 +74,7 @@ interface FileTreeProps {
   onFileMove?: (oldPath: string, newPath: string) => void;
 }
 
-function FileTreeComponent({
+function FileExplorerTreeComponent({
   files,
   activePath,
   updateActivePath,
@@ -92,7 +92,7 @@ function FileTreeComponent({
   onRevealInFinder,
   onUploadFile,
   onFileMove,
-}: FileTreeProps) {
+}: FileExplorerTreeProps) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<{ path: string; isDir: boolean } | null>(
     null,
@@ -114,7 +114,7 @@ function FileTreeComponent({
   const clipboardActions = useFileClipboardStore.getState().actions;
   const clipboard = useFileClipboardStore((s) => s.clipboard);
 
-  const { dragState, startDrag } = useDragDrop(rootFolderPath, onFileMove);
+  const { dragState, startDrag } = useFileExplorerDragDrop(rootFolderPath, onFileMove);
 
   const [mouseDownInfo, setMouseDownInfo] = useState<{
     x: number;
@@ -1055,7 +1055,7 @@ function FileTreeComponent({
                 {items.map((vi) => {
                   const row = visibleRows[vi.index];
                   return (
-                    <FileTreeItem
+                    <FileExplorerTreeItem
                       key={row.file.path}
                       file={row.file}
                       depth={row.depth}
@@ -1125,5 +1125,5 @@ function FileTreeComponent({
   );
 }
 
-export const FileTree = memo(FileTreeComponent);
-export default FileTree;
+export const FileExplorerTree = memo(FileExplorerTreeComponent);
+export default FileExplorerTree;

@@ -1,6 +1,6 @@
 import { Database, Globe, Package, Pin, Sparkles, Terminal, X } from "lucide-react";
 import { memo, useCallback, useEffect, useState } from "react";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import { cn } from "@/utils/cn";
 
@@ -106,7 +106,7 @@ const TabBarItem = memo(function TabBarItem({
           ) : buffer.databaseType ? (
             <Database size={12} className="text-text-lighter" />
           ) : (
-            <FileIcon
+            <FileExplorerIcon
               fileName={buffer.name}
               isDir={false}
               className="text-text-lighter"

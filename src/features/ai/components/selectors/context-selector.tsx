@@ -1,7 +1,7 @@
 import { Database, FileText, Plus, Search, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
 import type { FileEntry } from "@/features/file-system/types/app";
@@ -403,7 +403,7 @@ export function ContextSelector({
                           <FileText size={10} className="shrink-0 text-text-lighter" />
                         )
                       ) : (
-                        <FileIcon
+                        <FileExplorerIcon
                           fileName={item.name}
                           isDir={false}
                           size={10}

@@ -1,5 +1,5 @@
 import { Database, Package, Pin } from "lucide-react";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { Buffer } from "@/features/tabs/types/buffer";
 
 interface TabDragPreviewProps {
@@ -20,7 +20,12 @@ const TabDragPreview = ({ x, y, buffer }: TabDragPreviewProps) => (
         ) : buffer.databaseType ? (
           <Database size={12} className="text-text-lighter" />
         ) : (
-          <FileIcon fileName={buffer.name} isDir={false} className="text-text-lighter" size={12} />
+          <FileExplorerIcon
+            fileName={buffer.name}
+            isDir={false}
+            className="text-text-lighter"
+            size={12}
+          />
         )}
       </span>
       {buffer.isPinned && <Pin size={8} className="shrink-0 text-accent" />}

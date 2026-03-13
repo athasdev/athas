@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
-import { handleOpenRequest } from "@/utils/open-request";
+import { handleWindowOpenRequest } from "../utils/window-open-request";
 
 interface CliOpenPayload {
   path: string;
@@ -12,7 +12,7 @@ export function useCliOpen() {
   useEffect(() => {
     const unlisten = listen<CliOpenPayload>("cli_open_request", (event) => {
       const { path, is_directory, line } = event.payload;
-      handleOpenRequest({
+      handleWindowOpenRequest({
         path,
         isDirectory: is_directory,
         line: line ?? undefined,

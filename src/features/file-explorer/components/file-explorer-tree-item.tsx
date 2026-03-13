@@ -1,12 +1,12 @@
 import type React from "react";
 import { memo } from "react";
-import { useFileClipboardStore } from "@/features/file-explorer/stores/file-clipboard-store";
+import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
-import { FileIcon } from "./file-icon";
+import { FileExplorerIcon } from "./file-explorer-icon";
 
-interface FileTreeItemProps {
+interface FileExplorerTreeItemProps {
   file: FileEntry;
   depth: number;
   isExpanded: boolean;
@@ -21,7 +21,7 @@ interface FileTreeItemProps {
   getGitStatusClass: (file: FileEntry) => string;
 }
 
-function FileTreeItemComponent({
+function FileExplorerTreeItemComponent({
   file,
   depth,
   isExpanded,
@@ -33,7 +33,7 @@ function FileTreeItemComponent({
   onKeyDown,
   onBlur,
   getGitStatusClass,
-}: FileTreeItemProps) {
+}: FileExplorerTreeItemProps) {
   const isCut = useFileClipboardStore(
     (s) =>
       s.clipboard?.operation === "cut" && s.clipboard.entries.some((e) => e.path === file.path),
@@ -47,7 +47,7 @@ function FileTreeItemComponent({
           className="flex min-h-[22px] w-full items-center gap-1.5 rounded-md px-1.5 py-0.5"
           style={{ paddingLeft: `${paddingLeft}px`, paddingRight: "8px" }}
         >
-          <FileIcon
+          <FileExplorerIcon
             fileName={file.isDir ? "folder" : "file"}
             isDir={file.isDir}
             isExpanded={false}
@@ -118,7 +118,7 @@ function FileTreeItemComponent({
           } as React.CSSProperties
         }
       >
-        <FileIcon
+        <FileExplorerIcon
           fileName={file.name}
           isDir={file.isDir}
           isExpanded={isExpanded}
@@ -133,4 +133,4 @@ function FileTreeItemComponent({
   );
 }
 
-export const FileTreeItem = memo(FileTreeItemComponent);
+export const FileExplorerTreeItem = memo(FileExplorerTreeItemComponent);

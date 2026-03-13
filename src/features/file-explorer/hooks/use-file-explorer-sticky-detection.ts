@@ -6,7 +6,7 @@ interface StickyDetectionResult {
   registerStickyFolder: (path: string, element: HTMLElement | null) => void;
 }
 
-export function useStickyDetection(
+export function useFileExplorerStickyDetection(
   containerRef: React.RefObject<HTMLDivElement | null>,
 ): StickyDetectionResult {
   const [deepestStickyFolder, setDeepestStickyFolder] = useState<string | null>(null);

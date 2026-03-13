@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
 import type { FileEntry } from "@/features/file-system/types/app";
@@ -308,7 +308,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
               aria-selected={index === selectedIndex}
               tabIndex={index === selectedIndex ? 0 : -1}
             >
-              <FileIcon
+              <FileExplorerIcon
                 fileName={file.name}
                 isDir={false}
                 isExpanded={false}

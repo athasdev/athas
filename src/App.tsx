@@ -19,7 +19,7 @@ import { initializeThemeSystem } from "./extensions/themes/theme-initializer";
 import {
   cleanupFileClipboardListener,
   initializeFileClipboardListener,
-} from "./features/file-explorer/stores/file-clipboard-listener";
+} from "./features/file-explorer/stores/file-explorer-clipboard-listener";
 import {
   cleanupFileWatcherListener,
   initializeFileWatcherListener,
@@ -42,8 +42,8 @@ import { initializeExtensionStore } from "./extensions/registry/extension-store"
 import { initializeWasmTokenizer } from "./features/editor/lib/wasm-parser";
 import { initializeKeymaps } from "./features/keymaps/init";
 import { WindowResizeBorder } from "./features/window/window-resize-border";
-import { useCliOpen } from "./hooks/use-cli-open";
-import { useDeepLink } from "./hooks/use-deep-link";
+import { useCliOpen } from "./features/window/hooks/use-cli-open";
+import { useDeepLink } from "./features/window/hooks/use-deep-link";
 import { useAuthStore } from "./stores/auth-store";
 
 initializeWasmTokenizer().catch(console.error);

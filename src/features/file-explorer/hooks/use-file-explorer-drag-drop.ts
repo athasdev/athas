@@ -19,7 +19,7 @@ const initialDragState: DragState = {
   mousePosition: { x: 0, y: 0 },
 };
 
-export function useDragDrop(
+export function useFileExplorerDragDrop(
   rootFolderPath: string | undefined,
   onFileMove?: (oldPath: string, newPath: string) => void,
 ) {

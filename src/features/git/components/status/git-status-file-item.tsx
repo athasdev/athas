@@ -1,6 +1,6 @@
 import { Archive, Minus, Plus, Trash2 } from "lucide-react";
 import type { MouseEvent } from "react";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useSettingsStore } from "@/features/settings/store";
 import { cn } from "@/utils/cn";
 import type { GitFile } from "../../types/git-types";
@@ -70,7 +70,7 @@ export const GitFileItem = ({
       onContextMenu={onContextMenu}
     >
       {showFileIcon && (
-        <FileIcon
+        <FileExplorerIcon
           fileName={fileName}
           isDir={false}
           className="shrink-0 text-text-lighter"

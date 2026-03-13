@@ -1,5 +1,5 @@
 import type { FileEntry } from "@/features/file-system/types/app";
-import type { GitFile } from "@/features/git/types/git";
+import type { GitFile } from "@/features/git/types/git-types";
 
 export interface FileTreeProps {
   files: FileEntry[];

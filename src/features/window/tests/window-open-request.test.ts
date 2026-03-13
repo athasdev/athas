@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
-import { __test__ } from "./open-request";
+import { __test__ } from "../utils/window-open-request";
 
-const { parseOpenUrl } = __test__;
+const { parseWindowOpenUrl } = __test__;
 
-describe("parseOpenUrl", () => {
+describe("parseWindowOpenUrl", () => {
   it("parses file with line number", () => {
     const url = new URL("athas://open?path=/Users/test/foo.txt&line=42");
-    const result = parseOpenUrl(url);
+    const result = parseWindowOpenUrl(url);
     expect(result).toEqual({
       path: "/Users/test/foo.txt",
       isDirectory: false,
@@ -16,7 +16,7 @@ describe("parseOpenUrl", () => {
 
   it("parses directory", () => {
     const url = new URL("athas://open?path=/Users/test/project&type=directory");
-    const result = parseOpenUrl(url);
+    const result = parseWindowOpenUrl(url);
     expect(result).toEqual({
       path: "/Users/test/project",
       isDirectory: true,
@@ -26,7 +26,7 @@ describe("parseOpenUrl", () => {
 
   it("parses file without line", () => {
     const url = new URL("athas://open?path=/Users/test/foo.txt");
-    const result = parseOpenUrl(url);
+    const result = parseWindowOpenUrl(url);
     expect(result).toEqual({
       path: "/Users/test/foo.txt",
       isDirectory: false,
@@ -36,17 +36,17 @@ describe("parseOpenUrl", () => {
 
   it("returns null when path is missing", () => {
     const url = new URL("athas://open");
-    expect(parseOpenUrl(url)).toBeNull();
+    expect(parseWindowOpenUrl(url)).toBeNull();
   });
 
   it("returns null for non-open host", () => {
     const url = new URL("athas://extension/install/foo");
-    expect(parseOpenUrl(url)).toBeNull();
+    expect(parseWindowOpenUrl(url)).toBeNull();
   });
 
   it("ignores line=0", () => {
     const url = new URL("athas://open?path=/foo.txt&line=0");
-    const result = parseOpenUrl(url);
+    const result = parseWindowOpenUrl(url);
     expect(result?.line).toBeUndefined();
   });
 });

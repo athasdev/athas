@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { memo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { cn } from "@/utils/cn";
 import type { DiffHeaderProps } from "../../types/git-diff-types";
 import { getFileStatus } from "../../utils/git-diff-helpers";
@@ -96,7 +96,7 @@ const DiffHeader = memo(
       return (
         <div className="flex min-w-0 items-center gap-0.5 overflow-hidden" title={fullPath}>
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-text-lighter">
-            <FileIcon
+            <FileExplorerIcon
               fileName={pathSegments[pathSegments.length - 1] || fullPath}
               isDir={false}
               isExpanded={false}

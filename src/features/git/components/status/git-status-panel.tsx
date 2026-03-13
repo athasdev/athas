@@ -1,7 +1,7 @@
 import { Archive, Check, ChevronDown, ChevronRight, FileText, Minus, Plus } from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useSettingsStore } from "@/features/settings/store";
 import { useContextMenu } from "@/hooks/use-context-menu";
 import { ContextMenu } from "@/ui/context-menu";
@@ -310,7 +310,7 @@ const GitStatusPanel = ({
               ) : (
                 <ChevronDown size={10} className="shrink-0 text-text-lighter" />
               )}
-              <FileIcon
+              <FileExplorerIcon
                 fileName={folderNode.name}
                 isDir
                 isExpanded={!isCollapsed}

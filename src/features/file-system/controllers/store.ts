@@ -7,7 +7,7 @@ import { immer } from "zustand/middleware/immer";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileTreeStore } from "@/features/file-explorer/stores/file-tree-store";
+import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import { useGitBlameStore } from "@/features/git/stores/git-blame-store";
 import { useGitStore } from "@/features/git/stores/git-store";
