@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { FileTree } from "@/features/file-explorer/components/file-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import GitView from "@/features/git/components/view";
+import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/stores/sidebar-store";

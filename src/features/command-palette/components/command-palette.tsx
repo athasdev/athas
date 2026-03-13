@@ -4,9 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { commitChanges } from "@/features/git/api/commits";
-import { fetchChanges, pullChanges, pushChanges } from "@/features/git/api/remotes";
-import { discardAllChanges, stageAllFiles, unstageAllFiles } from "@/features/git/api/status";
+import { commitChanges } from "@/features/git/api/git-commits-api";
+import { fetchChanges, pullChanges, pushChanges } from "@/features/git/api/git-remotes-api";
+import {
+  discardAllChanges,
+  stageAllFiles,
+  unstageAllFiles,
+} from "@/features/git/api/git-status-api";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";

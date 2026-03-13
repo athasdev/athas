@@ -3,7 +3,7 @@ import { CornerDownLeft, X } from "lucide-react";
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
-import { useGitGutter } from "@/features/git/hooks/use-gutter";
+import { useGitGutter } from "@/features/git/hooks/use-git-gutter";
 import { useSettingsStore } from "@/features/settings/store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/stores/zoom-store";

@@ -18,8 +18,8 @@ import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-s
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { getGitStatus } from "@/features/git/api/status";
-import GitBranchManager from "@/features/git/components/branch-manager";
+import { getGitStatus } from "@/features/git/api/git-status-api";
+import GitBranchManager from "@/features/git/components/git-branch-manager";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";

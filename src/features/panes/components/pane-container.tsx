@@ -5,8 +5,8 @@ import CodeEditor from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { stageHunk, unstageHunk } from "@/features/git/api/status";
-import type { GitHunk } from "@/features/git/types/git";
+import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
+import type { GitHunk } from "@/features/git/types/git-types";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/utils/dropped-file-paths";
 import { EmptyEditorState } from "../../layout/components/empty-editor-state";
@@ -32,7 +32,7 @@ const ExternalEditorTerminal = lazy(() =>
     default: m.ExternalEditorTerminal,
   })),
 );
-const DiffViewer = lazy(() => import("@/features/git/components/diff/viewer"));
+const DiffViewer = lazy(() => import("@/features/git/components/diff/git-diff-viewer"));
 const PRViewer = lazy(() => import("@/features/github/components/pr-viewer"));
 const ImageViewer = lazy(() =>
   import("@/features/image-viewer/components/image-viewer").then((m) => ({

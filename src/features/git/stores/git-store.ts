@@ -1,7 +1,7 @@
 import { create } from "zustand";
-import { getGitLog } from "../api/commits";
-import { getGitStatus } from "../api/status";
-import type { GitCommit, GitStash, GitStatus } from "../types/git";
+import { getGitLog } from "../api/git-commits-api";
+import { getGitStatus } from "../api/git-status-api";
+import type { GitCommit, GitStash, GitStatus } from "../types/git-types";
 
 interface GitState {
   gitStatus: GitStatus | null;
