@@ -1,7 +1,7 @@
 import { Database, Plus, Trash2 } from "lucide-react";
 import { useEffect } from "react";
 import { useConnectionStore } from "@/features/database/stores/connection-store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import Button from "@/ui/button";
 import Section, { SettingRow } from "@/ui/section";
 

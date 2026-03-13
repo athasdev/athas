@@ -1,7 +1,7 @@
 import { Info } from "lucide-react";
 import { useEffect } from "react";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import { useFontStore } from "@/stores/font-store";
+import { useFontStore } from "@/features/settings/stores/font-store";
 import NumberInput from "@/ui/number-input";
 import Section, { SettingRow } from "@/ui/section";
 import Select from "@/ui/select";

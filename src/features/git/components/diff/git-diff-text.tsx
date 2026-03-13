@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo, useState } from "react";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { useSettingsStore } from "@/features/settings/store";
-import { useZoomStore } from "@/stores/zoom-store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { useDiffHighlighting } from "../../hooks/use-git-diff-highlight";
 import type { TextDiffViewerProps } from "../../types/git-diff-types";
 import { groupLinesIntoHunks } from "../../utils/git-diff-helpers";

@@ -4,8 +4,8 @@ import { useSettingsStore } from "@/features/settings/store";
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
 import { IS_MAC } from "@/utils/platform";
-import { useProjectStore } from "../../../../stores/project-store";
-import { useUIState } from "../../../../stores/ui-state-store";
+import { useProjectStore } from "@/stores/project-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import DiagnosticsPane from "../../../diagnostics/diagnostics-pane";
 import type { Diagnostic } from "../../../diagnostics/types";
 

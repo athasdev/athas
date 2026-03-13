@@ -1,5 +1,5 @@
 import { EditIcon, PlusIcon, TrashIcon } from "lucide-react";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 
 export const SqliteTableMenu = ({

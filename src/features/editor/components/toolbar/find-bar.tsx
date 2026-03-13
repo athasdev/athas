@@ -12,7 +12,7 @@ import {
 import type React from "react";
 import { useEffect, useRef } from "react";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 

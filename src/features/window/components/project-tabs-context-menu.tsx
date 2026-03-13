@@ -1,5 +1,5 @@
 import { Copy, FolderOpen, X } from "lucide-react";
-import type { ProjectTab } from "@/stores/workspace-tabs-store";
+import type { ProjectTab } from "@/features/window/stores/workspace-tabs-store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 
 interface ProjectTabsContextMenuProps {

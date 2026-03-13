@@ -11,7 +11,7 @@ import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAppStore } from "@/stores/app-store";
-import { useZoomStore } from "@/stores/zoom-store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import { MarkdownPreview } from "../markdown/markdown-preview";

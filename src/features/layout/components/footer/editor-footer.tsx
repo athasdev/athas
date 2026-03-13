@@ -33,7 +33,7 @@ import {
 } from "@/utils/auth-api";
 import { type AutocompleteModel, fetchAutocompleteModels } from "@/utils/autocomplete";
 import { cn } from "@/utils/cn";
-import { useUIState } from "../../../../stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { getFilenameFromPath } from "../../../file-system/controllers/file-utils";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
 import VimStatusIndicator from "../../../vim/components/vim-status-indicator";

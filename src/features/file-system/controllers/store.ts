@@ -17,7 +17,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/stores/project-store";
 import { useSessionStore } from "@/stores/session-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import { useWorkspaceTabsStore } from "@/stores/workspace-tabs-store";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { FileEntry } from "../types/app";
 import type { FsActions, FsState } from "../types/interface";

@@ -1,7 +1,7 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 import { shouldRequestPaneCollapse } from "./resizable-pane-utils";
 

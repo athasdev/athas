@@ -6,7 +6,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAppStore } from "@/stores/app-store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { fetchRawAppVersion } from "@/utils/app-utils";
 import { useMenuEvents } from "./use-menu-events";
 

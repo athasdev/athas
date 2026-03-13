@@ -1,5 +1,5 @@
 import type { StateCreator } from "zustand";
-import type { QuickEditSelection } from "@/stores/ui-state/types";
+import type { QuickEditSelection } from "@/features/window/stores/ui-state/types";
 
 export interface QuickEditState {
   isQuickEditVisible: boolean;

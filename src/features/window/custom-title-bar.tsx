@@ -8,7 +8,7 @@ import {
 } from "@/features/layout/components/sidebar/sidebar-pane-utils";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC } from "@/utils/platform";

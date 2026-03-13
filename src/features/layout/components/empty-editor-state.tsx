@@ -17,7 +17,7 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
 import { useContextMenu } from "@/hooks/use-context-menu";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
 import Input from "@/ui/input";

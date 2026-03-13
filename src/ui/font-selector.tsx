@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useFontStore } from "@/stores/font-store";
-import type { FontInfo } from "@/stores/types/font";
+import { useFontStore } from "@/features/settings/stores/font-store";
+import type { FontInfo } from "@/features/settings/stores/types/font";
 import Select from "@/ui/select";
 
 // Bundled fonts that are always available

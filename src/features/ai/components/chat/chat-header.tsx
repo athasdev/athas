@@ -1,6 +1,6 @@
 import { History } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import Input from "@/ui/input";
 import Tooltip from "@/ui/tooltip";
 import { useAIChatStore } from "../../store/store";

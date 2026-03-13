@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
-import { type SettingsTab, useUIState } from "@/stores/ui-state-store";
+import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state-store";
 import Dialog from "@/ui/dialog";
 import { SettingsVerticalTabs } from "./settings-vertical-tabs";
 

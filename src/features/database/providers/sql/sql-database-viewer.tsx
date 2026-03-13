@@ -1,6 +1,6 @@
 import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import type { ViewMode } from "../../models/common.types";
 import type { DatabaseType } from "../../models/provider.types";
 import { SqliteRowMenu, SqliteTableMenu } from "../sqlite/components/context-menus";

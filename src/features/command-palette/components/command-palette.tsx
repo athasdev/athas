@@ -18,8 +18,8 @@ import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { vimCommands } from "@/features/vim/stores/vim-commands";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useAppStore } from "@/stores/app-store";
-import { useUIState } from "@/stores/ui-state-store";
-import { useZoomStore } from "@/stores/zoom-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
 import Command, {
   CommandEmpty,
   CommandHeader,

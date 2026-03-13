@@ -10,7 +10,7 @@ import {
 import * as React from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
-import type { SettingsTab } from "@/stores/ui-state-store";
+import type { SettingsTab } from "@/features/window/stores/ui-state-store";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 

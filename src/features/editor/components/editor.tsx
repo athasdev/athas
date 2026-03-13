@@ -6,7 +6,7 @@ import { useOnClickOutside } from "usehooks-ts";
 import { useGitGutter } from "@/features/git/hooks/use-git-gutter";
 import { useSettingsStore } from "@/features/settings/store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
-import { useZoomStore } from "@/stores/zoom-store";
+import { useZoomStore } from "@/features/window/stores/zoom-store";
 import Input from "@/ui/input";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";

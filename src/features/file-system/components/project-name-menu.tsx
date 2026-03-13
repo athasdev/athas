@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 
 export const ProjectNameMenu = () => {

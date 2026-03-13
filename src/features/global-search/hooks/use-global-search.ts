@@ -3,7 +3,7 @@ import { useDebounce, useDebouncedCallback } from "use-debounce";
 import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { PREVIEW_DEBOUNCE_DELAY, SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { useFileLoader } from "./use-file-loader";
 import { useFileSearch } from "./use-file-search";

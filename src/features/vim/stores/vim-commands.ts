@@ -1,5 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useVimStore } from "./vim-store";
 
 export interface VimCommand {
