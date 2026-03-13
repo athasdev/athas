@@ -6,9 +6,8 @@ import { useSettingsStore } from "@/features/settings/store";
 import {
   executeReplaceCommand,
   executeVimCommand,
-  getCommandParseStatus,
-  parseVimCommand,
-} from "@/features/vim/core";
+} from "@/features/vim/core/core/command-executor";
+import { getCommandParseStatus, parseVimCommand } from "@/features/vim/core/core/command-parser";
 import { createVimEditing } from "@/features/vim/stores/vim-editing";
 import { useVimSearchStore } from "@/features/vim/stores/vim-search";
 import { useVimStore } from "@/features/vim/stores/vim-store";
