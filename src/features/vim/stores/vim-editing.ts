@@ -37,12 +37,6 @@ export const createVimEditing = (): VimEditingCommands => {
   const getLines = () => useEditorViewStore.getState().lines;
   const getContent = () => useEditorViewStore.getState().actions.getContent();
 
-  // Get active buffer info
-  const _getActiveBuffer = () => {
-    const { buffers, activeBufferId } = useBufferStore.getState();
-    return buffers.find((b) => b.id === activeBufferId);
-  };
-
   // Update buffer content
   const updateContent = (newContent: string) => {
     const { actions, activeBufferId } = useBufferStore.getState();

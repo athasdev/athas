@@ -11,7 +11,7 @@ import { useRecentFilesStore } from "@/features/file-system/controllers/recent-f
 import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
 import type { GitDiff } from "@/features/git/types/git-types";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
-import { cleanupBufferHistoryTracking } from "@/stores/app-store";
+import { cleanupBufferHistoryTracking } from "@/features/editor/stores/editor-app-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 

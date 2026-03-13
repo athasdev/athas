@@ -10,7 +10,7 @@ import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAppStore } from "@/stores/app-store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
 import { HoverTooltip } from "../lsp/hover-tooltip";
@@ -55,7 +55,7 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
   const activeBufferId = propBufferId ?? globalActiveBufferId;
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
-  const { handleContentChange } = useAppStore.use.actions();
+  const { handleContentChange } = useEditorAppStore.use.actions();
   const searchQuery = useEditorUIStore.use.searchQuery();
   const searchMatches = useEditorUIStore.use.searchMatches();
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();

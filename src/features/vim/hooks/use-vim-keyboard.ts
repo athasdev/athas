@@ -101,7 +101,6 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
   const isCommandMode = useVimStore.use.isCommandMode();
   const visualSelection = useVimStore.use.visualSelection();
   const activeVisualMode = useVimStore.use.visualMode();
-  const _lastKey = useVimStore.use.lastKey();
   const {
     setMode,
     enterCommandMode,

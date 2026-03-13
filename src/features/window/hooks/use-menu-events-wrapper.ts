@@ -1,12 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { fetchRawAppVersion } from "@/features/window/utils/app-version";
-import { useAppStore } from "@/stores/app-store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useMenuEvents } from "./use-menu-events";
 
@@ -18,10 +17,7 @@ export function useMenuEventsWrapper() {
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { closeBuffer } = useBufferStore.use.actions();
-  const { handleSave } = useAppStore.use.actions();
-
-  // Get current window for window operations (currently unused but kept for future functionality)
-  const _currentWindow = getCurrentWebviewWindow();
+  const { handleSave } = useEditorAppStore.use.actions();
 
   useMenuEvents({
     onNewFile: fileSystemStore.handleCreateNewFile,

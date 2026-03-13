@@ -8,7 +8,7 @@ import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/store";
 import type { Buffer } from "@/features/tabs/types/buffer";
-import { useAppStore } from "@/stores/app-store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { calculateDisplayNames } from "../utils/path-shortener";
@@ -56,7 +56,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
     cancelPendingClose,
     convertPreviewToDefinite,
   } = useBufferStore.use.actions();
-  const { handleSave } = useAppStore.use.actions();
+  const { handleSave } = useEditorAppStore.use.actions();
   const { settings } = useSettingsStore();
   const { updateActivePath } = useSidebarStore();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;

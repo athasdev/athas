@@ -55,8 +55,6 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
 
   const titleBarHeight = IS_MAC ? 44 : 28; // h-11 for macOS, h-7 for Windows/Linux
   const footerHeight = 32; // Footer height matches min-h-[32px] from editor-footer
-  const _totalReservedHeight = titleBarHeight + footerHeight;
-
   return (
     <div
       className={cn(

@@ -9,13 +9,6 @@ export interface VimCommand {
   execute: (args?: string[]) => Promise<void> | void;
 }
 
-// Helper to get current buffer path for file operations
-const _getCurrentBufferPath = (): string | null => {
-  const { buffers, activeBufferId } = useBufferStore.getState();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-  return activeBuffer?.path || null;
-};
-
 // Save current file
 const writeCommand: VimCommand = {
   name: "write",

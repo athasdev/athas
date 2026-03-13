@@ -6,7 +6,7 @@ import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
-import { useAppStore } from "@/stores/app-store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { isMac } from "@/utils/platform";
@@ -31,7 +31,7 @@ const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+s",
     execute: () => {
-      useAppStore.getState().actions.handleSave();
+      useEditorAppStore.getState().actions.handleSave();
     },
   },
   {

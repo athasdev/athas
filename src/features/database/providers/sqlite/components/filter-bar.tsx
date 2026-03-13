@@ -75,7 +75,7 @@ export default function FilterBar({
               size="xs"
               className="min-w-20"
             />
-            <Dropdown
+            <Select
               value={f.operator}
               options={FILTER_OPERATORS.map((op) => ({ value: op.value, label: op.label }))}
               onChange={(v) => onUpdate(i, { operator: v as FilterOperator })}

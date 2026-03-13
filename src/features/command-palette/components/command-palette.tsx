@@ -17,7 +17,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { vimCommands } from "@/features/vim/stores/vim-commands";
 import { useVimStore } from "@/features/vim/stores/vim-store";
-import { useAppStore } from "@/stores/app-store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import Command, {
@@ -62,7 +62,7 @@ const CommandPalette = () => {
     setIsDatabaseConnectionVisible,
     openSettingsDialog,
   } = useUIState();
-  const { openQuickEdit } = useAppStore.use.actions();
+  const { openQuickEdit } = useEditorAppStore.use.actions();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const isVisible = isCommandPaletteVisible;
   const onClose = () => setIsCommandPaletteVisible(false);

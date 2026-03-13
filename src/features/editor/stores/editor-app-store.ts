@@ -5,7 +5,7 @@ import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
 import { createSelectors } from "@/utils/zustand-selectors";
-import { writeFile } from "../features/file-system/controllers/platform";
+import { writeFile } from "@/features/file-system/controllers/platform";
 
 const HISTORY_DEBOUNCE_MS = 500;
 const historyDebounceTimers = new Map<string, NodeJS.Timeout>();
@@ -21,17 +21,13 @@ export function cleanupBufferHistoryTracking(bufferId: string): void {
 }
 
 interface AppState {
-  // Autosave state
   autoSaveTimeoutId: NodeJS.Timeout | null;
-
-  // Quick edit state
   quickEditState: {
     isOpen: boolean;
     selectedText: string;
     cursorPosition: { x: number; y: number };
     selectionRange: { start: number; end: number };
   };
-
   actions: AppActions;
 }
 
@@ -46,7 +42,7 @@ interface AppActions {
   cleanup: () => void;
 }
 
-export const useAppStore = createSelectors(
+export const useEditorAppStore = createSelectors(
   create<AppState>()(
     immer((set, get) => ({
       autoSaveTimeoutId: null,
@@ -58,14 +54,12 @@ export const useAppStore = createSelectors(
       },
       actions: {
         handleContentChange: async (content: string) => {
-          // Import stores dynamically to avoid circular dependencies
           const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
           const { useFileWatcherStore } =
-            await import("../features/file-system/controllers/file-watcher-store");
+            await import("@/features/file-system/controllers/file-watcher-store");
           const { useSettingsStore } = await import("@/features/settings/store");
           const { useHistoryStore } = await import("@/features/editor/stores/history-store");
 
-          // Get dependencies from other stores
           const { activeBufferId, buffers } = useBufferStore.getState();
           const { updateBufferContent, markBufferDirty } = useBufferStore.getState().actions;
           const { settings } = useSettingsStore.getState();
@@ -74,29 +68,23 @@ export const useAppStore = createSelectors(
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
           if (!activeBuffer) return;
 
-          // Track history for this buffer (debounced)
           if (activeBufferId) {
             const lastContent = lastBufferContent.get(activeBufferId);
 
-            // Initialize lastContent if this is the first edit
             if (lastContent === undefined) {
               lastBufferContent.set(activeBufferId, activeBuffer.content);
             }
 
-            // Only track if content actually changed
             if (content !== lastContent) {
-              // Clear existing debounce timer
               const existingTimer = historyDebounceTimers.get(activeBufferId);
               if (existingTimer) {
                 clearTimeout(existingTimer);
               }
 
-              // Set new debounce timer to save history
               const timer = setTimeout(() => {
                 const { pushHistory } = useHistoryStore.getState().actions;
                 const oldContent = lastBufferContent.get(activeBufferId);
 
-                // Save the OLD content to history (before this change)
                 if (oldContent !== undefined) {
                   pushHistory(activeBufferId, {
                     content: oldContent,
@@ -104,7 +92,6 @@ export const useAppStore = createSelectors(
                   });
                 }
 
-                // Update last content reference
                 lastBufferContent.set(activeBufferId, content);
                 historyDebounceTimers.delete(activeBufferId);
               }, HISTORY_DEBOUNCE_MS);
@@ -120,29 +107,21 @@ export const useAppStore = createSelectors(
           } else {
             updateBufferContent(activeBuffer.id, content, true);
 
-            // Handle autosave
             if (!activeBuffer.isVirtual && settings.autoSave) {
-              // Clear existing timeout
               const { autoSaveTimeoutId } = get();
               if (autoSaveTimeoutId) {
                 clearTimeout(autoSaveTimeoutId);
               }
 
-              // Set new timeout
               const newTimeoutId = setTimeout(async () => {
                 try {
                   markPendingSave(activeBuffer.path);
                   await writeFile(activeBuffer.path, content);
                   markBufferDirty(activeBuffer.id, false);
 
-                  // Invalidate git diff cache for this file
                   const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
                   if (rootFolderPath) {
                     gitDiffCache.invalidate(rootFolderPath, activeBuffer.path);
-                    // Small delay to ensure git operations are complete before updating gutter
-                    // Note: This timeout is intentionally not stored as it's very short (50ms)
-                    // and will complete before any cleanup is needed. If component unmounts
-                    // during this time, the event will still fire but won't cause issues.
                     setTimeout(() => {
                       window.dispatchEvent(
                         new CustomEvent("git-status-updated", {
@@ -165,11 +144,10 @@ export const useAppStore = createSelectors(
         },
 
         handleSave: async () => {
-          // Import stores dynamically to avoid circular dependencies
           const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
           const { useSettingsStore } = await import("@/features/settings/store");
           const { useFileWatcherStore } =
-            await import("../features/file-system/controllers/file-watcher-store");
+            await import("@/features/file-system/controllers/file-watcher-store");
 
           const { activeBufferId, buffers } = useBufferStore.getState();
           const { markBufferDirty } = useBufferStore.getState().actions;
@@ -202,7 +180,6 @@ export const useAppStore = createSelectors(
               markBufferDirty(activeBuffer.id, false);
             }
           } else if (activeBuffer.path.startsWith("remote://")) {
-            // Handle remote save
             markBufferDirty(activeBuffer.id, true);
             const pathParts = activeBuffer.path.replace("remote://", "").split("/");
             const connectionId = pathParts.shift();
@@ -222,14 +199,12 @@ export const useAppStore = createSelectors(
               }
             }
           } else {
-            // Handle local save
             try {
               markPendingSave(activeBuffer.path);
 
               let contentToSave = activeBuffer.content;
-
-              // Format on save if enabled
               const { settings } = useSettingsStore.getState();
+
               if (settings.formatOnSave) {
                 const { formatContent } =
                   await import("@/features/editor/formatter/formatter-service");
@@ -243,8 +218,6 @@ export const useAppStore = createSelectors(
 
                 if (formatResult.success && formatResult.formattedContent) {
                   contentToSave = formatResult.formattedContent;
-
-                  // Update buffer with formatted content
                   const { updateBufferContent } = useBufferStore.getState().actions;
                   updateBufferContent(activeBufferId!, contentToSave, false);
                 }
@@ -253,7 +226,6 @@ export const useAppStore = createSelectors(
               await writeFile(activeBuffer.path, contentToSave);
               markBufferDirty(activeBuffer.id, false);
 
-              // Lint on save if enabled
               if (settings.lintOnSave) {
                 const { lintContent } = await import("@/features/editor/linter/linter-service");
                 const languageId = extensionRegistry.getLanguageId(activeBuffer.path);
@@ -265,8 +237,6 @@ export const useAppStore = createSelectors(
                 });
 
                 if (lintResult.success && lintResult.diagnostics) {
-                  // TODO: Store diagnostics and display in UI
-                  // For now, just log them
                   console.log(
                     `Linting found ${lintResult.diagnostics.length} issues:`,
                     lintResult.diagnostics,
@@ -274,11 +244,9 @@ export const useAppStore = createSelectors(
                 }
               }
 
-              // Invalidate git diff cache for this file
               const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
               if (rootFolderPath) {
                 gitDiffCache.invalidate(rootFolderPath, activeBuffer.path);
-                // Small delay to ensure git operations are complete before updating gutter
                 setTimeout(() => {
                   window.dispatchEvent(
                     new CustomEvent("git-status-updated", {
@@ -294,11 +262,7 @@ export const useAppStore = createSelectors(
           }
         },
 
-        openQuickEdit: (params: {
-          text: string;
-          cursorPosition: { x: number; y: number };
-          selectionRange: { start: number; end: number };
-        }) => {
+        openQuickEdit: (params) => {
           set((state) => {
             state.quickEditState = {
               isOpen: true,

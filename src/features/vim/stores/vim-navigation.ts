@@ -194,7 +194,6 @@ export const createVimNavigation = (): VimNavigationCommands => {
     },
 
     moveToFileStart: () => {
-      const _lines = getLines();
       const newPosition = {
         line: 0,
         column: 0,
