@@ -39,9 +39,3 @@ export const isAction = (key: string): boolean => {
 export const getActionKeys = (): string[] => {
   return Object.keys(actionRegistry);
 };
-
-// Re-export actions
-export { pasteAction, pasteBeforeAction } from "./paste-actions";
-export { repeatAction } from "./repeat-action";
-export { createReplaceAction, replaceAction } from "./replace-action";
-export { toggleCaseAction } from "./toggle-case-action";

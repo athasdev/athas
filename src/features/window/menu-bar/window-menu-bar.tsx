@@ -27,7 +27,6 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
     setActiveMenu(null);
   };
 
-  // Load themes from theme registry
   useEffect(() => {
     const loadThemes = () => {
       const registryThemes = themeRegistry.getAllThemes();
@@ -36,7 +35,6 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
 
     loadThemes();
 
-    // Listen for theme registry changes
     const unsubscribe = themeRegistry.onRegistryChange(loadThemes);
     return unsubscribe;
   }, []);
@@ -194,7 +192,6 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
     [handleClickEmit, setActiveMenu, themes],
   );
 
-  // Close menu when clicking outside the menu bar
   useEffect(() => {
     if (!activeMenu) return;
 
@@ -220,26 +217,21 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu }: Props) => {
       )}
     >
       {Object.keys(menus).map((menuName) => (
-        <div key={menuName} className="relative h-full">
-          <Button
-            variant="ghost"
-            className={cn(
-              "h-6 rounded-full border border-transparent px-3 text-text-light text-xs transition-colors hover:border-border/70 hover:bg-hover",
-              activeMenu === menuName && "border-border bg-selected!",
-            )}
-            onClick={() => setActiveMenu((value) => (value ? null : menuName))}
-            onMouseEnter={() => activeMenu !== null && setActiveMenu(menuName)}
-          >
-            {menuName}
-          </Button>
-
-          {activeMenu === menuName && (
-            <div className="absolute top-full left-0 z-[10040] mt-1">
-              {menus[menuName as keyof typeof menus]}
-            </div>
+        <Button
+          key={menuName}
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "h-6 rounded-full px-2 text-xs",
+            activeMenu === menuName && "bg-hover text-text",
           )}
-        </div>
+          onClick={() => setActiveMenu((current) => (current === menuName ? null : menuName))}
+        >
+          {menuName}
+        </Button>
       ))}
+
+      {activeMenu && menus[activeMenu as keyof typeof menus]}
     </div>
   );
 };

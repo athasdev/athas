@@ -40,8 +40,3 @@ export const isOperator = (key: string): boolean => {
 export const getOperatorKeys = (): string[] => {
   return Object.keys(operatorRegistry);
 };
-
-export { changeOperator } from "./change-operator";
-// Re-export operators
-export { deleteOperator } from "./delete-operator";
-export { getVimClipboard, setVimClipboard, yankOperator } from "./yank-operator";

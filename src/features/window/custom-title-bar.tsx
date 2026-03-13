@@ -14,7 +14,7 @@ import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC } from "@/utils/platform";
 import { AccountMenu } from "./components/account-menu";
 import ProjectTabs from "./components/project-tabs";
-import CustomMenuBar from "./menu-bar";
+import CustomMenuBar from "./menu-bar/window-menu-bar";
 
 interface CustomTitleBarProps {
   title?: string;
