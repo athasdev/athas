@@ -10,14 +10,14 @@ import {
   removeProviderApiToken,
   storeProviderApiToken,
   validateProviderApiKey,
-} from "@/utils/ai-chat";
+} from "@/features/ai/services/ai-chat-service";
 import {
   deleteChatFromDb,
   initChatDatabase,
   loadAllChatsFromDb,
   loadChatFromDb,
   saveChatToDb,
-} from "@/utils/chat-history-db";
+} from "@/features/ai/services/ai-chat-history-service";
 import type { AIChatActions, AIChatState } from "./types";
 
 export const useAIChatStore = create<AIChatState & AIChatActions>()(

@@ -2,15 +2,15 @@ import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
 import type { AcpEvent } from "@/features/ai/types/acp";
+import type { ContextInfo } from "@/features/ai/types/ai-context";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { getModelById, getProviderById } from "@/features/ai/types/providers";
-import { AcpStreamHandler } from "./acp-handler";
-import { buildContextPrompt, buildSystemPrompt } from "./context-builder";
-import { getProvider } from "./providers";
-import { processStreamingResponse } from "./stream-utils";
-import { getProviderApiToken } from "./token-manager";
-import type { ContextInfo } from "./types";
+import { getProvider } from "@/utils/providers";
+import { processStreamingResponse } from "@/utils/stream-utils";
+import { getProviderApiToken } from "@/utils/token-manager";
+import { AcpStreamHandler } from "./acp-stream-handler";
+import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
 
 // Check if an agent uses ACP (CLI-based) vs HTTP API
 export const isAcpAgent = (agentId: AgentType): boolean => {
@@ -23,7 +23,7 @@ export {
   removeProviderApiToken,
   storeProviderApiToken,
   validateProviderApiKey,
-} from "./token-manager";
+} from "@/utils/token-manager";
 // Re-export types and legacy functions;
 
 // Generic streaming chat completion function that works with any agent/provider
