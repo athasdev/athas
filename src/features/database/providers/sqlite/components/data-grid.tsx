@@ -18,7 +18,7 @@ import { cn } from "@/utils/cn";
 import { useCellCopy } from "../hooks/use-cell-copy";
 import { useColumnResize } from "../hooks/use-column-resize";
 import { useFkNavigation } from "../hooks/use-fk-navigation";
-import type { ColumnInfo } from "../types";
+import type { ColumnInfo } from "../sqlite-types";
 import CellRenderer from "./cell-renderer";
 
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {

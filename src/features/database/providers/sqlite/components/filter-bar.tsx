@@ -1,7 +1,7 @@
 import { Plus, X } from "lucide-react";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
-import type { ColumnFilter, ColumnInfo, FilterOperator } from "../types";
+import type { ColumnFilter, ColumnInfo, FilterOperator } from "../sqlite-types";
 
 const FILTER_OPERATORS: { value: FilterOperator; label: string }[] = [
   { value: "equals", label: "=" },

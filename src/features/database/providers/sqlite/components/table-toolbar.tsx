@@ -1,6 +1,6 @@
 import { Code, Copy, Database, Download, Info, Settings, Table, Type } from "lucide-react";
 import { cn } from "@/utils/cn";
-import type { DatabaseInfo, ViewMode } from "../types";
+import type { DatabaseInfo, ViewMode } from "../sqlite-types";
 
 interface TableToolbarProps {
   fileName: string;

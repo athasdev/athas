@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/utils/cn";
-import type { ForeignKeyInfo } from "../types";
+import type { ForeignKeyInfo } from "../sqlite-types";
 
 interface CellRendererProps {
   value: unknown;

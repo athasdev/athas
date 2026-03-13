@@ -305,13 +305,6 @@ export function getLanguageExtensionById(languageId: string): ExtensionManifest 
   return manifestByLanguageId.get(languageId);
 }
 
-export function getLanguageExtensionByFileExt(fileExt: string): ExtensionManifest | undefined {
-  const ext = fileExt.startsWith(".") ? fileExt : `.${fileExt}`;
-  return packagedExtensions.find((extension) =>
-    extension.languages?.some((language) => language.extensions.includes(ext)),
-  );
-}
-
 export function getWasmUrlForLanguage(languageId: string): string {
   return (
     wasmUrlByLanguageId.get(languageId) || `${BUNDLED_PARSER_BASE_URL}/${languageId}/parser.wasm`

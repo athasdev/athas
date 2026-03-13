@@ -753,7 +753,7 @@ const windowCommands: Command[] = [
   },
 ];
 
-export const allCommands: Command[] = [
+const allCommands: Command[] = [
   ...fileCommands,
   ...editCommands,
   ...viewCommands,

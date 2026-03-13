@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ColumnFilter, FilterOperator } from "../types";
+import type { ColumnFilter, FilterOperator } from "../sqlite-types";
 
 const VALID_OPERATORS: FilterOperator[] = [
   "equals",

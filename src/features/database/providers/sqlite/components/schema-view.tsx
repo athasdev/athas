@@ -1,5 +1,5 @@
 import { Calendar, FileText, Filter, Hash, Key, Link, Type } from "lucide-react";
-import type { ColumnInfo, ForeignKeyInfo } from "../types";
+import type { ColumnInfo, ForeignKeyInfo } from "../sqlite-types";
 
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
   int: { icon: Hash, color: "text-accent" },
