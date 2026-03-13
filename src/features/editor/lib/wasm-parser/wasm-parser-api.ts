@@ -1,6 +1,6 @@
 /**
  * WASM Parser - Tree-sitter WASM-based syntax highlighting
- * Entry point for WASM tokenization functionality
+ * Public API for WASM tokenization functionality
  */
 
 export { parserCache } from "./cache";

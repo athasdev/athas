@@ -133,7 +133,8 @@ async function registerLanguageProvider(params: {
     return;
   }
 
-  const { tokenizeCode, convertToEditorTokens } = await import("@/features/editor/lib/wasm-parser");
+  const { tokenizeCode, convertToEditorTokens } =
+    await import("@/features/editor/lib/wasm-parser/wasm-parser-api");
 
   const languageExtension = {
     id: runtimeExtensionId,

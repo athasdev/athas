@@ -218,7 +218,8 @@ class ExtensionManager {
           aliases: language.aliases,
           getTokens: async (content: string) => {
             // Use tokenizeCode without config - parser is already loaded by bundled extension
-            const { tokenizeCode, convertToEditorTokens } = await import("../lib/wasm-parser");
+            const { tokenizeCode, convertToEditorTokens } =
+              await import("../lib/wasm-parser/wasm-parser-api");
             const highlightTokens = await tokenizeCode(content, language.id);
             return convertToEditorTokens(highlightTokens);
           },
