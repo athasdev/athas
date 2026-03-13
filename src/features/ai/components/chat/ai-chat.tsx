@@ -19,7 +19,7 @@ import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import ChatHistorySidebar from "../history/sidebar";

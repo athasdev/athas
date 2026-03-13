@@ -1,8 +1,8 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { CircleUser, CreditCard, ExternalLink, LogIn, LogOut } from "lucide-react";
 import { useRef, useState } from "react";
-import { useAuthStore } from "@/stores/auth-store";
-import { toast } from "@/stores/toast-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import { toast } from "@/ui/toast-store";
 import Button from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Tooltip from "@/ui/tooltip";

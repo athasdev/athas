@@ -23,8 +23,8 @@ import GitBranchManager from "@/features/git/components/git-branch-manager";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/stores/auth-store";
-import { toast } from "@/stores/toast-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import { toast } from "@/ui/toast-store";
 import Select from "@/ui/select";
 import {
   beginDesktopAuthSession,

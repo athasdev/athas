@@ -2,7 +2,7 @@ import { AlertCircle, Sparkles } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import Textarea from "@/ui/textarea";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";

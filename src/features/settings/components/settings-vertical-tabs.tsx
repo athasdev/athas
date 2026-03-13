@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import type { SettingsTab } from "@/features/window/stores/ui-state-store";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";

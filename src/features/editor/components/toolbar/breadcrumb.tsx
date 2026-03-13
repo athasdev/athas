@@ -13,7 +13,7 @@ import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
-import { toast } from "@/stores/toast-store";
+import { toast } from "@/ui/toast-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";
 import { isMac } from "@/utils/platform";

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
-import { toast } from "@/stores/toast-store";
+import { toast } from "@/ui/toast-store";
 import { type AutocompleteModel, fetchAutocompleteModels } from "@/utils/autocomplete";
 import { InlineEditError, requestInlineEdit } from "@/utils/inline-edit";
 import { EDITOR_CONSTANTS } from "../config/constants";

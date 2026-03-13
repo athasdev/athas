@@ -27,7 +27,7 @@ import {
 import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
-import { toast } from "@/stores/toast-store";
+import { toast } from "@/ui/toast-store";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
 import Tooltip from "@/ui/tooltip";

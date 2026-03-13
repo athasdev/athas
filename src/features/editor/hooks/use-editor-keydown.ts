@@ -1,6 +1,6 @@
 import { type RefObject, useCallback } from "react";
 import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
-import { toast } from "@/stores/toast-store";
+import { toast } from "@/ui/toast-store";
 import type { FilteredCompletion } from "@/utils/fuzzy-matcher";
 import { useLspStore } from "../lsp/lsp-store";
 import { useEditorDecorationsStore } from "../stores/decorations-store";

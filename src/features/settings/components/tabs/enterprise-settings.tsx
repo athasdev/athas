@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAuthStore } from "@/stores/auth-store";
-import { toast } from "@/stores/toast-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import { toast } from "@/ui/toast-store";
 import Button from "@/ui/button";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";

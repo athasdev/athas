@@ -44,7 +44,7 @@ import { initializeKeymaps } from "./features/keymaps/init";
 import { WindowResizeBorder } from "./features/window/window-resize-border";
 import { useCliOpen } from "./features/window/hooks/use-cli-open";
 import { useDeepLink } from "./features/window/hooks/use-deep-link";
-import { useAuthStore } from "./stores/auth-store";
+import { useAuthStore } from "./features/window/stores/auth-store";
 
 initializeWasmTokenizer().catch(console.error);
 extensionLoader.initialize().catch(console.error);

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import { AutocompleteError, requestAutocomplete } from "@/utils/autocomplete";
 
 interface UseAutocompleteOptions {
