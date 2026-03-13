@@ -57,18 +57,15 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
   useEffect(() => {
     const loadThemes = () => {
       const registryThemes = themeRegistry.getAllThemes();
-      const themeInfos: ThemeInfo[] = [
-        // Convert registry themes to ThemeInfo
-        ...registryThemes.map(
-          (theme: ThemeDefinition): ThemeInfo => ({
-            id: theme.id,
-            name: theme.name,
-            description: theme.description,
-            category: theme.category,
-            icon: getThemeIcon(theme.category, theme.isDark),
-          }),
-        ),
-      ];
+      const themeInfos: ThemeInfo[] = registryThemes.map(
+        (theme: ThemeDefinition): ThemeInfo => ({
+          id: theme.id,
+          name: theme.name,
+          description: theme.description,
+          category: theme.category,
+          icon: getThemeIcon(theme.category, theme.isDark),
+        }),
+      );
       setThemes(themeInfos);
     };
 

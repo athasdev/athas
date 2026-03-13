@@ -105,13 +105,7 @@
  */
 
 // Actions
-export {
-  getAction,
-  getActionKeys,
-  isAction,
-  pasteAction,
-  pasteBeforeAction,
-} from "./actions";
+export { getAction, getActionKeys, isAction, pasteAction, pasteBeforeAction } from "./actions";
 // Command execution
 export {
   canExecuteCommand,

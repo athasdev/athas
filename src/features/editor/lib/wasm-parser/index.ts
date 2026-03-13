@@ -6,15 +6,5 @@
 export { parserCache } from "./cache";
 export { convertToEditorToken, convertToEditorTokens } from "./converter";
 export { wasmParserLoader } from "./loader";
-export {
-  initializeWasmTokenizer,
-  tokenizeByLine,
-  tokenizeCode,
-  tokenizeRange,
-} from "./tokenizer";
-export type {
-  HighlightToken,
-  LoadedParser,
-  ParseResult,
-  ParserConfig,
-} from "./types";
+export { initializeWasmTokenizer, tokenizeByLine, tokenizeCode, tokenizeRange } from "./tokenizer";
+export type { HighlightToken, LoadedParser, ParseResult, ParserConfig } from "./types";

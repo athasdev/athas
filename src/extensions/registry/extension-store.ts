@@ -768,9 +768,8 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               );
 
               if (matchesLanguage) {
-                const { setSyntaxHighlightingFilePath } = await import(
-                  "@/features/editor/extensions/builtin/syntax-highlighting"
-                );
+                const { setSyntaxHighlightingFilePath } =
+                  await import("@/features/editor/extensions/builtin/syntax-highlighting");
                 setSyntaxHighlightingFilePath(activeBuffer.path);
               }
             }

@@ -71,7 +71,10 @@ const BUNDLED_PARSERS: Record<string, ParserSource> = {
   json: { package: "tree-sitter-json" },
   kotlin: { package: "tree-sitter-kotlin" },
   lua: { package: "tree-sitter-lua" },
-  markdown: { package: "@tree-sitter-grammars/tree-sitter-markdown", subdir: "tree-sitter-markdown" },
+  markdown: {
+    package: "@tree-sitter-grammars/tree-sitter-markdown",
+    subdir: "tree-sitter-markdown",
+  },
   objc: { package: "tree-sitter-objc" },
   ocaml: { package: "tree-sitter-ocaml", subdir: "grammars/ocaml" },
   php: { package: "tree-sitter-php", subdir: "php" },

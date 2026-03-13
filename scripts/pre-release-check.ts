@@ -45,7 +45,9 @@ function info(message: string) {
   log(`  ${message}`, "dim");
 }
 
-function parseStableVersion(version: string): { major: number; minor: number; patch: number } | null {
+function parseStableVersion(
+  version: string,
+): { major: number; minor: number; patch: number } | null {
   const match = version.match(/^(\d+)\.(\d+)\.(\d+)/);
   if (!match) {
     return null;
@@ -251,11 +253,41 @@ async function main() {
   await runCheck("Tree-sitter parsers", async () => {
     const parsersDir = `${process.cwd()}/public/tree-sitter/parsers`;
     const expectedLangs = [
-      "bash", "c", "c_sharp", "cpp", "css", "dart", "elisp", "elixir",
-      "go", "html", "java", "javascript", "json", "kotlin", "lua",
-      "markdown", "objc", "ocaml", "php", "python", "rescript", "ruby",
-      "rust", "scala", "solidity", "sql", "swift", "systemrdl", "tlaplus",
-      "toml", "tsx", "typescript", "vue", "yaml", "zig",
+      "bash",
+      "c",
+      "c_sharp",
+      "cpp",
+      "css",
+      "dart",
+      "elisp",
+      "elixir",
+      "go",
+      "html",
+      "java",
+      "javascript",
+      "json",
+      "kotlin",
+      "lua",
+      "markdown",
+      "objc",
+      "ocaml",
+      "php",
+      "python",
+      "rescript",
+      "ruby",
+      "rust",
+      "scala",
+      "solidity",
+      "sql",
+      "swift",
+      "systemrdl",
+      "tlaplus",
+      "toml",
+      "tsx",
+      "typescript",
+      "vue",
+      "yaml",
+      "zig",
     ];
 
     const missing: string[] = [];
@@ -279,34 +311,34 @@ async function main() {
 
   // Check: TypeScript
   await runCheck("TypeScript type check", async () => {
-    const result = await $`bun typecheck`.quiet().nothrow();
+    const result = await $`bunx vp check --no-fmt --no-lint`.quiet().nothrow();
     if (result.exitCode !== 0) {
       return { passed: false, message: "Type errors found" };
     }
     return { passed: true };
   });
 
-  // Check: Biome lint
-  await runCheck("Biome lint check", async () => {
-    const result = await $`bun check`.quiet().nothrow();
+  // Check: Vite+ lint and format
+  await runCheck("Vite+ check", async () => {
+    const result = await $`bunx vp check`.quiet().nothrow();
     if (result.exitCode !== 0) {
-      return { passed: false, message: "Lint errors found" };
+      return { passed: false, message: "Format, lint, or type errors found" };
     }
     return { passed: true };
   });
 
-  await runCheck("Bun test suite", async () => {
-    const result = await $`bun test`.quiet().nothrow();
+  await runCheck("Vite+ test suite", async () => {
+    const result = await $`bunx vp test run`.quiet().nothrow();
     if (result.exitCode !== 0) {
       return { passed: false, message: "Tests failed" };
     }
     return { passed: true };
   });
 
-  // Check: Vite build (full mode only)
+  // Check: Vite+ build (full mode only)
   if (fullMode) {
-    await runCheck("Vite build", async () => {
-      const result = await $`bun vite build`.quiet().nothrow();
+    await runCheck("Vite+ build", async () => {
+      const result = await $`bunx vp build`.quiet().nothrow();
       if (result.exitCode !== 0) {
         return { passed: false, message: "Frontend build failed" };
       }

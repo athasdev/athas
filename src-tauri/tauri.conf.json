@@ -4,9 +4,9 @@
   "version": "0.4.4",
   "identifier": "com.code.athas",
   "build": {
-    "beforeDevCommand": "bun vite",
+    "beforeDevCommand": "bunx vp dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bun typecheck && bun vite build",
+    "beforeBuildCommand": "bunx vp check && bunx vp build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -81,9 +81,7 @@
     },
     "updater": {
       "active": true,
-      "endpoints": [
-        "https://github.com/athasdev/athas/releases/latest/download/latest.json"
-      ],
+      "endpoints": ["https://github.com/athasdev/athas/releases/latest/download/latest.json"],
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJBNDk0QjI4NkVDNDQwRUUKUldUdVFNUnVLRXRKdXV2elJZL3RsOWkvRDJueUwvQjh1UzdMbFBHZmZjV01Ec3lXZ1hFY3V6RkYK"
     }

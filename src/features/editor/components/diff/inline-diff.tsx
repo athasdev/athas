@@ -17,8 +17,8 @@ function highlightCharDiff(
   oldStr: string,
   newStr: string,
 ): { oldHighlights: boolean[]; newHighlights: boolean[] } {
-  const oldHighlights: boolean[] = new Array(oldStr.length).fill(false);
-  const newHighlights: boolean[] = new Array(newStr.length).fill(false);
+  const oldHighlights: boolean[] = Array.from({ length: oldStr.length }, () => false);
+  const newHighlights: boolean[] = Array.from({ length: newStr.length }, () => false);
 
   let prefixLen = 0;
   while (

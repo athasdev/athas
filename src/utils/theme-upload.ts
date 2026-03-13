@@ -74,7 +74,7 @@ export const uploadTheme = async (
 
     try {
       themeFile = JSON.parse(content);
-    } catch (_parseError) {
+    } catch {
       return {
         success: false,
         error: "Invalid JSON format. Please check your theme file syntax.",

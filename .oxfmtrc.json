@@ -1,0 +1,7 @@
+{
+  "tabWidth": 2,
+  "printWidth": 100,
+  "singleQuote": false,
+  "arrowParens": "always",
+  "ignorePatterns": ["dist/**", "build/**", "target/**"]
+}

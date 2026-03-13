@@ -3,8 +3,10 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { cn } from "@/utils/cn";
 
-interface InputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "onChange"> {
+interface InputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "size" | "onChange"
+> {
   size?: "xs" | "sm" | "md";
   onChange?: (value: number) => void;
 }

@@ -40,7 +40,12 @@ regex = "1.10"
 reqwest = "0.12"
 rusqlite = { version = "0.29.0", features = ["bundled"] }
 duckdb = { version = "1.4.4", features = ["bundled"] }
-sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "mysql"] }
+sqlx = { version = "0.8.6", default-features = false, features = [
+  "runtime-tokio",
+  "tls-rustls",
+  "postgres",
+  "mysql",
+] }
 mongodb = "3.5.1"
 redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
 sha256 = "1.5"

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vite-plus/test";
 import { parseDroppedPathCandidate, parseDroppedPaths } from "./dropped-file-paths";
 
 describe("dropped-file-paths", () => {

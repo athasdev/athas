@@ -74,13 +74,7 @@
   padding: 0.2em 0.4em;
   border-radius: 4px;
   font-family:
-    "JetBrains Mono",
-    ui-monospace,
-    SFMono-Regular,
-    "SF Mono",
-    Menlo,
-    Consolas,
-    "Liberation Mono",
+    "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
     monospace;
   font-size: 0.9em;
   color: var(--color-syntax-string, #c3e88d);

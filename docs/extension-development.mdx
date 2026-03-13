@@ -33,16 +33,20 @@ Syntax highlighting is bundled by Athas core.
   "name": "my-language",
   "version": "1.0.0",
   "contributes": {
-    "languages": [{
-      "id": "my-language",
-      "extensions": [".mylang"],
-      "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-      "language": "my-language",
-      "scopeName": "source.mylang",
-      "path": "./syntaxes/my-language.tmLanguage.json"
-    }]
+    "languages": [
+      {
+        "id": "my-language",
+        "extensions": [".mylang"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "my-language",
+        "scopeName": "source.mylang",
+        "path": "./syntaxes/my-language.tmLanguage.json"
+      }
+    ]
   }
 }
 ```

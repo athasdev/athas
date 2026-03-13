@@ -41,9 +41,7 @@ function info(message: string) {
 }
 
 function parseVersion(version: string): ParsedVersion {
-  const match = version.match(
-    /^(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$/,
-  );
+  const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$/);
   if (!match) {
     error(`Invalid version format: ${version}`);
   }
@@ -210,9 +208,7 @@ async function updateCargoToml(newVersion: string) {
 async function checkWorkingDirectory() {
   const status = await $`git status --porcelain`.text();
   if (status.trim().length > 0) {
-    error(
-      "Working directory is not clean. Please commit or stash your changes first.",
-    );
+    error("Working directory is not clean. Please commit or stash your changes first.");
   }
 }
 
@@ -257,10 +253,7 @@ async function release() {
   }
 
   log("\n  This will:", "yellow");
-  log(
-    `  1. Update package.json, tauri.conf.json, and Cargo.toml to v${newVersion}`,
-    "yellow",
-  );
+  log(`  1. Update package.json, tauri.conf.json, and Cargo.toml to v${newVersion}`, "yellow");
   log("  2. Create a commit with these changes", "yellow");
   log(`  3. Create and push tag v${newVersion}`, "yellow");
   log("  4. Trigger GitHub Actions to build and release\n", "yellow");

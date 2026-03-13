@@ -7,6 +7,7 @@ Thank you for contributing to Athas! Please check existing issues and pull reque
 See [setup guides](docs/contributing/setup/) for your platform.
 
 Prerequisites:
+
 - [Rust](https://rustup.rs)
 - [Bun](https://bun.sh)
 - [Node.js ≥ 18](https://nodejs.org)

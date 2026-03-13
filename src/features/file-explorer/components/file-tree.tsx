@@ -849,15 +849,9 @@ function FileTreeComponent({
 
   // No recursive render; rows are virtualized
 
-  const handleRootDrop = async (e: React.DragEvent) => {
+  const handleRootDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (e.dataTransfer.files.length > 0) {
-      const firstFilePath = files[0]?.path || "";
-      const pathSep = firstFilePath.includes("\\") ? "\\" : "/";
-      firstFilePath.split(pathSep).slice(0, -1).join(pathSep) || ".";
-    }
   };
 
   const handleDeleteConfirm = useCallback(async () => {

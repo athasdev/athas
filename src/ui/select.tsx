@@ -38,8 +38,10 @@ interface SharedSelectProps {
   }>;
 }
 
-interface NativeSelectProps
-  extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "size" | "onChange" | "value"> {
+interface NativeSelectProps extends Omit<
+  SelectHTMLAttributes<HTMLSelectElement>,
+  "size" | "onChange" | "value"
+> {
   value: string;
   onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
   options?: undefined;

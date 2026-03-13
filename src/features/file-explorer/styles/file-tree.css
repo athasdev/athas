@@ -31,7 +31,6 @@
   font-family: var(--app-font-family);
 }
 
-
 /* Cover gap above sticky headers to prevent content bleeding through (only when stuck) */
 /* Removed JS-managed .is-stuck marker; pure CSS sticky remains */
 
@@ -66,4 +65,6 @@
 
 /* No sticky folder styling */
 
-.file-tree-item { position: relative; }
+.file-tree-item {
+  position: relative;
+}

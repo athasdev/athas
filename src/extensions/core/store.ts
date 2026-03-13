@@ -435,9 +435,8 @@ async function triggerRehighlighting(manifest: ExtensionManifest): Promise<void>
     if (activeBuffer) {
       const fileExt = activeBuffer.path.split(".").pop()?.toLowerCase();
       if (fileExt && caps.fileExtensions.includes(fileExt)) {
-        const { setSyntaxHighlightingFilePath } = await import(
-          "@/features/editor/extensions/builtin/syntax-highlighting"
-        );
+        const { setSyntaxHighlightingFilePath } =
+          await import("@/features/editor/extensions/builtin/syntax-highlighting");
         setSyntaxHighlightingFilePath(activeBuffer.path);
       }
     }

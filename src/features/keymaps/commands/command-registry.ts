@@ -530,9 +530,8 @@ const navigationCommands: Command[] = [
     keybinding: "F12",
     execute: async () => {
       const { LspClient } = await import("@/features/editor/lsp/lsp-client");
-      const { readFileContent } = await import(
-        "@/features/file-system/controllers/file-operations"
-      );
+      const { readFileContent } =
+        await import("@/features/file-system/controllers/file-operations");
 
       const lspClient = LspClient.getInstance();
       const bufferStore = useBufferStore.getState();

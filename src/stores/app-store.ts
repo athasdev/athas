@@ -60,9 +60,8 @@ export const useAppStore = createSelectors(
         handleContentChange: async (content: string) => {
           // Import stores dynamically to avoid circular dependencies
           const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
-          const { useFileWatcherStore } = await import(
-            "../features/file-system/controllers/file-watcher-store"
-          );
+          const { useFileWatcherStore } =
+            await import("../features/file-system/controllers/file-watcher-store");
           const { useSettingsStore } = await import("@/features/settings/store");
           const { useHistoryStore } = await import("@/features/editor/stores/history-store");
 
@@ -169,9 +168,8 @@ export const useAppStore = createSelectors(
           // Import stores dynamically to avoid circular dependencies
           const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
           const { useSettingsStore } = await import("@/features/settings/store");
-          const { useFileWatcherStore } = await import(
-            "../features/file-system/controllers/file-watcher-store"
-          );
+          const { useFileWatcherStore } =
+            await import("../features/file-system/controllers/file-watcher-store");
 
           const { activeBufferId, buffers } = useBufferStore.getState();
           const { markBufferDirty } = useBufferStore.getState().actions;
@@ -233,9 +231,8 @@ export const useAppStore = createSelectors(
               // Format on save if enabled
               const { settings } = useSettingsStore.getState();
               if (settings.formatOnSave) {
-                const { formatContent } = await import(
-                  "@/features/editor/formatter/formatter-service"
-                );
+                const { formatContent } =
+                  await import("@/features/editor/formatter/formatter-service");
                 const languageId = extensionRegistry.getLanguageId(activeBuffer.path);
 
                 const formatResult = await formatContent({

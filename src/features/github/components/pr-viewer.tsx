@@ -750,7 +750,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
         shouldSchedule = true;
         return {
           ...prev,
-          [path]: { ...(existing ?? {}), loading: true, error: undefined },
+          [path]: { ...existing, loading: true, error: undefined },
         };
       });
       if (!shouldSchedule) return;

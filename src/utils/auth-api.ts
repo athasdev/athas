@@ -102,7 +102,7 @@ async function authenticatedFetch(path: string, options: RequestInit = {}): Prom
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
-      ...(options.headers || {}),
+      ...options.headers,
     },
   });
 }
