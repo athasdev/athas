@@ -3,6 +3,12 @@ import { type RefObject, useCallback, useEffect, useRef } from "react";
 const EDGE_MARGIN = 40;
 const MAX_SCROLL_SPEED = 25;
 
+let dragScrollActive = false;
+
+export function isDragScrolling() {
+  return dragScrollActive;
+}
+
 export function useDragScroll(textareaRef: RefObject<HTMLTextAreaElement | null>) {
   const isDraggingRef = useRef(false);
   const rafRef = useRef<number | null>(null);
@@ -69,6 +75,7 @@ export function useDragScroll(textareaRef: RefObject<HTMLTextAreaElement | null>
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
       isDraggingRef.current = true;
+      dragScrollActive = true;
       mousePositionRef.current = { x: e.clientX, y: e.clientY };
     };
 
@@ -83,6 +90,7 @@ export function useDragScroll(textareaRef: RefObject<HTMLTextAreaElement | null>
 
     const handleMouseUp = () => {
       isDraggingRef.current = false;
+      dragScrollActive = false;
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
