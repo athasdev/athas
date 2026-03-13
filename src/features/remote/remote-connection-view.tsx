@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { message } from "@tauri-apps/plugin-dialog";
 import { memo, useEffect, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { connectionStore } from "@/utils/connection-store";
+import { connectionStore } from "@/features/remote/services/remote-connection-store";
 import ConnectionDialog from "./connection-dialog";
 import ConnectionList from "./connection-list";
 import PasswordPromptDialog from "./password-prompt-dialog";

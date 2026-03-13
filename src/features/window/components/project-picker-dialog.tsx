@@ -10,7 +10,7 @@ import ConnectionDialog from "@/features/remote/connection-dialog";
 import PasswordPromptDialog from "@/features/remote/password-prompt-dialog";
 import type { RemoteConnection, RemoteConnectionFormData } from "@/features/remote/types";
 import { cn } from "@/utils/cn";
-import { connectionStore } from "@/utils/connection-store";
+import { connectionStore } from "@/features/remote/services/remote-connection-store";
 
 interface ProjectPickerDialogProps {
   isOpen: boolean;

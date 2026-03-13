@@ -142,7 +142,7 @@ const AIChat = memo(function AIChat({
       activeBuffer || undefined;
     if (activeBuffer?.isWebViewer && activeBuffer.webViewerUrl) {
       // Fetch web page content for context
-      const { fetchWebPageContent } = await import("@/utils/web-fetcher");
+      const { fetchWebPageContent } = await import("@/features/ai/services/web-content-service");
       const webContent = await fetchWebPageContent(activeBuffer.webViewerUrl);
       activeBufferContext = {
         ...activeBuffer,

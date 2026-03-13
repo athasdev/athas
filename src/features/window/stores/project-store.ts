@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
-import { connectionStore } from "@/utils/connection-store";
+import { connectionStore } from "@/features/remote/services/remote-connection-store";
 import { getFolderName } from "@/utils/path-helpers";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 
