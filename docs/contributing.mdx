@@ -139,3 +139,109 @@ We use semantic versioning: `MAJOR.MINOR.PATCH`.
 - **MAJOR**: Breaking changes
 - **MINOR**: New features (backwards compatible)
 - **PATCH**: Bug fixes
+
+## Project Structure
+
+Athas should move toward a predictable feature-first structure. This is an incremental migration policy, not a one-shot rewrite.
+
+### Frontend
+
+- State management uses Zustand.
+- Shared code that is genuinely reused across features belongs in `src/components`, `src/ui`, `src/hooks`, or `src/lib`.
+- Feature-specific logic should live under `src/features/[feature]/` and not in loose files under `src/`.
+- New feature code should follow the structure below. Existing code should be migrated module-by-module when touched or when a dedicated refactor is scheduled.
+
+```text
+src/
+- components/
+- ui/
+- hooks/
+- lib/
+- features/
+
+src/features/[feature]/
+- components/ -> [feature]-*.tsx
+- hooks/ -> use-[feature]-*.ts
+- services/ -> [feature]-service.ts
+- api/ -> [feature]-api.ts
+- adapters/ -> [feature]-adapter.ts
+- stores/ -> [feature]-store.ts
+- state/ -> [feature]-state.ts
+- selectors/ -> [feature]-selectors.ts
+- contexts/ -> [feature]-context.tsx
+- types/ -> [feature]-types.ts
+- constants/ -> [feature]-constants.ts
+- utils/ -> [feature]-utils.ts
+- tests/ -> [feature].test.ts
+```
+
+Naming rule:
+
+- `[feature]-[role].ts`
+
+Examples:
+
+- `git-panel.tsx`
+- `git-diff-viewer.tsx`
+- `git-service.ts`
+- `git-store.ts`
+- `git-types.ts`
+- `use-git-status.ts`
+
+Frontend enforcement rules:
+
+- Do not add new feature logic to global folders unless it is shared by multiple features.
+- Do not leave feature logic scattered at `src/features/[feature]/` root when a matching subfolder exists.
+- Keep tests in `src/features/[feature]/tests/` whenever practical.
+- Benchmarks may be added as `*.bench.ts` files inside the feature's `tests/` folder for critical paths such as parsing, diffing, or indexing.
+
+### Backend
+
+Rust code should move toward a Cargo workspace with feature sub-crates. `src-tauri` should stay thin and focused on app wiring, while feature logic lives in `crates/[feature]`.
+
+```text
+crates/[feature]/
+- Cargo.toml
+- src/
+  - lib.rs
+  - commands.rs
+  - service.rs
+  - repository.rs
+  - models.rs
+  - types.rs
+  - state.rs
+  - events.rs
+  - errors.rs
+  - utils.rs
+
+src-tauri/
+- Cargo.toml
+- src/
+  - main.rs
+  - app_state.rs
+  - commands.rs
+  - menu.rs
+  - events.rs
+```
+
+Cargo workspace target:
+
+```toml
+[workspace]
+members = [
+  "src-tauri",
+  "crates/[feature]"
+]
+```
+
+Backend enforcement rules:
+
+- New backend feature logic should prefer `crates/[feature]` over adding more unrelated code to `src-tauri/src/`.
+- `src-tauri` should primarily compose crates, register commands, and manage application startup and integration concerns.
+
+### Migration Strategy
+
+- Apply this structure to all new code immediately.
+- When touching an existing module, prefer moving it closer to the target layout instead of extending the old shape.
+- Migrate one feature at a time in dedicated refactors where the file movement would otherwise obscure product changes.
+- Favor mechanical file moves first, then behavior changes in follow-up commits or PRs.
