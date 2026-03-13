@@ -4,7 +4,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { useSettingsStore } from "@/features/settings/store";
-import { useSidebarStore } from "@/stores/sidebar-store";
+import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 

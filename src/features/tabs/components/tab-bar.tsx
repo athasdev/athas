@@ -9,7 +9,7 @@ import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/store";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import { useAppStore } from "@/stores/app-store";
-import { useSidebarStore } from "@/stores/sidebar-store";
+import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import UnsavedChangesDialog from "@/ui/unsaved-changes-dialog";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import { NewTabMenu } from "./new-tab-menu";

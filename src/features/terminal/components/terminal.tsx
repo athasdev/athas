@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 
 import { useSettingsStore } from "@/features/settings/store";
-import { useProjectStore } from "@/stores/project-store";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import {
   createTerminalAddons,
   injectLinkStyles,

@@ -8,7 +8,7 @@ import { FileExplorerIcon } from "@/features/file-explorer/components/file-explo
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
 import type { FileEntry } from "@/features/file-system/types/app";
-import { useProjectStore } from "@/stores/project-store";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
