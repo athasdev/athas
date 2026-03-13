@@ -1,7 +1,7 @@
 import type { SessionMode, SlashCommand } from "@/features/ai/types/acp";
 import type { AgentType, Chat, Message } from "@/features/ai/types/ai-chat";
 import type { FileEntry } from "@/features/file-system/types/app";
-import type { ProviderModel } from "@/utils/providers/provider-interface";
+import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";

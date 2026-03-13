@@ -10,7 +10,7 @@ import { getAvailableProviders } from "@/features/ai/types/providers";
 import { useSettingsStore } from "@/features/settings/store";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
-import { getProvider } from "@/utils/providers";
+import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
 
 interface UnifiedAgentSelectorProps {
   variant?: "header" | "input";

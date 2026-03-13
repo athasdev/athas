@@ -45,7 +45,7 @@ export const validateProviderApiKey = async (
 ): Promise<boolean> => {
   try {
     // Import provider dynamically to avoid circular dependency
-    const { getProvider } = await import("./providers");
+    const { getProvider } = await import("@/features/ai/services/providers/ai-provider-registry");
     const provider = getProvider(providerId);
 
     if (!provider) {

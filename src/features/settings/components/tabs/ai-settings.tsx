@@ -15,8 +15,8 @@ import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/features/editor/services/editor-autocomplete-service";
 import { cn } from "@/utils/cn";
-import { setOllamaBaseUrl } from "@/utils/providers";
-import { checkOllamaConnection } from "@/utils/providers/ollama-provider";
+import { setOllamaBaseUrl } from "@/features/ai/services/providers/ai-provider-registry";
+import { checkOllamaConnection } from "@/features/ai/services/providers/ollama-provider";
 
 const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";

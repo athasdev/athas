@@ -428,9 +428,11 @@ const initializeSettings = async () => {
 
     // Sync Ollama base URL with provider
     if (normalizedSettings.ollamaBaseUrl) {
-      import("@/utils/providers").then(({ setOllamaBaseUrl }) => {
-        setOllamaBaseUrl(normalizedSettings.ollamaBaseUrl);
-      });
+      import("@/features/ai/services/providers/ai-provider-registry").then(
+        ({ setOllamaBaseUrl }) => {
+          setOllamaBaseUrl(normalizedSettings.ollamaBaseUrl);
+        },
+      );
     }
 
     // Update Zustand store
@@ -538,9 +540,11 @@ export const useSettingsStore = create(
 
           if (key === "theme") applyTheme(normalizedValue as Theme);
           if (key === "ollamaBaseUrl") {
-            import("@/utils/providers").then(({ setOllamaBaseUrl }) => {
-              setOllamaBaseUrl(normalizedValue as string);
-            });
+            import("@/features/ai/services/providers/ai-provider-registry").then(
+              ({ setOllamaBaseUrl }) => {
+                setOllamaBaseUrl(normalizedValue as string);
+              },
+            );
           }
           if (key === "fontFamily" || key === "uiFontFamily" || key === "uiFontSize") {
             const latestSettings = useSettingsStore.getState().settings;

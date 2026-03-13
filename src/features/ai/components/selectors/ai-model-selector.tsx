@@ -33,8 +33,11 @@ import { useSettingsStore } from "@/features/settings/store";
 import Input from "@/ui/input";
 import { MenuPopover } from "@/ui/menu";
 import { cn } from "@/utils/cn";
-import { getProvider, setOllamaBaseUrl } from "@/utils/providers";
-import { checkOllamaConnection } from "@/utils/providers/ollama-provider";
+import {
+  getProvider,
+  setOllamaBaseUrl,
+} from "@/features/ai/services/providers/ai-provider-registry";
+import { checkOllamaConnection } from "@/features/ai/services/providers/ollama-provider";
 
 interface AIModelSelectorProps {
   providerId: string;

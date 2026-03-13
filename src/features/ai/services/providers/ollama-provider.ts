@@ -1,6 +1,6 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import type { ProviderModel } from "./provider-interface";
-import { AIProvider, type ProviderHeaders, type StreamRequest } from "./provider-interface";
+import type { ProviderModel } from "./ai-provider-interface";
+import { AIProvider, type ProviderHeaders, type StreamRequest } from "./ai-provider-interface";
 
 const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
 const OLLAMA_TIMEOUT_MS = 3000;

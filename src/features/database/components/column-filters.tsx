@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
-import Dropdown from "@/ui/dropdown";
 import Input from "@/ui/input";
+import Select from "@/ui/select";
 import type { ColumnFilter, ColumnInfo } from "../models/common.types";
 
 interface ColumnFiltersProps {
@@ -31,7 +31,7 @@ export default function ColumnFilters({
       <div className="space-y-1">
         {columnFilters.map((filter, index) => (
           <div key={index} className="flex items-center gap-2 text-xs">
-            <Dropdown
+            <Select
               value={filter.column}
               options={tableMeta.map((col) => ({ value: col.name, label: col.name }))}
               onChange={(value) => onUpdateFilter(index, { column: value })}
@@ -39,7 +39,7 @@ export default function ColumnFilters({
               className="min-w-20"
             />
 
-            <Dropdown
+            <Select
               value={filter.operator}
               options={[
                 { value: "equals", label: "=" },

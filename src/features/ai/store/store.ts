@@ -3,14 +3,14 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat";
-import { AI_PROVIDERS } from "@/features/ai/types/providers";
-import type { FileEntry } from "@/features/file-system/types/app";
 import {
   getProviderApiToken,
   removeProviderApiToken,
   storeProviderApiToken,
   validateProviderApiKey,
-} from "@/features/ai/services/ai-chat-service";
+} from "@/features/ai/services/ai-token-service";
+import { AI_PROVIDERS } from "@/features/ai/types/providers";
+import type { FileEntry } from "@/features/file-system/types/app";
 import {
   deleteChatFromDb,
   initChatDatabase,

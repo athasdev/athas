@@ -3,7 +3,7 @@ import { GrokProvider } from "./grok-provider";
 import { OllamaProvider } from "./ollama-provider";
 import { OpenAIProvider } from "./openai-provider";
 import { OpenRouterProvider } from "./openrouter-provider";
-import type { AIProvider, ProviderConfig } from "./provider-interface";
+import type { AIProvider, ProviderConfig } from "./ai-provider-interface";
 
 const providers = new Map<string, AIProvider>();
 

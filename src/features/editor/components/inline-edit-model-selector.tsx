@@ -1,8 +1,8 @@
 import { ChevronDown } from "lucide-react";
 import { useMemo } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import Dropdown from "@/ui/dropdown";
 import type { AutocompleteModel } from "@/features/editor/services/editor-autocomplete-service";
+import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 
 interface InlineEditModelSelectorProps {
@@ -51,7 +51,7 @@ export const InlineEditModelSelector = ({
   const selectedProviderId = getProviderFromModelId(selectedModel?.id || value);
 
   return (
-    <Dropdown
+    <Select
       value={value}
       options={options}
       onChange={onChange}

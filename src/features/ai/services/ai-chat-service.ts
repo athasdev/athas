@@ -6,9 +6,9 @@ import type { ContextInfo } from "@/features/ai/types/ai-context";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
 import { getModelById, getProviderById } from "@/features/ai/types/providers";
-import { getProvider } from "@/utils/providers";
+import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
 import { processStreamingResponse } from "@/utils/stream-utils";
-import { getProviderApiToken } from "@/utils/token-manager";
+import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
 
@@ -17,14 +17,6 @@ export const isAcpAgent = (agentId: AgentType): boolean => {
   const agent = AGENT_OPTIONS.find((a) => a.id === agentId);
   return agent?.isAcp ?? false;
 };
-
-export {
-  getProviderApiToken,
-  removeProviderApiToken,
-  storeProviderApiToken,
-  validateProviderApiKey,
-} from "@/utils/token-manager";
-// Re-export types and legacy functions;
 
 // Generic streaming chat completion function that works with any agent/provider
 export const getChatCompletionStream = async (

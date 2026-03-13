@@ -1,6 +1,6 @@
 import { Plus, X } from "lucide-react";
-import Dropdown from "@/ui/dropdown";
 import Input from "@/ui/input";
+import Select from "@/ui/select";
 import type { ColumnFilter, ColumnInfo, FilterOperator } from "../types";
 
 const FILTER_OPERATORS: { value: FilterOperator; label: string }[] = [
@@ -68,7 +68,7 @@ export default function FilterBar({
       <div className="space-y-1">
         {filters.map((f, i) => (
           <div key={i} className="flex items-center gap-2 text-xs">
-            <Dropdown
+            <Select
               value={f.column}
               options={columns.map((c) => ({ value: c.name, label: c.name }))}
               onChange={(v) => onUpdate(i, { column: v })}

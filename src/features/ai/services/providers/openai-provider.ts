@@ -1,4 +1,4 @@
-import { AIProvider, type ProviderHeaders, type StreamRequest } from "./provider-interface";
+import { AIProvider, type ProviderHeaders, type StreamRequest } from "./ai-provider-interface";
 
 // Models that require max_completion_tokens instead of max_tokens
 const MODELS_REQUIRING_MAX_COMPLETION_TOKENS = [

@@ -1,5 +1,5 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import { AIProvider, type ProviderHeaders, type StreamRequest } from "./provider-interface";
+import { AIProvider, type ProviderHeaders, type StreamRequest } from "./ai-provider-interface";
 
 export class GeminiProvider extends AIProvider {
   buildHeaders(apiKey?: string): ProviderHeaders {

@@ -5,8 +5,8 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import Button from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
-import Dropdown from "@/ui/dropdown";
 import Input from "@/ui/input";
+import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import type { DatabaseType } from "../../models/provider.types";
 import { PROVIDER_REGISTRY } from "../../providers/provider-registry";
@@ -188,7 +188,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
         <label htmlFor="db-conn-provider" className="ui-font block text-sm text-text">
           Database
         </label>
-        <Dropdown
+        <Select
           value={dbType}
           onChange={(value) => handleDbTypeChange(value as DatabaseType)}
           options={CONNECTION_DB_TYPES.map((type) => ({

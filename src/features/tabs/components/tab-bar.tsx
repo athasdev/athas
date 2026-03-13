@@ -10,7 +10,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import { useAppStore } from "@/stores/app-store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
-import UnsavedChangesDialog from "@/ui/unsaved-changes-dialog";
+import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import { NewTabMenu } from "./new-tab-menu";
 import TabBarItem from "./tab-bar-item";

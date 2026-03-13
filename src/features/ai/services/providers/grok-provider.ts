@@ -1,4 +1,4 @@
-import { AIProvider, type ProviderHeaders, type StreamRequest } from "./provider-interface";
+import { AIProvider, type ProviderHeaders, type StreamRequest } from "./ai-provider-interface";
 
 export class GrokProvider extends AIProvider {
   buildHeaders(apiKey?: string): ProviderHeaders {

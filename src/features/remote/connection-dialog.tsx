@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import Button from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
-import Dropdown from "@/ui/dropdown";
 import Input from "@/ui/input";
+import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import type { RemoteConnection, RemoteConnectionFormData } from "./types";
 
@@ -267,7 +267,7 @@ const ConnectionDialog = ({
           <label htmlFor="type" className="font-medium text-text text-xs">
             Connection Type
           </label>
-          <Dropdown
+          <Select
             value={formData.type}
             options={connectionTypeOptions}
             onChange={(value) => updateFormData({ type: value as "ssh" | "sftp" })}
