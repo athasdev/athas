@@ -14,6 +14,7 @@ import { editorAPI } from "../extensions/api";
 import { useAutocomplete } from "../hooks/use-autocomplete";
 import { useBufferSwitch } from "../hooks/use-buffer-switch";
 import { useContextMenu } from "../hooks/use-context-menu";
+import { useDragScroll } from "../hooks/use-drag-scroll";
 import { useEditorKeyDown } from "../hooks/use-editor-keydown";
 import { useEditorOperations } from "../hooks/use-editor-operations";
 import { useEditorScroll } from "../hooks/use-editor-scroll";
@@ -480,6 +481,8 @@ export function Editor({
     setEditorScrollTop,
     handleViewportScroll,
   });
+
+  useDragScroll(inputRef);
 
   useEffect(() => {
     if (inputRef.current) {
