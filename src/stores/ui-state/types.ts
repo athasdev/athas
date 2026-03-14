@@ -11,7 +11,8 @@ export type SettingsTab =
   | "features"
   | "enterprise"
   | "advanced"
-  | "terminal";
+  | "terminal"
+  | "web-viewer";
 
 export type BottomPaneTab = "terminal" | "diagnostics";
 

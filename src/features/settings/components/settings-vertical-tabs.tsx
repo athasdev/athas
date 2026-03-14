@@ -50,6 +50,7 @@ const tabGroups: TabGroup[] = [
       { id: "editor", label: "Editor" },
       { id: "git", label: "Git" },
       { id: "terminal", label: "Terminal" },
+      { id: "web-viewer", label: "Web Viewer" },
       { id: "language", label: "Language" },
       { id: "keyboard", label: "Keybindings" },
       { id: "extensions", label: "Extensions" },

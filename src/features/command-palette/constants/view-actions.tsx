@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   ArrowLeftRight,
+  Bookmark,
   Globe,
   Menu,
   MessageSquare,
@@ -8,11 +9,14 @@ import {
   PanelLeft,
   RotateCcw,
   Search,
+  Smartphone,
   Terminal,
+  Trash2,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
 import { useSettingsStore } from "@/features/settings/store";
+import { useWebViewerStore } from "@/features/web-viewer/stores/web-viewer-store";
 import type { Action } from "../models/action.types";
 
 interface ViewActionsParams {
@@ -284,6 +288,41 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         if (url?.trim()) {
           openWebViewerBuffer(url.trim());
         }
+        onClose();
+      },
+    },
+    {
+      id: "web-viewer-toggle-device-preview",
+      label: "Web Viewer: Toggle Device Preview",
+      description: "Toggle responsive device preview mode",
+      icon: <Smartphone size={14} />,
+      category: "Web Viewer",
+      keybinding: ["⌘", "⇧", "M"],
+      action: () => {
+        const store = useWebViewerStore.getState();
+        store.actions.setResponsiveMode(!store.responsiveMode);
+        onClose();
+      },
+    },
+    {
+      id: "web-viewer-clear-history",
+      label: "Web Viewer: Clear Browsing History",
+      description: "Remove all browsing history entries",
+      icon: <Trash2 size={14} />,
+      category: "Web Viewer",
+      action: () => {
+        useWebViewerStore.getState().actions.clearHistory();
+        onClose();
+      },
+    },
+    {
+      id: "web-viewer-add-bookmark",
+      label: "Web Viewer: Add Bookmark",
+      description: "Bookmark the current page in the web viewer",
+      icon: <Bookmark size={14} />,
+      category: "Web Viewer",
+      action: () => {
+        window.dispatchEvent(new CustomEvent("webviewer-add-bookmark"));
         onClose();
       },
     },
