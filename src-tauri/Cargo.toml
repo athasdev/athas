@@ -26,7 +26,6 @@ ec4rs = "1.2"
 env_logger = "0.11.8"
 futures-util = "0.3"
 git2 = { version = "0.20", features = ["vendored-libgit2", "vendored-openssl"] }
-interceptor = { path = "../crates/interceptor" }
 athas-runtime = { path = "../crates/runtime" }
 athas-tooling = { path = "../crates/tooling" }
 athas-lsp = { path = "../crates/lsp" }

@@ -1,7 +1,6 @@
 [workspace]
 members = [
   "src-tauri",
-  "crates/interceptor",
   "crates/runtime",
   "crates/tooling",
   "crates/lsp",
