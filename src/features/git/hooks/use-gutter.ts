@@ -50,12 +50,14 @@ function shouldSkipGitGutter(relativePath: string, contentLength: number): boole
 export function useGitGutter({ filePath, content, enabled = true }: GitGutterHookOptions) {
   const gitDecorationIdsRef = useRef<string[]>([]);
   const lastDiffRef = useRef<GitDiff | null>(null);
-  const lastContentHashRef = useRef<string>("");
+  const lastContentKeyRef = useRef<string>("");
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const latestRequestedContentRef = useRef<string>(content);
+  const latestContentKeyRef = useRef<string>("");
 
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const fileIdentity = rootFolderPath && filePath ? `${rootFolderPath}:${filePath}` : "";
 
   const contentHash = useMemo(() => {
     if (!content) return "";
@@ -67,6 +69,11 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
     }
     return hash.toString(36);
   }, [content]);
+
+  useEffect(() => {
+    latestRequestedContentRef.current = content;
+    latestContentKeyRef.current = fileIdentity ? `${fileIdentity}:${contentHash}` : "";
+  }, [content, contentHash, fileIdentity]);
 
   const processGitDiff = useCallback((diff: GitDiff): ProcessedGitChanges => {
     const addedLines = new Set<number>();
@@ -180,7 +187,7 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
 
   const updateGitGutter = useCallback(
     async (useContentDiff: boolean = false, specificContent?: string) => {
-      const targetContent = specificContent ?? content;
+      const targetContent = specificContent ?? latestRequestedContentRef.current;
 
       if (!enabled || !filePath || !rootFolderPath) {
         return;
@@ -219,15 +226,7 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
         clearGitDecorations();
       }
     },
-    [
-      enabled,
-      filePath,
-      rootFolderPath,
-      processGitDiff,
-      applyGitDecorations,
-      content,
-      clearGitDecorations,
-    ],
+    [enabled, filePath, rootFolderPath, processGitDiff, applyGitDecorations, clearGitDecorations],
   );
 
   const debouncedUpdate = useCallback(() => {
@@ -245,22 +244,30 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
 
   useEffect(() => {
     if (filePath && rootFolderPath) {
-      latestRequestedContentRef.current = content;
-      lastContentHashRef.current = contentHash;
+      // File switches should refresh immediately, but content edits already have
+      // their own debounced diff path below.
+      lastContentKeyRef.current = latestContentKeyRef.current;
       updateGitGutter(false);
     }
 
     return () => {
       clearGitDecorations();
     };
-  }, [filePath, rootFolderPath, content, contentHash, updateGitGutter, clearGitDecorations]);
+  }, [filePath, rootFolderPath, updateGitGutter, clearGitDecorations]);
 
   useEffect(() => {
-    if (contentHash && contentHash !== lastContentHashRef.current) {
-      lastContentHashRef.current = contentHash;
-      debouncedUpdate();
+    if (!contentHash || !fileIdentity) {
+      return;
     }
-  }, [contentHash, debouncedUpdate]);
+
+    const contentKey = latestContentKeyRef.current;
+    if (contentKey === lastContentKeyRef.current) {
+      return;
+    }
+
+    lastContentKeyRef.current = contentKey;
+    debouncedUpdate();
+  }, [contentHash, debouncedUpdate, fileIdentity]);
 
   useEffect(() => {
     if (!enabled || !filePath) return;
