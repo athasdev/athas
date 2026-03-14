@@ -92,7 +92,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^4.7.0",
+    "@vitejs/plugin-react": "^6.0.1",
     "@voidzero-dev/vite-plus-core": "^0.1.11",
     "code-inspector-plugin": "^1.3.0",
     "concurrently": "^9.2.1",
