@@ -13,8 +13,15 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAIChatStore } from "@/features/ai/store/store";
 import {
@@ -23,8 +30,11 @@ import {
   getProviderById,
 } from "@/features/ai/types/providers";
 import { useSettingsStore } from "@/features/settings/store";
+import Input from "@/ui/input";
+import { MenuPopover } from "@/ui/menu";
 import { cn } from "@/utils/cn";
 import { getProvider, setOllamaBaseUrl } from "@/utils/providers";
+import { checkOllamaConnection } from "@/utils/providers/ollama-provider";
 
 interface AIModelSelectorProps {
   providerId: string;
@@ -64,7 +74,6 @@ export function AIModelSelector({
   const [position, setPosition] = useState<DropdownPosition | null>(null);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
-
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -74,19 +83,16 @@ export function AIModelSelector({
     status: "valid" | "invalid" | null;
     message?: string;
   }>({ providerId: null, status: null });
+  const [ollamaUrlInput, setOllamaUrlInput] = useState("");
+  const [ollamaUrlStatus, setOllamaUrlStatus] = useState<"idle" | "checking" | "ok" | "error">(
+    "idle",
+  );
 
   const { dynamicModels, setDynamicModels } = useAIChatStore();
   const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
   const saveApiKey = useAIChatStore((state) => state.saveApiKey);
   const removeApiKey = useAIChatStore((state) => state.removeApiKey);
   const { settings, updateSetting } = useSettingsStore();
-
-  const [ollamaUrlInput, setOllamaUrlInput] = useState(
-    settings.ollamaBaseUrl || "http://localhost:11434",
-  );
-  const [ollamaUrlStatus, setOllamaUrlStatus] = useState<"idle" | "checking" | "ok" | "error">(
-    "idle",
-  );
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -100,10 +106,10 @@ export function AIModelSelector({
   const supportsDynamicModels = !!providerInstance?.getModels;
 
   const currentModelName = useMemo(() => {
-    const dynamic = dynamicModels[providerId]?.find((m) => m.id === modelId);
+    const dynamic = dynamicModels[providerId]?.find((model) => model.id === modelId);
     if (dynamic) return dynamic.name;
     return currentModel?.name || modelId;
-  }, [dynamicModels, providerId, modelId, currentModel]);
+  }, [currentModel, dynamicModels, modelId, providerId]);
 
   const fetchDynamicModels = useCallback(async () => {
     const config = getProviderById(providerId);
@@ -111,34 +117,40 @@ export function AIModelSelector({
 
     setModelFetchError(null);
 
-    if (instance?.getModels && !config?.requiresApiKey) {
-      setIsLoadingModels(true);
-      try {
-        const models = await instance.getModels();
-        if (models.length > 0) {
-          setDynamicModels(providerId, models);
-          if (!models.find((m) => m.id === modelId)) {
-            onModelChange(models[0].id);
-          }
-        } else {
-          setDynamicModels(providerId, []);
-          setModelFetchError(
-            providerId === "ollama"
-              ? "No models detected. Please install a model in Ollama."
-              : "No models found.",
-          );
-        }
-      } catch {
-        setModelFetchError("Failed to fetch models");
-      } finally {
-        setIsLoadingModels(false);
-      }
+    if (!instance?.getModels || config?.requiresApiKey) {
+      return;
     }
-  }, [providerId, modelId, onModelChange, setDynamicModels]);
+
+    setIsLoadingModels(true);
+    try {
+      const models = await instance.getModels();
+      if (models.length > 0) {
+        setDynamicModels(providerId, models);
+        if (!models.find((model) => model.id === modelId)) {
+          onModelChange(models[0].id);
+        }
+      } else {
+        setDynamicModels(providerId, []);
+        setModelFetchError(
+          providerId === "ollama"
+            ? "No models detected. Please install a model in Ollama."
+            : "No models found.",
+        );
+      }
+    } catch {
+      setModelFetchError("Failed to fetch models");
+    } finally {
+      setIsLoadingModels(false);
+    }
+  }, [modelId, onModelChange, providerId, setDynamicModels]);
 
   useEffect(() => {
-    fetchDynamicModels();
-  }, [providerId]);
+    void fetchDynamicModels();
+  }, [fetchDynamicModels]);
+
+  useEffect(() => {
+    setOllamaUrlInput(settings.ollamaBaseUrl || "http://localhost:11434");
+  }, [settings.ollamaBaseUrl]);
 
   const filteredItems = useMemo(() => {
     const items: FilteredItem[] = [];
@@ -180,7 +192,7 @@ export function AIModelSelector({
     }
 
     return items;
-  }, [search, providers, dynamicModels, hasProviderApiKey, providerId, modelId]);
+  }, [dynamicModels, hasProviderApiKey, modelId, providerId, providers, search]);
 
   const selectableItems = useMemo(
     () => filteredItems.filter((item) => item.type === "model"),
@@ -192,27 +204,25 @@ export function AIModelSelector({
   }, [search]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setSearch("");
-      setSelectedIndex(0);
-      setEditingProvider(null);
-      setApiKeyInput("");
-      setShowKey(false);
-      setValidationStatus({ providerId: null, status: null });
+    if (isOpen) {
+      inputRef.current?.focus();
+      return;
     }
+
+    setSearch("");
+    setSelectedIndex(0);
+    setEditingProvider(null);
+    setApiKeyInput("");
+    setShowKey(false);
+    setValidationStatus({ providerId: null, status: null });
+    setOllamaUrlStatus("idle");
   }, [isOpen]);
 
   useEffect(() => {
-    if (editingProvider && apiKeyInputRef.current) {
-      apiKeyInputRef.current.focus();
+    if (editingProvider) {
+      apiKeyInputRef.current?.focus();
     }
   }, [editingProvider]);
-
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isOpen]);
 
   const updateDropdownPosition = useCallback(() => {
     const trigger = triggerRef.current;
@@ -233,11 +243,9 @@ export function AIModelSelector({
     );
     const measuredHeight = dropdownRef.current?.getBoundingClientRect().height ?? estimatedHeight;
     const visibleHeight = Math.min(maxHeight, measuredHeight);
-
-    const desiredLeft = rect.left;
     const left = Math.max(
       viewportPadding,
-      Math.min(desiredLeft, window.innerWidth - safeWidth - viewportPadding),
+      Math.min(rect.left, window.innerWidth - safeWidth - viewportPadding),
     );
     const top = openUp ? Math.max(viewportPadding, rect.top - visibleHeight - 6) : rect.bottom + 6;
 
@@ -247,29 +255,30 @@ export function AIModelSelector({
   useLayoutEffect(() => {
     if (!isOpen) return;
     updateDropdownPosition();
-  }, [isOpen, updateDropdownPosition, search, filteredItems.length, editingProvider]);
+  }, [editingProvider, filteredItems.length, isOpen, search, updateDropdownPosition]);
 
   useEffect(() => {
     if (!isOpen) return;
 
     const handleDocumentMouseDown = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (dropdownRef.current?.contains(target)) return;
-      if (triggerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target) || triggerRef.current?.contains(target)) {
+        return;
+      }
       setIsOpen(false);
     };
 
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        if (editingProvider) {
-          setEditingProvider(null);
-          setApiKeyInput("");
-          setShowKey(false);
-          setValidationStatus({ providerId: null, status: null });
-        } else {
-          setIsOpen(false);
-        }
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      if (editingProvider) {
+        setEditingProvider(null);
+        setApiKeyInput("");
+        setShowKey(false);
+        setValidationStatus({ providerId: null, status: null });
+        setOllamaUrlStatus("idle");
+      } else {
+        setIsOpen(false);
       }
     };
 
@@ -286,7 +295,7 @@ export function AIModelSelector({
       window.removeEventListener("resize", handleReposition);
       window.removeEventListener("scroll", handleReposition, true);
     };
-  }, [isOpen, updateDropdownPosition, editingProvider]);
+  }, [editingProvider, isOpen, updateDropdownPosition]);
 
   const handleModelSelect = useCallback(
     (selectedProviderId: string, selectedModelId: string) => {
@@ -296,35 +305,36 @@ export function AIModelSelector({
       onModelChange(selectedModelId);
       setIsOpen(false);
     },
-    [providerId, onProviderChange, onModelChange],
+    [onModelChange, onProviderChange, providerId],
   );
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (event: ReactKeyboardEvent<HTMLInputElement>) => {
       if (editingProvider) return;
-      switch (e.key) {
+
+      switch (event.key) {
         case "ArrowDown":
-          e.preventDefault();
+          event.preventDefault();
           setSelectedIndex((prev) => Math.min(prev + 1, selectableItems.length - 1));
           break;
         case "ArrowUp":
-          e.preventDefault();
+          event.preventDefault();
           setSelectedIndex((prev) => Math.max(prev - 1, 0));
           break;
         case "Enter":
-          e.preventDefault();
+          event.preventDefault();
           if (selectableItems[selectedIndex]) {
             const item = selectableItems[selectedIndex];
             handleModelSelect(item.providerId, item.id);
           }
           break;
         case "Escape":
-          e.preventDefault();
+          event.preventDefault();
           setIsOpen(false);
           break;
       }
     },
-    [selectableItems, selectedIndex, handleModelSelect, editingProvider],
+    [editingProvider, handleModelSelect, selectableItems, selectedIndex],
   );
 
   const startEditing = (targetProviderId: string) => {
@@ -332,6 +342,7 @@ export function AIModelSelector({
     setApiKeyInput("");
     setShowKey(false);
     setValidationStatus({ providerId: null, status: null });
+    setOllamaUrlStatus("idle");
   };
 
   const cancelEditing = () => {
@@ -339,6 +350,7 @@ export function AIModelSelector({
     setApiKeyInput("");
     setShowKey(false);
     setValidationStatus({ providerId: null, status: null });
+    setOllamaUrlStatus("idle");
   };
 
   const handleSaveKey = async (targetProviderId: string) => {
@@ -356,14 +368,13 @@ export function AIModelSelector({
 
     try {
       const isValid = await saveApiKey(targetProviderId, apiKeyInput);
-
       if (isValid) {
         setValidationStatus({
           providerId: targetProviderId,
           status: "valid",
           message: "Saved",
         });
-        setTimeout(() => cancelEditing(), 1000);
+        window.setTimeout(() => cancelEditing(), 1000);
       } else {
         setValidationStatus({
           providerId: targetProviderId,
@@ -390,7 +401,7 @@ export function AIModelSelector({
         status: "valid",
         message: "Key removed",
       });
-      setTimeout(() => {
+      window.setTimeout(() => {
         setValidationStatus({ providerId: null, status: null });
       }, 1500);
     } catch {
@@ -405,19 +416,15 @@ export function AIModelSelector({
   const handleSaveOllamaUrl = async (url: string) => {
     const trimmed = url.replace(/\/+$/, "") || "http://localhost:11434";
     setOllamaUrlStatus("checking");
-    try {
-      const response = await fetch(`${trimmed}/api/tags`, { signal: AbortSignal.timeout(3000) });
-      if (response.ok) {
-        setOllamaUrlStatus("ok");
-        updateSetting("ollamaBaseUrl", trimmed);
-        setOllamaBaseUrl(trimmed);
-        setOllamaUrlInput(trimmed);
-        fetchDynamicModels();
-        setTimeout(() => cancelEditing(), 1000);
-      } else {
-        setOllamaUrlStatus("error");
-      }
-    } catch {
+    const ok = await checkOllamaConnection(trimmed);
+    if (ok) {
+      setOllamaUrlStatus("ok");
+      updateSetting("ollamaBaseUrl", trimmed);
+      setOllamaBaseUrl(trimmed);
+      setOllamaUrlInput(trimmed);
+      void fetchDynamicModels();
+      window.setTimeout(() => cancelEditing(), 1000);
+    } else {
       setOllamaUrlStatus("error");
     }
   };
@@ -428,7 +435,8 @@ export function AIModelSelector({
     <div>
       <button
         ref={triggerRef}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        type="button"
+        onClick={() => !disabled && setIsOpen((open) => !open)}
         disabled={disabled}
         className="flex items-center gap-2 rounded-lg border border-border bg-secondary-bg px-3 py-1.5 text-xs transition-colors hover:bg-hover disabled:opacity-50"
         aria-label="Select AI provider and model"
@@ -445,335 +453,320 @@ export function AIModelSelector({
         />
       </button>
 
-      {isOpen &&
-        createPortal(
-          <AnimatePresence>
-            {position && (
-              <motion.div
-                ref={dropdownRef}
-                initial={{ opacity: 0, y: -4, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                className="fixed z-[10030] flex flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 shadow-xl backdrop-blur-sm"
-                style={{
-                  left: `${position.left}px`,
-                  top: `${position.top}px`,
-                  width: `${position.width}px`,
-                  maxHeight: `${position.maxHeight}px`,
-                }}
+      <MenuPopover
+        isOpen={isOpen && !!position}
+        menuRef={dropdownRef}
+        initial={{ opacity: 0, y: -4, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -4, scale: 0.98 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+        className="z-[10030] flex flex-col overflow-hidden rounded-2xl bg-primary-bg/95 p-0 shadow-xl"
+        style={
+          position
+            ? {
+                left: `${position.left}px`,
+                top: `${position.top}px`,
+                width: `${position.width}px`,
+                maxHeight: `${position.maxHeight}px`,
+              }
+            : undefined
+        }
+      >
+        <div className="border-border/60 border-b px-1.5 py-1.5">
+          <div className="flex items-center gap-1.5 rounded-lg bg-secondary-bg/70 pr-1.5">
+            <Input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Search providers and models..."
+              variant="ghost"
+              leftIcon={Search}
+              className="min-w-0 flex-1 py-2"
+            />
+            {supportsDynamicModels && (
+              <button
+                type="button"
+                onClick={() => void fetchDynamicModels()}
+                disabled={isLoadingModels}
+                className="rounded-md p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:opacity-50"
+                aria-label="Refresh models"
               >
-                {/* Header */}
-                <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/75 px-3 py-2.5">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <ProviderIcon
-                      providerId={providerId}
-                      size={14}
-                      className="shrink-0 text-text-lighter"
-                    />
-                    <span className="truncate font-medium text-text text-xs">
-                      {currentProvider?.name} / {currentModelName}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {supportsDynamicModels && (
-                      <button
-                        onClick={() => fetchDynamicModels()}
-                        disabled={isLoadingModels}
-                        className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
-                        aria-label="Refresh models"
-                      >
-                        <RefreshCw size={12} className={cn(isLoadingModels && "animate-spin")} />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setIsOpen(false)}
-                      className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
-                      aria-label="Close model selector"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Search */}
-                <div className="relative border-border/60 border-b">
-                  <Search
-                    size={12}
-                    className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-text-lighter"
-                  />
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Search providers and models..."
-                    className="w-full bg-transparent py-2.5 pr-3 pl-8 text-text text-xs placeholder:text-text-lighter focus:outline-none"
-                  />
-                </div>
-
-                {/* Model list */}
-                <div className="min-h-0 flex-1 overflow-y-auto p-2">
-                  {modelFetchError && (
-                    <div className="mb-2 flex items-center gap-1.5 rounded-lg bg-red-500/10 px-2.5 py-2 text-red-400 text-xs">
-                      <AlertCircle size={12} className="shrink-0" />
-                      <span>{modelFetchError}</span>
-                    </div>
-                  )}
-
-                  {filteredItems.length === 0 ? (
-                    <div className="p-4 text-center text-text-lighter text-xs">No models found</div>
-                  ) : (
-                    filteredItems.map((item) => {
-                      if (item.type === "provider") {
-                        const isEditing = editingProvider === item.providerId;
-                        const hasKey = item.hasKey;
-                        const showingValidation =
-                          validationStatus.providerId === item.providerId &&
-                          validationStatus.status;
-
-                        return (
-                          <div key={item.id}>
-                            <div className="flex items-center justify-between px-1 pt-2.5 pb-1.5">
-                              <span className="flex items-center gap-2 font-medium text-text-lighter text-xs uppercase tracking-wide">
-                                <ProviderIcon
-                                  providerId={item.providerId}
-                                  size={14}
-                                  className="text-text-lighter"
-                                />
-                                {item.name}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                {item.requiresApiKey &&
-                                  !isEditing &&
-                                  (hasKey ? (
-                                    <>
-                                      <button
-                                        onClick={() => startEditing(item.providerId)}
-                                        className="rounded px-1.5 py-0.5 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
-                                        aria-label={`Edit ${item.name} API key`}
-                                      >
-                                        Edit Key
-                                      </button>
-                                      <button
-                                        onClick={() => handleRemoveKey(item.providerId)}
-                                        className="rounded p-0.5 text-red-400 transition-colors hover:bg-red-500/10"
-                                        aria-label={`Remove ${item.name} API key`}
-                                      >
-                                        <Trash2 size={10} />
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <button
-                                      onClick={() => startEditing(item.providerId)}
-                                      className="flex items-center gap-1 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent transition-colors hover:bg-accent/25"
-                                      aria-label={`Set ${item.name} API key`}
-                                    >
-                                      <Key size={8} />
-                                      Set Key
-                                    </button>
-                                  ))}
-                                {item.providerId === "ollama" && !isEditing && (
-                                  <button
-                                    onClick={() => startEditing(item.providerId)}
-                                    className="flex items-center gap-1 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent transition-colors hover:bg-accent/25"
-                                    aria-label="Set Ollama URL"
-                                  >
-                                    <Globe size={8} />
-                                    Set URL
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-
-                            <AnimatePresence>
-                              {isEditing && (
-                                <motion.div
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.15, ease: "easeOut" }}
-                                  className="overflow-hidden"
-                                >
-                                  <div className="border-border/60 border-b">
-                                    {item.providerId === "ollama" ? (
-                                      <>
-                                        <div className="flex items-center gap-1.5">
-                                          <Globe
-                                            size={12}
-                                            className="ml-3 shrink-0 text-text-lighter"
-                                          />
-                                          <input
-                                            ref={apiKeyInputRef}
-                                            type="text"
-                                            value={ollamaUrlInput}
-                                            onChange={(e) => {
-                                              setOllamaUrlInput(e.target.value);
-                                              setOllamaUrlStatus("idle");
-                                            }}
-                                            onKeyDown={(e) => {
-                                              if (e.key === "Enter") {
-                                                e.preventDefault();
-                                                handleSaveOllamaUrl(ollamaUrlInput);
-                                              }
-                                              if (e.key === "Escape") {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                cancelEditing();
-                                              }
-                                            }}
-                                            placeholder="http://localhost:11434"
-                                            spellCheck={false}
-                                            className="min-w-0 flex-1 bg-transparent py-2 text-text text-xs placeholder:text-text-lighter focus:outline-none"
-                                            disabled={ollamaUrlStatus === "checking"}
-                                          />
-                                          {ollamaUrlStatus === "ok" && (
-                                            <CheckCircle
-                                              size={12}
-                                              className="shrink-0 text-green-500"
-                                            />
-                                          )}
-                                          {ollamaUrlStatus === "error" && (
-                                            <AlertCircle
-                                              size={12}
-                                              className="shrink-0 text-red-400"
-                                            />
-                                          )}
-                                          <button
-                                            onClick={() => handleSaveOllamaUrl(ollamaUrlInput)}
-                                            disabled={ollamaUrlStatus === "checking"}
-                                            className="shrink-0 rounded bg-accent/15 px-2 py-1 text-accent text-xs transition-colors hover:bg-accent/25 disabled:opacity-50"
-                                          >
-                                            {ollamaUrlStatus === "checking" ? "..." : "Save"}
-                                          </button>
-                                          <button
-                                            onClick={cancelEditing}
-                                            className="mr-1 shrink-0 rounded p-1 text-text-lighter hover:text-text"
-                                            aria-label="Cancel editing"
-                                          >
-                                            <X size={10} />
-                                          </button>
-                                        </div>
-                                        {ollamaUrlStatus === "error" && (
-                                          <div className="flex items-center gap-1 px-3 pb-2 text-[10px] text-red-400">
-                                            <span>Could not connect to Ollama at this URL</span>
-                                          </div>
-                                        )}
-                                      </>
-                                    ) : (
-                                      <>
-                                        <div className="flex items-center gap-1.5">
-                                          <Key
-                                            size={12}
-                                            className="ml-3 shrink-0 text-text-lighter"
-                                          />
-                                          <div className="relative min-w-0 flex-1">
-                                            <input
-                                              ref={apiKeyInputRef}
-                                              type={showKey ? "text" : "password"}
-                                              value={apiKeyInput}
-                                              onChange={(e) => setApiKeyInput(e.target.value)}
-                                              onKeyDown={(e) => {
-                                                if (e.key === "Enter" && apiKeyInput.trim()) {
-                                                  e.preventDefault();
-                                                  handleSaveKey(item.providerId);
-                                                }
-                                                if (e.key === "Escape") {
-                                                  e.preventDefault();
-                                                  e.stopPropagation();
-                                                  cancelEditing();
-                                                }
-                                              }}
-                                              placeholder={`${item.name} API key...`}
-                                              className="w-full bg-transparent py-2 pr-6 text-text text-xs placeholder:text-text-lighter focus:outline-none"
-                                              disabled={isValidating}
-                                            />
-                                            <button
-                                              type="button"
-                                              onClick={() => setShowKey(!showKey)}
-                                              className="-translate-y-1/2 absolute top-1/2 right-0 text-text-lighter hover:text-text"
-                                              aria-label={showKey ? "Hide key" : "Show key"}
-                                            >
-                                              {showKey ? <EyeOff size={10} /> : <Eye size={10} />}
-                                            </button>
-                                          </div>
-                                          {showingValidation &&
-                                            (validationStatus.status === "valid" ? (
-                                              <CheckCircle
-                                                size={12}
-                                                className="shrink-0 text-green-500"
-                                              />
-                                            ) : (
-                                              <AlertCircle
-                                                size={12}
-                                                className="shrink-0 text-red-400"
-                                              />
-                                            ))}
-                                          <button
-                                            onClick={() => handleSaveKey(item.providerId)}
-                                            disabled={!apiKeyInput.trim() || isValidating}
-                                            className="shrink-0 rounded bg-accent/15 px-2 py-1 text-accent text-xs transition-colors hover:bg-accent/25 disabled:opacity-50"
-                                          >
-                                            {isValidating ? "..." : "Save"}
-                                          </button>
-                                          <button
-                                            onClick={cancelEditing}
-                                            className="mr-1 shrink-0 rounded p-1 text-text-lighter hover:text-text"
-                                            aria-label="Cancel editing"
-                                          >
-                                            <X size={10} />
-                                          </button>
-                                        </div>
-                                        {showingValidation && validationStatus.message && (
-                                          <div
-                                            className={cn(
-                                              "flex items-center gap-1 px-3 pb-2 text-[10px]",
-                                              validationStatus.status === "valid"
-                                                ? "text-green-500"
-                                                : "text-red-400",
-                                            )}
-                                          >
-                                            <span>{validationStatus.message}</span>
-                                          </div>
-                                        )}
-                                      </>
-                                    )}
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        );
-                      }
-
-                      selectableIndex++;
-                      const itemIndex = selectableIndex;
-                      const isHighlighted = itemIndex === selectedIndex;
-
-                      return (
-                        <button
-                          key={`${item.providerId}-${item.id}`}
-                          onClick={() => handleModelSelect(item.providerId, item.id)}
-                          onMouseEnter={() => setSelectedIndex(itemIndex)}
-                          className={cn(
-                            "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors",
-                            isHighlighted ? "bg-hover" : "bg-transparent",
-                            item.isCurrent && "bg-accent/10",
-                          )}
-                        >
-                          <span className="flex-1 truncate text-text">{item.name}</span>
-                          {item.isCurrent && <Check size={12} className="shrink-0 text-accent" />}
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </motion.div>
+                <RefreshCw size={12} className={cn(isLoadingModels && "animate-spin")} />
+              </button>
             )}
-          </AnimatePresence>,
-          document.body,
-        )}
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="rounded-md p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              aria-label="Close model selector"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+          {modelFetchError && (
+            <div className="mb-2 flex items-center gap-1.5 rounded-lg bg-red-500/10 px-2.5 py-2 text-red-400 text-xs">
+              <AlertCircle size={12} className="shrink-0" />
+              <span>{modelFetchError}</span>
+            </div>
+          )}
+
+          {filteredItems.length === 0 ? (
+            <div className="p-4 text-center text-text-lighter text-xs">No models found</div>
+          ) : (
+            filteredItems.map((item) => {
+              if (item.type === "provider") {
+                const isEditing = editingProvider === item.providerId;
+                const hasKey = item.hasKey;
+                const showingValidation =
+                  validationStatus.providerId === item.providerId && validationStatus.status;
+                const isCurrentProvider = item.providerId === providerId;
+
+                return (
+                  <div key={item.id} className="mb-1 last:mb-0">
+                    <div className="flex items-center justify-between px-2 py-1.5">
+                      <span
+                        className={cn(
+                          "flex items-center gap-2 font-medium text-[11px] uppercase tracking-wide",
+                          isCurrentProvider ? "text-text" : "text-text-lighter",
+                        )}
+                      >
+                        <ProviderIcon
+                          providerId={item.providerId}
+                          size={14}
+                          className="text-text-lighter"
+                        />
+                        {item.name}
+                      </span>
+
+                      <div className="flex items-center gap-1">
+                        {item.requiresApiKey &&
+                          !isEditing &&
+                          (hasKey ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => startEditing(item.providerId)}
+                                className="rounded px-1.5 py-0.5 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                                aria-label={`Edit ${item.name} API key`}
+                              >
+                                Edit Key
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void handleRemoveKey(item.providerId)}
+                                className="rounded p-0.5 text-red-400 transition-colors hover:bg-red-500/10"
+                                aria-label={`Remove ${item.name} API key`}
+                              >
+                                <Trash2 size={10} />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => startEditing(item.providerId)}
+                              className="flex items-center gap-1 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent transition-colors hover:bg-accent/25"
+                              aria-label={`Set ${item.name} API key`}
+                            >
+                              <Key size={8} />
+                              Set Key
+                            </button>
+                          ))}
+
+                        {item.providerId === "ollama" && !isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => startEditing(item.providerId)}
+                            className="flex items-center gap-1 rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent transition-colors hover:bg-accent/25"
+                            aria-label="Set Ollama URL"
+                          >
+                            <Globe size={8} />
+                            Set URL
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <AnimatePresence initial={false}>
+                      {isEditing && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.15, ease: "easeOut" }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mb-1 rounded-xl border border-border/70 bg-secondary-bg/55 p-1.5">
+                            {item.providerId === "ollama" ? (
+                              <>
+                                <div className="flex items-center gap-1.5">
+                                  <Globe size={12} className="ml-1 shrink-0 text-text-lighter" />
+                                  <Input
+                                    ref={apiKeyInputRef}
+                                    type="text"
+                                    value={ollamaUrlInput}
+                                    onChange={(event) => {
+                                      setOllamaUrlInput(event.target.value);
+                                      setOllamaUrlStatus("idle");
+                                    }}
+                                    onKeyDown={(event) => {
+                                      if (event.key === "Enter") {
+                                        event.preventDefault();
+                                        void handleSaveOllamaUrl(ollamaUrlInput);
+                                      }
+                                      if (event.key === "Escape") {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        cancelEditing();
+                                      }
+                                    }}
+                                    placeholder="http://localhost:11434"
+                                    spellCheck={false}
+                                    variant="ghost"
+                                    className="min-w-0 flex-1 py-2"
+                                    disabled={ollamaUrlStatus === "checking"}
+                                  />
+                                  {ollamaUrlStatus === "ok" && (
+                                    <CheckCircle size={12} className="shrink-0 text-green-500" />
+                                  )}
+                                  {ollamaUrlStatus === "error" && (
+                                    <AlertCircle size={12} className="shrink-0 text-red-400" />
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleSaveOllamaUrl(ollamaUrlInput)}
+                                    disabled={ollamaUrlStatus === "checking"}
+                                    className="shrink-0 rounded bg-accent/15 px-2 py-1 text-accent text-xs transition-colors hover:bg-accent/25 disabled:opacity-50"
+                                  >
+                                    {ollamaUrlStatus === "checking" ? "..." : "Save"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={cancelEditing}
+                                    className="mr-1 shrink-0 rounded p-1 text-text-lighter hover:text-text"
+                                    aria-label="Cancel editing"
+                                  >
+                                    <X size={10} />
+                                  </button>
+                                </div>
+
+                                {ollamaUrlStatus === "error" && (
+                                  <div className="flex items-center gap-1 px-2 pt-1 text-[10px] text-red-400">
+                                    <span>Could not connect to Ollama at this URL</span>
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <div className="flex items-center gap-1.5">
+                                  <Key size={12} className="ml-1 shrink-0 text-text-lighter" />
+                                  <div className="relative min-w-0 flex-1">
+                                    <Input
+                                      ref={apiKeyInputRef}
+                                      type={showKey ? "text" : "password"}
+                                      value={apiKeyInput}
+                                      onChange={(event) => setApiKeyInput(event.target.value)}
+                                      onKeyDown={(event) => {
+                                        if (event.key === "Enter" && apiKeyInput.trim()) {
+                                          event.preventDefault();
+                                          void handleSaveKey(item.providerId);
+                                        }
+                                        if (event.key === "Escape") {
+                                          event.preventDefault();
+                                          event.stopPropagation();
+                                          cancelEditing();
+                                        }
+                                      }}
+                                      placeholder={`${item.name} API key...`}
+                                      variant="ghost"
+                                      className="w-full py-2 pr-6"
+                                      disabled={isValidating}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowKey((visible) => !visible)}
+                                      className="-translate-y-1/2 absolute top-1/2 right-0 text-text-lighter hover:text-text"
+                                      aria-label={showKey ? "Hide key" : "Show key"}
+                                    >
+                                      {showKey ? <EyeOff size={10} /> : <Eye size={10} />}
+                                    </button>
+                                  </div>
+
+                                  {showingValidation &&
+                                    (validationStatus.status === "valid" ? (
+                                      <CheckCircle size={12} className="shrink-0 text-green-500" />
+                                    ) : (
+                                      <AlertCircle size={12} className="shrink-0 text-red-400" />
+                                    ))}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleSaveKey(item.providerId)}
+                                    disabled={!apiKeyInput.trim() || isValidating}
+                                    className="shrink-0 rounded bg-accent/15 px-2 py-1 text-accent text-xs transition-colors hover:bg-accent/25 disabled:opacity-50"
+                                  >
+                                    {isValidating ? "..." : "Save"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={cancelEditing}
+                                    className="mr-1 shrink-0 rounded p-1 text-text-lighter hover:text-text"
+                                    aria-label="Cancel editing"
+                                  >
+                                    <X size={10} />
+                                  </button>
+                                </div>
+
+                                {showingValidation && validationStatus.message && (
+                                  <div
+                                    className={cn(
+                                      "flex items-center gap-1 px-2 pt-1 text-[10px]",
+                                      validationStatus.status === "valid"
+                                        ? "text-green-500"
+                                        : "text-red-400",
+                                    )}
+                                  >
+                                    <span>{validationStatus.message}</span>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              }
+
+              selectableIndex += 1;
+              const itemIndex = selectableIndex;
+              const isHighlighted = itemIndex === selectedIndex;
+
+              return (
+                <button
+                  key={`${item.providerId}-${item.id}`}
+                  type="button"
+                  onClick={() => handleModelSelect(item.providerId, item.id)}
+                  onMouseEnter={() => setSelectedIndex(itemIndex)}
+                  className={cn(
+                    "mb-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors last:mb-0",
+                    isHighlighted ? "bg-hover" : "bg-transparent",
+                    item.isCurrent && "bg-accent/10",
+                  )}
+                >
+                  <span className="flex-1 truncate text-text">{item.name}</span>
+                  {item.isCurrent && <Check size={12} className="shrink-0 text-accent" />}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </MenuPopover>
     </div>
   );
 }

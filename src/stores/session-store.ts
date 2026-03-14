@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { AIWorkspaceSessionSnapshot } from "@/features/ai/store/types";
 import type { PersistedTerminal } from "@/features/terminal/types/terminal";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -15,6 +16,7 @@ interface ProjectSession {
   activeBufferPath: string | null;
   buffers: BufferSession[];
   terminals: PersistedTerminal[];
+  aiSession: AIWorkspaceSessionSnapshot | null;
   lastSaved: number;
 }
 
@@ -25,6 +27,7 @@ interface SessionState {
     buffers: BufferSession[],
     activeBufferPath: string | null,
     terminals?: PersistedTerminal[],
+    aiSession?: AIWorkspaceSessionSnapshot | null,
   ) => void;
   getSession: (projectPath: string) => ProjectSession | null;
   clearSession: (projectPath: string) => void;
@@ -36,15 +39,17 @@ const useSessionStoreBase = create<SessionState>()(
     (set, get) => ({
       sessions: {},
 
-      saveSession: (projectPath, buffers, activeBufferPath, terminals = []) => {
+      saveSession: (projectPath, buffers, activeBufferPath, terminals, aiSession) => {
         set((state) => ({
           sessions: {
             ...state.sessions,
             [projectPath]: {
+              ...state.sessions[projectPath],
               projectPath,
               activeBufferPath,
               buffers,
-              terminals,
+              terminals: terminals ?? state.sessions[projectPath]?.terminals ?? [],
+              aiSession: aiSession ?? state.sessions[projectPath]?.aiSession ?? null,
               lastSaved: Date.now(),
             },
           },

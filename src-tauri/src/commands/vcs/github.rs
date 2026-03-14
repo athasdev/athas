@@ -1,7 +1,12 @@
 use crate::secure_storage::{get_secret, remove_secret, store_secret};
 use serde::{Deserialize, Serialize};
-use std::{path::Path, process::Command};
-use tauri::command;
+use std::{
+   env,
+   ffi::OsStr,
+   path::{Path, PathBuf},
+   process::Command,
+};
+use tauri::{AppHandle, Manager, command};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PullRequest {
@@ -110,17 +115,28 @@ pub struct PullRequestComment {
 }
 
 #[command]
-pub fn github_check_cli_auth() -> Result<bool, String> {
-   let output = Command::new("gh")
+pub fn github_check_cli_auth(app: AppHandle) -> Result<bool, String> {
+   let output = gh_command(&app, None)
       .args(["auth", "status"])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
+
+   if !output.status.success() {
+      let stderr = String::from_utf8_lossy(&output.stderr);
+      if !stderr.trim().is_empty() {
+         log::warn!("GitHub CLI auth check failed: {}", stderr.trim());
+      }
+   }
 
    Ok(output.status.success())
 }
 
 #[command]
-pub fn github_list_prs(repo_path: String, filter: String) -> Result<Vec<PullRequest>, String> {
+pub fn github_list_prs(
+   app: AppHandle,
+   repo_path: String,
+   filter: String,
+) -> Result<Vec<PullRequest>, String> {
    let repo_dir = Path::new(&repo_path);
 
    // Build the gh pr list command with JSON output
@@ -131,7 +147,7 @@ pub fn github_list_prs(repo_path: String, filter: String) -> Result<Vec<PullRequ
 
    // Get username outside the match to ensure it lives long enough
    let username = if filter == "my-prs" {
-      get_github_username().ok()
+      get_github_username(&app).ok()
    } else {
       None
    };
@@ -153,8 +169,7 @@ pub fn github_list_prs(repo_path: String, filter: String) -> Result<Vec<PullRequ
       }
    }
 
-   let output = Command::new("gh")
-      .current_dir(repo_dir)
+   let output = gh_command(&app, Some(repo_dir))
       .args(&args)
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
@@ -172,12 +187,12 @@ pub fn github_list_prs(repo_path: String, filter: String) -> Result<Vec<PullRequ
 }
 
 #[command]
-pub fn github_get_current_user() -> Result<String, String> {
-   get_github_username()
+pub fn github_get_current_user(app: AppHandle) -> Result<String, String> {
+   get_github_username(&app)
 }
 
-fn get_github_username() -> Result<String, String> {
-   let output = Command::new("gh")
+fn get_github_username(app: &AppHandle) -> Result<String, String> {
+   let output = gh_command(app, None)
       .args(["api", "user", "--jq", ".login"])
       .output()
       .map_err(|e| format!("Failed to get GitHub username: {}", e))?;
@@ -191,11 +206,14 @@ fn get_github_username() -> Result<String, String> {
 }
 
 #[command]
-pub fn github_open_pr_in_browser(repo_path: String, pr_number: i64) -> Result<(), String> {
+pub fn github_open_pr_in_browser(
+   app: AppHandle,
+   repo_path: String,
+   pr_number: i64,
+) -> Result<(), String> {
    let repo_dir = Path::new(&repo_path);
 
-   let output = Command::new("gh")
-      .current_dir(repo_dir)
+   let output = gh_command(&app, Some(repo_dir))
       .args(["pr", "view", &pr_number.to_string(), "--web"])
       .output()
       .map_err(|e| format!("Failed to open PR: {}", e))?;
@@ -209,11 +227,10 @@ pub fn github_open_pr_in_browser(repo_path: String, pr_number: i64) -> Result<()
 }
 
 #[command]
-pub fn github_checkout_pr(repo_path: String, pr_number: i64) -> Result<(), String> {
+pub fn github_checkout_pr(app: AppHandle, repo_path: String, pr_number: i64) -> Result<(), String> {
    let repo_dir = Path::new(&repo_path);
 
-   let output = Command::new("gh")
-      .current_dir(repo_dir)
+   let output = gh_command(&app, Some(repo_dir))
       .args(["pr", "checkout", &pr_number.to_string()])
       .output()
       .map_err(|e| format!("Failed to checkout PR: {}", e))?;
@@ -228,6 +245,7 @@ pub fn github_checkout_pr(repo_path: String, pr_number: i64) -> Result<(), Strin
 
 #[command]
 pub fn github_get_pr_details(
+   app: AppHandle,
    repo_path: String,
    pr_number: i64,
 ) -> Result<PullRequestDetails, String> {
@@ -239,8 +257,7 @@ pub fn github_get_pr_details(
                       statusCheckRollup,closingIssuesReferences,reviewRequests,mergeStateStatus,\
                       mergeable,labels,assignees";
 
-   let output = Command::new("gh")
-      .current_dir(repo_dir)
+   let output = gh_command(&app, Some(repo_dir))
       .args(["pr", "view", &pr_num_str, "--json", json_fields])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
@@ -258,12 +275,15 @@ pub fn github_get_pr_details(
 }
 
 #[command]
-pub fn github_get_pr_diff(repo_path: String, pr_number: i64) -> Result<String, String> {
+pub fn github_get_pr_diff(
+   app: AppHandle,
+   repo_path: String,
+   pr_number: i64,
+) -> Result<String, String> {
    let repo_dir = Path::new(&repo_path);
    let pr_num_str = pr_number.to_string();
 
-   let output = Command::new("gh")
-      .current_dir(repo_dir)
+   let output = gh_command(&app, Some(repo_dir))
       .args(["pr", "diff", &pr_num_str])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
@@ -279,14 +299,14 @@ pub fn github_get_pr_diff(repo_path: String, pr_number: i64) -> Result<String, S
 
 #[command]
 pub fn github_get_pr_files(
+   app: AppHandle,
    repo_path: String,
    pr_number: i64,
 ) -> Result<Vec<PullRequestFile>, String> {
    let repo_dir = Path::new(&repo_path);
    let pr_num_str = pr_number.to_string();
 
-   let output = Command::new("gh")
-      .current_dir(repo_dir)
+   let output = gh_command(&app, Some(repo_dir))
       .args(["pr", "view", &pr_num_str, "--json", "files"])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
@@ -311,14 +331,14 @@ pub fn github_get_pr_files(
 
 #[command]
 pub fn github_get_pr_comments(
+   app: AppHandle,
    repo_path: String,
    pr_number: i64,
 ) -> Result<Vec<PullRequestComment>, String> {
    let repo_dir = Path::new(&repo_path);
    let pr_num_str = pr_number.to_string();
 
-   let output = Command::new("gh")
-      .current_dir(repo_dir)
+   let output = gh_command(&app, Some(repo_dir))
       .args(["pr", "view", &pr_num_str, "--json", "comments"])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
@@ -354,4 +374,117 @@ pub async fn get_github_token(app: tauri::AppHandle) -> Result<Option<String>, S
 #[command]
 pub async fn remove_github_token(app: tauri::AppHandle) -> Result<(), String> {
    remove_secret(&app, "github_token")
+}
+
+fn gh_command(app: &AppHandle, repo_dir: Option<&Path>) -> Command {
+   let mut command = Command::new("gh");
+
+   if let Some(dir) = repo_dir {
+      command.current_dir(dir);
+   }
+
+   let has_explicit_config_dir =
+      matches!(env::var_os("GH_CONFIG_DIR"), Some(dir) if !dir.is_empty());
+
+   if !has_explicit_config_dir {
+      if let Some(config_dir) = resolve_gh_config_dir(app) {
+         command.env("GH_CONFIG_DIR", config_dir);
+      }
+   }
+
+   command
+}
+
+fn resolve_gh_config_dir(app: &AppHandle) -> Option<PathBuf> {
+   let home_dir = app.path().home_dir().ok();
+   resolve_gh_config_dir_from_sources(
+      env::var_os("GH_CONFIG_DIR").as_deref(),
+      env::var_os("XDG_CONFIG_HOME").as_deref(),
+      env::var_os("APPDATA").as_deref(),
+      home_dir.as_deref(),
+      cfg!(target_os = "windows"),
+   )
+}
+
+fn resolve_gh_config_dir_from_sources(
+   gh_config_dir: Option<&OsStr>,
+   xdg_config_home: Option<&OsStr>,
+   app_data: Option<&OsStr>,
+   home_dir: Option<&Path>,
+   is_windows: bool,
+) -> Option<PathBuf> {
+   if let Some(dir) = gh_config_dir.filter(|dir| !dir.is_empty()) {
+      return Some(PathBuf::from(dir));
+   }
+
+   if let Some(dir) = xdg_config_home.filter(|dir| !dir.is_empty()) {
+      return Some(PathBuf::from(dir).join("gh"));
+   }
+
+   if is_windows {
+      if let Some(dir) = app_data.filter(|dir| !dir.is_empty()) {
+         return Some(PathBuf::from(dir).join("GitHub CLI"));
+      }
+   }
+
+   home_dir.map(|dir| dir.join(".config").join("gh"))
+}
+
+#[cfg(test)]
+mod tests {
+   use super::resolve_gh_config_dir_from_sources;
+   use std::{
+      ffi::OsStr,
+      path::{Path, PathBuf},
+   };
+
+   #[test]
+   fn prefers_explicit_gh_config_dir() {
+      let config_dir = resolve_gh_config_dir_from_sources(
+         Some(OsStr::new("/tmp/gh-config")),
+         Some(OsStr::new("/tmp/xdg")),
+         Some(OsStr::new("C:\\Users\\user\\AppData\\Roaming")),
+         Some(Path::new("/home/fsos")),
+         false,
+      );
+
+      assert_eq!(config_dir, Some("/tmp/gh-config".into()));
+   }
+
+   #[test]
+   fn uses_xdg_config_home_before_home_fallback() {
+      let config_dir = resolve_gh_config_dir_from_sources(
+         None,
+         Some(OsStr::new("/tmp/xdg")),
+         None,
+         Some(Path::new("/home/fsos")),
+         false,
+      );
+
+      assert_eq!(config_dir, Some("/tmp/xdg/gh".into()));
+   }
+
+   #[test]
+   fn uses_windows_appdata_when_requested() {
+      let config_dir = resolve_gh_config_dir_from_sources(
+         None,
+         None,
+         Some(OsStr::new("C:\\Users\\user\\AppData\\Roaming")),
+         Some(Path::new("C:\\Users\\user")),
+         true,
+      );
+
+      assert_eq!(
+         config_dir,
+         Some(PathBuf::from("C:\\Users\\user\\AppData\\Roaming").join("GitHub CLI"))
+      );
+   }
+
+   #[test]
+   fn falls_back_to_home_config_dir() {
+      let config_dir =
+         resolve_gh_config_dir_from_sources(None, None, None, Some(Path::new("/home/fsos")), false);
+
+      assert_eq!(config_dir, Some("/home/fsos/.config/gh".into()));
+   }
 }

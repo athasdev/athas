@@ -3,6 +3,7 @@ import type React from "react";
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/stores/auth-store";
+import Textarea from "@/ui/textarea";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { InlineEditError, requestInlineEdit } from "@/utils/inline-edit";
@@ -46,7 +47,7 @@ const GitCommitPanel = ({
     const subscriptionStatus = subscription?.status ?? "free";
     const enterprisePolicy = subscription?.enterprise?.policy;
     const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-    const isPro = subscriptionStatus === "pro" || subscriptionStatus === "trial";
+    const isPro = subscriptionStatus === "pro";
 
     if (managedPolicy && !managedPolicy.aiCompletionEnabled) {
       setError("AI commit message generation is disabled by your organization policy.");
@@ -156,11 +157,12 @@ const GitCommitPanel = ({
         </div>
       )}
 
-      <textarea
+      <Textarea
         value={commitMessage}
         onChange={(e) => setCommitMessage(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Commit message..."
+        variant="ghost"
         className={cn(
           "w-full resize-none bg-transparent px-2 py-1.5",
           "ui-font text-[10px] text-text placeholder:text-text-lighter",

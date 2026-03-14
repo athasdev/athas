@@ -10,6 +10,7 @@ import { discardAllChanges, stageAllFiles, unstageAllFiles } from "@/features/gi
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { vimCommands } from "@/features/vim/stores/vim-commands";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useAppStore } from "@/stores/app-store";
@@ -24,6 +25,7 @@ import Command, {
 } from "@/ui/command";
 import KeybindingBadge from "@/ui/keybinding-badge";
 import { createAdvancedActions } from "../constants/advanced-actions";
+import { createDatabaseActions } from "../constants/database-actions";
 import { createFileActions } from "../constants/file-actions";
 import { createGitActions } from "../constants/git-actions";
 import { createMarkdownActions } from "../constants/markdown-actions";
@@ -53,6 +55,7 @@ const CommandPalette = () => {
     setActiveView,
     setIsQuickOpenVisible,
     setIsGlobalSearchVisible,
+    setIsDatabaseConnectionVisible,
     openSettingsDialog,
   } = useUIState();
   const { openQuickEdit } = useAppStore.use.actions();
@@ -74,6 +77,7 @@ const CommandPalette = () => {
   const { rootFolderPath } = useFileSystemStore();
   const gitStore = useGitStore();
   const { showToast } = useToast();
+  const openWhatsNew = useWhatsNewStore((state) => state.open);
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
@@ -139,6 +143,7 @@ const CommandPalette = () => {
       ) => void | Promise<void>,
       handleFileSelect,
       getAppDataDir: appDataDir,
+      openWhatsNew,
       onClose,
     }),
     ...createNavigationActions({
@@ -176,6 +181,10 @@ const CommandPalette = () => {
         discardAllChanges,
       },
       onClose,
+    }),
+    ...createDatabaseActions({
+      onClose,
+      setIsDatabaseConnectionVisible,
     }),
     ...createAdvancedActions({
       lspStatus,
@@ -243,7 +252,7 @@ const CommandPalette = () => {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isVisible, filteredActions, selectedIndex, prioritizedActions]);
+  }, [isVisible, selectedIndex, prioritizedActions, pushAction]);
 
   // Reset state when visibility changes
   useEffect(() => {

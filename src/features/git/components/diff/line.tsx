@@ -80,10 +80,7 @@ const renderHighlightedContent = (
     }
 
     const tokenText = content.slice(start, end);
-    const scopeClass = token.type
-      ?.split(".")
-      .map((s: string) => `syntax-${s}`)
-      .join(" ");
+    const scopeClass = token.type;
 
     result.push(
       <span key={`token-${start}`} className={scopeClass}>
@@ -104,7 +101,7 @@ const renderHighlightedContent = (
 
 const DiffLine = memo(
   ({ line, viewMode, showWhitespace, tokens, fontSize, lineHeight, tabSize }: DiffLineProps) => {
-    const rowStyle = { minHeight: `${lineHeight}px` };
+    const rowStyle = { height: `${lineHeight}px` };
     const gutterStyle = { fontSize: `${fontSize}px`, lineHeight: `${lineHeight}px` };
     const contentStyle = {
       fontSize: `${fontSize}px`,
@@ -135,15 +132,15 @@ const DiffLine = memo(
             >
               {line.line_type !== "added" ? line.old_line_number : ""}
             </div>
-            <pre
+            <div
               className={cn(
-                "editor-font flex-1 whitespace-pre px-2",
+                "editor-font m-0 flex-1 whitespace-pre px-2",
                 line.line_type === "removed" ? getContentColor("removed") : "text-text",
               )}
               style={contentStyle}
             >
               {line.line_type !== "added" ? lineContent : ""}
-            </pre>
+            </div>
           </div>
 
           <div
@@ -162,15 +159,15 @@ const DiffLine = memo(
             >
               {line.line_type !== "removed" ? line.new_line_number : ""}
             </div>
-            <pre
+            <div
               className={cn(
-                "editor-font flex-1 whitespace-pre px-2",
+                "editor-font m-0 flex-1 whitespace-pre px-2",
                 line.line_type === "added" ? getContentColor("added") : "text-text",
               )}
               style={contentStyle}
             >
               {line.line_type !== "removed" ? lineContent : ""}
-            </pre>
+            </div>
           </div>
         </div>
       );
@@ -199,12 +196,15 @@ const DiffLine = memo(
           {line.new_line_number}
         </div>
 
-        <pre
-          className={cn("editor-font flex-1 whitespace-pre px-2", getContentColor(line.line_type))}
+        <div
+          className={cn(
+            "editor-font m-0 flex-1 whitespace-pre px-2",
+            getContentColor(line.line_type),
+          )}
           style={contentStyle}
         >
           {lineContent}
-        </pre>
+        </div>
       </div>
     );
   },

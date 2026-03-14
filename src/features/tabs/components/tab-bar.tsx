@@ -748,7 +748,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
                   buffer.name,
                   buffer.content,
                   buffer.isImage,
-                  buffer.isSQLite,
+                  undefined, // databaseType
                   buffer.isDiff,
                 );
               } catch (error) {

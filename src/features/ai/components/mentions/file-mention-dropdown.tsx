@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAIChatStore } from "@/features/ai/store/store";
@@ -9,6 +9,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
 import type { FileEntry } from "@/features/file-system/types/app";
 import { useProjectStore } from "@/stores/project-store";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
 
@@ -242,9 +243,8 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: -4 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      className="scrollbar-hidden fixed select-none overflow-y-auto rounded-md border border-border bg-secondary-bg shadow-lg"
+      className="fixed z-[10040] flex select-none flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 shadow-xl backdrop-blur-sm"
       style={{
-        zIndex: 10040,
         maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
         width: `${adjustedPosition.width}px`,
         left: `${adjustedPosition.left}px`,
@@ -254,26 +254,42 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       role="listbox"
       aria-label="File suggestions"
     >
+      <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/75 px-3 py-2.5">
+        <div className="min-w-0 font-medium text-text text-xs">Search Files</div>
+        <button
+          type="button"
+          onClick={hideMention}
+          className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
+          aria-label="Close file search"
+        >
+          <X size={12} />
+        </button>
+      </div>
+
       {/* Search input */}
-      <div className="sticky top-0 z-10 border-border border-b bg-secondary-bg p-2">
-        <div className="relative">
-          <Search
-            size={12}
-            className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 transform text-text-lighter"
-          />
-          <input
-            type="text"
-            placeholder="Search files..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded border border-border bg-primary-bg py-1 pr-2 pl-6 text-text text-xs placeholder-text-lighter focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/50"
-            aria-label="Search files"
-          />
-        </div>
+      <div className="relative border-border/60 border-b">
+        <Search
+          size={12}
+          className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-text-lighter"
+        />
+        <Input
+          type="text"
+          placeholder="Search files..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          variant="ghost"
+          leftIcon={Search}
+          className="w-full py-2.5 pr-3"
+          aria-label="Search files"
+        />
       </div>
 
       {/* Files list */}
-      <div className="items-container py-1" role="listbox" aria-label="File list">
+      <div
+        className="items-container min-h-0 flex-1 overflow-y-auto p-2"
+        role="listbox"
+        aria-label="File list"
+      >
         {filteredFiles.length === 0 ? (
           <div className="ui-font px-3 py-2 text-center text-text-lighter text-xs">
             {searchTerm ? "No matching files found" : "No files available"}
@@ -284,7 +300,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
               key={file.path}
               onClick={() => handleFileClick(file)}
               className={cn(
-                "ui-font flex w-full items-center gap-2 px-3 py-1 text-left text-xs transition-colors",
+                "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors",
                 "focus:outline-none focus:ring-1 focus:ring-accent/50",
                 index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
               )}

@@ -1,8 +1,9 @@
 import { Copy, Download, Edit, Pin, PinOff, RotateCcw, X } from "lucide-react";
-import type { RefObject } from "react";
-import { useRef } from "react";
-import { useEventListener, useOnClickOutside } from "usehooks-ts";
 import type { Terminal } from "@/features/terminal/types/terminal";
+import type { ContextMenuItem } from "@/ui/context-menu";
+import { ContextMenu } from "@/ui/context-menu";
+import KeybindingBadge from "@/ui/keybinding-badge";
+import { IS_MAC } from "@/utils/platform";
 
 interface TerminalTabContextMenuProps {
   isOpen: boolean;
@@ -35,132 +36,69 @@ const TerminalTabContextMenu = ({
   onRename,
   onExport,
 }: TerminalTabContextMenuProps) => {
-  const menuRef = useRef<HTMLDivElement>(null);
-  const documentRef = useRef(document);
+  const modKey = IS_MAC ? "Cmd" : "Ctrl";
 
-  useOnClickOutside(menuRef as RefObject<HTMLElement>, () => {
-    onClose();
-  });
+  const items: ContextMenuItem[] = terminal
+    ? [
+        {
+          id: "pin",
+          label: terminal.isPinned ? "Unpin Terminal" : "Pin Terminal",
+          icon: terminal.isPinned ? <PinOff size={12} /> : <Pin size={12} />,
+          onClick: () => onPin(terminal.id),
+        },
+        { id: "sep-1", label: "", separator: true, onClick: () => {} },
+        {
+          id: "duplicate",
+          label: "Duplicate Terminal",
+          icon: <Copy size={12} />,
+          onClick: () => onDuplicate(terminal.id),
+        },
+        {
+          id: "clear",
+          label: "Clear Terminal",
+          icon: <RotateCcw size={12} />,
+          onClick: () => onClear(terminal.id),
+        },
+        {
+          id: "rename",
+          label: "Rename Terminal",
+          icon: <Edit size={12} />,
+          keybinding: <KeybindingBadge keys={["F2"]} />,
+          onClick: () => onRename(terminal.id),
+        },
+        {
+          id: "export",
+          label: "Export Output",
+          icon: <Download size={12} />,
+          onClick: () => onExport(terminal.id),
+        },
+        { id: "sep-2", label: "", separator: true, onClick: () => {} },
+        {
+          id: "close",
+          label: "Close Terminal",
+          icon: <X size={12} />,
+          keybinding: <KeybindingBadge keys={[modKey, "W"]} />,
+          onClick: () => onCloseTab(terminal.id),
+        },
+        {
+          id: "close-others",
+          label: "Close Other Terminals",
+          onClick: () => onCloseOthers(terminal.id),
+        },
+        {
+          id: "close-all",
+          label: "Close All Terminals",
+          onClick: onCloseAll,
+        },
+        {
+          id: "close-right",
+          label: "Close Terminals to Right",
+          onClick: () => onCloseToRight(terminal.id),
+        },
+      ]
+    : [];
 
-  useEventListener(
-    "keydown",
-    (e) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    },
-    documentRef,
-  );
-
-  if (!isOpen || !terminal) return null;
-
-  return (
-    <div
-      ref={menuRef}
-      className="fixed z-[10040] min-w-[190px] select-none rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
-      style={{ left: position.x, top: position.y }}
-    >
-      <button
-        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onPin(terminal.id);
-          onClose();
-        }}
-      >
-        {terminal.isPinned ? <PinOff size={12} /> : <Pin size={12} />}
-        {terminal.isPinned ? "Unpin Terminal" : "Pin Terminal"}
-      </button>
-
-      <div className="my-0.5 border-border/70 border-t" />
-
-      <button
-        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onDuplicate(terminal.id);
-          onClose();
-        }}
-      >
-        <Copy size={12} />
-        Duplicate Terminal
-      </button>
-
-      <button
-        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onClear(terminal.id);
-          onClose();
-        }}
-      >
-        <RotateCcw size={12} />
-        Clear Terminal
-      </button>
-
-      <button
-        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onRename(terminal.id);
-          onClose();
-        }}
-      >
-        <Edit size={12} />
-        Rename Terminal
-      </button>
-
-      <button
-        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onExport(terminal.id);
-          onClose();
-        }}
-      >
-        <Download size={12} />
-        Export Output
-      </button>
-
-      <div className="my-0.5 border-border/70 border-t" />
-
-      <button
-        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onCloseTab(terminal.id);
-          onClose();
-        }}
-      >
-        <X size={12} />
-        Close Terminal
-      </button>
-
-      <button
-        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onCloseOthers(terminal.id);
-          onClose();
-        }}
-      >
-        Close Other Terminals
-      </button>
-
-      <button
-        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onCloseAll();
-          onClose();
-        }}
-      >
-        Close All Terminals
-      </button>
-
-      <button
-        className="ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs hover:bg-hover"
-        onClick={() => {
-          onCloseToRight(terminal.id);
-          onClose();
-        }}
-      >
-        Close Terminals to Right
-      </button>
-    </div>
-  );
+  return <ContextMenu isOpen={isOpen} position={position} items={items} onClose={onClose} />;
 };
 
 export default TerminalTabContextMenu;

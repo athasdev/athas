@@ -25,23 +25,15 @@
         "center": true,
         "minWidth": 400,
         "minHeight": 400,
-        "shadow": true,
-        "trafficLightPosition": {
-          "x": 18.5,
-          "y": 20.5
-        }
+        "shadow": true
       }
     ],
     "security": {
       "csp": "default-src 'self' ipc: http://ipc.localhost; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 https://athas.dev https://*.athas.dev https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://*.githubusercontent.com; img-src 'self' asset: http://asset.localhost data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'",
-      "capabilities": [
-        "main-capability"
-      ],
+      "capabilities": ["main-capability"],
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**"
-        ]
+        "scope": ["**"]
       }
     },
     "macOSPrivateApi": true
@@ -81,9 +73,7 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": [
-          "athas"
-        ]
+        "schemes": ["athas"]
       }
     },
     "fs": {

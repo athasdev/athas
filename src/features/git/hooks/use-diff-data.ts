@@ -68,7 +68,16 @@ export const useDiffData = (): UseDiffDataReturn => {
         if (newDiff && newDiff.lines.length > 0) {
           useBufferStore
             .getState()
-            .actions.openBuffer(newVirtualPath, displayName, "", false, false, true, true, newDiff);
+            .actions.openBuffer(
+              newVirtualPath,
+              displayName,
+              "",
+              false,
+              undefined,
+              true,
+              true,
+              newDiff,
+            );
         }
       });
     },

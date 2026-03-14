@@ -9,7 +9,6 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAppStore } from "@/stores/app-store";
 import { useZoomStore } from "@/stores/zoom-store";
@@ -62,7 +61,6 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
   const searchOptions = useEditorUIStore.use.searchOptions();
   const { setSearchMatches, setCurrentMatchIndex } = useEditorUIStore.use.actions();
-  const isFileTreeLoading = useFileSystemStore((state) => state.isFileTreeLoading);
   const { settings } = useSettingsStore();
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
@@ -270,7 +268,7 @@ const CodeEditor = ({ className, bufferId: propBufferId }: CodeEditorProps) => {
     }
   }, [currentMatchIndex, searchMatches, value, zoomedFontSize]);
 
-  if (!activeBuffer || isFileTreeLoading) {
+  if (!activeBuffer) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;
   }
 

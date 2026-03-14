@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { motion } from "framer-motion";
-import { Edit, Folder, FolderOpen, Plus, Trash2, X } from "lucide-react";
+import { Edit, Folder, FolderOpen, Plus, Server, Trash2, X } from "lucide-react";
 import { memo, useCallback, useEffect, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -261,27 +261,37 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                 <div key={connection.id} className="group flex items-center hover:bg-hover">
                   <button
                     onClick={() => handleConnect(connection.id)}
-                    className={`flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left ${
-                      connectingMap[connection.id] ? "cursor-not-allowed opacity-70" : ""
-                    }`}
+                    className={cn(
+                      "flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-left",
+                      "border-l-2 border-transparent hover:border-sky-500/35",
+                      connectingMap[connection.id] && "cursor-not-allowed opacity-70",
+                    )}
                     disabled={!!connectingMap[connection.id]}
                   >
-                    <span
-                      className={cn(
-                        "h-2 w-2 shrink-0 rounded-full",
-                        connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
-                      )}
-                    />
-                    <span className="truncate text-text text-xs">{connection.name}</span>
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-sky-500/10 text-sky-300">
+                      <Server size={12} />
+                    </span>
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-text text-xs">{connection.name}</span>
+                      <span className="truncate text-[10px] text-text-lighter">
+                        {connectingMap[connection.id]
+                          ? "Connecting…"
+                          : statusMap[connection.id] === "error"
+                            ? "Connection failed"
+                            : `${connection.username}@${connection.host}`}
+                      </span>
+                    </div>
                     <span className="text-[10px] text-text-lighter">
                       {connection.type.toUpperCase()}
                     </span>
-                    <span className="ml-auto truncate text-[10px] text-text-lighter">
-                      {connectingMap[connection.id]
-                        ? "Connecting…"
-                        : statusMap[connection.id] === "error"
-                          ? "Connection failed"
-                          : `${connection.username}@${connection.host}`}
+                    <span
+                      className={cn(
+                        "ml-auto h-2 w-2 shrink-0 rounded-full",
+                        connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
+                      )}
+                    />
+                    <span className="sr-only">
+                      {connection.isConnected ? "Connected" : "Disconnected"}
                     </span>
                   </button>
                   <div className="mr-2 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
