@@ -172,6 +172,62 @@ jobs:
           # Verify certificate is available
           security find-identity -v -p codesigning
 
+      - name: Import Windows Certificate (Windows only)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          WINDOWS_TIMESTAMP_URL: ${{ secrets.WINDOWS_TIMESTAMP_URL }}
+          WINDOWS_TIMESTAMP_USE_TSP: ${{ secrets.WINDOWS_TIMESTAMP_USE_TSP }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE)) {
+            throw "Missing WINDOWS_CERTIFICATE secret."
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
+            throw "Missing WINDOWS_CERTIFICATE_PASSWORD secret."
+          }
+
+          New-Item -ItemType Directory -Force -Path certificate | Out-Null
+          Set-Content -Path certificate/tempCert.txt -Value $env:WINDOWS_CERTIFICATE
+          certutil -decode certificate/tempCert.txt certificate/certificate.pfx
+
+          $securePassword = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $importedCertificates = Import-PfxCertificate `
+            -FilePath certificate/certificate.pfx `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -Password $securePassword
+
+          $signingCertificate = $importedCertificates |
+            Where-Object { $_.HasPrivateKey } |
+            Select-Object -First 1
+
+          if (-not $signingCertificate) {
+            throw "Failed to import a Windows signing certificate with a private key."
+          }
+
+          "WINDOWS_CERTIFICATE_THUMBPRINT=$($signingCertificate.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "WINDOWS_DIGEST_ALGORITHM=sha256" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_TIMESTAMP_URL)) {
+            "WINDOWS_TIMESTAMP_URL=http://time.certum.pl/" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          } else {
+            "WINDOWS_TIMESTAMP_URL=$($env:WINDOWS_TIMESTAMP_URL)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_TIMESTAMP_USE_TSP)) {
+            "WINDOWS_TIMESTAMP_USE_TSP=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          } else {
+            "WINDOWS_TIMESTAMP_USE_TSP=$($env:WINDOWS_TIMESTAMP_USE_TSP)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+
+          Remove-Item -Recurse -Force certificate
+
+      - name: Prepare Tauri Windows signing (Windows only)
+        if: matrix.os == 'windows'
+        run: node scripts/windows/prepare-tauri-signing.mjs
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
