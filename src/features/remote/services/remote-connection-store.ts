@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { load } from "@tauri-apps/plugin-store";
 
 const CONNECTIONS_STORE = "remote-connections.json";
@@ -25,6 +26,18 @@ class ConnectionStore {
     return this.credentialsStore;
   }
 
+  private async storePassword(connectionId: string, password: string) {
+    await invoke("store_remote_credential", { connectionId, password });
+  }
+
+  private async getPassword(connectionId: string): Promise<string | null> {
+    return (await invoke("get_remote_credential", { connectionId })) as string | null;
+  }
+
+  private async removePassword(connectionId: string) {
+    await invoke("remove_remote_credential", { connectionId });
+  }
+
   async saveConnection(connection: {
     id: string;
     name: string;
@@ -37,7 +50,6 @@ class ConnectionStore {
     saveCredentials?: boolean;
   }) {
     const connectionsStore = await this.getConnectionsStore();
-    const credentialsStore = await this.getCredentialsStore();
 
     const connectionData = {
       id: connection.id,
@@ -54,35 +66,30 @@ class ConnectionStore {
     await connectionsStore.set(connection.id, connectionData);
 
     if (connection.saveCredentials && connection.password) {
-      await credentialsStore.set(connection.id, {
-        password: connection.password,
-      });
+      await this.storePassword(connection.id, connection.password);
     } else {
-      await credentialsStore.delete(connection.id);
+      await this.removePassword(connection.id);
     }
 
     await connectionsStore.save();
-    await credentialsStore.save();
   }
 
   async getConnection(connectionId: string) {
     const connectionsStore = await this.getConnectionsStore();
-    const credentialsStore = await this.getCredentialsStore();
 
     const connection = await connectionsStore.get(connectionId);
     if (!connection) return null;
 
-    const credentials = await credentialsStore.get(connectionId);
+    const password = await this.getPassword(connectionId);
 
     return {
       ...connection,
-      password: credentials?.password,
+      password: password || undefined,
     };
   }
 
   async getAllConnections() {
     const connectionsStore = await this.getConnectionsStore();
-    const credentialsStore = await this.getCredentialsStore();
 
     const connectionIds: string[] = await connectionsStore.keys();
     const connections = [];
@@ -90,10 +97,10 @@ class ConnectionStore {
     for (const id of connectionIds) {
       const connection = await connectionsStore.get(id);
       if (connection) {
-        const credentials = await credentialsStore.get(id);
+        const password = await this.getPassword(id);
         connections.push({
           ...connection,
-          password: credentials?.password,
+          password: password || undefined,
         });
       }
     }
@@ -103,13 +110,11 @@ class ConnectionStore {
 
   async deleteConnection(connectionId: string) {
     const connectionsStore = await this.getConnectionsStore();
-    const credentialsStore = await this.getCredentialsStore();
 
     await connectionsStore.delete(connectionId);
-    await credentialsStore.delete(connectionId);
+    await this.removePassword(connectionId);
 
     await connectionsStore.save();
-    await credentialsStore.save();
   }
 
   async updateConnectionStatus(connectionId: string, isConnected: boolean, lastConnected?: string) {
@@ -144,9 +149,40 @@ class ConnectionStore {
         localStorage.removeItem("athas-remote-connections");
         console.log("Successfully migrated connections from localStorage to Tauri Store");
       }
+
+      await this.migrateLegacyCredentialsStore();
     } catch (error) {
       console.error("Error migrating from localStorage:", error);
     }
+  }
+
+  async migrateLegacyCredentialsStore() {
+    const credentialsStore = await this.getCredentialsStore();
+    const credentialIds: string[] = await credentialsStore.keys();
+
+    if (credentialIds.length === 0) {
+      return;
+    }
+
+    for (const connectionId of credentialIds) {
+      const legacyCredentials = await credentialsStore.get(connectionId);
+      const password =
+        legacyCredentials &&
+        typeof legacyCredentials === "object" &&
+        "password" in legacyCredentials &&
+        typeof legacyCredentials.password === "string"
+          ? legacyCredentials.password
+          : null;
+
+      if (password) {
+        await this.storePassword(connectionId, password);
+      }
+
+      await credentialsStore.delete(connectionId);
+    }
+
+    await credentialsStore.save();
+    console.log("Successfully migrated remote credentials to secure storage");
   }
 }
 

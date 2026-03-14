@@ -5,7 +5,6 @@ pub mod mongodb;
 pub mod mysql;
 pub mod postgres;
 pub mod redis_db;
-pub mod sql_common;
 pub mod sqlite;
 
 pub use connection_manager::{connect_database, disconnect_database, test_connection};

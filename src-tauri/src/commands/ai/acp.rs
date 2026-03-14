@@ -1,4 +1,4 @@
-use crate::features::ai::{AcpAgentBridge, AcpAgentStatus, AgentConfig};
+use athas_ai::{AcpAgentBridge, AcpAgentStatus, AgentConfig};
 use serde::Deserialize;
 use std::sync::Arc;
 use tauri::State;

@@ -1,0 +1,11 @@
+[package]
+name = "athas-remote"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+lazy_static = "1.4"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+ssh2 = { version = "0.9", features = ["vendored-openssl"] }
+tauri = { version = "2", features = ["test"] }

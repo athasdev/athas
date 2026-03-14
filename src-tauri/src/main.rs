@@ -5,31 +5,26 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use commands::{database::connection_manager::ConnectionManager, *};
-use features::{AcpAgentBridge, ClaudeCodeBridge, FileWatcher};
+use athas_database::ConnectionManager;
+use athas_ai::AcpAgentBridge;
+use athas_lsp::LspManager;
+use athas_project::FileWatcher;
+use commands::*;
 use log::{debug, info};
-use lsp::LspManager;
-use ssh::{
-   ssh_connect, ssh_disconnect, ssh_disconnect_only, ssh_read_directory, ssh_read_file,
-   ssh_write_file,
-};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri_plugin_os::platform;
 use tauri_plugin_store::StoreExt;
 use terminal::{
-   TerminalManager, close_terminal, create_terminal, get_shells, terminal_resize, terminal_write,
+   ManagedTerminalManager as TerminalManager, close_terminal, create_terminal, list_shells,
+   terminal_resize, terminal_write,
 };
 use tokio::sync::Mutex;
 
 mod commands;
-mod extensions;
-mod features;
 mod logger;
-mod lsp;
 mod menu;
 mod secure_storage;
-mod ssh;
 mod terminal;
 
 #[cfg(target_os = "macos")]
@@ -125,11 +120,7 @@ fn main() {
          let terminal_manager = Arc::new(TerminalManager::new());
          app.manage(terminal_manager.clone());
 
-         // Set up Claude bridge (legacy, kept for rollback)
-         let claude_bridge = Arc::new(Mutex::new(ClaudeCodeBridge::new(app.handle().clone())));
-         app.manage(claude_bridge.clone());
-
-         // Set up ACP agent bridge (new implementation)
+         // Set up ACP agent bridge
          let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(
             app.handle().clone(),
             terminal_manager,
@@ -147,23 +138,6 @@ fn main() {
 
          // Set up database connection manager
          app.manage(Arc::new(ConnectionManager::new()));
-
-         // Auto-start interceptor on app launch
-         {
-            let claude_bridge_clone = claude_bridge.clone();
-            tauri::async_runtime::spawn(async move {
-               // Small delay to ensure app is fully initialized
-               tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-
-               let mut bridge = claude_bridge_clone.lock().await;
-               match bridge.start_interceptor().await {
-                  Ok(_) => log::info!("Interceptor auto-started successfully"),
-                  Err(_) => {
-                     log::warn!("Claude Code service is unavailable. Disabling Claude provider.");
-                  }
-               }
-            });
-         }
 
          // Process CLI arguments (file/folder paths passed on launch)
          {
@@ -449,12 +423,15 @@ fn main() {
          start_watching,
          stop_watching,
          set_project_root,
+         store_remote_credential,
+         get_remote_credential,
+         remove_remote_credential,
          // Terminal commands
          create_terminal,
          terminal_write,
          terminal_resize,
          close_terminal,
-         get_shells,
+         list_shells,
          // execute_shell,
          // SSH commands
          ssh_connect,
@@ -463,11 +440,6 @@ fn main() {
          ssh_write_file,
          ssh_read_directory,
          ssh_read_file,
-         // Claude commands (legacy)
-         start_claude_code,
-         stop_claude_code,
-         send_claude_input,
-         get_claude_status,
          // ACP agent commands (new)
          get_available_agents,
          start_acp_agent,

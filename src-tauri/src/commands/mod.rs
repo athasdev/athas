@@ -5,7 +5,7 @@ pub mod development;
 pub mod editor;
 pub mod project;
 pub mod ui;
-pub mod vcs;
+pub mod version_control;
 
 // Standalone modules (not domain-specific)
 pub mod extensions;
@@ -21,4 +21,4 @@ pub use extensions::*;
 pub use fuzzy::*;
 pub use project::*;
 pub use ui::*;
-pub use vcs::*;
+pub use version_control::*;

@@ -549,8 +549,17 @@ dependencies = [
  "agent-client-protocol",
  "anyhow",
  "async-trait",
- "athas-runtime-core",
- "athas-tooling-core",
+ "athas-ai",
+ "athas-database",
+ "athas-extensions",
+ "athas-github",
+ "athas-lsp",
+ "athas-project",
+ "athas-remote",
+ "athas-runtime",
+ "athas-terminal",
+ "athas-tooling",
+ "athas-version-control",
  "base64 0.21.7",
  "chrono",
  "colored",
@@ -565,13 +574,10 @@ dependencies = [
  "git2",
  "interceptor",
  "keyring",
- "lazy_static",
  "log",
  "lsp-types",
  "mimalloc",
  "mongodb",
- "notify",
- "notify-debouncer-mini",
  "nucleo",
  "nucleo-matcher",
  "objc",
@@ -586,7 +592,6 @@ dependencies = [
  "sha2",
  "sha256",
  "sqlx",
- "ssh2",
  "tar",
  "tauri",
  "tauri-build",
@@ -619,17 +624,161 @@ dependencies = [
 ]
 
 [[package]]
-name = "athas-runtime-core"
+name = "athas-ai"
 version = "0.1.0"
 dependencies = [
+ "agent-client-protocol",
+ "anyhow",
+ "async-trait",
+ "athas-terminal",
+ "interceptor",
+ "log",
  "serde",
+ "serde_json",
+ "tauri",
+ "tokio",
+ "tokio-util",
+ "uuid",
+ "which",
 ]
 
 [[package]]
-name = "athas-tooling-core"
+name = "athas-database"
 version = "0.1.0"
 dependencies = [
+ "duckdb",
+ "futures-util",
+ "mongodb",
+ "redis",
+ "rusqlite",
  "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
+name = "athas-extensions"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "flate2",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha256",
+ "tar",
+ "tauri",
+]
+
+[[package]]
+name = "athas-github"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "tauri",
+]
+
+[[package]]
+name = "athas-lsp"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "athas-runtime",
+ "crossbeam-channel",
+ "log",
+ "lsp-types",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tokio",
+ "which",
+]
+
+[[package]]
+name = "athas-project"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "notify",
+ "notify-debouncer-mini",
+ "serde",
+ "tauri",
+]
+
+[[package]]
+name = "athas-remote"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "log",
+ "serde",
+ "ssh2",
+ "tauri",
+]
+
+[[package]]
+name = "athas-runtime"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "log",
+ "reqwest",
+ "serde",
+ "tar",
+ "tauri",
+ "which",
+ "zip 2.4.2",
+]
+
+[[package]]
+name = "athas-terminal"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dirs 5.0.1",
+ "log",
+ "portable-pty",
+ "serde",
+ "serde_json",
+ "tauri",
+ "uuid",
+]
+
+[[package]]
+name = "athas-tooling"
+version = "0.1.0"
+dependencies = [
+ "athas-runtime",
+ "flate2",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tar",
+ "tauri",
+ "tempfile",
+ "walkdir",
+ "which",
+ "zip 2.4.2",
+]
+
+[[package]]
+name = "athas-version-control"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.21.7",
+ "chrono",
+ "git2",
+ "log",
+ "serde",
+ "tempfile",
 ]
 
 [[package]]
