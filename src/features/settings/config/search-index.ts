@@ -1,4 +1,5 @@
 import type { SettingSearchRecord } from "../types/search";
+import { IS_MAC } from "@/utils/platform";
 
 export const settingsSearchIndex: SettingSearchRecord[] = [
   // General Settings
@@ -331,14 +332,18 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Choose where to position the sidebar",
     keywords: ["sidebar", "position", "left", "right", "layout"],
   },
-  {
-    id: "appearance-native-menu-bar",
-    tab: "appearance",
-    section: "Layout",
-    label: "Native Menu Bar",
-    description: "Use the native menu bar or a custom UI menu bar",
-    keywords: ["menu", "bar", "native", "ui"],
-  },
+  ...(IS_MAC
+    ? [
+        {
+          id: "appearance-native-menu-bar",
+          tab: "appearance",
+          section: "Layout",
+          label: "Native Menu Bar",
+          description: "Use the native menu bar or a custom UI menu bar",
+          keywords: ["menu", "bar", "native", "ui"],
+        } satisfies SettingSearchRecord,
+      ]
+    : []),
   {
     id: "appearance-compact-menu-bar",
     tab: "appearance",

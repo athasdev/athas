@@ -17,6 +17,7 @@ import { FontSelector } from "@/ui/font-selector";
 import Section, { SettingRow } from "@/ui/section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
+import { IS_MAC } from "@/utils/platform";
 
 export const AppearanceSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
@@ -238,21 +239,23 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow
-          label="Native Menu Bar"
-          description="Use the native menu bar or a custom UI menu bar"
-          onReset={() => updateSetting("nativeMenuBar", getDefaultSetting("nativeMenuBar"))}
-          canReset={settings.nativeMenuBar !== getDefaultSetting("nativeMenuBar")}
-        >
-          <Switch
-            checked={settings.nativeMenuBar}
-            onChange={(checked) => {
-              updateSetting("nativeMenuBar", checked);
-              invoke("toggle_menu_bar", { toggle: checked });
-            }}
-            size="sm"
-          />
-        </SettingRow>
+        {IS_MAC && (
+          <SettingRow
+            label="Native Menu Bar"
+            description="Use the native menu bar or a custom UI menu bar"
+            onReset={() => updateSetting("nativeMenuBar", getDefaultSetting("nativeMenuBar"))}
+            canReset={settings.nativeMenuBar !== getDefaultSetting("nativeMenuBar")}
+          >
+            <Switch
+              checked={settings.nativeMenuBar}
+              onChange={(checked) => {
+                updateSetting("nativeMenuBar", checked);
+                invoke("toggle_menu_bar", { toggle: checked });
+              }}
+              size="sm"
+            />
+          </SettingRow>
+        )}
 
         <SettingRow
           label="Compact Menu Bar"
