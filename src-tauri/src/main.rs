@@ -5,31 +5,26 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+use athas_database::ConnectionManager;
+use athas_ai::AcpAgentBridge;
+use athas_lsp::LspManager;
+use athas_project::FileWatcher;
 use commands::*;
-use features::{AcpAgentBridge, ClaudeCodeBridge, FileWatcher};
 use log::{debug, info};
-use lsp::LspManager;
-use ssh::{
-   ssh_connect, ssh_disconnect, ssh_disconnect_only, ssh_read_directory, ssh_read_file,
-   ssh_write_file,
-};
 use std::sync::Arc;
 use tauri::{Emitter, Manager};
 use tauri_plugin_os::platform;
 use tauri_plugin_store::StoreExt;
 use terminal::{
-   TerminalManager, close_terminal, create_terminal, get_shells, terminal_resize, terminal_write,
+   ManagedTerminalManager as TerminalManager, close_terminal, create_terminal, list_shells,
+   terminal_resize, terminal_write,
 };
 use tokio::sync::Mutex;
 
 mod commands;
-mod extensions;
-mod features;
 mod logger;
-mod lsp;
 mod menu;
 mod secure_storage;
-mod ssh;
 mod terminal;
 
 #[cfg(target_os = "macos")]
@@ -125,11 +120,7 @@ fn main() {
          let terminal_manager = Arc::new(TerminalManager::new());
          app.manage(terminal_manager.clone());
 
-         // Set up Claude bridge (legacy, kept for rollback)
-         let claude_bridge = Arc::new(Mutex::new(ClaudeCodeBridge::new(app.handle().clone())));
-         app.manage(claude_bridge.clone());
-
-         // Set up ACP agent bridge (new implementation)
+         // Set up ACP agent bridge
          let acp_bridge = Arc::new(Mutex::new(AcpAgentBridge::new(
             app.handle().clone(),
             terminal_manager,
@@ -145,22 +136,8 @@ fn main() {
          // Set up file clipboard
          app.manage(FileClipboard::new(None));
 
-         // Auto-start interceptor on app launch
-         {
-            let claude_bridge_clone = claude_bridge.clone();
-            tauri::async_runtime::spawn(async move {
-               // Small delay to ensure app is fully initialized
-               tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-
-               let mut bridge = claude_bridge_clone.lock().await;
-               match bridge.start_interceptor().await {
-                  Ok(_) => log::info!("Interceptor auto-started successfully"),
-                  Err(_) => {
-                     log::warn!("Claude Code service is unavailable. Disabling Claude provider.");
-                  }
-               }
-            });
-         }
+         // Set up database connection manager
+         app.manage(Arc::new(ConnectionManager::new()));
 
          // Process CLI arguments (file/folder paths passed on launch)
          {
@@ -446,12 +423,15 @@ fn main() {
          start_watching,
          stop_watching,
          set_project_root,
+         store_remote_credential,
+         get_remote_credential,
+         remove_remote_credential,
          // Terminal commands
          create_terminal,
          terminal_write,
          terminal_resize,
          close_terminal,
-         get_shells,
+         list_shells,
          // execute_shell,
          // SSH commands
          ssh_connect,
@@ -460,11 +440,6 @@ fn main() {
          ssh_write_file,
          ssh_read_directory,
          ssh_read_file,
-         // Claude commands (legacy)
-         start_claude_code,
-         stop_claude_code,
-         send_claude_input,
-         get_claude_status,
          // ACP agent commands (new)
          get_available_agents,
          start_acp_agent,
@@ -496,6 +471,59 @@ fn main() {
          update_sqlite_row,
          delete_sqlite_row,
          get_sqlite_foreign_keys,
+         // DuckDB commands
+         get_duckdb_tables,
+         query_duckdb,
+         query_duckdb_filtered,
+         execute_duckdb,
+         insert_duckdb_row,
+         update_duckdb_row,
+         delete_duckdb_row,
+         get_duckdb_foreign_keys,
+         // Connection management
+         connect_database,
+         disconnect_database,
+         test_connection,
+         // Credentials
+         store_db_credential,
+         get_db_credential,
+         remove_db_credential,
+         save_connection,
+         list_saved_connections,
+         delete_saved_connection,
+         // PostgreSQL commands
+         get_postgres_tables,
+         query_postgres,
+         query_postgres_filtered,
+         execute_postgres,
+         get_postgres_foreign_keys,
+         get_postgres_table_schema,
+         insert_postgres_row,
+         update_postgres_row,
+         delete_postgres_row,
+         // MySQL commands
+         get_mysql_tables,
+         query_mysql,
+         query_mysql_filtered,
+         execute_mysql,
+         get_mysql_foreign_keys,
+         get_mysql_table_schema,
+         insert_mysql_row,
+         update_mysql_row,
+         delete_mysql_row,
+         // MongoDB commands
+         get_mongo_databases,
+         get_mongo_collections,
+         query_mongo_documents,
+         insert_mongo_document,
+         update_mongo_document,
+         delete_mongo_document,
+         // Redis commands
+         redis_scan_keys,
+         redis_get_value,
+         redis_set_value,
+         redis_delete_key,
+         redis_get_info,
          // LSP commands
          lsp_start,
          lsp_stop,

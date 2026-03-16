@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
-import { useAuthStore } from "@/stores/auth-store";
-import { AutocompleteError, requestAutocomplete } from "@/utils/autocomplete";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import {
+  AutocompleteError,
+  requestAutocomplete,
+} from "@/features/editor/services/editor-autocomplete-service";
 
 interface UseAutocompleteOptions {
   enabled: boolean;
@@ -124,7 +127,7 @@ export function useAutocomplete({
   const subscriptionStatus = subscription?.status ?? "free";
   const enterprisePolicy = subscription?.enterprise?.policy;
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-  const isPro = subscriptionStatus === "pro" || subscriptionStatus === "trial";
+  const isPro = subscriptionStatus === "pro";
   const useByok = managedPolicy ? managedPolicy.allowByok && !isPro : !isPro;
 
   useEffect(() => {

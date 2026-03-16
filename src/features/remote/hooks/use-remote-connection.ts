@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
-import { useSidebarStore } from "@/stores/sidebar-store";
+import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 
 export function useRemoteConnection() {
   const setRemoteWindow = useSidebarStore.use.setRemoteWindow();

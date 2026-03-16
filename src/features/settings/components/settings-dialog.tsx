@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/stores/auth-store";
-import { type SettingsTab, useUIState } from "@/stores/ui-state-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state-store";
 import Dialog from "@/ui/dialog";
 import { SettingsVerticalTabs } from "./settings-vertical-tabs";
 
 import { AdvancedSettings } from "./tabs/advanced-settings";
 import { AISettings } from "./tabs/ai-settings";
 import { AppearanceSettings } from "./tabs/appearance-settings";
+import { DatabaseSettings } from "./tabs/database-settings";
 import { EditorSettings } from "./tabs/editor-settings";
 import { EnterpriseSettings } from "./tabs/enterprise-settings";
 import { ExtensionsSettings } from "./tabs/extensions-settings";
 import { FeaturesSettings } from "./tabs/features-settings";
 import { GeneralSettings } from "./tabs/general-settings";
+import { GitSettings } from "./tabs/git-settings";
 import { KeyboardSettings } from "./tabs/keyboard-settings";
 import { LanguageSettings } from "./tabs/language-settings";
 import { TerminalSettings } from "./tabs/terminal-settings";
@@ -54,8 +56,12 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         return <GeneralSettings />;
       case "editor":
         return <EditorSettings />;
+      case "git":
+        return <GitSettings />;
       case "appearance":
         return <AppearanceSettings />;
+      case "databases":
+        return <DatabaseSettings />;
       case "extensions":
         return <ExtensionsSettings />;
       case "ai":

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/utils/cn";
-import type { ForeignKeyInfo } from "../types";
+import type { ForeignKeyInfo } from "../sqlite-types";
 
 interface CellRendererProps {
   value: unknown;
@@ -108,7 +108,7 @@ export default function CellRenderer({
           className={cn(
             "block max-w-[280px] text-left",
             expanded ? "whitespace-pre-wrap" : "truncate",
-            isPrimaryKey && "font-semibold text-amber-600",
+            isPrimaryKey && "font-semibold text-text",
           )}
           title="Click to expand"
         >
@@ -121,7 +121,7 @@ export default function CellRenderer({
   // Default
   return (
     <span
-      className={cn("block truncate", isPrimaryKey && "font-semibold text-amber-600")}
+      className={cn("block truncate", isPrimaryKey && "font-semibold text-text")}
       onContextMenu={handleContextMenu}
     >
       {text}

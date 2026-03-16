@@ -77,6 +77,12 @@ src/
 - Group related components, hooks, and utils into feature-based folders (e.g. `src/features/editor/[components,types,utils,config,constants,etc.])
 - Use `src/` for shared, generic components used across multiple features (e.g. `src/components`, `src/hooks`, `src/utils`, etc.)
 - Use `src/extensions/` for extension-specific code (e.g. themes, plugins, etc.)
+- New feature code should follow the canonical structure documented in `docs/contributing.mdx`
+- Prefer `src/features/[feature]/{components,hooks,services,api,adapters,stores,state,selectors,contexts,types,constants,utils,tests}`
+- Do not add new feature-specific logic to global folders unless it is genuinely shared across multiple features
+- Do not leave feature logic scattered in `src/features/[feature]/` root when an appropriate subfolder exists
+- Keep feature tests under `src/features/[feature]/tests/` when practical
+- Backend feature logic should prefer `crates/[feature]`; keep `src-tauri` focused on app wiring and integration
 
 ### Documentation
 

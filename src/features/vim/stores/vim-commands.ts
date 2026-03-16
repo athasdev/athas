@@ -1,5 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useVimStore } from "./vim-store";
 
 export interface VimCommand {
@@ -8,13 +8,6 @@ export interface VimCommand {
   description: string;
   execute: (args?: string[]) => Promise<void> | void;
 }
-
-// Helper to get current buffer path for file operations
-const _getCurrentBufferPath = (): string | null => {
-  const { buffers, activeBufferId } = useBufferStore.getState();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-  return activeBuffer?.path || null;
-};
 
 // Save current file
 const writeCommand: VimCommand = {

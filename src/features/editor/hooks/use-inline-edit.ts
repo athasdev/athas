@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/stores/auth-store";
-import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
-import { toast } from "@/stores/toast-store";
-import { type AutocompleteModel, fetchAutocompleteModels } from "@/utils/autocomplete";
-import { InlineEditError, requestInlineEdit } from "@/utils/inline-edit";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
+import { toast } from "@/ui/toast-store";
+import {
+  type AutocompleteModel,
+  fetchAutocompleteModels,
+} from "@/features/editor/services/editor-autocomplete-service";
+import {
+  InlineEditError,
+  requestInlineEdit,
+} from "@/features/editor/services/editor-inline-edit-service";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import type { Position, Range } from "../types/editor";
 import { splitLines } from "../utils/lines";
@@ -162,7 +168,7 @@ export function useInlineEdit({
     const subscriptionStatus = subscription?.status ?? "free";
     const enterprisePolicy = subscription?.enterprise?.policy;
     const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-    const isPro = subscriptionStatus === "pro" || subscriptionStatus === "trial";
+    const isPro = subscriptionStatus === "pro";
 
     if (managedPolicy && !managedPolicy.aiCompletionEnabled) {
       toast.error("Inline edit is disabled by your organization policy.");

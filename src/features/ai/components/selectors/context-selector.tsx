@@ -1,11 +1,12 @@
-import { Database, FileText, Plus, Search } from "lucide-react";
+import { Database, FileText, Plus, Search, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
 import type { FileEntry } from "@/features/file-system/types/app";
-import { useProjectStore } from "@/stores/project-store";
+import { useProjectStore } from "@/features/window/stores/project-store";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
 
@@ -16,7 +17,7 @@ interface ContextSelectorProps {
     name: string;
     content: string;
     isDirty: boolean;
-    isSQLite: boolean;
+    databaseType?: string;
     isActive: boolean;
   }>;
   allProjectFiles: FileEntry[];
@@ -143,7 +144,7 @@ export function ContextSelector({
       name: buffer.name,
       path: buffer.path,
       isDir: false,
-      isSQLite: buffer.isSQLite,
+      databaseType: buffer.databaseType,
       isDirty: buffer.isDirty,
       isSelected: selectedBufferIds.has(buffer.id),
     }));
@@ -200,7 +201,7 @@ export function ContextSelector({
         type: "buffer" as const,
         id: buffer.id,
         name: buffer.name,
-        isSQLite: buffer.isSQLite,
+        databaseType: buffer.databaseType,
         isDirty: buffer.isDirty,
       }));
 
@@ -334,26 +335,45 @@ export function ContextSelector({
             aria-label="Context file selector"
             aria-modal="false"
           >
-            {/* Search input */}
-            <div className="border-border border-b p-2">
-              <div className="relative rounded-xl border border-border bg-secondary-bg/80 px-1">
-                <Search
-                  size={12}
-                  className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 transform text-text-lighter"
-                />
-                <input
-                  type="text"
-                  placeholder="Search files..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-transparent py-1.5 pr-2 pl-6 text-text text-xs placeholder-text-lighter focus:outline-none"
-                  aria-label="Search files"
-                />
+            <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/75 px-3 py-2.5">
+              <div className="flex min-w-0 items-center gap-2">
+                <Plus size={12} className="shrink-0 text-text-lighter" />
+                <span className="truncate font-medium text-text text-xs">Add Context</span>
               </div>
+              <button
+                type="button"
+                onClick={onToggleOpen}
+                className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
+                aria-label="Close context selector"
+              >
+                <X size={12} />
+              </button>
+            </div>
+
+            {/* Search input */}
+            <div className="relative border-border/60 border-b">
+              <Search
+                size={12}
+                className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-text-lighter"
+              />
+              <Input
+                type="text"
+                placeholder="Search files..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                variant="ghost"
+                leftIcon={Search}
+                className="w-full py-2.5 pr-3"
+                aria-label="Search files"
+              />
             </div>
 
             {/* Unified file list */}
-            <div className="py-1" role="listbox" aria-label="Files and buffers">
+            <div
+              className="min-h-0 flex-1 overflow-y-auto p-2"
+              role="listbox"
+              aria-label="Files and buffers"
+            >
               {allItems.length === 0 ? (
                 <div className="ui-font px-3 py-2 text-center text-text-lighter text-xs">
                   {searchTerm ? "No matching files found" : "No files available"}
@@ -370,20 +390,20 @@ export function ContextSelector({
                       }
                     }}
                     className={cn(
-                      "group ui-font mx-1 flex w-[calc(100%-8px)] cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs transition-colors hover:bg-hover focus:outline-none focus:ring-1 focus:ring-accent/50",
+                      "group ui-font flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors hover:bg-hover focus:outline-none focus:ring-1 focus:ring-accent/50",
                       item.isSelected && "bg-selected",
                     )}
                     aria-label={`${item.isSelected ? "Remove" : "Add"} ${item.name} ${item.isSelected ? "from" : "to"} context`}
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-2">
                       {item.type === "buffer" ? (
-                        item.isSQLite ? (
+                        item.databaseType ? (
                           <Database size={10} className="shrink-0 text-text-lighter" />
                         ) : (
                           <FileText size={10} className="shrink-0 text-text-lighter" />
                         )
                       ) : (
-                        <FileIcon
+                        <FileExplorerIcon
                           fileName={item.name}
                           isDir={false}
                           size={10}
@@ -442,7 +462,7 @@ export function ContextSelector({
             className="group flex shrink-0 select-none items-center gap-1 rounded-full border border-border bg-secondary-bg/80 px-2 py-1 text-xs"
           >
             {item.type === "buffer" ? (
-              item.isSQLite ? (
+              item.databaseType ? (
                 <Database size={8} className="text-text-lighter" />
               ) : (
                 <FileText size={8} className="text-text-lighter" />

@@ -1,15 +1,16 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { CircleUser, CreditCard, ExternalLink, LogIn, LogOut } from "lucide-react";
 import { useRef, useState } from "react";
-import { useAuthStore } from "@/stores/auth-store";
-import { toast } from "@/stores/toast-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import { toast } from "@/ui/toast-store";
+import Button from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Tooltip from "@/ui/tooltip";
 import {
   beginDesktopAuthSession,
   DesktopAuthError,
   waitForDesktopAuthToken,
-} from "@/utils/auth-api";
+} from "@/features/window/services/auth-api";
 import { cn } from "@/utils/cn";
 
 interface AccountMenuProps {
@@ -107,7 +108,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     },
     {
       id: "subscription",
-      label: `Plan: ${isEnterprise ? "Enterprise" : subscriptionStatus === "pro" ? "Pro" : subscriptionStatus === "trial" ? "Trial" : "Free"}`,
+      label: `Plan: ${isEnterprise ? "Enterprise" : subscriptionStatus === "pro" ? "Pro" : "Free"}`,
       icon: <CreditCard size={12} />,
       onClick: handleViewPricing,
     },
@@ -136,28 +137,29 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
   return (
     <>
       <Tooltip content={tooltipLabel} side="bottom">
-        <button
+        <Button
           ref={buttonRef}
           onClick={handleClick}
+          type="button"
+          variant="ghost"
+          size="sm"
           className={cn(
-            "flex h-7 min-w-7 items-center justify-center rounded-full border border-border bg-primary-bg/70 p-1",
-            "text-text-lighter transition-colors hover:bg-hover hover:text-text",
+            "h-7 w-7 min-w-7 rounded-full p-0 text-text-lighter",
             isAuthenticated && "text-blue-400 hover:text-blue-300",
             className,
           )}
-          style={{ minHeight: 0, minWidth: 0 }}
         >
           {isAuthenticated && user?.avatar_url ? (
             <img
               src={user.avatar_url}
               alt=""
-              className="rounded-full"
+              className="rounded-full object-cover"
               style={{ width: iconSize, height: iconSize }}
             />
           ) : (
             <CircleUser size={iconSize} />
           )}
-        </button>
+        </Button>
       </Tooltip>
       <ContextMenu
         isOpen={isOpen}

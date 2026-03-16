@@ -1,110 +1,61 @@
-import { ClockIcon } from "lucide-react";
-import { type RefObject, useEffect, useRef } from "react";
-import { useOnClickOutside } from "usehooks-ts";
+import { ClockIcon, FolderOpen, PanelTopClose } from "lucide-react";
+import { useMemo } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders";
-import { useUIState } from "@/stores/ui-state-store";
-import { cn } from "@/utils/cn";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 
 export const ProjectNameMenu = () => {
-  const menuRef = useRef<HTMLDivElement>(null);
-  // Get data from stores
   const { projectNameMenu, setProjectNameMenu } = useUIState();
   const { handleOpenFolder, handleCollapseAllFolders } = useFileSystemStore();
   const { recentFolders, openRecentFolder } = useRecentFoldersStore();
 
-  const onCloseMenu = () => setProjectNameMenu(null);
-  const onOpenFolder = handleOpenFolder;
-  const onCollapseAllFolders = handleCollapseAllFolders;
-  const onOpenRecentFolder = openRecentFolder;
+  const items = useMemo<ContextMenuItem[]>(() => {
+    const baseItems: ContextMenuItem[] = [
+      {
+        id: "open-folder",
+        label: "Open Folder in New Tab",
+        icon: <FolderOpen size={12} />,
+        onClick: () => handleOpenFolder(),
+      },
+      {
+        id: "collapse-folders",
+        label: "Collapse All Folders",
+        icon: <PanelTopClose size={12} />,
+        onClick: () => handleCollapseAllFolders(),
+      },
+    ];
 
-  // Close menu on outside click
-  useOnClickOutside(menuRef as RefObject<HTMLElement>, () => {
-    setProjectNameMenu(null);
-  });
+    if (recentFolders.length === 0) {
+      return baseItems;
+    }
 
-  // Close menu on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setProjectNameMenu(null);
-      }
-    };
+    const recentItems: ContextMenuItem[] = recentFolders
+      .slice(0, 5)
+      .map((folder: RecentFolder) => ({
+        id: `recent-${folder.path}`,
+        label: folder.name,
+        icon: <ClockIcon size={12} />,
+        onClick: () => openRecentFolder(folder.path),
+      }));
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [setProjectNameMenu]);
+    return [
+      ...baseItems,
+      { id: "sep-recent", label: "", separator: true, onClick: () => {} },
+      ...recentItems,
+    ];
+  }, [handleCollapseAllFolders, handleOpenFolder, openRecentFolder, recentFolders]);
 
   if (!projectNameMenu) return null;
 
   return (
-    <div
-      ref={menuRef}
-      className="fixed z-50 min-w-[200px] rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
-      style={{
-        left: projectNameMenu.x,
-        top: projectNameMenu.y,
-      }}
-    >
-      <button
-        onMouseDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onOpenFolder();
-          onCloseMenu();
-        }}
-        className={cn(
-          "flex w-full items-center gap-2 px-3 py-1.5",
-          "ui-font text-left text-text text-xs hover:bg-hover",
-        )}
-      >
-        Open Folder in New Tab
-      </button>
-
-      <button
-        onMouseDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onCollapseAllFolders();
-          onCloseMenu();
-        }}
-        className={cn(
-          "flex w-full items-center gap-2 px-3 py-1.5",
-          "ui-font text-left text-text text-xs hover:bg-hover",
-        )}
-      >
-        Collapse All Folders
-      </button>
-
-      {recentFolders.length > 0 && (
-        <>
-          <div className="my-1 border-border border-t"></div>
-          <div className="ui-font flex items-center gap-1 px-3 py-1 text-text-lighter text-xs tracking-wide">
-            <ClockIcon size="10" />
-            Recent Folders
-          </div>
-          {recentFolders.slice(0, 5).map((folder: RecentFolder) => (
-            <button
-              key={folder.path}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onOpenRecentFolder(folder.path);
-                onCloseMenu();
-              }}
-              className={cn(
-                "flex w-full items-center gap-2 px-3 py-1.5",
-                "ui-font text-left text-text text-xs hover:bg-hover",
-              )}
-            >
-              <div className="flex min-w-0 flex-1 flex-col items-start">
-                <span className="truncate font-medium">{folder.name}</span>
-              </div>
-            </button>
-          ))}
-        </>
-      )}
-    </div>
+    <ContextMenu
+      isOpen
+      position={{ x: projectNameMenu.x, y: projectNameMenu.y }}
+      items={items}
+      onClose={() => setProjectNameMenu(null)}
+      className="min-w-[220px]"
+    />
   );
 };

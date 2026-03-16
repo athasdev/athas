@@ -23,13 +23,6 @@ function getFileName(filePath: string): string {
 /**
  * Check if a path is within the root directory
  */
-function _isInWorkingDirectory(filePath: string, rootPath: string | undefined): boolean {
-  if (!rootPath) return false;
-  const normalizedFile = filePath.replace(/\\/g, "/").toLowerCase();
-  const normalizedRoot = rootPath.replace(/\\/g, "/").toLowerCase();
-  return normalizedFile.startsWith(normalizedRoot);
-}
-
 /**
  * Calculate minimal distinguishing display names for buffers
  * Returns a map of buffer ID to display name

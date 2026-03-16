@@ -5,7 +5,7 @@ import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message } from "@/features/ai/types/ai-chat";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import Tooltip from "@/ui/tooltip";
-import { isAcpAgent } from "@/utils/ai-chat";
+import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "../../store/store";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";

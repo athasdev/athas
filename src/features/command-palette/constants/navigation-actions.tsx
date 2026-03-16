@@ -7,7 +7,7 @@ import {
   Package,
   Search,
 } from "lucide-react";
-import type { SettingsTab } from "@/stores/ui-state/types";
+import type { SettingsTab } from "@/features/window/stores/ui-state/types";
 import type { Action } from "../models/action.types";
 
 interface NavigationActionsParams {

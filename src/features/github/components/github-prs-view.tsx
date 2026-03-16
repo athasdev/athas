@@ -14,8 +14,8 @@ import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/repo";
-import { useRepositoryStore } from "@/features/git/stores/repository-store";
+import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
+import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";

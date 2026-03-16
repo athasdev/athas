@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import { NODE_PLATFORM, PLATFORM_ARCH } from "@/utils/platform";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { extensionInstaller } from "../installer/extension-installer";
@@ -133,7 +133,8 @@ async function registerLanguageProvider(params: {
     return;
   }
 
-  const { tokenizeCode, convertToEditorTokens } = await import("@/features/editor/lib/wasm-parser");
+  const { tokenizeCode, convertToEditorTokens } =
+    await import("@/features/editor/lib/wasm-parser/wasm-parser-api");
 
   const languageExtension = {
     id: runtimeExtensionId,
@@ -768,9 +769,8 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               );
 
               if (matchesLanguage) {
-                const { setSyntaxHighlightingFilePath } = await import(
-                  "@/features/editor/extensions/builtin/syntax-highlighting"
-                );
+                const { setSyntaxHighlightingFilePath } =
+                  await import("@/features/editor/extensions/builtin/syntax-highlighting");
                 setSyntaxHighlightingFilePath(activeBuffer.path);
               }
             }

@@ -26,8 +26,10 @@ import {
 } from "react";
 import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useRepositoryStore } from "@/features/git/stores/repository-store";
-import { toast } from "@/stores/toast-store";
+import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import { toast } from "@/ui/toast-store";
+import Input from "@/ui/input";
+import Select from "@/ui/select";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { usePRDiffHighlighting } from "../hooks/use-pr-diff-highlighting";
@@ -748,7 +750,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
         shouldSchedule = true;
         return {
           ...prev,
-          [path]: { ...(existing ?? {}), loading: true, error: undefined },
+          [path]: { ...existing, loading: true, error: undefined },
         };
       });
       if (!shouldSchedule) return;
@@ -1203,11 +1205,13 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
                       size={12}
                       className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
                     />
-                    <input
+                    <Input
                       value={fileQuery}
                       onChange={(e) => setFileQuery(e.target.value)}
                       placeholder="Search changed files..."
-                      className="ui-font h-8 w-full rounded-md border border-border/70 bg-primary-bg/70 pr-2 pl-7 text-text text-xs placeholder:text-text-lighter focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30 sm:w-56"
+                      leftIcon={Search}
+                      size="md"
+                      className="ui-font w-full rounded-md border-border/70 bg-primary-bg/70 sm:w-56"
                     />
                   </div>
                   <div className="relative">
@@ -1215,21 +1219,19 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
                       size={12}
                       className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
                     />
-                    <select
+                    <Select
                       value={fileStatusFilter}
                       onChange={(e) => setFileStatusFilter(e.target.value as FileStatusFilter)}
-                      className="ui-font h-8 w-full appearance-none rounded-md border border-border/70 bg-primary-bg/70 pr-7 pl-7 text-text text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30 sm:w-40"
+                      size="md"
+                      leftIcon={SlidersHorizontal}
+                      className="w-full rounded-md border-border/70 bg-primary-bg/70 sm:w-40"
                     >
                       <option value="all">All statuses</option>
                       <option value="added">Added</option>
                       <option value="modified">Modified</option>
                       <option value="deleted">Deleted</option>
                       <option value="renamed">Renamed</option>
-                    </select>
-                    <ChevronDown
-                      size={12}
-                      className="-translate-y-1/2 pointer-events-none absolute top-1/2 right-2 text-text-lighter"
-                    />
+                    </Select>
                   </div>
                 </div>
               </div>

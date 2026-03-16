@@ -1,10 +1,10 @@
 import { Info } from "lucide-react";
 import { useEffect } from "react";
-import { useSettingsStore } from "@/features/settings/store";
-import { useFontStore } from "@/stores/font-store";
-import Dropdown from "@/ui/dropdown";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import { useFontStore } from "@/features/settings/stores/font-store";
 import NumberInput from "@/ui/number-input";
 import Section, { SettingRow } from "@/ui/section";
+import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import Tooltip from "@/ui/tooltip";
 
@@ -34,7 +34,10 @@ export const TerminalSettings = () => {
   );
 
   const fontOptions = [
-    ...installedNerdFonts.map((font) => ({ value: font, label: `${font} (Nerd Font)` })),
+    ...installedNerdFonts.map((font) => ({
+      value: font,
+      label: `${font} (Nerd Font)`,
+    })),
     ...monospaceFonts
       .filter((f) => !NERD_FONTS.includes(f.family))
       .map((f) => ({ value: f.family, label: f.family })),
@@ -57,9 +60,13 @@ export const TerminalSettings = () => {
         <SettingRow
           label="Font Family"
           description="Font family for the integrated terminal. Select a Nerd Font for best icon support."
+          onReset={() =>
+            updateSetting("terminalFontFamily", getDefaultSetting("terminalFontFamily"))
+          }
+          canReset={settings.terminalFontFamily !== getDefaultSetting("terminalFontFamily")}
         >
           <div className="flex items-center gap-2">
-            <Dropdown
+            <Select
               value={settings.terminalFontFamily}
               options={fontOptions}
               onChange={(val) => updateSetting("terminalFontFamily", val)}
@@ -74,7 +81,12 @@ export const TerminalSettings = () => {
           </div>
         </SettingRow>
 
-        <SettingRow label="Font Size" description="Terminal font size in pixels">
+        <SettingRow
+          label="Font Size"
+          description="Terminal font size in pixels"
+          onReset={() => updateSetting("terminalFontSize", getDefaultSetting("terminalFontSize"))}
+          canReset={settings.terminalFontSize !== getDefaultSetting("terminalFontSize")}
+        >
           <NumberInput
             min="8"
             max="32"
@@ -85,7 +97,14 @@ export const TerminalSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow label="Line Height" description="Line height multiplier">
+        <SettingRow
+          label="Line Height"
+          description="Line height multiplier"
+          onReset={() =>
+            updateSetting("terminalLineHeight", getDefaultSetting("terminalLineHeight"))
+          }
+          canReset={settings.terminalLineHeight !== getDefaultSetting("terminalLineHeight")}
+        >
           <NumberInput
             min="1"
             max="2"
@@ -97,7 +116,14 @@ export const TerminalSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow label="Letter Spacing" description="Additional spacing between characters">
+        <SettingRow
+          label="Letter Spacing"
+          description="Additional spacing between characters"
+          onReset={() =>
+            updateSetting("terminalLetterSpacing", getDefaultSetting("terminalLetterSpacing"))
+          }
+          canReset={settings.terminalLetterSpacing !== getDefaultSetting("terminalLetterSpacing")}
+        >
           <NumberInput
             min="-5"
             max="5"
@@ -108,11 +134,37 @@ export const TerminalSettings = () => {
             size="xs"
           />
         </SettingRow>
+
+        <SettingRow
+          label="Scrollback"
+          description="How many lines of terminal history to keep in memory"
+          onReset={() =>
+            updateSetting("terminalScrollback", getDefaultSetting("terminalScrollback"))
+          }
+          canReset={settings.terminalScrollback !== getDefaultSetting("terminalScrollback")}
+        >
+          <NumberInput
+            min="1000"
+            max="100000"
+            step={1000}
+            value={settings.terminalScrollback}
+            onChange={(val) => updateSetting("terminalScrollback", val)}
+            className="w-24"
+            size="xs"
+          />
+        </SettingRow>
       </Section>
 
       <Section title="Cursor">
-        <SettingRow label="Cursor Style" description="Shape of the cursor">
-          <Dropdown
+        <SettingRow
+          label="Cursor Style"
+          description="Shape of the cursor"
+          onReset={() =>
+            updateSetting("terminalCursorStyle", getDefaultSetting("terminalCursorStyle"))
+          }
+          canReset={settings.terminalCursorStyle !== getDefaultSetting("terminalCursorStyle")}
+        >
+          <Select
             value={settings.terminalCursorStyle}
             options={[
               { value: "block", label: "Block" },
@@ -127,11 +179,36 @@ export const TerminalSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow label="Blinking Cursor" description="Whether the cursor should blink">
+        <SettingRow
+          label="Blinking Cursor"
+          description="Whether the cursor should blink"
+          onReset={() =>
+            updateSetting("terminalCursorBlink", getDefaultSetting("terminalCursorBlink"))
+          }
+          canReset={settings.terminalCursorBlink !== getDefaultSetting("terminalCursorBlink")}
+        >
           <Switch
             checked={settings.terminalCursorBlink}
             onChange={(val) => updateSetting("terminalCursorBlink", val)}
             size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Cursor Width"
+          description="Thickness of the bar or block cursor"
+          onReset={() =>
+            updateSetting("terminalCursorWidth", getDefaultSetting("terminalCursorWidth"))
+          }
+          canReset={settings.terminalCursorWidth !== getDefaultSetting("terminalCursorWidth")}
+        >
+          <NumberInput
+            min="1"
+            max="6"
+            value={settings.terminalCursorWidth}
+            onChange={(val) => updateSetting("terminalCursorWidth", val)}
+            className="w-20"
+            size="xs"
           />
         </SettingRow>
       </Section>

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { SearchMatch } from "@/features/global-search/lib/rust-api/search";
 
 interface SearchMatchItemProps {
@@ -40,7 +40,7 @@ export const SearchMatchItem = memo(
       >
         {/* File icon, name and path */}
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <FileIcon
+          <FileExplorerIcon
             fileName={fileName}
             isDir={false}
             size={12}

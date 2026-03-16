@@ -14,7 +14,7 @@ import {
 } from "@/features/image-editor/utils/image-file-utils";
 import { useResizeObserver } from "@/hooks/use-resize-observer";
 import Button from "@/ui/button";
-import UnsavedChangesDialog from "@/ui/unsaved-changes-dialog";
+import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
 import { useImageZoom } from "../hooks/use-image-zoom";

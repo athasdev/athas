@@ -2,7 +2,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useHistoryStore } from "@/features/editor/stores/history-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import { useEditorStateStore } from "@/stores/editor-cursor-store";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
 
 interface VimClipboard {
   content: string;
@@ -36,12 +36,6 @@ export const createVimEditing = (): VimEditingCommands => {
     useEditorStateStore.getState().actions.setCursorPosition(position);
   const getLines = () => useEditorViewStore.getState().lines;
   const getContent = () => useEditorViewStore.getState().actions.getContent();
-
-  // Get active buffer info
-  const _getActiveBuffer = () => {
-    const { buffers, activeBufferId } = useBufferStore.getState();
-    return buffers.find((b) => b.id === activeBufferId);
-  };
 
   // Update buffer content
   const updateContent = (newContent: string) => {

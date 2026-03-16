@@ -224,7 +224,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
             }
             className="flex flex-col items-center gap-4"
           >
-            {Array.from(new Array(numPages), (_el, index) => (
+            {Array.from({ length: numPages }, (_el, index) => (
               <div
                 key={`page_${index + 1}`}
                 className="pdf-page-container bg-white shadow-lg"

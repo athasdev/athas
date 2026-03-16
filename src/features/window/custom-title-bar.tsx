@@ -8,13 +8,13 @@ import {
 } from "@/features/layout/components/sidebar/sidebar-pane-utils";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC } from "@/utils/platform";
 import { AccountMenu } from "./components/account-menu";
 import ProjectTabs from "./components/project-tabs";
-import CustomMenuBar from "./menu-bar";
+import CustomMenuBar from "./menu-bar/window-menu-bar";
 
 interface CustomTitleBarProps {
   title?: string;
@@ -148,10 +148,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     return (
       <div
         data-tauri-drag-region
-        className="relative z-50 flex h-10 select-none items-center justify-between bg-secondary-bg/70 pr-2 pl-[96px] backdrop-blur-sm"
+        className="relative z-50 flex h-10 select-none items-start justify-between bg-secondary-bg/70 pt-2 pr-3 pl-[96px] backdrop-blur-sm"
       >
         {/* Left side: keep clear of traffic lights */}
-        <div className="pointer-events-auto flex min-w-0 items-center gap-2">
+        <div className="pointer-events-auto flex h-7 min-w-0 items-center gap-2">
           {!settings.nativeMenuBar && !settings.compactMenuBar && (
             <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
           )}
@@ -185,12 +185,12 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         </div>
 
         {/* Center - Project tabs for macOS */}
-        <div className="-translate-x-1/2 pointer-events-auto absolute left-1/2 flex transform items-center">
+        <div className="-translate-x-1/2 pointer-events-auto absolute top-2 left-1/2 flex h-7 transform items-center">
           <ProjectTabs />
         </div>
 
         {/* Account menu */}
-        <div className="mr-2 flex items-center gap-1">
+        <div className="mr-1 flex h-7 items-center">
           <AccountMenu iconSize={14} />
         </div>
       </div>

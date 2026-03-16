@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, Filter } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import type { ColumnInfo, QueryResult } from "../models/common.types";
@@ -40,7 +40,7 @@ export default function DataViewComponent({
   );
   const [editValue, setEditValue] = useState<string>("");
   const editInputRef = useRef<HTMLInputElement>(null);
-  const { setSqliteRowMenu } = useUIState();
+  const { setDatabaseRowMenu } = useUIState();
   const handleRowClick = (rowIndex: number, event: React.MouseEvent) => {
     if (event.ctrlKey || event.metaKey) {
       // Multi-select with Ctrl/Cmd
@@ -81,7 +81,7 @@ export default function DataViewComponent({
       rowData[column] = row[i];
     });
 
-    setSqliteRowMenu({
+    setDatabaseRowMenu({
       x: event.clientX,
       y: event.clientY,
       tableName,

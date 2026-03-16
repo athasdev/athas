@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAuthStore } from "@/stores/auth-store";
-import { toast } from "@/stores/toast-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import { toast } from "@/ui/toast-store";
 import Button from "@/ui/button";
 import Section, { SettingRow } from "@/ui/section";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
-import { updateEnterprisePolicy } from "@/utils/auth-api";
+import { updateEnterprisePolicy } from "@/features/window/services/auth-api";
 
 const parseAllowlistInput = (value: string): string[] =>
   Array.from(

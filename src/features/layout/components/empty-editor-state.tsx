@@ -1,5 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
+  Database,
   FileText,
   FolderOpen,
   Globe,
@@ -16,8 +17,10 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
 import { useContextMenu } from "@/hooks/use-context-menu";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
+import Input from "@/ui/input";
 
 interface ActionItem {
   id: string;
@@ -29,6 +32,7 @@ interface ActionItem {
 export function EmptyEditorState() {
   const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
     useBufferStore.use.actions();
+  const { setIsDatabaseConnectionVisible } = useUIState();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
 
   const customActions = useCustomActionsStore.use.actions();
@@ -52,6 +56,10 @@ export function EmptyEditorState() {
   const handleOpenWebViewer = useCallback(() => {
     openWebViewerBuffer("https://");
   }, [openWebViewerBuffer]);
+
+  const handleOpenDatabaseConnection = useCallback(() => {
+    setIsDatabaseConnectionVisible(true);
+  }, [setIsDatabaseConnectionVisible]);
 
   const handleOpenFile = useCallback(async () => {
     try {
@@ -155,8 +163,21 @@ export function EmptyEditorState() {
         icon: <Globe size={12} />,
         onClick: handleOpenWebViewer,
       },
+      {
+        id: "connect-database",
+        label: "Connect Database",
+        icon: <Database size={12} />,
+        onClick: handleOpenDatabaseConnection,
+      },
     ];
-  }, [handleOpenFolder, handleOpenFile, handleOpenTerminal, handleOpenAgent, handleOpenWebViewer]);
+  }, [
+    handleOpenFolder,
+    handleOpenFile,
+    handleOpenTerminal,
+    handleOpenAgent,
+    handleOpenWebViewer,
+    handleOpenDatabaseConnection,
+  ]);
 
   const actions: ActionItem[] = [
     {
@@ -189,6 +210,12 @@ export function EmptyEditorState() {
       icon: <Globe size={14} className="text-text-light" />,
       action: handleOpenWebViewer,
     },
+    {
+      id: "database",
+      label: "Connect Database",
+      icon: <Database size={14} className="text-text-light" />,
+      action: handleOpenDatabaseConnection,
+    },
   ];
 
   return (
@@ -215,7 +242,7 @@ export function EmptyEditorState() {
             {customActions.map((action) =>
               editingActionId === action.id ? (
                 <div key={action.id} className="px-1">
-                  <input
+                  <Input
                     ref={inputRef}
                     type="text"
                     placeholder="command"
@@ -223,7 +250,7 @@ export function EmptyEditorState() {
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onBlur={handleSave}
-                    className="w-full rounded border border-border bg-secondary-bg px-2 py-1 text-text text-xs outline-none focus:border-accent"
+                    className="w-full bg-secondary-bg"
                   />
                 </div>
               ) : (
@@ -265,7 +292,7 @@ export function EmptyEditorState() {
 
         {isAddingAction ? (
           <div className="px-1">
-            <input
+            <Input
               ref={inputRef}
               type="text"
               placeholder="command"
@@ -273,7 +300,7 @@ export function EmptyEditorState() {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleSave}
-              className="w-full rounded border border-border bg-secondary-bg px-2 py-1 text-text text-xs outline-none focus:border-accent"
+              className="w-full bg-secondary-bg"
             />
           </div>
         ) : (

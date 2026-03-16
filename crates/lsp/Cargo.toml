@@ -1,0 +1,16 @@
+[package]
+name = "athas-lsp"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+athas-runtime = { path = "../runtime" }
+crossbeam-channel = "0.5"
+log = "0.4"
+lsp-types = { version = "0.95", features = ["proposed"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tauri = { version = "2", features = ["test"] }
+tokio = { version = "1.0", features = ["full"] }
+which = "7.0"

@@ -8,7 +8,9 @@ export const FeaturesSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
 
   // Create core features list
-  const coreFeaturesList = createCoreFeaturesList(settings.coreFeatures);
+  const coreFeaturesList = createCoreFeaturesList(settings.coreFeatures).filter(
+    (feature: CoreFeature) => feature.id !== "git",
+  );
 
   // Handle core feature toggle
   const handleCoreFeatureToggle = (featureId: string, enabled: boolean) => {

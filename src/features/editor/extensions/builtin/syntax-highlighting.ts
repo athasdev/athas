@@ -1,4 +1,8 @@
-import { convertToEditorTokens, tokenizeCode, wasmParserLoader } from "../../lib/wasm-parser";
+import {
+  convertToEditorTokens,
+  tokenizeCode,
+  wasmParserLoader,
+} from "../../lib/wasm-parser/wasm-parser-api";
 import { indexedDBParserCache } from "../../lib/wasm-parser/cache-indexeddb";
 import {
   fetchHighlightQuery,

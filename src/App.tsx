@@ -7,6 +7,7 @@ import { useRemoteConnection } from "@/features/remote/hooks/use-remote-connecti
 import { useRemoteWindowClose } from "@/features/remote/hooks/use-remote-window-close";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 
 const UpdateDialog = lazy(() => import("@/features/settings/components/update-dialog"));
 
@@ -18,7 +19,7 @@ import { initializeThemeSystem } from "./extensions/themes/theme-initializer";
 import {
   cleanupFileClipboardListener,
   initializeFileClipboardListener,
-} from "./features/file-explorer/stores/file-clipboard-listener";
+} from "./features/file-explorer/stores/file-explorer-clipboard-listener";
 import {
   cleanupFileWatcherListener,
   initializeFileWatcherListener,
@@ -38,12 +39,12 @@ import { useExtensionInstallPrompt } from "./extensions/hooks/use-extension-inst
 // Initialize extension system
 import { extensionLoader } from "./extensions/loader/extension-loader";
 import { initializeExtensionStore } from "./extensions/registry/extension-store";
-import { initializeWasmTokenizer } from "./features/editor/lib/wasm-parser";
+import { initializeWasmTokenizer } from "./features/editor/lib/wasm-parser/wasm-parser-api";
 import { initializeKeymaps } from "./features/keymaps/init";
 import { WindowResizeBorder } from "./features/window/window-resize-border";
-import { useCliOpen } from "./hooks/use-cli-open";
-import { useDeepLink } from "./hooks/use-deep-link";
-import { useAuthStore } from "./stores/auth-store";
+import { useCliOpen } from "./features/window/hooks/use-cli-open";
+import { useDeepLink } from "./features/window/hooks/use-deep-link";
+import { useAuthStore } from "./features/window/stores/auth-store";
 
 initializeWasmTokenizer().catch(console.error);
 extensionLoader.initialize().catch(console.error);
@@ -64,6 +65,7 @@ function App() {
     onDismiss: dismissUpdate,
     onDownload: downloadUpdate,
   } = useAutoUpdate();
+  const initializeWhatsNew = useWhatsNewStore((state) => state.initialize);
 
   // App initialization and setup hooks
   usePlatformSetup();
@@ -82,6 +84,10 @@ function App() {
   useEffect(() => {
     useAuthStore.getState().initialize();
   }, []);
+
+  useEffect(() => {
+    void initializeWhatsNew();
+  }, [initializeWhatsNew]);
 
   // File watcher setup
   useEffect(() => {

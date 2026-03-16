@@ -1,6 +1,7 @@
 import { History } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import Input from "@/ui/input";
 import Tooltip from "@/ui/tooltip";
 import { useAIChatStore } from "../../store/store";
 import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
@@ -54,13 +55,13 @@ function EditableChatTitle({
 
   if (isEditing) {
     return (
-      <input
+      <Input
         ref={inputRef}
         value={editValue}
         onChange={(e) => setEditValue(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 font-medium text-text outline-none focus:border-accent/40 focus:bg-hover"
+        className="rounded-full border-border bg-secondary-bg/80 px-2.5 py-1 font-medium focus:border-accent/40 focus:bg-hover"
         style={{ minWidth: "100px", maxWidth: "200px" }}
       />
     );

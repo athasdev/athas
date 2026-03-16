@@ -10,17 +10,17 @@ import {
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import { createToolCall, markToolCallComplete } from "@/features/ai/lib/tool-call-state";
+import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
+import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpEvent } from "@/features/ai/types/acp";
+import type { ContextInfo } from "@/features/ai/types/ai-context";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/stores/auth-store";
-import { useProjectStore } from "@/stores/project-store";
-import { AcpStreamHandler } from "@/utils/acp-handler";
-import { getChatCompletionStream, isAcpAgent } from "@/utils/ai-chat";
-import type { ContextInfo } from "@/utils/types";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import ChatHistorySidebar from "../history/sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
@@ -142,7 +142,7 @@ const AIChat = memo(function AIChat({
       activeBuffer || undefined;
     if (activeBuffer?.isWebViewer && activeBuffer.webViewerUrl) {
       // Fetch web page content for context
-      const { fetchWebPageContent } = await import("@/utils/web-fetcher");
+      const { fetchWebPageContent } = await import("@/features/ai/services/web-content-service");
       const webContent = await fetchWebPageContent(activeBuffer.webViewerUrl);
       activeBufferContext = {
         ...activeBuffer,
@@ -642,7 +642,7 @@ details: ${errorDetails || mainError}
 
   return (
     <div
-      className={`ui-font flex h-full flex-col bg-secondary-bg text-text text-xs ${className || ""}`}
+      className={`ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
     >
       <ChatHeader />
       {isAiChatBlockedByPolicy ? (

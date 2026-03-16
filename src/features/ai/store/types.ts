@@ -1,10 +1,18 @@
 import type { SessionMode, SlashCommand } from "@/features/ai/types/acp";
 import type { AgentType, Chat, Message } from "@/features/ai/types/ai-chat";
 import type { FileEntry } from "@/features/file-system/types/app";
-import type { ProviderModel } from "@/utils/providers/provider-interface";
+import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";
 
 export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
 export type ChatMode = "chat" | "plan";
+
+export interface AIWorkspaceSessionSnapshot {
+  currentChatId: string | null;
+  selectedAgentId: AgentType;
+  isChatHistoryVisible: boolean;
+  selectedBufferPaths: string[];
+  selectedFilesPaths: string[];
+}
 
 export interface QueuedMessage {
   id: string;
@@ -166,6 +174,15 @@ export interface AIChatActions {
 
   // Settings integration
   applyDefaultSettings: () => void;
+
+  // Workspace session integration
+  getWorkspaceSessionSnapshot: (
+    buffers: Array<{ id: string; path: string }>,
+  ) => AIWorkspaceSessionSnapshot;
+  restoreWorkspaceSession: (
+    snapshot: AIWorkspaceSessionSnapshot | null | undefined,
+    buffers: Array<{ id: string; path: string }>,
+  ) => void;
 
   // Helper getters
   getCurrentChat: () => Chat | undefined;

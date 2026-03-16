@@ -1,6 +1,6 @@
 import { Database, Globe, Package, Pin, Sparkles, Terminal, X } from "lucide-react";
 import { memo, useCallback, useEffect, useState } from "react";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { Buffer } from "@/features/tabs/types/buffer";
 import { cn } from "@/utils/cn";
 
@@ -75,7 +75,7 @@ const TabBarItem = memo(function TabBarItem({
             : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",
           isDraggedTab ? "opacity-30" : "opacity-100",
         )}
-        style={{ minWidth: 104, maxWidth: 290 }}
+        style={{ maxWidth: 290 }}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
@@ -103,10 +103,10 @@ const TabBarItem = memo(function TabBarItem({
             ) : (
               <Globe size={12} className="text-text-lighter" />
             )
-          ) : buffer.isSQLite ? (
+          ) : buffer.databaseType ? (
             <Database size={12} className="text-text-lighter" />
           ) : (
-            <FileIcon
+            <FileExplorerIcon
               fileName={buffer.name}
               isDir={false}
               className="text-text-lighter"
@@ -153,7 +153,7 @@ const TabBarItem = memo(function TabBarItem({
           draggable={false}
         >
           {buffer.isPinned ? (
-            <Pin className="pointer-events-none select-none text-accent" size={10} />
+            <Pin className="pointer-events-none select-none fill-current text-accent" size={10} />
           ) : (
             <X className="pointer-events-none select-none" size={10} />
           )}

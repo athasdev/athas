@@ -1,4 +1,4 @@
-import type { SettingsTab } from "@/stores/ui-state-store";
+import type { SettingsTab } from "@/features/window/stores/ui-state-store";
 
 export interface SettingSearchRecord {
   id: string;

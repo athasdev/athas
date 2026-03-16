@@ -175,7 +175,8 @@ class GenericLspExtension {
       }
 
       // Load the tree-sitter parser
-      const { wasmParserLoader } = await import("@/features/editor/lib/wasm-parser");
+      const { wasmParserLoader } =
+        await import("@/features/editor/lib/wasm-parser/wasm-parser-api");
       await wasmParserLoader.loadParser({
         languageId: grammar.languageId,
         wasmPath,

@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { logger } from "@/features/editor/utils/logger";
 import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useKeymapStore } from "../stores/store";
 import { evaluateWhenClause } from "../utils/context";
 import { eventToKey, matchKeybinding } from "../utils/matcher";

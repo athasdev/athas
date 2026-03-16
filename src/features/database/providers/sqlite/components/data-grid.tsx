@@ -13,23 +13,24 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { useCellCopy } from "../hooks/use-cell-copy";
 import { useColumnResize } from "../hooks/use-column-resize";
 import { useFkNavigation } from "../hooks/use-fk-navigation";
-import type { ColumnInfo } from "../types";
+import type { ColumnInfo } from "../sqlite-types";
 import CellRenderer from "./cell-renderer";
 
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
   int: { icon: Hash, color: "text-accent" },
   num: { icon: Hash, color: "text-accent" },
-  text: { icon: Type, color: "text-green-500" },
-  varchar: { icon: Type, color: "text-green-500" },
-  char: { icon: Type, color: "text-green-500" },
-  date: { icon: Calendar, color: "text-purple-500" },
-  time: { icon: Calendar, color: "text-purple-500" },
-  blob: { icon: FileText, color: "text-red-500" },
-  binary: { icon: FileText, color: "text-red-500" },
+  text: { icon: Type, color: "text-text-lighter" },
+  varchar: { icon: Type, color: "text-text-lighter" },
+  char: { icon: Type, color: "text-text-lighter" },
+  date: { icon: Calendar, color: "text-accent" },
+  time: { icon: Calendar, color: "text-accent" },
+  blob: { icon: FileText, color: "text-text-lighter" },
+  binary: { icon: FileText, color: "text-text-lighter" },
 };
 
 function getColumnIcon(type: string, isPrimaryKey: boolean, isForeignKey: boolean) {
@@ -122,7 +123,7 @@ export default function DataGrid({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="group flex items-center justify-between px-3 py-2">
+      <div className="group flex items-center justify-between border-border/50 border-b px-3 py-2">
         <span className="text-text-lighter text-xs">{queryResult.rows.length} rows</span>
         <button
           onClick={onCreateRow}
@@ -132,11 +133,13 @@ export default function DataGrid({
           <Plus size={10} className="text-text-lighter hover:text-text" />
         </button>
       </div>
-      <div className="custom-scrollbar flex-1 overflow-auto">
-        <table className="w-full border-collapse text-xs">
+      <div className="custom-scrollbar flex-1 overflow-auto px-2 pb-2">
+        <table className="w-full border-separate border-spacing-0 text-xs">
           <thead className="sticky top-0 z-10">
-            <tr className="bg-secondary-bg/90 backdrop-blur-sm">
-              <th className="w-10 border-border/60 border-b px-2 py-2 text-left">#</th>
+            <tr>
+              <th className="w-10 border-border/60 border-b bg-primary-bg/95 px-2 py-2 text-left backdrop-blur-sm">
+                #
+              </th>
               {queryResult.columns.map((col, i) => {
                 const info = tableMeta.find((c) => c.name === col);
                 const sorted = sortColumn === col;
@@ -146,7 +149,7 @@ export default function DataGrid({
                 return (
                   <th
                     key={i}
-                    className="group relative cursor-pointer whitespace-nowrap border-border/60 border-b px-2 py-2 text-left transition-colors hover:bg-hover"
+                    className="group relative cursor-pointer whitespace-nowrap border-border/60 border-b bg-primary-bg/95 px-2 py-2 text-left transition-colors hover:bg-hover/80"
                     style={{ width: colWidth, minWidth: 60 }}
                     onClick={() => onColumnSort(col)}
                   >
@@ -206,10 +209,10 @@ export default function DataGrid({
             {queryResult.rows.map((row, ri) => (
               <tr
                 key={ri}
-                className="cursor-pointer border-border/50 border-b hover:bg-hover/40"
+                className="cursor-pointer transition-colors hover:bg-hover/25"
                 onContextMenu={(e) => onRowContextMenu(e, ri)}
               >
-                <td className="border-border/60 border-b px-2 py-1.5 text-text-lighter">
+                <td className="border-border/40 border-b px-2 py-1.5 text-text-lighter">
                   {(currentPage - 1) * pageSize + ri + 1}
                 </td>
                 {(row as unknown[]).map((cell, ci) => {
@@ -223,15 +226,15 @@ export default function DataGrid({
                     <td
                       key={ci}
                       className={cn(
-                        "max-w-[300px] border-border/60 border-b px-2 py-1.5",
-                        !isPK && "cursor-pointer hover:bg-hover/50",
-                        isPK && "bg-amber-500/10",
+                        "max-w-[300px] border-border/40 border-b px-2 py-1.5",
+                        !isPK && "cursor-pointer hover:bg-hover/40",
+                        isPK && "bg-selected/60",
                       )}
                       style={{ width: getColumnWidth(col), minWidth: 60 }}
                       onClick={() => !isPK && !fk && handleCellClick(ri, col, cell)}
                     >
                       {isEditing ? (
-                        <input
+                        <Input
                           ref={(el) => el?.focus()}
                           type={info?.type.toLowerCase().includes("int") ? "number" : "text"}
                           value={editValue}
@@ -241,7 +244,7 @@ export default function DataGrid({
                             if (e.key === "Escape") setEditing(null);
                           }}
                           onBlur={handleSubmit}
-                          className="w-full rounded bg-secondary-bg/60 p-1 text-xs outline-none"
+                          className="w-full rounded-lg border-border/70 bg-secondary-bg/80 text-xs focus:border-accent/60"
                         />
                       ) : (
                         <CellRenderer

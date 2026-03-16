@@ -254,7 +254,7 @@ export const useGitHubStore = create(
             prDetailsCache: {
               ...state.prDetailsCache,
               [cacheKey]: {
-                ...(state.prDetailsCache[cacheKey] ?? {}),
+                ...state.prDetailsCache[cacheKey],
                 fetchedAt: Date.now(),
                 details,
               },

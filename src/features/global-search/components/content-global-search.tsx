@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { CommandInput } from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { PREVIEW_DEBOUNCE_DELAY } from "../constants/limits";

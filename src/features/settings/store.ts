@@ -43,7 +43,7 @@ const AI_AUTOCOMPLETE_MODEL_MIGRATIONS: Record<string, string> = {
   "google/gemini-2.5-flash-lite": "google/gemini-3-flash-preview",
 };
 
-interface Settings {
+export interface Settings {
   // General
   autoSave: boolean;
   sidebarPosition: "left" | "right";
@@ -60,8 +60,10 @@ interface Settings {
   terminalFontSize: number;
   terminalLineHeight: number;
   terminalLetterSpacing: number;
+  terminalScrollback: number;
   terminalCursorStyle: "block" | "underline" | "bar";
   terminalCursorBlink: boolean;
+  terminalCursorWidth: number;
   // UI
   uiFontFamily: string;
   uiFontSize: number;
@@ -117,6 +119,19 @@ interface Settings {
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
   gitChangesFolderView: boolean;
+  confirmBeforeDiscard: boolean;
+  autoRefreshGitStatus: boolean;
+  showUntrackedFiles: boolean;
+  showStagedFirst: boolean;
+  gitDefaultDiffView: "unified" | "split";
+  openDiffOnClick: boolean;
+  showGitStatusInFileTree: boolean;
+  compactGitStatusBadges: boolean;
+  collapseEmptyGitSections: boolean;
+  rememberLastGitPanelMode: boolean;
+  gitLastPanelMode: "stash" | "history" | "none";
+  enableInlineGitBlame: boolean;
+  enableGitGutter: boolean;
 }
 
 const normalizeAISettings = (settings: Settings): Settings => {
@@ -156,7 +171,7 @@ const normalizeAISettings = (settings: Settings): Settings => {
   return normalizedSettings;
 };
 
-const defaultSettings: Settings = {
+export const defaultSettings: Settings = {
   // General
   autoSave: true,
   sidebarPosition: "left",
@@ -173,8 +188,10 @@ const defaultSettings: Settings = {
   terminalFontSize: 14,
   terminalLineHeight: 1.2,
   terminalLetterSpacing: 0,
+  terminalScrollback: 10000,
   terminalCursorStyle: "block",
   terminalCursorBlink: true,
+  terminalCursorWidth: 2,
   // UI
   uiFontFamily: "Geist Variable",
   uiFontSize: UI_FONT_SIZE_DEFAULT,
@@ -233,7 +250,23 @@ const defaultSettings: Settings = {
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
   gitChangesFolderView: true,
+  confirmBeforeDiscard: true,
+  autoRefreshGitStatus: true,
+  showUntrackedFiles: true,
+  showStagedFirst: true,
+  gitDefaultDiffView: "unified",
+  openDiffOnClick: true,
+  showGitStatusInFileTree: true,
+  compactGitStatusBadges: false,
+  collapseEmptyGitSections: false,
+  rememberLastGitPanelMode: false,
+  gitLastPanelMode: "none",
+  enableInlineGitBlame: true,
+  enableGitGutter: true,
 };
+
+export const getDefaultSetting = <K extends keyof Settings>(key: K): Settings[K] =>
+  defaultSettings[key];
 
 const AI_CHAT_TOGGLE_COOLDOWN_MS = 120;
 
@@ -249,7 +282,9 @@ let storeInstance: Store;
 
 const getStore = async () => {
   if (!storeInstance) {
-    storeInstance = await load("settings.json", { autoSave: true } as Parameters<typeof load>[1]);
+    storeInstance = await load("settings.json", {
+      autoSave: true,
+    } as Parameters<typeof load>[1]);
 
     // Initialize defaults if not present, merge nested objects
     for (const [key, value] of Object.entries(defaultSettings)) {
@@ -393,9 +428,11 @@ const initializeSettings = async () => {
 
     // Sync Ollama base URL with provider
     if (normalizedSettings.ollamaBaseUrl) {
-      import("@/utils/providers").then(({ setOllamaBaseUrl }) => {
-        setOllamaBaseUrl(normalizedSettings.ollamaBaseUrl);
-      });
+      import("@/features/ai/services/providers/ai-provider-registry").then(
+        ({ setOllamaBaseUrl }) => {
+          setOllamaBaseUrl(normalizedSettings.ollamaBaseUrl);
+        },
+      );
     }
 
     // Update Zustand store
@@ -503,9 +540,11 @@ export const useSettingsStore = create(
 
           if (key === "theme") applyTheme(normalizedValue as Theme);
           if (key === "ollamaBaseUrl") {
-            import("@/utils/providers").then(({ setOllamaBaseUrl }) => {
-              setOllamaBaseUrl(normalizedValue as string);
-            });
+            import("@/features/ai/services/providers/ai-provider-registry").then(
+              ({ setOllamaBaseUrl }) => {
+                setOllamaBaseUrl(normalizedValue as string);
+              },
+            );
           }
           if (key === "fontFamily" || key === "uiFontFamily" || key === "uiFontSize") {
             const latestSettings = useSettingsStore.getState().settings;

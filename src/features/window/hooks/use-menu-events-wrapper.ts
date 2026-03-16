@@ -1,13 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAppStore } from "@/stores/app-store";
-import { useUIState } from "@/stores/ui-state-store";
-import { fetchRawAppVersion } from "@/utils/app-utils";
+import { fetchRawAppVersion } from "@/features/window/utils/app-version";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useMenuEvents } from "./use-menu-events";
 
 export function useMenuEventsWrapper() {
@@ -18,10 +17,7 @@ export function useMenuEventsWrapper() {
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { closeBuffer } = useBufferStore.use.actions();
-  const { handleSave } = useAppStore.use.actions();
-
-  // Get current window for window operations (currently unused but kept for future functionality)
-  const _currentWindow = getCurrentWebviewWindow();
+  const { handleSave } = useEditorAppStore.use.actions();
 
   useMenuEvents({
     onNewFile: fileSystemStore.handleCreateNewFile,
@@ -237,7 +233,7 @@ For more help: https://github.com/athasdev/athas`;
         }
 
         const { openUrl } = await import("@tauri-apps/plugin-opener");
-        await openUrl("https://github.com/athasdev/athas/issues/new?template=bug_report.md");
+        await openUrl("https://github.com/athasdev/athas/issues/new?template=01-bug.yml");
       } catch (e) {
         console.error("Failed to prepare bug report:", e);
       }

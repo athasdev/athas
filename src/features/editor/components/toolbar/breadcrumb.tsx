@@ -8,13 +8,13 @@ import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { logger } from "@/features/editor/utils/logger";
-import { FileIcon } from "@/features/file-explorer/components/file-icon";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
-import { useInlineEditToolbarStore } from "@/stores/inline-edit-toolbar-store";
-import { toast } from "@/stores/toast-store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
+import { toast } from "@/ui/toast-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";
 import { isMac } from "@/utils/platform";
 
@@ -136,7 +136,7 @@ export default function Breadcrumb() {
       previewName,
       activeBuffer.content,
       false, // isImage
-      false, // isSQLite
+      undefined, // databaseType
       false, // isDiff
       true, // isVirtual
       undefined, // diffData
@@ -437,7 +437,7 @@ export default function Breadcrumb() {
                 }}
                 className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
               >
-                <FileIcon
+                <FileExplorerIcon
                   fileName={item.name}
                   isDir={item.isDir}
                   isExpanded={false}

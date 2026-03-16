@@ -1,6 +1,6 @@
 import { useState } from "react";
-import Dropdown from "@/ui/dropdown";
 import Input from "@/ui/input";
+import Select from "@/ui/select";
 
 interface PaginationProps {
   currentPage: number;
@@ -50,7 +50,7 @@ export default function Pagination({
   return (
     <div className="flex items-center justify-between border-border border-t bg-secondary-bg px-3 py-2">
       <div className="flex items-center gap-2">
-        <Dropdown
+        <Select
           value={pageSize.toString()}
           options={[
             { value: "10", label: "10" },

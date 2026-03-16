@@ -1,4 +1,4 @@
-import Dropdown from "@/ui/dropdown";
+import Select from "@/ui/select";
 
 const PAGE_SIZES = [
   { value: "10", label: "10" },
@@ -26,7 +26,7 @@ export default function PaginationControls({
   return (
     <div className="flex items-center justify-between px-3 py-2">
       <div className="flex items-center gap-2">
-        <Dropdown
+        <Select
           value={pageSize.toString()}
           options={PAGE_SIZES}
           onChange={(v) => onPageSizeChange(Number(v))}

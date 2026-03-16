@@ -18,21 +18,25 @@ import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-s
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { getGitStatus } from "@/features/git/api/status";
-import GitBranchManager from "@/features/git/components/branch-manager";
+import { getGitStatus } from "@/features/git/api/git-status-api";
+import GitBranchManager from "@/features/git/components/git-branch-manager";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/stores/auth-store";
-import { toast } from "@/stores/toast-store";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import { toast } from "@/ui/toast-store";
+import Select from "@/ui/select";
 import {
   beginDesktopAuthSession,
   DesktopAuthError,
   waitForDesktopAuthToken,
-} from "@/utils/auth-api";
-import { type AutocompleteModel, fetchAutocompleteModels } from "@/utils/autocomplete";
+} from "@/features/window/services/auth-api";
+import {
+  type AutocompleteModel,
+  fetchAutocompleteModels,
+} from "@/features/editor/services/editor-autocomplete-service";
 import { cn } from "@/utils/cn";
-import { useUIState } from "../../../../stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { getFilenameFromPath } from "../../../file-system/controllers/file-utils";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
 import VimStatusIndicator from "../../../vim/components/vim-status-indicator";
@@ -237,12 +241,11 @@ const AiUsageStatusIndicator = () => {
   const subscriptionStatus = subscription?.status ?? "free";
   const enterprisePolicy = subscription?.enterprise?.policy;
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-  const isPro = subscriptionStatus === "pro" || subscriptionStatus === "trial";
+  const isPro = subscriptionStatus === "pro";
   const aiAllowedByPolicy = managedPolicy ? managedPolicy.aiCompletionEnabled : true;
   const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
   const planLabel = (() => {
     if (!isAuthenticated) return "Guest";
-    if (subscriptionStatus === "trial") return "Trial";
     if (subscriptionStatus === "pro") return "Pro";
     return "Free";
   })();
@@ -416,19 +419,20 @@ const AiUsageStatusIndicator = () => {
               >
                 Model
               </label>
-              <select
+              <Select
                 id="footer-ai-model-select"
                 value={aiAutocompleteModelId}
                 onChange={(e) => updateSetting("aiAutocompleteModelId", e.target.value)}
                 disabled={isLoadingModels}
-                className="ui-font w-full rounded-lg border border-border bg-secondary-bg px-2 py-1.5 text-text text-xs outline-none focus:border-accent disabled:opacity-60"
+                size="sm"
+                className="focus:border-accent focus:ring-accent/30"
               >
                 {autocompleteModels.map((model) => (
                   <option key={model.id} value={model.id}>
                     {model.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </>
         )}
@@ -464,7 +468,8 @@ const EditorFooter = () => {
   const settings = useSettingsStore((state) => state.settings);
   const uiState = useUIState();
   const { rootFolderPath } = useFileSystemStore();
-  const { gitStatus, actions } = useGitStore();
+  const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
+  const { actions } = useGitStore();
   const { available, downloading, installing, updateInfo, downloadAndInstall } = useUpdater(false);
   const cursorPosition = useEditorStateStore.use.cursorPosition();
 
@@ -482,15 +487,15 @@ const EditorFooter = () => {
     <div className="relative z-20 flex min-h-9 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
       <div className="ui-font flex items-center gap-1 text-text-lighter text-xs">
         {/* Git branch manager */}
-        {rootFolderPath && gitStatus?.branch && (
+        {rootFolderPath && workspaceGitStatus?.branch && (
           <GitBranchManager
-            currentBranch={gitStatus.branch}
+            currentBranch={workspaceGitStatus.branch}
             repoPath={rootFolderPath}
             paletteTarget
             placement="up"
             onBranchChange={async () => {
               const status = await getGitStatus(rootFolderPath);
-              actions.setGitStatus(status);
+              actions.setWorkspaceGitStatus(status, rootFolderPath);
             }}
             compact={true}
           />

@@ -3,6 +3,7 @@ import { AlertCircle, CheckCircle, ExternalLink, Key, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { getProviderById } from "@/features/ai/types/providers";
 import Button from "@/ui/button";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
 interface ApiKeyModalProps {
@@ -207,18 +208,14 @@ const ApiKeyModal = ({
               API Key
             </label>
 
-            <input
+            <Input
               ref={inputRef}
               id="api-key-input"
               type="password"
               value={apiKey}
               onChange={(e) => handleKeyChange(e.target.value)}
               placeholder={getApiKeyPlaceholder()}
-              className={cn(
-                "w-full rounded border border-border bg-secondary-bg",
-                "ui-font px-3 py-2 text-text text-xs",
-                "focus:border-blue-500 focus:outline-none",
-              )}
+              className={cn("w-full bg-secondary-bg")}
               disabled={isValidating}
             />
 

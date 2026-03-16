@@ -4,8 +4,8 @@
  * Examples: 3dw, d3w, 2ciw, c2aw, p, 3p, P, etc.
  */
 
-import { getActionKeys } from "../actions";
-import { getOperatorKeys } from "../operators";
+import { getActionKeys } from "../actions/action-registry";
+import { getOperatorKeys } from "../operators/operator-registry";
 import { getMotionKeys } from "./motion-registry";
 import type { VimCommand } from "./types";
 

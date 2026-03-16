@@ -1,6 +1,3 @@
-import { writeFileSync } from "fs";
-import { join } from "path";
-
 const BENCHMARKS = {
   small: { lines: 100, name: "benchmark_small.md" },
   medium: { lines: 2000, name: "benchmark_medium.md" },
@@ -19,10 +16,12 @@ const generateContent = (lineCount: number) => {
   return content;
 };
 
-Object.entries(BENCHMARKS).forEach(([key, config]) => {
-  const filePath = join(process.cwd(), config.name);
-  console.log(`Generating ${key} benchmark (${config.lines} lines) to ${config.name}...`);
-  writeFileSync(filePath, generateContent(config.lines));
-});
+await Promise.all(
+  Object.entries(BENCHMARKS).map(async ([key, config]) => {
+    const filePath = `${process.cwd()}/${config.name}`;
+    console.log(`Generating ${key} benchmark (${config.lines} lines) to ${config.name}...`);
+    await Bun.write(filePath, generateContent(config.lines));
+  }),
+);
 
 console.log("Benchmark suite generated successfully.");

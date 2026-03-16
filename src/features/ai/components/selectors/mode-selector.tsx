@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
-import Dropdown from "@/ui/dropdown";
+import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 
 interface ModeSelectorProps {
@@ -35,7 +35,7 @@ export const ModeSelector = memo(function ModeSelector({ className }: ModeSelect
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <Dropdown
+      <Select
         value={mode}
         options={modeOptions}
         onChange={handleModeChange}
@@ -43,7 +43,7 @@ export const ModeSelector = memo(function ModeSelector({ className }: ModeSelect
         openDirection="up"
         className="min-w-16"
       />
-      <Dropdown
+      <Select
         value={outputStyle}
         options={outputStyleOptions}
         onChange={handleOutputStyleChange}

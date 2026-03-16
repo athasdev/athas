@@ -4,9 +4,9 @@
   "version": "0.4.4",
   "identifier": "com.code.athas",
   "build": {
-    "beforeDevCommand": "bun vite",
+    "beforeDevCommand": "bunx vp dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bun typecheck && bun vite build",
+    "beforeBuildCommand": "bunx vp check && bunx vp build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -25,23 +25,15 @@
         "center": true,
         "minWidth": 400,
         "minHeight": 400,
-        "shadow": true,
-        "trafficLightPosition": {
-          "x": 18.5,
-          "y": 20.5
-        }
+        "shadow": true
       }
     ],
     "security": {
       "csp": "default-src 'self' ipc: http://ipc.localhost; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 https://athas.dev https://*.athas.dev https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://*.githubusercontent.com; img-src 'self' asset: http://asset.localhost data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'",
-      "capabilities": [
-        "main-capability"
-      ],
+      "capabilities": ["main-capability"],
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**"
-        ]
+        "scope": ["**"]
       }
     },
     "macOSPrivateApi": true
@@ -81,9 +73,7 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": [
-          "athas"
-        ]
+        "schemes": ["athas"]
       }
     },
     "fs": {
@@ -91,9 +81,7 @@
     },
     "updater": {
       "active": true,
-      "endpoints": [
-        "https://github.com/athasdev/athas/releases/latest/download/latest.json"
-      ],
+      "endpoints": ["https://github.com/athasdev/athas/releases/latest/download/latest.json"],
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJBNDk0QjI4NkVDNDQwRUUKUldUdVFNUnVLRXRKdXV2elJZL3RsOWkvRDJueUwvQjh1UzdMbFBHZmZjV01Ec3lXZ1hFY3V6RkYK"
     }

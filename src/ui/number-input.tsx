@@ -3,8 +3,10 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { cn } from "@/utils/cn";
 
-interface InputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "onChange"> {
+interface InputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "size" | "onChange"
+> {
   size?: "xs" | "sm" | "md";
   onChange?: (value: number) => void;
 }
@@ -22,22 +24,35 @@ export default function NumberInput({
   className,
   ...props
 }: InputProps) {
-  const [inputValue, setInputValue] = useState<string>(value?.toString() || "0");
-  const [numericValue, setNumericValue] = useState<number>(value ? parseInt(value.toString()) : 0);
+  const parseNumber = (raw: string | number | readonly string[]) => {
+    const normalized = Array.isArray(raw) ? raw[0] : raw;
+    return Number.parseFloat(normalized.toString());
+  };
+  const step = props.step ? parseNumber(props.step) : 1;
+  const precision =
+    Number.isFinite(step) && step > 0 ? (step.toString().split(".")[1]?.length ?? 0) : 0;
+  const formatValue = (num: number) => {
+    if (Number.isNaN(num)) return "0";
+    return precision > 0
+      ? num.toFixed(precision).replace(/\.?0+$/, "")
+      : Math.round(num).toString();
+  };
 
-  const min = props.min ? parseInt(props.min.toString()) : Number.MIN_SAFE_INTEGER;
-  const max = props.max ? parseInt(props.max.toString()) : Number.MAX_SAFE_INTEGER;
+  const [inputValue, setInputValue] = useState<string>(value?.toString() || "0");
+  const [numericValue, setNumericValue] = useState<number>(value ? parseNumber(value) : 0);
+
+  const min = props.min ? parseNumber(props.min) : Number.MIN_SAFE_INTEGER;
+  const max = props.max ? parseNumber(props.max) : Number.MAX_SAFE_INTEGER;
 
   useEffect(() => {
     if (value !== undefined) {
-      const newValue = value.toString();
-      const numValue = parseInt(newValue);
+      const numValue = parseNumber(value);
       if (!Number.isNaN(numValue)) {
-        setInputValue(newValue);
+        setInputValue(formatValue(numValue));
         setNumericValue(numValue);
       }
     }
-  }, [value]);
+  }, [value, precision]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputStr = e.target.value;
@@ -47,7 +62,7 @@ export default function NumberInput({
       return;
     }
 
-    const newValue = parseInt(inputStr);
+    const newValue = parseNumber(inputStr);
     if (!Number.isNaN(newValue)) {
       setNumericValue(newValue);
       onChange?.(newValue);
@@ -57,23 +72,23 @@ export default function NumberInput({
   const handleBlur = () => {
     let finalValue = numericValue;
 
-    if (inputValue === "" || inputValue === "-" || Number.isNaN(parseInt(inputValue))) {
+    if (inputValue === "" || inputValue === "-" || Number.isNaN(parseNumber(inputValue))) {
       finalValue = 0;
     } else {
-      finalValue = parseInt(inputValue);
+      finalValue = parseNumber(inputValue);
     }
 
     const clampedValue = Math.max(min, Math.min(max, finalValue));
 
-    setInputValue(clampedValue.toString());
+    setInputValue(formatValue(clampedValue));
     setNumericValue(clampedValue);
     onChange?.(clampedValue);
   };
 
   const handleIncrement = () => {
     if (numericValue < max) {
-      const newValue = numericValue + 1;
-      setInputValue(newValue.toString());
+      const newValue = Math.min(max, Number((numericValue + step).toFixed(Math.max(precision, 6))));
+      setInputValue(formatValue(newValue));
       setNumericValue(newValue);
       onChange?.(newValue);
     }
@@ -81,8 +96,8 @@ export default function NumberInput({
 
   const handleDecrement = () => {
     if (numericValue > min) {
-      const newValue = numericValue - 1;
-      setInputValue(newValue.toString());
+      const newValue = Math.max(min, Number((numericValue - step).toFixed(Math.max(precision, 6))));
+      setInputValue(formatValue(newValue));
       setNumericValue(newValue);
       onChange?.(newValue);
     }

@@ -1,9 +1,9 @@
 import { useEffect } from "react";
-import { useAppStore } from "@/stores/app-store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { isMac } from "@/utils/platform";
 
 export function usePlatformSetup() {
-  const { cleanup } = useAppStore.use.actions();
+  const { cleanup } = useEditorAppStore.use.actions();
 
   useEffect(() => {
     if (isMac()) {

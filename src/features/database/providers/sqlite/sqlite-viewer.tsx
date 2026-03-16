@@ -1,6 +1,6 @@
 import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import type { ViewMode } from "../../models/common.types";
 import { SqliteRowMenu, SqliteTableMenu } from "./components/context-menus";
 import { CreateRowModal, CreateTableModal, EditRowModal } from "./components/crud-modals";
@@ -20,7 +20,7 @@ export interface SQLiteViewerProps {
 export default function SQLiteViewer({ databasePath }: SQLiteViewerProps) {
   const store = useSqliteStore();
   const { actions } = store;
-  const { setSqliteTableMenu, setSqliteRowMenu } = useUIState();
+  const { setDatabaseTableMenu, setDatabaseRowMenu } = useUIState();
 
   const [viewMode, setViewMode] = useState<ViewMode>("data");
   const [showColumnTypes, setShowColumnTypes] = useState(true);
@@ -39,7 +39,7 @@ export default function SQLiteViewer({ databasePath }: SQLiteViewerProps) {
 
   const handleTableContextMenu = (e: React.MouseEvent, tableName: string) => {
     e.preventDefault();
-    setSqliteTableMenu({ x: e.clientX, y: e.clientY, tableName });
+    setDatabaseTableMenu({ x: e.clientX, y: e.clientY, tableName, databaseType: "sqlite" });
   };
 
   const handleRowContextMenu = (e: React.MouseEvent, rowIndex: number) => {
@@ -50,11 +50,12 @@ export default function SQLiteViewer({ databasePath }: SQLiteViewerProps) {
     store.queryResult.columns.forEach((col, i) => {
       rowData[col] = row[i];
     });
-    setSqliteRowMenu({
+    setDatabaseRowMenu({
       x: e.clientX,
       y: e.clientY,
       tableName: store.selectedTable || "",
       rowData,
+      databaseType: "sqlite",
     });
   };
 

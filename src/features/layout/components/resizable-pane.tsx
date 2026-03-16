@@ -1,7 +1,7 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { cn } from "@/utils/cn";
 import { shouldRequestPaneCollapse } from "./resizable-pane-utils";
 
@@ -15,6 +15,7 @@ interface ResizablePaneProps {
   position: "left" | "right";
   widthKey: WidthSettingKey;
   className?: string;
+  hidden?: boolean;
   collapsible?: boolean;
   // Pixels user must push past min width before auto-collapse.
   collapseThreshold?: number;
@@ -26,6 +27,7 @@ export function ResizablePane({
   position,
   widthKey,
   className,
+  hidden = false,
   collapsible = false,
   collapseThreshold = 0,
   onCollapse,
@@ -169,30 +171,49 @@ export function ResizablePane({
   return (
     <div
       ref={paneRef}
-      style={{ width: `${width}px` }}
+      style={{ width: hidden ? "0px" : `${width}px` }}
       className={cn(
-        "relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden bg-secondary-bg",
+        "relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden bg-secondary-bg transition-[width] duration-150",
+        hidden && "pointer-events-none",
         className,
       )}
+      aria-hidden={hidden}
     >
-      <div
-        onMouseDown={handleMouseDown}
-        className={cn(
-          "absolute top-0 z-50 h-full w-1.5 cursor-col-resize transition-colors duration-150",
-          "hover:bg-accent/30 active:bg-accent/50",
-          handlePosition,
-          isResizing && "bg-accent/50",
-        )}
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize sidebar"
-        aria-valuenow={Math.round(width)}
-        aria-valuemin={Math.round(getMinWidth())}
-        aria-valuemax={Math.round(getMaxWidth())}
-        tabIndex={0}
-      />
+      {!hidden && (
+        <div
+          onMouseDown={handleMouseDown}
+          className={cn(
+            "absolute top-0 z-50 h-full w-1.5 cursor-col-resize transition-colors duration-150",
+            "hover:bg-accent/30 active:bg-accent/50",
+            handlePosition,
+            isResizing && "bg-accent/50",
+          )}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar"
+          aria-valuenow={Math.round(width)}
+          aria-valuemin={Math.round(getMinWidth())}
+          aria-valuemax={Math.round(getMaxWidth())}
+          tabIndex={0}
+        />
+      )}
       {isResizing && <div className="pointer-events-none fixed inset-0 z-40 cursor-col-resize" />}
-      {children}
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col overflow-hidden",
+          hidden ? "py-0" : "py-2",
+          !hidden && (position === "left" ? "pl-2" : "pr-2"),
+        )}
+      >
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col overflow-hidden bg-primary-bg",
+            !hidden && "rounded-2xl",
+          )}
+        >
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
