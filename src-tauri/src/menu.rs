@@ -137,7 +137,7 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "close_tab",
          "Close Tab",
          true,
-         None::<String>,
+         Some("CmdOrCtrl+W"),
       )?)
       .separator()
       .item(&MenuItem::with_id(
