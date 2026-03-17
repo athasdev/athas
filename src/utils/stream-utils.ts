@@ -10,15 +10,20 @@ interface StreamHandlers {
 }
 
 interface SSEData {
+  // OpenAI/OpenRouter format
   choices?: Array<{
     delta?: { content?: string };
     message?: { content?: string };
   }>;
+  // Gemini format
   candidates?: Array<{
     content?: {
       parts?: Array<{ text?: string }>;
     };
   }>;
+  // Anthropic format
+  type?: string;
+  delta?: { type?: string; text?: string };
 }
 
 class SSEStreamParser {
@@ -67,6 +72,8 @@ class SSEStreamParser {
     const trimmedLine = line.trim();
 
     if (trimmedLine === "") return;
+    // Skip SSE event type lines (e.g. "event: content_block_delta")
+    if (trimmedLine.startsWith("event:")) return;
     if (trimmedLine === "data: [DONE]") {
       this.handlers.onComplete();
       return;
@@ -85,16 +92,17 @@ class SSEStreamParser {
           const choice = data.choices[0];
           if (choice.delta?.content) {
             content = choice.delta.content;
-            console.log("🔍 Delta content found:", content);
           } else if (choice.message?.content) {
             content = choice.message.content;
-            console.log("🔍 Message content found:", content);
           }
+        }
+        // Anthropic format: content_block_delta with delta.text
+        else if (data.type === "content_block_delta" && data.delta?.text) {
+          content = data.delta.text;
         }
         // Gemini format
         else if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
           content = data.candidates[0].content.parts[0].text;
-          console.log("🔍 Gemini content found:", content);
         }
 
         if (content) {

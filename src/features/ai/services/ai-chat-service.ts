@@ -126,8 +126,10 @@ export const getChatCompletionStream = async (
 
     console.log(`Making ${provider.name} streaming chat request with model ${model.name}...`);
 
-    // Use Tauri's fetch for Gemini and Ollama to bypass CORS restrictions
-    const fetchFn = providerId === "gemini" || providerId === "ollama" ? tauriFetch : fetch;
+    // Use Tauri's fetch for providers that don't support browser CORS
+    const needsTauriFetch =
+      providerId === "gemini" || providerId === "ollama" || providerId === "anthropic";
+    const fetchFn = needsTauriFetch ? tauriFetch : fetch;
     const response = await fetchFn(url, {
       method: "POST",
       headers,
