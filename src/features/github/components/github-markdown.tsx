@@ -1,3 +1,4 @@
+import "./github-markdown.css";
 import { memo, useMemo } from "react";
 import { parseMarkdown } from "@/features/editor/markdown/parser";
 

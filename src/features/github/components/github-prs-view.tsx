@@ -432,7 +432,7 @@ const GitHubPRsView = memo(() => {
   }
 
   return (
-    <div className="flex h-full flex-col gap-2 p-2">
+    <div className="ui-font flex h-full select-none flex-col gap-2 p-2">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-1.5 px-0.5 py-0.5">
         <div>
@@ -631,21 +631,18 @@ const GitHubPRsView = memo(() => {
         )}
 
       {/* Content */}
-      <div className="scrollbar-hidden flex-1 overflow-y-auto bg-secondary-bg/60">
+      <div className="scrollbar-hidden flex-1 overflow-y-auto">
         {!activeRepoPath ? (
-          <div className="mx-auto flex max-w-72 flex-col items-center justify-center p-4 text-center">
-            <p className="text-[0.8em] leading-tight text-text">No repository selected</p>
-            <button
-              onClick={() => void handleSelectRepository()}
-              className="mt-2 inline-flex h-6 items-center rounded-lg border border-border/60 bg-secondary-bg/80 px-2.5 text-[0.8em] text-text hover:bg-hover"
-            >
-              Browse Repository
-            </button>
-            {workspaceRepoPaths.length === 0 && rootFolderPath && (
-              <p className="mt-2 text-[0.68em] leading-relaxed text-text-lighter/82">
-                No repositories were detected under the current workspace.
-              </p>
-            )}
+          <div className="flex h-full items-center justify-center">
+            <div className="ui-font flex flex-col items-center text-center">
+              <span className="text-[0.78em] text-text-lighter">No repository selected</span>
+              <button
+                onClick={() => void handleSelectRepository()}
+                className="mt-1.5 ui-font text-[0.78em] text-accent transition-colors hover:text-accent/80"
+              >
+                Browse Repository
+              </button>
+            </div>
           </div>
         ) : error ? (
           <div className="mx-auto flex max-w-80 flex-col items-center justify-center rounded-xl border border-error/30 bg-error/5 p-4 text-center">

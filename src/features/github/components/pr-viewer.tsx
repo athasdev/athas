@@ -89,11 +89,15 @@ function inferFileStatus(additions: number, deletions: number): FileDiff["status
 }
 
 function toFileDiffFromMetadata(file: PullRequestFile): FileDiff {
+  const path = typeof file.path === "string" ? file.path.trim() : "";
   return {
-    path: file.path,
-    additions: file.additions,
-    deletions: file.deletions,
-    status: inferFileStatus(file.additions, file.deletions),
+    path,
+    additions: Number.isFinite(file.additions) ? file.additions : 0,
+    deletions: Number.isFinite(file.deletions) ? file.deletions : 0,
+    status: inferFileStatus(
+      Number.isFinite(file.additions) ? file.additions : 0,
+      Number.isFinite(file.deletions) ? file.deletions : 0,
+    ),
   };
 }
 
@@ -651,7 +655,7 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
   }, [activeTab, repoPath, prNumber, fetchPRContent]);
 
   const baseDiffFiles = useMemo(() => {
-    return selectedPRFiles.map(toFileDiffFromMetadata);
+    return selectedPRFiles.map(toFileDiffFromMetadata).filter((file) => file.path.length > 0);
   }, [selectedPRFiles]);
 
   const baseDiffByPath = useMemo(() => {
@@ -1169,10 +1173,14 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
           <div className="p-3 sm:p-4">
             {pr.body ? (
               <div className="rounded-xl border border-border/60 bg-secondary-bg/35 p-3 sm:p-4">
-                <GitHubMarkdown content={pr.body} />
+                <GitHubMarkdown
+                  content={pr.body}
+                  className="github-markdown-pr"
+                  contentClassName="github-markdown-pr-content"
+                />
               </div>
             ) : (
-              <p className="text-sm text-text-lighter italic">No description provided</p>
+              <p className="text-xs text-text-lighter italic">No description provided</p>
             )}
           </div>
         )}
@@ -1201,10 +1209,6 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <div className="relative">
-                    <Search
-                      size={12}
-                      className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
-                    />
                     <Input
                       value={fileQuery}
                       onChange={(e) => setFileQuery(e.target.value)}
@@ -1215,10 +1219,6 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
                     />
                   </div>
                   <div className="relative">
-                    <SlidersHorizontal
-                      size={12}
-                      className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
-                    />
                     <Select
                       value={fileStatusFilter}
                       onChange={(e) => setFileStatusFilter(e.target.value as FileStatusFilter)}

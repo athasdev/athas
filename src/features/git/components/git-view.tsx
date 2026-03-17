@@ -582,13 +582,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       onClick={handleSelectRepository}
       disabled={isSelectingRepo}
       className={cn(
-        "mt-2 inline-flex h-6 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary-bg/80 px-2.5 text-[0.8em] text-text transition-colors hover:bg-hover",
+        "mt-1.5 ui-font text-[0.78em] text-accent transition-colors hover:text-accent/80",
         "disabled:cursor-not-allowed disabled:opacity-50",
       )}
       title="Select repository folder"
       aria-label="Select repository folder"
     >
-      <FolderOpen size={11} />
       {isSelectingRepo ? "Selecting..." : "Browse Repository"}
     </button>
   );
@@ -625,22 +624,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         <div className={cn("flex items-center justify-between px-0.5 py-0.5")}>
           <div className="flex items-center gap-2">{renderActionsButton()}</div>
         </div>
-        <div className="flex flex-1 items-center justify-center p-4">
-          <div className="ui-font flex max-w-72 flex-col items-center text-center">
-            <div className="text-[0.8em] leading-tight text-text">No repository selected</div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="ui-font flex flex-col items-center text-center">
+            <span className="text-[0.78em] text-text-lighter">No repository selected</span>
             {renderSelectRepositoryButton()}
-            {workspaceRepoPaths.length === 0 && repoPath && !isDiscoveringRepos && (
-              <div className="mt-2 text-[0.68em] leading-relaxed text-text-lighter/82">
-                No repositories were detected under the current workspace.
-              </div>
-            )}
-            {isDiscoveringRepos && (
-              <div className="mt-2 text-[0.68em] leading-relaxed text-text-lighter/82">
-                Scanning workspace for repositories...
-              </div>
-            )}
             {repoSelectionError && (
-              <div className="mt-2 text-[0.68em] text-red-400">{repoSelectionError}</div>
+              <span className="mt-1.5 text-[0.68em] text-red-400">{repoSelectionError}</span>
             )}
           </div>
         </div>
@@ -669,15 +658,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         <div className={cn("flex items-center justify-between px-0.5 py-0.5")}>
           <div className="flex items-center gap-2">{renderActionsButton()}</div>
         </div>
-        <div className="flex flex-1 items-center justify-center p-4">
-          <div className="ui-font flex max-w-72 flex-col items-center text-center">
-            <div className="text-[0.8em] leading-tight text-text">No repository selected</div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="ui-font flex flex-col items-center text-center">
+            <span className="text-[0.78em] text-text-lighter">Not a Git repository</span>
             {renderSelectRepositoryButton()}
-            <div className="mt-2 text-[0.68em] leading-relaxed text-text-lighter/82">
-              Select another folder that contains a `.git` repository.
-            </div>
             {repoSelectionError && (
-              <div className="mt-2 text-[0.68em] text-red-400">{repoSelectionError}</div>
+              <span className="mt-1.5 text-[0.68em] text-red-400">{repoSelectionError}</span>
             )}
           </div>
         </div>

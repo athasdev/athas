@@ -88,6 +88,25 @@ function isFresh(timestamp: number, ttlMs: number): boolean {
   return Date.now() - timestamp < ttlMs;
 }
 
+function normalizePullRequestFiles(files: unknown): PullRequestFile[] {
+  if (!Array.isArray(files)) return [];
+
+  return files
+    .map((file) => {
+      if (!file || typeof file !== "object") return null;
+      const record = file as Record<string, unknown>;
+      const path = typeof record.path === "string" ? record.path.trim() : "";
+      if (!path) return null;
+
+      return {
+        path,
+        additions: typeof record.additions === "number" ? record.additions : 0,
+        deletions: typeof record.deletions === "number" ? record.deletions : 0,
+      };
+    })
+    .filter((file): file is PullRequestFile => !!file);
+}
+
 export const useGitHubStore = create(
   combine(initialState, (set, get) => ({
     actions: {
@@ -355,6 +374,8 @@ export const useGitHubStore = create(
 
           if (requestId !== prContentRequestSeqByKey[cacheKey]) return;
 
+          const normalizedFiles = shouldFetchFiles ? normalizePullRequestFiles(files) : undefined;
+
           set((state) => {
             const now = Date.now();
             const baseDetails =
@@ -370,7 +391,7 @@ export const useGitHubStore = create(
                 : state.selectedPRDiff,
               selectedPRFiles: needsFiles
                 ? shouldFetchFiles
-                  ? (files ?? [])
+                  ? (normalizedFiles ?? [])
                   : state.selectedPRFiles
                 : state.selectedPRFiles,
               selectedPRComments: needsComments
@@ -389,7 +410,7 @@ export const useGitHubStore = create(
                         details: baseDetails,
                       }),
                       diff: shouldFetchFiles ? diff : currentEntry?.diff,
-                      files: shouldFetchFiles ? files : currentEntry?.files,
+                      files: shouldFetchFiles ? normalizedFiles : currentEntry?.files,
                       comments: shouldFetchComments ? comments : currentEntry?.comments,
                       filesFetchedAt: shouldFetchFiles ? now : currentEntry?.filesFetchedAt,
                       commentsFetchedAt: shouldFetchComments
