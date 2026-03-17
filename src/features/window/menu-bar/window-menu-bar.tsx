@@ -212,10 +212,10 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     <div
       ref={menuBarRef}
       className={cn(
-        "z-[10030] flex h-7 items-center gap-1 rounded-full border border-border bg-primary-bg/70 px-1 py-0.5",
+        "z-[10030] flex h-6 items-center gap-0.5 rounded-full border border-border/70 bg-primary-bg/65 px-0.5 py-0.5",
         settings.compactMenuBar &&
           compactFloating &&
-          "absolute top-[calc(100%+4px)] left-0 rounded-2xl border-border bg-primary-bg/95 shadow-xl backdrop-blur-sm",
+          "absolute top-[calc(100%+4px)] left-0 rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-xl backdrop-blur-sm",
         settings.compactMenuBar &&
           !compactFloating &&
           "absolute inset-0 h-full rounded-none border-none bg-transparent px-2 py-0",
@@ -227,8 +227,8 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           variant="ghost"
           size="sm"
           className={cn(
-            "h-6 rounded-full px-2 text-xs",
-            activeMenu === menuName && "bg-hover text-text",
+            "h-5 rounded-md px-1.5 text-[11px] text-text-lighter",
+            activeMenu === menuName ? "bg-hover/80 text-text" : "hover:bg-hover/50 hover:text-text",
           )}
           onClick={() => setActiveMenu((current) => (current === menuName ? null : menuName))}
         >

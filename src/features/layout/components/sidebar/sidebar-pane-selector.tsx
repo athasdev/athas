@@ -26,13 +26,18 @@ export const SidebarPaneSelector = ({
   const tooltipSide = compact ? "bottom" : "right";
   const getTabClass = (isActive: boolean) =>
     cn(
-      "flex items-center justify-center rounded-full p-0 text-xs transition-colors duration-150",
-      compact ? "h-6 w-6" : "h-8 w-8",
-      isActive ? "bg-hover text-text" : "text-text-lighter hover:bg-hover hover:text-text",
+      "flex items-center justify-center rounded-md p-0 text-xs transition-colors duration-150",
+      compact ? "h-5 w-5" : "h-8 w-8",
+      isActive ? "bg-hover/80 text-text" : "text-text-lighter hover:bg-hover/50 hover:text-text",
     );
 
   return (
-    <div className={cn("flex items-center gap-1", compact ? "p-0.5" : "p-1")}>
+    <div
+      className={cn(
+        "flex items-center gap-0.5 rounded-full border border-border/70 bg-primary-bg/65",
+        compact ? "p-0.5" : "p-1",
+      )}
+    >
       <Tooltip content="File Explorer" side={tooltipSide}>
         <Button
           aria-role="tab"
@@ -44,7 +49,7 @@ export const SidebarPaneSelector = ({
           data-active={isFilesActive}
           className={getTabClass(isFilesActive)}
         >
-          <Folder size={14} />
+          <Folder size={13} />
         </Button>
       </Tooltip>
 
@@ -57,7 +62,7 @@ export const SidebarPaneSelector = ({
             size="sm"
             className={getTabClass(false)}
           >
-            <Search size={14} />
+            <Search size={13} />
           </Button>
         </Tooltip>
       )}
@@ -74,7 +79,7 @@ export const SidebarPaneSelector = ({
             data-active={isGitViewActive}
             className={getTabClass(isGitViewActive)}
           >
-            <GitBranch size={14} />
+            <GitBranch size={13} />
           </Button>
         </Tooltip>
       )}
@@ -91,7 +96,7 @@ export const SidebarPaneSelector = ({
             data-active={isGitHubPRsViewActive}
             className={getTabClass(isGitHubPRsViewActive)}
           >
-            <GitPullRequest size={14} />
+            <GitPullRequest size={13} />
           </Button>
         </Tooltip>
       )}

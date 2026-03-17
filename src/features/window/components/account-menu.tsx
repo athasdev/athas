@@ -144,7 +144,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
           variant="ghost"
           size="sm"
           className={cn(
-            "h-7 w-7 min-w-7 rounded-full p-0 text-text-lighter",
+            "h-6 w-6 min-w-6 rounded-full p-0 text-text-lighter",
             isAuthenticated && "text-blue-400 hover:text-blue-300",
             className,
           )}

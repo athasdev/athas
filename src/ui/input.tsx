@@ -36,9 +36,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   };
 
   const iconSizes = {
-    xs: "var(--app-ui-icon-size-sm)",
-    sm: "var(--app-ui-icon-size-sm)",
-    md: "var(--app-ui-icon-size-md)",
+    xs: 12,
+    sm: 12,
+    md: 14,
   };
 
   const iconPositions = {

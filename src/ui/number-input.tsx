@@ -126,7 +126,7 @@ export default function NumberInput({
             "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-secondary-bg",
           )}
         >
-          <Plus size="var(--app-ui-icon-size-md)" className="text-text-lighter" />
+          <Plus size={14} className="text-text-lighter" />
         </button>
         <button
           type="button"
@@ -137,7 +137,7 @@ export default function NumberInput({
             "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-secondary-bg",
           )}
         >
-          <Minus size="var(--app-ui-icon-size-md)" className="text-text-lighter" />
+          <Minus size={14} className="text-text-lighter" />
         </button>
       </div>
     </div>

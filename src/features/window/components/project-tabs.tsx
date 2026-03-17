@@ -14,7 +14,8 @@ import ProjectPickerDialog from "./project-picker-dialog";
 
 const DRAG_THRESHOLD = 5;
 
-const isRemoteProjectTab = (tab: ProjectTab) => tab.path.startsWith("remote://");
+const isRemoteProjectTab = (tab: ProjectTab) =>
+  tab.path.startsWith("remote://");
 
 interface TabPosition {
   index: number;
@@ -143,7 +144,11 @@ const ProjectTabs = () => {
         }
 
         if (prev.isDragging) {
-          const dropTarget = calculateDropTarget(e.clientX, prev.draggedIndex, prev.tabPositions);
+          const dropTarget = calculateDropTarget(
+            e.clientX,
+            prev.draggedIndex,
+            prev.tabPositions,
+          );
           return {
             ...prev,
             currentPosition,
@@ -159,7 +164,10 @@ const ProjectTabs = () => {
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent, index: number, _tab: ProjectTab) => {
-      if (e.button !== 0 || (e.target as HTMLElement).closest("button.close-button")) {
+      if (
+        e.button !== 0 ||
+        (e.target as HTMLElement).closest("button.close-button")
+      ) {
         return;
       }
 
@@ -287,7 +295,8 @@ const ProjectTabs = () => {
     };
 
     const handleGlobalMouseUp = () => {
-      const { isDragging, draggedIndex, dropTargetIndex } = dragStateRef.current;
+      const { isDragging, draggedIndex, dropTargetIndex } =
+        dragStateRef.current;
 
       if (
         isDragging &&
@@ -334,7 +343,7 @@ const ProjectTabs = () => {
     <>
       <div
         ref={tabBarRef}
-        className="flex items-center gap-1 rounded-lg border border-border bg-primary-bg/70 px-1 py-0.5"
+        className="flex items-center justify-center gap-0.5 rounded-lg border border-border/70 bg-primary-bg/65 px-0.5 py-0.5"
       >
         {projectTabs.map((tab: ProjectTab, index: number) => {
           const isRemote = isRemoteProjectTab(tab);
@@ -355,33 +364,33 @@ const ProjectTabs = () => {
                 onMouseDown={(e) => handleMouseDown(e, index, tab)}
                 onContextMenu={(e) => contextMenu.open(e, tab)}
                 className={cn(
-                  "group relative flex h-6 items-center gap-1.5 rounded-md border pr-5 pl-2 text-xs transition-colors",
+                  "group relative flex h-5 items-center gap-1 rounded-md px-4 text-xs transition-colors",
                   tab.isActive
-                    ? "border-border/80 bg-secondary-bg text-text"
-                    : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",
+                    ? "bg-hover/80 text-text"
+                    : "text-text-lighter hover:bg-hover/50 hover:text-text",
                   isRemote &&
                     (tab.isActive
-                      ? "border-sky-500/30 bg-sky-500/8 text-sky-100"
-                      : "text-sky-200/85 hover:border-sky-500/20 hover:bg-sky-500/10 hover:text-sky-100"),
+                      ? "text-sky-100"
+                      : "text-sky-200/85 hover:text-sky-100"),
                   isSwitchingProject && "cursor-wait",
                   isDraggedTab && "opacity-30",
                 )}
                 onClick={() => void handleTabClick(tab)}
                 title={tab.path}
               >
-                {isRemote ? <Server size={12} /> : <Folder size={12} />}
+                {isRemote ? <Server size={11} /> : <Folder size={11} />}
                 <span className="max-w-32 truncate">{tab.name}</span>
                 <button
                   onClick={(e) => handleCloseTab(e, tab.id)}
                   className={cn(
-                    "close-button -translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 items-center justify-center rounded-md text-text-lighter transition-opacity",
-                    "hover:bg-hover hover:text-text",
+                    "close-button -translate-y-1/2 absolute top-1/2 right-0.5 z-10 flex size-3.5 items-center justify-center rounded-md bg-primary-bg/85 text-text-lighter transition",
+                    "hover:bg-hover/50 hover:text-text",
                     "opacity-0 group-hover:opacity-100",
                   )}
                   title="Close project"
                   aria-label="Close project"
                 >
-                  <X size={10} />
+                  <X size={9} />
                 </button>
               </button>
             </div>
@@ -394,11 +403,11 @@ const ProjectTabs = () => {
         )}
         <button
           onClick={handleAddProject}
-          className="flex size-6 shrink-0 items-center justify-center rounded-md border border-transparent text-text-lighter transition-colors hover:border-border/60 hover:bg-hover/80 hover:text-text"
+          className="flex size-5 shrink-0 items-center justify-center rounded-md text-text-lighter transition-colors hover:bg-hover/50 hover:text-text"
           title="Open folder"
           aria-label="Open folder"
         >
-          <Plus size={14} />
+          <Plus size={12} />
         </button>
       </div>
 

@@ -148,10 +148,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     return (
       <div
         data-tauri-drag-region
-        className="relative z-50 flex h-10 select-none items-start justify-between bg-secondary-bg/70 pt-2 pr-3 pl-[96px] backdrop-blur-sm"
+        className="relative z-50 flex select-none items-start justify-between bg-secondary-bg/70 pt-1 pr-3 pl-[94px] backdrop-blur-sm"
       >
         {/* Left side: keep clear of traffic lights */}
-        <div className="pointer-events-auto flex h-7 min-w-0 items-center gap-2">
+        <div className="pointer-events-auto flex h-6 min-w-0 items-center gap-1.5">
           {!settings.nativeMenuBar && !settings.compactMenuBar && (
             <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
           )}
@@ -162,9 +162,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                   onClick={() => {
                     setMenuBarActiveMenu("File");
                   }}
-                  className="flex h-6 w-8 items-center justify-center rounded-full border border-border bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                  className="flex h-5 w-7 items-center justify-center rounded-full border border-border bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
                 >
-                  <MenuIcon size={16} />
+                  <MenuIcon size={14} />
                 </button>
               </Tooltip>
               <CustomMenuBar
@@ -185,13 +185,15 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         </div>
 
         {/* Center - Project tabs for macOS */}
-        <div className="-translate-x-1/2 pointer-events-auto absolute top-2 left-1/2 flex h-7 transform items-center">
-          <ProjectTabs />
+        <div className="pointer-events-none absolute inset-x-0 top-1.5 flex h-6 justify-center">
+          <div className="pointer-events-auto flex items-center">
+            <ProjectTabs />
+          </div>
         </div>
 
         {/* Account menu */}
-        <div className="mr-1 flex h-7 items-center">
-          <AccountMenu iconSize={14} />
+        <div className="mr-1 flex h-6 items-center">
+          <AccountMenu iconSize={13} />
         </div>
       </div>
     );
@@ -217,9 +219,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 onClick={() => {
                   setMenuBarActiveMenu("File");
                 }}
-                className="flex h-6 w-8 items-center justify-center rounded-full border border-border bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className="flex h-5 w-7 items-center justify-center rounded-full border border-border bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
               >
-                <MenuIcon size={16} />
+                <MenuIcon size={14} />
               </button>
             </Tooltip>
             <CustomMenuBar

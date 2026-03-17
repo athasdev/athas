@@ -60,9 +60,9 @@ const sizeClasses = {
 };
 
 const iconSizes = {
-  xs: "var(--app-ui-icon-size-xs)",
-  sm: "var(--app-ui-icon-size-sm)",
-  md: "var(--app-ui-icon-size-md)",
+  xs: 10,
+  sm: 12,
+  md: 14,
 };
 
 function renderLeftIcon(
@@ -70,8 +70,9 @@ function renderLeftIcon(
   size: "xs" | "sm" | "md",
 ): ReactNode {
   if (!leftIcon) return null;
-  if (typeof leftIcon === "function") {
-    const Icon = leftIcon;
+  // Handle both regular functions and forwardRef components (typeof === "object" with $$typeof)
+  if (typeof leftIcon === "function" || (typeof leftIcon === "object" && "render" in leftIcon)) {
+    const Icon = leftIcon as ComponentType<{ size?: number; className?: string }>;
     return <Icon size={size === "md" ? 14 : 12} className="text-text-lighter" />;
   }
   return leftIcon;
@@ -303,7 +304,7 @@ function RadixSharedSelect({
               <div className="border-border/60 border-b px-1.5 py-1.5">
                 <div className="relative">
                   <Search
-                    size="var(--app-ui-icon-size-sm)"
+                    size={12}
                     className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
                   />
                   <input
