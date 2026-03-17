@@ -112,6 +112,7 @@ export function Editor({
 
   const fontSize = baseFontSize * zoomLevel;
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
+  const wordWrap = useEditorSettingsStore.use.wordWrap();
 
   const rawBuffer = buffers.find((b) => b.id === bufferId);
   const buffer = rawBuffer && isEditorContent(rawBuffer) ? rawBuffer : undefined;
@@ -716,6 +717,7 @@ export function Editor({
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             tabSize={tabSize}
+            wordWrap={wordWrap}
             viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
           />
         )}
@@ -733,6 +735,7 @@ export function Editor({
           fontFamily={fontFamily}
           lineHeight={lineHeight}
           tabSize={tabSize}
+          wordWrap={wordWrap}
           bufferId={bufferId || undefined}
           showText={!hasSyntaxHighlighting}
         />

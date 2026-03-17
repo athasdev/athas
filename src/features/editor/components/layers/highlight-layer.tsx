@@ -8,6 +8,7 @@ interface HighlightLayerProps {
   fontFamily: string;
   lineHeight: number;
   tabSize?: number;
+  wordWrap?: boolean;
   viewportRange?: { startLine: number; endLine: number };
 }
 
@@ -102,7 +103,19 @@ const Line = memo<LineProps>(
 Line.displayName = "HighlightLayerLine";
 
 const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
-  ({ content, tokens, fontSize, fontFamily, lineHeight, tabSize = 2, viewportRange }, ref) => {
+  (
+    {
+      content,
+      tokens,
+      fontSize,
+      fontFamily,
+      lineHeight,
+      tabSize = 2,
+      wordWrap = false,
+      viewportRange,
+    },
+    ref,
+  ) => {
     // Normalize line endings first to ensure consistent rendering with textarea
     const normalizedContent = useMemo(() => normalizeLineEndings(content), [content]);
 
@@ -208,6 +221,9 @@ const HighlightLayerComponent = forwardRef<HTMLDivElement, HighlightLayerProps>(
           fontFamily,
           lineHeight: `${lineHeight}px`,
           tabSize: tabSize,
+          whiteSpace: wordWrap ? "pre-wrap" : "pre",
+          overflowWrap: wordWrap ? "anywhere" : "normal",
+          wordBreak: wordWrap ? "break-word" : "normal",
         }}
         aria-hidden="true"
       >
@@ -242,7 +258,8 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
       prev.fontSize === next.fontSize &&
       prev.fontFamily === next.fontFamily &&
       prev.lineHeight === next.lineHeight &&
-      prev.tabSize === next.tabSize
+      prev.tabSize === next.tabSize &&
+      prev.wordWrap === next.wordWrap
     );
   }
 
@@ -258,7 +275,8 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
-    prev.tabSize === next.tabSize;
+    prev.tabSize === next.tabSize &&
+    prev.wordWrap === next.wordWrap;
 
   return shouldSkipRender;
 });

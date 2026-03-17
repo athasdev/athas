@@ -20,6 +20,7 @@ interface InputLayerProps {
   fontFamily: string;
   lineHeight: number;
   tabSize: number;
+  wordWrap: boolean;
   onScroll?: (e: React.UIEvent<HTMLTextAreaElement>) => void;
   bufferId?: string;
   filePath?: string;
@@ -40,6 +41,7 @@ const InputLayerComponent = ({
   fontFamily,
   lineHeight,
   tabSize,
+  wordWrap,
   onScroll,
   showText = false,
   textareaRef,
@@ -75,13 +77,17 @@ const InputLayerComponent = ({
         right: 0,
         bottom: 0,
         overflowY: "auto",
-        overflowX: horizontalBufferCarousel ? "hidden" : "auto",
+        overflowX: wordWrap || horizontalBufferCarousel ? "hidden" : "auto",
         fontSize: `${fontSize}px`,
         fontFamily,
         lineHeight: `${lineHeight}px`,
         tabSize,
+        whiteSpace: wordWrap ? "pre-wrap" : "pre",
+        overflowWrap: wordWrap ? "anywhere" : "normal",
+        wordBreak: wordWrap ? "break-word" : "normal",
         ...(showText && { color: "var(--text, #d4d4d4)" }),
       }}
+      wrap={wordWrap ? "soft" : "off"}
       spellCheck={false}
       autoCapitalize="off"
       autoComplete="off"
@@ -102,6 +108,7 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
     prev.tabSize === next.tabSize &&
+    prev.wordWrap === next.wordWrap &&
     prev.showText === next.showText &&
     prev.textareaRef === next.textareaRef &&
     prev.onInput === next.onInput &&
