@@ -103,6 +103,18 @@ pub struct GitTag {
    pub date: String,
 }
 
+#[derive(Serialize)]
+pub struct GitWorktree {
+   pub path: String,
+   pub branch: Option<String>,
+   pub head: String,
+   pub is_bare: bool,
+   pub is_detached: bool,
+   pub locked_reason: Option<String>,
+   pub prunable_reason: Option<String>,
+   pub is_current: bool,
+}
+
 #[derive(Deserialize)]
 pub struct GitHunk {
    pub file_path: String,

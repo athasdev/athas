@@ -55,8 +55,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 
   const variantClasses = {
     default: cn(
-      "rounded-lg border border-border bg-secondary-bg text-text transition-colors",
-      "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
+      "rounded-lg border border-border bg-secondary-bg text-text transition-[border-color,box-shadow,background-color]",
+      "focus:border-border-strong focus:bg-secondary-bg focus:outline-none focus:ring-1 focus:ring-border-strong/35",
     ),
     ghost: "border-none bg-transparent text-text focus:outline-none focus:ring-0",
   };

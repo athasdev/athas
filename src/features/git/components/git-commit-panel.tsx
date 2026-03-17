@@ -147,12 +147,12 @@ const GitCommitPanel = ({
   const isGenerateDisabled = stagedFilesCount === 0 || isGenerating || isCommitting;
 
   return (
-    <div className="rounded-lg bg-primary-bg/55">
+    <div className="overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
       {error && (
         <div
           className={cn(
             "mx-2 mt-1.5 flex items-center gap-2 rounded border border-error/30",
-            "bg-error/20 px-2 py-1 text-error text-xs",
+            "bg-error/20 px-2 py-1 text-[0.84em] text-error",
           )}
         >
           <AlertCircle size={12} />
@@ -168,15 +168,15 @@ const GitCommitPanel = ({
         variant="ghost"
         className={cn(
           "w-full resize-none bg-transparent px-2 py-1.5",
-          "ui-font text-[10px] text-text placeholder:text-text-lighter",
+          "ui-font text-inherit text-text placeholder:text-text-lighter",
           "focus:outline-none",
         )}
         rows={2}
         disabled={isCommitting}
       />
 
-      <div className="flex items-center justify-between border-border/50 border-t px-2 py-1">
-        <span className="text-[9px] text-text-lighter">
+      <div className="flex items-center justify-between px-2 py-1">
+        <span className="text-[0.82em] text-text-lighter">
           {stagedFilesCount > 0
             ? `${stagedFilesCount} file${stagedFilesCount !== 1 ? "s" : ""} staged`
             : "No files staged"}
@@ -189,11 +189,10 @@ const GitCommitPanel = ({
                 onClick={() => void handleGenerateCommitMessage()}
                 disabled={isGenerateDisabled}
                 className={cn(
-                  "flex items-center gap-1 rounded border p-1",
-                  "ui-font text-[10px] transition-colors",
+                  "flex items-center p-1 transition-colors",
                   isGenerateDisabled
-                    ? "cursor-not-allowed border-border/60 bg-secondary-bg text-text-lighter"
-                    : "border-border/70 bg-secondary-bg/80 text-text hover:bg-hover",
+                    ? "cursor-not-allowed text-text-lighter opacity-50"
+                    : "text-text-lighter hover:text-text",
                 )}
                 aria-label="Generate commit message with AI"
               >
@@ -206,21 +205,13 @@ const GitCommitPanel = ({
             onClick={() => void handleCommit()}
             disabled={isCommitDisabled}
             className={cn(
-              "flex items-center gap-1 rounded px-2 py-0.5",
-              "ui-font text-[10px] transition-colors duration-150",
+              "ui-font px-1 py-0.5 text-xs transition-colors duration-150",
               isCommitDisabled
-                ? "cursor-not-allowed bg-secondary-bg text-text-lighter"
-                : "bg-accent text-white hover:opacity-90",
+                ? "cursor-not-allowed text-text-lighter opacity-50"
+                : "text-accent hover:text-accent/80",
             )}
           >
-            {isCommitting ? (
-              <>
-                <div className="h-2.5 w-2.5 animate-spin rounded-full border border-white border-t-transparent"></div>
-                Committing
-              </>
-            ) : (
-              "Commit"
-            )}
+            {isCommitting ? "Committing..." : "Commit"}
           </button>
         </div>
       </div>

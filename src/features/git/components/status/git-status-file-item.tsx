@@ -44,7 +44,7 @@ export const GitFileItem = ({
   const fileName = pathParts.pop() || file.path;
   const directory = pathParts.join("/");
   const indentPx = 8 + indentLevel * 14;
-  const fileNameTextClass = showDirectory ? "text-[10px]" : "text-xs";
+  const fileNameTextClass = "text-inherit";
   const hasDiffStats = !!diffStats && (diffStats.additions > 0 || diffStats.deletions > 0);
   const fileStatusTextClass =
     file.status === "modified"
@@ -80,7 +80,7 @@ export const GitFileItem = ({
       <div className="flex min-w-0 flex-1 items-center gap-1.5" title={file.path}>
         <span className={cn("shrink-0", fileNameTextClass, fileStatusTextClass)}>{fileName}</span>
         {showDirectory && directory && (
-          <span className="truncate text-[9px] text-text-lighter">{directory}</span>
+          <span className="truncate text-[0.82em] text-text-lighter">{directory}</span>
         )}
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -88,7 +88,7 @@ export const GitFileItem = ({
           <div
             className={cn(
               "hidden items-center leading-none sm:flex",
-              compactGitStatusBadges ? "gap-0.5 text-[8px]" : "gap-1 text-[9px]",
+              compactGitStatusBadges ? "gap-0.5 text-[0.72em]" : "gap-1 text-[0.78em]",
             )}
           >
             {diffStats.additions > 0 && (
@@ -100,7 +100,7 @@ export const GitFileItem = ({
           </div>
         )}
         {file.staged && !compactGitStatusBadges && (
-          <span className="hidden shrink-0 text-[8px] text-git-added opacity-60 md:inline">
+          <span className="hidden shrink-0 text-[0.72em] text-git-added opacity-60 md:inline">
             staged
           </span>
         )}

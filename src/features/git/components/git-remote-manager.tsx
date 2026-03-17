@@ -1,7 +1,8 @@
-import { Globe, Plus, Server, Trash2, X } from "lucide-react";
+import { Globe, Plus, Server, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import Button from "@/ui/button";
+import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
-import { cn } from "@/utils/cn";
 import { addRemote, getRemotes, removeRemote } from "../api/git-remotes-api";
 import type { GitRemote } from "../types/git-types";
 
@@ -21,7 +22,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
 
   useEffect(() => {
     if (isOpen) {
-      loadRemotes();
+      void loadRemotes();
     }
   }, [isOpen, repoPath]);
 
@@ -87,120 +88,96 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
   }
 
   return (
-    <div className={cn("fixed inset-0 z-50 flex items-center justify-center", "bg-opacity-50")}>
-      <div
-        className={cn(
-          "flex max-h-[80vh] w-96 flex-col rounded-lg",
-          "border border-border bg-secondary-bg",
-        )}
-      >
-        <div className="flex items-center justify-between border-border border-b p-4">
-          <div className="flex items-center gap-2">
-            <Server size={16} className="text-text-lighter" />
-            <h2 className="font-medium text-sm text-text">Remote Manager</h2>
+    <Dialog
+      onClose={onClose}
+      title="Remotes"
+      icon={Server}
+      size="md"
+      classNames={{ content: "p-0" }}
+    >
+      <div className="ui-font flex max-h-[70vh] flex-col">
+        <div className="border-border/70 border-b p-4">
+          <div className="mb-3 flex items-center gap-2 text-text text-xs">
+            <Plus size={12} className="text-text-lighter" />
+            <span className="font-medium">Add remote</span>
           </div>
-          <button onClick={onClose} className="text-text-lighter transition-colors hover:text-text">
-            <X size={16} />
-          </button>
-        </div>
 
-        <div className="border-border border-b p-4">
           <div className="space-y-2">
-            <div className="mb-2 flex items-center gap-2">
-              <Plus size={12} className="text-text-lighter" />
-              <span className="font-medium text-text text-xs">Add New Remote</span>
-            </div>
-
             <Input
               type="text"
-              placeholder="Remote name (e.g., origin)"
+              placeholder="Remote name"
               value={newRemoteName}
               onChange={(e) => setNewRemoteName(e.target.value)}
-              className={cn("w-full bg-primary-bg")}
+              className="w-full bg-primary-bg"
             />
-
             <Input
               type="text"
-              placeholder="Remote URL (e.g., https://github.com/user/repo.git)"
+              placeholder="Remote URL"
               value={newRemoteUrl}
               onChange={(e) => setNewRemoteUrl(e.target.value)}
-              className={cn("w-full bg-primary-bg")}
+              className="w-full bg-primary-bg"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  handleAddRemote();
+                  void handleAddRemote();
                 }
               }}
             />
-
-            <button
-              onClick={handleAddRemote}
-              disabled={isLoading || !newRemoteName.trim() || !newRemoteUrl.trim()}
-              className={cn(
-                "w-full rounded border border-border bg-primary-bg",
-                "py-1.5 text-text text-xs transition-colors",
-                "hover:bg-hover disabled:opacity-50",
-              )}
-            >
-              {isLoading ? "Adding..." : "Add Remote"}
-            </button>
+            <div className="flex justify-end">
+              <Button
+                onClick={() => void handleAddRemote()}
+                disabled={isLoading || !newRemoteName.trim() || !newRemoteUrl.trim()}
+                size="sm"
+              >
+                {isLoading ? "Adding..." : "Add Remote"}
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {isLoading && remotes.length === 0 ? (
             <div className="p-4 text-center text-text-lighter text-xs">Loading remotes...</div>
           ) : remotes.length === 0 ? (
             <div className="p-4 text-center text-text-lighter text-xs">No remotes configured</div>
           ) : (
-            <div className="space-y-0">
-              {remotes.map((remote) => {
-                const isActionLoading = actionLoading.has(remote.name);
+            remotes.map((remote) => {
+              const isActionLoading = actionLoading.has(remote.name);
 
-                return (
-                  <div
-                    key={remote.name}
-                    className={cn("border-border border-b p-3", "last:border-b-0 hover:bg-hover")}
-                  >
-                    <div className="mb-2 flex items-start justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-1 flex items-center gap-2">
-                          <Globe size={12} className="text-text-lighter" />
-                          <span className="ui-font font-medium text-text text-xs">
-                            {remote.name}
-                          </span>
-                        </div>
-
-                        <div className="break-all text-[10px] text-text-lighter">{remote.url}</div>
+              return (
+                <div
+                  key={remote.name}
+                  className="border-border/70 border-b px-4 py-3 last:border-b-0"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        <Globe size={12} className="text-text-lighter" />
+                        <span className="font-medium text-text text-xs">{remote.name}</span>
                       </div>
-
-                      <button
-                        onClick={() => handleRemoveRemote(remote.name)}
-                        disabled={isActionLoading}
-                        className={cn(
-                          "ml-2 flex items-center gap-1 rounded border border-red-500",
-                          "bg-red-600 px-2 py-1 text-[9px] text-white",
-                          "transition-colors hover:bg-red-700 disabled:opacity-50",
-                        )}
-                        title="Remove remote"
-                      >
-                        <Trash2 size={8} />
-                        Remove
-                      </button>
+                      <div className="break-all text-[10px] text-text-lighter">{remote.url}</div>
                     </div>
+                    <Button
+                      onClick={() => void handleRemoveRemote(remote.name)}
+                      disabled={isActionLoading}
+                      variant="ghost"
+                      size="xs"
+                      className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                      title="Remove remote"
+                    >
+                      <Trash2 size={10} />
+                    </Button>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })
           )}
         </div>
 
-        <div
-          className={cn("border-border border-t bg-primary-bg p-3", "text-[9px] text-text-lighter")}
-        >
+        <div className="border-border/70 border-t bg-secondary-bg/40 px-4 py-2 text-[10px] text-text-lighter">
           {remotes.length} remote{remotes.length !== 1 ? "s" : ""} configured
         </div>
       </div>
-    </div>
+    </Dialog>
   );
 };
 

@@ -10,6 +10,7 @@ mod status;
 mod tag;
 mod types;
 mod utils;
+mod worktree;
 
 pub use blame::*;
 pub use branch::*;
@@ -23,3 +24,4 @@ pub use status::*;
 pub use tag::*;
 pub use types::*;
 pub use utils::*;
+pub use worktree::*;

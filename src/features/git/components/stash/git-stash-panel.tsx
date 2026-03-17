@@ -11,6 +11,7 @@ interface GitStashPanelProps {
   repoPath?: string;
   onRefresh?: () => void;
   onViewStashDiff?: (stashIndex: number) => void;
+  showHeader?: boolean;
 }
 
 const GitStashPanel = ({
@@ -19,6 +20,7 @@ const GitStashPanel = ({
   repoPath,
   onRefresh,
   onViewStashDiff,
+  showHeader = true,
 }: GitStashPanelProps) => {
   const { stashes } = useGitStore();
   const [actionLoading, setActionLoading] = useState<Set<number>>(new Set());
@@ -69,25 +71,44 @@ const GitStashPanel = ({
   };
 
   return (
-    <div className={cn("select-none", isCollapsed ? "shrink-0" : "flex min-h-24 flex-1 flex-col")}>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
-        <button
-          type="button"
-          className="sticky top-0 z-20 flex w-full shrink-0 cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
-          onClick={onToggle}
-        >
-          {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-          <span className="font-bold text-[10px] uppercase tracking-wide">Stashes</span>
-          <div className="flex-1" />
-          {stashes.length > 0 && (
-            <span className="rounded-full bg-primary-bg px-1.5 text-[9px]">{stashes.length}</span>
-          )}
-        </button>
+    <div
+      className={cn(
+        "select-none",
+        isCollapsed ? "shrink-0" : "flex h-full min-h-0 flex-1 flex-col",
+      )}
+    >
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col overflow-hidden",
+          showHeader && "rounded-lg border border-border/60 bg-primary-bg/55",
+        )}
+      >
+        {showHeader && (
+          <button
+            type="button"
+            className="sticky top-0 z-20 flex w-full shrink-0 cursor-pointer items-center gap-1 border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm hover:bg-hover"
+            onClick={onToggle}
+          >
+            {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
+            <span className="font-medium text-[0.9em] text-text">Stashes</span>
+            <div className="flex-1" />
+            {stashes.length > 0 && (
+              <span className="rounded-full bg-primary-bg px-1.5 text-[0.74em]">
+                {stashes.length}
+              </span>
+            )}
+          </button>
+        )}
 
         {!isCollapsed && (
-          <div className="scrollbar-none min-h-0 flex-1 overflow-y-scroll bg-primary-bg/70 p-1">
+          <div
+            className={cn(
+              "scrollbar-none min-h-0 flex-1 overflow-y-scroll p-1",
+              showHeader ? "bg-primary-bg/70" : "bg-transparent",
+            )}
+          >
             {stashes.length === 0 ? (
-              <div className="px-2.5 py-1.5 text-[10px] text-text-lighter italic">No stashes</div>
+              <div className="px-2.5 py-1.5 text-[0.84em] text-text-lighter italic">No stashes</div>
             ) : (
               stashes.map((stash) => (
                 <div
@@ -96,10 +117,10 @@ const GitStashPanel = ({
                   className="group mb-1 flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[10px] text-text" title={stash.message}>
+                    <div className="truncate text-inherit text-text" title={stash.message}>
                       {stash.message || "Stashed changes"}
                     </div>
-                    <div className="text-[9px] text-text-lighter">
+                    <div className="text-[0.84em] text-text-lighter">
                       {formatRelativeDate(stash.date)}
                     </div>
                   </div>

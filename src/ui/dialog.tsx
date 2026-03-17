@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { type LucideProps, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/utils/cn";
 
@@ -35,6 +35,20 @@ const Dialog = ({
   size = "md",
   classNames,
 }: DialogProps) => {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
   return createPortal(
     <>
       {/* Backdrop */}

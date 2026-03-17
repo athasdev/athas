@@ -633,17 +633,16 @@ const GitHubPRsView = memo(() => {
       {/* Content */}
       <div className="scrollbar-hidden flex-1 overflow-y-auto bg-secondary-bg/60">
         {!activeRepoPath ? (
-          <div className="mx-auto flex max-w-72 flex-col items-center justify-center rounded-xl border border-border/60 bg-primary-bg/65 p-4 text-center">
-            <FolderOpen size={20} className="mb-2 text-text-lighter" />
-            <p className="text-text text-xs">No repository selected</p>
+          <div className="mx-auto flex max-w-72 flex-col items-center justify-center p-4 text-center">
+            <p className="text-[0.8em] leading-tight text-text">No repository selected</p>
             <button
               onClick={() => void handleSelectRepository()}
-              className="mt-2 rounded-lg border border-border/60 bg-secondary-bg/80 px-3 py-1 text-text text-xs hover:bg-hover"
+              className="mt-2 inline-flex h-6 items-center rounded-lg border border-border/60 bg-secondary-bg/80 px-2.5 text-[0.8em] text-text hover:bg-hover"
             >
               Browse Repository
             </button>
             {workspaceRepoPaths.length === 0 && rootFolderPath && (
-              <p className="mt-2 text-[10px] text-text-lighter">
+              <p className="mt-2 text-[0.68em] leading-relaxed text-text-lighter/82">
                 No repositories were detected under the current workspace.
               </p>
             )}

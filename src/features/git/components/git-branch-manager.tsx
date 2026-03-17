@@ -282,7 +282,7 @@ const GitBranchManager = ({
         className={cn(
           "flex min-w-0 items-center",
           compact
-            ? "gap-1 rounded-full px-1.5 py-0.5 text-text-lighter hover:bg-hover disabled:opacity-50"
+            ? "gap-1 rounded-full px-1.5 py-0.5 text-[0.92em] text-text-lighter hover:bg-hover disabled:opacity-50"
             : "gap-1 rounded-full px-2 py-1 font-medium text-text text-xs hover:bg-hover disabled:opacity-50",
         )}
       >
@@ -290,7 +290,7 @@ const GitBranchManager = ({
           size={compact ? 11 : 12}
           className={compact ? "shrink-0" : "text-text-lighter"}
         />
-        <span className={cn("ui-font flex items-center truncate", compact ? "pt-0.5 text-xs" : "")}>
+        <span className={cn("ui-font flex items-center truncate", compact ? "text-[0.92em]" : "")}>
           {currentBranch}
         </span>
         <ChevronDown size={8} />
@@ -327,9 +327,7 @@ const GitBranchManager = ({
             </div>
 
             <div className="border-border/60 border-b p-2.5">
-              <div className="mb-1 font-medium text-[10px] text-text-lighter uppercase tracking-wide">
-                Create Branch
-              </div>
+              <div className="mb-1 font-medium text-[10px] text-text-lighter">Create Branch</div>
               <div className="flex gap-1.5">
                 <Input
                   id="new-branch-name"
@@ -361,10 +359,7 @@ const GitBranchManager = ({
             </div>
 
             <div className="border-border/60 border-b p-2.5">
-              <label
-                htmlFor="branch-search"
-                className="mb-1 block text-[10px] text-text-lighter uppercase tracking-wide"
-              >
+              <label htmlFor="branch-search" className="mb-1 block text-[10px] text-text-lighter">
                 Find Branch
               </label>
               <div className="relative">
@@ -386,7 +381,7 @@ const GitBranchManager = ({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-2">
-              <div className="mb-1 flex items-center justify-between px-1 text-[10px] text-text-lighter uppercase tracking-wide">
+              <div className="mb-1 flex items-center justify-between px-1 text-[10px] text-text-lighter">
                 <span>Branches</span>
                 <span>
                   {filteredBranches.length}

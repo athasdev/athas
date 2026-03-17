@@ -208,6 +208,31 @@ pub fn git_delete_tag(repo_path: String, name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn git_get_worktrees(repo_path: String) -> Result<Vec<git_backend::GitWorktree>, String> {
+   git_backend::git_get_worktrees(repo_path)
+}
+
+#[tauri::command]
+pub fn git_add_worktree(
+   repo_path: String,
+   path: String,
+   branch: Option<String>,
+   create_branch: bool,
+) -> Result<(), String> {
+   git_backend::git_add_worktree(repo_path, path, branch, create_branch)
+}
+
+#[tauri::command]
+pub fn git_remove_worktree(repo_path: String, path: String, force: bool) -> Result<(), String> {
+   git_backend::git_remove_worktree(repo_path, path, force)
+}
+
+#[tauri::command]
+pub fn git_prune_worktrees(repo_path: String) -> Result<(), String> {
+   git_backend::git_prune_worktrees(repo_path)
+}
+
+#[tauri::command]
 pub fn git_stage_hunk(repo_path: String, hunk: git_backend::GitHunk) -> Result<(), String> {
    git_backend::git_stage_hunk(repo_path, hunk)
 }

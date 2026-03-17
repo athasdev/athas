@@ -302,7 +302,7 @@ const GitStatusPanel = ({
             <button
               type="button"
               onClick={() => toggleFolderCollapsed(section, folderNode.fullPath)}
-              className="ui-font mx-1 mb-1 flex w-[calc(100%-8px)] items-center gap-1.5 rounded-lg py-1 text-left text-text text-xs hover:bg-hover"
+              className="ui-font mx-1 mb-1 flex w-[calc(100%-8px)] items-center gap-1.5 rounded-lg py-1 text-left text-inherit text-text hover:bg-hover"
               style={{ paddingLeft: `${paddingLeft}px`, paddingRight: "8px" }}
             >
               {isCollapsed ? (
@@ -374,11 +374,11 @@ const GitStatusPanel = ({
           onClick={() => setIsStagedCollapsed(!isStagedCollapsed)}
         >
           {isStagedCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-          <span className="font-bold text-[10px] uppercase tracking-wide">Staged Changes</span>
+          <span className="font-medium text-[0.9em] text-text">Staged changes</span>
           <div className="flex-1" />
           <div className="flex items-center gap-1">
             {hasVisibleStagedFiles && (
-              <span className="rounded-full bg-primary-bg px-1.5 text-[9px]">
+              <span className="rounded-full bg-primary-bg px-1.5 text-[0.74em]">
                 {stagedFiles.length}
               </span>
             )}
@@ -404,7 +404,7 @@ const GitStatusPanel = ({
             {hasVisibleStagedFiles ? (
               renderFlatFileList(groupedStagedFiles)
             ) : (
-              <div className="flex items-center gap-2 px-2.5 py-2 text-[10px] text-text-lighter">
+              <div className="flex items-center gap-2 px-2.5 py-2 text-[0.84em] text-text-lighter">
                 <Check size={10} className="text-success" />
                 <span className="italic">No staged changes</span>
               </div>
@@ -429,11 +429,11 @@ const GitStatusPanel = ({
             onClick={() => setIsChangesCollapsed(!isChangesCollapsed)}
           >
             {isChangesCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-            <span className="font-bold text-[10px] uppercase tracking-wide">Changes</span>
+            <span className="font-medium text-[0.9em] text-text">Changes</span>
             <div className="flex-1" />
             <div className="flex items-center gap-1">
               {hasVisibleUnstagedFiles && (
-                <span className="rounded-full bg-primary-bg px-1.5 text-[9px]">
+                <span className="rounded-full bg-primary-bg px-1.5 text-[0.74em]">
                   {unstagedFiles.length}
                 </span>
               )}
@@ -477,7 +477,7 @@ const GitStatusPanel = ({
                   renderFlatFileList(groupedUnstagedFiles)
                 )
               ) : (
-                <div className="flex items-center gap-2 px-2.5 py-2 text-[10px] text-text-lighter">
+                <div className="flex items-center gap-2 px-2.5 py-2 text-[0.84em] text-text-lighter">
                   <Check size={10} className="text-success" />
                   <span className="italic">No changes</span>
                 </div>
@@ -493,7 +493,7 @@ const GitStatusPanel = ({
         )}
 
       {collapseEmptyGitSections && !hasVisibleStagedFiles && !hasVisibleUnstagedFiles && (
-        <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-primary-bg/55 px-3 py-2 text-[10px] text-text-lighter">
+        <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-primary-bg/55 px-3 py-2 text-[0.84em] text-text-lighter">
           <Check size={10} className="text-success" />
           <span className="italic">Working tree clean</span>
         </div>

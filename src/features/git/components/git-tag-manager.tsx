@@ -1,7 +1,8 @@
-import { Calendar, GitCommit, Plus, Tag, Trash2, X } from "lucide-react";
+import { Calendar, GitCommit, Plus, Tag, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import Button from "@/ui/button";
+import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
-import { cn } from "@/utils/cn";
 import { formatShortDate } from "@/utils/date";
 import { createTag, deleteTag, getTags } from "../api/git-tags-api";
 import type { GitTag } from "../types/git-types";
@@ -23,7 +24,7 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
 
   useEffect(() => {
     if (isOpen) {
-      loadTags();
+      void loadTags();
     }
   }, [isOpen, repoPath]);
 
@@ -92,139 +93,109 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
   }
 
   return (
-    <div className={cn("fixed inset-0 z-50 flex items-center justify-center", "bg-opacity-50")}>
-      <div
-        className={cn(
-          "flex max-h-[80vh] w-[480px] flex-col rounded-lg",
-          "border border-border bg-secondary-bg",
-        )}
-      >
-        <div className="flex items-center justify-between border-border border-b p-4">
-          <div className="flex items-center gap-2">
-            <Tag size={16} className="text-text-lighter" />
-            <h2 className="font-medium text-sm text-text">Tag Manager</h2>
+    <Dialog onClose={onClose} title="Tags" icon={Tag} size="lg" classNames={{ content: "p-0" }}>
+      <div className="ui-font flex max-h-[70vh] flex-col">
+        <div className="border-border/70 border-b p-4">
+          <div className="mb-3 flex items-center gap-2 text-text text-xs">
+            <Plus size={12} className="text-text-lighter" />
+            <span className="font-medium">Create tag</span>
           </div>
-          <button onClick={onClose} className="text-text-lighter transition-colors hover:text-text">
-            <X size={16} />
-          </button>
-        </div>
 
-        <div className="border-border border-b p-4">
           <div className="space-y-2">
-            <div className="mb-2 flex items-center gap-2">
-              <Plus size={12} className="text-text-lighter" />
-              <span className="font-medium text-text text-xs">Create New Tag</span>
-            </div>
-
             <Input
               type="text"
-              placeholder="Tag name (e.g., v1.0.0)"
+              placeholder="Tag name"
               value={newTagName}
               onChange={(e) => setNewTagName(e.target.value)}
-              className={cn("w-full bg-primary-bg")}
+              className="w-full bg-primary-bg"
             />
-
             <Input
               type="text"
               placeholder="Tag message (optional)"
               value={newTagMessage}
               onChange={(e) => setNewTagMessage(e.target.value)}
-              className={cn("w-full bg-primary-bg")}
+              className="w-full bg-primary-bg"
             />
-
             <Input
               type="text"
-              placeholder="Commit SHA (optional, defaults to HEAD)"
+              placeholder="Commit SHA (optional)"
               value={newTagCommit}
               onChange={(e) => setNewTagCommit(e.target.value)}
-              className={cn("w-full bg-primary-bg")}
+              className="w-full bg-primary-bg"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  handleCreateTag();
+                  void handleCreateTag();
                 }
               }}
             />
-
-            <button
-              onClick={handleCreateTag}
-              disabled={isLoading || !newTagName.trim()}
-              className={cn(
-                "w-full rounded border border-border bg-primary-bg",
-                "py-1.5 text-text text-xs transition-colors",
-                "hover:bg-hover disabled:opacity-50",
-              )}
-            >
-              {isLoading ? "Creating..." : "Create Tag"}
-            </button>
+            <div className="flex justify-end">
+              <Button
+                onClick={() => void handleCreateTag()}
+                disabled={isLoading || !newTagName.trim()}
+                size="sm"
+              >
+                {isLoading ? "Creating..." : "Create Tag"}
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {isLoading && tags.length === 0 ? (
             <div className="p-4 text-center text-text-lighter text-xs">Loading tags...</div>
           ) : tags.length === 0 ? (
             <div className="p-4 text-center text-text-lighter text-xs">No tags found</div>
           ) : (
-            <div className="space-y-0">
-              {tags.map((tag) => {
-                const isActionLoading = actionLoading.has(tag.name);
+            tags.map((tag) => {
+              const isActionLoading = actionLoading.has(tag.name);
 
-                return (
-                  <div
-                    key={tag.name}
-                    className={cn("border-border border-b p-3", "last:border-b-0 hover:bg-hover")}
-                  >
-                    <div className="mb-2 flex items-start justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-1 flex items-center gap-2">
-                          <Tag size={12} className="text-text-lighter" />
-                          <span className="ui-font font-medium text-text text-xs">{tag.name}</span>
-                        </div>
-
-                        {tag.message && (
-                          <div className="mb-1 text-[11px] text-text-lighter">{tag.message}</div>
-                        )}
-
-                        <div className="flex items-center gap-3 text-[9px] text-text-lighter">
-                          <div className="flex items-center gap-1">
-                            <GitCommit size={8} />
-                            <span className="ui-font">{tag.commit.substring(0, 7)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar size={8} />
-                            {formatShortDate(tag.date)}
-                          </div>
-                        </div>
+              return (
+                <div key={tag.name} className="border-border/70 border-b px-4 py-3 last:border-b-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        <Tag size={12} className="text-text-lighter" />
+                        <span className="font-medium text-text text-xs">{tag.name}</span>
                       </div>
 
-                      <button
-                        onClick={() => handleDeleteTag(tag.name)}
-                        disabled={isActionLoading}
-                        className={cn(
-                          "ml-2 flex items-center gap-1 rounded border border-red-500",
-                          "bg-red-600 px-2 py-1 text-[9px] text-white",
-                          "transition-colors hover:bg-red-700 disabled:opacity-50",
-                        )}
-                        title="Delete tag"
-                      >
-                        <Trash2 size={8} />
-                        Delete
-                      </button>
+                      {tag.message && (
+                        <div className="mb-1 text-[11px] text-text-lighter">{tag.message}</div>
+                      )}
+
+                      <div className="flex items-center gap-3 text-[10px] text-text-lighter">
+                        <div className="flex items-center gap-1">
+                          <GitCommit size={10} />
+                          <span className="ui-font">{tag.commit.substring(0, 7)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar size={10} />
+                          {formatShortDate(tag.date)}
+                        </div>
+                      </div>
                     </div>
+
+                    <Button
+                      onClick={() => void handleDeleteTag(tag.name)}
+                      disabled={isActionLoading}
+                      variant="ghost"
+                      size="xs"
+                      className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                      title="Delete tag"
+                    >
+                      <Trash2 size={10} />
+                    </Button>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })
           )}
         </div>
 
-        <div
-          className={cn("border-border border-t bg-primary-bg p-3", "text-[9px] text-text-lighter")}
-        >
+        <div className="border-border/70 border-t bg-secondary-bg/40 px-4 py-2 text-[10px] text-text-lighter">
           {tags.length} tag{tags.length !== 1 ? "s" : ""} total
         </div>
       </div>
-    </div>
+    </Dialog>
   );
 };
 

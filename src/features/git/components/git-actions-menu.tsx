@@ -9,16 +9,13 @@ import {
   Tag,
   Upload,
 } from "lucide-react";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { fetchChanges, pullChanges, pushChanges } from "../api/git-remotes-api";
 import { discardAllChanges, initRepository } from "../api/git-status-api";
 import { useGitStore } from "../stores/git-store";
-import {
-  type GitActionsMenuAnchorRect,
-  resolveGitActionsMenuPosition,
-} from "../utils/git-actions-menu-position";
+import { type GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 
 interface GitActionsMenuProps {
   isOpen: boolean;
@@ -46,46 +43,8 @@ const GitActionsMenu = ({
   isSelectingRepository,
 }: GitActionsMenuProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{
-    left: number;
-    top: number;
-  } | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const { isRefreshing } = useGitStore();
   const confirmBeforeDiscard = useSettingsStore((state) => state.settings.confirmBeforeDiscard);
-
-  const updateMenuPosition = useCallback(() => {
-    if (!anchorRect || !menuRef.current) {
-      return;
-    }
-
-    const rect = menuRef.current.getBoundingClientRect();
-    const resolved = resolveGitActionsMenuPosition({
-      anchorRect,
-      menuSize: { width: rect.width, height: rect.height },
-      viewport: { width: window.innerWidth, height: window.innerHeight },
-    });
-
-    setMenuPosition({
-      left: resolved.left,
-      top: resolved.top,
-    });
-  }, [anchorRect]);
-
-  useLayoutEffect(() => {
-    if (!isOpen || !anchorRect) {
-      setMenuPosition(null);
-      return;
-    }
-
-    const frame = window.requestAnimationFrame(updateMenuPosition);
-    window.addEventListener("resize", updateMenuPosition);
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", updateMenuPosition);
-    };
-  }, [isOpen, anchorRect, updateMenuPosition, hasGitRepo, isLoading, isRefreshing]);
 
   const handleAction = async (action: () => Promise<boolean>, actionName: string) => {
     if (!repoPath) return;
@@ -240,14 +199,11 @@ const GitActionsMenu = ({
     <ContextMenu
       isOpen={isOpen}
       position={{
-        x: menuPosition?.left ?? anchorRect.left,
-        y: menuPosition?.top ?? anchorRect.bottom + 6,
+        x: anchorRect.right,
+        y: anchorRect.bottom + 6,
       }}
       items={items}
       onClose={onClose}
-      style={{
-        visibility: menuPosition ? "visible" : "hidden",
-      }}
     />
   );
 };
