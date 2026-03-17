@@ -18,6 +18,7 @@ import { usePaneStore } from "../stores/pane-store";
 import type { PaneGroup } from "../types/pane";
 import { hasTextContent } from "../types/pane-content";
 import type { EditorContent, PullRequestContent } from "../types/pane-content";
+import { type DropZone, SplitDropOverlay } from "./split-drop-overlay";
 
 const AgentTab = lazy(() =>
   import("@/features/ai/components/agent-tab").then((m) => ({ default: m.AgentTab })),
@@ -73,25 +74,26 @@ function BufferPreviewCard({ buffer }: { buffer: Buffer }) {
     ? buffer.content.split("\n").slice(0, 14).join("\n").trim()
     : "";
 
-  const summary = buffer.type === "terminal"
-    ? "Terminal session"
-    : buffer.type === "webViewer"
-      ? buffer.url || "Web view"
-      : buffer.type === "pullRequest"
-        ? `Pull request #${buffer.prNumber}`
-        : buffer.type === "diff"
-          ? "Diff preview"
-          : buffer.type === "image"
-            ? "Image preview"
-            : buffer.type === "pdf"
-              ? "PDF preview"
-              : buffer.type === "binary"
-                ? "Binary file preview"
-                : buffer.type === "database"
-                  ? `${buffer.databaseType} viewer`
-                  : buffer.type === "externalEditor"
-                    ? "External editor session"
-                    : previewText || "No preview available";
+  const summary =
+    buffer.type === "terminal"
+      ? "Terminal session"
+      : buffer.type === "webViewer"
+        ? buffer.url || "Web view"
+        : buffer.type === "pullRequest"
+          ? `Pull request #${buffer.prNumber}`
+          : buffer.type === "diff"
+            ? "Diff preview"
+            : buffer.type === "image"
+              ? "Image preview"
+              : buffer.type === "pdf"
+                ? "PDF preview"
+                : buffer.type === "binary"
+                  ? "Binary file preview"
+                  : buffer.type === "database"
+                    ? `${buffer.databaseType} viewer`
+                    : buffer.type === "externalEditor"
+                      ? "External editor session"
+                      : previewText || "No preview available";
 
   const previewLines = summary.split("\n").slice(0, 12);
 
@@ -190,6 +192,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     addBufferToPane,
     moveBufferToPane,
     reorderPaneBuffers,
+    splitPane,
   } = usePaneStore.use.actions();
   const { closeBufferForce, openBuffer } = useBufferStore.use.actions();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
@@ -197,6 +200,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
 
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isTabDragOver, setIsTabDragOver] = useState(false);
   const [carouselCardWidth, setCarouselCardWidth] = useState(DEFAULT_CAROUSEL_CARD_WIDTH);
   const [isCarouselResizing, setIsCarouselResizing] = useState(false);
   const [draggedCarouselBufferId, setDraggedCarouselBufferId] = useState<string | null>(null);
@@ -430,7 +434,6 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     e.preventDefault();
     e.stopPropagation();
 
-    // Check if this is a tab being dragged or a file
     const hasTabData = e.dataTransfer.types.includes("application/tab-data");
     const hasFilePath = e.dataTransfer.types.includes("text/plain");
     const hasFileDragData = !!window.__fileDragData;
@@ -438,19 +441,66 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     if (hasTabData || hasFilePath || hasFileDragData || e.dataTransfer.types.includes("Files")) {
       e.dataTransfer.dropEffect = "move";
       setIsDragOver(true);
+      if (hasTabData) {
+        setIsTabDragOver(true);
+      }
     }
   }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Only set false if we're leaving the pane container itself
     const relatedTarget = e.relatedTarget as HTMLElement | null;
     const currentTarget = e.currentTarget as HTMLElement;
     if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
       setIsDragOver(false);
+      setIsTabDragOver(false);
     }
   }, []);
+
+  const handleSplitDrop = useCallback(
+    (zone: DropZone, e: React.DragEvent) => {
+      setIsDragOver(false);
+      setIsTabDragOver(false);
+
+      if (!zone) return;
+
+      const tabDataString = e.dataTransfer.getData("application/tab-data");
+      if (!tabDataString) return;
+
+      let bufferId: string;
+      let sourcePaneId: string;
+      try {
+        const tabData = JSON.parse(tabDataString);
+        bufferId = tabData.bufferId;
+        sourcePaneId = tabData.paneId;
+      } catch {
+        return;
+      }
+
+      if (zone === "center") {
+        if (sourcePaneId && sourcePaneId !== pane.id) {
+          moveBufferToPane(bufferId, sourcePaneId, pane.id);
+        } else if (!sourcePaneId) {
+          addBufferToPane(pane.id, bufferId, true);
+        }
+        return;
+      }
+
+      // Create a split — new pane is always child[1]
+      const direction = zone === "left" || zone === "right" ? "horizontal" : "vertical";
+      const newPaneId = splitPane(pane.id, direction);
+      if (!newPaneId) return;
+
+      // Move the dragged buffer into the new pane (child[1] = right/bottom)
+      if (sourcePaneId && sourcePaneId !== pane.id) {
+        moveBufferToPane(bufferId, sourcePaneId, newPaneId);
+      } else {
+        moveBufferToPane(bufferId, pane.id, newPaneId);
+      }
+    },
+    [pane.id, splitPane, moveBufferToPane, addBufferToPane],
+  );
 
   // Handle mouse up for file tree drag (which uses mouse events, not HTML5 drag API)
   const handleMouseUp = useCallback(async () => {
@@ -510,26 +560,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       e.preventDefault();
       e.stopPropagation();
       setIsDragOver(false);
+      setIsTabDragOver(false);
       setActivePane(pane.id);
 
-      // Handle tab drag from another pane
-      const tabDataString = e.dataTransfer.getData("application/tab-data");
-      if (tabDataString) {
-        try {
-          const tabData = JSON.parse(tabDataString);
-          const { bufferId, paneId: sourcePaneId } = tabData;
-
-          if (sourcePaneId && sourcePaneId !== pane.id) {
-            // Move buffer from source pane to this pane
-            moveBufferToPane(bufferId, sourcePaneId, pane.id);
-          } else if (!sourcePaneId) {
-            // Tab from outside pane system, just add to this pane
-            addBufferToPane(pane.id, bufferId, true);
-          }
-          return;
-        } catch {
-          // Invalid tab data, continue to other handlers
-        }
+      // Tab drops are handled by SplitDropOverlay — skip here
+      if (e.dataTransfer.types.includes("application/tab-data")) {
+        return;
       }
 
       const droppedPaths = extractDroppedFilePaths(e.dataTransfer);
@@ -740,10 +776,15 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {isDragOver && <div className="pointer-events-none absolute inset-0 z-40 bg-accent/10" />}
+      {isDragOver && !isTabDragOver && (
+        <div className="pointer-events-none absolute inset-0 z-40 bg-accent/10" />
+      )}
+      <SplitDropOverlay visible={isTabDragOver} onDrop={handleSplitDrop} />
       {paneBuffers.length > 0 && <TabBar paneId={pane.id} onTabClick={handleTabClick} />}
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {(!activeBuffer || activeBuffer.type === "newTab") && !shouldRenderCarousel && <EmptyEditorState />}
+        {(!activeBuffer || activeBuffer.type === "newTab") && !shouldRenderCarousel && (
+          <EmptyEditorState />
+        )}
 
         <Suspense fallback={null}>
           {shouldRenderCarousel ? (

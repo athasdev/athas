@@ -37,7 +37,6 @@ import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
-import { IS_MAC } from "@/utils/platform";
 import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
 import { FileExplorerTreeItem } from "./file-explorer-tree-item";
 import "../styles/file-explorer-tree.css";
@@ -109,7 +108,6 @@ function FileExplorerTreeComponent({
 
   const { settings } = useSettingsStore();
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
-  const isMac = IS_MAC;
 
   const clipboardActions = useFileClipboardStore.getState().actions;
   const clipboard = useFileClipboardStore((s) => s.clipboard);
@@ -1030,16 +1028,15 @@ function FileExplorerTreeComponent({
     >
       {filteredFiles.length === 0 ? (
         <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
-          <button
-            onClick={handleOpenFolder}
-            className="ui-font flex w-fit min-w-fit items-center justify-center gap-2 rounded border border-border bg-hover px-3 py-1.5 text-text text-xs transition-colors hover:border-accent hover:text-accent"
-          >
-            <FolderOpen size={14} />
-            <span>Open Folder</span>
-            <kbd className="ml-1 rounded bg-secondary-bg px-1.5 py-0.5 font-mono text-[10px] text-text-lighter">
-              {isMac ? "\u2318O" : "Ctrl+O"}
-            </kbd>
-          </button>
+          <div className="ui-font flex flex-col items-center text-center">
+            <span className="text-[0.78em] text-text-lighter">No folder open</span>
+            <button
+              onClick={handleOpenFolder}
+              className="mt-1.5 ui-font text-[0.78em] text-accent transition-colors hover:text-accent/80"
+            >
+              Open Folder
+            </button>
+          </div>
         </div>
       ) : (
         <div className="w-max min-w-full" style={{}}>

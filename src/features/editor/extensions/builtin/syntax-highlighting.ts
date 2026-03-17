@@ -64,7 +64,12 @@ class SyntaxHighlighter {
     const bufferStore = useBufferStore.getState();
     const activeBuffer = bufferStore.actions.getActiveBuffer();
 
-    if (activeBuffer && isEditorContent(activeBuffer) && activeBuffer.path === this.filePath && activeBuffer.tokens.length > 0) {
+    if (
+      activeBuffer &&
+      isEditorContent(activeBuffer) &&
+      activeBuffer.path === this.filePath &&
+      activeBuffer.tokens.length > 0
+    ) {
       // Use cached tokens immediately
       this.tokens = activeBuffer.tokens;
       this.applyDecorations(affectedLines);
@@ -206,7 +211,11 @@ class SyntaxHighlighter {
       const bufferStore = useBufferStore.getState();
       const targetBuffer = bufferStore.buffers.find((b) => b.path === targetFilePath);
       if (!targetBuffer || !isEditorContent(targetBuffer)) {
-        logger.warn("SyntaxHighlighter", "Target editor buffer not found for path:", targetFilePath);
+        logger.warn(
+          "SyntaxHighlighter",
+          "Target editor buffer not found for path:",
+          targetFilePath,
+        );
         return;
       }
 

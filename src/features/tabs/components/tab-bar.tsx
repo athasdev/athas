@@ -346,7 +346,9 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
       updateActivePath(buffer.path);
 
       // Announce tab switch to screen readers
-      setSrAnnouncement(`Switched to ${buffer.name}${buffer.type === "editor" && buffer.isDirty ? ", unsaved changes" : ""}`);
+      setSrAnnouncement(
+        `Switched to ${buffer.name}${buffer.type === "editor" && buffer.isDirty ? ", unsaved changes" : ""}`,
+      );
 
       e.preventDefault();
       setDragState({
@@ -661,7 +663,9 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
           e.preventDefault();
           handleTabClick(buffer.id);
           updateActivePath(buffer.path);
-          setSrAnnouncement(`Activated ${buffer.name}${buffer.type === "editor" && buffer.isDirty ? ", unsaved changes" : ""}`);
+          setSrAnnouncement(
+            `Activated ${buffer.name}${buffer.type === "editor" && buffer.isDirty ? ", unsaved changes" : ""}`,
+          );
           break;
       }
     },
@@ -770,7 +774,8 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
             closeBuffer(bufferId);
             setTimeout(async () => {
               try {
-                const content = buffer.type === "editor" || buffer.type === "diff" ? buffer.content : "";
+                const content =
+                  buffer.type === "editor" || buffer.type === "diff" ? buffer.content : "";
                 openBuffer(
                   buffer.path,
                   buffer.name,

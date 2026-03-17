@@ -33,7 +33,8 @@ export function CsvPreview() {
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
 
   // Get the source buffer if this is a preview buffer
-  const sourceFilePath = activeBuffer?.type === "csvPreview" ? activeBuffer.sourceFilePath : undefined;
+  const sourceFilePath =
+    activeBuffer?.type === "csvPreview" ? activeBuffer.sourceFilePath : undefined;
   const sourceBuffer = sourceFilePath
     ? buffers.find((b) => b.path === sourceFilePath)
     : activeBuffer;

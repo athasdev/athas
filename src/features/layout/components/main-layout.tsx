@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AIChat from "@/features/ai/components/chat/ai-chat";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
@@ -35,26 +35,6 @@ import { MainSidebar } from "./sidebar/main-sidebar";
 
 const AI_CHAT_OVERLAY_BREAKPOINT = 1180;
 const SIDEBAR_COLLAPSE_THRESHOLD = 48;
-
-function SidebarRestoreHandle({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
-  const isLeft = side === "left";
-
-  return (
-    <div className={`flex shrink-0 items-center py-2 ${isLeft ? "pr-1 pl-0" : "pr-0 pl-1"}`}>
-      <button
-        type="button"
-        onClick={onClick}
-        className={`flex h-16 w-5 items-center justify-center border border-border bg-secondary-bg/90 text-text-lighter transition-colors hover:bg-hover hover:text-text ${
-          isLeft ? "rounded-r-full border-l-0" : "rounded-l-full border-r-0"
-        }`}
-        aria-label={`Show ${side} sidebar`}
-        title="Show sidebar"
-      >
-        {isLeft ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
-      </button>
-    </div>
-  );
-}
 
 export function MainLayout() {
   useChatInitialization();
@@ -303,23 +283,18 @@ export function MainLayout() {
               </ResizablePane>
             </div>
           ) : (
-            sidebarPosition === "left" && (
-              <>
+            sidebarPosition === "left" &&
+              isSidebarVisible && (
                 <ResizablePane
                   position="left"
                   widthKey="sidebarWidth"
-                  hidden={!isSidebarVisible}
                   collapsible
                   collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
                   onCollapse={() => setIsSidebarVisible(false)}
                 >
                   <MainSidebar />
                 </ResizablePane>
-                {!isSidebarVisible && (
-                  <SidebarRestoreHandle side="left" onClick={() => setIsSidebarVisible(true)} />
-                )}
-              </>
-            )
+              )
           )}
 
           {/* Main content area with split view */}
@@ -332,21 +307,17 @@ export function MainLayout() {
 
           {/* Right sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
-            <>
+            isSidebarVisible && (
               <ResizablePane
                 position="right"
                 widthKey="sidebarWidth"
-                hidden={!isSidebarVisible}
                 collapsible
                 collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
                 onCollapse={() => setIsSidebarVisible(false)}
               >
                 <MainSidebar />
               </ResizablePane>
-              {!isSidebarVisible && (
-                <SidebarRestoreHandle side="right" onClick={() => setIsSidebarVisible(true)} />
-              )}
-            </>
+            )
           ) : (
             <div className={!showInlineAiChat ? "hidden" : undefined}>
               <ResizablePane

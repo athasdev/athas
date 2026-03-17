@@ -187,10 +187,7 @@ const DiagnosticsPane = ({
     const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
     if (!activeBuffer) return null;
 
-    if (
-      activeBuffer.type !== "editor" ||
-      activeBuffer.isVirtual
-    ) {
+    if (activeBuffer.type !== "editor" || activeBuffer.isVirtual) {
       return null;
     }
 

@@ -69,9 +69,7 @@ const closeNewTabInActivePane = (buffers: PaneContent[]): PaneContent[] => {
   const paneStore = usePaneStore.getState();
   const activePane = paneStore.actions.getActivePane();
   const paneBufferIds = activePane?.bufferIds ?? [];
-  const newTabBuffer = buffers.find(
-    (b) => b.type === "newTab" && paneBufferIds.includes(b.id),
-  );
+  const newTabBuffer = buffers.find((b) => b.type === "newTab" && paneBufferIds.includes(b.id));
   if (newTabBuffer) {
     removeBufferFromPanes(newTabBuffer.id);
     return buffers.filter((b) => b.id !== newTabBuffer.id);
@@ -378,10 +376,7 @@ const checkExtensionSupport = (path: string) => {
       return extensionLoader.waitForInitialization();
     })
     .then(() => {
-      logger.debug(
-        "BufferStore",
-        "Extension loader initialized, waiting for extension store...",
-      );
+      logger.debug("BufferStore", "Extension loader initialized, waiting for extension store...");
       return import("@/extensions/registry/extension-store").then(
         ({ waitForExtensionStoreInitialization }) => waitForExtensionStoreInitialization(),
       );
@@ -485,10 +480,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec) as EditorContent;
 
               set((state) => {
-                state.buffers = [
-                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
-                  newBuffer,
-                ];
+                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -529,10 +521,7 @@ export const useBufferStore = createSelectors(
               newBuffer.name = displayName;
 
               set((state) => {
-                state.buffers = [
-                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
-                  newBuffer,
-                ];
+                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -582,10 +571,7 @@ export const useBufferStore = createSelectors(
               newBuffer.name = displayName;
 
               set((state) => {
-                state.buffers = [
-                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
-                  newBuffer,
-                ];
+                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -607,9 +593,7 @@ export const useBufferStore = createSelectors(
               }
               const path = `web-viewer://${spec.url}`;
 
-              const existing = buffers.find(
-                (b) => b.type === "webViewer" && b.url === spec.url,
-              );
+              const existing = buffers.find((b) => b.type === "webViewer" && b.url === spec.url);
               if (existing) {
                 set((state) => {
                   state.activeBufferId = existing.id;
@@ -635,10 +619,7 @@ export const useBufferStore = createSelectors(
               newBuffer.name = displayName;
 
               set((state) => {
-                state.buffers = [
-                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
-                  newBuffer,
-                ];
+                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -710,10 +691,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [
-                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
-                  newBuffer,
-                ];
+                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -742,11 +720,7 @@ export const useBufferStore = createSelectors(
                   invoke("close_terminal", {
                     id: existingExternalEditor.terminalConnectionId,
                   }).catch((e) => {
-                    logger.error(
-                      "BufferStore",
-                      "Failed to close old external editor terminal:",
-                      e,
-                    );
+                    logger.error("BufferStore", "Failed to close old external editor terminal:", e);
                   });
                 }
                 newBuffers = newBuffers.filter((b) => b.id !== existingExternalEditor.id);
@@ -756,10 +730,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [
-                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
-                  newBuffer,
-                ];
+                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -801,10 +772,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [
-                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
-                  newBuffer,
-                ];
+                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -891,8 +859,7 @@ export const useBufferStore = createSelectors(
 
           // Default: editor content
           // Special buffers should never be in preview mode
-          const shouldBePreview =
-            isPreview && !isVirtual;
+          const shouldBePreview = isPreview && !isVirtual;
 
           return get().actions.openContent({
             type: "editor",
@@ -984,9 +951,7 @@ export const useBufferStore = createSelectors(
           // Close terminal session for terminal tab buffers
           if (closedBuffer.type === "terminal") {
             import("@/features/terminal/stores/terminal-store").then(({ useTerminalStore }) => {
-              const session = useTerminalStore
-                .getState()
-                .getSession(closedBuffer.sessionId);
+              const session = useTerminalStore.getState().getSession(closedBuffer.sessionId);
               if (session?.connectionId) {
                 invoke("close_terminal", { id: session.connectionId }).catch((e) => {
                   logger.error("BufferStore", "Failed to close terminal tab session:", e);
@@ -1217,9 +1182,7 @@ export const useBufferStore = createSelectors(
           const { buffers } = get();
           const buffersToClose = buffers.filter((b) => b.id !== keepBufferId && !b.isPinned);
 
-          const dirtyBuffer = buffersToClose.find(
-            (b) => isEditorContent(b) && b.isDirty,
-          );
+          const dirtyBuffer = buffersToClose.find((b) => isEditorContent(b) && b.isDirty);
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1238,9 +1201,7 @@ export const useBufferStore = createSelectors(
           const { buffers } = get();
           const buffersToClose = buffers.filter((b) => !b.isPinned);
 
-          const dirtyBuffer = buffersToClose.find(
-            (b) => isEditorContent(b) && b.isDirty,
-          );
+          const dirtyBuffer = buffersToClose.find((b) => isEditorContent(b) && b.isDirty);
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1261,9 +1222,7 @@ export const useBufferStore = createSelectors(
 
           const buffersToClose = buffers.slice(bufferIndex + 1).filter((b) => !b.isPinned);
 
-          const dirtyBuffer = buffersToClose.find(
-            (b) => isEditorContent(b) && b.isDirty,
-          );
+          const dirtyBuffer = buffersToClose.find((b) => isEditorContent(b) && b.isDirty);
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1289,63 +1248,63 @@ export const useBufferStore = createSelectors(
         },
 
         switchToNextBuffer: () => {
+          const { buffers, activeBufferId } = get();
           const paneStore = usePaneStore.getState();
           const activePane = paneStore.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
-          if (activePane && paneBufferIds.length > 0) {
-            paneStore.actions.switchToNextBufferInPane();
-            const updatedActiveBufferId = paneStore.actions.getActivePane()?.activeBufferId;
-            if (!updatedActiveBufferId) return;
+          // Get the cyclable buffer IDs (skip newTab placeholders)
+          const cyclableIds = paneBufferIds.filter((id) => {
+            const b = buffers.find((buf) => buf.id === id);
+            return b && b.type !== "newTab";
+          });
 
-            set((state) => {
-              state.activeBufferId = updatedActiveBufferId;
-              state.buffers = state.buffers.map((b) => ({
-                ...b,
-                isActive: b.id === updatedActiveBufferId,
-              }));
-            });
-            return;
+          if (cyclableIds.length <= 1) return;
+
+          const currentIndex = cyclableIds.indexOf(activeBufferId ?? "");
+          const nextIndex = (currentIndex + 1) % cyclableIds.length;
+          const nextBufferId = cyclableIds[nextIndex];
+
+          if (activePane) {
+            paneStore.actions.setActivePaneBuffer(activePane.id, nextBufferId);
           }
-
-          const { buffers, activeBufferId } = get();
-          if (buffers.length === 0) return;
-
-          const currentIndex = buffers.findIndex((b) => b.id === activeBufferId);
-          const nextIndex = (currentIndex + 1) % buffers.length;
-          const nextBufferId = buffers[nextIndex].id;
-
-          get().actions.setActiveBuffer(nextBufferId);
+          set((state) => {
+            state.activeBufferId = nextBufferId;
+            state.buffers = state.buffers.map((b) => ({
+              ...b,
+              isActive: b.id === nextBufferId,
+            }));
+          });
         },
 
         switchToPreviousBuffer: () => {
+          const { buffers, activeBufferId } = get();
           const paneStore = usePaneStore.getState();
           const activePane = paneStore.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
-          if (activePane && paneBufferIds.length > 0) {
-            paneStore.actions.switchToPreviousBufferInPane();
-            const updatedActiveBufferId = paneStore.actions.getActivePane()?.activeBufferId;
-            if (!updatedActiveBufferId) return;
+          // Get the cyclable buffer IDs (skip newTab placeholders)
+          const cyclableIds = paneBufferIds.filter((id) => {
+            const b = buffers.find((buf) => buf.id === id);
+            return b && b.type !== "newTab";
+          });
 
-            set((state) => {
-              state.activeBufferId = updatedActiveBufferId;
-              state.buffers = state.buffers.map((b) => ({
-                ...b,
-                isActive: b.id === updatedActiveBufferId,
-              }));
-            });
-            return;
+          if (cyclableIds.length <= 1) return;
+
+          const currentIndex = cyclableIds.indexOf(activeBufferId ?? "");
+          const prevIndex = (currentIndex - 1 + cyclableIds.length) % cyclableIds.length;
+          const prevBufferId = cyclableIds[prevIndex];
+
+          if (activePane) {
+            paneStore.actions.setActivePaneBuffer(activePane.id, prevBufferId);
           }
-
-          const { buffers, activeBufferId } = get();
-          if (buffers.length === 0) return;
-
-          const currentIndex = buffers.findIndex((b) => b.id === activeBufferId);
-          const prevIndex = (currentIndex - 1 + buffers.length) % buffers.length;
-          const prevBufferId = buffers[prevIndex].id;
-
-          get().actions.setActiveBuffer(prevBufferId);
+          set((state) => {
+            state.activeBufferId = prevBufferId;
+            state.buffers = state.buffers.map((b) => ({
+              ...b,
+              isActive: b.id === prevBufferId,
+            }));
+          });
         },
 
         getActiveBuffer: (): PaneContent | null => {

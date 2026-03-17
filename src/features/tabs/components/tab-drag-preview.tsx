@@ -31,7 +31,9 @@ const TabDragPreview = ({ x, y, buffer }: TabDragPreviewProps) => (
       {buffer.isPinned && <Pin size={8} className="shrink-0 text-accent" />}
       <span className="max-w-[200px] truncate text-text">
         {buffer.name}
-        {buffer.type === "editor" && buffer.isDirty && <span className="ml-1 text-text-lighter">•</span>}
+        {buffer.type === "editor" && buffer.isDirty && (
+          <span className="ml-1 text-text-lighter">•</span>
+        )}
       </span>
     </div>
   </div>

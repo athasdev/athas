@@ -22,9 +22,10 @@ export function MarkdownPreview() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Get the source buffer if this is a preview buffer
-  const sourceBuffer = activeBuffer?.type === "markdownPreview"
-    ? buffers.find((b) => b.path === activeBuffer.sourceFilePath) ?? activeBuffer
-    : activeBuffer;
+  const sourceBuffer =
+    activeBuffer?.type === "markdownPreview"
+      ? (buffers.find((b) => b.path === activeBuffer.sourceFilePath) ?? activeBuffer)
+      : activeBuffer;
 
   const sourceContent = sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
 

@@ -9,9 +9,10 @@ export function HtmlPreview() {
   const activeBuffer = buffers.find((b) => b.id === activeBufferId);
 
   // If this is a preview buffer, find the source buffer (which has text content)
-  const sourceBuffer = activeBuffer?.type === "htmlPreview"
-    ? buffers.find((b) => b.path === activeBuffer.sourceFilePath) ?? activeBuffer
-    : activeBuffer;
+  const sourceBuffer =
+    activeBuffer?.type === "htmlPreview"
+      ? (buffers.find((b) => b.path === activeBuffer.sourceFilePath) ?? activeBuffer)
+      : activeBuffer;
 
   const sourceContent = sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
   const sourcePath = sourceBuffer?.path;
@@ -25,8 +26,7 @@ export function HtmlPreview() {
 
     // Get directory path
     const lastSlashIndex = sourcePath.lastIndexOf("/");
-    const dirPath =
-      lastSlashIndex !== -1 ? sourcePath.substring(0, lastSlashIndex) : sourcePath;
+    const dirPath = lastSlashIndex !== -1 ? sourcePath.substring(0, lastSlashIndex) : sourcePath;
 
     // Convert to Tauri asset URL
     // convertFileSrc handles the protocol logic (e.g. asset:// or http://asset.localhost)
