@@ -1,10 +1,9 @@
-import { Send, Slash, Square, X } from "lucide-react";
+import { Slash, X } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import Button from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
@@ -35,7 +34,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const selectedBufferIds = useAIChatStore((state) => state.selectedBufferIds);
   const selectedFilesPaths = useAIChatStore((state) => state.selectedFilesPaths);
   const isContextDropdownOpen = useAIChatStore((state) => state.isContextDropdownOpen);
-  const isSendAnimating = useAIChatStore((state) => state.isSendAnimating);
   const queueCount = useAIChatStore((state) => state.messageQueue.length);
   const hasApiKey = useAIChatStore((state) => state.hasApiKey);
   const mentionState = useAIChatStore((state) => state.mentionState);
@@ -52,7 +50,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // Memoize action selectors
   const setInput = useAIChatStore((state) => state.setInput);
   const setIsContextDropdownOpen = useAIChatStore((state) => state.setIsContextDropdownOpen);
-  const setIsSendAnimating = useAIChatStore((state) => state.setIsSendAnimating);
   const toggleBufferSelection = useAIChatStore((state) => state.toggleBufferSelection);
   const toggleFileSelection = useAIChatStore((state) => state.toggleFileSelection);
   const showMention = useAIChatStore((state) => state.showMention);
@@ -246,20 +243,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
     // The checkAndSync on mount handles initial sync and chat switching
   }, [getPlainTextFromDiv]);
 
-  // Click outside handler for context dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        contextDropdownRef.current &&
-        !contextDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsContextDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [setIsContextDropdownOpen]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     // Handle slash command navigation
@@ -632,12 +615,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
     const hasContent = currentInput.trim() || currentImages.length > 0;
     if (!hasContent || !isInputEnabled) return;
 
-    // Trigger send animation
-    setIsSendAnimating(true);
-
-    // Reset animation after the flying animation completes
-    setTimeout(() => setIsSendAnimating(false), 800);
-
     // Clear input and images immediately after send is triggered
     setInput("");
     setHasInputText(false);
@@ -659,14 +636,13 @@ const AIChatInputBar = memo(function AIChatInputBar({
       ref={aiChatContainerRef}
       className="ai-chat-container relative z-20 bg-transparent px-3 pt-2 pb-3"
     >
-      <div className="rounded-[20px] border border-border bg-primary-bg/95 px-3 py-2.5 shadow-sm backdrop-blur-sm">
-        {/* Pasted images preview */}
+      <div className="overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
         {pastedImages.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 px-2 pt-2">
             {pastedImages.map((image) => (
               <div
                 key={image.id}
-                className="group relative overflow-hidden rounded-lg border border-border bg-secondary-bg"
+                className="group relative overflow-hidden rounded border border-border bg-secondary-bg"
               >
                 <img
                   src={image.dataUrl}
@@ -685,7 +661,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
           </div>
         )}
 
-        {/* Input area */}
         <div
           ref={inputRef}
           contentEditable={isInputEnabled}
@@ -700,19 +675,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
               : "Configure API key to enable AI chat..."
           }
           className={cn(
-            "max-h-[140px] min-h-[64px] w-full resize-none overflow-y-auto border-none bg-transparent",
-            "px-2 py-1.5 text-text",
+            "max-h-[140px] min-h-[64px] w-full resize-none overflow-y-auto bg-transparent",
+            "ui-font px-2 py-1.5 text-inherit text-text placeholder:text-text-lighter",
             "focus:outline-none",
             !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
-            // Custom styles for contentEditable placeholder
             "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
           )}
           style={
             {
-              // Use dynamic font settings (slightly smaller than editor for UI consistency)
               fontFamily: `${fontFamily}, "Fira Code", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace`,
               fontSize: `${Math.max(fontSize - 2, 11)}px`,
-              // Ensure proper line height and text rendering
               lineHeight: "1.4",
               wordWrap: "break-word",
               overflowWrap: "break-word",
@@ -724,8 +696,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           tabIndex={isInputEnabled ? 0 : -1}
         />
 
-        {/* Bottom row: Context + Mode + Style + Model/Agent + Send */}
-        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+        <div className="flex items-center justify-between px-2 py-1">
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
             <div ref={contextDropdownRef} className="min-w-0 flex-1">
               <ContextSelector
@@ -739,20 +710,17 @@ const AIChatInputBar = memo(function AIChatInputBar({
               />
             </div>
 
-            {/* Queue indicator */}
             {queueCount > 0 && (
-              <div className="flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-blue-400 text-xs">
+              <div className="flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-blue-400 text-xs">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
                 <span>{queueCount}</span>
               </div>
             )}
           </div>
 
-          <div className="ml-auto flex shrink-0 select-none items-center gap-1.5">
-            {/* Chat mode selector */}
+          <div className="flex shrink-0 items-center gap-1">
             <ChatModeSelector />
 
-            {/* Slash command hint button */}
             {hasSlashCommands && (
               <button
                 onClick={() => {
@@ -761,29 +729,29 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     setInput("/");
                     setHasInputText(true);
                     inputRef.current.focus();
-                    // Trigger slash command detection
                     showSlashCommands(getSlashDropdownPosition(), "");
                   }
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary-bg/80 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className="flex items-center p-1 text-text-lighter transition-colors hover:text-text"
                 title="Show slash commands"
+                aria-label="Show slash commands"
               >
-                <Slash size={12} />
+                <Slash size={10} />
               </button>
             )}
 
-            <Button
-              type="submit"
+            <button
+              type="button"
               disabled={isSendDisabled}
               onClick={isStreaming ? onStopStreaming : handleSendMessage}
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text",
-                "send-button-hover button-transition focus:outline-none focus:ring-2 focus:ring-accent/50",
-                isStreaming && !isSendAnimating && "button-morphing",
-                (hasInputText || hasImages) &&
-                  isInputEnabled &&
-                  "border-blue-500/40 bg-blue-500 text-white hover:bg-blue-600 hover:text-white focus:ring-blue-500/50",
-                isSendDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                "ui-font p-1 text-xs transition-colors duration-150",
+                "button-transition focus:outline-none",
+                isSendDisabled
+                  ? "cursor-not-allowed text-text-lighter opacity-50"
+                  : (hasInputText || hasImages) && isInputEnabled
+                    ? "text-accent hover:text-accent/80"
+                    : "text-text-lighter hover:text-text",
               )}
               title={
                 isStreaming
@@ -793,28 +761,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     : "Send message (Enter)"
               }
               aria-label={isStreaming ? "Stop generation" : "Send message"}
-              tabIndex={0}
             >
-              {isStreaming && !isSendAnimating ? (
-                <Square size={14} className="transition-all duration-300" />
-              ) : (
-                <Send
-                  size={14}
-                  className={cn(
-                    "send-icon transition-all duration-200",
-                    isSendAnimating && "flying",
-                  )}
-                />
-              )}
-            </Button>
+              {isStreaming ? "Stop" : "Send"}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* File Mention Dropdown */}
       {mentionState.active && <FileMentionDropdown onSelect={handleFileMentionSelect} />}
 
-      {/* Slash Command Dropdown */}
       {slashCommandState.active && <SlashCommandDropdown onSelect={handleSlashCommandSelect} />}
     </div>
   );

@@ -188,10 +188,8 @@ const DiagnosticsPane = ({
     if (!activeBuffer) return null;
 
     if (
-      activeBuffer.isVirtual ||
-      activeBuffer.isDiff ||
-      activeBuffer.isImage ||
-      activeBuffer.databaseType
+      activeBuffer.type !== "editor" ||
+      activeBuffer.isVirtual
     ) {
       return null;
     }

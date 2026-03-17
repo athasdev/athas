@@ -22,7 +22,6 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
-import ChatHistorySidebar from "../history/sidebar";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
@@ -140,10 +139,10 @@ const AIChat = memo(function AIChat({
     // Build active buffer context, including web viewer content if applicable
     let activeBufferContext: (typeof activeBuffer & { webViewerContent?: string }) | undefined =
       activeBuffer || undefined;
-    if (activeBuffer?.isWebViewer && activeBuffer.webViewerUrl) {
+    if (activeBuffer?.type === "webViewer" && activeBuffer.url) {
       // Fetch web page content for context
       const { fetchWebPageContent } = await import("@/features/ai/services/web-content-service");
-      const webContent = await fetchWebPageContent(activeBuffer.webViewerUrl);
+      const webContent = await fetchWebPageContent(activeBuffer.url);
       activeBufferContext = {
         ...activeBuffer,
         webViewerContent: webContent,
@@ -160,7 +159,7 @@ const AIChat = memo(function AIChat({
       agentId,
     };
 
-    if (activeBuffer && !activeBuffer.isWebViewer) {
+    if (activeBuffer && activeBuffer.type !== "webViewer") {
       const extension = activeBuffer.path.split(".").pop()?.toLowerCase() || "";
       const languageMap: Record<string, string> = {
         js: "JavaScript",
@@ -644,7 +643,7 @@ details: ${errorDetails || mainError}
     <div
       className={`ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
     >
-      <ChatHeader />
+      <ChatHeader onDeleteChat={handleDeleteChat} />
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
@@ -710,14 +709,6 @@ details: ${errorDetails || mainError}
             }
           />
 
-          <ChatHistorySidebar
-            chats={chatState.chats}
-            currentChatId={chatState.currentChatId}
-            onSwitchToChat={chatActions.switchToChat}
-            onDeleteChat={handleDeleteChat}
-            isOpen={chatState.isChatHistoryVisible}
-            onClose={() => chatActions.setIsChatHistoryVisible(false)}
-          />
         </>
       )}
     </div>

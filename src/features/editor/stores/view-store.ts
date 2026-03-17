@@ -1,5 +1,6 @@
 import isEqual from "fast-deep-equal";
 import { createWithEqualityFn } from "zustand/traditional";
+import { isEditorContent } from "@/features/panes/types/pane-content";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { LineToken } from "../types/editor";
 import { logger } from "../utils/logger";
@@ -135,19 +136,20 @@ export const useEditorViewStore = createSelectors(
       actions: {
         getLines: () => {
           const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
-          if (!activeBuffer) return [""];
+          if (!activeBuffer || !isEditorContent(activeBuffer)) return [""];
           return activeBuffer.content.split("\n");
         },
 
         getLineTokens: () => {
           const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
-          if (!activeBuffer) return new Map();
+          if (!activeBuffer || !isEditorContent(activeBuffer)) return new Map();
           return convertToLineTokens(activeBuffer.content, activeBuffer.tokens);
         },
 
         getContent: () => {
           const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
-          return activeBuffer?.content || "";
+          if (!activeBuffer || !isEditorContent(activeBuffer)) return "";
+          return activeBuffer.content;
         },
       },
     }),
@@ -158,7 +160,7 @@ export const useEditorViewStore = createSelectors(
 // Subscribe to buffer changes and update computed values
 useBufferStore.subscribe((state) => {
   const activeBuffer = state.actions.getActiveBuffer();
-  if (activeBuffer) {
+  if (activeBuffer && isEditorContent(activeBuffer)) {
     // Always recalculate line tokens when content or tokens change
     // The token filtering in convertToLineTokens handles stale tokens gracefully
     const lineTokens = convertToLineTokens(activeBuffer.content, activeBuffer.tokens);

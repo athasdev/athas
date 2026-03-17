@@ -8,6 +8,7 @@ interface TerminalTabProps {
   initialCommand?: string;
   workingDirectory?: string;
   isActive?: boolean;
+  isVisible?: boolean;
 }
 
 export function TerminalTab({
@@ -16,6 +17,7 @@ export function TerminalTab({
   initialCommand,
   workingDirectory,
   isActive = true,
+  isVisible = true,
 }: TerminalTabProps) {
   const { closeBufferForce } = useBufferStore.use.actions();
 
@@ -28,7 +30,7 @@ export function TerminalTab({
       <XtermTerminal
         sessionId={sessionId}
         isActive={isActive}
-        isVisible={isActive}
+        isVisible={isVisible}
         onTerminalExit={handleTerminalExit}
         initialCommand={initialCommand}
         workingDirectory={workingDirectory}

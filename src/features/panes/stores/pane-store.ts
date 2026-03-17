@@ -16,6 +16,7 @@ import {
   removeBufferFromPane,
   setActivePaneBuffer,
   splitPane,
+  reorderPaneBuffers,
   updatePaneSizes,
 } from "../utils/pane-tree";
 
@@ -33,6 +34,7 @@ interface PaneActions {
   removeBufferFromPane: (paneId: string, bufferId: string) => void;
   moveBufferToPane: (bufferId: string, fromPaneId: string, toPaneId: string) => void;
   setActivePaneBuffer: (paneId: string, bufferId: string | null) => void;
+  reorderPaneBuffers: (paneId: string, startIndex: number, endIndex: number) => void;
   updatePaneSizes: (splitId: string, sizes: [number, number]) => void;
   navigateToPane: (direction: "left" | "right" | "up" | "down") => void;
   switchToNextBufferInPane: () => void;
@@ -136,6 +138,12 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
       setActivePaneBuffer: (paneId, bufferId) => {
         set((state) => {
           state.root = setActivePaneBuffer(state.root, paneId, bufferId);
+        });
+      },
+
+      reorderPaneBuffers: (paneId, startIndex, endIndex) => {
+        set((state) => {
+          state.root = reorderPaneBuffers(state.root, paneId, startIndex, endIndex);
         });
       },
 

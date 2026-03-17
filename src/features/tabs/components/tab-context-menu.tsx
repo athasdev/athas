@@ -10,7 +10,8 @@ import {
   X,
 } from "lucide-react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import type { Buffer } from "@/features/tabs/types/buffer";
+import type { PaneContent } from "@/features/panes/types/pane-content";
+import { isVirtualContent } from "@/features/panes/types/pane-content";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import KeybindingBadge from "@/ui/keybinding-badge";
 import { IS_MAC } from "@/utils/platform";
@@ -18,7 +19,7 @@ import { IS_MAC } from "@/utils/platform";
 interface TabContextMenuProps {
   isOpen: boolean;
   position: { x: number; y: number };
-  buffer: Buffer | null;
+  buffer: PaneContent | null;
   paneId?: string;
   onClose: () => void;
   onPin: (bufferId: string) => void;
@@ -115,7 +116,7 @@ const TabContextMenu = ({
       icon: <FolderOpen size={12} />,
       onClick: () => onRevealInFinder?.(buffer.path),
     },
-    ...(!buffer.isVirtual && !buffer.path.includes("://")
+    ...(!isVirtualContent(buffer) && !buffer.path.includes("://")
       ? [
           {
             id: "terminal",

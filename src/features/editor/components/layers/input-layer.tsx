@@ -5,6 +5,7 @@
  */
 
 import { memo, useCallback, useRef } from "react";
+import { useSettingsStore } from "@/features/settings/store";
 
 interface InputLayerProps {
   content: string;
@@ -45,6 +46,7 @@ const InputLayerComponent = ({
 }: InputLayerProps) => {
   const localRef = useRef<HTMLTextAreaElement>(null);
   const ref = textareaRef || localRef;
+  const horizontalBufferCarousel = useSettingsStore((state) => state.settings.horizontalTabScroll);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -72,7 +74,8 @@ const InputLayerComponent = ({
         left: 0,
         right: 0,
         bottom: 0,
-        overflow: "auto",
+        overflowY: "auto",
+        overflowX: horizontalBufferCarousel ? "hidden" : "auto",
         fontSize: `${fontSize}px`,
         fontFamily,
         lineHeight: `${lineHeight}px`,

@@ -48,7 +48,7 @@ export function useMenuEventsWrapper() {
           try {
             await invoke("write_file", {
               path: result,
-              contents: activeBuffer.content || "",
+              contents: activeBuffer.type === "editor" ? activeBuffer.content : "",
             });
             console.log("File saved successfully to:", result);
             // Update buffer with new file path if needed

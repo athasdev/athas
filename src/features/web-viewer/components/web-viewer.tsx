@@ -24,9 +24,15 @@ interface WebViewerProps {
   bufferId: string;
   paneId?: string;
   isActive?: boolean;
+  isVisible?: boolean;
 }
 
-export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebViewerProps) {
+export function WebViewer({
+  url: initialUrl,
+  bufferId,
+  isActive: _isActive = true,
+  isVisible = true,
+}: WebViewerProps) {
   const isNewTab = initialUrl === "https://" || initialUrl === "http://" || !initialUrl;
   const [currentUrl, setCurrentUrl] = useState(isNewTab ? "" : initialUrl);
   const [inputUrl, setInputUrl] = useState(isNewTab ? "" : initialUrl);
@@ -68,12 +74,13 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
       const faviconUrl = `${urlObj.origin}/favicon.ico`;
 
       // Update buffer with new title and favicon
+      if (buffer.type !== "webViewer") return;
       updateBuffer({
         ...buffer,
         name: title,
-        webViewerTitle: hostname,
-        webViewerFavicon: faviconUrl,
-        webViewerUrl: currentUrl,
+        title: hostname,
+        favicon: faviconUrl,
+        url: currentUrl,
       });
     } catch {
       // Invalid URL, ignore
@@ -135,6 +142,30 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
   useEffect(() => {
     if (!webviewLabel || !containerRef.current) return;
 
+    const scrollParents: Array<Element | Window> = [];
+
+    const getScrollParents = (node: HTMLElement): Array<Element | Window> => {
+      const parents: Array<Element | Window> = [window];
+      let current: HTMLElement | null = node.parentElement;
+
+      while (current) {
+        const style = window.getComputedStyle(current);
+        const overflowX = style.overflowX;
+        const overflowY = style.overflowY;
+        const isScrollable =
+          ["auto", "scroll", "overlay"].includes(overflowX) ||
+          ["auto", "scroll", "overlay"].includes(overflowY);
+
+        if (isScrollable) {
+          parents.push(current);
+        }
+
+        current = current.parentElement;
+      }
+
+      return parents;
+    };
+
     const updatePosition = async () => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
@@ -156,18 +187,25 @@ export function WebViewer({ url: initialUrl, bufferId, isActive = true }: WebVie
     resizeObserver.observe(containerRef.current);
 
     window.addEventListener("resize", updatePosition);
+    for (const parent of getScrollParents(containerRef.current)) {
+      scrollParents.push(parent);
+      parent.addEventListener("scroll", updatePosition, { passive: true });
+    }
 
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener("resize", updatePosition);
+      for (const parent of scrollParents) {
+        parent.removeEventListener("scroll", updatePosition);
+      }
     };
   }, [webviewLabel]);
 
   useEffect(() => {
     if (!webviewLabel) return;
 
-    invoke("set_webview_visible", { webviewLabel, visible: isActive }).catch(console.error);
-  }, [webviewLabel, isActive]);
+    invoke("set_webview_visible", { webviewLabel, visible: isVisible }).catch(console.error);
+  }, [webviewLabel, isVisible]);
 
   const navigateTo = useCallback(
     async (url: string, addToHistory = true) => {

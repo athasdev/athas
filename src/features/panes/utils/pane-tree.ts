@@ -279,6 +279,46 @@ export function setActivePaneBuffer(
   return root;
 }
 
+export function reorderPaneBuffers(
+  root: PaneNode,
+  paneId: string,
+  startIndex: number,
+  endIndex: number,
+): PaneNode {
+  if (root.id === paneId && root.type === "group") {
+    if (
+      startIndex < 0 ||
+      endIndex < 0 ||
+      startIndex >= root.bufferIds.length ||
+      endIndex >= root.bufferIds.length ||
+      startIndex === endIndex
+    ) {
+      return root;
+    }
+
+    const nextBufferIds = [...root.bufferIds];
+    const [movedBufferId] = nextBufferIds.splice(startIndex, 1);
+    nextBufferIds.splice(endIndex, 0, movedBufferId);
+
+    return {
+      ...root,
+      bufferIds: nextBufferIds,
+    };
+  }
+
+  if (root.type === "split") {
+    return {
+      ...root,
+      children: [
+        reorderPaneBuffers(root.children[0], paneId, startIndex, endIndex),
+        reorderPaneBuffers(root.children[1], paneId, startIndex, endIndex),
+      ],
+    };
+  }
+
+  return root;
+}
+
 export function getAdjacentPane(
   root: PaneNode,
   currentPaneId: string,

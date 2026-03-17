@@ -29,8 +29,8 @@ export const useDiffData = (): UseDiffDataReturn => {
   const isRefreshing = useRef(false);
 
   const rawDiffData: GitDiff | MultiFileDiff | null =
-    activeBuffer?.diffData ||
-    (activeBuffer?.isDiff && activeBuffer.content
+    (activeBuffer?.type === "diff" && activeBuffer.diffData) ||
+    (activeBuffer?.type === "diff" && activeBuffer.content
       ? (() => {
           try {
             return JSON.parse(activeBuffer.content) as GitDiff | MultiFileDiff;

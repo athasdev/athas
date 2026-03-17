@@ -2,6 +2,7 @@ import { Download, FileJson, Rows } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import Select from "@/ui/select";
 import { TableView } from "@/ui/table-view";
@@ -32,18 +33,20 @@ export function CsvPreview() {
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
 
   // Get the source buffer if this is a preview buffer
-  const sourceBuffer = activeBuffer?.sourceFilePath
-    ? buffers.find((b) => b.path === activeBuffer.sourceFilePath)
+  const sourceFilePath = activeBuffer?.type === "csvPreview" ? activeBuffer.sourceFilePath : undefined;
+  const sourceBuffer = sourceFilePath
+    ? buffers.find((b) => b.path === sourceFilePath)
     : activeBuffer;
 
   const [delimiter, setDelimiter] = useState<Delim | "auto">("auto");
   const [hasHeader, setHasHeader] = useState(true);
 
+  const sourceContent = sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
+
   const { headers, rows } = useMemo(() => {
-    const content = sourceBuffer?.content ?? "";
-    const delim = delimiter === "auto" ? autodetectDelimiter(content) : delimiter;
-    return parseCsv(content, delim, hasHeader);
-  }, [sourceBuffer?.content, delimiter, hasHeader]);
+    const delim = delimiter === "auto" ? autodetectDelimiter(sourceContent) : delimiter;
+    return parseCsv(sourceContent, delim, hasHeader);
+  }, [sourceContent, delimiter, hasHeader]);
 
   const handleCopyCsv = async () => {
     try {

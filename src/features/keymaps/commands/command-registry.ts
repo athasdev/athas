@@ -19,7 +19,7 @@ function getZoomTarget(): "editor" | "terminal" | "webviewer" {
   if (terminalContainer?.contains(document.activeElement)) return "terminal";
 
   const activeBuffer = useBufferStore.getState().buffers.find((b) => b.isActive);
-  if (activeBuffer?.isWebViewer) return "webviewer";
+  if (activeBuffer?.type === "webViewer") return "webviewer";
 
   return "editor";
 }
@@ -62,7 +62,7 @@ const fileCommands: Command[] = [
       if (result) {
         await invoke("write_file", {
           path: result,
-          contents: activeBuffer.content || "",
+          contents: activeBuffer.type === "editor" ? activeBuffer.content : "",
         });
       }
     },

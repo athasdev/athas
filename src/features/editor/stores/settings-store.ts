@@ -49,12 +49,13 @@ export const useEditorSettingsStore = createSelectors(
 
 // Subscribe to settings store and sync all editor settings
 useSettingsStore.subscribe((state) => {
-  const { fontSize, fontFamily, tabSize, wordWrap, lineNumbers } = state.settings;
+  const { fontSize, fontFamily, tabSize, wordWrap, lineNumbers, horizontalTabScroll } =
+    state.settings;
   const actions = useEditorSettingsStore.getState().actions;
 
   actions.setFontSize(fontSize);
   actions.setFontFamily(fontFamily);
   actions.setTabSize(tabSize);
-  actions.setWordWrap(wordWrap);
+  actions.setWordWrap(wordWrap || horizontalTabScroll);
   actions.setLineNumbers(lineNumbers);
 });

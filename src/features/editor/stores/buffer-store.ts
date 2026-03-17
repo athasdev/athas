@@ -12,8 +12,24 @@ import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
 import type { GitDiff } from "@/features/git/types/git-types";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { cleanupBufferHistoryTracking } from "@/features/editor/stores/editor-app-store";
+import type {
+  EditorContent,
+  OpenContentSpec,
+  PaneContent,
+  TokenEntry,
+} from "@/features/panes/types/pane-content";
+import {
+  isEditorContent,
+  isEditableContent,
+  isPersistableContent,
+  isVirtualContent,
+  shouldStartLsp,
+} from "@/features/panes/types/pane-content";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import { createSelectors } from "@/utils/zustand-selectors";
+
+/** @deprecated Use `PaneContent` directly. Kept for backward compatibility. */
+export type Buffer = PaneContent;
 
 const syncBufferToPane = (bufferId: string) => {
   const paneStore = usePaneStore.getState();
@@ -46,58 +62,22 @@ const removeBufferFromPanes = (bufferId: string) => {
   }
 };
 
-export interface Buffer {
-  id: string;
-  path: string;
-  name: string;
-  content: string;
-  savedContent: string;
-  isDirty: boolean;
-  isVirtual: boolean;
-  isPinned: boolean;
-  isPreview: boolean;
-  isImage: boolean;
-  databaseType?: DatabaseType;
-  connectionId?: string;
-  isDiff: boolean;
-  isMarkdownPreview: boolean;
-  isHtmlPreview: boolean;
-  isCsvPreview: boolean;
-  isExternalEditor: boolean;
-  isWebViewer: boolean;
-  isPullRequest: boolean;
-  isPdf: boolean;
-  isBinary: boolean;
-  isActive: boolean;
-  language?: string; // File language for syntax highlighting and formatting
-  // For diff buffers, store the parsed diff data (single or multi-file)
-  diffData?: GitDiff | MultiFileDiff;
-  // For markdown preview buffers, store the source file path
-  sourceFilePath?: string;
-  // For external editor buffers, store the terminal connection ID
-  terminalConnectionId?: string;
-  // For web viewer buffers, store the URL
-  webViewerUrl?: string;
-  webViewerTitle?: string;
-  webViewerFavicon?: string;
-  // For PR buffers, store the PR number
-  prNumber?: number;
-  // For terminal tab buffers
-  isTerminal?: boolean;
-  terminalSessionId?: string;
-  terminalInitialCommand?: string;
-  terminalWorkingDirectory?: string;
-  // For agent tab buffers
-  isAgent?: boolean;
-  agentSessionId?: string;
-  // Cached syntax highlighting tokens
-  tokens: {
-    start: number;
-    end: number;
-    token_type: string;
-    class_name: string;
-  }[];
-}
+/**
+ * Close any new-tab placeholder in the active pane and return filtered buffers.
+ */
+const closeNewTabInActivePane = (buffers: PaneContent[]): PaneContent[] => {
+  const paneStore = usePaneStore.getState();
+  const activePane = paneStore.actions.getActivePane();
+  const paneBufferIds = activePane?.bufferIds ?? [];
+  const newTabBuffer = buffers.find(
+    (b) => b.type === "newTab" && paneBufferIds.includes(b.id),
+  );
+  if (newTabBuffer) {
+    removeBufferFromPanes(newTabBuffer.id);
+    return buffers.filter((b) => b.id !== newTabBuffer.id);
+  }
+  return buffers;
+};
 
 interface PendingClose {
   bufferId: string;
@@ -112,7 +92,7 @@ interface ClosedBuffer {
 }
 
 interface BufferState {
-  buffers: Buffer[];
+  buffers: PaneContent[];
   activeBufferId: string | null;
   maxOpenTabs: number;
   pendingClose: PendingClose | null;
@@ -121,6 +101,7 @@ interface BufferState {
 }
 
 interface BufferActions {
+  openContent: (spec: OpenContentSpec) => string;
   openBuffer: (
     path: string,
     name: string,
@@ -166,18 +147,10 @@ interface BufferActions {
     markDirty?: boolean,
     diffData?: GitDiff | MultiFileDiff,
   ) => void;
-  updateBufferTokens: (
-    bufferId: string,
-    tokens: {
-      start: number;
-      end: number;
-      token_type: string;
-      class_name: string;
-    }[],
-  ) => void;
+  updateBufferTokens: (bufferId: string, tokens: TokenEntry[]) => void;
   markBufferDirty: (bufferId: string, isDirty: boolean) => void;
   updateBufferPath: (bufferId: string, newPath: string) => void;
-  updateBuffer: (updatedBuffer: Buffer) => void;
+  updateBuffer: (updatedBuffer: PaneContent) => void;
   handleTabClick: (bufferId: string) => void;
   handleTabClose: (bufferId: string) => void;
   handleTabPin: (bufferId: string) => void;
@@ -187,7 +160,7 @@ interface BufferActions {
   reorderBuffers: (startIndex: number, endIndex: number) => void;
   switchToNextBuffer: () => void;
   switchToPreviousBuffer: () => void;
-  getActiveBuffer: () => Buffer | null;
+  getActiveBuffer: () => PaneContent | null;
   setMaxOpenTabs: (max: number) => void;
   reloadBufferFromDisk: (bufferId: string) => Promise<void>;
   setPendingClose: (pending: PendingClose | null) => void;
@@ -203,7 +176,7 @@ const generateBufferId = (path: string): string => {
 let saveSessionTimer: NodeJS.Timeout | null = null;
 const SAVE_SESSION_DEBOUNCE_MS = 300;
 
-const saveSessionToStore = (_buffers: Buffer[], _activeBufferId: string | null) => {
+const saveSessionToStore = (_buffers: PaneContent[], _activeBufferId: string | null) => {
   if (saveSessionTimer) clearTimeout(saveSessionTimer);
   saveSessionTimer = setTimeout(() => {
     const { buffers, activeBufferId } = useBufferStore.getState();
@@ -212,60 +185,253 @@ const saveSessionToStore = (_buffers: Buffer[], _activeBufferId: string | null) 
   }, SAVE_SESSION_DEBOUNCE_MS);
 };
 
-const saveSessionToStoreImmediate = (buffers: Buffer[], activeBufferId: string | null) => {
-  // Get the root folder path from file system store
-  // We'll import this dynamically to avoid circular dependencies
+const saveSessionToStoreImmediate = (buffers: PaneContent[], activeBufferId: string | null) => {
   import("@/features/file-system/controllers/store").then(({ useFileSystemStore }) => {
     const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
 
     if (!rootFolderPath) return;
 
-    // Only save real files, not virtual/diff/image/sqlite/external editor/web viewer/PR/terminal/agent buffers
     const persistableBuffers = buffers
-      .filter(
-        (b) =>
-          !b.isVirtual &&
-          !b.isDiff &&
-          !b.isImage &&
-          !b.databaseType &&
-          !b.isMarkdownPreview &&
-          !b.isHtmlPreview &&
-          !b.isCsvPreview &&
-          !b.isExternalEditor &&
-          !b.isWebViewer &&
-          !b.isPullRequest &&
-          !b.isPdf &&
-          !b.isTerminal &&
-          !b.isAgent,
-      )
+      .filter((b) => isPersistableContent(b))
       .map((b) => ({
         path: b.path,
         name: b.name,
         isPinned: b.isPinned,
       }));
 
-    // Find the active buffer path
     const activeBuffer = buffers.find((b) => b.id === activeBufferId);
     const activeBufferPath =
-      activeBuffer &&
-      !activeBuffer.isVirtual &&
-      !activeBuffer.isDiff &&
-      !activeBuffer.isImage &&
-      !activeBuffer.databaseType &&
-      !activeBuffer.isMarkdownPreview &&
-      !activeBuffer.isHtmlPreview &&
-      !activeBuffer.isCsvPreview &&
-      !activeBuffer.isExternalEditor &&
-      !activeBuffer.isWebViewer &&
-      !activeBuffer.isPullRequest &&
-      !activeBuffer.isPdf &&
-      !activeBuffer.isTerminal &&
-      !activeBuffer.isAgent
-        ? activeBuffer.path
-        : null;
+      activeBuffer && isPersistableContent(activeBuffer) ? activeBuffer.path : null;
 
     useSessionStore.getState().saveSession(rootFolderPath, persistableBuffers, activeBufferPath);
   });
+};
+
+/**
+ * Create a PaneContent variant from an OpenContentSpec.
+ * Used internally by openContent; also handles the "editor" type's complex logic
+ * (preview mode, max tabs, extension checking, recent files) in the openContent action itself.
+ */
+const createPaneContent = (id: string, spec: OpenContentSpec): PaneContent => {
+  const base = {
+    id,
+    isPinned: false,
+    isActive: true,
+  };
+
+  switch (spec.type) {
+    case "editor":
+      return {
+        ...base,
+        type: "editor",
+        path: spec.path,
+        name: spec.name,
+        content: spec.content,
+        savedContent: spec.content,
+        isDirty: false,
+        isVirtual: spec.isVirtual ?? false,
+        isPreview: spec.isPreview ?? false,
+        language: spec.language ?? detectLanguageFromFileName(spec.name),
+        tokens: [],
+      };
+    case "terminal":
+      return {
+        ...base,
+        type: "terminal",
+        path: `terminal://${id}`,
+        name: spec.name ?? "Terminal",
+        isPreview: false,
+        sessionId: id.replace("buffer_", ""),
+        initialCommand: spec.command,
+        workingDirectory: spec.workingDirectory,
+      };
+    case "agent":
+      return {
+        ...base,
+        type: "agent",
+        path: `agent://${spec.sessionId ?? id}`,
+        name: "Agent",
+        isPreview: false,
+        sessionId: spec.sessionId ?? id.replace("buffer_", ""),
+      };
+    case "webViewer":
+      return {
+        ...base,
+        type: "webViewer",
+        path: `web-viewer://${spec.url}`,
+        name: "Web Viewer",
+        isPreview: false,
+        url: spec.url,
+      };
+    case "newTab":
+      return {
+        ...base,
+        type: "newTab",
+        path: `newtab://${id}`,
+        name: "New Tab",
+        isPreview: false,
+      };
+    case "diff":
+      return {
+        ...base,
+        type: "diff",
+        path: spec.path,
+        name: spec.name,
+        isPreview: false,
+        content: spec.content,
+        savedContent: spec.content,
+        diffData: spec.diffData,
+      };
+    case "image":
+      return {
+        ...base,
+        type: "image",
+        path: spec.path,
+        name: spec.name,
+        isPreview: false,
+      };
+    case "pdf":
+      return {
+        ...base,
+        type: "pdf",
+        path: spec.path,
+        name: spec.name,
+        isPreview: false,
+      };
+    case "binary":
+      return {
+        ...base,
+        type: "binary",
+        path: spec.path,
+        name: spec.name,
+        isPreview: false,
+      };
+    case "database":
+      return {
+        ...base,
+        type: "database",
+        path: spec.path,
+        name: spec.name,
+        isPreview: false,
+        databaseType: spec.databaseType,
+        connectionId: spec.connectionId,
+      };
+    case "pullRequest":
+      return {
+        ...base,
+        type: "pullRequest",
+        path: `pr://${spec.prNumber}`,
+        name: `PR #${spec.prNumber}`,
+        isPreview: false,
+        prNumber: spec.prNumber,
+      };
+    case "markdownPreview":
+      return {
+        ...base,
+        type: "markdownPreview",
+        path: spec.path,
+        name: spec.name,
+        isPreview: false,
+        content: spec.content,
+        sourceFilePath: spec.sourceFilePath,
+      };
+    case "htmlPreview":
+      return {
+        ...base,
+        type: "htmlPreview",
+        path: spec.path,
+        name: spec.name,
+        isPreview: false,
+        content: spec.content,
+        sourceFilePath: spec.sourceFilePath,
+      };
+    case "csvPreview":
+      return {
+        ...base,
+        type: "csvPreview",
+        path: spec.path,
+        name: spec.name,
+        isPreview: false,
+        content: spec.content,
+        sourceFilePath: spec.sourceFilePath,
+      };
+    case "externalEditor":
+      return {
+        ...base,
+        type: "externalEditor",
+        path: spec.path,
+        name: spec.name,
+        isPreview: false,
+        terminalConnectionId: spec.terminalConnectionId,
+      };
+  }
+};
+
+/**
+ * Run extension checking and LSP logic for a newly opened editor file.
+ */
+const checkExtensionSupport = (path: string) => {
+  logger.info("BufferStore", `Checking extension support for ${path}`);
+  import("@/extensions/loader/extension-loader")
+    .then(({ extensionLoader }) => {
+      logger.debug("BufferStore", "Waiting for extension loader initialization...");
+      return extensionLoader.waitForInitialization();
+    })
+    .then(() => {
+      logger.debug(
+        "BufferStore",
+        "Extension loader initialized, waiting for extension store...",
+      );
+      return import("@/extensions/registry/extension-store").then(
+        ({ waitForExtensionStoreInitialization }) => waitForExtensionStoreInitialization(),
+      );
+    })
+    .then(() => {
+      return import("@/extensions/registry/extension-store");
+    })
+    .then(({ useExtensionStore }) => {
+      const { getExtensionForFile } = useExtensionStore.getState().actions;
+
+      const extension = getExtensionForFile(path);
+      logger.debug(
+        "BufferStore",
+        `getExtensionForFile(${path}) returned:`,
+        extension?.manifest?.name || "undefined",
+      );
+
+      if (extension) {
+        const isBundled = !extension.manifest.installation;
+        const installed = extension.isInstalled || isBundled;
+        logger.info(
+          "BufferStore",
+          `Extension ${extension.manifest.name} for ${path}: installed=${installed}, bundled=${isBundled}`,
+        );
+
+        if (installed) {
+          logger.debug("BufferStore", `Extension ready for ${path}`);
+        } else {
+          logger.info(
+            "BufferStore",
+            `Extension ${extension.manifest.name} not installed for ${path}`,
+          );
+
+          window.dispatchEvent(
+            new CustomEvent("extension-install-needed", {
+              detail: {
+                extensionId: extension.manifest.id,
+                extensionName: extension.manifest.displayName,
+                filePath: path,
+              },
+            }),
+          );
+        }
+      } else {
+        logger.info("BufferStore", `No extension available for ${path}`);
+      }
+    })
+    .catch((error) => {
+      logger.error("BufferStore", "Failed to check extension support:", error);
+    });
 };
 
 export const useBufferStore = createSelectors(
@@ -277,6 +443,378 @@ export const useBufferStore = createSelectors(
       pendingClose: null,
       closedBuffersHistory: [],
       actions: {
+        openContent: (spec: OpenContentSpec): string => {
+          const { buffers, maxOpenTabs } = get();
+
+          switch (spec.type) {
+            case "editor": {
+              // Special buffers should never be in preview mode
+              const shouldBePreview = spec.isPreview ?? false;
+
+              // Check if already open
+              const existing = buffers.find((b) => b.path === spec.path);
+              if (existing) {
+                set((state) => {
+                  state.activeBufferId = existing.id;
+                  state.buffers = state.buffers.map((b) => ({
+                    ...b,
+                    isActive: b.id === existing.id,
+                    isPreview: b.id === existing.id && !shouldBePreview ? false : b.isPreview,
+                  }));
+                });
+                syncBufferToPane(existing.id);
+                return existing.id;
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+
+              if (shouldBePreview) {
+                const existingPreview = newBuffers.find((b) => b.isPreview);
+                if (existingPreview) {
+                  newBuffers = newBuffers.filter((b) => b.id !== existingPreview.id);
+                }
+              }
+
+              if (newBuffers.filter((b) => !b.isPinned && !b.isPreview).length >= maxOpenTabs) {
+                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned && !b.isPreview);
+                const lruBuffer = unpinnedBuffers[0];
+                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+              }
+
+              const id = generateBufferId(spec.path);
+              const newBuffer = createPaneContent(id, spec) as EditorContent;
+
+              set((state) => {
+                state.buffers = [
+                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
+                  newBuffer,
+                ];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+
+              // Track in recent files and check extensions (only for real files)
+              if (shouldStartLsp(newBuffer)) {
+                useRecentFilesStore.getState().addOrUpdateRecentFile(spec.path, spec.name);
+                checkExtensionSupport(spec.path);
+              }
+
+              saveSessionToStore(get().buffers, get().activeBufferId);
+              return newBuffer.id;
+            }
+
+            case "terminal": {
+              const terminalCount = buffers.filter((b) => b.type === "terminal").length;
+              const terminalNumber = terminalCount + 1;
+              const sessionId = `terminal-tab-${Date.now()}`;
+              const path = `terminal://${sessionId}`;
+              const displayName = spec.name ?? `Terminal ${terminalNumber}`;
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+                const lruBuffer = unpinnedBuffers[0];
+                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+              }
+
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, {
+                ...spec,
+                name: displayName,
+              });
+              // Override the auto-generated sessionId with our specific one
+              (newBuffer as PaneContent & { sessionId: string }).sessionId = sessionId;
+              newBuffer.path = path;
+              newBuffer.name = displayName;
+
+              set((state) => {
+                state.buffers = [
+                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
+                  newBuffer,
+                ];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
+            case "agent": {
+              const agentCount = buffers.filter((b) => b.type === "agent").length;
+
+              // If sessionId provided, check if already open
+              if (spec.sessionId) {
+                const existing = buffers.find(
+                  (b) => b.type === "agent" && b.sessionId === spec.sessionId,
+                );
+                if (existing) {
+                  set((state) => {
+                    state.activeBufferId = existing.id;
+                    state.buffers = state.buffers.map((b) => ({
+                      ...b,
+                      isActive: b.id === existing.id,
+                    }));
+                  });
+                  syncBufferToPane(existing.id);
+                  return existing.id;
+                }
+              }
+
+              const agentNumber = agentCount + 1;
+              const agentSessionId = spec.sessionId ?? `agent-tab-${Date.now()}`;
+              const path = `agent://${agentSessionId}`;
+              const displayName = `Agent ${agentNumber}`;
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+                const lruBuffer = unpinnedBuffers[0];
+                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+              }
+
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, {
+                ...spec,
+                sessionId: agentSessionId,
+              });
+              newBuffer.path = path;
+              newBuffer.name = displayName;
+
+              set((state) => {
+                state.buffers = [
+                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
+                  newBuffer,
+                ];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
+            case "webViewer": {
+              let displayName = "Web Viewer";
+              if (spec.url && spec.url !== "about:blank") {
+                try {
+                  const urlObj = new URL(spec.url);
+                  if (urlObj.hostname) {
+                    displayName = `Web: ${urlObj.hostname}`;
+                  }
+                } catch {
+                  // Invalid URL, use default
+                }
+              }
+              const path = `web-viewer://${spec.url}`;
+
+              const existing = buffers.find(
+                (b) => b.type === "webViewer" && b.url === spec.url,
+              );
+              if (existing) {
+                set((state) => {
+                  state.activeBufferId = existing.id;
+                  state.buffers = state.buffers.map((b) => ({
+                    ...b,
+                    isActive: b.id === existing.id,
+                  }));
+                });
+                syncBufferToPane(existing.id);
+                return existing.id;
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+                const lruBuffer = unpinnedBuffers[0];
+                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+              }
+
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, spec);
+              newBuffer.path = path;
+              newBuffer.name = displayName;
+
+              set((state) => {
+                state.buffers = [
+                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
+                  newBuffer,
+                ];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
+            case "newTab": {
+              const paneStore = usePaneStore.getState();
+              const activePane = paneStore.actions.getActivePane();
+              const paneBufferIds = activePane?.bufferIds ?? [];
+              const existingNewTab = buffers.find(
+                (b) => b.type === "newTab" && paneBufferIds.includes(b.id),
+              );
+
+              if (existingNewTab) {
+                set((state) => {
+                  state.activeBufferId = existingNewTab.id;
+                  state.buffers = state.buffers.map((b) => ({
+                    ...b,
+                    isActive: b.id === existingNewTab.id,
+                  }));
+                });
+                if (activePane) {
+                  paneStore.actions.setActivePaneBuffer(activePane.id, existingNewTab.id);
+                }
+                return existingNewTab.id;
+              }
+
+              const newTabId = `buffer_new_tab_${Date.now()}`;
+              const newBuffer = createPaneContent(newTabId, spec);
+
+              set((state) => {
+                state.buffers = state.buffers
+                  .map((b) => ({ ...b, isActive: false }))
+                  .concat(newBuffer);
+                state.activeBufferId = newTabId;
+              });
+
+              syncBufferToPane(newTabId);
+              return newTabId;
+            }
+
+            case "pullRequest": {
+              const path = `pr://${spec.prNumber}`;
+              const existing = buffers.find(
+                (b) => b.type === "pullRequest" && b.prNumber === spec.prNumber,
+              );
+              if (existing) {
+                set((state) => {
+                  state.activeBufferId = existing.id;
+                  state.buffers = state.buffers.map((b) => ({
+                    ...b,
+                    isActive: b.id === existing.id,
+                  }));
+                });
+                syncBufferToPane(existing.id);
+                return existing.id;
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+                const lruBuffer = unpinnedBuffers[0];
+                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+              }
+
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [
+                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
+                  newBuffer,
+                ];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
+            case "externalEditor": {
+              const existing = buffers.find((b) => b.path === spec.path);
+              if (existing) {
+                set((state) => {
+                  state.activeBufferId = existing.id;
+                  state.buffers = state.buffers.map((b) => ({
+                    ...b,
+                    isActive: b.id === existing.id,
+                  }));
+                });
+                syncBufferToPane(existing.id);
+                return existing.id;
+              }
+
+              const existingExternalEditor = buffers.find((b) => b.type === "externalEditor");
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              if (existingExternalEditor) {
+                if (existingExternalEditor.type === "externalEditor") {
+                  invoke("close_terminal", {
+                    id: existingExternalEditor.terminalConnectionId,
+                  }).catch((e) => {
+                    logger.error(
+                      "BufferStore",
+                      "Failed to close old external editor terminal:",
+                      e,
+                    );
+                  });
+                }
+                newBuffers = newBuffers.filter((b) => b.id !== existingExternalEditor.id);
+              }
+
+              const id = generateBufferId(spec.path);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [
+                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
+                  newBuffer,
+                ];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              saveSessionToStore(get().buffers, get().activeBufferId);
+              return newBuffer.id;
+            }
+
+            case "diff":
+            case "image":
+            case "pdf":
+            case "binary":
+            case "database":
+            case "markdownPreview":
+            case "htmlPreview":
+            case "csvPreview": {
+              const path = spec.path;
+              const existing = buffers.find((b) => b.path === path);
+              if (existing) {
+                set((state) => {
+                  state.activeBufferId = existing.id;
+                  state.buffers = state.buffers.map((b) => ({
+                    ...b,
+                    isActive: b.id === existing.id,
+                  }));
+                });
+                syncBufferToPane(existing.id);
+                return existing.id;
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              if (newBuffers.filter((b) => !b.isPinned && !b.isPreview).length >= maxOpenTabs) {
+                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned && !b.isPreview);
+                const lruBuffer = unpinnedBuffers[0];
+                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+              }
+
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [
+                  ...newBuffers.map((b) => ({ ...b, isActive: false })),
+                  newBuffer,
+                ];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              saveSessionToStore(get().buffers, get().activeBufferId);
+              return newBuffer.id;
+            }
+          }
+        },
+
         openBuffer: (
           path: string,
           name: string,
@@ -295,180 +833,76 @@ export const useBufferStore = createSelectors(
           isBinary = false,
           connectionId?: string,
         ) => {
-          const { buffers, maxOpenTabs } = get();
+          // Map the old boolean-flag API to the new OpenContentSpec
+          if (isImage) {
+            return get().actions.openContent({ type: "image", path, name });
+          }
+          if (isPdf) {
+            return get().actions.openContent({ type: "pdf", path, name });
+          }
+          if (isBinary) {
+            return get().actions.openContent({ type: "binary", path, name });
+          }
+          if (databaseType) {
+            return get().actions.openContent({
+              type: "database",
+              path,
+              name,
+              databaseType,
+              connectionId,
+            });
+          }
+          if (isDiff) {
+            return get().actions.openContent({
+              type: "diff",
+              path,
+              name,
+              content,
+              diffData,
+            });
+          }
+          if (isMarkdownPreview) {
+            return get().actions.openContent({
+              type: "markdownPreview",
+              path,
+              name,
+              content,
+              sourceFilePath: sourceFilePath ?? path,
+            });
+          }
+          if (isHtmlPreview) {
+            return get().actions.openContent({
+              type: "htmlPreview",
+              path,
+              name,
+              content,
+              sourceFilePath: sourceFilePath ?? path,
+            });
+          }
+          if (isCsvPreview) {
+            return get().actions.openContent({
+              type: "csvPreview",
+              path,
+              name,
+              content,
+              sourceFilePath: sourceFilePath ?? path,
+            });
+          }
 
+          // Default: editor content
           // Special buffers should never be in preview mode
           const shouldBePreview =
-            isPreview &&
-            !isImage &&
-            !databaseType &&
-            !isDiff &&
-            !isVirtual &&
-            !isMarkdownPreview &&
-            !isHtmlPreview &&
-            !isCsvPreview &&
-            !isPdf &&
-            !isBinary;
+            isPreview && !isVirtual;
 
-          // Check if already open
-          const existing = buffers.find((b) => b.path === path);
-          if (existing) {
-            set((state) => {
-              state.activeBufferId = existing.id;
-              state.buffers = state.buffers.map((b) => ({
-                ...b,
-                isActive: b.id === existing.id,
-                // If opening in definite mode, convert existing preview to definite
-                isPreview: b.id === existing.id && !shouldBePreview ? false : b.isPreview,
-              }));
-            });
-            syncBufferToPane(existing.id);
-            return existing.id;
-          }
-
-          let newBuffers = [...buffers];
-
-          // If opening in preview mode, close any existing preview buffer
-          if (shouldBePreview) {
-            const existingPreview = newBuffers.find((b) => b.isPreview);
-            if (existingPreview) {
-              newBuffers = newBuffers.filter((b) => b.id !== existingPreview.id);
-            }
-          }
-
-          // Handle max tabs limit
-          if (newBuffers.filter((b) => !b.isPinned && !b.isPreview).length >= maxOpenTabs) {
-            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned && !b.isPreview);
-            const lruBuffer = unpinnedBuffers[0]; // Simplified LRU
-            newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-          }
-
-          const newBuffer: Buffer = {
-            id: generateBufferId(path),
+          return get().actions.openContent({
+            type: "editor",
             path,
             name,
             content,
-            savedContent: content,
-            isDirty: false,
             isVirtual,
-            isPinned: false,
             isPreview: shouldBePreview,
-            isImage,
-            databaseType,
-            connectionId,
-            isDiff,
-            isMarkdownPreview,
-            isHtmlPreview,
-            isCsvPreview,
-            isExternalEditor: false,
-            isWebViewer: false,
-            isPullRequest: false,
-            isPdf: isPdf,
-            isBinary,
-            isActive: true,
             language: detectLanguageFromFileName(name),
-            diffData,
-            sourceFilePath,
-            tokens: [],
-          };
-
-          set((state) => {
-            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
-            state.activeBufferId = newBuffer.id;
           });
-
-          // Sync with pane store
-          syncBufferToPane(newBuffer.id);
-
-          // Track in recent files (only for real files, not virtual/diff/markdown preview buffers)
-          if (
-            !isVirtual &&
-            !isDiff &&
-            !isHtmlPreview &&
-            !isCsvPreview &&
-            !isImage &&
-            !databaseType &&
-            !isPdf &&
-            !isBinary
-          ) {
-            useRecentFilesStore.getState().addOrUpdateRecentFile(path, name);
-
-            // Check if extension is available and start LSP or prompt installation
-            // First wait for bundled extensions to finish loading
-            logger.info("BufferStore", `Checking extension support for ${path}`);
-            import("@/extensions/loader/extension-loader")
-              .then(({ extensionLoader }) => {
-                logger.debug("BufferStore", "Waiting for extension loader initialization...");
-                return extensionLoader.waitForInitialization();
-              })
-              .then(() => {
-                logger.debug(
-                  "BufferStore",
-                  "Extension loader initialized, waiting for extension store...",
-                );
-                return import("@/extensions/registry/extension-store").then(
-                  ({ waitForExtensionStoreInitialization }) =>
-                    waitForExtensionStoreInitialization(),
-                );
-              })
-              .then(() => {
-                return import("@/extensions/registry/extension-store");
-              })
-              .then(({ useExtensionStore }) => {
-                const { getExtensionForFile } = useExtensionStore.getState().actions;
-
-                const extension = getExtensionForFile(path);
-                logger.debug(
-                  "BufferStore",
-                  `getExtensionForFile(${path}) returned:`,
-                  extension?.manifest?.name || "undefined",
-                );
-
-                if (extension) {
-                  // Bundled extensions don't have installation metadata - they're always available
-                  const isBundled = !extension.manifest.installation;
-                  const installed = extension.isInstalled || isBundled;
-                  logger.info(
-                    "BufferStore",
-                    `Extension ${extension.manifest.name} for ${path}: installed=${installed}, bundled=${isBundled}`,
-                  );
-
-                  if (installed) {
-                    // LSP startup is handled by use-lsp-integration for the active editor buffer.
-                    // Avoid starting LSP from openBuffer to prevent background/session files from
-                    // triggering language servers unexpectedly.
-                    logger.debug("BufferStore", `Extension ready for ${path}`);
-                  } else {
-                    // Marketplace extension not installed, emit event for UI to handle
-                    logger.info(
-                      "BufferStore",
-                      `Extension ${extension.manifest.name} not installed for ${path}`,
-                    );
-
-                    // Dispatch custom event for extension installation prompt
-                    window.dispatchEvent(
-                      new CustomEvent("extension-install-needed", {
-                        detail: {
-                          extensionId: extension.manifest.id,
-                          extensionName: extension.manifest.displayName,
-                          filePath: path,
-                        },
-                      }),
-                    );
-                  }
-                } else {
-                  logger.info("BufferStore", `No extension available for ${path}`);
-                }
-              })
-              .catch((error) => {
-                logger.error("BufferStore", "Failed to check extension support:", error);
-              });
-          }
-
-          // Save session
-          saveSessionToStore(get().buffers, get().activeBufferId);
-
-          return newBuffer.id;
         },
 
         openExternalEditorBuffer: (
@@ -476,212 +910,20 @@ export const useBufferStore = createSelectors(
           name: string,
           terminalConnectionId: string,
         ): string => {
-          const { buffers } = get();
-
-          // Check if already open
-          const existing = buffers.find((b) => b.path === path);
-          if (existing) {
-            set((state) => {
-              state.activeBufferId = existing.id;
-              state.buffers = state.buffers.map((b) => ({
-                ...b,
-                isActive: b.id === existing.id,
-              }));
-            });
-            syncBufferToPane(existing.id);
-            return existing.id;
-          }
-
-          // Close any existing external editor buffer (single instance only)
-          const existingExternalEditor = buffers.find((b) => b.isExternalEditor);
-          let newBuffers = [...buffers];
-          if (existingExternalEditor) {
-            // Close the old terminal connection
-            if (existingExternalEditor.terminalConnectionId) {
-              invoke("close_terminal", { id: existingExternalEditor.terminalConnectionId }).catch(
-                (e) => {
-                  logger.error("BufferStore", "Failed to close old external editor terminal:", e);
-                },
-              );
-            }
-            newBuffers = newBuffers.filter((b) => b.id !== existingExternalEditor.id);
-          }
-
-          const newBuffer: Buffer = {
-            id: generateBufferId(path),
+          return get().actions.openContent({
+            type: "externalEditor",
             path,
             name,
-            content: "", // External editor buffers don't have content
-            savedContent: "",
-            isDirty: false,
-            isVirtual: false,
-            isPinned: false,
-            isPreview: false, // External editor buffers are never preview
-            isImage: false,
-            databaseType: undefined,
-            isDiff: false,
-            isMarkdownPreview: false,
-            isHtmlPreview: false,
-            isCsvPreview: false,
-            isExternalEditor: true,
-            isWebViewer: false,
-            isPullRequest: false,
-            isPdf: false,
-            isBinary: false,
-            isActive: true,
-            language: detectLanguageFromFileName(name),
             terminalConnectionId,
-            tokens: [],
-          };
-
-          set((state) => {
-            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
-            state.activeBufferId = newBuffer.id;
           });
-
-          // Sync with pane store
-          syncBufferToPane(newBuffer.id);
-
-          // Save session
-          saveSessionToStore(get().buffers, get().activeBufferId);
-
-          return newBuffer.id;
         },
 
         openWebViewerBuffer: (url: string): string => {
-          const { buffers, maxOpenTabs } = get();
-
-          // Extract hostname for display name
-          let displayName = "Web Viewer";
-          if (url && url !== "about:blank") {
-            try {
-              const urlObj = new URL(url);
-              if (urlObj.hostname) {
-                displayName = `Web: ${urlObj.hostname}`;
-              }
-            } catch {
-              // Invalid URL, use default
-            }
-          }
-          const path = `web-viewer://${url}`;
-
-          // Check if already open with the same URL
-          const existing = buffers.find((b) => b.isWebViewer && b.webViewerUrl === url);
-          if (existing) {
-            set((state) => {
-              state.activeBufferId = existing.id;
-              state.buffers = state.buffers.map((b) => ({
-                ...b,
-                isActive: b.id === existing.id,
-              }));
-            });
-            syncBufferToPane(existing.id);
-            return existing.id;
-          }
-
-          // Handle max tabs limit
-          let newBuffers = [...buffers];
-          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
-            const lruBuffer = unpinnedBuffers[0];
-            newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-          }
-
-          const newBuffer: Buffer = {
-            id: generateBufferId(path),
-            path,
-            name: displayName,
-            content: "",
-            savedContent: "",
-            isDirty: false,
-            isVirtual: true,
-            isPinned: false,
-            isPreview: false, // Web viewer buffers are never preview
-            isImage: false,
-            databaseType: undefined,
-            isDiff: false,
-            isMarkdownPreview: false,
-            isHtmlPreview: false,
-            isCsvPreview: false,
-            isExternalEditor: false,
-            isWebViewer: true,
-            isPullRequest: false,
-            isPdf: false,
-            isBinary: false,
-            isActive: true,
-            webViewerUrl: url,
-            tokens: [],
-          };
-
-          set((state) => {
-            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
-            state.activeBufferId = newBuffer.id;
-          });
-
-          syncBufferToPane(newBuffer.id);
-          return newBuffer.id;
+          return get().actions.openContent({ type: "webViewer", url });
         },
 
         openPRBuffer: (prNumber: number): string => {
-          const { buffers, maxOpenTabs } = get();
-          const path = `pr://${prNumber}`;
-          const displayName = `PR #${prNumber}`;
-
-          // Check if already open
-          const existing = buffers.find((b) => b.isPullRequest && b.prNumber === prNumber);
-          if (existing) {
-            set((state) => {
-              state.activeBufferId = existing.id;
-              state.buffers = state.buffers.map((b) => ({
-                ...b,
-                isActive: b.id === existing.id,
-              }));
-            });
-            syncBufferToPane(existing.id);
-            return existing.id;
-          }
-
-          // Handle max tabs limit
-          let newBuffers = [...buffers];
-          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
-            const lruBuffer = unpinnedBuffers[0];
-            newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-          }
-
-          const newBuffer: Buffer = {
-            id: generateBufferId(path),
-            path,
-            name: displayName,
-            content: "",
-            savedContent: "",
-            isDirty: false,
-            isVirtual: true,
-            isPinned: false,
-            isPreview: false,
-            isImage: false,
-            databaseType: undefined,
-            isDiff: false,
-            isMarkdownPreview: false,
-            isHtmlPreview: false,
-            isCsvPreview: false,
-            isExternalEditor: false,
-            isWebViewer: false,
-            isPullRequest: true,
-            isPdf: false,
-            isBinary: false,
-            prNumber,
-            isActive: true,
-            tokens: [],
-          };
-
-          set((state) => {
-            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
-            state.activeBufferId = newBuffer.id;
-          });
-
-          syncBufferToPane(newBuffer.id);
-          return newBuffer.id;
+          return get().actions.openContent({ type: "pullRequest", prNumber });
         },
 
         openTerminalBuffer: (options?: {
@@ -689,129 +931,16 @@ export const useBufferStore = createSelectors(
           command?: string;
           workingDirectory?: string;
         }): string => {
-          const { buffers, maxOpenTabs } = get();
-
-          // Count existing terminal buffers to generate next number
-          const terminalCount = buffers.filter((b) => b.isTerminal).length;
-          const terminalNumber = terminalCount + 1;
-          const sessionId = `terminal-tab-${Date.now()}`;
-          const path = `terminal://${sessionId}`;
-          const displayName = options?.name || `Terminal ${terminalNumber}`;
-
-          // Handle max tabs limit
-          let newBuffers = [...buffers];
-          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
-            const lruBuffer = unpinnedBuffers[0];
-            newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-          }
-
-          const newBuffer: Buffer = {
-            id: generateBufferId(path),
-            path,
-            name: displayName,
-            content: "",
-            savedContent: "",
-            isDirty: false,
-            isVirtual: true,
-            isPinned: false,
-            isPreview: false,
-            isImage: false,
-            databaseType: undefined,
-            isDiff: false,
-            isMarkdownPreview: false,
-            isHtmlPreview: false,
-            isCsvPreview: false,
-            isExternalEditor: false,
-            isWebViewer: false,
-            isPullRequest: false,
-            isPdf: false,
-            isBinary: false,
-            isTerminal: true,
-            terminalSessionId: sessionId,
-            terminalInitialCommand: options?.command,
-            terminalWorkingDirectory: options?.workingDirectory,
-            isActive: true,
-            tokens: [],
-          };
-
-          set((state) => {
-            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
-            state.activeBufferId = newBuffer.id;
+          return get().actions.openContent({
+            type: "terminal",
+            name: options?.name,
+            command: options?.command,
+            workingDirectory: options?.workingDirectory,
           });
-
-          syncBufferToPane(newBuffer.id);
-          return newBuffer.id;
         },
 
         openAgentBuffer: (sessionId?: string): string => {
-          const { buffers, maxOpenTabs } = get();
-
-          // If sessionId provided, check if already open
-          if (sessionId) {
-            const existing = buffers.find((b) => b.isAgent && b.agentSessionId === sessionId);
-            if (existing) {
-              set((state) => {
-                state.activeBufferId = existing.id;
-                state.buffers = state.buffers.map((b) => ({
-                  ...b,
-                  isActive: b.id === existing.id,
-                }));
-              });
-              syncBufferToPane(existing.id);
-              return existing.id;
-            }
-          }
-
-          // Count existing agent buffers to generate next number
-          const agentCount = buffers.filter((b) => b.isAgent).length;
-          const agentNumber = agentCount + 1;
-          const agentSessionId = sessionId || `agent-tab-${Date.now()}`;
-          const path = `agent://${agentSessionId}`;
-          const displayName = `Agent ${agentNumber}`;
-
-          // Handle max tabs limit
-          let newBuffers = [...buffers];
-          if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
-            const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
-            const lruBuffer = unpinnedBuffers[0];
-            newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
-          }
-
-          const newBuffer: Buffer = {
-            id: generateBufferId(path),
-            path,
-            name: displayName,
-            content: "",
-            savedContent: "",
-            isDirty: false,
-            isVirtual: true,
-            isPinned: false,
-            isPreview: false,
-            isImage: false,
-            databaseType: undefined,
-            isDiff: false,
-            isMarkdownPreview: false,
-            isHtmlPreview: false,
-            isCsvPreview: false,
-            isExternalEditor: false,
-            isWebViewer: false,
-            isPullRequest: false,
-            isPdf: false,
-            isBinary: false,
-            isAgent: true,
-            agentSessionId,
-            isActive: true,
-            tokens: [],
-          };
-
-          set((state) => {
-            state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
-            state.activeBufferId = newBuffer.id;
-          });
-
-          syncBufferToPane(newBuffer.id);
-          return newBuffer.id;
+          return get().actions.openContent({ type: "agent", sessionId });
         },
 
         closeBuffer: (bufferId: string) => {
@@ -819,8 +948,8 @@ export const useBufferStore = createSelectors(
 
           if (!buffer) return;
 
-          // Check if buffer has unsaved changes
-          if (buffer.isDirty) {
+          // Only EditorContent can be dirty
+          if (isEditorContent(buffer) && buffer.isDirty) {
             set((state) => {
               state.pendingClose = {
                 bufferId,
@@ -830,7 +959,6 @@ export const useBufferStore = createSelectors(
             return;
           }
 
-          // No unsaved changes, close directly
           get().actions.closeBufferForce(bufferId);
         },
 
@@ -842,24 +970,23 @@ export const useBufferStore = createSelectors(
 
           cleanupBufferHistoryTracking(bufferId);
 
-          // Remove from pane
           removeBufferFromPanes(bufferId);
 
           const closedBuffer = buffers[bufferIndex];
 
           // Close terminal connection for external editor buffers
-          if (closedBuffer.isExternalEditor && closedBuffer.terminalConnectionId) {
+          if (closedBuffer.type === "externalEditor") {
             invoke("close_terminal", { id: closedBuffer.terminalConnectionId }).catch((e) => {
               logger.error("BufferStore", "Failed to close external editor terminal:", e);
             });
           }
 
           // Close terminal session for terminal tab buffers
-          if (closedBuffer.isTerminal && closedBuffer.terminalSessionId) {
+          if (closedBuffer.type === "terminal") {
             import("@/features/terminal/stores/terminal-store").then(({ useTerminalStore }) => {
               const session = useTerminalStore
                 .getState()
-                .getSession(closedBuffer.terminalSessionId!);
+                .getSession(closedBuffer.sessionId);
               if (session?.connectionId) {
                 invoke("close_terminal", { id: session.connectionId }).catch((e) => {
                   logger.error("BufferStore", "Failed to close terminal tab session:", e);
@@ -868,20 +995,8 @@ export const useBufferStore = createSelectors(
             });
           }
 
-          // Stop LSP for this file (only for real files, not virtual/diff/image/sqlite/external editor/web viewer)
-          if (
-            !closedBuffer.isVirtual &&
-            !closedBuffer.isDiff &&
-            !closedBuffer.isImage &&
-            !closedBuffer.databaseType &&
-            !closedBuffer.isMarkdownPreview &&
-            !closedBuffer.isHtmlPreview &&
-            !closedBuffer.isCsvPreview &&
-            !closedBuffer.isExternalEditor &&
-            !closedBuffer.isWebViewer &&
-            !closedBuffer.isPdf
-          ) {
-            // Stop LSP for this file in background (don't block buffer closing)
+          // Stop LSP for this file (only for real editor files)
+          if (shouldStartLsp(closedBuffer)) {
             import("@/features/editor/lsp/lsp-client")
               .then(({ LspClient }) => {
                 const lspClient = LspClient.getInstance();
@@ -899,7 +1014,6 @@ export const useBufferStore = createSelectors(
               isPinned: closedBuffer.isPinned,
             };
 
-            // Keep only last N closed buffers
             const updatedHistory = [closedBufferInfo, ...closedBuffersHistory].slice(
               0,
               EDITOR_CONSTANTS.MAX_CLOSED_BUFFERS_HISTORY,
@@ -915,7 +1029,6 @@ export const useBufferStore = createSelectors(
 
           if (activeBufferId === bufferId) {
             if (newBuffers.length > 0) {
-              // Select next or previous buffer
               const newIndex = Math.min(bufferIndex, newBuffers.length - 1);
               newActiveId = newBuffers[newIndex].id;
             } else {
@@ -931,14 +1044,12 @@ export const useBufferStore = createSelectors(
             state.activeBufferId = newActiveId;
           });
 
-          // Save session
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         closeBuffersBatch: (bufferIds: string[], skipSessionSave = false) => {
           if (bufferIds.length === 0) return;
 
-          // Remove from panes
           bufferIds.forEach((id) => removeBufferFromPanes(id));
 
           set((state) => {
@@ -971,19 +1082,7 @@ export const useBufferStore = createSelectors(
         },
 
         showNewTabView: () => {
-          set((state) => {
-            state.activeBufferId = null;
-            state.buffers = state.buffers.map((b) => ({
-              ...b,
-              isActive: false,
-            }));
-          });
-          // Also clear the active pane's activeBufferId
-          const paneStore = usePaneStore.getState();
-          const activePane = paneStore.actions.getActivePane();
-          if (activePane) {
-            paneStore.actions.setActivePaneBuffer(activePane.id, null);
-          }
+          get().actions.openContent({ type: "newTab" });
         },
 
         updateBufferContent: (
@@ -993,40 +1092,41 @@ export const useBufferStore = createSelectors(
           diffData?: GitDiff | MultiFileDiff,
         ) => {
           const buffer = get().buffers.find((b) => b.id === bufferId);
-          if (!buffer || (buffer.content === content && !diffData)) {
-            // Content hasn't changed and no diff data update, don't update
-            return;
-          }
+          if (!buffer) return;
+
+          // Only content types with text content can be updated
+          if (!isEditableContent(buffer)) return;
+
+          if (buffer.content === content && !diffData) return;
 
           set((state) => {
-            const buffer = state.buffers.find((b) => b.id === bufferId);
-            if (buffer) {
-              buffer.content = content;
-              if (diffData) {
-                buffer.diffData = diffData;
-              }
-              if (!buffer.isVirtual) {
-                if (!markDirty) {
-                  buffer.savedContent = content;
-                  buffer.isDirty = false;
-                } else {
-                  buffer.isDirty = content !== buffer.savedContent;
-                  // Convert preview to definite when user makes an edit
-                  if (buffer.isPreview && content !== buffer.savedContent) {
-                    buffer.isPreview = false;
-                  }
+            const buf = state.buffers.find((b) => b.id === bufferId);
+            if (!buf || !isEditableContent(buf)) return;
+
+            buf.content = content;
+            if (diffData && buf.type === "diff") {
+              buf.diffData = diffData;
+            }
+            if (buf.type === "editor" && !buf.isVirtual) {
+              if (!markDirty) {
+                buf.savedContent = content;
+                buf.isDirty = false;
+              } else {
+                buf.isDirty = content !== buf.savedContent;
+                if (buf.isPreview && content !== buf.savedContent) {
+                  buf.isPreview = false;
                 }
               }
-              // Keep tokens - syntax highlighter will update them automatically
-              // The 16ms debounce ensures smooth updates without glitches
+            } else if (buf.type === "diff") {
+              buf.savedContent = content;
             }
           });
         },
 
-        updateBufferTokens: (bufferId: string, tokens: Buffer["tokens"]) => {
+        updateBufferTokens: (bufferId: string, tokens: TokenEntry[]) => {
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
-            if (buffer) {
+            if (buffer && isEditorContent(buffer)) {
               buffer.tokens = tokens;
             }
           });
@@ -1035,7 +1135,7 @@ export const useBufferStore = createSelectors(
         markBufferDirty: (bufferId: string, isDirty: boolean) => {
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
-            if (buffer) {
+            if (buffer && isEditorContent(buffer)) {
               buffer.isDirty = isDirty;
               if (!isDirty) {
                 buffer.savedContent = buffer.content;
@@ -1048,7 +1148,7 @@ export const useBufferStore = createSelectors(
           const newName = newPath.split("/").pop() || newPath;
           set((state) => {
             const buffer = state.buffers.find((b) => b.id === bufferId);
-            if (buffer) {
+            if (buffer && isEditorContent(buffer)) {
               buffer.path = newPath;
               buffer.name = newName;
               buffer.isVirtual = false;
@@ -1058,7 +1158,7 @@ export const useBufferStore = createSelectors(
           });
         },
 
-        updateBuffer: (updatedBuffer: Buffer) => {
+        updateBuffer: (updatedBuffer: PaneContent) => {
           set((state) => {
             const index = state.buffers.findIndex((b) => b.id === updatedBuffer.id);
             if (index !== -1) {
@@ -1080,14 +1180,12 @@ export const useBufferStore = createSelectors(
             const buffer = state.buffers.find((b) => b.id === bufferId);
             if (buffer) {
               buffer.isPinned = !buffer.isPinned;
-              // Pinned tabs should never be in preview mode
               if (buffer.isPinned) {
                 buffer.isPreview = false;
               }
             }
           });
 
-          // Save session
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
@@ -1097,24 +1195,13 @@ export const useBufferStore = createSelectors(
           databaseType: DatabaseType,
           connectionId?: string,
         ) => {
-          return get().actions.openBuffer(
+          return get().actions.openContent({
+            type: "database",
             path,
             name,
-            "",
-            false,
             databaseType,
-            false,
-            false,
-            undefined,
-            false,
-            false,
-            false,
-            undefined,
-            false,
-            false,
-            false,
             connectionId,
-          );
+          });
         },
 
         convertPreviewToDefinite: (bufferId: string) => {
@@ -1130,8 +1217,9 @@ export const useBufferStore = createSelectors(
           const { buffers } = get();
           const buffersToClose = buffers.filter((b) => b.id !== keepBufferId && !b.isPinned);
 
-          // Check if any buffer has unsaved changes
-          const dirtyBuffer = buffersToClose.find((b) => b.isDirty);
+          const dirtyBuffer = buffersToClose.find(
+            (b) => isEditorContent(b) && b.isDirty,
+          );
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1150,8 +1238,9 @@ export const useBufferStore = createSelectors(
           const { buffers } = get();
           const buffersToClose = buffers.filter((b) => !b.isPinned);
 
-          // Check if any buffer has unsaved changes
-          const dirtyBuffer = buffersToClose.find((b) => b.isDirty);
+          const dirtyBuffer = buffersToClose.find(
+            (b) => isEditorContent(b) && b.isDirty,
+          );
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1172,8 +1261,9 @@ export const useBufferStore = createSelectors(
 
           const buffersToClose = buffers.slice(bufferIndex + 1).filter((b) => !b.isPinned);
 
-          // Check if any buffer has unsaved changes
-          const dirtyBuffer = buffersToClose.find((b) => b.isDirty);
+          const dirtyBuffer = buffersToClose.find(
+            (b) => isEditorContent(b) && b.isDirty,
+          );
           if (dirtyBuffer) {
             set((state) => {
               state.pendingClose = {
@@ -1195,7 +1285,6 @@ export const useBufferStore = createSelectors(
             state.buffers = result;
           });
 
-          // Save session
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
@@ -1204,7 +1293,6 @@ export const useBufferStore = createSelectors(
           const activePane = paneStore.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
-          // Prefer pane-aware cycling so tab highlight and editor stay in sync
           if (activePane && paneBufferIds.length > 0) {
             paneStore.actions.switchToNextBufferInPane();
             const updatedActiveBufferId = paneStore.actions.getActivePane()?.activeBufferId;
@@ -1235,7 +1323,6 @@ export const useBufferStore = createSelectors(
           const activePane = paneStore.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
-          // Prefer pane-aware cycling so tab highlight and editor stay in sync
           if (activePane && paneBufferIds.length > 0) {
             paneStore.actions.switchToPreviousBufferInPane();
             const updatedActiveBufferId = paneStore.actions.getActivePane()?.activeBufferId;
@@ -1261,7 +1348,7 @@ export const useBufferStore = createSelectors(
           get().actions.setActiveBuffer(prevBufferId);
         },
 
-        getActiveBuffer: (): Buffer | null => {
+        getActiveBuffer: (): PaneContent | null => {
           const { buffers, activeBufferId } = get();
           return buffers.find((b) => b.id === activeBufferId) || null;
         },
@@ -1274,22 +1361,15 @@ export const useBufferStore = createSelectors(
 
         reloadBufferFromDisk: async (bufferId: string): Promise<void> => {
           const buffer = get().buffers.find((b) => b.id === bufferId);
-          if (
-            !buffer ||
-            buffer.isVirtual ||
-            buffer.isImage ||
-            buffer.databaseType ||
-            buffer.isMarkdownPreview ||
-            buffer.isHtmlPreview ||
-            buffer.isCsvPreview ||
-            buffer.isWebViewer
-          ) {
+          if (!buffer) return;
+
+          // Only reload real editor files from disk
+          if (buffer.type !== "editor" || buffer.isVirtual || isVirtualContent(buffer)) {
             return;
           }
 
           try {
             const content = await readFileContent(buffer.path);
-            // Update buffer content and clear dirty flag
             useBufferStore.getState().actions.updateBufferContent(bufferId, content, false);
             logger.debug("Editor", `[FileWatcher] Reloaded buffer from disk: ${buffer.path}`);
           } catch (error) {
@@ -1313,12 +1393,10 @@ export const useBufferStore = createSelectors(
 
           const { bufferId, type, keepBufferId } = pendingClose;
 
-          // Clear pending close first
           set((state) => {
             state.pendingClose = null;
           });
 
-          // Execute the close operation based on type
           switch (type) {
             case "single":
               get().actions.closeBufferForce(bufferId);
@@ -1363,28 +1441,21 @@ export const useBufferStore = createSelectors(
             return;
           }
 
-          // Get the most recent closed buffer
           const [closedBuffer, ...remainingHistory] = closedBuffersHistory;
 
-          // Remove it from history
           set((state) => {
             state.closedBuffersHistory = remainingHistory;
           });
 
           try {
-            // Read the file content and reopen it
             const content = await readFileContent(closedBuffer.path);
-            const bufferId = get().actions.openBuffer(
-              closedBuffer.path,
-              closedBuffer.name,
+            const bufferId = get().actions.openContent({
+              type: "editor",
+              path: closedBuffer.path,
+              name: closedBuffer.name,
               content,
-              false,
-              undefined,
-              false,
-              false,
-            );
+            });
 
-            // Restore pinned state if it was pinned
             if (closedBuffer.isPinned) {
               get().actions.handleTabPin(bufferId);
             }

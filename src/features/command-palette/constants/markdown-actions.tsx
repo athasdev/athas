@@ -1,10 +1,10 @@
 import { Eye } from "lucide-react";
-import type { Buffer } from "@/features/editor/stores/buffer-store";
+import type { PaneContent } from "@/features/panes/types/pane-content";
 import type { Action } from "../models/action.types";
 
 interface MarkdownActionsParams {
   isMarkdownFile: boolean;
-  activeBuffer: Buffer | null;
+  activeBuffer: PaneContent | null;
   openBuffer: (
     path: string,
     name: string,
@@ -42,10 +42,11 @@ export const createMarkdownActions = (params: MarkdownActionsParams): Action[] =
         const previewName = `${activeBuffer.name} (Preview)`;
 
         // Open a new buffer for the preview
+        const content = activeBuffer.type === "editor" ? activeBuffer.content : "";
         openBuffer(
           previewPath,
           previewName,
-          activeBuffer.content,
+          content,
           false, // isImage
           undefined, // databaseType
           false, // isDiff

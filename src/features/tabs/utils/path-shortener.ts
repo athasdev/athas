@@ -1,4 +1,5 @@
-import type { Buffer } from "../types/buffer";
+import type { PaneContent } from "@/features/panes/types/pane-content";
+import { isVirtualContent } from "@/features/panes/types/pane-content";
 
 /**
  * Get path segments (directories) from a file path
@@ -28,18 +29,18 @@ function getFileName(filePath: string): string {
  * Returns a map of buffer ID to display name
  */
 export function calculateDisplayNames(
-  buffers: Buffer[],
+  buffers: PaneContent[],
   _rootPath: string | undefined,
 ): Map<string, string> {
   const displayNames = new Map<string, string>();
 
   // Skip virtual or special buffers
   const regularBuffers = buffers.filter(
-    (b) => !b.isVirtual && b.path !== "extensions://marketplace",
+    (b) => !isVirtualContent(b) && b.path !== "extensions://marketplace",
   );
 
   // Group buffers by filename
-  const fileNameGroups = new Map<string, Buffer[]>();
+  const fileNameGroups = new Map<string, PaneContent[]>();
   for (const buffer of regularBuffers) {
     const fileName = getFileName(buffer.path);
     if (!fileNameGroups.has(fileName)) {

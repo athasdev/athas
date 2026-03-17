@@ -1,11 +1,11 @@
 import { Database, Globe, Package, Pin, Sparkles, Terminal, X } from "lucide-react";
 import { memo, useCallback, useEffect, useState } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
-import type { Buffer } from "@/features/tabs/types/buffer";
+import type { PaneContent } from "@/features/panes/types/pane-content";
 import { cn } from "@/utils/cn";
 
 interface TabBarItemProps {
-  buffer: Buffer;
+  buffer: PaneContent;
   displayName: string;
   index: number;
   isActive: boolean;
@@ -43,7 +43,7 @@ const TabBarItem = memo(function TabBarItem({
   // Reset favicon error when favicon URL changes
   useEffect(() => {
     setFaviconError(false);
-  }, [buffer.webViewerFavicon]);
+  }, [buffer.type === "webViewer" ? buffer.favicon : undefined]);
 
   const handleAuxClick = useCallback(
     (e: React.MouseEvent) => {
@@ -66,7 +66,7 @@ const TabBarItem = memo(function TabBarItem({
         ref={tabRef}
         role="tab"
         aria-selected={isActive}
-        aria-label={`${buffer.name}${buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
+        aria-label={`${buffer.name}${buffer.type === "editor" && buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         className={cn(
           "group relative flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-lg border pr-5 pl-2 transition-[transform,opacity,color,background-color,border-color] duration-200 ease-[ease]",
@@ -88,14 +88,14 @@ const TabBarItem = memo(function TabBarItem({
         <div className="grid size-3 shrink-0 place-content-center">
           {buffer.path === "extensions://marketplace" ? (
             <Package size={12} className="text-text-lighter" />
-          ) : buffer.isTerminal ? (
+          ) : buffer.type === "terminal" ? (
             <Terminal size={12} className="text-text-lighter" />
-          ) : buffer.isAgent ? (
+          ) : buffer.type === "agent" ? (
             <Sparkles size={12} className="text-text-lighter" />
-          ) : buffer.isWebViewer ? (
-            buffer.webViewerFavicon && !faviconError ? (
+          ) : buffer.type === "webViewer" ? (
+            buffer.favicon && !faviconError ? (
               <img
-                src={buffer.webViewerFavicon}
+                src={buffer.favicon}
                 alt=""
                 className="size-3 object-contain"
                 onError={() => setFaviconError(true)}
@@ -103,7 +103,7 @@ const TabBarItem = memo(function TabBarItem({
             ) : (
               <Globe size={12} className="text-text-lighter" />
             )
-          ) : buffer.databaseType ? (
+          ) : buffer.type === "database" ? (
             <Database size={12} className="text-text-lighter" />
           ) : (
             <FileExplorerIcon
@@ -124,7 +124,7 @@ const TabBarItem = memo(function TabBarItem({
         >
           {displayName}
         </span>
-        {buffer.isDirty && (
+        {buffer.type === "editor" && buffer.isDirty && (
           <div
             className="size-2 shrink-0 rounded-full bg-accent"
             title="Unsaved changes"

@@ -7,7 +7,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/store";
-import type { Buffer } from "@/features/tabs/types/buffer";
+import type { PaneContent } from "@/features/panes/types/pane-content";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
@@ -85,7 +85,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean;
     position: { x: number; y: number };
-    buffer: Buffer | null;
+    buffer: PaneContent | null;
   }>({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
 
   const [isDropTarget, setIsDropTarget] = useState(false);
@@ -98,18 +98,45 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
   const { clearPositionCache } = useEditorStateStore.getState().actions;
 
-  // Handle horizontal scrolling with mouse wheel
-  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+  const canScrollTabsHorizontally = useCallback(() => {
     const container = tabBarRef.current;
-    if (!container) return;
+    if (!container) return false;
 
-    // Only handle horizontal scrolling when scrolling vertically over the tab bar
-    if (e.deltaY !== 0) {
-      e.preventDefault();
-      // Multiply by 5 for smoother, less friction scrolling
-      container.scrollLeft += e.deltaY;
-    }
+    return container.scrollWidth > container.clientWidth + 1;
   }, []);
+
+  // Optional wheel-to-horizontal scrolling for overflowing tab strips.
+  const handleWheel = useCallback(
+    (e: React.WheelEvent<HTMLDivElement>) => {
+      const container = tabBarRef.current;
+      if (!container) return;
+      if (!settings.horizontalTabScroll) return;
+      if (dragStateRef.current.isDragging) return;
+      if (e.ctrlKey || e.metaKey) return;
+      if (!canScrollTabsHorizontally()) return;
+
+      const hasHorizontalIntent = Math.abs(e.deltaX) > 0;
+      const hasShiftedVerticalIntent = e.shiftKey && Math.abs(e.deltaY) > 0;
+      const hasVerticalFallback = Math.abs(e.deltaX) === 0 && Math.abs(e.deltaY) > 0;
+
+      if (!hasHorizontalIntent && !hasShiftedVerticalIntent && !hasVerticalFallback) {
+        return;
+      }
+
+      const delta = hasHorizontalIntent ? e.deltaX : e.deltaY;
+      if (delta === 0) return;
+
+      const maxScrollLeft = container.scrollWidth - container.clientWidth;
+      if (maxScrollLeft <= 0) return;
+
+      const nextScrollLeft = Math.max(0, Math.min(container.scrollLeft + delta, maxScrollLeft));
+      if (nextScrollLeft === container.scrollLeft) return;
+
+      e.preventDefault();
+      container.scrollLeft = nextScrollLeft;
+    },
+    [canScrollTabsHorizontally, settings.horizontalTabScroll],
+  );
 
   useEffect(() => {
     dragStateRef.current = dragState;
@@ -319,7 +346,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
       updateActivePath(buffer.path);
 
       // Announce tab switch to screen readers
-      setSrAnnouncement(`Switched to ${buffer.name}${buffer.isDirty ? ", unsaved changes" : ""}`);
+      setSrAnnouncement(`Switched to ${buffer.name}${buffer.type === "editor" && buffer.isDirty ? ", unsaved changes" : ""}`);
 
       e.preventDefault();
       setDragState({
@@ -349,7 +376,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
     [sortedBuffers, convertPreviewToDefinite],
   );
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, buffer: Buffer) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, buffer: PaneContent) => {
     e.preventDefault();
 
     // Get the tab element that was right-clicked
@@ -571,7 +598,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
             handleTabClick(prevBuffer.id);
             updateActivePath(prevBuffer.path);
             setSrAnnouncement(
-              `Switched to ${prevBuffer.name}${prevBuffer.isDirty ? ", unsaved changes" : ""}`,
+              `Switched to ${prevBuffer.name}${prevBuffer.type === "editor" && prevBuffer.isDirty ? ", unsaved changes" : ""}`,
             );
             tabRefs.current[index - 1]?.focus();
           }
@@ -584,7 +611,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
             handleTabClick(nextBuffer.id);
             updateActivePath(nextBuffer.path);
             setSrAnnouncement(
-              `Switched to ${nextBuffer.name}${nextBuffer.isDirty ? ", unsaved changes" : ""}`,
+              `Switched to ${nextBuffer.name}${nextBuffer.type === "editor" && nextBuffer.isDirty ? ", unsaved changes" : ""}`,
             );
             tabRefs.current[index + 1]?.focus();
           }
@@ -597,7 +624,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
             handleTabClick(firstBuffer.id);
             updateActivePath(firstBuffer.path);
             setSrAnnouncement(
-              `Switched to ${firstBuffer.name}${firstBuffer.isDirty ? ", unsaved changes" : ""}`,
+              `Switched to ${firstBuffer.name}${firstBuffer.type === "editor" && firstBuffer.isDirty ? ", unsaved changes" : ""}`,
             );
             tabRefs.current[0]?.focus();
           }
@@ -611,7 +638,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
             handleTabClick(lastBuffer.id);
             updateActivePath(lastBuffer.path);
             setSrAnnouncement(
-              `Switched to ${lastBuffer.name}${lastBuffer.isDirty ? ", unsaved changes" : ""}`,
+              `Switched to ${lastBuffer.name}${lastBuffer.type === "editor" && lastBuffer.isDirty ? ", unsaved changes" : ""}`,
             );
             tabRefs.current[lastIndex]?.focus();
           }
@@ -634,7 +661,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
           e.preventDefault();
           handleTabClick(buffer.id);
           updateActivePath(buffer.path);
-          setSrAnnouncement(`Activated ${buffer.name}${buffer.isDirty ? ", unsaved changes" : ""}`);
+          setSrAnnouncement(`Activated ${buffer.name}${buffer.type === "editor" && buffer.isDirty ? ", unsaved changes" : ""}`);
           break;
       }
     },
@@ -743,13 +770,14 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
             closeBuffer(bufferId);
             setTimeout(async () => {
               try {
+                const content = buffer.type === "editor" || buffer.type === "diff" ? buffer.content : "";
                 openBuffer(
                   buffer.path,
                   buffer.name,
-                  buffer.content,
-                  buffer.isImage,
+                  content,
+                  buffer.type === "image",
                   undefined, // databaseType
-                  buffer.isDiff,
+                  buffer.type === "diff",
                 );
               } catch (error) {
                 console.error("Failed to reload buffer:", error);

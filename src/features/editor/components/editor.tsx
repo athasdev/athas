@@ -4,6 +4,7 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { useGitGutter } from "@/features/git/hooks/use-git-gutter";
+import { isEditorContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
@@ -48,6 +49,8 @@ import { VimCursorLayer } from "./layers/vim-cursor-layer";
 import { Minimap } from "./minimap/minimap";
 
 interface EditorProps {
+  bufferId?: string;
+  isActiveSurface?: boolean;
   className?: string;
   onMouseMove?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onMouseLeave?: () => void;
@@ -59,6 +62,8 @@ const LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD = 20000;
 const LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS = 120;
 
 export function Editor({
+  bufferId: propBufferId,
+  isActiveSurface = true,
   className,
   onMouseMove,
   onMouseLeave,
@@ -78,9 +83,10 @@ export function Editor({
   const [editorScrollTop, setEditorScrollTop] = useState(0);
   const [editorViewportHeight, setEditorViewportHeight] = useState(0);
 
-  const bufferId = useBufferStore.use.activeBufferId();
+  const globalActiveBufferId = useBufferStore.use.activeBufferId();
+  const bufferId = propBufferId ?? globalActiveBufferId;
   const buffers = useBufferStore.use.buffers();
-  const { updateBufferContent } = useBufferStore.use.actions();
+  const { updateBufferContent, updateBufferTokens } = useBufferStore.use.actions();
   const {
     setCursorPosition,
     setSelection,
@@ -107,7 +113,8 @@ export function Editor({
   const fontSize = baseFontSize * zoomLevel;
   const showLineNumbers = useEditorSettingsStore.use.lineNumbers();
 
-  const buffer = buffers.find((b) => b.id === bufferId);
+  const rawBuffer = buffers.find((b) => b.id === bufferId);
+  const buffer = rawBuffer && isEditorContent(rawBuffer) ? rawBuffer : undefined;
   const content = buffer?.content || "";
   const filePath = buffer?.path;
 
@@ -172,9 +179,22 @@ export function Editor({
     incremental: true,
     enabled: hasSyntaxHighlighting,
   });
+  const effectiveTokens = tokens.length > 0 ? tokens : (buffer?.tokens ?? []);
+
+  useEffect(() => {
+    if (!bufferId || tokens.length === 0) return;
+    updateBufferTokens(
+      bufferId,
+      tokens.map((token) => ({
+        ...token,
+        token_type: token.class_name,
+      })),
+    );
+  }, [bufferId, tokens, updateBufferTokens]);
 
   // Atomic buffer switch — resets stores, syncs textarea, restores position
   const { switchGuardRef } = useBufferSwitch({
+    enabled: isActiveSurface,
     bufferId,
     content: displayContent,
     textareaRef: inputRef,
@@ -268,7 +288,7 @@ export function Editor({
           id: buffer.id,
           content: buffer.content,
           path: buffer.path,
-          language: buffer.language || "",
+          language: buffer.language ?? "",
         }
       : undefined,
     selection,
@@ -691,7 +711,7 @@ export function Editor({
           <HighlightLayer
             ref={highlightRef}
             content={displayContent}
-            tokens={tokens}
+            tokens={effectiveTokens}
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
@@ -891,7 +911,7 @@ export function Editor({
       {minimapEnabled && (
         <Minimap
           content={displayContent}
-          tokens={tokens}
+          tokens={effectiveTokens}
           scrollTop={editorScrollTop}
           viewportHeight={editorViewportHeight}
           totalHeight={lines.length * lineHeight}

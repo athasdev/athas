@@ -14,6 +14,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
 import { toast } from "@/ui/toast-store";
+import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Tooltip from "@/ui/tooltip";
 import { isMac } from "@/utils/platform";
@@ -117,9 +118,9 @@ export default function Breadcrumb() {
   const handlePreviewClick = () => {
     if (
       !activeBuffer ||
-      activeBuffer.isMarkdownPreview ||
-      activeBuffer.isHtmlPreview ||
-      activeBuffer.isCsvPreview
+      activeBuffer.type === "markdownPreview" ||
+      activeBuffer.type === "htmlPreview" ||
+      activeBuffer.type === "csvPreview"
     )
       return;
 
@@ -131,10 +132,12 @@ export default function Breadcrumb() {
     const isHtml = isHtmlFile();
     const isCsv = isCsvFile();
 
+    const bufferContent = hasTextContent(activeBuffer) ? activeBuffer.content : "";
+
     openBuffer(
       previewPath,
       previewName,
-      activeBuffer.content,
+      bufferContent,
       false, // isImage
       undefined, // databaseType
       false, // isDiff
@@ -336,9 +339,9 @@ export default function Breadcrumb() {
           ))}
         </div>
         <div className="flex items-center gap-1">
-          {((isMarkdownFile() && !activeBuffer?.isMarkdownPreview) ||
-            (isHtmlFile() && !activeBuffer?.isHtmlPreview) ||
-            (isCsvFile() && !activeBuffer?.isCsvPreview)) && (
+          {((isMarkdownFile() && activeBuffer?.type !== "markdownPreview") ||
+            (isHtmlFile() && activeBuffer?.type !== "htmlPreview") ||
+            (isCsvFile() && activeBuffer?.type !== "csvPreview")) && (
             <button
               onClick={handlePreviewClick}
               className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"

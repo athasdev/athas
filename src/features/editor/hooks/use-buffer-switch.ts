@@ -4,6 +4,7 @@ import { useEditorUIStore } from "../stores/ui-store";
 import type { ViewportRange } from "./use-viewport-lines";
 
 interface UseBufferSwitchOptions {
+  enabled?: boolean;
   bufferId: string | null;
   content: string;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
@@ -14,6 +15,7 @@ interface UseBufferSwitchOptions {
 }
 
 export function useBufferSwitch({
+  enabled = true,
   bufferId,
   content,
   textareaRef,
@@ -26,6 +28,7 @@ export function useBufferSwitch({
   const switchGuardRef = useRef(0);
 
   useLayoutEffect(() => {
+    if (!enabled) return;
     if (!bufferId) return;
 
     const isSwitch = prevBufferIdRef.current !== null && prevBufferIdRef.current !== bufferId;
@@ -70,7 +73,16 @@ export function useBufferSwitch({
     // 6. Reset and re-trigger tokenization
     resetTokenizer();
     void tokenize(content);
-  }, [bufferId, content, textareaRef, forceUpdateViewport, totalLines, resetTokenizer, tokenize]);
+  }, [
+    enabled,
+    bufferId,
+    content,
+    textareaRef,
+    forceUpdateViewport,
+    totalLines,
+    resetTokenizer,
+    tokenize,
+  ]);
 
   return { switchGuardRef };
 }

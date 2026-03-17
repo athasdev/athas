@@ -4,6 +4,7 @@ import { immer } from "zustand/middleware/immer";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
+import { isEditorContent, hasTextContent } from "@/features/panes/types/pane-content";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "@/features/file-system/controllers/platform";
 
@@ -66,7 +67,7 @@ export const useEditorAppStore = createSelectors(
           const { markPendingSave } = useFileWatcherStore.getState();
 
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-          if (!activeBuffer) return;
+          if (!activeBuffer || !isEditorContent(activeBuffer)) return;
 
           if (activeBufferId) {
             const lastContent = lastBufferContent.get(activeBufferId);
@@ -155,7 +156,7 @@ export const useEditorAppStore = createSelectors(
           const { markPendingSave } = useFileWatcherStore.getState();
 
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-          if (!activeBuffer) return;
+          if (!activeBuffer || !isEditorContent(activeBuffer)) return;
 
           if (activeBuffer.path.startsWith("untitled:")) {
             const { save: saveDialog } = await import("@tauri-apps/plugin-dialog");

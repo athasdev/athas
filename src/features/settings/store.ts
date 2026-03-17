@@ -115,6 +115,7 @@ export interface Settings {
     | "snippet"
     | "database";
   maxOpenTabs: number;
+  horizontalTabScroll: boolean;
   //// File tree
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
@@ -129,7 +130,7 @@ export interface Settings {
   compactGitStatusBadges: boolean;
   collapseEmptyGitSections: boolean;
   rememberLastGitPanelMode: boolean;
-  gitLastPanelMode: "stash" | "history" | "none";
+  gitLastPanelMode: "changes" | "stash" | "history" | "worktrees";
   enableInlineGitBlame: boolean;
   enableGitGutter: boolean;
 }
@@ -167,6 +168,22 @@ const normalizeAISettings = (settings: Settings): Settings => {
     AI_AUTOCOMPLETE_MODEL_MIGRATIONS[normalizedSettings.aiAutocompleteModelId] ||
     normalizedSettings.aiAutocompleteModelId ||
     DEFAULT_AI_AUTOCOMPLETE_MODEL_ID;
+
+  return normalizedSettings;
+};
+
+const normalizeSettings = (settings: Settings): Settings => {
+  const normalizedSettings = normalizeAISettings(settings);
+  const persistedGitPanelMode = (normalizedSettings as { gitLastPanelMode?: string })
+    .gitLastPanelMode;
+
+  if (
+    persistedGitPanelMode === "none" ||
+    (persistedGitPanelMode &&
+      !["changes", "stash", "history", "worktrees"].includes(persistedGitPanelMode))
+  ) {
+    normalizedSettings.gitLastPanelMode = "changes";
+  }
 
   return normalizedSettings;
 };
@@ -246,6 +263,7 @@ export const defaultSettings: Settings = {
   // Other
   extensionsActiveTab: "all",
   maxOpenTabs: 10,
+  horizontalTabScroll: false,
   //// File tree
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
@@ -260,7 +278,7 @@ export const defaultSettings: Settings = {
   compactGitStatusBadges: false,
   collapseEmptyGitSections: false,
   rememberLastGitPanelMode: false,
-  gitLastPanelMode: "none",
+  gitLastPanelMode: "changes",
   enableInlineGitBlame: true,
   enableGitGutter: true,
 };
@@ -416,7 +434,7 @@ const initializeSettings = async () => {
       loadedSettings.theme = detectedTheme;
     }
 
-    const normalizedSettings = normalizeAISettings(loadedSettings);
+    const normalizedSettings = normalizeSettings(loadedSettings);
     normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
 
     applyTheme(normalizedSettings.theme);
@@ -466,7 +484,7 @@ export const useSettingsStore = create(
         updateSettingsFromJSON: (jsonString: string): boolean => {
           try {
             const parsedSettings = JSON.parse(jsonString);
-            const validatedSettings = normalizeAISettings({
+            const validatedSettings = normalizeSettings({
               ...defaultSettings,
               ...parsedSettings,
             });
