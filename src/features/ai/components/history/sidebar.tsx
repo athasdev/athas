@@ -55,7 +55,8 @@ export default function ChatHistoryDropdown({
     const safeWidth = Math.min(DROPDOWN_WIDTH, window.innerWidth - viewportPadding * 2);
     const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
     const availableAbove = rect.top - viewportPadding;
-    const openUp = availableBelow < Math.min(ESTIMATED_HEIGHT, 280) && availableAbove > availableBelow;
+    const openUp =
+      availableBelow < Math.min(ESTIMATED_HEIGHT, 280) && availableAbove > availableBelow;
     const maxHeight = Math.max(
       220,
       Math.min(ESTIMATED_HEIGHT, openUp ? availableAbove - 6 : availableBelow - 6),

@@ -30,38 +30,46 @@ export const buildContextPrompt = (context: ContextInfo): string => {
 
   // Currently active file or web viewer
   if (context.activeBuffer) {
+    const ab = context.activeBuffer;
     // Handle web viewer buffers
-    if (context.activeBuffer.isWebViewer && context.activeBuffer.webViewerUrl) {
-      contextPrompt += `\nCurrently viewing web page: ${context.activeBuffer.webViewerUrl}`;
-      if (context.activeBuffer.webViewerContent) {
-        contextPrompt += `\n\nWeb page content:\n${context.activeBuffer.webViewerContent}`;
+    if (ab.type === "webViewer") {
+      contextPrompt += `\nCurrently viewing web page: ${ab.url}`;
+      if (ab.webViewerContent) {
+        contextPrompt += `\n\nWeb page content:\n${ab.webViewerContent}`;
       }
     } else if (isAcpAgent) {
       // For Claude Code, just provide the path
-      contextPrompt += `\nCurrently editing: ${context.activeBuffer.path}`;
+      contextPrompt += `\nCurrently editing: ${ab.path}`;
       if (context.language && context.language !== "Text") {
         contextPrompt += ` (${context.language})`;
       }
-      if (context.activeBuffer.isDirty) {
+      if (ab.type === "editor" && ab.isDirty) {
         contextPrompt += " [unsaved changes]";
       }
     } else {
       // For other providers, include content as before
-      contextPrompt += `\nCurrently editing: ${context.activeBuffer.name}`;
+      contextPrompt += `\nCurrently editing: ${ab.name}`;
       if (context.language && context.language !== "Text") {
         contextPrompt += ` (${context.language})`;
       }
 
-      if (context.activeBuffer.isDirty) {
+      if (ab.type === "editor" && ab.isDirty) {
         contextPrompt += " [unsaved changes]";
       }
 
       // Include relevant portions of the active file content
-      if (context.activeBuffer.content && !context.activeBuffer.isDatabase) {
-        const lines = context.activeBuffer.content.split("\n");
+      const hasContent =
+        ab.type === "editor" ||
+        ab.type === "diff" ||
+        ab.type === "markdownPreview" ||
+        ab.type === "htmlPreview" ||
+        ab.type === "csvPreview";
+      if (hasContent) {
+        const textContent = (ab as { content: string }).content;
+        const lines = textContent.split("\n");
         if (lines.length <= 100) {
           // Include the whole file if it's small
-          contextPrompt += `\n\nFile content:\n\`\`\`${context.language?.toLowerCase() || "text"}\n${context.activeBuffer.content}\n\`\`\``;
+          contextPrompt += `\n\nFile content:\n\`\`\`${context.language?.toLowerCase() || "text"}\n${textContent}\n\`\`\``;
         } else {
           // Include first 50 lines and last 20 lines for larger files
           const preview = [
@@ -90,7 +98,7 @@ export const buildContextPrompt = (context: ContextInfo): string => {
               context.projectRoot && buffer.path.startsWith(context.projectRoot)
                 ? buffer.path.slice(context.projectRoot.length + 1)
                 : buffer.path;
-            return `${relativePath}${buffer.isDirty ? " [modified]" : ""}`;
+            return `${relativePath}${buffer.type === "editor" && buffer.isDirty ? " [modified]" : ""}`;
           })
           .slice(0, 10);
 
@@ -101,7 +109,10 @@ export const buildContextPrompt = (context: ContextInfo): string => {
       } else {
         // For other providers, keep the original behavior
         const fileNames = otherFiles
-          .map((buffer) => `${buffer.name}${buffer.isDirty ? " [modified]" : ""}`)
+          .map(
+            (buffer) =>
+              `${buffer.name}${buffer.type === "editor" && buffer.isDirty ? " [modified]" : ""}`,
+          )
           .slice(0, 10);
 
         contextPrompt += `\n\nOther open files: ${fileNames.join(", ")}`;

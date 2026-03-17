@@ -102,7 +102,7 @@ export const ChatMessages = memo(
 
       return (
         <div className="flex h-full flex-col items-center justify-center p-4">
-          <div className="w-full max-w-sm space-y-0.5">
+          <div className="w-full max-w-sm overflow-hidden rounded-xl border border-border/40 bg-secondary-bg/30 p-1">
             {recentChats.map((chat) => (
               <button
                 key={chat.id}

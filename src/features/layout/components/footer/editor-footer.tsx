@@ -10,7 +10,13 @@ import {
   Zap,
   ZapOff,
 } from "lucide-react";
-import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  type RefObject,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { useAIChatStore } from "@/features/ai/store/store";
@@ -49,7 +55,11 @@ const DEFAULT_AUTOCOMPLETE_MODELS: AutocompleteModel[] = [
 ];
 
 // LSP Status Indicator Component
-const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => {
+const LspStatusIndicator = ({
+  projectName,
+}: {
+  projectName: string | null;
+}) => {
   const lspStatus = useLspStore.use.lspStatus();
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -134,7 +144,8 @@ const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => 
 
   // Get active language servers from supported languages or workspaces
   const activeServers = lspStatus.supportedLanguages || [];
-  const hasActiveServers = lspStatus.status === "connected" && activeServers.length > 0;
+  const hasActiveServers =
+    lspStatus.status === "connected" && activeServers.length > 0;
 
   const renderDropdown = () => {
     if (!isOpen) return null;
@@ -147,7 +158,9 @@ const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => 
       >
         {/* Header - Project Name */}
         <div className="border-border border-b bg-primary-bg/50 px-3 py-2">
-          <span className="font-medium text-text text-xs">{projectName || "No Project"}</span>
+          <span className="font-medium text-text text-xs">
+            {projectName || "No Project"}
+          </span>
         </div>
 
         {/* Language Servers List */}
@@ -160,7 +173,7 @@ const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => 
               {activeServers.map((server) => (
                 <div
                   key={server}
-                  className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-hover"
+                  className="flex items-center gap-2 rounded p-1 hover:bg-hover"
                 >
                   <Zap size={10} className="text-green-400" />
                   <span className="text-text text-xs capitalize">{server}</span>
@@ -179,7 +192,7 @@ const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => 
                 <span className="text-xs">Connection Error</span>
               </div>
               {lspStatus.lastError && (
-                <div className="rounded-md bg-red-500/10 px-2 py-1.5 text-[10px] text-red-400">
+                <div className="rounded-md bg-red-500/10 p-1 text-[10px] text-red-400">
                   {lspStatus.lastError}
                 </div>
               )}
@@ -211,7 +224,8 @@ const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => 
       >
         {config.icon}
       </button>
-      {typeof document !== "undefined" && createPortal(renderDropdown(), document.body)}
+      {typeof document !== "undefined" &&
+        createPortal(renderDropdown(), document.body)}
     </div>
   );
 };
@@ -221,18 +235,22 @@ const AiUsageStatusIndicator = () => {
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
-  const [autocompleteModels, setAutocompleteModels] = useState<AutocompleteModel[]>(
-    DEFAULT_AUTOCOMPLETE_MODELS,
-  );
+  const [autocompleteModels, setAutocompleteModels] = useState<
+    AutocompleteModel[]
+  >(DEFAULT_AUTOCOMPLETE_MODELS);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const subscription = useAuthStore((state) => state.subscription);
   const handleAuthCallback = useAuthStore((state) => state.handleAuthCallback);
-  const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
+  const aiAutocompleteModelId = useSettingsStore(
+    (state) => state.settings.aiAutocompleteModelId,
+  );
   const updateSetting = useSettingsStore((state) => state.updateSetting);
-  const checkAllProviderApiKeys = useAIChatStore((state) => state.checkAllProviderApiKeys);
+  const checkAllProviderApiKeys = useAIChatStore(
+    (state) => state.checkAllProviderApiKeys,
+  );
   const hasOpenRouterKey = useAIChatStore(
     (state) => state.providerApiKeys.get("openrouter") || false,
   );
@@ -242,7 +260,9 @@ const AiUsageStatusIndicator = () => {
   const enterprisePolicy = subscription?.enterprise?.policy;
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
   const isPro = subscriptionStatus === "pro";
-  const aiAllowedByPolicy = managedPolicy ? managedPolicy.aiCompletionEnabled : true;
+  const aiAllowedByPolicy = managedPolicy
+    ? managedPolicy.aiCompletionEnabled
+    : true;
   const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
   const planLabel = (() => {
     if (!isAuthenticated) return "Guest";
@@ -303,21 +323,28 @@ const AiUsageStatusIndicator = () => {
   const handleSignIn = async () => {
     setIsSigningIn(true);
     try {
-      const { sessionId, pollSecret, loginUrl } = await beginDesktopAuthSession();
+      const { sessionId, pollSecret, loginUrl } =
+        await beginDesktopAuthSession();
       await openUrl(loginUrl);
-      toast.info("Complete sign-in in your browser. Waiting for confirmation...");
+      toast.info(
+        "Complete sign-in in your browser. Waiting for confirmation...",
+      );
 
       const token = await waitForDesktopAuthToken(sessionId, pollSecret);
       await handleAuthCallback(token);
       toast.success("Signed in successfully!");
       setIsOpen(false);
     } catch (error) {
-      if (error instanceof DesktopAuthError && error.code === "endpoint_unavailable") {
+      if (
+        error instanceof DesktopAuthError &&
+        error.code === "endpoint_unavailable"
+      ) {
         toast.error(
           "Desktop sign-in endpoint is unavailable on this server. Please use the local dev www server.",
         );
       } else {
-        const message = error instanceof Error ? error.message : "Authentication failed.";
+        const message =
+          error instanceof Error ? error.message : "Authentication failed.";
         toast.error(message);
       }
     } finally {
@@ -395,7 +422,7 @@ const AiUsageStatusIndicator = () => {
             <button
               onClick={() => void handleSignIn()}
               disabled={isSigningIn}
-              className="ui-font mt-2 flex w-full items-center justify-center rounded-lg border border-accent bg-accent px-2 py-1.5 text-white text-xs hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="ui-font mt-2 flex w-full items-center justify-center rounded-lg border border-accent bg-accent p-1 text-white text-xs hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSigningIn ? "Signing in..." : "Sign in"}
             </button>
@@ -405,11 +432,15 @@ const AiUsageStatusIndicator = () => {
             <div className="border-border/60 border-b p-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-text-lighter text-xs">Plan</span>
-                <span className="font-medium text-text text-xs">{planLabel}</span>
+                <span className="font-medium text-text text-xs">
+                  {planLabel}
+                </span>
               </div>
               <div className="mt-1 flex items-center justify-between">
                 <span className="text-text-lighter text-xs">Mode</span>
-                <span className={cn("font-medium text-xs", modeToneClass)}>{modeLabel}</span>
+                <span className={cn("font-medium text-xs", modeToneClass)}>
+                  {modeLabel}
+                </span>
               </div>
             </div>
             <div className="p-2.5">
@@ -422,7 +453,9 @@ const AiUsageStatusIndicator = () => {
               <Select
                 id="footer-ai-model-select"
                 value={aiAutocompleteModelId}
-                onChange={(e) => updateSetting("aiAutocompleteModelId", e.target.value)}
+                onChange={(e) =>
+                  updateSetting("aiAutocompleteModelId", e.target.value)
+                }
                 disabled={isLoadingModels}
                 size="sm"
                 className="focus:border-accent focus:ring-accent/30"
@@ -455,7 +488,8 @@ const AiUsageStatusIndicator = () => {
       >
         <span className="ui-font text-[11px]">{indicatorLabel}</span>
       </button>
-      {typeof document !== "undefined" && createPortal(renderDropdown(), document.body)}
+      {typeof document !== "undefined" &&
+        createPortal(renderDropdown(), document.body)}
     </div>
   );
 };
@@ -470,7 +504,8 @@ const EditorFooter = () => {
   const { rootFolderPath } = useFileSystemStore();
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
   const { actions } = useGitStore();
-  const { available, downloading, installing, updateInfo, downloadAndInstall } = useUpdater(false);
+  const { available, downloading, installing, updateInfo, downloadAndInstall } =
+    useUpdater(false);
   const cursorPosition = useEditorStateStore.use.cursorPosition();
 
   // Get diagnostics count for badge display
@@ -507,7 +542,8 @@ const EditorFooter = () => {
             onClick={() => {
               uiState.setBottomPaneActiveTab("terminal");
               const showingTerminal =
-                !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "terminal";
+                !uiState.isBottomPaneVisible ||
+                uiState.bottomPaneActiveTab !== "terminal";
               uiState.setIsBottomPaneVisible(showingTerminal);
 
               // Request terminal focus after showing
@@ -536,7 +572,8 @@ const EditorFooter = () => {
             onClick={() => {
               uiState.setBottomPaneActiveTab("diagnostics");
               const showingDiagnostics =
-                !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "diagnostics";
+                !uiState.isBottomPaneVisible ||
+                uiState.bottomPaneActiveTab !== "diagnostics";
               uiState.setIsBottomPaneVisible(showingDiagnostics);
             }}
             className={cn(
@@ -544,7 +581,10 @@ const EditorFooter = () => {
               uiState.isBottomPaneVisible &&
                 uiState.bottomPaneActiveTab === "diagnostics" &&
                 footerActiveClass,
-              !(uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics") &&
+              !(
+                uiState.isBottomPaneVisible &&
+                uiState.bottomPaneActiveTab === "diagnostics"
+              ) &&
                 diagnosticsCount > 0 &&
                 "text-warning",
             )}
@@ -556,13 +596,17 @@ const EditorFooter = () => {
             }
           >
             <AlertCircle size={12} />
-            {diagnosticsCount > 0 && <span className="ml-0.5 text-[10px]">{diagnosticsCount}</span>}
+            {diagnosticsCount > 0 && (
+              <span className="ml-0.5 text-[10px]">{diagnosticsCount}</span>
+            )}
           </button>
         )}
 
         {/* LSP Status indicator */}
         <LspStatusIndicator
-          projectName={rootFolderPath ? getFilenameFromPath(rootFolderPath) : null}
+          projectName={
+            rootFolderPath ? getFilenameFromPath(rootFolderPath) : null
+          }
         />
 
         {/* Vim status indicator */}
@@ -588,7 +632,10 @@ const EditorFooter = () => {
                   : `Update available: ${updateInfo?.version}`
             }
           >
-            <Download size={12} className={downloading || installing ? "animate-pulse" : ""} />
+            <Download
+              size={12}
+              className={downloading || installing ? "animate-pulse" : ""}
+            />
           </button>
         )}
       </div>

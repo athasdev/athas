@@ -448,11 +448,7 @@ export class LspClient {
 
     const buffer = useBufferStore.getState().buffers.find((entry) => entry.path === filePath);
     const content = buffer && hasTextContent(buffer) ? buffer.content : "";
-    await this.restartForFile(
-      filePath,
-      this.parseServerKey(serverKey).workspacePath,
-      content,
-    );
+    await this.restartForFile(filePath, this.parseServerKey(serverKey).workspacePath, content);
   }
 
   async restartAllTrackedServers(): Promise<void> {

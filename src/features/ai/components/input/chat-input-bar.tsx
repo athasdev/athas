@@ -243,7 +243,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
     // The checkAndSync on mount handles initial sync and chat switching
   }, [getPlainTextFromDiv]);
 
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     // Handle slash command navigation
     if (slashCommandState.active) {

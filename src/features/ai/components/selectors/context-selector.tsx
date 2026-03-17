@@ -11,16 +11,10 @@ import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
 
+import type { PaneContent } from "@/features/panes/types/pane-content";
+
 interface ContextSelectorProps {
-  buffers: Array<{
-    id: string;
-    path: string;
-    name: string;
-    content: string;
-    isDirty: boolean;
-    databaseType?: string;
-    isActive: boolean;
-  }>;
+  buffers: PaneContent[];
   allProjectFiles: never[];
   selectedBufferIds: Set<string>;
   selectedFilesPaths: Set<string>;
@@ -75,10 +69,7 @@ export function ContextSelector({
   }, [isOpen, getAllProjectFiles]);
 
   // Open buffer paths as Set for O(1) lookup
-  const openBufferPathSet = useMemo(
-    () => new Set(buffers.map((b) => b.path)),
-    [buffers],
-  );
+  const openBufferPathSet = useMemo(() => new Set(buffers.map((b) => b.path)), [buffers]);
 
   const allItems = useMemo(() => {
     const bufferItems = buffers.map((buffer) => ({
@@ -86,8 +77,8 @@ export function ContextSelector({
       id: buffer.id,
       name: buffer.name,
       path: buffer.path,
-      databaseType: buffer.databaseType,
-      isDirty: buffer.isDirty,
+      databaseType: buffer.type === "database" ? buffer.databaseType : undefined,
+      isDirty: buffer.type === "editor" && buffer.isDirty,
       isSelected: selectedBufferIds.has(buffer.id),
     }));
 
@@ -110,12 +101,18 @@ export function ContextSelector({
     const scored: Array<{ item: any; score: number }> = [];
 
     for (const item of bufferItems) {
-      const score = Math.max(fuzzyScore(item.name, debouncedSearch), fuzzyScore(item.path, debouncedSearch));
+      const score = Math.max(
+        fuzzyScore(item.name, debouncedSearch),
+        fuzzyScore(item.path, debouncedSearch),
+      );
       if (score > 0) scored.push({ item, score });
     }
 
     for (const file of fileItems) {
-      const score = Math.max(fuzzyScore(file.name, debouncedSearch), fuzzyScore(file.path, debouncedSearch));
+      const score = Math.max(
+        fuzzyScore(file.name, debouncedSearch),
+        fuzzyScore(file.path, debouncedSearch),
+      );
       if (score > 0) {
         scored.push({
           item: {
@@ -140,7 +137,14 @@ export function ContextSelector({
     });
 
     return scored.slice(0, MAX_RESULTS).map(({ item }) => item);
-  }, [fileItems, buffers, debouncedSearch, selectedBufferIds, selectedFilesPaths, openBufferPathSet]);
+  }, [
+    fileItems,
+    buffers,
+    debouncedSearch,
+    selectedBufferIds,
+    selectedFilesPaths,
+    openBufferPathSet,
+  ]);
 
   const selectedItems = useMemo(() => {
     const bufferSelections = buffers
@@ -149,8 +153,8 @@ export function ContextSelector({
         type: "buffer" as const,
         id: buffer.id,
         name: buffer.name,
-        databaseType: buffer.databaseType,
-        isDirty: buffer.isDirty,
+        databaseType: buffer.type === "database" ? buffer.databaseType : undefined,
+        isDirty: buffer.type === "editor" && buffer.isDirty,
       }));
 
     const fileSelections = Array.from(selectedFilesPaths).map((filePath) => ({
@@ -183,7 +187,8 @@ export function ContextSelector({
     const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
 
     // Prefer opening above (since trigger is at bottom of chat), fall back to below
-    const openUp = availableAbove >= Math.min(estimatedHeight, 200) || availableAbove > availableBelow;
+    const openUp =
+      availableAbove >= Math.min(estimatedHeight, 200) || availableAbove > availableBelow;
     const maxHeight = Math.max(
       180,
       Math.min(estimatedHeight, openUp ? availableAbove - gap : availableBelow - gap),

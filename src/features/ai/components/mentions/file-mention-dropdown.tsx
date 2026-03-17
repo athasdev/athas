@@ -52,17 +52,12 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
 
   const filteredFiles = useMemo(() => {
     if (!searchTerm.trim()) {
-      return fileItems
-        .slice(0, MAX_RESULTS)
-        .sort((a, b) => a.name.localeCompare(b.name));
+      return fileItems.slice(0, MAX_RESULTS).sort((a, b) => a.name.localeCompare(b.name));
     }
 
     const scored: Array<{ file: { name: string; path: string }; score: number }> = [];
     for (const file of fileItems) {
-      const score = Math.max(
-        fuzzyScore(file.name, searchTerm),
-        fuzzyScore(file.path, searchTerm),
-      );
+      const score = Math.max(fuzzyScore(file.name, searchTerm), fuzzyScore(file.path, searchTerm));
       if (score > 0) {
         scored.push({ file, score });
       }

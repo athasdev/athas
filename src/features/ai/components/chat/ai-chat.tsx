@@ -708,7 +708,6 @@ details: ${errorDetails || mainError}
                 : false
             }
           />
-
         </>
       )}
     </div>
