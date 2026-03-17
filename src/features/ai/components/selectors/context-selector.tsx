@@ -1,11 +1,12 @@
-import { Database, FileText, Plus, Search, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Database, FileText, Plus, Search } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useDebounce } from "use-debounce";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { IGNORE_PATTERNS as IGNORED_PATTERNS } from "@/features/file-system/controllers/utils";
-import type { FileEntry } from "@/features/file-system/types/app";
 import { useProjectStore } from "@/features/window/stores/project-store";
+import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
+import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
@@ -20,7 +21,7 @@ interface ContextSelectorProps {
     databaseType?: string;
     isActive: boolean;
   }>;
-  allProjectFiles: FileEntry[];
+  allProjectFiles: never[];
   selectedBufferIds: Set<string>;
   selectedFilesPaths: Set<string>;
   onToggleBuffer: (bufferId: string) => void;
@@ -29,73 +30,8 @@ interface ContextSelectorProps {
   onToggleOpen: () => void;
 }
 
-// Function to check if a file should be ignored (same as quick open)
-const shouldIgnoreFile = (filePath: string): boolean => {
-  const fileName = filePath.split("/").pop() || "";
-  const fullPath = filePath.toLowerCase();
-
-  return IGNORED_PATTERNS.some((pattern) => {
-    if (pattern.includes("*")) {
-      // Handle glob patterns like *.log
-      const regex = new RegExp(pattern.replace(/\*/g, ".*"));
-      return regex.test(fileName.toLowerCase()) || regex.test(fullPath);
-    } else {
-      // Handle exact matches
-      return (
-        fileName.toLowerCase() === pattern.toLowerCase() ||
-        fullPath.includes(`/${pattern.toLowerCase()}/`) ||
-        fullPath.endsWith(`/${pattern.toLowerCase()}`)
-      );
-    }
-  });
-};
-
-// Fuzzy search scoring function (same as file mention dropdown)
-const fuzzyScore = (text: string, query: string): number => {
-  if (!query) return 0;
-
-  const textLower = text.toLowerCase();
-  const queryLower = query.toLowerCase();
-
-  // Exact match gets highest score
-  if (textLower === queryLower) return 1000;
-
-  // Starts with query gets high score
-  if (textLower.startsWith(queryLower)) return 800;
-
-  // Contains query as substring gets medium score
-  if (textLower.includes(queryLower)) return 600;
-
-  // Fuzzy matching - check if all query characters exist in order
-  let textIndex = 0;
-  let queryIndex = 0;
-  let score = 0;
-  let consecutiveMatches = 0;
-
-  while (textIndex < textLower.length && queryIndex < queryLower.length) {
-    if (textLower[textIndex] === queryLower[queryIndex]) {
-      score += 10;
-      consecutiveMatches++;
-      // Bonus for consecutive matches
-      if (consecutiveMatches > 1) {
-        score += consecutiveMatches * 2;
-      }
-      queryIndex++;
-    } else {
-      consecutiveMatches = 0;
-    }
-    textIndex++;
-  }
-
-  // If we matched all query characters, it's a valid fuzzy match
-  if (queryIndex === queryLower.length) {
-    // Bonus for shorter text (more precise match)
-    score += Math.max(0, 100 - textLower.length);
-    return score;
-  }
-
-  return 0; // No match
-};
+const MAX_RESULTS = 20;
+const SEARCH_DEBOUNCE_MS = 100;
 
 export function ContextSelector({
   buffers,
@@ -107,11 +43,10 @@ export function ContextSelector({
   onToggleOpen,
 }: Omit<ContextSelectorProps, "allProjectFiles">) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch] = useDebounce(searchTerm, SEARCH_DEBOUNCE_MS);
   const triggerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const [allFiles, setAllFiles] = useState<Array<{ name: string; path: string; isDir: boolean }>>(
-    [],
-  );
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [popoverPosition, setPopoverPosition] = useState({
     top: 0,
     left: 0,
@@ -119,83 +54,96 @@ export function ContextSelector({
     maxHeight: 300,
   });
 
-  // Get rootFolderPath from project store and file system store
   const { rootFolderPath } = useProjectStore();
   const { getAllProjectFiles } = useFileSystemStore();
 
-  // Load all project files on mount (same as file mention dropdown)
-  useEffect(() => {
-    getAllProjectFiles().then((projectFiles) => {
-      const formattedFiles = projectFiles.map((file) => ({
-        name: file.name,
-        path: file.path,
-        isDir: file.isDir,
-      }));
-      setAllFiles(formattedFiles);
-    });
-  }, [getAllProjectFiles]);
+  // Pre-filtered file list (excludes directories + ignored files). Refreshed on each open.
+  const [fileItems, setFileItems] = useState<Array<{ name: string; path: string }>>([]);
 
-  // Combined list of buffers and files with fuzzy search (same logic as file mention dropdown)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    getAllProjectFiles().then((projectFiles) => {
+      const filtered: Array<{ name: string; path: string }> = [];
+      for (const file of projectFiles) {
+        if (!file.isDir && !shouldIgnoreFile(file.path)) {
+          filtered.push({ name: file.name, path: file.path });
+        }
+      }
+      setFileItems(filtered);
+    });
+  }, [isOpen, getAllProjectFiles]);
+
+  // Open buffer paths as Set for O(1) lookup
+  const openBufferPathSet = useMemo(
+    () => new Set(buffers.map((b) => b.path)),
+    [buffers],
+  );
+
   const allItems = useMemo(() => {
-    // Convert buffers to items
     const bufferItems = buffers.map((buffer) => ({
       type: "buffer" as const,
       id: buffer.id,
       name: buffer.name,
       path: buffer.path,
-      isDir: false,
       databaseType: buffer.databaseType,
       isDirty: buffer.isDirty,
       isSelected: selectedBufferIds.has(buffer.id),
     }));
 
-    // Convert project files to items (filter out directories and ignored files)
-    const fileItems = allFiles
-      .filter((file) => !file.isDir && !shouldIgnoreFile(file.path))
-      .map((file) => ({
-        type: "file" as const,
-        id: file.path,
-        name: file.name,
-        path: file.path,
-        isDir: false,
-        isSelected: selectedFilesPaths.has(file.path),
-      }));
+    if (!debouncedSearch.trim()) {
+      const sortedFiles = fileItems
+        .slice(0, MAX_RESULTS)
+        .map((file) => ({
+          type: "file" as const,
+          id: file.path,
+          name: file.name,
+          path: file.path,
+          isSelected: selectedFilesPaths.has(file.path),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
 
-    const allCombined = [...bufferItems, ...fileItems];
-
-    if (!searchTerm.trim()) {
-      // No search query - show buffers first, then alphabetical files
-      return [
-        ...bufferItems,
-        ...fileItems.sort((a, b) => a.name.localeCompare(b.name)).slice(0, 20),
-      ];
+      return [...bufferItems, ...sortedFiles];
     }
 
-    // With search query - use fuzzy search
-    const scoredItems = allCombined
-      .map((item) => {
-        // Score both filename and full path, take the higher score
-        const nameScore = fuzzyScore(item.name, searchTerm);
-        const pathScore = fuzzyScore(item.path, searchTerm);
-        const score = Math.max(nameScore, pathScore);
+    // Score all items, take top results
+    const scored: Array<{ item: any; score: number }> = [];
 
-        return { item, score };
-      })
-      .filter(({ score }) => score > 0) // Only include items with positive scores
-      .sort((a, b) => {
-        // First sort by score (highest first)
-        if (b.score !== a.score) return b.score - a.score;
-        // Then sort alphabetically
-        return a.item.name.localeCompare(b.item.name);
-      })
-      .slice(0, 20); // Limit to 20 results
+    for (const item of bufferItems) {
+      const score = Math.max(fuzzyScore(item.name, debouncedSearch), fuzzyScore(item.path, debouncedSearch));
+      if (score > 0) scored.push({ item, score });
+    }
 
-    return scoredItems.map(({ item }) => item);
-  }, [allFiles, buffers, searchTerm, selectedBufferIds, selectedFilesPaths]);
+    for (const file of fileItems) {
+      const score = Math.max(fuzzyScore(file.name, debouncedSearch), fuzzyScore(file.path, debouncedSearch));
+      if (score > 0) {
+        scored.push({
+          item: {
+            type: "file" as const,
+            id: file.path,
+            name: file.name,
+            path: file.path,
+            isSelected: selectedFilesPaths.has(file.path),
+          },
+          score,
+        });
+      }
+    }
 
-  // Get selected items for display
+    scored.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      // Prioritize open buffers
+      const aIsOpen = openBufferPathSet.has(a.item.path);
+      const bIsOpen = openBufferPathSet.has(b.item.path);
+      if (aIsOpen !== bIsOpen) return aIsOpen ? -1 : 1;
+      return a.item.name.localeCompare(b.item.name);
+    });
+
+    return scored.slice(0, MAX_RESULTS).map(({ item }) => item);
+  }, [fileItems, buffers, debouncedSearch, selectedBufferIds, selectedFilesPaths, openBufferPathSet]);
+
   const selectedItems = useMemo(() => {
-    const bufferItems = buffers
+    const bufferSelections = buffers
       .filter((buffer) => selectedBufferIds.has(buffer.id))
       .map((buffer) => ({
         type: "buffer" as const,
@@ -205,14 +153,14 @@ export function ContextSelector({
         isDirty: buffer.isDirty,
       }));
 
-    const fileItems = Array.from(selectedFilesPaths).map((filePath) => ({
+    const fileSelections = Array.from(selectedFilesPaths).map((filePath) => ({
       type: "file" as const,
       id: filePath,
       name: filePath.split("/").pop() || "Unknown",
       path: filePath,
     }));
 
-    return [...bufferItems, ...fileItems];
+    return [...bufferSelections, ...fileSelections];
   }, [buffers, selectedBufferIds, selectedFilesPaths]);
 
   const closePopover = useCallback(() => {
@@ -225,39 +173,39 @@ export function ContextSelector({
     if (!triggerRef.current) return;
 
     const rect = triggerRef.current.getBoundingClientRect();
-    const padding = 8;
-    const width = Math.min(340, window.innerWidth - padding * 2);
-    const maxHeight = Math.min(320, window.innerHeight - padding * 2);
+    const viewportPadding = 8;
+    const gap = 6;
+    const dropdownWidth = 340;
+    const estimatedHeight = 320;
 
-    // The control is at the bottom of the input bar, so open upward by default.
-    let top = rect.top - maxHeight - 8;
-    if (top < padding) {
-      top = rect.bottom + 8;
-    }
-    if (top + maxHeight > window.innerHeight - padding) {
-      top = window.innerHeight - maxHeight - padding;
-    }
-    if (top < padding) {
-      top = padding;
-    }
+    const safeWidth = Math.min(dropdownWidth, window.innerWidth - viewportPadding * 2);
+    const availableAbove = rect.top - viewportPadding;
+    const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
+
+    // Prefer opening above (since trigger is at bottom of chat), fall back to below
+    const openUp = availableAbove >= Math.min(estimatedHeight, 200) || availableAbove > availableBelow;
+    const maxHeight = Math.max(
+      180,
+      Math.min(estimatedHeight, openUp ? availableAbove - gap : availableBelow - gap),
+    );
+    const measuredHeight = popoverRef.current?.getBoundingClientRect().height ?? estimatedHeight;
+    const visibleHeight = Math.min(maxHeight, measuredHeight);
+
+    const top = openUp
+      ? Math.max(viewportPadding, rect.top - visibleHeight - gap)
+      : rect.bottom + gap;
 
     let left = rect.left;
-    if (left + width > window.innerWidth - padding) {
-      left = window.innerWidth - width - padding;
+    if (left + safeWidth > window.innerWidth - viewportPadding) {
+      left = window.innerWidth - safeWidth - viewportPadding;
     }
-    if (left < padding) {
-      left = padding;
+    if (left < viewportPadding) {
+      left = viewportPadding;
     }
 
-    setPopoverPosition({
-      top,
-      left,
-      width,
-      maxHeight,
-    });
+    setPopoverPosition({ top, left, width: safeWidth, maxHeight });
   }, []);
 
-  // Handle ESC key to close dropdown
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
@@ -272,6 +220,18 @@ export function ContextSelector({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    updatePopoverPosition();
+  }, [isOpen, updatePopoverPosition, debouncedSearch, allItems.length]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSearchTerm("");
+      setTimeout(() => searchInputRef.current?.focus(), 0);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -304,9 +264,9 @@ export function ContextSelector({
         <button
           onClick={onToggleOpen}
           className={cn(
-            "flex h-8 w-8 select-none items-center justify-center rounded-full border border-border bg-secondary-bg/80 p-1",
+            "flex select-none items-center justify-center p-1",
             "text-text-lighter text-xs transition-colors",
-            "hover:bg-hover hover:text-text focus:outline-none",
+            "hover:text-text focus:outline-none",
           )}
           title="Add context files"
           aria-label="Add context files"
@@ -335,42 +295,22 @@ export function ContextSelector({
             aria-label="Context file selector"
             aria-modal="false"
           >
-            <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/75 px-3 py-2.5">
-              <div className="flex min-w-0 items-center gap-2">
-                <Plus size={12} className="shrink-0 text-text-lighter" />
-                <span className="truncate font-medium text-text text-xs">Add Context</span>
-              </div>
-              <button
-                type="button"
-                onClick={onToggleOpen}
-                className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
-                aria-label="Close context selector"
-              >
-                <X size={12} />
-              </button>
-            </div>
-
-            {/* Search input */}
-            <div className="relative border-border/60 border-b">
-              <Search
-                size={12}
-                className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-text-lighter"
-              />
+            <div className="bg-secondary-bg px-2 py-2">
               <Input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Search files..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 variant="ghost"
                 leftIcon={Search}
-                className="w-full py-2.5 pr-3"
+                className="w-full"
                 aria-label="Search files"
               />
             </div>
 
-            {/* Unified file list */}
             <div
-              className="min-h-0 flex-1 overflow-y-auto p-2"
+              className="min-h-0 flex-1 overflow-y-auto p-1.5"
               role="listbox"
               aria-label="Files and buffers"
             >
@@ -379,7 +319,7 @@ export function ContextSelector({
                   {searchTerm ? "No matching files found" : "No files available"}
                 </div>
               ) : (
-                allItems.map((item) => (
+                allItems.map((item: any) => (
                   <button
                     key={`${item.type}-${item.id}`}
                     onClick={() => {
@@ -454,7 +394,6 @@ export function ContextSelector({
           document.body,
         )}
 
-      {/* Selected items as compact badges with horizontal scrolling */}
       <div className="scrollbar-hidden flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
         {selectedItems.map((item) => (
           <div

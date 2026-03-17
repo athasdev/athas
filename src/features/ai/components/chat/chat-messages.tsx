@@ -1,32 +1,13 @@
-import { AlertCircle, CheckCircle, Clock, MessageSquare } from "lucide-react";
+import { AlertCircle, CheckCircle, Clock } from "lucide-react";
 import { forwardRef, memo, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { cn } from "@/utils/cn";
 import { getRelativeTime } from "../../lib/formatting";
 import { useAIChatStore } from "../../store/store";
-import { AGENT_OPTIONS } from "../../types/ai-chat";
 import { ChatMessage } from "./chat-message";
-
-// Get short agent label for badge
-const getAgentLabel = (agentId: string | undefined): string => {
-  if (!agentId) return "API";
-  const agent = AGENT_OPTIONS.find((a) => a.id === agentId);
-  if (!agent) return "API";
-  switch (agentId) {
-    case "claude-code":
-      return "Claude";
-    case "gemini-cli":
-      return "Gemini";
-    case "codex-cli":
-      return "Codex";
-    case "custom":
-      return "API";
-    default:
-      return agent.name.split(" ")[0];
-  }
-};
 
 interface ChatMessagesProps {
   onApplyCode?: (code: string, language?: string) => void;
@@ -121,28 +102,26 @@ export const ChatMessages = memo(
 
       return (
         <div className="flex h-full flex-col items-center justify-center p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-border bg-primary-bg/90 p-3">
-            <div className="mb-2 flex items-center gap-1.5 text-text-lighter text-xs">
-              <MessageSquare size={12} />
-              <span>Recent Chats</span>
-            </div>
-            <div className="space-y-1">
-              {recentChats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => switchToChat(chat.id)}
-                  className="flex w-full items-center gap-2 rounded-xl border border-transparent px-2 py-2 text-left transition-colors hover:border-border hover:bg-hover"
-                >
-                  <span className="min-w-0 flex-1 truncate text-text text-xs">{chat.title}</span>
-                  <span className="shrink-0 text-[10px] text-text-lighter">
-                    {getAgentLabel(chat.agentId)}
-                  </span>
-                  <span className="shrink-0 text-[10px] text-text-lighter">
+          <div className="w-full max-w-sm space-y-0.5">
+            {recentChats.map((chat) => (
+              <button
+                key={chat.id}
+                onClick={() => switchToChat(chat.id)}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-hover"
+              >
+                <ProviderIcon
+                  providerId={chat.agentId || "custom"}
+                  size={12}
+                  className="shrink-0 text-text-lighter"
+                />
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="truncate text-text text-xs">{chat.title}</span>
+                  <span className="select-none text-[10px] text-text-lighter">
                     {getRelativeTime(chat.lastMessageAt)}
                   </span>
-                </button>
-              ))}
-            </div>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       );

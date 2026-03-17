@@ -1,180 +1,216 @@
-import { Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Check, Search, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
-import { AGENT_OPTIONS, type ChatHistoryModalProps } from "@/features/ai/types/ai-chat";
-import Command, {
-  CommandEmpty,
-  CommandHeader,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/ui/command";
+import type { Chat } from "@/features/ai/types/ai-chat";
+import Input from "@/ui/input";
+import { cn } from "@/utils/cn";
+import { ProviderIcon } from "../icons/provider-icons";
 
-// Get short agent label for badge
-const getAgentLabel = (agentId: string | undefined): string => {
-  if (!agentId) return "API";
-  const agent = AGENT_OPTIONS.find((a) => a.id === agentId);
-  if (!agent) return "API";
-  // Return short labels
-  switch (agentId) {
-    case "claude-code":
-      return "Claude";
-    case "gemini-cli":
-      return "Gemini";
-    case "codex-cli":
-      return "Codex";
-    case "custom":
-      return "API";
-    default:
-      return agent.name.split(" ")[0];
-  }
-};
+interface DropdownPosition {
+  left: number;
+  top: number;
+  width: number;
+  maxHeight: number;
+}
 
-// Get badge color based on agent
-const getAgentColor = (agentId: string | undefined): string => {
-  switch (agentId) {
-    case "claude-code":
-      return "bg-orange-500/20 text-orange-400 border-orange-500/30";
-    case "gemini-cli":
-      return "bg-blue-500/20 text-blue-400 border-blue-500/30";
-    case "codex-cli":
-      return "bg-green-500/20 text-green-400 border-green-500/30";
-    case "kimi-cli":
-      return "bg-cyan-500/20 text-cyan-400 border-cyan-500/30";
-    case "opencode":
-      return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-    case "qwen-code":
-      return "bg-pink-500/20 text-pink-400 border-pink-500/30";
-    default:
-      return "bg-purple-500/20 text-purple-400 border-purple-500/30";
-  }
-};
+interface ChatHistoryDropdownProps {
+  isOpen: boolean;
+  onClose: () => void;
+  chats: Chat[];
+  currentChatId: string | null;
+  onSwitchToChat: (chatId: string) => void;
+  onDeleteChat: (chatId: string, event: React.MouseEvent) => void;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
+}
 
-interface ChatHistorySidebarProps extends Omit<ChatHistoryModalProps, "formatTime"> {}
+const DROPDOWN_WIDTH = 340;
+const ESTIMATED_HEIGHT = 400;
 
-export default function ChatHistorySidebar({
+export default function ChatHistoryDropdown({
   isOpen,
   onClose,
   chats,
+  currentChatId,
   onSwitchToChat,
   onDeleteChat,
-}: ChatHistorySidebarProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const resultsRef = useRef<HTMLDivElement>(null);
+  triggerRef,
+}: ChatHistoryDropdownProps) {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [position, setPosition] = useState<DropdownPosition | null>(null);
 
-  const filteredChats = chats.filter((chat) =>
-    chat.title.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredChats = useMemo(() => {
+    if (!searchQuery.trim()) return chats;
+    return chats.filter((chat) => chat.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [chats, searchQuery]);
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportPadding = 8;
+    const safeWidth = Math.min(DROPDOWN_WIDTH, window.innerWidth - viewportPadding * 2);
+    const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
+    const availableAbove = rect.top - viewportPadding;
+    const openUp = availableBelow < Math.min(ESTIMATED_HEIGHT, 280) && availableAbove > availableBelow;
+    const maxHeight = Math.max(
+      220,
+      Math.min(ESTIMATED_HEIGHT, openUp ? availableAbove - 6 : availableBelow - 6),
+    );
+    const measuredHeight = dropdownRef.current?.getBoundingClientRect().height ?? ESTIMATED_HEIGHT;
+    const visibleHeight = Math.min(maxHeight, measuredHeight);
+
+    const desiredLeft = rect.right - safeWidth;
+    const left = Math.max(
+      viewportPadding,
+      Math.min(desiredLeft, window.innerWidth - safeWidth - viewportPadding),
+    );
+    const top = openUp ? Math.max(viewportPadding, rect.top - visibleHeight - 6) : rect.bottom + 6;
+
+    setPosition({ left, top, width: safeWidth, maxHeight });
+  }, [triggerRef]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+  }, [isOpen, updatePosition, searchQuery, chats.length]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-      setSelectedIndex(0);
+    if (isOpen) {
       setSearchQuery("");
+      setTimeout(() => searchRef.current?.focus(), 0);
     }
   }, [isOpen]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
+    if (!isOpen) return;
 
-      switch (e.key) {
-        case "Escape":
-          e.preventDefault();
-          onClose();
-          break;
-        case "ArrowDown":
-          e.preventDefault();
-          setSelectedIndex((prev) => (prev < filteredChats.length - 1 ? prev + 1 : prev));
-          break;
-        case "ArrowUp":
-          e.preventDefault();
-          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
-          break;
-        case "Enter":
-          e.preventDefault();
-          if (filteredChats[selectedIndex]) {
-            onSwitchToChat(filteredChats[selectedIndex].id);
-            onClose();
-          }
-          break;
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (dropdownRef.current?.contains(target)) return;
+      if (triggerRef.current?.contains(target)) return;
+      onClose();
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
       }
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, selectedIndex, filteredChats]);
 
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [searchQuery]);
+    const handleReposition = () => updatePosition();
 
-  useEffect(() => {
-    if (resultsRef.current && filteredChats.length > 0) {
-      const selectedElement = resultsRef.current.children[selectedIndex] as HTMLElement;
-      if (selectedElement) {
-        selectedElement.scrollIntoView({
-          block: "nearest",
-          behavior: "smooth",
-        });
-      }
-    }
-  }, [selectedIndex, filteredChats.length]);
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
 
-  return (
-    <Command isVisible={isOpen} onClose={onClose}>
-      <CommandHeader onClose={onClose}>
-        <CommandInput
-          ref={inputRef}
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", handleReposition);
+      window.removeEventListener("scroll", handleReposition, true);
+    };
+  }, [isOpen, onClose, triggerRef, updatePosition]);
+
+  if (!isOpen || !position) return null;
+
+  return createPortal(
+    <div
+      ref={dropdownRef}
+      className="fixed z-[10030] flex flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 backdrop-blur-sm"
+      style={{
+        left: `${position.left}px`,
+        top: `${position.top}px`,
+        width: `${position.width}px`,
+        maxHeight: `${position.maxHeight}px`,
+      }}
+    >
+      <div className="bg-secondary-bg px-2 py-2">
+        <Input
+          ref={searchRef}
+          type="text"
+          placeholder="Search chats..."
           value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search chat history..."
+          onChange={(e) => setSearchQuery(e.target.value)}
+          leftIcon={Search}
+          variant="ghost"
+          className="w-full"
         />
-      </CommandHeader>
+      </div>
 
-      <CommandList ref={resultsRef}>
-        {filteredChats.length === 0 ? (
-          <CommandEmpty>No chat history</CommandEmpty>
+      <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+        {chats.length === 0 ? (
+          <div className="p-3 text-center text-text-lighter text-xs italic">No chat history</div>
+        ) : filteredChats.length === 0 ? (
+          <div className="p-3 text-center text-text-lighter text-xs italic">
+            No chats match "{searchQuery}"
+          </div>
         ) : (
-          filteredChats.map((chat, index) => (
-            <CommandItem
-              key={chat.id}
-              onClick={() => {
-                onSwitchToChat(chat.id);
-                onClose();
-              }}
-              isSelected={index === selectedIndex}
-              className="group px-3 py-1.5"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="truncate text-xs">{chat.title}</span>
-                  <span
-                    className={`shrink-0 rounded border px-1 py-0.5 text-[9px] leading-none ${getAgentColor(chat.agentId)}`}
-                  >
-                    {getAgentLabel(chat.agentId)}
-                  </span>
-                </div>
-                <div className="select-none text-[10px] text-text-lighter">
-                  {getRelativeTime(chat.lastMessageAt)}
-                </div>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteChat(chat.id, e);
-                }}
-                className="ml-2 flex size-5 shrink-0 items-center justify-center rounded text-text-lighter opacity-0 transition-all hover:bg-red-500/20 hover:text-red-400 group-hover:opacity-100"
-                title="Delete chat"
-                aria-label="Delete chat"
+          <div className="space-y-0.5">
+            {filteredChats.map((chat) => (
+              <div
+                key={chat.id}
+                className={cn(
+                  "group flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-hover",
+                  chat.id === currentChatId && "bg-selected",
+                )}
               >
-                <Trash2 size={12} />
-              </button>
-            </CommandItem>
-          ))
+                <div className="flex shrink-0 items-center">
+                  {chat.id === currentChatId ? (
+                    <Check size={12} className="text-success" />
+                  ) : (
+                    <ProviderIcon
+                      providerId={chat.agentId || "custom"}
+                      size={12}
+                      className="text-text-lighter"
+                    />
+                  )}
+                </div>
+
+                <button
+                  onClick={() => {
+                    onSwitchToChat(chat.id);
+                    onClose();
+                  }}
+                  className="flex min-w-0 flex-1 flex-col gap-0.5 text-left"
+                >
+                  <span
+                    className={cn(
+                      "truncate text-xs",
+                      chat.id === currentChatId
+                        ? "font-medium text-text"
+                        : "text-text-lighter hover:text-text",
+                    )}
+                  >
+                    {chat.title}
+                  </span>
+                  <span className="select-none text-[10px] text-text-lighter">
+                    {getRelativeTime(chat.lastMessageAt)}
+                  </span>
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteChat(chat.id, e);
+                  }}
+                  className="ml-auto flex size-5 shrink-0 items-center justify-center rounded text-text-lighter opacity-0 transition-all hover:bg-red-500/20 hover:text-red-400 group-hover:opacity-100"
+                  title="Delete chat"
+                  aria-label="Delete chat"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
         )}
-      </CommandList>
-    </Command>
+      </div>
+    </div>,
+    document.body,
   );
 }

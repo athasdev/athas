@@ -1,6 +1,6 @@
 import type React from "react";
 import type { FileEntry } from "@/features/file-system/types/app";
-import type { Buffer } from "@/features/tabs/types/buffer";
+import type { PaneContent } from "@/features/panes/types/pane-content";
 
 export interface ToolCall {
   id?: string;
@@ -107,8 +107,8 @@ export interface Chat {
 }
 
 export interface ContextInfo {
-  activeBuffer?: Buffer & { webViewerContent?: string };
-  openBuffers?: Buffer[];
+  activeBuffer?: PaneContent & { webViewerContent?: string };
+  openBuffers?: PaneContent[];
   selectedFiles?: string[];
   projectRoot?: string;
   language?: string;
@@ -119,8 +119,8 @@ export interface ContextInfo {
 export interface AIChatProps {
   className?: string;
   // Context from the main app
-  activeBuffer?: Buffer | null;
-  buffers?: Buffer[];
+  activeBuffer?: PaneContent | null;
+  buffers?: PaneContent[];
   selectedFiles?: string[];
   allProjectFiles?: FileEntry[];
   mode: "chat";
@@ -144,7 +144,7 @@ export interface MarkdownRendererProps {
 }
 
 export interface AIChatInputBarProps {
-  buffers: Buffer[];
+  buffers: PaneContent[];
   allProjectFiles: FileEntry[];
   onSendMessage: (message: string) => Promise<void>;
   onStopStreaming: () => void;

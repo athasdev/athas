@@ -120,7 +120,7 @@ export function UnifiedAgentSelector({
     const searchLower = search.toLowerCase();
 
     // Add agents section
-    if (activeSection === "agents" || !search) {
+    if (activeSection === "agents") {
       const matchingAgents = AGENT_OPTIONS.filter(
         (agent) =>
           !search ||
@@ -142,8 +142,8 @@ export function UnifiedAgentSelector({
       }
     }
 
-    // Add models section (only for custom agent view or when searching)
-    if ((activeSection === "models" || search) && isCustomAgent) {
+    // Add models section (only for custom agent view)
+    if (activeSection === "models" && isCustomAgent) {
       for (const provider of providers) {
         const providerHasKey = !provider.requiresApiKey || hasProviderApiKey(provider.id);
         const models = dynamicModels[provider.id] || provider.models;
@@ -448,12 +448,7 @@ export function UnifiedAgentSelector({
               </button>
             </div>
 
-            {/* Search */}
-            <div className="relative border-border/60 border-b">
-              <Search
-                size={12}
-                className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-text-lighter"
-              />
+            <div className="border-border/60 border-b">
               <Input
                 ref={inputRef}
                 type="text"
