@@ -34,6 +34,17 @@ pub struct SessionModeState {
    pub available_modes: Vec<SessionMode>,
 }
 
+/// Runtime used to install and launch an ACP agent
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum AgentRuntime {
+   Node,
+   Python,
+   Go,
+   Rust,
+   Binary,
+}
+
 /// Reason why a prompt turn ended
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -103,6 +114,10 @@ pub struct AgentConfig {
    pub icon: Option<String>,
    pub description: Option<String>,
    pub installed: bool,
+   pub install_runtime: Option<AgentRuntime>,
+   pub install_package: Option<String>,
+   pub install_command: Option<String>,
+   pub can_install: bool,
 }
 
 impl AgentConfig {
@@ -117,6 +132,10 @@ impl AgentConfig {
          icon: None,
          description: None,
          installed: false,
+         install_runtime: None,
+         install_package: None,
+         install_command: None,
+         can_install: false,
       }
    }
 
@@ -127,6 +146,18 @@ impl AgentConfig {
 
    pub fn with_args(mut self, args: Vec<&str>) -> Self {
       self.args = args.into_iter().map(|s| s.to_string()).collect();
+      self
+   }
+
+   pub fn with_install(mut self, runtime: AgentRuntime, package: &str) -> Self {
+      self.install_runtime = Some(runtime);
+      self.install_package = Some(package.to_string());
+      self.can_install = true;
+      self
+   }
+
+   pub fn with_install_command(mut self, command: &str) -> Self {
+      self.install_command = Some(command.to_string());
       self
    }
 }
@@ -171,6 +202,36 @@ pub enum UiAction {
    /// Open a terminal with an optional command
    #[serde(rename_all = "camelCase")]
    OpenTerminal { command: Option<String> },
+}
+
+/// A selectable value for an ACP session configuration option
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionConfigOptionValue {
+   pub id: String,
+   pub name: String,
+   pub description: Option<String>,
+}
+
+/// Supported ACP session configuration option variants
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum SessionConfigOptionKind {
+   #[serde(rename_all = "camelCase")]
+   Select {
+      current_value: String,
+      options: Vec<SessionConfigOptionValue>,
+   },
+}
+
+/// ACP session configuration option advertised by the agent
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionConfigOption {
+   pub id: String,
+   pub name: String,
+   pub description: Option<String>,
+   pub kind: SessionConfigOptionKind,
 }
 
 /// Events emitted to the frontend via Tauri
@@ -256,6 +317,19 @@ pub enum AcpEvent {
    CurrentModeUpdate {
       session_id: String,
       current_mode_id: String,
+   },
+   /// Session configuration options updated
+   #[serde(rename_all = "camelCase")]
+   ConfigOptionsUpdate {
+      session_id: String,
+      config_options: Vec<SessionConfigOption>,
+   },
+   /// Session metadata updated
+   #[serde(rename_all = "camelCase")]
+   SessionInfoUpdate {
+      session_id: String,
+      title: Option<String>,
+      updated_at: Option<String>,
    },
    /// Prompt turn completed with a stop reason
    #[serde(rename_all = "camelCase")]

@@ -38,6 +38,9 @@ pub enum ToolRuntime {
 pub struct ToolConfig {
    /// Tool name (e.g., "pyright", "black", "eslint")
    pub name: String,
+   /// Optional package-provided command/binary name when it differs from `name`
+   #[serde(default)]
+   pub command: Option<String>,
    /// Runtime to use for running the tool
    pub runtime: ToolRuntime,
    /// Package name (for npm/pip/cargo)

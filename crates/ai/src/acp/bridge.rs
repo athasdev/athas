@@ -1,7 +1,10 @@
 use super::{
    client::{AthasAcpClient, PermissionResponse},
    config::AgentRegistry,
-   types::{AcpAgentStatus, AcpEvent, AgentConfig, SessionMode, SessionModeState, StopReason},
+   types::{
+      AcpAgentStatus, AcpEvent, AgentConfig, SessionConfigOption, SessionMode, SessionModeState,
+      StopReason,
+   },
 };
 use athas_terminal::TerminalManager;
 use acp::Agent;
@@ -36,6 +39,11 @@ enum AcpCommand {
    },
    SetMode {
       mode_id: String,
+      response_tx: oneshot::Sender<Result<()>>,
+   },
+   SetConfigOption {
+      config_id: String,
+      value: String,
       response_tx: oneshot::Sender<Result<()>>,
    },
    CancelPrompt {
@@ -110,6 +118,13 @@ impl AcpWorker {
          Ok(None) => Ok(()),
          Err(e) => Err(anyhow::anyhow!("Failed to check ACP process status: {}", e)),
       }
+   }
+
+   fn map_config_options(options: Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption> {
+      options
+         .into_iter()
+         .filter_map(AthasAcpClient::map_session_config_option)
+         .collect()
    }
 
    async fn initialize(
@@ -333,6 +348,7 @@ impl AcpWorker {
 
       let mut active_session_id: Option<acp::SessionId> = None;
       let mut initial_modes: Option<SessionModeState> = None;
+      let mut initial_config_options: Option<Vec<SessionConfigOption>> = None;
 
       if let Some(existing_session_id) = session_id.clone() {
          log::info!(
@@ -371,6 +387,9 @@ impl AcpWorker {
                      })
                      .collect(),
                });
+               initial_config_options = load_response
+                  .config_options
+                  .map(Self::map_config_options);
             }
             Ok(Err(err))
                if matches!(
@@ -445,6 +464,7 @@ impl AcpWorker {
                })
                .collect(),
          });
+         initial_config_options = session.config_options.map(Self::map_config_options);
          active_session_id = Some(session.session_id);
       }
 
@@ -459,6 +479,18 @@ impl AcpWorker {
          )
       {
          log::warn!("Failed to emit initial session mode state: {}", e);
+      }
+
+      if let (Some(sid), Some(config_options)) = (&active_session_id, initial_config_options)
+         && let Err(e) = app_handle.emit(
+            "acp-event",
+            AcpEvent::ConfigOptionsUpdate {
+               session_id: sid.to_string(),
+               config_options,
+            },
+         )
+      {
+         log::warn!("Failed to emit initial session config options: {}", e);
       }
 
       // Store state
@@ -583,6 +615,23 @@ impl AcpWorker {
       Ok(())
    }
 
+   async fn set_config_option(&mut self, config_id: &str, value: &str) -> Result<()> {
+      self.ensure_process_alive().await?;
+
+      let connection = self.connection.as_ref().context("No active connection")?;
+      let session_id = self.session_id.as_ref().context("No active session")?;
+
+      let request =
+         acp::SetSessionConfigOptionRequest::new(session_id.clone(), config_id.to_string(), value.to_string());
+
+      connection
+         .set_session_config_option(request)
+         .await
+         .context("Failed to set session config option")?;
+
+      Ok(())
+   }
+
    async fn stop(&mut self) -> Result<()> {
       if let Some(handle) = self.io_handle.take() {
          handle.abort();
@@ -628,7 +677,7 @@ pub struct AcpAgentBridge {
 
 impl AcpAgentBridge {
    pub fn new(app_handle: AppHandle, terminal_manager: Arc<TerminalManager>) -> Self {
-      let mut registry = AgentRegistry::new();
+      let mut registry = AgentRegistry::new(&app_handle);
       registry.detect_installed();
 
       let (command_tx, command_rx) = mpsc::channel::<AcpCommand>(32);
@@ -715,6 +764,18 @@ impl AcpAgentBridge {
                      response_tx,
                   } => {
                      let result = worker.set_mode(&mode_id).await;
+                     {
+                        let mut s = status.lock().await;
+                        *s = worker.get_status();
+                     }
+                     let _ = response_tx.send(result);
+                  }
+                  AcpCommand::SetConfigOption {
+                     config_id,
+                     value,
+                     response_tx,
+                  } => {
+                     let result = worker.set_config_option(&config_id, &value).await;
                      {
                         let mut s = status.lock().await;
                         *s = worker.get_status();
@@ -893,6 +954,23 @@ impl AcpAgentBridge {
          .command_tx
          .send(AcpCommand::SetMode {
             mode_id: mode_id.to_string(),
+            response_tx,
+         })
+         .await
+         .context("Failed to send command to ACP worker")?;
+
+      response_rx.await.context("Worker disconnected")?
+   }
+
+   /// Set a session configuration option for the active agent
+   pub async fn set_session_config_option(&self, config_id: &str, value: &str) -> Result<()> {
+      let (response_tx, response_rx) = oneshot::channel();
+
+      self
+         .command_tx
+         .send(AcpCommand::SetConfigOption {
+            config_id: config_id.to_string(),
+            value: value.to_string(),
             response_tx,
          })
          .await

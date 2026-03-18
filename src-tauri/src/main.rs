@@ -446,12 +446,14 @@ fn main() {
          ssh_read_file,
          // ACP agent commands (new)
          get_available_agents,
+         install_acp_agent,
          start_acp_agent,
          stop_acp_agent,
          send_acp_prompt,
          get_acp_status,
          respond_acp_permission,
          set_acp_session_mode,
+         set_acp_session_config_option,
          cancel_acp_prompt,
          // Theme commands
          get_system_theme,

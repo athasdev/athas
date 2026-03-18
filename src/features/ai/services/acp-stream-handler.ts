@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAIChatStore } from "@/features/ai/store/store";
-import type { AcpAgentStatus, AcpEvent } from "@/features/ai/types/acp";
+import type { AcpAgentStatus, AcpEvent, AgentConfig } from "@/features/ai/types/acp";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
@@ -35,6 +35,7 @@ export class AcpStreamHandler {
   private pendingNewMessage = false;
   private cancelled = false;
   private wasRunning = false;
+  private receivedResponseSignal = false;
 
   constructor(
     private agentId: string,
@@ -44,6 +45,7 @@ export class AcpStreamHandler {
   async start(userMessage: string, context: ContextInfo): Promise<void> {
     try {
       AcpStreamHandler.activeHandler = this;
+      this.receivedResponseSignal = false;
       await this.setupListeners();
       await this.ensureAgentRunning();
       const fullMessage = this.buildMessage(userMessage, context);
@@ -52,7 +54,7 @@ export class AcpStreamHandler {
     } catch (error) {
       console.error("ACP agent error:", error);
       this.cleanup();
-      this.handlers.onError(`${this.agentId} is currently unavailable`);
+      this.handlers.onError(this.formatStartupError(error));
     }
   }
 
@@ -65,12 +67,33 @@ export class AcpStreamHandler {
 
         // Get current workspace path if available
         const workspacePath = this.getWorkspacePath();
+        const currentChat = useAIChatStore.getState().getCurrentChat();
+        const rememberedSessionId =
+          currentChat?.agentId === this.agentId
+            ? currentChat.acpSessionId || AcpStreamHandler.lastSessionIdByAgent.get(this.agentId)
+            : AcpStreamHandler.lastSessionIdByAgent.get(this.agentId);
 
-        const startStatus = await invoke<AcpAgentStatus>("start_acp_agent", {
-          agentId: this.agentId,
-          workspacePath,
-          sessionId: AcpStreamHandler.lastSessionIdByAgent.get(this.agentId) ?? null,
-        });
+        let startStatus: AcpAgentStatus;
+        try {
+          startStatus = await invoke<AcpAgentStatus>("start_acp_agent", {
+            agentId: this.agentId,
+            workspacePath,
+            sessionId: rememberedSessionId ?? null,
+          });
+        } catch (error) {
+          const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
+          const agent = availableAgents.find((item) => item.id === this.agentId);
+          if (!agent?.installed && agent?.canInstall) {
+            await invoke<AgentConfig>("install_acp_agent", { agentId: this.agentId });
+            startStatus = await invoke<AcpAgentStatus>("start_acp_agent", {
+              agentId: this.agentId,
+              workspacePath,
+              sessionId: rememberedSessionId ?? null,
+            });
+          } else {
+            throw error;
+          }
+        }
 
         if (!startStatus.running) {
           throw new Error(`${this.agentId} failed to start`);
@@ -78,6 +101,9 @@ export class AcpStreamHandler {
 
         if (startStatus.sessionId) {
           AcpStreamHandler.lastSessionIdByAgent.set(this.agentId, startStatus.sessionId);
+          if (currentChat) {
+            useAIChatStore.getState().setChatAcpSessionId(currentChat.id, startStatus.sessionId);
+          }
         }
 
         this.wasRunning = true;
@@ -94,6 +120,23 @@ export class AcpStreamHandler {
 
   private getWorkspacePath(): string | null {
     return useProjectStore.getState().rootFolderPath ?? null;
+  }
+
+  private formatStartupError(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    const normalized = message.toLowerCase();
+
+    if (normalized.includes("runtime")) {
+      return `${this.agentId} could not start because a required runtime is unavailable.`;
+    }
+    if (normalized.includes("install")) {
+      return `${this.agentId} could not be installed automatically. Check network access and local tool permissions.`;
+    }
+    if (normalized.includes("auth")) {
+      return `${this.agentId} requires authentication before it can answer prompts.`;
+    }
+
+    return `${this.agentId} is currently unavailable.`;
   }
 
   private buildMessage(userMessage: string, context: ContextInfo): string {
@@ -166,8 +209,15 @@ export class AcpStreamHandler {
         useAIChatStore.getState().setAvailableSlashCommands(event.commands);
         break;
 
+      case "config_options_update":
+        useAIChatStore.getState().setSessionConfigOptions(event.configOptions);
+        break;
+
       case "plan_update":
         // Plan updates are surfaced through generic ACP event stream UI for now
+        break;
+
+      case "session_info_update":
         break;
 
       case "prompt_complete":
@@ -211,6 +261,10 @@ export class AcpStreamHandler {
 
     if (event.status.running && event.status.sessionId) {
       AcpStreamHandler.lastSessionIdByAgent.set(this.agentId, event.status.sessionId);
+      const currentChat = useAIChatStore.getState().getCurrentChat();
+      if (currentChat && currentChat.agentId === this.agentId) {
+        useAIChatStore.getState().setChatAcpSessionId(currentChat.id, event.status.sessionId);
+      }
     }
 
     // Detect unexpected agent crash: was running but now stopped without user action
@@ -243,6 +297,7 @@ export class AcpStreamHandler {
   }
 
   private handleContentChunk(event: Extract<AcpEvent, { type: "content_chunk" }>): void {
+    this.receivedResponseSignal = true;
     if (this.pendingNewMessage && this.handlers.onNewMessage) {
       this.handlers.onNewMessage();
     }
@@ -267,6 +322,7 @@ export class AcpStreamHandler {
   }
 
   private handleToolStart(event: Extract<AcpEvent, { type: "tool_start" }>): void {
+    this.receivedResponseSignal = true;
     this.activeTools.set(event.toolId, event.toolName);
     if (this.handlers.onToolUse) {
       this.handlers.onToolUse(event.toolName, event.input, event.toolId);
@@ -287,6 +343,7 @@ export class AcpStreamHandler {
   }
 
   private handlePermissionRequest(event: Extract<AcpEvent, { type: "permission_request" }>): void {
+    this.receivedResponseSignal = true;
     if (this.handlers.onPermissionRequest) {
       this.handlers.onPermissionRequest(event);
     } else {
@@ -326,6 +383,12 @@ export class AcpStreamHandler {
 
       // If no activity for 10 seconds and no active tool, consider complete
       if (inactiveTime > 10000 && this.activeTools.size === 0) {
+        if (!this.receivedResponseSignal) {
+          console.log("No ACP response received before inactivity timeout");
+          this.cleanup();
+          this.handlers.onError(`${this.agentId} did not return any response.`, true);
+          return;
+        }
         console.log("No activity for 10 seconds, conversation appears complete");
         this.cleanup();
         this.handlers.onComplete();

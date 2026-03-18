@@ -69,6 +69,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           currentModeId: null,
           availableModes: [],
         },
+        sessionConfigOptions: [],
 
         // Agent selection actions
         setSelectedAgentId: (agentId) =>
@@ -226,6 +227,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             createdAt: new Date(),
             lastMessageAt: new Date(),
             agentId: chatAgentId,
+            acpSessionId: null,
           };
           set((state) => {
             state.chats.unshift(newChat);
@@ -319,6 +321,16 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             }
           });
           // Save to SQLite
+          get().syncChatToDatabase(chatId);
+        },
+
+        setChatAcpSessionId: (chatId, sessionId) => {
+          set((state) => {
+            const chat = state.chats.find((c) => c.id === chatId);
+            if (chat) {
+              chat.acpSessionId = sessionId;
+            }
+          });
           get().syncChatToDatabase(chatId);
         },
 
@@ -708,6 +720,20 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             // The mode will be updated via the event handler when the agent confirms
           } catch (error) {
             console.error("Failed to change session mode:", error);
+          }
+        },
+
+        setSessionConfigOptions: (options) =>
+          set((state) => {
+            state.sessionConfigOptions = options;
+          }),
+
+        changeSessionConfigOption: async (configId, value) => {
+          try {
+            const { invoke } = await import("@tauri-apps/api/core");
+            await invoke("set_acp_session_config_option", { args: { configId, value } });
+          } catch (error) {
+            console.error("Failed to change session config option:", error);
           }
         },
 

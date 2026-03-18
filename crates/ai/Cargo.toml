@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-agent-client-protocol = "0.9"
+agent-client-protocol = { version = "0.9", features = ["unstable_session_config_options", "unstable_session_info_update", "unstable_session_list"] }
 anyhow = "1.0"
 async-trait = "0.1"
 log = "0.4"
@@ -14,5 +14,6 @@ tauri = { version = "2", features = ["test"] }
 tokio = { version = "1.0", features = ["full"] }
 tokio-util = { version = "0.7", features = ["compat"] }
 athas-terminal = { path = "../terminal" }
+tempfile = "3"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 which = "7.0"

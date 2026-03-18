@@ -16,6 +16,10 @@ use zip::ZipArchive;
 pub struct ToolInstaller;
 
 impl ToolInstaller {
+   fn configured_command_name(config: &ToolConfig) -> &str {
+      config.command.as_deref().unwrap_or(&config.name)
+   }
+
    fn node_bin_name(name: &str) -> String {
       if cfg!(windows) {
          format!("{}.cmd", name)
@@ -194,35 +198,35 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_bun(app_handle, package, &config.name).await
+            Self::install_via_bun(app_handle, package, Self::configured_command_name(config)).await
          }
          ToolRuntime::Node => {
             let package = config
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_npm(app_handle, package, &config.name).await
+            Self::install_via_npm(app_handle, package, Self::configured_command_name(config)).await
          }
          ToolRuntime::Python => {
             let package = config
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_pip(app_handle, package, &config.name).await
+            Self::install_via_pip(app_handle, package, Self::configured_command_name(config)).await
          }
          ToolRuntime::Go => {
             let package = config
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_go(app_handle, package, &config.name).await
+            Self::install_via_go(app_handle, package, Self::configured_command_name(config)).await
          }
          ToolRuntime::Rust => {
             let package = config
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_cargo(app_handle, package, &config.name).await
+            Self::install_via_cargo(app_handle, package, Self::configured_command_name(config)).await
          }
          ToolRuntime::Binary => {
             if let Some(url) = config.download_url.as_ref() {
@@ -571,6 +575,7 @@ impl ToolInstaller {
 
       match config.runtime {
          ToolRuntime::Bun => {
+            let command_name = Self::configured_command_name(config);
             let package = config
                .package
                .as_ref()
@@ -580,9 +585,10 @@ impl ToolInstaller {
                .join(package)
                .join("node_modules")
                .join(".bin")
-               .join(Self::node_bin_name(&config.name)))
+               .join(Self::node_bin_name(command_name)))
          }
          ToolRuntime::Node => {
+            let command_name = Self::configured_command_name(config);
             let package = config
                .package
                .as_ref()
@@ -592,10 +598,10 @@ impl ToolInstaller {
                .join(package)
                .join("node_modules")
                .join(".bin")
-               .join(Self::node_bin_name(&config.name)))
+               .join(Self::node_bin_name(command_name)))
          }
          ToolRuntime::Python => {
-            let bin_name = Self::bin_file_name(&config.name);
+            let bin_name = Self::bin_file_name(Self::configured_command_name(config));
             let package = config
                .package
                .as_ref()
@@ -608,11 +614,11 @@ impl ToolInstaller {
                .join(bin_name))
          }
          ToolRuntime::Go => {
-            let bin_name = Self::bin_file_name(&config.name);
+            let bin_name = Self::bin_file_name(Self::configured_command_name(config));
             Ok(tools_dir.join("go").join("bin").join(bin_name))
          }
          ToolRuntime::Rust => {
-            let bin_name = Self::bin_file_name(&config.name);
+            let bin_name = Self::bin_file_name(Self::configured_command_name(config));
             Ok(tools_dir.join("cargo").join("bin").join(bin_name))
          }
          ToolRuntime::Binary => {
@@ -638,6 +644,7 @@ impl ToolInstaller {
 
       match config.runtime {
          ToolRuntime::Bun => {
+            let command_name = Self::configured_command_name(config);
             let package = config
                .package
                .as_ref()
@@ -645,7 +652,7 @@ impl ToolInstaller {
             let package_dir = tools_dir.join("bun").join(package);
 
             if let Some(entrypoint) =
-               Self::resolve_node_package_entrypoint(&package_dir, package, &config.name)
+               Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
             {
                return Ok(entrypoint);
             }
@@ -653,9 +660,10 @@ impl ToolInstaller {
             Ok(package_dir
                .join("node_modules")
                .join(".bin")
-               .join(Self::node_bin_name(&config.name)))
+               .join(Self::node_bin_name(command_name)))
          }
          ToolRuntime::Node => {
+            let command_name = Self::configured_command_name(config);
             let package = config
                .package
                .as_ref()
@@ -663,7 +671,7 @@ impl ToolInstaller {
             let package_dir = tools_dir.join("npm").join(package);
 
             if let Some(entrypoint) =
-               Self::resolve_node_package_entrypoint(&package_dir, package, &config.name)
+               Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
             {
                return Ok(entrypoint);
             }
@@ -671,7 +679,7 @@ impl ToolInstaller {
             Ok(package_dir
                .join("node_modules")
                .join(".bin")
-               .join(Self::node_bin_name(&config.name)))
+               .join(Self::node_bin_name(command_name)))
          }
          _ => Self::get_tool_path(app_handle, config),
       }

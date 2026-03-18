@@ -1,5 +1,6 @@
 use super::types::{
-   AcpContentBlock, AcpEvent, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus, UiAction,
+   AcpContentBlock, AcpEvent, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus,
+   SessionConfigOption, SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
 };
 use athas_terminal::{TerminalConfig, TerminalManager};
 use agent_client_protocol as acp;
@@ -330,6 +331,37 @@ impl AthasAcpClient {
          _ => None,
       }
    }
+
+   pub(crate) fn map_session_config_option(
+      option: acp::SessionConfigOption,
+   ) -> Option<SessionConfigOption> {
+      let kind = match option.kind {
+         acp::SessionConfigKind::Select(select) => SessionConfigOptionKind::Select {
+            current_value: select.current_value.to_string(),
+            options: match select.options {
+               acp::SessionConfigSelectOptions::Ungrouped(options) => options,
+               acp::SessionConfigSelectOptions::Grouped(groups) =>
+                  groups.into_iter().flat_map(|group| group.options).collect(),
+               _ => Vec::new(),
+            }
+            .into_iter()
+            .map(|value| SessionConfigOptionValue {
+               id: value.value.to_string(),
+               name: value.name,
+               description: value.description,
+            })
+            .collect(),
+         },
+         _ => return None,
+      };
+
+      Some(SessionConfigOption {
+         id: option.id.to_string(),
+         name: option.name,
+         description: option.description,
+         kind,
+      })
+   }
 }
 
 #[async_trait(?Send)]
@@ -540,6 +572,23 @@ impl acp::Client for AthasAcpClient {
             self.emit_event(AcpEvent::CurrentModeUpdate {
                session_id,
                current_mode_id: update.current_mode_id.to_string(),
+            });
+         }
+         acp::SessionUpdate::ConfigOptionUpdate(update) => {
+            self.emit_event(AcpEvent::ConfigOptionsUpdate {
+               session_id,
+               config_options: update
+                  .config_options
+                  .into_iter()
+                  .filter_map(Self::map_session_config_option)
+                  .collect(),
+            });
+         }
+         acp::SessionUpdate::SessionInfoUpdate(update) => {
+            self.emit_event(AcpEvent::SessionInfoUpdate {
+               session_id,
+               title: update.title.take(),
+               updated_at: update.updated_at.take(),
             });
          }
          acp::SessionUpdate::AvailableCommandsUpdate(commands_update) => {

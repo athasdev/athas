@@ -91,8 +91,8 @@ export const AGENT_OPTIONS: AgentInfo[] = [
   },
   {
     id: "custom",
-    name: "Custom (API)",
-    description: "Use HTTP API providers",
+    name: "Athas Agent",
+    description: "Use Athas chat settings and provider configuration",
     isAcp: false,
   },
 ];
@@ -104,6 +104,7 @@ export interface Chat {
   createdAt: Date;
   lastMessageAt: Date;
   agentId: AgentType; // Which agent this chat uses
+  acpSessionId?: string | null;
 }
 
 export interface ContextInfo {

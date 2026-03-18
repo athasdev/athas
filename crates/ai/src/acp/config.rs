@@ -1,10 +1,11 @@
-use super::types::AgentConfig;
+use super::types::{AgentConfig, AgentRuntime};
 use std::{
    collections::HashMap,
    env, fs,
    path::{Path, PathBuf},
    time::Instant,
 };
+use tauri::{AppHandle, Manager};
 
 /// Cache duration for binary detection (60 seconds)
 const DETECTION_CACHE_SECONDS: u64 = 60;
@@ -14,26 +15,27 @@ const DETECTION_CACHE_SECONDS: u64 = 60;
 pub struct AgentRegistry {
    agents: HashMap<String, AgentConfig>,
    last_detection: Option<Instant>,
+   managed_bin_dir: Option<PathBuf>,
 }
 
 impl AgentRegistry {
-   pub fn new() -> Self {
+   pub fn new(app_handle: &AppHandle) -> Self {
       let mut agents = HashMap::new();
 
       // Claude Code - ACP adapter (Zed)
-      // Install: npm install -g @zed-industries/claude-code-acp
       agents.insert(
          "claude-code".to_string(),
          AgentConfig::new("claude-code", "Claude Code", "claude-code-acp")
-            .with_description("Claude Code (ACP adapter)"),
+            .with_description("Claude Code (ACP adapter)")
+            .with_install(AgentRuntime::Node, "@zed-industries/claude-code-acp"),
       );
 
       // Codex CLI (OpenAI) - ACP adapter
-      // Preferred install: npm install -g @zed-industries/codex-acp
       agents.insert(
          "codex-cli".to_string(),
          AgentConfig::new("codex-cli", "Codex CLI", "codex-acp")
-            .with_description("OpenAI Codex (ACP adapter)"),
+            .with_description("OpenAI Codex (ACP adapter)")
+            .with_install(AgentRuntime::Node, "@zed-industries/codex-acp"),
       );
 
       // Gemini CLI - native ACP support with --experimental-acp flag
@@ -41,39 +43,45 @@ impl AgentRegistry {
          "gemini-cli".to_string(),
          AgentConfig::new("gemini-cli", "Gemini CLI", "gemini")
             .with_description("Google Gemini CLI")
-            .with_args(vec!["--experimental-acp"]),
+            .with_args(vec!["--experimental-acp"])
+            .with_install(AgentRuntime::Node, "@google/gemini-cli")
+            .with_install_command("gemini"),
       );
 
       // Kimi CLI - native ACP support with --acp flag
-      // Install: npm install -g @anthropic/kimi-cli or cargo install kimi-cli
       agents.insert(
          "kimi-cli".to_string(),
          AgentConfig::new("kimi-cli", "Kimi CLI", "kimi")
             .with_description("Moonshot Kimi CLI")
-            .with_args(vec!["--acp"]),
+            .with_args(vec!["--acp"])
+            .with_install(AgentRuntime::Python, "kimi-cli")
+            .with_install_command("kimi-cli"),
       );
 
       // OpenCode - native ACP support with 'acp' subcommand
-      // Install: go install github.com/sst/opencode@latest
       agents.insert(
          "opencode".to_string(),
          AgentConfig::new("opencode", "OpenCode", "opencode")
             .with_description("SST OpenCode")
-            .with_args(vec!["acp"]),
+            .with_args(vec!["acp"])
+            .with_install(AgentRuntime::Node, "opencode-ai")
+            .with_install_command("opencode"),
       );
 
       // Qwen Code - native ACP support with --acp flag
-      // Install: pip install qwen-code or npm install -g qwen-code
       agents.insert(
          "qwen-code".to_string(),
-         AgentConfig::new("qwen-code", "Qwen Code", "qwen-code")
+         AgentConfig::new("qwen-code", "Qwen Code", "qwen")
             .with_description("Alibaba Qwen Code")
-            .with_args(vec!["--acp"]),
+            .with_args(vec!["--acp"])
+            .with_install(AgentRuntime::Node, "@qwen-code/qwen-code")
+            .with_install_command("qwen-code"),
       );
 
       Self {
          agents,
          last_detection: None,
+         managed_bin_dir: managed_acp_bin_dir(app_handle),
       }
    }
 
@@ -82,7 +90,9 @@ impl AgentRegistry {
    }
 
    pub fn list_all(&self) -> Vec<AgentConfig> {
-      self.agents.values().cloned().collect()
+      let mut agents: Vec<_> = self.agents.values().cloned().collect();
+      agents.sort_by(|left, right| left.name.cmp(&right.name));
+      agents
    }
 
    pub fn detect_installed(&mut self) {
@@ -100,6 +110,12 @@ impl AgentRegistry {
 
       log::debug!("Running binary detection for ACP agents");
       for config in self.agents.values_mut() {
+         if let Some(path) = managed_wrapper_path(self.managed_bin_dir.as_deref(), &config.id) {
+            config.installed = true;
+            config.binary_path = Some(path.to_string_lossy().to_string());
+            continue;
+         }
+
          if config.id == "codex-cli" {
             detect_codex_adapter(config);
             continue;
@@ -120,7 +136,30 @@ impl AgentRegistry {
 
 impl Default for AgentRegistry {
    fn default() -> Self {
-      Self::new()
+      panic!("AgentRegistry::default requires an AppHandle")
+   }
+}
+
+pub fn managed_wrapper_path(managed_bin_dir: Option<&Path>, agent_id: &str) -> Option<PathBuf> {
+   let dir = managed_bin_dir?;
+   let path = dir.join(wrapper_file_name(agent_id));
+   path.is_file().then_some(path)
+}
+
+fn managed_acp_bin_dir(app_handle: &AppHandle) -> Option<PathBuf> {
+   let data_dir = app_handle.path().app_data_dir().ok()?;
+   Some(data_dir.join("tools").join("acp"))
+}
+
+fn wrapper_file_name(agent_id: &str) -> String {
+   #[cfg(target_os = "windows")]
+   {
+      format!("{agent_id}.cmd")
+   }
+
+   #[cfg(not(target_os = "windows"))]
+   {
+      agent_id.to_string()
    }
 }
 
@@ -290,5 +329,32 @@ fn check_dir_for_binary(dir: &Path, binary_name: &str) -> Option<PathBuf> {
          return Some(candidate);
       }
       None
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::{check_dir_for_binary, managed_wrapper_path};
+   use std::{fs, path::PathBuf};
+
+   #[test]
+   fn managed_wrapper_path_prefers_expected_wrapper_name() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let wrapper = if cfg!(windows) {
+         temp_dir.path().join("codex-cli.cmd")
+      } else {
+         temp_dir.path().join("codex-cli")
+      };
+      fs::write(&wrapper, "echo test").expect("write wrapper");
+
+      let resolved =
+         managed_wrapper_path(Some(temp_dir.path()), "codex-cli").expect("wrapper should exist");
+      assert_eq!(resolved, wrapper);
+   }
+
+   #[test]
+   fn check_dir_for_binary_returns_none_for_missing_binary() {
+      let missing = check_dir_for_binary(PathBuf::from("/tmp/athas-missing").as_path(), "nope");
+      assert!(missing.is_none());
    }
 }

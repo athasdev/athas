@@ -117,6 +117,7 @@ mod tests {
 
       let config = ToolConfig {
          name: "example-tool".to_string(),
+         command: None,
          runtime: crate::ToolRuntime::Binary,
          package: None,
          download_url: Some("https://example.com/${os}/${arch}.tar.gz".to_string()),
