@@ -1,10 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import type { ISearchOptions } from "@xterm/addon-search";
 import { Terminal } from "@xterm/xterm";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { themeRegistry } from "@/extensions/themes/theme-registry";
-
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import {
@@ -14,9 +11,9 @@ import {
   removeLinkStyles,
   type TerminalAddons,
 } from "../hooks/use-terminal-addons";
+import { useTerminalConnection } from "../hooks/use-terminal-connection";
 import { useTerminalTheme } from "../hooks/use-terminal-theme";
 import { useTerminalStore } from "../stores/terminal-store";
-import { parseOSC7 } from "../utils/osc-parser";
 import { resolveTerminalFont } from "../utils/resolve-font";
 import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";
 import "@xterm/xterm/css/xterm.css";
@@ -43,29 +40,44 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   initialCommand,
   workingDirectory,
 }) => {
-  const terminalRef = useRef<HTMLDivElement>(null);
+  const terminalContainerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const addonsRef = useRef<TerminalAddons | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchResults, setSearchResults] = useState({ current: 0, total: 0 });
   const isInitializingRef = useRef(false);
-  const currentConnectionIdRef = useRef<string | null>(null);
-  const onTerminalExitRef = useRef(onTerminalExit);
-  const currentInputLineRef = useRef("");
+
+  const { updateSession, getSession } = useTerminalStore();
+  const session = getSession(sessionId);
+  const connectionId = session?.connectionId;
+
+  const {
+    theme: terminalThemeId,
+    terminalFontFamily,
+    terminalFontSize,
+    terminalLineHeight,
+    terminalLetterSpacing,
+    terminalScrollback,
+    terminalCursorStyle,
+    terminalCursorBlink,
+    terminalCursorWidth,
+  } = useSettingsStore((state) => state.settings);
+  const { rootFolderPath } = useProjectStore();
+  const { getTerminalTheme } = useTerminalTheme();
 
   const fitTerminal = useCallback((attempts = 1) => {
     let attempt = 0;
     let rafId: number | null = null;
 
     const runFit = () => {
-      const container = terminalRef.current;
+      const container = terminalContainerRef.current;
       const addons = addonsRef.current;
       if (!container || !addons) return;
 
       const rect = container.getBoundingClientRect();
-      const isVisible = container.offsetParent !== null;
-      if (rect.width <= 0 || rect.height <= 0 || !isVisible) {
+      const isContainerVisible = container.offsetParent !== null;
+      if (rect.width <= 0 || rect.height <= 0 || !isContainerVisible) {
         if (attempt < attempts - 1) {
           attempt += 1;
           rafId = requestAnimationFrame(runFit);
@@ -88,41 +100,30 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     };
   }, []);
 
-  useEffect(() => {
-    onTerminalExitRef.current = onTerminalExit;
-  }, [onTerminalExit]);
-
-  const { updateSession, getSession } = useTerminalStore();
-
-  const {
-    theme: terminalThemeId,
-    terminalFontFamily,
-    terminalFontSize,
-    terminalLineHeight,
-    terminalLetterSpacing,
-    terminalScrollback,
-    terminalCursorStyle,
-    terminalCursorBlink,
-    terminalCursorWidth,
-  } = useSettingsStore((state) => state.settings);
-  const { rootFolderPath } = useProjectStore();
-  const { getTerminalTheme } = useTerminalTheme();
+  const { currentConnectionIdRef, writeBuffered } = useTerminalConnection({
+    connectionId,
+    getTerminalTheme,
+    initialCommand,
+    isInitialized,
+    onTerminalExit,
+    sessionId,
+    terminal: xtermRef.current,
+    updateSession,
+  });
 
   const initializeTerminal = useCallback(async () => {
-    if (!terminalRef.current || isInitialized || isInitializingRef.current) return;
+    const container = terminalContainerRef.current;
+    if (!container || isInitialized || isInitializingRef.current) return;
 
-    const rect = terminalRef.current.getBoundingClientRect();
-    const isContainerVisible = terminalRef.current.offsetParent !== null;
+    const rect = container.getBoundingClientRect();
+    const isContainerVisible = container.offsetParent !== null;
     if (rect.width <= 0 || rect.height <= 0 || !isContainerVisible) return;
 
     isInitializingRef.current = true;
-
-    // Resolve font with verification and platform-aware fallbacks
     const resolved = await resolveTerminalFont(terminalFontFamily, terminalFontSize);
-
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    if (!terminalRef.current) {
+    if (!terminalContainerRef.current) {
       isInitializingRef.current = false;
       return;
     }
@@ -145,44 +146,39 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       const addons = createTerminalAddons(terminal, {
         skipWebGL: resolved.skipWebGL,
       });
-      terminal.open(terminalRef.current);
 
-      terminal.attachCustomKeyEventHandler((e) => {
-        if (e.ctrlKey && !e.metaKey) return true;
+      terminal.open(terminalContainerRef.current);
+      terminal.attachCustomKeyEventHandler((event) => {
+        if (event.ctrlKey && !event.metaKey) return true;
         if (
-          e.metaKey &&
-          ["Backspace", "k", "a", "e", "f", "ArrowLeft", "ArrowRight"].includes(e.key)
+          event.metaKey &&
+          ["Backspace", "k", "a", "e", "f", "ArrowLeft", "ArrowRight"].includes(event.key)
         ) {
           return true;
         }
-        if (e.metaKey) return false;
-        return true;
+        return !event.metaKey;
       });
 
       if (terminal.textarea) {
-        terminal.textarea.addEventListener("beforeinput", (e) => {
-          if (e.inputType === "insertReplacementText" || e.inputType === "insertFromDrop") {
-            const text = e.dataTransfer?.getData("text/plain") ?? e.data;
-            if (text) {
-              e.preventDefault();
-              const currentId = currentConnectionIdRef.current;
-              if (currentId) {
-                invoke("terminal_write", { id: currentId, data: text }).catch(() => {});
-              }
-            }
+        terminal.textarea.addEventListener("beforeinput", (event) => {
+          if (event.inputType === "insertReplacementText" || event.inputType === "insertFromDrop") {
+            const text = event.dataTransfer?.getData("text/plain") ?? event.data;
+            if (!text || !currentConnectionIdRef.current) return;
+
+            event.preventDefault();
+            writeBuffered(text);
           }
         });
       }
 
       loadWebLinksAddon(terminal);
       terminal.unicode.activeVersion = "11";
-      injectLinkStyles(sessionId, terminalRef.current.id || `terminal-${sessionId}`);
+      injectLinkStyles(sessionId, terminalContainerRef.current.id || `terminal-${sessionId}`);
 
       xtermRef.current = terminal;
       addonsRef.current = addons;
       fitTerminal(12);
 
-      // Create backend connection
       const existingSession = getSession(sessionId);
       if (existingSession?.connectionId) {
         try {
@@ -190,7 +186,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         } catch {}
       }
 
-      const connectionId = await invoke<string>("create_terminal", {
+      const newConnectionId = await invoke<string>("create_terminal", {
         config: {
           working_directory:
             workingDirectory || existingSession?.currentDirectory || rootFolderPath || undefined,
@@ -200,108 +196,15 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         },
       });
 
-      updateSession(sessionId, { connectionId });
-      currentConnectionIdRef.current = connectionId;
-
-      // Handle input with exit detection
-      terminal.onData((data) => {
-        const currentId = currentConnectionIdRef.current || connectionId;
-        const hasNewline = data.includes("\n") || data.includes("\r");
-
-        if (hasNewline) {
-          currentInputLineRef.current += data;
-          if (/^\s*exit\s*$/i.test(currentInputLineRef.current.trim())) {
-            currentInputLineRef.current = "";
-            invoke("terminal_write", { id: currentId, data }).catch(() => {});
-            setTimeout(() => {
-              onTerminalExitRef.current?.(sessionId);
-              invoke("close_terminal", { id: currentId }).catch(() => {});
-            }, 100);
-            return;
-          }
-          currentInputLineRef.current = "";
-        } else {
-          currentInputLineRef.current += data;
-          if (currentInputLineRef.current.length > 1000) {
-            currentInputLineRef.current = currentInputLineRef.current.slice(-100);
-          }
-        }
-
-        invoke("terminal_write", { id: currentId, data }).catch(() => {});
-      });
-
-      // Handle keyboard shortcuts
-      terminal.onKey(({ domEvent: e }) => {
-        const currentId = currentConnectionIdRef.current || connectionId;
-        const shortcuts: Record<string, string> = {
-          "meta+Backspace": "\u0015",
-          "ctrl+u": "\u0015",
-          "meta+k": "\u000c",
-          "alt+Backspace": "\u0017",
-          "meta+a": "\u0001",
-          "meta+e": "\u0005",
-        };
-
-        const key = `${e.metaKey ? "meta+" : ""}${e.ctrlKey ? "ctrl+" : ""}${e.altKey ? "alt+" : ""}${e.key}`;
-        if (shortcuts[key]) {
-          e.preventDefault();
-          invoke("terminal_write", {
-            id: currentId,
-            data: shortcuts[key],
-          }).catch(() => {});
-          return;
-        }
-
-        if (e.metaKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
-          e.preventDefault();
-          invoke("terminal_write", {
-            id: currentId,
-            data: e.key === "ArrowLeft" ? "\u0001" : "\u0005",
-          }).catch(() => {});
-        }
-
-        if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
-          e.preventDefault();
-          invoke("terminal_write", {
-            id: currentId,
-            data: e.key === "ArrowLeft" ? "\u001bb" : "\u001bf",
-          }).catch(() => {});
-        }
-      });
-
-      terminal.onResize(({ cols, rows }) => {
-        const currentId = currentConnectionIdRef.current || connectionId;
-        invoke("terminal_resize", { id: currentId, rows, cols }).catch(() => {});
-      });
-
-      terminal.onSelectionChange(() => {
-        const selection = terminal.getSelection();
-        if (selection) updateSession(sessionId, { selection });
-      });
-
-      terminal.onTitleChange((title) => updateSession(sessionId, { title }));
-
+      updateSession(sessionId, { connectionId: newConnectionId });
       setIsInitialized(true);
       isInitializingRef.current = false;
 
-      // Emit terminal-ready event for pending commands
       window.dispatchEvent(
         new CustomEvent("terminal-ready", {
-          detail: { terminalId: sessionId, connectionId },
+          detail: { terminalId: sessionId, connectionId: newConnectionId },
         }),
       );
-
-      // Run initial command if provided (with a small delay to ensure shell is ready)
-      if (initialCommand) {
-        setTimeout(() => {
-          invoke("terminal_write", {
-            id: connectionId,
-            data: `${initialCommand}\n`,
-          }).catch((e) => {
-            console.error("Failed to run initial command:", e);
-          });
-        }, 300);
-      }
 
       onTerminalRef?.({
         focus: () => terminal.focus(),
@@ -314,70 +217,28 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       isInitializingRef.current = false;
     }
   }, [
-    sessionId,
-    isInitialized,
+    currentConnectionIdRef,
+    fitTerminal,
+    getSession,
     getTerminalTheme,
-    updateSession,
+    isInitialized,
     onReady,
-
-    getSession,
-    getSession,
+    onTerminalRef,
+    rootFolderPath,
+    sessionId,
+    terminalCursorBlink,
+    terminalCursorStyle,
+    terminalCursorWidth,
     terminalFontFamily,
     terminalFontSize,
-    terminalLineHeight,
     terminalLetterSpacing,
+    terminalLineHeight,
     terminalScrollback,
-    terminalCursorStyle,
-    terminalCursorBlink,
-    terminalCursorWidth,
-    rootFolderPath,
-    onTerminalRef,
-    fitTerminal,
+    updateSession,
+    workingDirectory,
+    writeBuffered,
   ]);
 
-  const session = getSession(sessionId);
-  const connectionId = session?.connectionId;
-
-  // Handle terminal output
-  useEffect(() => {
-    if (!xtermRef.current || !isInitialized || !connectionId) return;
-
-    currentConnectionIdRef.current = connectionId;
-
-    const unlistenOutput = listen(`pty-output-${connectionId}`, (event) => {
-      const data = event.payload as { data: string };
-      if (xtermRef.current) {
-        xtermRef.current.write(data.data);
-        const newDirectory = parseOSC7(data.data);
-        if (newDirectory) updateSession(sessionId, { currentDirectory: newDirectory });
-      }
-    });
-
-    const unlistenError = listen(`pty-error-${connectionId}`, (event) => {
-      const error = event.payload as { error: string };
-      xtermRef.current?.writeln(`\r\n\x1b[31mError: ${error.error}\x1b[0m`);
-    });
-
-    const unlistenClosed = listen(`pty-closed-${connectionId}`, async () => {
-      try {
-        await invoke("close_terminal", { id: connectionId });
-      } catch {}
-      onTerminalExitRef.current?.(sessionId);
-    });
-
-    const unlistenThemeChange = themeRegistry.onThemeChange(() => {
-      if (xtermRef.current) xtermRef.current.options.theme = getTerminalTheme();
-    });
-
-    return () => {
-      unlistenOutput.then((fn) => fn());
-      unlistenError.then((fn) => fn());
-      unlistenClosed.then((fn) => fn());
-      unlistenThemeChange();
-    };
-  }, [sessionId, isInitialized, connectionId, updateSession, getTerminalTheme]);
-
-  // Handle theme changes
   useEffect(() => {
     if (!xtermRef.current) return;
     xtermRef.current.options.theme = getTerminalTheme();
@@ -388,7 +249,6 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     return () => clearTimeout(timer);
   }, [terminalThemeId, getTerminalTheme, fitTerminal]);
 
-  // Handle font changes
   useEffect(() => {
     if (!xtermRef.current || !addonsRef.current) return;
 
@@ -432,14 +292,13 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     fitTerminal,
   ]);
 
-  // Initialize terminal
   useEffect(() => {
     if (!isVisible) return;
 
     let mounted = true;
     const initTimer = setTimeout(() => {
       if (mounted && !isInitialized && !isInitializingRef.current) {
-        initializeTerminal();
+        void initializeTerminal();
       }
     }, 200);
 
@@ -448,14 +307,13 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       clearTimeout(initTimer);
       removeLinkStyles(sessionId);
     };
-  }, [sessionId, initializeTerminal, isInitialized, isVisible]);
+  }, [initializeTerminal, isInitialized, isVisible, sessionId]);
 
-  // Retry initialization when the container becomes measurable after being hidden.
   useEffect(() => {
-    if (isInitialized || !isVisible || !terminalRef.current) return;
+    if (isInitialized || !isVisible || !terminalContainerRef.current) return;
 
     let rafId: number | null = null;
-    const container = terminalRef.current;
+    const container = terminalContainerRef.current;
 
     const attemptInitialize = () => {
       if (isInitialized || isInitializingRef.current) return;
@@ -477,39 +335,38 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     };
   }, [initializeTerminal, isInitialized, isVisible]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
+      const activeSession = getSession(sessionId);
       if (xtermRef.current) {
-        const session = getSession(sessionId);
-        if (session?.connectionId) {
-          invoke("close_terminal", { id: session.connectionId });
+        if (activeSession?.connectionId) {
+          void invoke("close_terminal", { id: activeSession.connectionId });
         }
         xtermRef.current.dispose();
         xtermRef.current = null;
         addonsRef.current = null;
       }
     };
-  }, [sessionId, getSession]);
+  }, [getSession, sessionId]);
 
-  // Handle resize
   useEffect(() => {
-    if (!addonsRef.current || !terminalRef.current || !isInitialized) return;
+    if (!addonsRef.current || !terminalContainerRef.current || !isInitialized) return;
 
     let rafId: number | null = null;
     const resizeObserver = new ResizeObserver(() => {
       if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
-        if (addonsRef.current && terminalRef.current) {
-          const rect = terminalRef.current.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            fitTerminal(3);
-          }
+        const container = terminalContainerRef.current;
+        if (!addonsRef.current || !container) return;
+
+        const rect = container.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          fitTerminal(3);
         }
       });
     });
 
-    resizeObserver.observe(terminalRef.current);
+    resizeObserver.observe(terminalContainerRef.current);
     const cleanupFit = fitTerminal(12);
 
     return () => {
@@ -517,16 +374,15 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       if (rafId) cancelAnimationFrame(rafId);
       cleanupFit?.();
     };
-  }, [isInitialized, fitTerminal]);
+  }, [fitTerminal, isInitialized]);
 
-  // Handle focus
   useEffect(() => {
     if (isActive && isVisible && xtermRef.current && isInitialized) {
       const cleanupFit = fitTerminal(12);
       requestAnimationFrame(() => xtermRef.current?.focus());
       return () => cleanupFit?.();
     }
-  }, [isActive, isInitialized, fitTerminal, isVisible]);
+  }, [isActive, isInitialized, isVisible, fitTerminal]);
 
   useEffect(() => {
     if (!isInitialized || !addonsRef.current) return;
@@ -540,12 +396,9 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       },
     );
 
-    return () => {
-      disposable.dispose();
-    };
+    return () => disposable.dispose();
   }, [isInitialized]);
 
-  // Zoom handlers
   const handleZoom = useCallback(
     (delta: number) => {
       const newSize = Math.min(Math.max(terminalFontSize + delta, 8), 32);
@@ -555,7 +408,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         fitTerminal(4);
       }
     },
-    [terminalFontSize, fitTerminal],
+    [fitTerminal, terminalFontSize],
   );
 
   const handleZoomReset = useCallback(() => {
@@ -593,38 +446,37 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     setSearchResults({ current: 0, total: 0 });
   }, []);
 
-  // Keyboard shortcuts
   useEffect(() => {
     if (!isActive) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       const isTerminalFocused =
-        terminalRef.current?.contains(e.target as Node) ||
-        terminalRef.current?.contains(document.activeElement);
-      const key = e.key.toLowerCase();
+        terminalContainerRef.current?.contains(event.target as Node) ||
+        terminalContainerRef.current?.contains(document.activeElement);
+      const key = event.key.toLowerCase();
 
-      if ((e.ctrlKey || e.metaKey) && key === "f" && (isTerminalFocused || isSearchVisible)) {
-        e.preventDefault();
-        e.stopPropagation();
+      if ((event.ctrlKey || event.metaKey) && key === "f" && (isTerminalFocused || isSearchVisible)) {
+        event.preventDefault();
+        event.stopPropagation();
         setIsSearchVisible(true);
       }
 
-      if (e.key === "Escape" && isSearchVisible) {
-        e.preventDefault();
+      if (event.key === "Escape" && isSearchVisible) {
+        event.preventDefault();
         setIsSearchVisible(false);
         clearSearch();
         xtermRef.current?.focus();
       }
 
-      if (isTerminalFocused && (e.ctrlKey || e.metaKey)) {
-        if (e.key === "+" || e.key === "=") {
-          e.preventDefault();
+      if (isTerminalFocused && (event.ctrlKey || event.metaKey)) {
+        if (event.key === "+" || event.key === "=") {
+          event.preventDefault();
           handleZoom(2);
-        } else if (e.key === "-") {
-          e.preventDefault();
+        } else if (event.key === "-") {
+          event.preventDefault();
           handleZoom(-2);
-        } else if (e.key === "0") {
-          e.preventDefault();
+        } else if (event.key === "0") {
+          event.preventDefault();
           handleZoomReset();
         }
       }
@@ -632,9 +484,8 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [isActive, isSearchVisible, handleZoom, handleZoomReset, clearSearch]);
+  }, [clearSearch, handleZoom, handleZoomReset, isActive, isSearchVisible]);
 
-  // Search handlers
   const handleSearch = useCallback(
     (term: string, options: TerminalSearchOptions) => {
       if (!term || !addonsRef.current) {
@@ -676,7 +527,6 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     xtermRef.current?.focus();
   }, [clearSearch]);
 
-  // Imperative handle
   React.useImperativeHandle(
     getSession(sessionId)?.ref,
     () => ({
@@ -697,7 +547,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       serialize: () => (xtermRef.current ? addonsRef.current?.serializeAddon.serialize() : ""),
       resize: () => fitTerminal(4),
     }),
-    [sessionId, isInitialized, getSession, fitTerminal],
+    [fitTerminal, getSession, isInitialized, sessionId],
   );
 
   return (
@@ -713,9 +563,9 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       />
       <div className="min-h-0 flex-1 pl-[16px]">
         <div
-          ref={terminalRef}
+          ref={terminalContainerRef}
           id={`terminal-${sessionId}`}
-          className={`xterm-container h-full min-h-0 text-text ${!isActive && "opacity-60"}`}
+          className={`xterm-container h-full min-h-0 text-text ${!isActive ? "opacity-60" : ""}`}
         />
       </div>
     </div>
