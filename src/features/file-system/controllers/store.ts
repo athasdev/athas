@@ -373,7 +373,8 @@ export const useFileSystemStore = createSelectors(
           useFileTreeStore.getState().setExpandedPaths(new Set([remotePath]));
 
           // Update project store
-          const { setRootFolderPath, setProjectName, setActiveProjectId } = useProjectStore.getState();
+          const { setRootFolderPath, setProjectName, setActiveProjectId } =
+            useProjectStore.getState();
           setRootFolderPath(remotePath);
           setProjectName(connection.name);
           setActiveProjectId(activeProjectTab?.id);
@@ -1368,7 +1369,10 @@ export const useFileSystemStore = createSelectors(
           useWorkspaceTabsStore.getState().setActiveProjectTab(projectId);
 
           if (remoteTabInfo) {
-            const reconnected = await get().handleOpenRemoteProject(remoteTabInfo.connectionId, tab.name);
+            const reconnected = await get().handleOpenRemoteProject(
+              remoteTabInfo.connectionId,
+              tab.name,
+            );
             if (!reconnected) {
               throw new Error(`Failed to reconnect remote workspace "${tab.name}".`);
             }
