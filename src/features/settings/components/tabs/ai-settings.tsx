@@ -3,7 +3,7 @@ import { AlertCircle, CheckCircle, Globe, RefreshCw, RotateCcw, Trash2 } from "l
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AIModelSelector } from "@/features/ai/components/selectors/ai-model-selector";
 import { useAIChatStore } from "@/features/ai/store/store";
-import type { AgentConfig, SessionMode } from "@/features/ai/types/acp";
+import type { AgentConfig, SessionConfigOption, SessionMode } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
@@ -43,8 +43,10 @@ export const AISettings = () => {
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
   const aiCompletionAllowedByPolicy = managedPolicy ? managedPolicy.aiCompletionEnabled : true;
   const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
+  const isPro = subscription?.status === "pro";
 
   const [availableModes, setAvailableModes] = useState<SessionMode[]>([]);
+  const [sessionConfigOptions, setSessionConfigOptions] = useState<SessionConfigOption[]>([]);
   const [isClearingChats, setIsClearingChats] = useState(false);
   const [autocompleteModels, setAutocompleteModels] = useState(DEFAULT_AUTOCOMPLETE_MODELS);
   const [isLoadingAutocompleteModels, setIsLoadingAutocompleteModels] = useState(false);
@@ -70,8 +72,10 @@ export const AISettings = () => {
   useEffect(() => {
     const unsubscribe = useAIChatStore.subscribe((state) => {
       setAvailableModes(state.sessionModeState.availableModes);
+      setSessionConfigOptions(state.sessionConfigOptions);
     });
     setAvailableModes(useAIChatStore.getState().sessionModeState.availableModes);
+    setSessionConfigOptions(useAIChatStore.getState().sessionConfigOptions);
     return unsubscribe;
   }, []);
 
@@ -151,10 +155,20 @@ export const AISettings = () => {
 
   return (
     <div className="space-y-4">
-      <Section title="Provider & Model">
+      <Section title="Athas Agent">
+        <div className="px-1 pb-1 text-text-lighter text-xs">
+          When `Athas Agent` is selected in chat, it uses the provider and model configured here.
+        </div>
+        {isPro ? (
+          <div className="rounded-xl border border-border bg-secondary-bg/60 px-3 py-2 text-xs text-text-lighter">
+            <span className="font-medium text-text">Athas Pro detected.</span> Chat provider routing
+            is currently configured through the model selection below; autocomplete already uses
+            Athas-hosted credit on Pro.
+          </div>
+        ) : null}
         <SettingRow
-          label="Model"
-          description="Choose your AI provider and model"
+          label="Provider & Model"
+          description="Choose the provider and model used by Athas Agent"
           onReset={() => {
             updateSetting("aiProviderId", getDefaultSetting("aiProviderId"));
             updateSetting("aiModelId", getDefaultSetting("aiModelId"));
@@ -260,6 +274,36 @@ export const AISettings = () => {
               size="xs"
             />
           </SettingRow>
+        </Section>
+      )}
+
+      {sessionConfigOptions.length > 0 && (
+        <Section title="ACP Session">
+          {sessionConfigOptions.map((option) => {
+            if (option.kind.type !== "select") {
+              return null;
+            }
+
+            return (
+              <SettingRow
+                key={option.id}
+                label={option.name}
+                description={option.description || "Session option exposed by the active ACP agent"}
+              >
+                <Select
+                  value={option.kind.currentValue}
+                  options={option.kind.options.map((value) => ({
+                    value: value.id,
+                    label: value.name,
+                  }))}
+                  onChange={(value) =>
+                    useAIChatStore.getState().changeSessionConfigOption(option.id, value)
+                  }
+                  size="xs"
+                />
+              </SettingRow>
+            );
+          })}
         </Section>
       )}
 

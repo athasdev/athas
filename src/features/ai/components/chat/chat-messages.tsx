@@ -1,42 +1,17 @@
-import { AlertCircle, CheckCircle, Clock } from "lucide-react";
 import { forwardRef, memo, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
-import { cn } from "@/utils/cn";
 import { getRelativeTime } from "../../lib/formatting";
 import { useAIChatStore } from "../../store/store";
+import { AcpActivityPanel } from "./acp-activity-panel";
 import { ChatMessage } from "./chat-message";
 
 interface ChatMessagesProps {
   onApplyCode?: (code: string, language?: string) => void;
   acpEvents?: ChatAcpEvent[];
 }
-
-const getEventStatusIcon = (
-  state: ChatAcpEvent["state"],
-): { Icon: typeof Clock; className: string; spin?: boolean } => {
-  switch (state) {
-    case "running":
-      return { Icon: Clock, className: "text-text-lighter/55", spin: true };
-    case "success":
-      return { Icon: CheckCircle, className: "text-text-lighter/65" };
-    case "error":
-      return { Icon: AlertCircle, className: "text-red-400/70" };
-    default:
-      return { Icon: CheckCircle, className: "text-text-lighter/65" };
-  }
-};
-
-const getVisibleEventDetail = (event: ChatAcpEvent): string | null => {
-  if (!event.detail) return null;
-  const normalized = event.detail.trim().toLowerCase();
-  if (normalized === "running" || normalized === "completed" || normalized === "failed") {
-    return null;
-  }
-  return event.detail;
-};
 
 const getTimestampMs = (value: Date | string): number => {
   const date = value instanceof Date ? value : new Date(value);
@@ -62,28 +37,17 @@ export const ChatMessages = memo(
       [chats, currentChatId],
     );
     const messages = currentChat?.messages || [];
-    const timelineItems = useMemo(() => {
-      const messageItems = messages.map((message, messageIndex) => ({
-        type: "message" as const,
-        id: `message-${message.id}`,
-        timestamp: getTimestampMs(message.timestamp),
-        order: messageIndex,
-        message,
-        messageIndex,
-      }));
-      const eventItems = (acpEvents || []).map((event, eventIndex) => ({
-        type: "event" as const,
-        id: `event-${event.id}`,
-        timestamp: getTimestampMs(event.timestamp),
-        order: messages.length + eventIndex,
-        event,
-      }));
-
-      return [...messageItems, ...eventItems].sort((a, b) => {
-        if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
-        return a.order - b.order;
-      });
-    }, [messages, acpEvents]);
+    const timelineItems = useMemo(
+      () =>
+        messages.map((message, messageIndex) => ({
+          id: `message-${message.id}`,
+          timestamp: getTimestampMs(message.timestamp),
+          order: messageIndex,
+          message,
+          messageIndex,
+        })),
+      [messages],
+    );
 
     // Get recent chats excluding the current one (title "New Chat" means it's empty/unused)
     const recentChats = useMemo(
@@ -130,72 +94,44 @@ export const ChatMessages = memo(
     return (
       <>
         {timelineItems.map((item) => {
-          if (item.type === "message") {
-            const message = item.message;
-            const index = item.messageIndex;
-            const prevMessage = index > 0 ? messages[index - 1] : null;
-            const isToolOnlyMessage =
-              message.role === "assistant" &&
-              message.toolCalls &&
-              message.toolCalls.length > 0 &&
-              (!message.content || message.content.trim().length === 0);
-            const previousMessageIsToolOnly =
-              prevMessage &&
-              prevMessage.role === "assistant" &&
-              prevMessage.toolCalls &&
-              prevMessage.toolCalls.length > 0 &&
-              (!prevMessage.content || prevMessage.content.trim().length === 0);
+          const message = item.message;
+          const index = item.messageIndex;
+          const prevMessage = index > 0 ? messages[index - 1] : null;
+          const isToolOnlyMessage =
+            message.role === "assistant" &&
+            message.toolCalls &&
+            message.toolCalls.length > 0 &&
+            (!message.content || message.content.trim().length === 0);
+          const previousMessageIsToolOnly =
+            prevMessage &&
+            prevMessage.role === "assistant" &&
+            prevMessage.toolCalls &&
+            prevMessage.toolCalls.length > 0 &&
+            (!prevMessage.content || prevMessage.content.trim().length === 0);
 
-            const isPlanMessage = message.role === "assistant" && hasPlanBlock(message.content);
-            const messageClassName = cn(
-              isToolOnlyMessage
-                ? previousMessageIsToolOnly
-                  ? "px-4 py-1"
-                  : "px-4 pt-2 pb-1"
-                : "px-4 py-2",
-              isPlanMessage && "pt-2",
-            );
-
-            return (
-              <div key={item.id} className={messageClassName}>
-                <ChatMessage
-                  message={message}
-                  isLastMessage={index === messages.length - 1}
-                  onApplyCode={onApplyCode}
-                />
-              </div>
-            );
-          }
-
-          const event = item.event;
-          const statusIcon = getEventStatusIcon(event.state);
-          const StatusIcon = statusIcon.Icon;
-          const detail = getVisibleEventDetail(event);
+          const isPlanMessage = message.role === "assistant" && hasPlanBlock(message.content);
+          const messageClassName = [
+            isToolOnlyMessage
+              ? previousMessageIsToolOnly
+                ? "px-4 py-1"
+                : "px-4 pt-2 pb-1"
+              : "px-4 py-2",
+            isPlanMessage ? "pt-2" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
 
           return (
-            <div key={item.id} className="px-4 py-1">
-              <div className="flex items-center gap-1 text-xs leading-tight">
-                <span className="min-w-0 flex-1 truncate">
-                  <span className="font-medium text-text-lighter/80">{event.label}</span>
-                  {detail ? (
-                    <>
-                      <span className="opacity-40"> · </span>
-                      <span className="text-text-lighter/60">{detail}</span>
-                    </>
-                  ) : null}
-                </span>
-                <StatusIcon
-                  size={10}
-                  className={cn(
-                    "shrink-0",
-                    statusIcon.className,
-                    statusIcon.spin && "animate-spin",
-                  )}
-                />
-              </div>
+            <div key={item.id} className={messageClassName}>
+              <ChatMessage
+                message={message}
+                isLastMessage={index === messages.length - 1}
+                onApplyCode={onApplyCode}
+              />
             </div>
           );
         })}
+        {acpEvents && acpEvents.length > 0 ? <AcpActivityPanel events={acpEvents} /> : null}
         <div ref={ref} />
       </>
     );

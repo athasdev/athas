@@ -7,6 +7,7 @@ import {
   truncateDetail,
   updateToolCompletionAcpEvent,
 } from "@/features/ai/lib/acp-event-timeline";
+import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import { createToolCall, markToolCallComplete } from "@/features/ai/lib/tool-call-state";
@@ -15,9 +16,10 @@ import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-c
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AcpEvent } from "@/features/ai/types/acp";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
-import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
+import { AGENT_OPTIONS, type AIChatProps, type Message } from "@/features/ai/types/ai-chat";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
@@ -44,6 +46,7 @@ const AIChat = memo(function AIChat({
 
   const chatState = useChatState();
   const chatActions = useChatActions();
+  const { showToast } = useToast();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -91,10 +94,22 @@ const AIChat = memo(function AIChat({
           case "current_mode_update":
             store.setCurrentModeId(payload.currentModeId);
             break;
+          case "config_options_update":
+            store.setSessionConfigOptions(payload.configOptions);
+            break;
+          case "session_info_update": {
+            const chat = store.getCurrentChat();
+            const nextTitle = chat ? getChatTitleFromSessionInfo(chat.title, payload.title) : null;
+            if (chat && nextTitle) {
+              store.updateChatTitle(chat.id, nextTitle);
+            }
+            break;
+          }
           case "status_changed":
             if (!payload.status.running) {
               store.setAvailableSlashCommands([]);
               store.setSessionModeState(null, []);
+              store.setSessionConfigOptions([]);
             }
             break;
           default:
@@ -342,6 +357,38 @@ const AIChat = memo(function AIChat({
           requestAnimationFrame(scrollToBottom);
         },
         () => {
+          const currentMessage = chatActions
+            .getCurrentMessages()
+            .find((message) => message.id === currentAssistantMessageId);
+          const hasVisibleResponse = Boolean(
+            currentMessage?.content?.trim() ||
+            currentMessage?.toolCalls?.length ||
+            currentMessage?.images?.length ||
+            currentMessage?.resources?.length,
+          );
+
+          if (!hasVisibleResponse && isAcpAgent(currentAgentId)) {
+            const fallbackMessage = `${AGENT_OPTIONS.find((agent) => agent.id === currentAgentId)?.name || "Agent"} did not return a visible response. Try sending the message again.`;
+            updateStreamingAssistantMessage(chatId, currentAssistantMessageId, () => ({
+              content: `[ERROR_BLOCK]
+title: No Response
+code: EMPTY_RESPONSE
+message: ${fallbackMessage}
+details: The agent session started, but no content, tool output, or resource was returned.
+[/ERROR_BLOCK]`,
+              isStreaming: false,
+            }));
+            showToast({
+              message: fallbackMessage,
+              type: "error",
+            });
+            chatActions.setIsTyping(false);
+            chatActions.setStreamingMessageId(null);
+            abortControllerRef.current = null;
+            processQueuedMessages();
+            return;
+          }
+
           chatActions.updateMessage(chatId, currentAssistantMessageId, {
             isStreaming: false,
           });
@@ -411,6 +458,10 @@ details: ${errorDetails || mainError}
             content: currentMessage?.content || formattedError,
             isStreaming: false,
           }));
+          showToast({
+            message: errorMessage,
+            type: "error",
+          });
           chatActions.setIsTyping(false);
           chatActions.setStreamingMessageId(null);
           abortControllerRef.current = null;
@@ -506,6 +557,24 @@ details: ${errorDetails || mainError}
                   kind: "mode",
                   label: "Mode changed",
                   detail: event.modeState.currentModeId,
+                  state: "info",
+                });
+              }
+              break;
+            case "config_options_update":
+              appendAcpEvent({
+                kind: "status",
+                label: "Session options updated",
+                detail: `${event.configOptions.length} option${event.configOptions.length === 1 ? "" : "s"} available`,
+                state: "info",
+              });
+              break;
+            case "session_info_update":
+              if (event.title) {
+                appendAcpEvent({
+                  kind: "status",
+                  label: "Session title updated",
+                  detail: event.title,
                   state: "info",
                 });
               }
@@ -661,29 +730,45 @@ details: ${errorDetails || mainError}
 
           {currentPermission && (
             <div className="bg-transparent px-3 pt-2 text-xs">
-              <div className="flex items-center gap-2 rounded-2xl border border-border bg-primary-bg/90 px-3 py-2 font-mono">
-                <span className="text-text-lighter">permission:</span>
-                <span
-                  className="min-w-0 flex-1 truncate text-text"
-                  title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
-                >
-                  {currentPermission.description}
-                </span>
-                <div className="flex shrink-0 items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => handlePermission(false)}
-                    className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text-lighter hover:bg-hover"
-                  >
-                    deny
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handlePermission(true)}
-                    className="rounded-full border border-border bg-secondary-bg/80 px-2.5 py-1 text-text hover:bg-hover"
-                  >
-                    allow
-                  </button>
+              <div className="rounded-2xl border border-border bg-primary-bg/90 px-3 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-border/60 bg-secondary-bg/70 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-text-lighter">
+                        Permission
+                      </span>
+                      {permissionQueue.length > 1 ? (
+                        <span className="text-[11px] text-text-lighter">
+                          {permissionQueue.length - 1} more queued
+                        </span>
+                      ) : null}
+                    </div>
+                    <div
+                      className="mt-2 break-words font-mono text-text"
+                      title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
+                    >
+                      {currentPermission.description}
+                    </div>
+                    <div className="mt-1 text-[11px] text-text-lighter">
+                      Review this request before the agent can continue.
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handlePermission(false)}
+                      className="rounded-full border border-border bg-secondary-bg/80 px-3 py-1.5 text-text-lighter hover:bg-hover"
+                    >
+                      Deny
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePermission(true)}
+                      className="rounded-full border border-border bg-secondary-bg/80 px-3 py-1.5 text-text hover:bg-hover"
+                    >
+                      Allow
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

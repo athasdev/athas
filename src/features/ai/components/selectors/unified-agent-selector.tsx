@@ -1,16 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Check, ChevronDown, Key, Plus, Search, X } from "lucide-react";
+import { Check, ChevronDown, Download, LoaderCircle, Plus, Search, Settings2 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig } from "@/features/ai/types/acp";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
-import { getAvailableProviders } from "@/features/ai/types/providers";
-import { useSettingsStore } from "@/features/settings/store";
+import { useToast } from "@/features/layout/contexts/toast-context";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
-import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
 
 interface UnifiedAgentSelectorProps {
   variant?: "header" | "input";
@@ -31,17 +29,16 @@ export function UnifiedAgentSelector({
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [availableAgents, setAvailableAgents] = useState<AgentConfig[]>([]);
   const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set(["custom"]));
-  const [activeSection, setActiveSection] = useState<"agents" | "models">("agents");
+  const [installingAgentId, setInstallingAgentId] = useState<string | null>(null);
   const [position, setPosition] = useState<DropdownPosition | null>(null);
 
-  const { settings, updateSetting } = useSettingsStore();
-  const { dynamicModels, setDynamicModels } = useAIChatStore();
+  const { showToast } = useToast();
   const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
   const setSelectedAgentId = useAIChatStore((state) => state.setSelectedAgentId);
   const createNewChat = useAIChatStore((state) => state.createNewChat);
   const changeCurrentChatAgent = useAIChatStore((state) => state.changeCurrentChatAgent);
-  const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -50,24 +47,33 @@ export function UnifiedAgentSelector({
   const currentAgentId = getCurrentAgentId();
   const currentAgent = AGENT_OPTIONS.find((a) => a.id === currentAgentId);
   const isCustomAgent = currentAgentId === "custom";
-  const providers = getAvailableProviders();
+  const agentConfigById = useMemo(
+    () => new Map(availableAgents.map((agent) => [agent.id, agent])),
+    [availableAgents],
+  );
 
-  // Get current model name for custom agent
-  const currentModelName = useMemo(() => {
-    if (!isCustomAgent) return null;
-    const providerModels = dynamicModels[settings.aiProviderId];
-    const dynamicModel = providerModels?.find((m) => m.id === settings.aiModelId);
-    if (dynamicModel) return dynamicModel.name;
-    const provider = providers.find((p) => p.id === settings.aiProviderId);
-    const staticModel = provider?.models.find((m) => m.id === settings.aiModelId);
-    return staticModel?.name || settings.aiModelId;
-  }, [isCustomAgent, dynamicModels, settings.aiProviderId, settings.aiModelId, providers]);
+  const reloadAgents = useCallback(async () => {
+    try {
+      const detectedAgents = await invoke<AgentConfig[]>("get_available_agents");
+      setAvailableAgents(detectedAgents);
+      const installed = new Set<string>(["custom"]);
+      for (const agent of detectedAgents) {
+        if (agent.installed) {
+          installed.add(agent.id);
+        }
+      }
+      setInstalledAgents(installed);
+    } catch {
+      // Silent fail
+    }
+  }, []);
 
   // Detect installed agents
   useEffect(() => {
     const detectAgents = async () => {
       try {
         const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
+        setAvailableAgents(availableAgents);
         const installed = new Set<string>(["custom"]);
         for (const agent of availableAgents) {
           if (agent.installed) {
@@ -82,126 +88,40 @@ export function UnifiedAgentSelector({
     detectAgents();
   }, []);
 
-  // Fetch dynamic models for providers
-  useEffect(() => {
-    const fetchModels = async () => {
-      for (const provider of providers) {
-        if (dynamicModels[provider.id]?.length > 0) continue;
-        if (provider.requiresApiKey) continue;
-        const providerInstance = getProvider(provider.id);
-        if (providerInstance?.getModels) {
-          try {
-            const models = await providerInstance.getModels();
-            if (models.length > 0) {
-              setDynamicModels(provider.id, models);
-            }
-          } catch {
-            // Silent fail
-          }
-        }
-      }
-    };
-    fetchModels();
-  }, [providers, dynamicModels, setDynamicModels]);
-
   // Build filtered items list
   const filteredItems = useMemo(() => {
     const items: Array<{
-      type: "section" | "agent" | "provider" | "model";
+      type: "agent";
       id: string;
       name: string;
-      providerId?: string;
       isInstalled?: boolean;
+      canInstall?: boolean;
       isCurrent?: boolean;
-      requiresApiKey?: boolean;
-      hasKey?: boolean;
     }> = [];
 
     const searchLower = search.toLowerCase();
+    const matchingAgents = AGENT_OPTIONS.filter(
+      (agent) =>
+        !search ||
+        agent.name.toLowerCase().includes(searchLower) ||
+        agent.description.toLowerCase().includes(searchLower),
+    );
 
-    // Add agents section
-    if (activeSection === "agents") {
-      const matchingAgents = AGENT_OPTIONS.filter(
-        (agent) =>
-          !search ||
-          agent.name.toLowerCase().includes(searchLower) ||
-          agent.description.toLowerCase().includes(searchLower),
-      );
-
-      if (matchingAgents.length > 0) {
-        items.push({ type: "section", id: "agents-section", name: "Agents" });
-        for (const agent of matchingAgents) {
-          items.push({
-            type: "agent",
-            id: agent.id,
-            name: agent.name,
-            isInstalled: installedAgents.has(agent.id),
-            isCurrent: agent.id === currentAgentId,
-          });
-        }
-      }
-    }
-
-    // Add models section (only for custom agent view)
-    if (activeSection === "models" && isCustomAgent) {
-      for (const provider of providers) {
-        const providerHasKey = !provider.requiresApiKey || hasProviderApiKey(provider.id);
-        const models = dynamicModels[provider.id] || provider.models;
-
-        const matchingModels = models.filter(
-          (model) =>
-            !search ||
-            provider.name.toLowerCase().includes(searchLower) ||
-            model.name.toLowerCase().includes(searchLower) ||
-            model.id.toLowerCase().includes(searchLower),
-        );
-
-        if (
-          matchingModels.length > 0 ||
-          (!search && provider.name.toLowerCase().includes(searchLower))
-        ) {
-          items.push({
-            type: "provider",
-            id: `provider-${provider.id}`,
-            name: provider.name,
-            providerId: provider.id,
-            requiresApiKey: provider.requiresApiKey,
-            hasKey: providerHasKey,
-          });
-
-          if (providerHasKey) {
-            for (const model of matchingModels) {
-              items.push({
-                type: "model",
-                id: model.id,
-                name: model.name,
-                providerId: provider.id,
-                isCurrent: settings.aiProviderId === provider.id && settings.aiModelId === model.id,
-              });
-            }
-          }
-        }
-      }
+    for (const agent of matchingAgents) {
+      items.push({
+        type: "agent",
+        id: agent.id,
+        name: agent.name,
+        isInstalled: installedAgents.has(agent.id),
+        canInstall: agentConfigById.get(agent.id)?.canInstall,
+        isCurrent: agent.id === currentAgentId,
+      });
     }
 
     return items;
-  }, [
-    search,
-    activeSection,
-    installedAgents,
-    currentAgentId,
-    isCustomAgent,
-    providers,
-    dynamicModels,
-    hasProviderApiKey,
-    settings.aiProviderId,
-    settings.aiModelId,
-  ]);
+  }, [search, installedAgents, agentConfigById, currentAgentId]);
 
-  const selectableItems = useMemo(
-    () => filteredItems.filter((item) => item.type === "agent" || item.type === "model"),
-    [filteredItems],
-  );
+  const selectableItems = filteredItems;
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -211,13 +131,12 @@ export function UnifiedAgentSelector({
 
   useEffect(() => {
     setSelectedIndex(0);
-  }, [search, activeSection]);
+  }, [search]);
 
   useEffect(() => {
     if (!isOpen) {
       setSearch("");
       setSelectedIndex(0);
-      setActiveSection("agents");
     }
   }, [isOpen]);
 
@@ -251,12 +170,12 @@ export function UnifiedAgentSelector({
     const top = openUp ? Math.max(viewportPadding, rect.top - visibleHeight - 6) : rect.bottom + 6;
 
     setPosition({ left, top, width: safeWidth, maxHeight });
-  }, [variant]);
+  }, [variant, isCustomAgent]);
 
   useLayoutEffect(() => {
     if (!isOpen) return;
     updateDropdownPosition();
-  }, [isOpen, updateDropdownPosition, search, filteredItems.length, activeSection]);
+  }, [isOpen, updateDropdownPosition, search, filteredItems.length]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -297,13 +216,6 @@ export function UnifiedAgentSelector({
         return;
       }
 
-      // In header variant, selecting Custom API should show models tab
-      if (variant === "header" && agentId === "custom") {
-        setSelectedAgentId(agentId);
-        setActiveSection("models");
-        return;
-      }
-
       setIsOpen(false);
       setSelectedAgentId(agentId);
 
@@ -325,16 +237,28 @@ export function UnifiedAgentSelector({
     [variant, currentAgentId, setSelectedAgentId, changeCurrentChatAgent, createNewChat],
   );
 
-  const handleModelSelect = useCallback(
-    (providerId: string, modelId: string) => {
-      updateSetting("aiProviderId", providerId);
-      updateSetting("aiModelId", modelId);
-      setIsOpen(false);
-      if (variant === "header") {
-        createNewChat();
+  const handleInstallAgent = useCallback(
+    async (agentId: string) => {
+      const agent = agentConfigById.get(agentId);
+      if (!agent?.canInstall || installingAgentId === agentId) {
+        return;
+      }
+
+      setInstallingAgentId(agentId);
+      try {
+        await invoke<AgentConfig>("install_acp_agent", { agentId });
+        await reloadAgents();
+        showToast({ message: `${agent.name} installed successfully`, type: "success" });
+      } catch (error) {
+        showToast({
+          message: `Failed to install ${agent.name}: ${error instanceof Error ? error.message : String(error)}`,
+          type: "error",
+        });
+      } finally {
+        setInstallingAgentId(null);
       }
     },
-    [updateSetting, variant, createNewChat],
+    [agentConfigById, installingAgentId, reloadAgents, showToast],
   );
 
   const handleKeyDown = useCallback(
@@ -354,10 +278,10 @@ export function UnifiedAgentSelector({
           e.preventDefault();
           if (selectableItems[selectedIndex]) {
             const item = selectableItems[selectedIndex];
-            if (item.type === "agent") {
+            if (item.isInstalled || item.id === "custom") {
               handleAgentChange(item.id as AgentType);
-            } else if (item.type === "model" && item.providerId) {
-              handleModelSelect(item.providerId, item.id);
+            } else {
+              void handleInstallAgent(item.id);
             }
           }
           break;
@@ -365,15 +289,9 @@ export function UnifiedAgentSelector({
           e.preventDefault();
           setIsOpen(false);
           break;
-        case "Tab":
-          e.preventDefault();
-          if (isCustomAgent) {
-            setActiveSection((prev) => (prev === "agents" ? "models" : "agents"));
-          }
-          break;
       }
     },
-    [isOpen, selectableItems, selectedIndex, handleAgentChange, handleModelSelect, isCustomAgent],
+    [isOpen, selectableItems, selectedIndex, handleAgentChange, handleInstallAgent],
   );
 
   let selectableIndex = -1;
@@ -384,7 +302,7 @@ export function UnifiedAgentSelector({
         <button
           ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
-          className="flex h-8 items-center gap-1 rounded-full border border-border bg-primary-bg/80 pr-1.5 pl-2 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+          className="flex h-8 items-center gap-1 rounded-full pr-1.5 pl-2 text-text-lighter transition-colors hover:bg-hover hover:text-text"
           aria-label="New chat"
         >
           <Plus size={14} />
@@ -397,12 +315,7 @@ export function UnifiedAgentSelector({
           className="ui-font flex h-8 items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
         >
           <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
-          <span className="max-w-[140px] truncate text-text">
-            {currentAgent?.name || "Custom"}
-            {isCustomAgent && currentModelName && (
-              <span className="text-text-lighter"> / {currentModelName}</span>
-            )}
-          </span>
+          <span className="max-w-[140px] truncate text-text">{currentAgent?.name || "Agent"}</span>
           <ChevronDown
             size={12}
             className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
@@ -416,7 +329,7 @@ export function UnifiedAgentSelector({
           <div
             ref={dropdownRef}
             onKeyDown={handleKeyDown}
-            className="fixed z-[10030] flex flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 shadow-xl backdrop-blur-sm"
+            className="scrollbar-hidden fixed z-[10030] flex flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 shadow-lg backdrop-blur-sm"
             style={{
               top: `${position.top}px`,
               left: `${position.left}px`,
@@ -424,173 +337,107 @@ export function UnifiedAgentSelector({
               maxHeight: `${position.maxHeight}px`,
             }}
           >
-            <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/75 px-3 py-2.5">
-              <div className="flex min-w-0 items-center gap-2">
-                <ProviderIcon
-                  providerId={currentAgentId}
-                  size={14}
-                  className="shrink-0 text-text-lighter"
-                />
-                <span className="truncate font-medium text-text text-xs">
-                  {currentAgent?.name || "Custom"}
-                  {isCustomAgent && currentModelName ? (
-                    <span className="text-text-lighter"> / {currentModelName}</span>
-                  ) : null}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
-                aria-label="Close agent selector"
-              >
-                <X size={12} />
-              </button>
-            </div>
-
-            <div className="border-border/60 border-b">
+            <div className="bg-secondary-bg px-2 py-2">
               <Input
                 ref={inputRef}
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Search agents or models..."
+                placeholder="Search agents..."
                 variant="ghost"
                 leftIcon={Search}
-                className="w-full py-2.5 pr-3"
+                className="w-full pr-3"
               />
             </div>
 
-            {/* Section tabs (only for custom agent) */}
-            {isCustomAgent && !search && (
-              <div className="flex border-border/60 border-b px-2 py-1.5">
-                <button
-                  onClick={() => setActiveSection("agents")}
-                  className={cn(
-                    "flex-1 rounded-lg px-2.5 py-1 text-xs transition-colors",
-                    activeSection === "agents"
-                      ? "bg-hover text-text"
-                      : "text-text-lighter hover:text-text",
-                  )}
-                >
-                  Agents
-                </button>
-                <button
-                  onClick={() => setActiveSection("models")}
-                  className={cn(
-                    "flex-1 rounded-lg px-2 py-1 text-xs transition-colors",
-                    activeSection === "models"
-                      ? "bg-hover text-text"
-                      : "text-text-lighter hover:text-text",
-                  )}
-                >
-                  Models
-                </button>
-              </div>
-            )}
-
             {/* Items */}
-            <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
               {filteredItems.length === 0 ? (
                 <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
               ) : (
                 filteredItems.map((item) => {
-                  if (item.type === "section") {
-                    return (
-                      <div
-                        key={item.id}
-                        className="px-1 pt-2.5 pb-1.5 text-[10px] text-text-lighter uppercase tracking-wide"
-                      >
-                        {item.name}
-                      </div>
-                    );
-                  }
+                  selectableIndex++;
+                  const itemIndex = selectableIndex;
+                  const isSelected = itemIndex === selectedIndex;
+                  const isInstalling = installingAgentId === item.id;
+                  const isUnavailable = !item.isInstalled && item.id !== "custom";
 
-                  if (item.type === "provider") {
-                    return (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between px-1 pt-2 pb-1"
-                      >
-                        <span className="flex items-center gap-1.5 text-[10px] text-text-lighter uppercase tracking-wide">
-                          <ProviderIcon
-                            providerId={item.providerId || item.id}
-                            size={10}
-                            className="text-text-lighter"
-                          />
-                          {item.name}
-                        </span>
-                        {item.requiresApiKey && !item.hasKey && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onOpenSettings?.();
-                              setIsOpen(false);
-                            }}
-                            className="flex items-center gap-1 rounded bg-red-500/15 px-1.5 py-0.5 text-[9px] text-red-400 transition-colors hover:bg-red-500/25"
-                          >
-                            <Key size={7} />
-                            Set Key
-                          </button>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  if (item.type === "agent") {
-                    selectableIndex++;
-                    const itemIndex = selectableIndex;
-                    const isSelected = itemIndex === selectedIndex;
-
-                    return (
+                  return (
+                    <div
+                      key={item.id}
+                      onMouseEnter={() => setSelectedIndex(itemIndex)}
+                      className={cn(
+                        "group flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-colors",
+                        isSelected ? "bg-hover/90" : "bg-transparent",
+                        item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
+                      )}
+                    >
                       <button
-                        key={item.id}
-                        onClick={() => handleAgentChange(item.id as AgentType)}
-                        onMouseEnter={() => setSelectedIndex(itemIndex)}
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors",
-                          isSelected ? "bg-hover" : "bg-transparent",
-                          item.isCurrent && "bg-accent/10",
-                        )}
+                        onClick={() =>
+                          item.isInstalled || item.id === "custom"
+                            ? handleAgentChange(item.id as AgentType)
+                            : handleInstallAgent(item.id)
+                        }
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
                       >
                         <ProviderIcon
                           providerId={item.id}
                           size={10}
                           className="text-text-lighter"
                         />
-                        <span className="flex-1 truncate text-text text-xs">{item.name}</span>
-                        {item.isCurrent && <Check size={10} className="text-accent" />}
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-text text-xs">{item.name}</div>
+                          {isUnavailable ? (
+                            <div className="mt-0.5 text-[10px] text-text-lighter">
+                              Install before use
+                            </div>
+                          ) : null}
+                        </div>
+                      </button>
+                      <div className="flex min-w-[4.5rem] shrink-0 items-center justify-end gap-1">
+                        {item.id === "custom" && onOpenSettings ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setIsOpen(false);
+                              onOpenSettings();
+                            }}
+                            className={cn(
+                              "flex size-6 shrink-0 items-center justify-center rounded-md transition-colors",
+                              item.isCurrent
+                                ? "bg-accent/15 text-accent"
+                                : "text-text-lighter hover:bg-secondary-bg hover:text-text",
+                            )}
+                            aria-label="Open Athas Agent settings"
+                            title="Athas Agent settings"
+                          >
+                            <Settings2 size={12} />
+                          </button>
+                        ) : null}
+                        {item.isCurrent && <Check size={10} className="shrink-0 text-accent" />}
                         {!item.isCurrent && item.isInstalled && item.id !== "custom" && (
-                          <Check size={10} className="text-green-500" />
+                          <Check size={10} className="shrink-0 text-green-500" />
                         )}
-                      </button>
-                    );
-                  }
-
-                  if (item.type === "model") {
-                    selectableIndex++;
-                    const itemIndex = selectableIndex;
-                    const isSelected = itemIndex === selectedIndex;
-
-                    return (
-                      <button
-                        key={`${item.providerId}-${item.id}`}
-                        onClick={() => handleModelSelect(item.providerId!, item.id)}
-                        onMouseEnter={() => setSelectedIndex(itemIndex)}
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors",
-                          isSelected ? "bg-hover" : "bg-transparent",
-                          item.isCurrent && "bg-accent/10",
-                        )}
-                      >
-                        <span className="flex-1 truncate text-text text-xs">{item.name}</span>
-                        {item.isCurrent && <Check size={10} className="text-accent" />}
-                      </button>
-                    );
-                  }
-
-                  return null;
+                        {isUnavailable && item.canInstall ? (
+                          <button
+                            type="button"
+                            onClick={() => void handleInstallAgent(item.id)}
+                            disabled={isInstalling}
+                            className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-border bg-secondary-bg/80 px-2 py-0 text-[10px] text-text-lighter transition-colors hover:bg-hover disabled:cursor-wait disabled:opacity-70"
+                          >
+                            {isInstalling ? (
+                              <LoaderCircle size={10} className="animate-spin" />
+                            ) : (
+                              <Download size={10} />
+                            )}
+                            {isInstalling ? "Installing" : "Install"}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
                 })
               )}
             </div>

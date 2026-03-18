@@ -1,5 +1,6 @@
 import { History } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Input from "@/ui/input";
 import Tooltip from "@/ui/tooltip";
@@ -94,6 +95,7 @@ export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
 
   const { openSettingsDialog } = useUIState();
   const currentChat = getCurrentChat();
+  const currentAgentId = useAIChatStore((state) => state.getCurrentAgentId());
   const historyButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
@@ -105,7 +107,12 @@ export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
             onUpdateTitle={(title) => updateChatTitle(currentChatId, title)}
           />
         ) : (
-          <span className="font-medium text-text text-xs">New Chat</span>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary-bg/70 text-text-lighter">
+              <ProviderIcon providerId={currentAgentId} size={12} />
+            </span>
+            <span className="truncate font-medium text-text text-xs">New Chat</span>
+          </div>
         )}
       </div>
 
@@ -114,7 +121,7 @@ export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
           <button
             ref={historyButtonRef}
             onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-            className="flex size-8 items-center justify-center rounded-full border border-border bg-primary-bg/80 p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+            className="flex size-8 items-center justify-center rounded-full p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
             aria-label="Toggle chat history"
           >
             <History size={14} />

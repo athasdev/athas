@@ -6,11 +6,11 @@ export const ToastContainer = () => {
   const { toasts, dismissToast } = useToast();
 
   return createPortal(
-    <div className="fixed right-4 bottom-16 z-[10000] flex flex-col gap-2 text-text">
+    <div className="fixed right-4 bottom-16 z-[10000] flex max-h-[min(60vh,32rem)] w-[min(calc(100vw-2rem),24rem)] flex-col gap-2 overflow-y-auto pr-1 text-text">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="relative flex min-w-[280px] max-w-[380px] flex-col gap-2 rounded-xl border border-border bg-primary-bg/95 px-3 py-2.5 shadow-xl backdrop-blur-sm"
+          className="relative flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-primary-bg/95 px-3 py-2.5 shadow-xl backdrop-blur-sm"
         >
           <div className="flex items-start gap-2">
             {toast.type === "error" && (
@@ -26,7 +26,9 @@ export const ToastContainer = () => {
               <CircleQuestionMark size={14} className="mt-0.5 shrink-0 text-blue-400" />
             )}
 
-            <p className="ui-font flex-1 text-text text-xs">{toast.message}</p>
+            <p className="ui-font max-h-40 flex-1 overflow-y-auto whitespace-pre-wrap break-words pr-1 text-xs text-text">
+              {toast.message}
+            </p>
 
             <button
               onClick={() => dismissToast(toast.id)}

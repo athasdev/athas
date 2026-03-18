@@ -45,6 +45,10 @@ export const ChatMessage = memo(function ChatMessage({
     message.toolCalls &&
     message.toolCalls.length > 0 &&
     (!message.content || message.content.trim().length === 0);
+  const toolCalls = message.toolCalls || [];
+  const runningToolCount = toolCalls.filter(
+    (toolCall) => !toolCall.isComplete && message.isStreaming,
+  ).length;
 
   const handleCopyMessage = useCallback(async (messageContent: string, messageId: string) => {
     try {
@@ -123,19 +127,34 @@ export const ChatMessage = memo(function ChatMessage({
 
   if (isToolOnlyMessage) {
     return (
-      <>
-        {message.toolCalls!.map((toolCall, toolIndex) => (
-          <ToolCallDisplay
-            key={`${message.id}-tool-${toolIndex}`}
-            toolName={toolCall.name}
-            input={toolCall.input}
-            output={toolCall.output}
-            error={toolCall.error}
-            isStreaming={!toolCall.isComplete && message.isStreaming}
-            onOpenInEditor={handleOpenInEditor}
-          />
-        ))}
-      </>
+      <div className="rounded-2xl border border-border/65 bg-secondary-bg/30 p-2.5">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-text-lighter/80">
+            Tool Activity
+          </div>
+          <div className="rounded-full border border-border/60 bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter">
+            {toolCalls.length} call{toolCalls.length !== 1 ? "s" : ""}
+          </div>
+          {runningToolCount > 0 ? (
+            <div className="rounded-full border border-border/60 bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter">
+              {runningToolCount} running
+            </div>
+          ) : null}
+        </div>
+        <div className="space-y-2">
+          {toolCalls.map((toolCall, toolIndex) => (
+            <ToolCallDisplay
+              key={`${message.id}-tool-${toolIndex}`}
+              toolName={toolCall.name}
+              input={toolCall.input}
+              output={toolCall.output}
+              error={toolCall.error}
+              isStreaming={!toolCall.isComplete && message.isStreaming}
+              onOpenInEditor={handleOpenInEditor}
+            />
+          ))}
+        </div>
+      </div>
     );
   }
 
@@ -164,18 +183,28 @@ export const ChatMessage = memo(function ChatMessage({
   return (
     <div className="group relative w-full">
       {message.toolCalls && message.toolCalls.length > 0 && (
-        <div className="mb-1 space-y-1">
-          {message.toolCalls!.map((toolCall, toolIndex) => (
-            <ToolCallDisplay
-              key={`${message.id}-tool-${toolIndex}`}
-              toolName={toolCall.name}
-              input={toolCall.input}
-              output={toolCall.output}
-              error={toolCall.error}
-              isStreaming={!toolCall.isComplete && message.isStreaming}
-              onOpenInEditor={handleOpenInEditor}
-            />
-          ))}
+        <div className="mb-2 rounded-2xl border border-border/60 bg-secondary-bg/25 p-2">
+          <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
+            <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-text-lighter/80">
+              Tool Activity
+            </div>
+            <div className="rounded-full border border-border/60 bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter">
+              {toolCalls.length} call{toolCalls.length !== 1 ? "s" : ""}
+            </div>
+          </div>
+          <div className="space-y-2">
+            {message.toolCalls!.map((toolCall, toolIndex) => (
+              <ToolCallDisplay
+                key={`${message.id}-tool-${toolIndex}`}
+                toolName={toolCall.name}
+                input={toolCall.input}
+                output={toolCall.output}
+                error={toolCall.error}
+                isStreaming={!toolCall.isComplete && message.isStreaming}
+                onOpenInEditor={handleOpenInEditor}
+              />
+            ))}
+          </div>
         </div>
       )}
 
