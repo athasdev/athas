@@ -311,6 +311,14 @@ pub async fn ssh_disconnect_only(connection_id: String) -> Result<(), String> {
    Ok(())
 }
 
+pub async fn ssh_get_connected_ids() -> Result<Vec<String>, String> {
+   let connections = CONNECTIONS
+      .lock()
+      .map_err(|e| format!("Failed to lock connections: {}", e))?;
+
+   Ok(connections.keys().cloned().collect())
+}
+
 pub async fn ssh_write_file(
    connection_id: String,
    file_path: String,

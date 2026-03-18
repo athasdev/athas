@@ -81,15 +81,18 @@ class ConnectionStore {
     if (!connection) return null;
 
     const password = await this.getPassword(connectionId);
+    const connectedIds = await this.getConnectedIds();
 
     return {
       ...connection,
+      isConnected: connectedIds.includes(connectionId),
       password: password || undefined,
     };
   }
 
   async getAllConnections() {
     const connectionsStore = await this.getConnectionsStore();
+    const connectedIds = await this.getConnectedIds();
 
     const connectionIds: string[] = await connectionsStore.keys();
     const connections = [];
@@ -100,6 +103,7 @@ class ConnectionStore {
         const password = await this.getPassword(id);
         connections.push({
           ...connection,
+          isConnected: connectedIds.includes(id),
           password: password || undefined,
         });
       }
@@ -183,6 +187,14 @@ class ConnectionStore {
 
     await credentialsStore.save();
     console.log("Successfully migrated remote credentials to secure storage");
+  }
+
+  private async getConnectedIds(): Promise<string[]> {
+    try {
+      return (await invoke("ssh_get_connected_ids")) as string[];
+    } catch {
+      return [];
+    }
   }
 }
 

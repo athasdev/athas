@@ -170,7 +170,7 @@ const ConnectionList = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onFileSelect?.(`/remote/${connection.id}/`, true);
+                          onFileSelect?.(`remote://${connection.id}/`, true);
                         }}
                         className="rounded p-0.5 text-text-lighter hover:bg-hover hover:text-text"
                         aria-label="Browse Files"

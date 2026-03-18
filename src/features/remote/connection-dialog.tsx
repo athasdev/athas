@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Server } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "@/ui/button";
@@ -7,6 +6,7 @@ import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
+import { testRemoteConnection } from "./services/remote-connection-actions";
 import type { RemoteConnection, RemoteConnectionFormData } from "./types";
 
 interface ConnectionDialogProps {
@@ -161,18 +161,8 @@ const ConnectionDialog = ({
               setIsTesting(true);
               setTestStatus("idle");
               setTestMessage("");
-              const tempId = `test-${Date.now()}`;
               try {
-                await invoke("ssh_connect", {
-                  connectionId: tempId,
-                  host: formData.host,
-                  port: formData.port,
-                  username: formData.username,
-                  password: formData.password || null,
-                  keyPath: formData.keyPath || null,
-                  useSftp: formData.type === "sftp",
-                });
-                await invoke("ssh_disconnect_only", { connectionId: tempId });
+                await testRemoteConnection(formData);
                 setTestStatus("success");
                 setTestMessage("Connection successful.");
               } catch (e) {

@@ -8,7 +8,13 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders";
 import ConnectionDialog from "@/features/remote/connection-dialog";
 import PasswordPromptDialog from "@/features/remote/password-prompt-dialog";
+import {
+  connectRemoteConnection,
+  loadRemoteConnections,
+} from "@/features/remote/services/remote-connection-actions";
 import type { RemoteConnection, RemoteConnectionFormData } from "@/features/remote/types";
+import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
+import { toast } from "@/ui/toast-store";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/services/remote-connection-store";
 
@@ -29,13 +35,12 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
   const { openRecentFolder, removeFromRecents } = useRecentFoldersStore();
-  const { handleOpenFolder, handleOpenRemoteProject } = useFileSystemStore();
+  const { handleOpenFolder } = useFileSystemStore();
 
   // Load connections
   const loadConnections = useCallback(async () => {
     try {
-      const allConnections = await connectionStore.getAllConnections();
-      setConnections(allConnections as RemoteConnection[]);
+      setConnections(await loadRemoteConnections());
     } catch (error) {
       console.error("Failed to load connections:", error);
     }
@@ -49,9 +54,16 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
 
   // Listen for connection status changes
   useEffect(() => {
-    const unsubscribe = listen("ssh_connection_status", () => {
-      loadConnections();
-    });
+    const unsubscribe = listen<{ connectionId: string; connected: boolean }>(
+      "ssh_connection_status",
+      async (event) => {
+        await connectionStore.updateConnectionStatus(
+          event.payload.connectionId,
+          event.payload.connected,
+        );
+        await loadConnections();
+      },
+    );
 
     return () => {
       unsubscribe.then((fn) => fn());
@@ -91,34 +103,13 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
       if (connectingMap[connectionId]) return;
       setConnectingMap((p) => ({ ...p, [connectionId]: true }));
       setStatusMap((p) => ({ ...p, [connectionId]: "idle" }));
-      await invoke("ssh_connect", {
-        connectionId,
-        host: connection.host,
-        port: connection.port,
-        username: connection.username,
-        password: providedPassword || connection.password || null,
-        keyPath: connection.keyPath || null,
-        useSftp: connection.type === "sftp",
-      });
-
-      await connectionStore.updateConnectionStatus(connectionId, true, new Date().toISOString());
+      await connectRemoteConnection(connection, providedPassword);
       await loadConnections();
-
-      // Open the remote project
-      if (handleOpenRemoteProject) {
-        await handleOpenRemoteProject(connectionId, connection.name);
-      }
-
       onClose();
     } catch (error) {
       console.error("Connection error:", error);
-      const errorStr = String(error);
 
-      const isAuthFailure =
-        errorStr.includes("No valid authentication method") ||
-        errorStr.includes("Authentication failed");
-
-      if (isAuthFailure && !providedPassword && !connection.password) {
+      if (isRemoteAuthFailure(error) && !providedPassword && !connection.password) {
         setConnectingMap((p) => ({ ...p, [connectionId]: false }));
         setPasswordPromptConnection(connection);
         return;
@@ -126,10 +117,11 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
 
       if (providedPassword) {
         setConnectingMap((p) => ({ ...p, [connectionId]: false }));
-        throw error;
+        throw new Error(getFriendlyRemoteError(error));
       }
 
       setStatusMap((p) => ({ ...p, [connectionId]: "error" }));
+      toast.error(getFriendlyRemoteError(error));
     } finally {
       setConnectingMap((p) => ({ ...p, [connectionId]: false }));
     }

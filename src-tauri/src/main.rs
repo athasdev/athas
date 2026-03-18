@@ -444,6 +444,7 @@ fn main() {
          ssh_write_file,
          ssh_read_directory,
          ssh_read_file,
+         ssh_get_connected_ids,
          // ACP agent commands (new)
          get_available_agents,
          install_acp_agent,
