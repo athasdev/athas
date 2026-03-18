@@ -150,20 +150,7 @@ pub async fn create_embedded_webview(
    let counter = WEB_VIEWER_COUNTER.fetch_add(1, Ordering::SeqCst);
    let webview_label = format!("web-viewer-{counter}");
 
-   // Parse and validate URL with localhost-aware protocol handling
-   let parsed_url = if url.starts_with("http://") || url.starts_with("https://") {
-      url.clone()
-   } else if url == "about:blank" {
-      "about:blank".to_string()
-   } else {
-      // Default to HTTP for localhost, HTTPS for everything else
-      let normalized = url.to_lowercase();
-      if normalized.starts_with("localhost") || normalized.starts_with("127.0.0.1") {
-         format!("http://{url}")
-      } else {
-         format!("https://{url}")
-      }
-   };
+   let parsed_url = normalize_webview_url(&url)?;
 
    // Get the main window
    let main_webview_window = app
@@ -223,18 +210,7 @@ pub async fn navigate_embedded_webview(
    url: String,
 ) -> Result<(), String> {
    if let Some(webview) = app.get_webview(&webview_label) {
-      // Parse URL with localhost-aware protocol handling
-      let parsed_url = if url.starts_with("http://") || url.starts_with("https://") {
-         url
-      } else {
-         // Default to HTTP for localhost, HTTPS for everything else
-         let normalized = url.to_lowercase();
-         if normalized.starts_with("localhost") || normalized.starts_with("127.0.0.1") {
-            format!("http://{url}")
-         } else {
-            format!("https://{url}")
-         }
-      };
+      let parsed_url = normalize_webview_url(&url)?;
 
       webview
          .navigate(
@@ -258,6 +234,10 @@ pub async fn resize_embedded_webview(
    width: f64,
    height: f64,
 ) -> Result<(), String> {
+   if width <= 0.0 || height <= 0.0 {
+      return Ok(());
+   }
+
    if let Some(webview) = app.get_webview(&webview_label) {
       webview
          .set_position(tauri::LogicalPosition::new(x, y))
@@ -303,6 +283,34 @@ pub async fn open_webview_devtools(
       Ok(())
    } else {
       Err(format!("Webview not found: {webview_label}"))
+   }
+}
+
+fn normalize_webview_url(url: &str) -> Result<String, String> {
+   let trimmed = url.trim();
+   if trimmed.is_empty() {
+      return Err("URL cannot be empty".to_string());
+   }
+
+   if trimmed == "about:blank" {
+      return Ok(trimmed.to_string());
+   }
+
+   let candidate = if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
+      trimmed.to_string()
+   } else {
+      let normalized = trimmed.to_lowercase();
+      if normalized.starts_with("localhost") || normalized.starts_with("127.0.0.1") {
+         format!("http://{trimmed}")
+      } else {
+         format!("https://{trimmed}")
+      }
+   };
+
+   let parsed = url::Url::parse(&candidate).map_err(|e| format!("Invalid URL: {e}"))?;
+   match parsed.scheme() {
+      "http" | "https" => Ok(candidate),
+      _ => Err("Only http and https URLs are allowed".to_string()),
    }
 }
 
