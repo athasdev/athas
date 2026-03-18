@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { motion } from "framer-motion";
 import { Edit, Folder, FolderOpen, Plus, Server, Trash2, X } from "lucide-react";
