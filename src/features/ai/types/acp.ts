@@ -52,17 +52,16 @@ export interface SessionConfigOptionValue {
   description?: string;
 }
 
-export type SessionConfigOption =
-  | {
-      id: string;
-      name: string;
-      description?: string;
-      kind: {
-        type: "select";
-        currentValue: string;
-        options: SessionConfigOptionValue[];
-      };
-    };
+export type SessionConfigOption = {
+  id: string;
+  name: string;
+  description?: string;
+  kind: {
+    type: "select";
+    currentValue: string;
+    options: SessionConfigOptionValue[];
+  };
+};
 
 export interface SessionModeState {
   currentModeId: string | null;

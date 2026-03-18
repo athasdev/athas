@@ -4,15 +4,15 @@
 
 ### Added
 
-- *(unstable)* Add initial support for session config options ([#36](https://github.com/agentclientprotocol/rust-sdk/pull/36))
+- _(unstable)_ Add initial support for session config options ([#36](https://github.com/agentclientprotocol/rust-sdk/pull/36))
 
 ## [0.9.1](https://github.com/agentclientprotocol/rust-sdk/compare/v0.9.0...v0.9.1) - 2025-12-17
 
 ### Added
 
-- *(unstable)* Add initial support for resuming sessions ([#34](https://github.com/agentclientprotocol/rust-sdk/pull/34))
-- *(unstable)* Add initial support for forking sessions ([#33](https://github.com/agentclientprotocol/rust-sdk/pull/33))
-- *(unstable)* Add initial support for listing sessions ([#31](https://github.com/agentclientprotocol/rust-sdk/pull/31))
+- _(unstable)_ Add initial support for resuming sessions ([#34](https://github.com/agentclientprotocol/rust-sdk/pull/34))
+- _(unstable)_ Add initial support for forking sessions ([#33](https://github.com/agentclientprotocol/rust-sdk/pull/33))
+- _(unstable)_ Add initial support for listing sessions ([#31](https://github.com/agentclientprotocol/rust-sdk/pull/31))
 
 ### Other
 

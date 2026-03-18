@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-agent-client-protocol = { version = "0.9", features = ["unstable_session_config_options", "unstable_session_info_update", "unstable_session_list"] }
+agent-client-protocol = { version = "0.9", features = [
+  "unstable_session_config_options",
+  "unstable_session_info_update",
+  "unstable_session_list",
+] }
 anyhow = "1.0"
 async-trait = "0.1"
 log = "0.4"

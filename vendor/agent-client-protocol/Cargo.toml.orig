@@ -14,13 +14,13 @@ categories = ["development-tools", "api-bindings"]
 
 [features]
 unstable = [
-    "unstable_cancel_request",
-    "unstable_session_config_options",
-    "unstable_session_fork",
-    "unstable_session_info_update",
-    "unstable_session_list",
-    "unstable_session_model",
-    "unstable_session_resume",
+  "unstable_cancel_request",
+  "unstable_session_config_options",
+  "unstable_session_fork",
+  "unstable_session_info_update",
+  "unstable_session_list",
+  "unstable_session_model",
+  "unstable_session_resume",
 ]
 unstable_cancel_request = ["agent-client-protocol-schema/unstable_cancel_request"]
 unstable_session_config_options = ["agent-client-protocol-schema/unstable_session_config_options"]

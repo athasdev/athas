@@ -164,7 +164,16 @@ export function useTerminalConnection({
       unlistenError.then((fn) => fn());
       unlistenClosed.then((fn) => fn());
     };
-  }, [connectionId, flush, getTerminalTheme, isInitialized, sessionId, terminal, updateSession, write]);
+  }, [
+    connectionId,
+    flush,
+    getTerminalTheme,
+    isInitialized,
+    sessionId,
+    terminal,
+    updateSession,
+    write,
+  ]);
 
   useEffect(() => {
     if (!initialCommand || !connectionId) return;

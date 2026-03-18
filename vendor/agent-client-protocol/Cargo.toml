@@ -24,29 +24,20 @@ description = "A protocol for standardizing communication between code editors a
 homepage = "https://github.com/agentclientprotocol/rust-sdk"
 documentation = "https://docs.rs/agent-client-protocol"
 readme = "README.md"
-keywords = [
-    "agent",
-    "client",
-    "protocol",
-    "ai",
-    "editor",
-]
-categories = [
-    "development-tools",
-    "api-bindings",
-]
+keywords = ["agent", "client", "protocol", "ai", "editor"]
+categories = ["development-tools", "api-bindings"]
 license = "Apache-2.0"
 repository = "https://github.com/agentclientprotocol/rust-sdk"
 
 [features]
 unstable = [
-    "unstable_cancel_request",
-    "unstable_session_config_options",
-    "unstable_session_fork",
-    "unstable_session_info_update",
-    "unstable_session_list",
-    "unstable_session_model",
-    "unstable_session_resume",
+  "unstable_cancel_request",
+  "unstable_session_config_options",
+  "unstable_session_fork",
+  "unstable_session_info_update",
+  "unstable_session_list",
+  "unstable_session_model",
+  "unstable_session_resume",
 ]
 unstable_cancel_request = ["agent-client-protocol-schema/unstable_cancel_request"]
 unstable_session_config_options = ["agent-client-protocol-schema/unstable_session_config_options"]
@@ -84,10 +75,7 @@ version = "0.4"
 
 [dependencies.serde]
 version = "1.0"
-features = [
-    "derive",
-    "rc",
-]
+features = ["derive", "rc"]
 
 [dependencies.serde_json]
 version = "1"

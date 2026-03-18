@@ -455,7 +455,11 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         terminalContainerRef.current?.contains(document.activeElement);
       const key = event.key.toLowerCase();
 
-      if ((event.ctrlKey || event.metaKey) && key === "f" && (isTerminalFocused || isSearchVisible)) {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        key === "f" &&
+        (isTerminalFocused || isSearchVisible)
+      ) {
         event.preventDefault();
         event.stopPropagation();
         setIsSearchVisible(true);

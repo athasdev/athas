@@ -7,8 +7,7 @@ export function normalizeWebViewerUrl(url: string): string {
   }
 
   const isLocal =
-    trimmed.toLowerCase().startsWith("localhost") ||
-    trimmed.toLowerCase().startsWith("127.0.0.1");
+    trimmed.toLowerCase().startsWith("localhost") || trimmed.toLowerCase().startsWith("127.0.0.1");
   return isLocal ? `http://${trimmed}` : `https://${trimmed}`;
 }
 
