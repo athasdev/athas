@@ -847,7 +847,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     }
                   >
                     <div className="h-full w-full">
-                      {isStandardEditorBuffer(buffer) ? (
+                      {buffer.type === "newTab" ? (
+                        <EmptyEditorState />
+                      ) : isStandardEditorBuffer(buffer) ? (
                         <CodeEditor
                           paneId={pane.id}
                           bufferId={buffer.id}

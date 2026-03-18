@@ -4,7 +4,7 @@ import { immer } from "zustand/middleware/immer";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
-import { isEditorContent, hasTextContent } from "@/features/panes/types/pane-content";
+import { isEditorContent } from "@/features/panes/types/pane-content";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "@/features/file-system/controllers/platform";
 

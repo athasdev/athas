@@ -284,17 +284,17 @@ export function MainLayout() {
             </div>
           ) : (
             sidebarPosition === "left" &&
-              isSidebarVisible && (
-                <ResizablePane
-                  position="left"
-                  widthKey="sidebarWidth"
-                  collapsible
-                  collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
-                  onCollapse={() => setIsSidebarVisible(false)}
-                >
-                  <MainSidebar />
-                </ResizablePane>
-              )
+            isSidebarVisible && (
+              <ResizablePane
+                position="left"
+                widthKey="sidebarWidth"
+                collapsible
+                collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
+                onCollapse={() => setIsSidebarVisible(false)}
+              >
+                <MainSidebar />
+              </ResizablePane>
+            )
           )}
 
           {/* Main content area with split view */}

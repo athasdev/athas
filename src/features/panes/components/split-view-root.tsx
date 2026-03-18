@@ -1,8 +1,84 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { usePaneStore } from "../stores/pane-store";
-import type { PaneNode } from "../types/pane";
+import type { PaneNode, PaneSplit } from "../types/pane";
 import { PaneContainer } from "./pane-container";
 import { PaneResizeHandle } from "./pane-resize-handle";
+
+interface FlatEntry {
+  node: PaneNode;
+  size: number;
+  // Path of {splitId, childIndex} pairs to write size back into the tree
+  path: Array<{ splitId: string; childIndex: 0 | 1 }>;
+}
+
+/**
+ * Flatten a split node: recursively expand children that share the same
+ * direction into a flat list with absolute percentage sizes.
+ */
+function flattenSplit(
+  split: PaneSplit,
+  parentSize: number,
+  path: Array<{ splitId: string; childIndex: 0 | 1 }>,
+): FlatEntry[] {
+  const entries: FlatEntry[] = [];
+
+  for (let i = 0; i < 2; i++) {
+    const child = split.children[i as 0 | 1];
+    const childSize = (split.sizes[i as 0 | 1] / 100) * parentSize;
+    const childPath = [...path, { splitId: split.id, childIndex: i as 0 | 1 }];
+
+    if (child.type === "split" && child.direction === split.direction) {
+      entries.push(...flattenSplit(child, childSize, childPath));
+    } else {
+      entries.push({ node: child, size: childSize, path: childPath });
+    }
+  }
+
+  return entries;
+}
+
+/**
+ * Given a flat list of sizes, write them back into the tree by walking
+ * each entry's path bottom-up and computing the binary split ratios.
+ */
+function writeFlatSizesToTree(
+  entries: FlatEntry[],
+  updateFn: (splitId: string, sizes: [number, number]) => void,
+) {
+  // Group entries by their parent splitId at each level.
+  // We need to compute, for each split node, what its two children's total sizes are.
+  const splitTotals = new Map<string, { first: number; second: number }>();
+
+  for (const entry of entries) {
+    for (const step of entry.path) {
+      if (!splitTotals.has(step.splitId)) {
+        splitTotals.set(step.splitId, { first: 0, second: 0 });
+      }
+    }
+  }
+
+  // For each entry, accumulate its size into each ancestor split
+  for (const entry of entries) {
+    for (const step of entry.path) {
+      const totals = splitTotals.get(step.splitId)!;
+      if (step.childIndex === 0) {
+        totals.first += entry.size;
+      } else {
+        totals.second += entry.size;
+      }
+    }
+  }
+
+  // Now convert totals to percentages and update each split
+  for (const [splitId, totals] of splitTotals) {
+    const sum = totals.first + totals.second;
+    if (sum > 0) {
+      const firstPct = (totals.first / sum) * 100;
+      const secondPct = (totals.second / sum) * 100;
+      updateFn(splitId, [firstPct, secondPct]);
+    }
+  }
+}
 
 interface PaneNodeRendererProps {
   node: PaneNode;
@@ -11,45 +87,101 @@ interface PaneNodeRendererProps {
 function PaneNodeRenderer({ node }: PaneNodeRendererProps) {
   const { updatePaneSizes } = usePaneStore.use.actions();
 
-  const handleResize = useCallback(
-    (sizes: [number, number]) => {
-      if (node.type === "split") {
-        updatePaneSizes(node.id, sizes);
-      }
+  const isHorizontal = node.type === "split" ? node.direction === "horizontal" : false;
+
+  // Flatten same-direction splits into a single flex container
+  const flatEntries = useMemo(() => {
+    if (node.type !== "split") return null;
+    return flattenSplit(node, 100, []);
+  }, [node]);
+
+  const handleFlatResize = useCallback(
+    (index: number, sizes: [number, number]) => {
+      if (!flatEntries) return;
+
+      // Clone the sizes
+      const newSizes = flatEntries.map((e) => e.size);
+      newSizes[index] = sizes[0];
+      newSizes[index + 1] = sizes[1];
+
+      // Build updated entries with new sizes
+      const updatedEntries = flatEntries.map((e, i) => ({ ...e, size: newSizes[i] }));
+
+      // Write back to tree
+      writeFlatSizesToTree(updatedEntries, (splitId, splitSizes) => {
+        updatePaneSizes(splitId, splitSizes);
+      });
     },
-    [node, updatePaneSizes],
+    [flatEntries, updatePaneSizes],
   );
 
   if (node.type === "group") {
     return <PaneContainer pane={node} />;
   }
 
-  const isHorizontal = node.direction === "horizontal";
+  if (!flatEntries || flatEntries.length === 0) return null;
+
+  // If only 2 entries (no flattening benefit), still use the flat approach for consistency
+  const totalSize = flatEntries.reduce((sum, e) => sum + e.size, 0);
+  const handleWidth = 4; // w-1 = 4px
+  const handleCount = flatEntries.length - 1;
 
   return (
     <div className={`flex h-full w-full ${isHorizontal ? "flex-row" : "flex-col"}`}>
-      <div
-        className="min-h-0 min-w-0 overflow-hidden"
-        style={{
-          [isHorizontal ? "width" : "height"]: `${node.sizes[0]}%`,
-        }}
-      >
-        <PaneNodeRenderer node={node.children[0]} />
-      </div>
-      <PaneResizeHandle
-        direction={node.direction}
-        onResize={handleResize}
-        initialSizes={node.sizes}
-      />
-      <div
-        className="min-h-0 min-w-0 overflow-hidden"
-        style={{
-          [isHorizontal ? "width" : "height"]: `${node.sizes[1]}%`,
-        }}
-      >
-        <PaneNodeRenderer node={node.children[1]} />
-      </div>
+      {flatEntries.map((entry, i) => {
+        const pct = (entry.size / totalSize) * 100;
+        const handleDeduction = `${(handleWidth * handleCount) / flatEntries.length}px`;
+
+        return (
+          <div key={entry.node.id} className="contents">
+            <div
+              className="min-h-0 min-w-0 overflow-hidden"
+              style={{
+                [isHorizontal ? "width" : "height"]: `calc(${pct}% - ${handleDeduction})`,
+              }}
+            >
+              {entry.node.type === "split" && entry.node.direction !== node.direction ? (
+                <PaneNodeRenderer node={entry.node} />
+              ) : entry.node.type === "group" ? (
+                <PaneContainer pane={entry.node} />
+              ) : (
+                <PaneNodeRenderer node={entry.node} />
+              )}
+            </div>
+            {i < flatEntries.length - 1 && (
+              <FlatResizeHandle
+                direction={node.direction}
+                index={i}
+                entries={flatEntries}
+                onResize={handleFlatResize}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
+  );
+}
+
+interface FlatResizeHandleProps {
+  direction: "horizontal" | "vertical";
+  index: number;
+  entries: FlatEntry[];
+  onResize: (index: number, sizes: [number, number]) => void;
+}
+
+function FlatResizeHandle({ direction, index, entries, onResize }: FlatResizeHandleProps) {
+  const handleResize = useCallback(
+    (sizes: [number, number]) => {
+      onResize(index, sizes);
+    },
+    [index, onResize],
+  );
+
+  const initialSizes: [number, number] = [entries[index].size, entries[index + 1].size];
+
+  return (
+    <PaneResizeHandle direction={direction} onResize={handleResize} initialSizes={initialSizes} />
   );
 }
 

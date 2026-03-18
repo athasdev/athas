@@ -14,8 +14,7 @@ import ProjectPickerDialog from "./project-picker-dialog";
 
 const DRAG_THRESHOLD = 5;
 
-const isRemoteProjectTab = (tab: ProjectTab) =>
-  tab.path.startsWith("remote://");
+const isRemoteProjectTab = (tab: ProjectTab) => tab.path.startsWith("remote://");
 
 interface TabPosition {
   index: number;
@@ -144,11 +143,7 @@ const ProjectTabs = () => {
         }
 
         if (prev.isDragging) {
-          const dropTarget = calculateDropTarget(
-            e.clientX,
-            prev.draggedIndex,
-            prev.tabPositions,
-          );
+          const dropTarget = calculateDropTarget(e.clientX, prev.draggedIndex, prev.tabPositions);
           return {
             ...prev,
             currentPosition,
@@ -164,10 +159,7 @@ const ProjectTabs = () => {
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent, index: number, _tab: ProjectTab) => {
-      if (
-        e.button !== 0 ||
-        (e.target as HTMLElement).closest("button.close-button")
-      ) {
+      if (e.button !== 0 || (e.target as HTMLElement).closest("button.close-button")) {
         return;
       }
 
@@ -295,8 +287,7 @@ const ProjectTabs = () => {
     };
 
     const handleGlobalMouseUp = () => {
-      const { isDragging, draggedIndex, dropTargetIndex } =
-        dragStateRef.current;
+      const { isDragging, draggedIndex, dropTargetIndex } = dragStateRef.current;
 
       if (
         isDragging &&
@@ -369,9 +360,7 @@ const ProjectTabs = () => {
                     ? "bg-hover/80 text-text"
                     : "text-text-lighter hover:bg-hover/50 hover:text-text",
                   isRemote &&
-                    (tab.isActive
-                      ? "text-sky-100"
-                      : "text-sky-200/85 hover:text-sky-100"),
+                    (tab.isActive ? "text-sky-100" : "text-sky-200/85 hover:text-sky-100"),
                   isSwitchingProject && "cursor-wait",
                   isDraggedTab && "opacity-30",
                 )}

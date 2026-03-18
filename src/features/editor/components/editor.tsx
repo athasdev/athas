@@ -71,6 +71,7 @@ export function Editor({
   onClick,
 }: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const contentContainerRef = useRef<HTMLDivElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const multiCursorRef = useRef<HTMLDivElement>(null);
   const searchHighlightRef = useRef<HTMLDivElement>(null);
@@ -82,6 +83,7 @@ export function Editor({
 
   const [editorScrollTop, setEditorScrollTop] = useState(0);
   const [editorViewportHeight, setEditorViewportHeight] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
 
   const globalActiveBufferId = useBufferStore.use.activeBufferId();
   const bufferId = propBufferId ?? globalActiveBufferId;
@@ -141,6 +143,18 @@ export function Editor({
   }, [filePath, content, foldActions]);
 
   const foldTransform = useFoldTransform(filePath, content);
+
+  // Track content area width for word wrap gutter measurement
+  useEffect(() => {
+    const el = contentContainerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      setContentWidth(width);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const hasSyntaxHighlighting = useMemo(() => {
     if (!filePath) return false;
@@ -698,10 +712,14 @@ export function Editor({
           onLineClick={handleLineClick}
           onGitIndicatorClick={inlineDiff.toggle}
           foldMapping={foldTransform.hasActiveFolds ? foldTransform.mapping : undefined}
+          wordWrap={wordWrap}
+          lines={lines}
+          contentWidth={contentWidth}
         />
       )}
 
       <div
+        ref={contentContainerRef}
         className={`overlay-editor-container relative min-h-0 min-w-0 flex-1 bg-primary-bg ${className || ""}`}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}

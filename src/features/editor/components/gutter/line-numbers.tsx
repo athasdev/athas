@@ -32,7 +32,6 @@ function LineNumbersComponent({
   const actualCursorLine = useEditorStateStore.use.cursorPosition().line;
   const lineNumberWidth = calculateLineNumberWidth(totalLines);
 
-  // Convert actual cursor line to virtual for comparison when folds are active
   const visualCursorLine = useMemo(() => {
     if (foldMapping?.actualToVirtual) {
       return foldMapping.actualToVirtual.get(actualCursorLine) ?? actualCursorLine;
