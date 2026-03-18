@@ -13,29 +13,36 @@ interface SearchMatch {
   length: number;
 }
 
+type SearchDirection = "forward" | "backward";
+
 interface VimSearchState {
   searchTerm: string;
   isSearchMode: boolean;
+  searchDirection: SearchDirection;
   matches: SearchMatch[];
   currentMatchIndex: number;
   lastSearchTerm: string; // For 'n' and 'N' commands
+  lastSearchDirection: SearchDirection; // For 'n' and 'N' commands
 }
 
 const defaultSearchState: VimSearchState = {
   searchTerm: "",
   isSearchMode: false,
+  searchDirection: "forward",
   matches: [],
   currentMatchIndex: -1,
   lastSearchTerm: "",
+  lastSearchDirection: "forward",
 };
 
 const useVimSearchStoreBase = create(
   immer(
     combine(defaultSearchState, (set, get) => ({
       actions: {
-        startSearch: () => {
+        startSearch: (direction: SearchDirection = "forward") => {
           set((state) => {
             state.isSearchMode = true;
+            state.searchDirection = direction;
             state.searchTerm = "";
             state.matches = [];
             state.currentMatchIndex = -1;
@@ -115,6 +122,7 @@ const useVimSearchStoreBase = create(
           if (state.searchTerm) {
             set((draft) => {
               draft.lastSearchTerm = draft.searchTerm;
+              draft.lastSearchDirection = draft.searchDirection;
               draft.isSearchMode = false;
               draft.searchTerm = "";
             });
@@ -152,29 +160,44 @@ const useVimSearchStoreBase = create(
         findNext: () => {
           const state = get();
           if (state.lastSearchTerm && state.matches.length === 0) {
-            // Re-perform search if no current matches
             useVimSearchStoreBase.getState().actions.performSearch(state.lastSearchTerm);
             return;
           }
 
           if (state.matches.length > 0) {
-            const nextIndex = (state.currentMatchIndex + 1) % state.matches.length;
-            useVimSearchStoreBase.getState().actions.goToMatch(nextIndex);
+            // 'n' goes in the direction of the original search
+            if (state.lastSearchDirection === "backward") {
+              const prevIndex =
+                state.currentMatchIndex <= 0
+                  ? state.matches.length - 1
+                  : state.currentMatchIndex - 1;
+              useVimSearchStoreBase.getState().actions.goToMatch(prevIndex);
+            } else {
+              const nextIndex = (state.currentMatchIndex + 1) % state.matches.length;
+              useVimSearchStoreBase.getState().actions.goToMatch(nextIndex);
+            }
           }
         },
 
         findPrevious: () => {
           const state = get();
           if (state.lastSearchTerm && state.matches.length === 0) {
-            // Re-perform search if no current matches
             useVimSearchStoreBase.getState().actions.performSearch(state.lastSearchTerm);
             return;
           }
 
           if (state.matches.length > 0) {
-            const prevIndex =
-              state.currentMatchIndex <= 0 ? state.matches.length - 1 : state.currentMatchIndex - 1;
-            useVimSearchStoreBase.getState().actions.goToMatch(prevIndex);
+            // 'N' goes opposite to the direction of the original search
+            if (state.lastSearchDirection === "backward") {
+              const nextIndex = (state.currentMatchIndex + 1) % state.matches.length;
+              useVimSearchStoreBase.getState().actions.goToMatch(nextIndex);
+            } else {
+              const prevIndex =
+                state.currentMatchIndex <= 0
+                  ? state.matches.length - 1
+                  : state.currentMatchIndex - 1;
+              useVimSearchStoreBase.getState().actions.goToMatch(prevIndex);
+            }
           }
         },
 

@@ -134,6 +134,13 @@ export const executeVimCommand = (keys: string[]): boolean => {
       const motion = getMotion(command.motion);
       if (!motion) return false;
 
+      // Push to jump list for large-jump motions
+      const jumpMotions = new Set(["gg", "G", "%", "{", "}"]);
+      if (jumpMotions.has(command.motion)) {
+        const vimStore = useVimStore.getState();
+        vimStore.actions.pushJump(context.cursor.line, context.cursor.column);
+      }
+
       const motionCountArg = command.count === undefined ? undefined : command.count;
       const range = motion.calculate(context.cursor, context.lines, motionCountArg, {
         explicitCount,

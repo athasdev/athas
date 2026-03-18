@@ -2,6 +2,7 @@
  * Central registry for all vim motions
  */
 
+import { matchBracket } from "../motions/bracket-motions";
 import {
   charDown,
   charLeft,
@@ -17,6 +18,7 @@ import {
   lineFirstNonBlankUnderscore,
   lineStart,
 } from "../motions/line-motions";
+import { paragraphBackward, paragraphForward } from "../motions/paragraph-motions";
 import { viewportBottom, viewportMiddle, viewportTop } from "../motions/viewport-motions";
 import {
   WORDBackward,
@@ -62,6 +64,13 @@ export const motionRegistry: Record<string, Motion> = {
   H: viewportTop,
   M: viewportMiddle,
   L: viewportBottom,
+
+  // Paragraph motions
+  "}": paragraphForward,
+  "{": paragraphBackward,
+
+  // Bracket matching
+  "%": matchBracket,
 };
 
 /**

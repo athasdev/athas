@@ -3,6 +3,7 @@
  */
 
 import type { Operator } from "../core/types";
+import { lowercaseOperator, uppercaseOperator } from "./case-operator";
 import { changeOperator } from "./change-operator";
 import { deleteOperator } from "./delete-operator";
 import { indentOperator } from "./indent-operator";
@@ -18,6 +19,8 @@ export const operatorRegistry: Record<string, Operator> = {
   y: yankOperator,
   ">": indentOperator,
   "<": outdentOperator,
+  gu: lowercaseOperator,
+  gU: uppercaseOperator,
 };
 
 /**

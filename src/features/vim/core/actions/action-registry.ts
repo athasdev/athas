@@ -3,6 +3,8 @@
  */
 
 import type { Action } from "../core/types";
+import { joinLinesAction } from "./join-lines-action";
+import { joinLinesNoSpaceAction } from "./join-lines-no-space-action";
 import { pasteAction, pasteBeforeAction } from "./paste-actions";
 import { repeatAction } from "./repeat-action";
 import { replaceAction } from "./replace-action";
@@ -14,6 +16,8 @@ import { toggleCaseAction } from "./toggle-case-action";
 export const actionRegistry: Record<string, Action> = {
   p: pasteAction,
   P: pasteBeforeAction,
+  J: joinLinesAction,
+  gJ: joinLinesNoSpaceAction,
   "~": toggleCaseAction,
   ".": repeatAction,
   r: replaceAction,

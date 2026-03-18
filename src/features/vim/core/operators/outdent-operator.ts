@@ -14,20 +14,14 @@ export const outdentOperator: Operator = {
 
   execute: (range: VimRange, context: EditorContext): void => {
     const { lines, updateContent, setCursorPosition, cursor, tabSize } = context;
-    const outdentLevel = tabSize;
 
-    // Handle linewise outdent
     const startLine = Math.min(range.start.line, range.end.line);
     const endLine = Math.max(range.start.line, range.end.line);
 
     const outdentedLines = lines.map((line, index) => {
       if (index >= startLine && index <= endLine) {
-        let resultLine = line;
-        // Remove up to 4 spaces per outdent level
-        for (let i = 0; i < outdentLevel; i++) {
-          resultLine = resultLine.replace(/^ {1,4}/, "");
-        }
-        return resultLine;
+        const spacesToRemove = Math.min(tabSize, line.length - line.trimStart().length);
+        return line.slice(spacesToRemove);
       }
       return line;
     });

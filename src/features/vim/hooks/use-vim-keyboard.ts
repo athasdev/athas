@@ -1,13 +1,15 @@
 import { useEffect, useRef } from "react";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
-import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
+import { calculateOffsetFromPosition, getLineHeight } from "@/features/editor/utils/position";
 import { useSettingsStore } from "@/features/settings/store";
 import {
   executeReplaceCommand,
   executeVimCommand,
 } from "@/features/vim/core/core/command-executor";
 import { getCommandParseStatus, parseVimCommand } from "@/features/vim/core/core/command-parser";
+import { createFindCharMotion } from "@/features/vim/core/motions/character-motions";
 import { createVimEditing } from "@/features/vim/stores/vim-editing";
 import { useVimSearchStore } from "@/features/vim/stores/vim-search";
 import { useVimStore } from "@/features/vim/stores/vim-store";
@@ -24,6 +26,16 @@ type VisualPoint = {
 
 const getDocumentLength = (lines: string[]): number =>
   lines.reduce((sum, line, index) => sum + line.length + (index < lines.length - 1 ? 1 : 0), 0);
+
+const getVisibleLineCount = (): number => {
+  const fontSize = useEditorSettingsStore.getState().fontSize;
+  const lineHeight = getLineHeight(fontSize);
+
+  const viewport = document.querySelector(".editor-viewport") as HTMLElement | null;
+  const viewportHeight = viewport?.clientHeight ?? window.innerHeight;
+
+  return Math.max(1, Math.floor(viewportHeight / lineHeight));
+};
 
 const getVisualSelectionOffsets = (
   start: VisualPoint | null,
@@ -249,10 +261,15 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
         target.tagName === "TEXTAREA" && target.classList.contains("editor-textarea");
 
       // Allow keyboard shortcuts with modifiers (Cmd/Ctrl/Alt) to pass through
-      // Exception: Ctrl+r is vim redo
+      // Exceptions: Ctrl+r (redo), Ctrl+d/u/f/b (scroll motions), Ctrl+o/i (jump list)
       if (
         (e.metaKey || e.ctrlKey || e.altKey) &&
-        !(e.ctrlKey && e.key === "r" && !e.metaKey && !e.altKey)
+        !(
+          e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey &&
+          ["r", "d", "u", "f", "b", "o", "i"].includes(e.key)
+        )
       ) {
         return;
       }
@@ -321,10 +338,212 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
         const buffer = [...useVimStore.getState().keyBuffer];
         const command = parseVimCommand(buffer);
         const count = command?.count ?? 1;
-        const commandKeys = [...buffer, replacementChar];
         const success = executeReplaceCommand(replacementChar, { count });
         if (!success) {
-          console.warn("Failed to execute replace command:", commandKeys.join(""));
+          clearKeyBuffer();
+          clearLastKey();
+          return true;
+        }
+
+        clearKeyBuffer();
+        clearLastKey();
+        return true;
+      }
+
+      // Handle " (register selection) - wait for register name
+      if (currentLastKey === '"') {
+        if (key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          clearLastKey();
+          clearKeyBuffer();
+          return true;
+        }
+
+        if (key.length !== 1) {
+          clearLastKey();
+          clearKeyBuffer();
+          return false;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const { setCurrentRegister } = useVimStore.getState().actions;
+        setCurrentRegister(key);
+        clearLastKey();
+        clearKeyBuffer();
+        return true;
+      }
+
+      // Handle m (set mark) - wait for mark name
+      if (currentLastKey === "m") {
+        if (key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          clearLastKey();
+          clearKeyBuffer();
+          return true;
+        }
+
+        if (key.length !== 1 || !/[a-zA-Z]/.test(key)) {
+          clearLastKey();
+          clearKeyBuffer();
+          return false;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const curPos = getCursorPosition();
+        useVimStore.getState().actions.setMark(key, curPos.line, curPos.column);
+        clearLastKey();
+        clearKeyBuffer();
+        return true;
+      }
+
+      // Handle ' (jump to mark line) - wait for mark name
+      if (currentLastKey === "'") {
+        if (key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          clearLastKey();
+          clearKeyBuffer();
+          return true;
+        }
+
+        if (key.length !== 1 || !/[a-zA-Z]/.test(key)) {
+          clearLastKey();
+          clearKeyBuffer();
+          return false;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const mark = useVimStore.getState().actions.getMark(key);
+        if (mark) {
+          const curPos = getCursorPosition();
+          useVimStore.getState().actions.pushJump(curPos.line, curPos.column);
+
+          const lines = getLines();
+          const targetLine = Math.min(mark.line, lines.length - 1);
+          const lineContent = lines[targetLine];
+          let firstNonBlank = 0;
+          while (firstNonBlank < lineContent.length && /\s/.test(lineContent[firstNonBlank])) {
+            firstNonBlank++;
+          }
+
+          const newOffset = calculateOffsetFromPosition(targetLine, firstNonBlank, lines);
+          setCursorPosition({
+            line: targetLine,
+            column: firstNonBlank,
+            offset: newOffset,
+          });
+
+          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.selectionStart = textarea.selectionEnd = newOffset;
+            textarea.dispatchEvent(new Event("select"));
+          }
+        }
+
+        clearLastKey();
+        clearKeyBuffer();
+        return true;
+      }
+
+      // Handle ` (jump to exact mark position) - wait for mark name
+      if (currentLastKey === "`") {
+        if (key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          clearLastKey();
+          clearKeyBuffer();
+          return true;
+        }
+
+        if (key.length !== 1 || !/[a-zA-Z]/.test(key)) {
+          clearLastKey();
+          clearKeyBuffer();
+          return false;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const mark = useVimStore.getState().actions.getMark(key);
+        if (mark) {
+          const curPos = getCursorPosition();
+          useVimStore.getState().actions.pushJump(curPos.line, curPos.column);
+
+          const lines = getLines();
+          const targetLine = Math.min(mark.line, lines.length - 1);
+          const lineContent = lines[targetLine];
+          const targetColumn = Math.min(mark.column, lineContent.length);
+
+          const newOffset = calculateOffsetFromPosition(targetLine, targetColumn, lines);
+          setCursorPosition({
+            line: targetLine,
+            column: targetColumn,
+            offset: newOffset,
+          });
+
+          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.selectionStart = textarea.selectionEnd = newOffset;
+            textarea.dispatchEvent(new Event("select"));
+          }
+        }
+
+        clearLastKey();
+        clearKeyBuffer();
+        return true;
+      }
+
+      if (
+        currentLastKey === "f" ||
+        currentLastKey === "F" ||
+        currentLastKey === "t" ||
+        currentLastKey === "T"
+      ) {
+        if (key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          clearLastKey();
+          clearKeyBuffer();
+          return true;
+        }
+
+        if (key.length !== 1) {
+          clearLastKey();
+          clearKeyBuffer();
+          return false;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const direction = currentLastKey === "f" || currentLastKey === "t" ? "forward" : "backward";
+        const type = currentLastKey === "f" || currentLastKey === "F" ? "find" : "to";
+
+        const buffer = [...useVimStore.getState().keyBuffer];
+        buffer.pop();
+        const command = parseVimCommand(buffer);
+        const count = command?.count ?? 1;
+
+        const motion = createFindCharMotion(key, direction, type);
+        const curPos = getCursorPosition();
+        const lines = getLines();
+        const range = motion.calculate(curPos, lines, count);
+
+        if (range.end.line !== curPos.line || range.end.column !== curPos.column) {
+          setCursorPosition(range.end);
+          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.selectionStart = textarea.selectionEnd = range.end.offset;
+            textarea.dispatchEvent(new Event("select"));
+          }
         }
 
         clearKeyBuffer();
@@ -350,7 +569,11 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           const lines = getLines();
           const newColumn = Math.min(lines[currentPos.line].length, currentPos.column + 1);
           const newOffset = calculateOffsetFromPosition(currentPos.line, newColumn, lines);
-          const newPosition = { line: currentPos.line, column: newColumn, offset: newOffset };
+          const newPosition = {
+            line: currentPos.line,
+            column: newColumn,
+            offset: newOffset,
+          };
           setCursorPosition(newPosition);
 
           // Update textarea cursor
@@ -376,13 +599,38 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           vimEdit.insertAtLineStart();
           setMode("insert");
           return true;
-        case "o":
+        case "o": {
+          if (e.ctrlKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearKeyBuffer();
+            const jumpEntry = useVimStore.getState().actions.jumpBack();
+            if (jumpEntry) {
+              const lines = getLines();
+              const targetLine = Math.min(jumpEntry.line, lines.length - 1);
+              const lineContent = lines[targetLine];
+              const targetColumn = Math.min(jumpEntry.column, lineContent.length);
+              const newOffset = calculateOffsetFromPosition(targetLine, targetColumn, lines);
+              setCursorPosition({
+                line: targetLine,
+                column: targetColumn,
+                offset: newOffset,
+              });
+              const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+              if (textarea) {
+                textarea.selectionStart = textarea.selectionEnd = newOffset;
+                textarea.dispatchEvent(new Event("select"));
+              }
+            }
+            return true;
+          }
           e.preventDefault();
           e.stopPropagation();
           clearKeyBuffer();
           vimEdit.openLineBelow();
           setMode("insert");
           return true;
+        }
         case "O":
           e.preventDefault();
           e.stopPropagation();
@@ -402,7 +650,10 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           clearKeyBuffer();
           const currentPos = useEditorStateStore.getState().cursorPosition;
           const lines = useEditorViewStore.getState().lines;
-          enterVisualMode("char", { line: currentPos.line, column: currentPos.column });
+          enterVisualMode("char", {
+            line: currentPos.line,
+            column: currentPos.column,
+          });
 
           // Initialize textarea selection at current position
           const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
@@ -453,11 +704,71 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           setMode("normal");
           return true;
         case "u":
+          if (e.ctrlKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearKeyBuffer();
+            {
+              const halfPage = Math.max(1, Math.floor(getVisibleLineCount() / 2));
+              const keys = [...String(halfPage).split(""), "k"];
+              executeVimCommand(keys);
+            }
+            return true;
+          }
           e.preventDefault();
           e.stopPropagation();
           clearKeyBuffer();
           vimEdit.undo();
           return true;
+        case "d": {
+          if (e.ctrlKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearKeyBuffer();
+            const halfPage = Math.max(1, Math.floor(getVisibleLineCount() / 2));
+            const keys = [...String(halfPage).split(""), "j"];
+            executeVimCommand(keys);
+            return true;
+          }
+          break;
+        }
+        case "f": {
+          if (e.ctrlKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearKeyBuffer();
+            const fullPage = Math.max(1, getVisibleLineCount() - 2);
+            const keys = [...String(fullPage).split(""), "j"];
+            executeVimCommand(keys);
+            return true;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          addToKeyBuffer(key);
+          setLastKey(key);
+          return true;
+        }
+        case "b": {
+          if (e.ctrlKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearKeyBuffer();
+            const fullPage = Math.max(1, getVisibleLineCount() - 2);
+            const keys = [...String(fullPage).split(""), "k"];
+            executeVimCommand(keys);
+            return true;
+          }
+          break;
+        }
+        case "?": {
+          e.preventDefault();
+          e.stopPropagation();
+          clearKeyBuffer();
+          const curPos = getCursorPosition();
+          useVimStore.getState().actions.pushJump(curPos.line, curPos.column);
+          startSearch("backward");
+          return true;
+        }
         case "r": {
           if (e.ctrlKey) {
             e.preventDefault();
@@ -497,24 +808,133 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           clearKeyBuffer();
           vimEdit.deleteCharBefore();
           return true;
-        case "/":
+        case "/": {
           e.preventDefault();
           e.stopPropagation();
           clearKeyBuffer();
+          const curPos = getCursorPosition();
+          useVimStore.getState().actions.pushJump(curPos.line, curPos.column);
           startSearch();
           return true;
-        case "n":
+        }
+        case "n": {
           e.preventDefault();
           e.stopPropagation();
           clearKeyBuffer();
+          const curPos = getCursorPosition();
+          useVimStore.getState().actions.pushJump(curPos.line, curPos.column);
           findNext();
           return true;
-        case "N":
+        }
+        case "N": {
           e.preventDefault();
           e.stopPropagation();
           clearKeyBuffer();
+          const curPos = getCursorPosition();
+          useVimStore.getState().actions.pushJump(curPos.line, curPos.column);
           findPrevious();
           return true;
+        }
+        case "F":
+        case "t":
+        case "T":
+          e.preventDefault();
+          e.stopPropagation();
+          addToKeyBuffer(key);
+          setLastKey(key);
+          return true;
+        case "*": {
+          e.preventDefault();
+          e.stopPropagation();
+          clearKeyBuffer();
+          const curPos = getCursorPosition();
+          const lines = getLines();
+          useVimStore.getState().actions.pushJump(curPos.line, curPos.column);
+          const line = lines[curPos.line];
+          let wordStart = curPos.column;
+          let wordEnd = curPos.column;
+          while (wordStart > 0 && /\w/.test(line[wordStart - 1])) wordStart--;
+          while (wordEnd < line.length && /\w/.test(line[wordEnd])) wordEnd++;
+          const word = line.slice(wordStart, wordEnd);
+          if (word) {
+            const { performSearch, findNext: searchFindNext } =
+              useVimSearchStore.getState().actions;
+            performSearch(word);
+            searchFindNext();
+          }
+          return true;
+        }
+        case "#": {
+          e.preventDefault();
+          e.stopPropagation();
+          clearKeyBuffer();
+          const curPos = getCursorPosition();
+          const lines = getLines();
+          useVimStore.getState().actions.pushJump(curPos.line, curPos.column);
+          const line = lines[curPos.line];
+          let wordStart = curPos.column;
+          let wordEnd = curPos.column;
+          while (wordStart > 0 && /\w/.test(line[wordStart - 1])) wordStart--;
+          while (wordEnd < line.length && /\w/.test(line[wordEnd])) wordEnd++;
+          const word = line.slice(wordStart, wordEnd);
+          if (word) {
+            const { performSearch, findPrevious: searchFindPrevious } =
+              useVimSearchStore.getState().actions;
+            performSearch(word);
+            searchFindPrevious();
+          }
+          return true;
+        }
+        case '"':
+          e.preventDefault();
+          e.stopPropagation();
+          clearKeyBuffer();
+          setLastKey('"');
+          return true;
+        case "m":
+          e.preventDefault();
+          e.stopPropagation();
+          clearKeyBuffer();
+          setLastKey("m");
+          return true;
+        case "'":
+          e.preventDefault();
+          e.stopPropagation();
+          clearKeyBuffer();
+          setLastKey("'");
+          return true;
+        case "`":
+          e.preventDefault();
+          e.stopPropagation();
+          clearKeyBuffer();
+          setLastKey("`");
+          return true;
+      }
+
+      // Handle Ctrl+i (jump forward)
+      if (e.ctrlKey && key === "i") {
+        e.preventDefault();
+        e.stopPropagation();
+        clearKeyBuffer();
+        const jumpEntry = useVimStore.getState().actions.jumpForward();
+        if (jumpEntry) {
+          const lines = getLines();
+          const targetLine = Math.min(jumpEntry.line, lines.length - 1);
+          const lineContent = lines[targetLine];
+          const targetColumn = Math.min(jumpEntry.column, lineContent.length);
+          const newOffset = calculateOffsetFromPosition(targetLine, targetColumn, lines);
+          setCursorPosition({
+            line: targetLine,
+            column: targetColumn,
+            offset: newOffset,
+          });
+          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.selectionStart = textarea.selectionEnd = newOffset;
+            textarea.dispatchEvent(new Event("select"));
+          }
+        }
+        return true;
       }
 
       // Handle arrow keys by mapping them to vim motions
@@ -539,10 +959,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
             break;
         }
 
-        const success = executeVimCommand([vimKey]);
-        if (!success) {
-          console.warn("Failed to execute arrow key motion:", vimKey);
-        }
+        executeVimCommand([vimKey]);
         return true;
       }
 
@@ -566,12 +983,8 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
       addToKeyBuffer(key);
 
       if (parseStatus === "complete") {
-        const success = executeVimCommand(candidateBuffer);
+        executeVimCommand(candidateBuffer);
         clearKeyBuffer();
-
-        if (!success) {
-          console.warn("Failed to execute vim command:", candidateBuffer.join(""));
-        }
         return true;
       }
 
@@ -590,7 +1003,11 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           const lines = getLines();
           const newColumn = currentPos.column - 1;
           const newOffset = calculateOffsetFromPosition(currentPos.line, newColumn, lines);
-          const newPosition = { line: currentPos.line, column: newColumn, offset: newOffset };
+          const newPosition = {
+            line: currentPos.line,
+            column: newColumn,
+            offset: newOffset,
+          };
           setCursorPosition(newPosition);
 
           const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
@@ -610,6 +1027,64 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
       const key = e.key;
       const currentVisualMode = useVimStore.getState().visualMode;
       const visualSelection = useVimStore.getState().visualSelection;
+      const currentLastKey = useVimStore.getState().lastKey;
+
+      if (
+        currentLastKey === "f" ||
+        currentLastKey === "F" ||
+        currentLastKey === "t" ||
+        currentLastKey === "T"
+      ) {
+        if (key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          clearLastKey();
+          clearKeyBuffer();
+          return true;
+        }
+
+        if (key.length !== 1) {
+          clearLastKey();
+          clearKeyBuffer();
+          return false;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const direction = currentLastKey === "f" || currentLastKey === "t" ? "forward" : "backward";
+        const type = currentLastKey === "f" || currentLastKey === "F" ? "find" : "to";
+
+        const motion = createFindCharMotion(key, direction, type);
+        const curPos = getCursorPosition();
+        const lines = getLines();
+        const range = motion.calculate(curPos, lines, 1);
+
+        if (range.end.line !== curPos.line || range.end.column !== curPos.column) {
+          setCursorPosition(range.end);
+
+          const { setVisualSelection } = useVimStore.use.actions();
+          if (visualSelection.start) {
+            const nextEnd = { line: range.end.line, column: range.end.column };
+            setVisualSelection(visualSelection.start, nextEnd);
+
+            const selectionOffsets = getVisualSelectionOffsets(
+              visualSelection.start,
+              nextEnd,
+              lines,
+              currentVisualMode,
+            );
+            const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
+            if (textarea && selectionOffsets) {
+              applyTextareaSelection(textarea, selectionOffsets);
+            }
+          }
+        }
+
+        clearKeyBuffer();
+        clearLastKey();
+        return true;
+      }
 
       switch (key) {
         case "Escape":
@@ -664,12 +1139,19 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           setMode("normal");
           return true;
         }
+        case "f":
+        case "F":
+        case "t":
+        case "T":
+          e.preventDefault();
+          e.stopPropagation();
+          setLastKey(key);
+          return true;
       }
 
       const applyMotion = (motionKeys: string[]): boolean => {
         const success = executeVimCommand(motionKeys);
         if (!success) {
-          console.warn("Failed to execute visual motion:", motionKeys.join(""));
           return false;
         }
 
