@@ -3,8 +3,6 @@ import { lazy, Suspense, useEffect } from "react";
 import { useLspInitialization } from "@/features/editor/hooks/use-lsp-initialization";
 import { useKeymapContext } from "@/features/keymaps/hooks/use-keymap-context";
 import { useKeymaps } from "@/features/keymaps/hooks/use-keymaps";
-import { useRemoteConnection } from "@/features/remote/hooks/use-remote-connection";
-import { useRemoteWindowClose } from "@/features/remote/hooks/use-remote-window-close";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
@@ -75,8 +73,6 @@ function App() {
   useExtensionInstallPrompt();
   useKeymapContext();
   useKeymaps();
-  useRemoteConnection();
-  useRemoteWindowClose();
   useContextMenuPrevention();
   useLspInitialization();
 

@@ -13,11 +13,14 @@ import { useGitBlameStore } from "@/features/git/stores/git-blame-store";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
 import { isDiffFile, parseRawDiffContent } from "@/features/git/utils/git-diff-parser";
+import { connectionStore } from "@/features/remote/services/remote-connection-store";
+import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import { toast } from "@/ui/toast-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { FileEntry } from "../types/app";
 import type { FsActions, FsState } from "../types/interface";
@@ -81,6 +84,30 @@ const readPersistedTerminalSessions = () => {
 const readPersistedAiWorkspaceSession = () =>
   useAIChatStore.getState().getWorkspaceSessionSnapshot(useBufferStore.getState().buffers);
 
+const reconnectRemoteConnection = async (connectionId: string) => {
+  const connection = await connectionStore.getConnection(connectionId);
+  if (!connection) {
+    throw new Error("Remote connection not found.");
+  }
+
+  if (connection.isConnected) {
+    return connection;
+  }
+
+  await invoke("ssh_connect", {
+    connectionId: connection.id,
+    host: connection.host,
+    port: connection.port,
+    username: connection.username,
+    password: connection.password || null,
+    keyPath: connection.keyPath || null,
+    useSftp: connection.type === "sftp",
+  });
+
+  await connectionStore.updateConnectionStatus(connection.id, true, new Date().toISOString());
+  return connection;
+};
+
 export const useFileSystemStore = createSelectors(
   create<FsState & FsActions>()(
     immer((set, get) => ({
@@ -90,9 +117,6 @@ export const useFileSystemStore = createSelectors(
       filesVersion: 0,
       isFileTreeLoading: false,
       isSwitchingProject: false,
-      isRemoteWindow: false,
-      remoteConnectionId: undefined,
-      remoteConnectionName: undefined,
       projectFilesCache: undefined,
 
       // Actions
@@ -304,12 +328,14 @@ export const useFileSystemStore = createSelectors(
         return true;
       },
 
-      handleOpenRemoteProject: async (connectionId: string, connectionName: string) => {
+      handleOpenRemoteProject: async (connectionId: string, _connectionName: string) => {
         set((state) => {
           state.isFileTreeLoading = true;
         });
 
         try {
+          const connection = await reconnectRemoteConnection(connectionId);
+
           // Read remote root directory
           const entries = await invoke<
             Array<{ name: string; path: string; is_dir: boolean; size: number }>
@@ -330,12 +356,13 @@ export const useFileSystemStore = createSelectors(
           const remotePath = `remote://${connectionId}/`;
 
           // Add project to workspace tabs
-          useWorkspaceTabsStore.getState().addProjectTab(remotePath, connectionName);
+          useWorkspaceTabsStore.getState().addProjectTab(remotePath, connection.name);
+          const activeProjectTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
 
           // Wrap with root folder
           const wrappedFileTree: FileEntry[] = [
             {
-              name: connectionName,
+              name: connection.name,
               path: remotePath,
               isDir: true,
               children: fileTree,
@@ -346,17 +373,18 @@ export const useFileSystemStore = createSelectors(
           useFileTreeStore.getState().setExpandedPaths(new Set([remotePath]));
 
           // Update project store
-          const { setRootFolderPath, setProjectName } = useProjectStore.getState();
+          const { setRootFolderPath, setProjectName, setActiveProjectId } = useProjectStore.getState();
           setRootFolderPath(remotePath);
-          setProjectName(connectionName);
+          setProjectName(connection.name);
+          setActiveProjectId(activeProjectTab?.id);
+
+          await useFileWatcherStore.getState().setProjectRoot("");
+          useGitStore.getState().actions.setWorkspaceGitStatus(null, null);
 
           set((state) => {
             state.isFileTreeLoading = false;
             state.files = wrappedFileTree;
             state.rootFolderPath = remotePath;
-            state.isRemoteWindow = true;
-            state.remoteConnectionId = connectionId;
-            state.remoteConnectionName = connectionName;
             state.filesVersion++;
             state.projectFilesCache = undefined;
           });
@@ -364,6 +392,7 @@ export const useFileSystemStore = createSelectors(
           return true;
         } catch (error) {
           console.error("Failed to open remote project:", error);
+          toast.error(error instanceof Error ? error.message : "Failed to open remote project.");
           set((state) => {
             state.isFileTreeLoading = false;
           });
@@ -1306,6 +1335,8 @@ export const useFileSystemStore = createSelectors(
           return true;
         }
 
+        const remoteTabInfo = parseRemotePath(tab.path);
+
         const { buffers, activeBufferId, actions: bufferActions } = useBufferStore.getState();
         const currentBuffers = [...buffers];
         const currentBufferIds = currentBuffers.map((buffer) => buffer.id);
@@ -1334,49 +1365,57 @@ export const useFileSystemStore = createSelectors(
             );
           }
 
-          const entries = await readDirectoryContents(tab.path);
-          const fileTree = sortFileEntries(entries);
-          const wrappedFileTree = wrapWithRootFolder(fileTree, tab.path, tab.name);
-
-          useFileTreeStore.getState().setExpandedPaths(new Set([tab.path]));
-
-          const { setRootFolderPath, setProjectName, setActiveProjectId } =
-            useProjectStore.getState();
-          setRootFolderPath(tab.path);
-          setProjectName(tab.name);
-          setActiveProjectId(projectId);
-
           useWorkspaceTabsStore.getState().setActiveProjectTab(projectId);
 
-          gitDiffCache.clear();
-
-          set((state) => {
-            state.isFileTreeLoading = false;
-            state.files = wrappedFileTree;
-            state.rootFolderPath = tab.path;
-            state.filesVersion++;
-            state.projectFilesCache = undefined;
-          });
-
-          useGitStore.getState().actions.setWorkspaceGitStatus(null, tab.path);
-
-          void (async () => {
-            try {
-              await useFileWatcherStore.getState().setProjectRoot(tab.path);
-              const gitStatus = await getGitStatus(tab.path);
-
-              if (get().rootFolderPath !== tab.path) {
-                return;
-              }
-
-              useGitStore.getState().actions.setWorkspaceGitStatus(gitStatus, tab.path);
-            } catch (error) {
-              if (get().rootFolderPath === tab.path) {
-                useGitStore.getState().actions.setWorkspaceGitStatus(null, tab.path);
-              }
-              console.error("Failed to refresh workspace git state:", error);
+          if (remoteTabInfo) {
+            const reconnected = await get().handleOpenRemoteProject(remoteTabInfo.connectionId, tab.name);
+            if (!reconnected) {
+              throw new Error(`Failed to reconnect remote workspace "${tab.name}".`);
             }
-          })();
+            useProjectStore.getState().setActiveProjectId(projectId);
+          } else {
+            const entries = await readDirectoryContents(tab.path);
+            const fileTree = sortFileEntries(entries);
+            const wrappedFileTree = wrapWithRootFolder(fileTree, tab.path, tab.name);
+
+            useFileTreeStore.getState().setExpandedPaths(new Set([tab.path]));
+
+            const { setRootFolderPath, setProjectName, setActiveProjectId } =
+              useProjectStore.getState();
+            setRootFolderPath(tab.path);
+            setProjectName(tab.name);
+            setActiveProjectId(projectId);
+
+            gitDiffCache.clear();
+
+            set((state) => {
+              state.isFileTreeLoading = false;
+              state.files = wrappedFileTree;
+              state.rootFolderPath = tab.path;
+              state.filesVersion++;
+              state.projectFilesCache = undefined;
+            });
+
+            useGitStore.getState().actions.setWorkspaceGitStatus(null, tab.path);
+
+            void (async () => {
+              try {
+                await useFileWatcherStore.getState().setProjectRoot(tab.path);
+                const gitStatus = await getGitStatus(tab.path);
+
+                if (get().rootFolderPath !== tab.path) {
+                  return;
+                }
+
+                useGitStore.getState().actions.setWorkspaceGitStatus(gitStatus, tab.path);
+              } catch (error) {
+                if (get().rootFolderPath === tab.path) {
+                  useGitStore.getState().actions.setWorkspaceGitStatus(null, tab.path);
+                }
+                console.error("Failed to refresh workspace git state:", error);
+              }
+            })();
+          }
 
           const activeSessionBuffer = restorePlan.initialBuffer;
 
@@ -1424,6 +1463,7 @@ export const useFileSystemStore = createSelectors(
 
         const wasActive = tab.isActive;
         const isLastTab = tabs.length <= 1;
+        const remoteTabInfo = parseRemotePath(tab.path);
 
         // Save session before closing if it's the active project
         if (wasActive) {
@@ -1442,6 +1482,17 @@ export const useFileSystemStore = createSelectors(
             readPersistedTerminalSessions(),
             readPersistedAiWorkspaceSession(),
           );
+        }
+
+        if (remoteTabInfo) {
+          await invoke("ssh_disconnect_only", {
+            connectionId: remoteTabInfo.connectionId,
+          }).catch((error) => {
+            console.error("Failed to disconnect remote workspace:", error);
+          });
+          await connectionStore
+            .updateConnectionStatus(remoteTabInfo.connectionId, false)
+            .catch(() => {});
         }
 
         // Remove project tab

@@ -414,7 +414,6 @@ fn main() {
          search_chats,
          get_chat_stats,
          // Window commands
-         create_remote_window,
          create_embedded_webview,
          close_embedded_webview,
          navigate_embedded_webview,

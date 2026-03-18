@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { buildRemoteRootPath } from "@/features/remote/utils/remote-path";
 import { toast } from "@/ui/toast-store";
 import { connectionStore } from "./remote-connection-store";
 import type { RemoteConnection } from "../types";
@@ -28,6 +29,7 @@ export async function connectRemoteConnection(
   const { handleOpenRemoteProject } = useFileSystemStore.getState();
   if (handleOpenRemoteProject) {
     await handleOpenRemoteProject(connection.id, connection.name);
+    await useFileSystemStore.getState().restoreSession(buildRemoteRootPath(connection.id));
   }
 
   toast.success(`Connected to ${connection.name}`);
