@@ -247,7 +247,7 @@ pub fn github_get_pr_details(
 
    let json_fields = "number,title,body,state,author,createdAt,updatedAt,isDraft,reviewDecision,\
                       url,headRefName,baseRefName,additions,deletions,changedFiles,commits,\
-                      statusCheckRollup,closingIssuesReferences,reviewRequests,mergeStateStatus,\
+                      statusCheckRollup,reviewRequests,mergeStateStatus,\
                       mergeable,labels,assignees";
 
    let output = gh_command(&app, Some(repo_dir))
