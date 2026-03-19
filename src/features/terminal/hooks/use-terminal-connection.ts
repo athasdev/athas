@@ -40,6 +40,8 @@ export function useTerminalConnection({
   const currentInputLineRef = useRef("");
   const initialCommandSentForConnectionRef = useRef<string | null>(null);
   const onTerminalExitRef = useRef(onTerminalExit);
+  const outputBufferRef = useRef("");
+  const outputFlushFrameRef = useRef<number | null>(null);
   const { write, flush } = useTerminalWriteBuffer({
     getConnectionId: () => currentConnectionIdRef.current,
     writeChunk: async (activeConnectionId, data) => {
@@ -59,9 +61,35 @@ export function useTerminalConnection({
   }, [connectionId]);
 
   useEffect(() => {
+    return () => {
+      if (outputFlushFrameRef.current !== null) {
+        cancelAnimationFrame(outputFlushFrameRef.current);
+      }
+      outputBufferRef.current = "";
+    };
+  }, []);
+
+  useEffect(() => {
     if (!terminal || !isInitialized || !connectionId) return;
 
     const disposables: IDisposable[] = [];
+
+    const flushOutputBuffer = () => {
+      outputFlushFrameRef.current = null;
+      const pendingOutput = outputBufferRef.current;
+      if (!pendingOutput) return;
+
+      outputBufferRef.current = "";
+      terminal.write(pendingOutput);
+
+      const newDirectory = parseOSC7(pendingOutput);
+      if (newDirectory) updateSession(sessionId, { currentDirectory: newDirectory });
+    };
+
+    const scheduleOutputFlush = () => {
+      if (outputFlushFrameRef.current !== null) return;
+      outputFlushFrameRef.current = window.requestAnimationFrame(flushOutputBuffer);
+    };
 
     disposables.push(
       terminal.onData((data) => {
@@ -153,9 +181,8 @@ export function useTerminalConnection({
 
     const unlistenOutput = listen(`pty-output-${connectionId}`, (event) => {
       const data = event.payload as { data: string };
-      terminal.write(data.data);
-      const newDirectory = parseOSC7(data.data);
-      if (newDirectory) updateSession(sessionId, { currentDirectory: newDirectory });
+      outputBufferRef.current += data.data;
+      scheduleOutputFlush();
     });
 
     const unlistenError = listen(`pty-error-${connectionId}`, (event) => {
@@ -173,6 +200,10 @@ export function useTerminalConnection({
     });
 
     return () => {
+      if (outputFlushFrameRef.current !== null) {
+        cancelAnimationFrame(outputFlushFrameRef.current);
+        flushOutputBuffer();
+      }
       void flush();
       for (const disposable of disposables) {
         disposable.dispose();

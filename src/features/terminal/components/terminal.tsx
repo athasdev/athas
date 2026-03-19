@@ -21,6 +21,9 @@ import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";
 import "@xterm/xterm/css/xterm.css";
 import "../styles/terminal.css";
 
+const MULTILINE_PASTE_LINE_THRESHOLD = 5;
+const LARGE_PASTE_CHAR_THRESHOLD = 1000;
+
 interface XtermTerminalProps {
   sessionId: string;
   isActive: boolean;
@@ -173,6 +176,30 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
             event.preventDefault();
             writeBuffered(text);
           }
+        });
+
+        terminal.textarea.addEventListener("paste", (event) => {
+          const text = event.clipboardData?.getData("text/plain");
+          if (!text || !currentConnectionIdRef.current) return;
+
+          const normalizedText = text.replace(/\r\n/g, "\n");
+          const lineCount = normalizedText.split("\n").length;
+          const requiresConfirmation =
+            lineCount >= MULTILINE_PASTE_LINE_THRESHOLD ||
+            normalizedText.length >= LARGE_PASTE_CHAR_THRESHOLD;
+
+          if (
+            requiresConfirmation &&
+            !window.confirm(
+              `Paste ${lineCount} lines into the terminal? This may execute multiple commands.`,
+            )
+          ) {
+            event.preventDefault();
+            return;
+          }
+
+          event.preventDefault();
+          writeBuffered(normalizedText);
         });
       }
 
