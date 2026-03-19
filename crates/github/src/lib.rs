@@ -37,11 +37,14 @@ pub struct PullRequestAuthor {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StatusCheck {
-   pub name: String,
-   pub status: String,
+   #[serde(default)]
+   pub name: Option<String>,
+   #[serde(default)]
+   pub status: Option<String>,
+   #[serde(default)]
    pub conclusion: Option<String>,
-   #[serde(rename = "workflowName")]
-   pub workflow_name: String,
+   #[serde(rename = "workflowName", default)]
+   pub workflow_name: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

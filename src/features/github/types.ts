@@ -3,10 +3,10 @@ export interface PullRequestAuthor {
 }
 
 export interface StatusCheck {
-  name: string;
-  status: string;
+  name: string | null;
+  status: string | null;
   conclusion: string | null;
-  workflowName: string;
+  workflowName: string | null;
 }
 
 export interface LinkedIssue {

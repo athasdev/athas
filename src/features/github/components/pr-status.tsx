@@ -84,8 +84,10 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
                 <Loader2 size={12} className="animate-spin text-yellow-500" />
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-text text-xs">{check.name}</p>
-                <p className="truncate text-[10px] text-text-lighter">{check.workflowName}</p>
+                <p className="truncate text-text text-xs">{check.name ?? "Check"}</p>
+                {check.workflowName && (
+                  <p className="truncate text-[10px] text-text-lighter">{check.workflowName}</p>
+                )}
               </div>
             </div>
           ))}
