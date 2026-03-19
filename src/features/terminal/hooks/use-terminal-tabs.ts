@@ -70,15 +70,8 @@ const generateTerminalId = (name: string): string => {
 const terminalReducer = (state: TerminalState, action: TerminalAction): TerminalState => {
   switch (action.type) {
     case "CREATE_TERMINAL": {
-      const {
-        name,
-        currentDirectory,
-        shell,
-        id,
-        remoteConnectionId,
-        profileId,
-        initialCommand,
-      } = action.payload;
+      const { name, currentDirectory, shell, id, remoteConnectionId, profileId, initialCommand } =
+        action.payload;
 
       // Generate a unique name if needed
       const existingNames = state.terminals.map((t) => t.name);

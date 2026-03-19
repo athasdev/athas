@@ -55,10 +55,12 @@ export const resolveTerminalLaunch = ({
   settings: Pick<Settings, "terminalDefaultProfileId" | "terminalDefaultShellId">;
   shells: Shell[];
 }): ResolvedTerminalLaunch => {
-  const profileId = explicitProfileId || settings.terminalDefaultProfileId || SYSTEM_DEFAULT_PROFILE_ID;
+  const profileId =
+    explicitProfileId || settings.terminalDefaultProfileId || SYSTEM_DEFAULT_PROFILE_ID;
   const profile = resolveTerminalProfile(profileId, shells, customProfiles);
   const fallbackShell =
-    settings.terminalDefaultShellId && settings.terminalDefaultShellId !== DEFAULT_SHELL_OPTION_VALUE
+    settings.terminalDefaultShellId &&
+    settings.terminalDefaultShellId !== DEFAULT_SHELL_OPTION_VALUE
       ? settings.terminalDefaultShellId
       : undefined;
   const shell = profile?.shell || fallbackShell;
