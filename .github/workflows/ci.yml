@@ -14,7 +14,7 @@ concurrency:
 jobs:
   bun:
     if: github.repository == 'athasdev/athas'
-    name: Bun — typecheck, lint
+    name: Bun — typecheck, frontend check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +38,7 @@ jobs:
       - name: Run typecheck
         run: bun typecheck
 
-      - name: Run biome check
+      - name: Run frontend check
         run: bun check
 
   rust:

@@ -183,9 +183,14 @@ async function updatePackageJson(newVersion: string) {
 
 async function updateTauriConfig(newVersion: string) {
   const configPath = `${process.cwd()}/src-tauri/tauri.conf.json`;
-  const config = JSON.parse(await Bun.file(configPath).text());
-  config.version = newVersion;
-  await Bun.write(configPath, JSON.stringify(config, null, 2) + "\n");
+  const configText = await Bun.file(configPath).text();
+  const updatedConfig = configText.replace(/"version"\s*:\s*"[^"]+"/, `"version": "${newVersion}"`);
+
+  if (updatedConfig === configText) {
+    error("Could not update version in src-tauri/tauri.conf.json");
+  }
+
+  await Bun.write(configPath, updatedConfig);
   success(`Updated tauri.conf.json to v${newVersion}`);
 }
 
