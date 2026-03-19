@@ -22,26 +22,32 @@ jobs:
             os: "macos"
             args: "--target aarch64-apple-darwin"
             target: "aarch64-apple-darwin"
+            include_updater_json: true
           - platform: "macos-latest"
             os: "macos"
             args: "--target x86_64-apple-darwin"
             target: "x86_64-apple-darwin"
+            include_updater_json: true
           - platform: "ubuntu-22.04"
             os: "linux"
             args: "--bundles deb,rpm,appimage,updater"
             target: ""
+            include_updater_json: true
           - platform: "ubuntu-22.04-arm"
             os: "linux"
-            args: "--bundles deb,rpm,appimage,updater"
+            args: "--bundles deb,rpm"
             target: ""
+            include_updater_json: false
           - platform: "windows-latest"
             os: "windows"
             args: ""
             target: ""
+            include_updater_json: true
           - platform: "windows-latest"
             os: "windows"
             args: "--target aarch64-pc-windows-msvc"
             target: "aarch64-pc-windows-msvc"
+            include_updater_json: true
 
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 40
@@ -187,7 +193,7 @@ jobs:
           releaseBody: ${{ steps.release_meta.outputs.release_body }}
           releaseDraft: false
           prerelease: ${{ steps.release_meta.outputs.is_prerelease }}
-          includeUpdaterJson: true
+          includeUpdaterJson: ${{ matrix.include_updater_json }}
           args: ${{ matrix.args }}
 
   deploy-docs:
