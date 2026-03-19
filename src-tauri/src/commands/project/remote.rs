@@ -1,15 +1,14 @@
 use athas_remote::{
-   close_remote_terminal as remote_close_terminal,
+   RemoteFileEntry, SshConnection, close_remote_terminal as remote_close_terminal,
    create_remote_terminal as remote_create_terminal,
-   RemoteFileEntry, SshConnection, ssh_connect as remote_ssh_connect,
+   remote_terminal_resize as remote_terminal_resize_impl,
+   remote_terminal_write as remote_terminal_write_impl, ssh_connect as remote_ssh_connect,
    ssh_copy_path as remote_ssh_copy_path, ssh_create_directory as remote_ssh_create_directory,
    ssh_create_file as remote_ssh_create_file, ssh_delete_path as remote_ssh_delete_path,
    ssh_disconnect as remote_ssh_disconnect, ssh_disconnect_only as remote_ssh_disconnect_only,
    ssh_get_connected_ids as remote_ssh_get_connected_ids,
-   ssh_rename_path as remote_ssh_rename_path, remote_terminal_resize as remote_terminal_resize_impl,
-   remote_terminal_write as remote_terminal_write_impl,
    ssh_read_directory as remote_ssh_read_directory, ssh_read_file as remote_ssh_read_file,
-   ssh_write_file as remote_ssh_write_file,
+   ssh_rename_path as remote_ssh_rename_path, ssh_write_file as remote_ssh_write_file,
 };
 use tauri::Emitter;
 
@@ -62,7 +61,10 @@ pub async fn ssh_disconnect(app: tauri::AppHandle, connection_id: String) -> Res
 }
 
 #[tauri::command]
-pub async fn ssh_disconnect_only(app: tauri::AppHandle, connection_id: String) -> Result<(), String> {
+pub async fn ssh_disconnect_only(
+   app: tauri::AppHandle,
+   connection_id: String,
+) -> Result<(), String> {
    remote_ssh_disconnect_only(connection_id.clone()).await?;
 
    let _ = app.emit(
@@ -109,7 +111,10 @@ pub async fn ssh_create_file(connection_id: String, file_path: String) -> Result
 }
 
 #[tauri::command]
-pub async fn ssh_create_directory(connection_id: String, directory_path: String) -> Result<(), String> {
+pub async fn ssh_create_directory(
+   connection_id: String,
+   directory_path: String,
+) -> Result<(), String> {
    remote_ssh_create_directory(connection_id, directory_path).await
 }
 

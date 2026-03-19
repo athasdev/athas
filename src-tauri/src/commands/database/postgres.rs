@@ -5,11 +5,12 @@ use athas_database::{
       get_postgres_foreign_keys as db_get_postgres_foreign_keys,
       get_postgres_table_schema as db_get_postgres_table_schema,
       get_postgres_tables as db_get_postgres_tables, insert_postgres_row as db_insert_postgres_row,
-      query_postgres as db_query_postgres,
-      query_postgres_filtered as db_query_postgres_filtered,
+      query_postgres as db_query_postgres, query_postgres_filtered as db_query_postgres_filtered,
       update_postgres_row as db_update_postgres_row,
    },
-   sql_common::{ColumnInfo, FilteredQueryParams, FilteredQueryResult, ForeignKeyInfo, QueryResult, TableInfo},
+   sql_common::{
+      ColumnInfo, FilteredQueryParams, FilteredQueryResult, ForeignKeyInfo, QueryResult, TableInfo,
+   },
 };
 use std::sync::Arc;
 
@@ -74,7 +75,14 @@ pub async fn insert_postgres_row(
    values: Vec<serde_json::Value>,
    state: tauri::State<'_, Arc<ConnectionManager>>,
 ) -> Result<i64, String> {
-   db_insert_postgres_row(connection_id, table, columns, values, state.inner().as_ref()).await
+   db_insert_postgres_row(
+      connection_id,
+      table,
+      columns,
+      values,
+      state.inner().as_ref(),
+   )
+   .await
 }
 
 #[tauri::command]

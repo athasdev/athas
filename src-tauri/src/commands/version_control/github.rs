@@ -1,7 +1,5 @@
-pub use athas_github::{
-   PullRequest, PullRequestComment, PullRequestDetails, PullRequestFile,
-};
 use crate::secure_storage::{get_secret, remove_secret, store_secret};
+pub use athas_github::{PullRequest, PullRequestComment, PullRequestDetails, PullRequestFile};
 
 #[tauri::command]
 pub fn github_check_cli_auth(app: tauri::AppHandle) -> Result<bool, String> {

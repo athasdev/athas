@@ -1,6 +1,4 @@
-use crate::git::{
-   GitDiff, GitStash, IntoStringError, diff::parse_diff_to_lines, is_image_file,
-};
+use crate::git::{GitDiff, GitStash, IntoStringError, diff::parse_diff_to_lines, is_image_file};
 use anyhow::{Context, Result, bail};
 use git2::Repository;
 use std::{path::Path, process::Command};

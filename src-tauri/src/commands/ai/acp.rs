@@ -148,7 +148,12 @@ fn tool_config_from_agent(agent: &AgentConfig) -> Result<ToolConfig, String> {
       Some(AgentRuntime::Go) => ToolRuntime::Go,
       Some(AgentRuntime::Rust) => ToolRuntime::Rust,
       Some(AgentRuntime::Binary) => ToolRuntime::Binary,
-      None => return Err(format!("{} does not support managed installation", agent.name)),
+      None => {
+         return Err(format!(
+            "{} does not support managed installation",
+            agent.name
+         ));
+      }
    };
 
    let package = agent
@@ -183,8 +188,8 @@ async fn write_acp_wrapper(
          let node_path = RuntimeManager::get_runtime(app_handle, RuntimeType::Node)
             .await
             .map_err(|e| e.to_string())?;
-         let entrypoint =
-            ToolInstaller::get_lsp_launch_path(app_handle, tool_config).map_err(|e| e.to_string())?;
+         let entrypoint = ToolInstaller::get_lsp_launch_path(app_handle, tool_config)
+            .map_err(|e| e.to_string())?;
          build_node_wrapper(&node_path, &entrypoint)
       }
       _ => build_binary_wrapper(installed_binary),

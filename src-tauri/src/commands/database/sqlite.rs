@@ -36,7 +36,15 @@ pub async fn update_sqlite_row(
    where_column: String,
    where_value: serde_json::Value,
 ) -> Result<i64, String> {
-   db_update_sqlite_row(path, table, set_columns, set_values, where_column, where_value).await
+   db_update_sqlite_row(
+      path,
+      table,
+      set_columns,
+      set_values,
+      where_column,
+      where_value,
+   )
+   .await
 }
 
 #[tauri::command]

@@ -226,7 +226,8 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Self::install_via_cargo(app_handle, package, Self::configured_command_name(config)).await
+            Self::install_via_cargo(app_handle, package, Self::configured_command_name(config))
+               .await
          }
          ToolRuntime::Binary => {
             if let Some(url) = config.download_url.as_ref() {

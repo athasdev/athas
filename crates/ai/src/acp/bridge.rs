@@ -6,10 +6,10 @@ use super::{
       StopReason,
    },
 };
-use athas_terminal::TerminalManager;
 use acp::Agent;
 use agent_client_protocol as acp;
 use anyhow::{Context, Result, bail};
+use athas_terminal::TerminalManager;
 use serde_json::json;
 use std::{process::Stdio, sync::Arc, thread};
 use tauri::{AppHandle, Emitter};
@@ -387,9 +387,7 @@ impl AcpWorker {
                      })
                      .collect(),
                });
-               initial_config_options = load_response
-                  .config_options
-                  .map(Self::map_config_options);
+               initial_config_options = load_response.config_options.map(Self::map_config_options);
             }
             Ok(Err(err))
                if matches!(
@@ -621,8 +619,11 @@ impl AcpWorker {
       let connection = self.connection.as_ref().context("No active connection")?;
       let session_id = self.session_id.as_ref().context("No active session")?;
 
-      let request =
-         acp::SetSessionConfigOptionRequest::new(session_id.clone(), config_id.to_string(), value.to_string());
+      let request = acp::SetSessionConfigOptionRequest::new(
+         session_id.clone(),
+         config_id.to_string(),
+         value.to_string(),
+      );
 
       connection
          .set_session_config_option(request)

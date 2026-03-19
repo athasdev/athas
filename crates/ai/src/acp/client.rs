@@ -2,9 +2,9 @@ use super::types::{
    AcpContentBlock, AcpEvent, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus,
    SessionConfigOption, SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
 };
-use athas_terminal::{TerminalConfig, TerminalManager};
 use agent_client_protocol as acp;
 use async_trait::async_trait;
+use athas_terminal::{TerminalConfig, TerminalManager};
 use std::{
    collections::HashMap,
    path::PathBuf,
@@ -340,8 +340,9 @@ impl AthasAcpClient {
             current_value: select.current_value.to_string(),
             options: match select.options {
                acp::SessionConfigSelectOptions::Ungrouped(options) => options,
-               acp::SessionConfigSelectOptions::Grouped(groups) =>
-                  groups.into_iter().flat_map(|group| group.options).collect(),
+               acp::SessionConfigSelectOptions::Grouped(groups) => {
+                  groups.into_iter().flat_map(|group| group.options).collect()
+               }
                _ => Vec::new(),
             }
             .into_iter()

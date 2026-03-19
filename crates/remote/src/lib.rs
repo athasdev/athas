@@ -381,11 +381,17 @@ pub async fn ssh_create_file(connection_id: String, file_path: String) -> Result
       .get(&connection_id)
       .ok_or("Connection not found")?;
 
-   let command = format!("mkdir -p $(dirname {0}) && : > {0}", shell_quote(&file_path));
+   let command = format!(
+      "mkdir -p $(dirname {0}) && : > {0}",
+      shell_quote(&file_path)
+   );
    exec_remote_command(session, &command).map(|_| ())
 }
 
-pub async fn ssh_create_directory(connection_id: String, directory_path: String) -> Result<(), String> {
+pub async fn ssh_create_directory(
+   connection_id: String,
+   directory_path: String,
+) -> Result<(), String> {
    let connections = CONNECTIONS
       .lock()
       .map_err(|e| format!("Failed to lock connections: {}", e))?;
@@ -484,7 +490,11 @@ pub async fn create_remote_terminal(
       .channel_session()
       .map_err(|e| format!("Failed to create remote terminal channel: {}", e))?;
    channel
-      .request_pty("xterm-256color", None, Some((cols as u32, rows as u32, 0, 0)))
+      .request_pty(
+         "xterm-256color",
+         None,
+         Some((cols as u32, rows as u32, 0, 0)),
+      )
       .map_err(|e| format!("Failed to request PTY: {}", e))?;
    channel
       .shell()

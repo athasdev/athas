@@ -110,7 +110,9 @@ fn _git_add_worktree(
       bail!("Worktree path is required");
    }
 
-   let branch = branch.map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
+   let branch = branch
+      .map(|value| value.trim().to_string())
+      .filter(|value| !value.is_empty());
    let mut args: Vec<String> = vec!["worktree".into(), "add".into()];
 
    if create_branch {

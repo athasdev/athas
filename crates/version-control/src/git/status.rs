@@ -1,6 +1,4 @@
-use crate::git::{
-   FileStatus, GitFile, GitStatus, IntoStringError, get_ahead_behind_counts,
-};
+use crate::git::{FileStatus, GitFile, GitStatus, IntoStringError, get_ahead_behind_counts};
 use anyhow::{Context, Result};
 use git2::Repository;
 

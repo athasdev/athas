@@ -70,9 +70,7 @@ impl NodeRuntime {
    async fn detect_system() -> Result<Self, RuntimeError> {
       let path = which::which("node").map_err(|_| RuntimeError::NotFound("node".to_string()))?;
 
-      let runtime = Self {
-         binary_path: path,
-      };
+      let runtime = Self { binary_path: path };
 
       // Check version
       let version = runtime.check_version().await?;
@@ -99,9 +97,7 @@ impl NodeRuntime {
          ));
       }
 
-      Ok(Self {
-         binary_path,
-      })
+      Ok(Self { binary_path })
    }
 
    /// Download Node.js and install it

@@ -5,8 +5,8 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use athas_database::ConnectionManager;
 use athas_ai::AcpAgentBridge;
+use athas_database::ConnectionManager;
 use athas_lsp::LspManager;
 use athas_project::FileWatcher;
 use commands::*;

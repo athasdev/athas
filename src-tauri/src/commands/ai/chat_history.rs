@@ -252,9 +252,8 @@ pub async fn load_all_chats(app: tauri::AppHandle) -> Result<Vec<ChatData>, Stri
 
    let mut stmt = conn
       .prepare(
-         "SELECT id, title, created_at, last_message_at, agent_id, acp_session_id FROM chats ORDER \
-          BY \
-          last_message_at DESC",
+         "SELECT id, title, created_at, last_message_at, agent_id, acp_session_id FROM chats \
+          ORDER BY last_message_at DESC",
       )
       .map_err(|e| format!("Failed to prepare query: {}", e))?;
 

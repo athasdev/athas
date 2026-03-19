@@ -75,9 +75,7 @@ impl BunRuntime {
    async fn detect_system() -> Result<Self, RuntimeError> {
       let path = which::which("bun").map_err(|_| RuntimeError::NotFound("bun".to_string()))?;
 
-      let runtime = Self {
-         binary_path: path,
-      };
+      let runtime = Self { binary_path: path };
 
       // Check version
       let version = runtime.check_version().await?;
@@ -104,9 +102,7 @@ impl BunRuntime {
          ));
       }
 
-      Ok(Self {
-         binary_path,
-      })
+      Ok(Self { binary_path })
    }
 
    /// Download Bun and install it
