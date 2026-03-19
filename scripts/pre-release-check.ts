@@ -319,7 +319,7 @@ async function main() {
 
   // Check: TypeScript
   await runCheck("TypeScript type check", async () => {
-    const result = await $`bunx vp check --no-fmt --no-lint`.quiet().nothrow();
+    const result = await $`bun typecheck`.quiet().nothrow();
     if (result.exitCode !== 0) {
       return { passed: false, message: "Type errors found" };
     }
