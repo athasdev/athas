@@ -40,7 +40,7 @@ export const SidebarPaneSelector = ({
     >
       <Tooltip content="File Explorer" side={tooltipSide}>
         <Button
-          aria-role="tab"
+          role="tab"
           aria-selected={isFilesActive}
           aria-label="File Explorer"
           onClick={() => onViewChange("files")}
@@ -70,7 +70,7 @@ export const SidebarPaneSelector = ({
       {coreFeatures.git && (
         <Tooltip content="Source Control" side={tooltipSide}>
           <Button
-            aria-role="tab"
+            role="tab"
             aria-selected={isGitViewActive}
             aria-label="Git Source Control"
             onClick={() => onViewChange("git")}
@@ -87,7 +87,7 @@ export const SidebarPaneSelector = ({
       {coreFeatures.github && (
         <Tooltip content="Pull Requests" side={tooltipSide}>
           <Button
-            aria-role="tab"
+            role="tab"
             aria-selected={isGitHubPRsViewActive}
             aria-label="GitHub Pull Requests"
             onClick={() => onViewChange("github-prs")}

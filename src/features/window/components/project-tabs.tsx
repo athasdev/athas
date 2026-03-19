@@ -1,6 +1,7 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Copy, Folder, FolderOpen, Plus, Server, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useContextMenu } from "@/hooks/use-context-menu";
@@ -32,7 +33,7 @@ const ProjectTabs = () => {
   const { isProjectPickerVisible, setIsProjectPickerVisible } = useUIState();
 
   const tabBarRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragStateRef = useRef({
     isDragging: false,
     draggedIndex: null as number | null,
@@ -182,6 +183,15 @@ const ProjectTabs = () => {
       await switchToProject(tab.id);
     },
     [isSwitchingProject, switchToProject],
+  );
+
+  const handleTabKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>, tab: ProjectTab) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      void handleTabClick(tab);
+    },
+    [handleTabClick],
   );
 
   const handleCloseTab = async (e: React.MouseEvent, projectId: string) => {
@@ -347,13 +357,16 @@ const ProjectTabs = () => {
               {showDropIndicatorBefore && (
                 <div className="absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
               )}
-              <button
+              <div
                 role="tab"
+                tabIndex={0}
+                aria-selected={tab.isActive}
                 ref={(el) => {
                   tabRefs.current[index] = el;
                 }}
                 onMouseDown={(e) => handleMouseDown(e, index, tab)}
                 onContextMenu={(e) => contextMenu.open(e, tab)}
+                onKeyDown={(event) => handleTabKeyDown(event, tab)}
                 className={cn(
                   "group relative flex h-5 items-center gap-1 rounded-md px-4 text-xs transition-colors",
                   tab.isActive
@@ -381,7 +394,7 @@ const ProjectTabs = () => {
                 >
                   <X size={9} />
                 </button>
-              </button>
+              </div>
             </div>
           );
         })}
