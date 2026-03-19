@@ -713,8 +713,10 @@ dependencies = [
  "lazy_static",
  "log",
  "serde",
+ "serde_json",
  "ssh2",
  "tauri",
+ "uuid",
 ]
 
 [[package]]

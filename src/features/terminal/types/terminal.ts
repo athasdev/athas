@@ -13,6 +13,7 @@ export interface Terminal {
   ref?: any;
   splitMode?: boolean;
   splitWithId?: string; // ID of the terminal to split with
+  remoteConnectionId?: string;
 }
 
 export interface Shell {
@@ -45,6 +46,7 @@ export interface PersistedTerminal {
   isPinned: boolean;
   shell?: string;
   title?: string;
+  remoteConnectionId?: string;
 }
 
 export type TerminalAction =
@@ -55,6 +57,7 @@ export type TerminalAction =
         currentDirectory: string;
         shell?: string;
         id?: string;
+        remoteConnectionId?: string;
       };
     }
   | { type: "CLOSE_TERMINAL"; payload: { id: string } }

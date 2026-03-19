@@ -12,6 +12,7 @@ interface UseTerminalConnectionOptions {
   initialCommand?: string;
   isInitialized: boolean;
   onTerminalExit?: (sessionId: string) => void;
+  remoteConnectionId?: string;
   sessionId: string;
   terminal: XtermTerminal | null;
   updateSession: (
@@ -30,6 +31,7 @@ export function useTerminalConnection({
   initialCommand,
   isInitialized,
   onTerminalExit,
+  remoteConnectionId,
   sessionId,
   terminal,
   updateSession,
@@ -38,7 +40,15 @@ export function useTerminalConnection({
   const currentInputLineRef = useRef("");
   const initialCommandSentForConnectionRef = useRef<string | null>(null);
   const onTerminalExitRef = useRef(onTerminalExit);
-  const { write, flush } = useTerminalWriteBuffer(() => currentConnectionIdRef.current);
+  const { write, flush } = useTerminalWriteBuffer({
+    getConnectionId: () => currentConnectionIdRef.current,
+    writeChunk: async (activeConnectionId, data) => {
+      await invoke(remoteConnectionId ? "remote_terminal_write" : "terminal_write", {
+        id: activeConnectionId,
+        data,
+      });
+    },
+  });
 
   useEffect(() => {
     onTerminalExitRef.current = onTerminalExit;
@@ -65,7 +75,9 @@ export function useTerminalConnection({
             write(data);
             window.setTimeout(() => {
               onTerminalExitRef.current?.(sessionId);
-              void invoke("close_terminal", { id: activeConnectionId }).catch(() => {});
+              void invoke(remoteConnectionId ? "close_remote_terminal" : "close_terminal", {
+                id: activeConnectionId,
+              }).catch(() => {});
             }, 100);
             return;
           }
@@ -114,7 +126,11 @@ export function useTerminalConnection({
 
     disposables.push(
       terminal.onResize(({ cols, rows }) => {
-        void invoke("terminal_resize", { id: connectionId, rows, cols }).catch(() => {});
+        void invoke(remoteConnectionId ? "remote_terminal_resize" : "terminal_resize", {
+          id: connectionId,
+          rows,
+          cols,
+        }).catch(() => {});
       }),
     );
 
@@ -149,7 +165,9 @@ export function useTerminalConnection({
 
     const unlistenClosed = listen(`pty-closed-${connectionId}`, async () => {
       try {
-        await invoke("close_terminal", { id: connectionId });
+        await invoke(remoteConnectionId ? "close_remote_terminal" : "close_terminal", {
+          id: connectionId,
+        });
       } catch {}
       onTerminalExitRef.current?.(sessionId);
     });
@@ -173,6 +191,7 @@ export function useTerminalConnection({
     terminal,
     updateSession,
     write,
+    remoteConnectionId,
   ]);
 
   useEffect(() => {

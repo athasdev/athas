@@ -5,6 +5,7 @@ import type {
   TerminalAction,
   TerminalState,
 } from "@/features/terminal/types/terminal";
+import { parseRemotePath } from "@/features/remote/utils/remote-path";
 
 const PERSISTENCE_KEY = "terminal-sessions";
 const PERSISTENCE_ENABLED_KEY = "terminal-persistence-enabled";
@@ -29,6 +30,7 @@ const saveTerminalsToStorage = (terminals: Terminal[]) => {
       isPinned: t.isPinned || false,
       shell: t.shell,
       title: t.title,
+      remoteConnectionId: t.remoteConnectionId,
     }));
     localStorage.setItem(PERSISTENCE_KEY, JSON.stringify(persistedTerminals));
   } catch (error) {
@@ -67,7 +69,7 @@ const generateTerminalId = (name: string): string => {
 const terminalReducer = (state: TerminalState, action: TerminalAction): TerminalState => {
   switch (action.type) {
     case "CREATE_TERMINAL": {
-      const { name, currentDirectory, shell, id } = action.payload;
+      const { name, currentDirectory, shell, id, remoteConnectionId } = action.payload;
 
       // Generate a unique name if needed
       const existingNames = state.terminals.map((t) => t.name);
@@ -85,6 +87,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
         isActive: true,
         isPinned: false,
         shell,
+        remoteConnectionId,
         createdAt: new Date(),
         lastActivity: new Date(),
       };
@@ -232,6 +235,7 @@ const terminalReducer = (state: TerminalState, action: TerminalAction): Terminal
         isActive: false,
         isPinned: pt.isPinned,
         shell: pt.shell,
+        remoteConnectionId: pt.remoteConnectionId,
         createdAt: new Date(),
         lastActivity: new Date(),
       }));
@@ -284,12 +288,25 @@ export const useTerminalTabs = () => {
   }, []);
 
   const createTerminal = useCallback(
-    (name: string, currentDirectory: string, shell?: string): string => {
+    (
+      name: string,
+      currentDirectory: string,
+      shell?: string,
+      remoteConnectionId?: string,
+    ): string => {
       // Generate the terminal ID here so we can return it
       const terminalId = generateTerminalId(name);
+      const resolvedRemoteConnectionId =
+        remoteConnectionId ?? parseRemotePath(currentDirectory)?.connectionId;
       dispatch({
         type: "CREATE_TERMINAL",
-        payload: { name, currentDirectory, shell, id: terminalId },
+        payload: {
+          name,
+          currentDirectory,
+          shell,
+          id: terminalId,
+          remoteConnectionId: resolvedRemoteConnectionId,
+        },
       });
       return terminalId;
     },
@@ -376,6 +393,7 @@ export const useTerminalTabs = () => {
           currentDirectory: pt.currentDirectory,
           shell: pt.shell,
           id: pt.id,
+          remoteConnectionId: pt.remoteConnectionId,
         },
       });
       if (pt.isPinned) {

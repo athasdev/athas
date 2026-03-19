@@ -699,6 +699,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
               bufferId={buffer.id}
               initialCommand={buffer.initialCommand}
               workingDirectory={buffer.workingDirectory}
+              remoteConnectionId={buffer.remoteConnectionId}
               isActive={isActivePane}
             />
           );

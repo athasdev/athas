@@ -132,6 +132,7 @@ interface BufferActions {
     name?: string;
     command?: string;
     workingDirectory?: string;
+    remoteConnectionId?: string;
   }) => string;
   openAgentBuffer: (sessionId?: string) => string;
   closeBuffer: (bufferId: string) => void;
@@ -242,6 +243,7 @@ const createPaneContent = (id: string, spec: OpenContentSpec): PaneContent => {
         sessionId: id.replace("buffer_", ""),
         initialCommand: spec.command,
         workingDirectory: spec.workingDirectory,
+        remoteConnectionId: spec.remoteConnectionId,
       };
     case "agent":
       return {
@@ -897,12 +899,14 @@ export const useBufferStore = createSelectors(
           name?: string;
           command?: string;
           workingDirectory?: string;
+          remoteConnectionId?: string;
         }): string => {
           return get().actions.openContent({
             type: "terminal",
             name: options?.name,
             command: options?.command,
             workingDirectory: options?.workingDirectory,
+            remoteConnectionId: options?.remoteConnectionId,
           });
         },
 

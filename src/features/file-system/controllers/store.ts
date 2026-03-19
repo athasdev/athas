@@ -984,7 +984,23 @@ export const useFileSystemStore = createSelectors(
           return;
         }
 
-        const entries = await readDirectory(directoryPath);
+        const remoteInfo = parseRemotePath(directoryPath);
+        let entries: any[];
+        if (remoteInfo) {
+          const remoteEntries = await invoke<
+            Array<{ name: string; path: string; is_dir: boolean; size: number }>
+          >("ssh_read_directory", {
+            connectionId: remoteInfo.connectionId,
+            path: remoteInfo.remotePath,
+          });
+          entries = remoteEntries.map((entry) => ({
+            name: entry.name,
+            path: `remote://${remoteInfo.connectionId}${entry.path}`,
+            is_dir: entry.is_dir,
+          }));
+        } else {
+          entries = await readDirectory(directoryPath);
+        }
 
         set((state) => {
           const updated = updateDirectoryContents(state.files, directoryPath, entries as any[]);
@@ -1004,6 +1020,16 @@ export const useFileSystemStore = createSelectors(
         const movedFile = findFileInTree(get().files, oldPath);
         if (!movedFile) {
           return;
+        }
+
+        const remoteSource = parseRemotePath(oldPath);
+        const remoteTarget = parseRemotePath(newPath);
+        if (remoteSource && remoteTarget && remoteSource.connectionId === remoteTarget.connectionId) {
+          await invoke("ssh_rename_path", {
+            connectionId: remoteSource.connectionId,
+            sourcePath: remoteSource.remotePath,
+            targetPath: remoteTarget.remotePath,
+          });
         }
 
         // Remove from old location
@@ -1160,7 +1186,22 @@ export const useFileSystemStore = createSelectors(
       },
 
       createFile: async (directoryPath: string, fileName: string) => {
-        const filePath = await createNewFile(directoryPath, fileName);
+        const remoteInfo = parseRemotePath(directoryPath);
+        const filePath = remoteInfo
+          ? (() => {
+              const normalizedDirectory = directoryPath.endsWith("/")
+                ? directoryPath.slice(0, -1)
+                : directoryPath;
+              return `${normalizedDirectory}/${fileName}`;
+            })()
+          : await createNewFile(directoryPath, fileName);
+
+        if (remoteInfo) {
+          await invoke("ssh_create_file", {
+            connectionId: remoteInfo.connectionId,
+            filePath: `${remoteInfo.remotePath.replace(/\/$/, "")}/${fileName}`,
+          });
+        }
 
         const newFile: FileEntry = {
           name: fileName,
@@ -1177,7 +1218,20 @@ export const useFileSystemStore = createSelectors(
       },
 
       createDirectory: async (parentPath: string, folderName: string) => {
-        const folderPath = await createNewDirectory(parentPath, folderName);
+        const remoteInfo = parseRemotePath(parentPath);
+        const folderPath = remoteInfo
+          ? (() => {
+              const normalizedParent = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
+              return `${normalizedParent}/${folderName}`;
+            })()
+          : await createNewDirectory(parentPath, folderName);
+
+        if (remoteInfo) {
+          await invoke("ssh_create_directory", {
+            connectionId: remoteInfo.connectionId,
+            directoryPath: `${remoteInfo.remotePath.replace(/\/$/, "")}/${folderName}`,
+          });
+        }
 
         const newFolder: FileEntry = {
           name: folderName,
@@ -1195,7 +1249,18 @@ export const useFileSystemStore = createSelectors(
       },
 
       deleteFile: async (path: string) => {
-        await deleteFileOrDirectory(path);
+        const remoteInfo = parseRemotePath(path);
+        const entry = findFileInTree(get().files, path);
+
+        if (remoteInfo) {
+          await invoke("ssh_delete_path", {
+            connectionId: remoteInfo.connectionId,
+            targetPath: remoteInfo.remotePath,
+            isDirectory: !!entry?.isDir,
+          });
+        } else {
+          await deleteFileOrDirectory(path);
+        }
 
         const { buffers, actions } = useBufferStore.getState();
         buffers
@@ -1215,10 +1280,65 @@ export const useFileSystemStore = createSelectors(
       },
 
       handleRevealInFolder: async (path: string) => {
+        if (parseRemotePath(path)) {
+          toast.info("Reveal in folder is only available for local workspaces.");
+          return;
+        }
         await revealItemInDir(path);
       },
 
       handleDuplicatePath: async (path: string) => {
+        const remoteInfo = parseRemotePath(path);
+        if (remoteInfo) {
+          const fileEntry = findFileInTree(get().files, path);
+          if (!fileEntry) return;
+
+          const remotePath = remoteInfo.remotePath;
+          const pathParts = remotePath.split("/");
+          const base = pathParts.pop() || "";
+          const dir = pathParts.join("/") || "/";
+          const extMatch = base.match(/(\.[^.]*)$/);
+          const ext = extMatch?.[1] ?? "";
+          const nameWithoutExt = ext ? base.slice(0, -ext.length) : base;
+
+          let counter = 0;
+          let finalName = "";
+          let finalPath = "";
+
+          do {
+            finalName =
+              counter === 0
+                ? `${nameWithoutExt}_copy${ext}`
+                : `${nameWithoutExt}_copy_${counter}${ext}`;
+            finalPath = dir === "/" ? `/${finalName}` : `${dir}/${finalName}`;
+            counter++;
+          } while (findFileInTree(get().files, `remote://${remoteInfo.connectionId}${finalPath}`));
+
+          await invoke("ssh_copy_path", {
+            connectionId: remoteInfo.connectionId,
+            sourcePath: remoteInfo.remotePath,
+            targetPath: finalPath,
+            isDirectory: fileEntry.isDir,
+          });
+
+          const newEntry: FileEntry = {
+            name: finalName,
+            path: `remote://${remoteInfo.connectionId}${finalPath}`,
+            isDir: fileEntry.isDir,
+            children: fileEntry.isDir ? [] : undefined,
+          };
+
+          set((state) => {
+            state.files = addFileToTree(
+              state.files,
+              `remote://${remoteInfo.connectionId}${dir === "/" ? "/" : dir}`,
+              newEntry,
+            );
+            state.filesVersion++;
+          });
+          return;
+        }
+
         const dir = await dirname(path);
         const base = await basename(path);
         const ext = await extname(path);
@@ -1260,11 +1380,27 @@ export const useFileSystemStore = createSelectors(
 
       handleRenamePath: async (path: string, newName?: string) => {
         if (newName) {
-          const dir = await dirname(path);
+          const remoteInfo = parseRemotePath(path);
 
           try {
-            const targetPath = await join(dir, newName);
-            await renameFile(path, targetPath);
+            let targetPath: string;
+
+            if (remoteInfo) {
+              const segments = remoteInfo.remotePath.split("/");
+              segments.pop();
+              const remoteDir = segments.join("/") || "/";
+              const nextRemotePath = remoteDir === "/" ? `/${newName}` : `${remoteDir}/${newName}`;
+              targetPath = `remote://${remoteInfo.connectionId}${nextRemotePath}`;
+              await invoke("ssh_rename_path", {
+                connectionId: remoteInfo.connectionId,
+                sourcePath: remoteInfo.remotePath,
+                targetPath: nextRemotePath,
+              });
+            } else {
+              const dir = await dirname(path);
+              targetPath = await join(dir, newName);
+              await renameFile(path, targetPath);
+            }
 
             set((state) => {
               state.files = updateFileInTree(state.files, path, (item) => ({

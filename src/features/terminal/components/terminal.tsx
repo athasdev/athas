@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import type { ISearchOptions } from "@xterm/addon-search";
 import { Terminal } from "@xterm/xterm";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { connectionStore } from "@/features/remote/services/remote-connection-store";
+import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import { useSettingsStore } from "@/features/settings/store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import {
@@ -28,6 +30,7 @@ interface XtermTerminalProps {
   onTerminalExit?: (sessionId: string) => void;
   initialCommand?: string;
   workingDirectory?: string;
+  remoteConnectionId?: string;
 }
 
 export const XtermTerminal: React.FC<XtermTerminalProps> = ({
@@ -39,6 +42,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   onTerminalExit,
   initialCommand,
   workingDirectory,
+  remoteConnectionId,
 }) => {
   const terminalContainerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
@@ -106,6 +110,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     initialCommand,
     isInitialized,
     onTerminalExit,
+    remoteConnectionId,
     sessionId,
     terminal: xtermRef.current,
     updateSession,
@@ -186,17 +191,42 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         } catch {}
       }
 
-      const newConnectionId = await invoke<string>("create_terminal", {
-        config: {
-          working_directory:
-            workingDirectory || existingSession?.currentDirectory || rootFolderPath || undefined,
-          shell: existingSession?.shell || undefined,
-          rows: terminal.rows,
-          cols: terminal.cols,
-        },
-      });
+      const targetDirectory = workingDirectory || existingSession?.currentDirectory || rootFolderPath;
+      const remoteInfo = targetDirectory ? parseRemotePath(targetDirectory) : null;
+      const effectiveRemoteConnectionId = remoteConnectionId || remoteInfo?.connectionId;
 
-      updateSession(sessionId, { connectionId: newConnectionId });
+      const newConnectionId = effectiveRemoteConnectionId
+        ? await (async () => {
+            const connection = await connectionStore.getConnection(effectiveRemoteConnectionId);
+            if (!connection) {
+              throw new Error("Remote terminal connection not found.");
+            }
+
+            return invoke<string>("create_remote_terminal", {
+              host: connection.host,
+              port: connection.port,
+              username: connection.username,
+              password: connection.password || null,
+              keyPath: connection.keyPath || null,
+              workingDirectory: remoteInfo?.remotePath || "/",
+              rows: terminal.rows,
+              cols: terminal.cols,
+            });
+          })()
+        : await invoke<string>("create_terminal", {
+            config: {
+              working_directory: targetDirectory || undefined,
+              shell: existingSession?.shell || undefined,
+              rows: terminal.rows,
+              cols: terminal.cols,
+            },
+          });
+
+      updateSession(sessionId, {
+        connectionId: newConnectionId,
+        currentDirectory: targetDirectory,
+        remoteConnectionId: effectiveRemoteConnectionId,
+      });
       setIsInitialized(true);
       isInitializingRef.current = false;
 
@@ -225,6 +255,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     onReady,
     onTerminalRef,
     rootFolderPath,
+    remoteConnectionId,
     sessionId,
     terminalCursorBlink,
     terminalCursorStyle,

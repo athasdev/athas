@@ -59,6 +59,7 @@ export interface TerminalContent extends PaneContentBase {
   sessionId: string;
   initialCommand?: string;
   workingDirectory?: string;
+  remoteConnectionId?: string;
 }
 
 export interface AgentContent extends PaneContentBase {
@@ -254,6 +255,7 @@ export type OpenContentSpec =
       name?: string;
       command?: string;
       workingDirectory?: string;
+      remoteConnectionId?: string;
     }
   | { type: "agent"; sessionId?: string }
   | { type: "webViewer"; url: string }

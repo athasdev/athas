@@ -1,10 +1,14 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef } from "react";
 
 const WRITE_FLUSH_MS = 8;
 const MAX_BATCH_SIZE = 4096;
 
-export function useTerminalWriteBuffer(getConnectionId: () => string | null) {
+interface TerminalWriteBufferOptions {
+  getConnectionId: () => string | null;
+  writeChunk: (connectionId: string, data: string) => Promise<void>;
+}
+
+export function useTerminalWriteBuffer({ getConnectionId, writeChunk }: TerminalWriteBufferOptions) {
   const queueRef = useRef("");
   const timerRef = useRef<number | null>(null);
   const flushingRef = useRef(false);
@@ -19,7 +23,7 @@ export function useTerminalWriteBuffer(getConnectionId: () => string | null) {
     queueRef.current = "";
     flushingRef.current = true;
     try {
-      await invoke("terminal_write", { id: connectionId, data });
+      await writeChunk(connectionId, data);
     } catch {
       queueRef.current = data + queueRef.current;
     } finally {
@@ -31,7 +35,7 @@ export function useTerminalWriteBuffer(getConnectionId: () => string | null) {
         }, WRITE_FLUSH_MS);
       }
     }
-  }, [getConnectionId]);
+  }, [getConnectionId, writeChunk]);
 
   const scheduleFlush = useCallback(() => {
     if (timerRef.current !== null) return;
