@@ -27,6 +27,12 @@ pub struct LspRegistry {
    servers: Vec<LspServerConfig>,
 }
 
+impl Default for LspRegistry {
+   fn default() -> Self {
+      Self::new()
+   }
+}
+
 impl LspRegistry {
    pub fn new() -> Self {
       // No longer register hardcoded servers.

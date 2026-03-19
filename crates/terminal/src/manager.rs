@@ -11,6 +11,12 @@ pub struct TerminalManager {
    connections: Arc<Mutex<HashMap<String, TerminalConnection>>>,
 }
 
+impl Default for TerminalManager {
+   fn default() -> Self {
+      Self::new()
+   }
+}
+
 impl TerminalManager {
    pub fn new() -> Self {
       Self {

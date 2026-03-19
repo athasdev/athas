@@ -13,6 +13,7 @@ use athas_remote::{
 use tauri::Emitter;
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn ssh_connect(
    app: tauri::AppHandle,
    connection_id: String,
@@ -147,6 +148,7 @@ pub async fn ssh_copy_path(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn create_remote_terminal(
    app: tauri::AppHandle,
    host: String,

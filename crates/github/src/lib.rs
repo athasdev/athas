@@ -363,10 +363,8 @@ fn gh_command(app: &AppHandle, repo_dir: Option<&Path>) -> Command {
    let has_explicit_config_dir =
       matches!(env::var_os("GH_CONFIG_DIR"), Some(dir) if !dir.is_empty());
 
-   if !has_explicit_config_dir {
-      if let Some(config_dir) = resolve_gh_config_dir(app) {
-         command.env("GH_CONFIG_DIR", config_dir);
-      }
+   if !has_explicit_config_dir && let Some(config_dir) = resolve_gh_config_dir(app) {
+      command.env("GH_CONFIG_DIR", config_dir);
    }
 
    command
@@ -398,10 +396,8 @@ fn resolve_gh_config_dir_from_sources(
       return Some(PathBuf::from(dir).join("gh"));
    }
 
-   if is_windows {
-      if let Some(dir) = app_data.filter(|dir| !dir.is_empty()) {
-         return Some(PathBuf::from(dir).join("GitHub CLI"));
-      }
+   if is_windows && let Some(dir) = app_data.filter(|dir| !dir.is_empty()) {
+      return Some(PathBuf::from(dir).join("GitHub CLI"));
    }
 
    home_dir.map(|dir| dir.join(".config").join("gh"))

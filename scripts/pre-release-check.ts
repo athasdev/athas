@@ -216,7 +216,15 @@ async function main() {
 
   // Check: Up to date with remote
   await runCheck("Up to date with remote", async () => {
-    await $`git fetch origin master`.quiet();
+    const fetchResult = await $`git fetch origin master`.quiet().nothrow();
+    if (fetchResult.exitCode !== 0) {
+      return {
+        passed: true,
+        warning: true,
+        message: "Could not fetch origin/master in current environment",
+      };
+    }
+
     const status = await $`git status -uno`.text();
     if (status.includes("Your branch is behind")) {
       return { passed: false, message: "Branch is behind origin/master" };
@@ -459,7 +467,8 @@ async function main() {
 
   await runCheck("GitHub release workflow exists", async () => {
     const workflowPath = `${process.cwd()}/.github/workflows`;
-    if (!(await Bun.file(workflowPath).exists())) {
+    const workflowDirCheck = await $`test -d ${workflowPath}`.nothrow();
+    if (workflowDirCheck.exitCode !== 0) {
       return { passed: false, message: "Missing .github/workflows directory" };
     }
 
@@ -479,7 +488,15 @@ async function main() {
 
   // Get commits since last tag
   try {
-    const lastTag = (await $`git describe --tags --abbrev=0`.text()).trim();
+    const lastTag = (await $`git tag --sort=-v:refname --list "v*"`.text())
+      .split("\n")
+      .map((tag) => tag.trim())
+      .find(Boolean);
+
+    if (!lastTag) {
+      throw new Error("No version tags found");
+    }
+
     const commits = await $`git log ${lastTag}..HEAD --oneline`.text();
     const commitList = commits.trim().split("\n").filter(Boolean);
 
@@ -515,6 +532,7 @@ async function main() {
     log("    bun release:patch  # Bug fixes", "dim");
     log("    bun release:minor  # New features", "dim");
     log("    bun release:major  # Breaking changes", "dim");
+    log("    bun release:alpha  # Early preview build", "dim");
     log("    bun release:beta   # Next patch prerelease", "dim");
     log("    bun release:rc     # Release candidate for current patch\n", "dim");
     process.exit(0);

@@ -2,7 +2,11 @@ use athas_ai::{AcpAgentBridge, AcpAgentStatus, AgentConfig, AgentRuntime};
 use athas_runtime::{RuntimeManager, RuntimeType};
 use athas_tooling::{ToolConfig, ToolInstaller, ToolRuntime};
 use serde::Deserialize;
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{
+   collections::HashMap,
+   path::{Path, PathBuf},
+   sync::Arc,
+};
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 
@@ -176,7 +180,7 @@ async fn write_acp_wrapper(
    app_handle: &AppHandle,
    agent: &AgentConfig,
    tool_config: &ToolConfig,
-   installed_binary: &PathBuf,
+   installed_binary: &Path,
 ) -> Result<(), String> {
    let wrapper_path = acp_wrapper_path(app_handle, &agent.id)?;
    if let Some(parent) = wrapper_path.parent() {
@@ -213,7 +217,7 @@ fn acp_wrapper_path(app_handle: &AppHandle, agent_id: &str) -> Result<PathBuf, S
    Ok(data_dir.join("tools").join("acp").join(file_name))
 }
 
-fn build_binary_wrapper(binary: &PathBuf) -> String {
+fn build_binary_wrapper(binary: &Path) -> String {
    #[cfg(target_os = "windows")]
    {
       format!("@echo off\r\n\"{}\" %*\r\n", binary.display())
@@ -225,7 +229,7 @@ fn build_binary_wrapper(binary: &PathBuf) -> String {
    }
 }
 
-fn build_node_wrapper(node_path: &PathBuf, entrypoint: &PathBuf) -> String {
+fn build_node_wrapper(node_path: &Path, entrypoint: &Path) -> String {
    #[cfg(target_os = "windows")]
    {
       format!(

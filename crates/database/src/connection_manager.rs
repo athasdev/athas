@@ -26,6 +26,12 @@ pub struct ConnectionManager {
    pools: RwLock<HashMap<String, Arc<DatabasePool>>>,
 }
 
+impl Default for ConnectionManager {
+   fn default() -> Self {
+      Self::new()
+   }
+}
+
 impl ConnectionManager {
    pub fn new() -> Self {
       Self {

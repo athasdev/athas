@@ -659,9 +659,9 @@ mod tests {
 
    #[test]
    fn test_json_to_rusqlite_float() {
-      let result = json_to_rusqlite(&serde_json::json!(3.14)).unwrap();
+      let result = json_to_rusqlite(&serde_json::json!(std::f64::consts::PI)).unwrap();
       if let rusqlite::types::Value::Real(v) = result {
-         assert!((v - 3.14).abs() < f64::EPSILON);
+         assert!((v - std::f64::consts::PI).abs() < f64::EPSILON);
       } else {
          panic!("Expected real");
       }
