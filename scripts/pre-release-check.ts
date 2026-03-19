@@ -390,6 +390,14 @@ async function main() {
     return { passed: true };
   });
 
+  await runCheck("Cargo check (release)", async () => {
+    const result = await $`cargo check --release -p athas`.quiet().nothrow();
+    if (result.exitCode !== 0) {
+      return { passed: false, message: "Release-profile compilation errors found" };
+    }
+    return { passed: true };
+  });
+
   // Check: Cargo clippy
   await runCheck("Cargo clippy", async () => {
     const result = await $`cargo clippy --workspace -- -D warnings`.quiet().nothrow();

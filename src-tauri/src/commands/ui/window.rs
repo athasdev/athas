@@ -193,8 +193,17 @@ pub async fn open_webview_devtools(
    webview_label: String,
 ) -> Result<(), String> {
    if let Some(webview) = app.get_webview(&webview_label) {
-      webview.open_devtools();
-      Ok(())
+      #[cfg(any(debug_assertions, feature = "devtools"))]
+      {
+         webview.open_devtools();
+         Ok(())
+      }
+
+      #[cfg(not(any(debug_assertions, feature = "devtools")))]
+      {
+         let _ = webview;
+         return Err("Webview devtools are unavailable in release builds".to_string());
+      }
    } else {
       Err(format!("Webview not found: {webview_label}"))
    }
