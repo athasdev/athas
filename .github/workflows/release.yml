@@ -178,6 +178,26 @@ jobs:
           # Verify certificate is available
           security find-identity -v -p codesigning
 
+      - name: Sign bundled macOS binaries (macOS only)
+        if: matrix.os == 'macos'
+        env:
+          APPLE_SIGNING_IDENTITY: "${{ secrets.APPLE_SIGNING_IDENTITY || 'Developer ID Application: Mehmet Ozgul (N43BXFX4H4)' }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! -d src/extensions/bundled ]]; then
+            exit 0
+          fi
+
+          while IFS= read -r -d '' file_path; do
+            file_type="$(file -b "$file_path" || true)"
+            if [[ "$file_type" == *"Mach-O"* ]]; then
+              echo "Signing bundled binary: $file_path"
+              codesign --force --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$file_path"
+            fi
+          done < <(find src/extensions/bundled -type f -perm -111 -print0)
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -191,14 +211,27 @@ jobs:
           tagName: v__VERSION__
           releaseName: ${{ steps.release_meta.outputs.release_name }}
           releaseBody: ${{ steps.release_meta.outputs.release_body }}
-          releaseDraft: false
+          releaseDraft: true
           prerelease: ${{ steps.release_meta.outputs.is_prerelease }}
           includeUpdaterJson: ${{ matrix.include_updater_json }}
           args: ${{ matrix.args }}
 
+  publish-release:
+    needs: publish-tauri
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: ${{ success() && startsWith(github.ref, 'refs/tags/v') }}
+    steps:
+      - name: Publish draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${GITHUB_REF_NAME}" --draft=false
+
   deploy-docs:
     if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ubuntu-latest
+    needs: publish-release
     steps:
       - name: Trigger docs rebuild on www
         uses: peter-evans/repository-dispatch@v3
