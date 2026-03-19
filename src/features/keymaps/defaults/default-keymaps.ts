@@ -8,6 +8,12 @@ import type { Keybinding } from "../types";
 export const defaultKeymaps: Keybinding[] = [
   // File Operations
   {
+    key: "cmd+t",
+    command: "workbench.newTab",
+    source: "default",
+    when: "!terminalFocus",
+  },
+  {
     key: "cmd+s",
     command: "file.save",
     source: "default",
@@ -83,6 +89,24 @@ export const defaultKeymaps: Keybinding[] = [
     command: "editor.duplicateLine",
     source: "default",
     when: "editorFocus",
+  },
+  {
+    key: "cmd+t",
+    command: "terminal.new",
+    source: "default",
+    when: "terminalFocus",
+  },
+  {
+    key: "cmd+w",
+    command: "terminal.close",
+    source: "default",
+    when: "terminalFocus",
+  },
+  {
+    key: "cmd+d",
+    command: "terminal.split",
+    source: "default",
+    when: "terminalFocus",
   },
   {
     key: "cmd+shift+k",

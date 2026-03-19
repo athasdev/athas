@@ -26,6 +26,16 @@ function getZoomTarget(): "editor" | "terminal" | "webviewer" {
 
 const fileCommands: Command[] = [
   {
+    id: "workbench.newTab",
+    title: "New Tab",
+    category: "File",
+    keybinding: "cmd+t",
+    execute: () => {
+      if (useKeymapStore.getState().contexts.terminalFocus) return;
+      useBufferStore.getState().actions.showNewTabView();
+    },
+  },
+  {
     id: "file.save",
     title: "Save File",
     category: "File",
@@ -130,6 +140,36 @@ const fileCommands: Command[] = [
     keybinding: "cmd+p",
     execute: () => {
       useUIState.getState().setIsQuickOpenVisible(true);
+    },
+  },
+];
+
+const terminalCommands: Command[] = [
+  {
+    id: "terminal.new",
+    title: "New Terminal",
+    category: "Terminal",
+    keybinding: "cmd+t",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-new"));
+    },
+  },
+  {
+    id: "terminal.close",
+    title: "Close Terminal",
+    category: "Terminal",
+    keybinding: "cmd+w",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("close-active-terminal"));
+    },
+  },
+  {
+    id: "terminal.split",
+    title: "Split Terminal",
+    category: "Terminal",
+    keybinding: "cmd+d",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-split"));
     },
   },
 ];
@@ -439,10 +479,7 @@ const viewCommands: Command[] = [
   },
 ];
 
-const isTerminalFocused = () => {
-  const terminalContainer = document.querySelector('[data-terminal-container="active"]');
-  return terminalContainer?.contains(document.activeElement) ?? false;
-};
+const isTerminalFocused = () => useKeymapStore.getState().contexts.terminalFocus;
 
 const switchNextTab = () => {
   if (isTerminalFocused()) {
@@ -518,6 +555,10 @@ const navigationCommands: Command[] = [
     category: "Navigation",
     keybinding: `cmd+${i + 1}`,
     execute: () => {
+      if (isTerminalFocused()) {
+        window.dispatchEvent(new CustomEvent("terminal-activate-tab", { detail: i }));
+        return;
+      }
       const bufferStore = useBufferStore.getState();
       const buffer = bufferStore.buffers[i];
       if (buffer) bufferStore.actions.setActiveBuffer(buffer.id);
@@ -756,6 +797,7 @@ const windowCommands: Command[] = [
 const allCommands: Command[] = [
   ...fileCommands,
   ...editCommands,
+  ...terminalCommands,
   ...viewCommands,
   ...navigationCommands,
   ...databaseCommands,

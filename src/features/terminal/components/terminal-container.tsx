@@ -391,117 +391,31 @@ const TerminalContainer = ({
     return () => window.removeEventListener("terminal-switch-tab", handleTerminalSwitchTab);
   }, [switchToNextTerminal, switchToPrevTerminal]);
 
-  // Terminal-specific keyboard shortcuts
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle other shortcuts when the terminal container or its children have focus
-      const terminalContainer = document.querySelector('[data-terminal-container="active"]');
-      if (!terminalContainer || !terminalContainer.contains(document.activeElement)) {
-        return;
-      }
-
-      // Cmd+T (Mac) or Ctrl+T (Windows/Linux) to create new terminal
-      if ((e.metaKey || e.ctrlKey) && e.key === "t" && !e.shiftKey) {
-        e.preventDefault();
-        handleNewTerminal();
-        return;
-      }
-
-      // Cmd+N (Mac) or Ctrl+N (Windows/Linux) to create new terminal (alternative)
-      if ((e.metaKey || e.ctrlKey) && e.key === "n" && !e.shiftKey) {
-        e.preventDefault();
-        handleNewTerminal();
-        return;
-      }
-
-      // Cmd+W (Mac) or Ctrl+W (Windows/Linux) to close current terminal
-      if ((e.metaKey || e.ctrlKey) && e.key === "w" && !e.shiftKey) {
-        e.preventDefault();
-        if (activeTerminalId) {
-          closeTerminal(activeTerminalId);
-        }
-        return;
-      }
-
-      // Cmd+Shift+T (Mac) or Ctrl+Shift+T (Windows/Linux) to create new terminal (backup)
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "T") {
-        e.preventDefault();
-        handleNewTerminal();
-        return;
-      }
-
-      // Cmd+Shift+W (Mac) or Ctrl+Shift+W (Windows/Linux) to close current terminal (backup)
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "W") {
-        e.preventDefault();
-        if (activeTerminalId) {
-          closeTerminal(activeTerminalId);
-        }
-        return;
-      }
-
-      // Terminal tab navigation with Cmd/Ctrl + [ and ]
-      if ((e.metaKey || e.ctrlKey) && (e.key === "[" || e.key === "]")) {
-        e.preventDefault();
-        if (e.key === "]") {
-          switchToNextTerminal();
-        } else {
-          switchToPrevTerminal();
-        }
-        return;
-      }
-
-      // Terminal tab navigation with Alt+Left/Right
-      if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
-        e.preventDefault();
-        if (e.key === "ArrowRight") {
-          switchToNextTerminal();
-        } else {
-          switchToPrevTerminal();
-        }
-        return;
-      }
-
-      // Alternative: Ctrl+PageUp/PageDown for terminal navigation
-      if (e.ctrlKey && (e.key === "PageUp" || e.key === "PageDown")) {
-        e.preventDefault();
-        if (e.key === "PageDown") {
-          switchToNextTerminal();
-        } else {
-          switchToPrevTerminal();
-        }
-        return;
-      }
-
-      // Cmd+D (Mac) or Ctrl+D (Windows/Linux) to toggle split view
-      if ((e.metaKey || e.ctrlKey) && e.key === "d" && !e.shiftKey) {
-        e.preventDefault();
-        handleSplitView();
-        return;
-      }
-
-      // Number shortcuts: Cmd/Ctrl+1, Cmd/Ctrl+2, etc. to switch to specific terminal tabs
-      if ((e.metaKey || e.ctrlKey) && /^[1-9]$/.test(e.key)) {
-        e.preventDefault();
-        const tabIndex = parseInt(e.key) - 1;
-        if (tabIndex < terminals.length) {
-          setActiveTerminal(terminals[tabIndex].id);
-        }
-        return;
-      }
+    const handleNewTerminalEvent = () => {
+      handleNewTerminal();
     };
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [
-    activeTerminalId,
-    terminals,
-    handleNewTerminal,
-    closeTerminal,
-    setActiveTerminal,
-    switchToNextTerminal,
-    switchToPrevTerminal,
-    handleSplitView,
-  ]);
+    const handleSplitTerminalEvent = () => {
+      handleSplitView();
+    };
+
+    const handleActivateTerminalTab = (event: Event) => {
+      const tabIndex = (event as CustomEvent<number>).detail;
+      if (typeof tabIndex !== "number" || tabIndex < 0 || tabIndex >= terminals.length) return;
+      setActiveTerminal(terminals[tabIndex].id);
+    };
+
+    window.addEventListener("terminal-new", handleNewTerminalEvent);
+    window.addEventListener("terminal-split", handleSplitTerminalEvent);
+    window.addEventListener("terminal-activate-tab", handleActivateTerminalTab);
+
+    return () => {
+      window.removeEventListener("terminal-new", handleNewTerminalEvent);
+      window.removeEventListener("terminal-split", handleSplitTerminalEvent);
+      window.removeEventListener("terminal-activate-tab", handleActivateTerminalTab);
+    };
+  }, [terminals, handleNewTerminal, setActiveTerminal, handleSplitView]);
 
   // Auto-create first terminal when the pane becomes visible
   useEffect(() => {

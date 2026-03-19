@@ -18,7 +18,6 @@ import { SplitViewRoot } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import QuickOpen from "@/features/quick-open/components/quick-open";
 import { useSettingsStore } from "@/features/settings/store";
-import { GlobalNewTabMenu } from "@/features/tabs/components/global-new-tab-menu";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim-store";
@@ -370,7 +369,6 @@ export function MainLayout() {
       <VimSearchBar />
       <CommandPalette />
       <ProjectNameMenu />
-      <GlobalNewTabMenu />
 
       {/* Dialog components */}
       <ThemeSelector
