@@ -1024,7 +1024,11 @@ export const useFileSystemStore = createSelectors(
 
         const remoteSource = parseRemotePath(oldPath);
         const remoteTarget = parseRemotePath(newPath);
-        if (remoteSource && remoteTarget && remoteSource.connectionId === remoteTarget.connectionId) {
+        if (
+          remoteSource &&
+          remoteTarget &&
+          remoteSource.connectionId === remoteTarget.connectionId
+        ) {
           await invoke("ssh_rename_path", {
             connectionId: remoteSource.connectionId,
             sourcePath: remoteSource.remotePath,
@@ -1221,7 +1225,9 @@ export const useFileSystemStore = createSelectors(
         const remoteInfo = parseRemotePath(parentPath);
         const folderPath = remoteInfo
           ? (() => {
-              const normalizedParent = parentPath.endsWith("/") ? parentPath.slice(0, -1) : parentPath;
+              const normalizedParent = parentPath.endsWith("/")
+                ? parentPath.slice(0, -1)
+                : parentPath;
               return `${normalizedParent}/${folderName}`;
             })()
           : await createNewDirectory(parentPath, folderName);

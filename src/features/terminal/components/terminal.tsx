@@ -191,7 +191,8 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         } catch {}
       }
 
-      const targetDirectory = workingDirectory || existingSession?.currentDirectory || rootFolderPath;
+      const targetDirectory =
+        workingDirectory || existingSession?.currentDirectory || rootFolderPath;
       const remoteInfo = targetDirectory ? parseRemotePath(targetDirectory) : null;
       const effectiveRemoteConnectionId = remoteConnectionId || remoteInfo?.connectionId;
 

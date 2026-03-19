@@ -8,7 +8,10 @@ interface TerminalWriteBufferOptions {
   writeChunk: (connectionId: string, data: string) => Promise<void>;
 }
 
-export function useTerminalWriteBuffer({ getConnectionId, writeChunk }: TerminalWriteBufferOptions) {
+export function useTerminalWriteBuffer({
+  getConnectionId,
+  writeChunk,
+}: TerminalWriteBufferOptions) {
   const queueRef = useRef("");
   const timerRef = useRef<number | null>(null);
   const flushingRef = useRef(false);

@@ -78,9 +78,9 @@ const TerminalSession = ({
             xtermInstanceRef.current = ref;
             terminalRef.current = ref;
           }}
-        onTerminalExit={onTerminalExit}
-        remoteConnectionId={terminal.remoteConnectionId}
-      />
+          onTerminalExit={onTerminalExit}
+          remoteConnectionId={terminal.remoteConnectionId}
+        />
       </TerminalErrorBoundary>
     </div>
   );
