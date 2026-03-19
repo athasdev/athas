@@ -70,6 +70,7 @@ const TerminalSession = ({
           sessionId={terminal.id}
           isActive={isActive}
           isVisible={isVisible}
+          initialCommand={terminal.initialCommand}
           onReady={() => {
             // Additional ready callback if needed
           }}

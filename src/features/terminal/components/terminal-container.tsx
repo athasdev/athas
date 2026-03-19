@@ -1,7 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
+import { useSettingsStore } from "@/features/settings/store";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
+import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
+import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
+import { resolveTerminalLaunch } from "@/features/terminal/utils/terminal-profiles";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { cn } from "@/utils/cn";
@@ -38,6 +42,13 @@ const TerminalContainer = ({
     getPersistedTerminals,
     restoreTerminalsFromPersisted,
   } = useTerminalTabs();
+  const terminalSettings = useSettingsStore((state) => ({
+    terminalDefaultProfileId: state.settings.terminalDefaultProfileId,
+    terminalDefaultShellId: state.settings.terminalDefaultShellId,
+  }));
+  const customProfiles = useTerminalProfilesStore.use.profiles();
+  const availableShells = useTerminalShellsStore.use.shells();
+  const loadShells = useTerminalShellsStore.use.actions().loadShells;
 
   // Wrapper to add logging and ensure terminal closes properly
   const closeTerminal = useCallback(
@@ -65,42 +76,66 @@ const TerminalContainer = ({
   } = useUIState();
   const isTerminalPaneVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
 
-  const handleNewTerminal = useCallback(() => {
-    const dirName = currentDirectory.split("/").pop() || "terminal";
-    const newTerminalId = createTerminal(dirName, currentDirectory);
-    // Focus the new terminal after creation
-    if (newTerminalId) {
-      // Clear any existing timeout for this terminal
-      const existingTimeout = tabFocusTimeoutRef.current.get(newTerminalId);
-      if (existingTimeout) {
-        clearTimeout(existingTimeout);
-      }
-      const timeoutId = setTimeout(() => {
-        const terminalRef = terminalSessionRefs.current.get(newTerminalId);
-        if (terminalRef) {
-          terminalRef.focus();
-        }
-        tabFocusTimeoutRef.current.delete(newTerminalId);
-      }, 150);
-      tabFocusTimeoutRef.current.set(newTerminalId, timeoutId);
+  useEffect(() => {
+    void loadShells();
+  }, [loadShells]);
+
+  const focusNewTerminal = useCallback((terminalId: string) => {
+    const existingTimeout = tabFocusTimeoutRef.current.get(terminalId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
     }
-  }, [createTerminal, currentDirectory]);
+    const timeoutId = setTimeout(() => {
+      const terminalRef = terminalSessionRefs.current.get(terminalId);
+      if (terminalRef) {
+        terminalRef.focus();
+      }
+      tabFocusTimeoutRef.current.delete(terminalId);
+    }, 150);
+    tabFocusTimeoutRef.current.set(terminalId, timeoutId);
+  }, []);
+
+  const handleNewTerminal = useCallback(
+    (profileId?: string) => {
+      const resolvedLaunch = resolveTerminalLaunch({
+        currentDirectory,
+        customProfiles,
+        explicitProfileId: profileId,
+        settings: terminalSettings,
+        shells: availableShells,
+      });
+      const dirName = resolvedLaunch.workingDirectory.split("/").pop() || resolvedLaunch.name;
+      const newTerminalId = createTerminal({
+        name: resolvedLaunch.profileId ? resolvedLaunch.name : dirName,
+        currentDirectory: resolvedLaunch.workingDirectory,
+        shell: resolvedLaunch.shell,
+        profileId: resolvedLaunch.profileId,
+        initialCommand: resolvedLaunch.initialCommand,
+      });
+      focusNewTerminal(newTerminalId);
+    },
+    [
+      availableShells,
+      createTerminal,
+      currentDirectory,
+      customProfiles,
+      focusNewTerminal,
+      terminalSettings,
+    ],
+  );
 
   const handleTabCreate = useCallback(
-    (directory: string, shell?: string) => {
+    (directory: string, shell?: string, profileId?: string) => {
       const dirName = directory.split("/").pop() || "terminal";
-      const newTerminalId = createTerminal(dirName, directory, shell);
-      // Focus the new terminal after creation
-      if (newTerminalId) {
-        setTimeout(() => {
-          const terminalRef = terminalSessionRefs.current.get(newTerminalId);
-          if (terminalRef) {
-            terminalRef.focus();
-          }
-        }, 150);
-      }
+      const newTerminalId = createTerminal({
+        name: dirName,
+        currentDirectory: directory,
+        shell,
+        profileId,
+      });
+      focusNewTerminal(newTerminalId);
     },
-    [createTerminal],
+    [createTerminal, focusNewTerminal],
   );
 
   // Restore persisted terminals or create initial terminal on mount
@@ -232,11 +267,12 @@ const TerminalContainer = ({
     } else {
       // Create an actual companion terminal with independent session
       const companionName = `${activeTerminal.name} (Split)`;
-      const companionId = createTerminal(
-        companionName,
-        activeTerminal.currentDirectory,
-        activeTerminal.shell,
-      );
+      const companionId = createTerminal({
+        name: companionName,
+        currentDirectory: activeTerminal.currentDirectory,
+        shell: activeTerminal.shell,
+        profileId: activeTerminal.profileId,
+      });
       setTerminalSplitMode(activeTerminalId, true, companionId);
     }
   }, [activeTerminalId, terminals, setTerminalSplitMode, createTerminal, closeTerminal]);
@@ -319,7 +355,10 @@ const TerminalContainer = ({
 
       // Create a new terminal
       const terminalName = name || "Install";
-      const newTerminalId = createTerminal(terminalName, currentDirectory);
+      const newTerminalId = createTerminal({
+        name: terminalName,
+        currentDirectory,
+      });
 
       if (newTerminalId) {
         // Store the pending command
@@ -429,7 +468,10 @@ const TerminalContainer = ({
       } else {
         // No persisted terminals, create a new one
         const dirName = currentDirectory.split("/").pop() || "terminal";
-        createTerminal(dirName, currentDirectory);
+        createTerminal({
+          name: dirName,
+          currentDirectory,
+        });
       }
     }
   }, [
@@ -467,6 +509,7 @@ const TerminalContainer = ({
         onTabPin={handleTabPin}
         onTabRename={handleTabRename}
         onNewTerminal={handleNewTerminal}
+        onNewTerminalWithProfile={handleNewTerminal}
         onTabCreate={handleTabCreate}
         onCloseOtherTabs={handleCloseOtherTabs}
         onCloseAllTabs={handleCloseAllTabs}

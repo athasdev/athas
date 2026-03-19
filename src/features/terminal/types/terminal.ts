@@ -5,6 +5,8 @@ export interface Terminal {
   isActive: boolean;
   isPinned?: boolean;
   shell?: string;
+  profileId?: string;
+  initialCommand?: string;
   createdAt: Date;
   lastActivity?: Date;
   connectionId?: string;
@@ -45,6 +47,7 @@ export interface PersistedTerminal {
   currentDirectory: string;
   isPinned: boolean;
   shell?: string;
+  profileId?: string;
   title?: string;
   remoteConnectionId?: string;
 }
@@ -58,6 +61,8 @@ export type TerminalAction =
         shell?: string;
         id?: string;
         remoteConnectionId?: string;
+        profileId?: string;
+        initialCommand?: string;
       };
     }
   | { type: "CLOSE_TERMINAL"; payload: { id: string } }

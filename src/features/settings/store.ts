@@ -64,6 +64,8 @@ export interface Settings {
   terminalCursorStyle: "block" | "underline" | "bar";
   terminalCursorBlink: boolean;
   terminalCursorWidth: number;
+  terminalDefaultShellId: string;
+  terminalDefaultProfileId: string;
   // UI
   uiFontFamily: string;
   uiFontSize: number;
@@ -209,6 +211,8 @@ export const defaultSettings: Settings = {
   terminalCursorStyle: "block",
   terminalCursorBlink: true,
   terminalCursorWidth: 2,
+  terminalDefaultShellId: "",
+  terminalDefaultProfileId: "",
   // UI
   uiFontFamily: "Geist Variable",
   uiFontSize: UI_FONT_SIZE_DEFAULT,

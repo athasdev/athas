@@ -1,11 +1,21 @@
-import { Info } from "lucide-react";
+import { Info, Plus, Trash2 } from "lucide-react";
 import { useEffect } from "react";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { useFontStore } from "@/features/settings/stores/font-store";
+import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
+import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
+import {
+  DEFAULT_SHELL_OPTION_VALUE,
+  SYSTEM_DEFAULT_PROFILE_ID,
+  getAllTerminalProfiles,
+} from "@/features/terminal/utils/terminal-profiles";
+import Button from "@/ui/button";
+import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
 import Section, { SettingRow } from "@/ui/section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
+import Textarea from "@/ui/textarea";
 import Tooltip from "@/ui/tooltip";
 
 const NERD_FONTS = [
@@ -22,10 +32,15 @@ export const TerminalSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
   const monospaceFonts = useFontStore.use.monospaceFonts();
   const { loadMonospaceFonts } = useFontStore.use.actions();
+  const profiles = useTerminalProfilesStore.use.profiles();
+  const profileActions = useTerminalProfilesStore.use.actions();
+  const shells = useTerminalShellsStore.use.shells();
+  const loadShells = useTerminalShellsStore.use.actions().loadShells;
 
   useEffect(() => {
     loadMonospaceFonts();
-  }, [loadMonospaceFonts]);
+    void loadShells();
+  }, [loadMonospaceFonts, loadShells]);
 
   // Combine Nerd Fonts with system monospace fonts
   // Only include Nerd Fonts if they are actually installed on the system
@@ -54,8 +69,220 @@ export const TerminalSettings = () => {
     });
   }
 
+  const shellOptions = [
+    { value: DEFAULT_SHELL_OPTION_VALUE, label: "System Default" },
+    ...shells.map((shell) => ({
+      value: shell.id,
+      label: shell.name,
+    })),
+  ];
+  const selectedDefaultShellId = shellOptions.some(
+    (option) => option.value === settings.terminalDefaultShellId,
+  )
+    ? settings.terminalDefaultShellId || DEFAULT_SHELL_OPTION_VALUE
+    : DEFAULT_SHELL_OPTION_VALUE;
+
+  const allProfiles = getAllTerminalProfiles(shells, profiles);
+  const profileOptions = allProfiles.map((profile) => ({
+    value: profile.id,
+    label: profile.name,
+  }));
+  const selectedDefaultProfileId = profileOptions.some(
+    (option) => option.value === settings.terminalDefaultProfileId,
+  )
+    ? settings.terminalDefaultProfileId || SYSTEM_DEFAULT_PROFILE_ID
+    : SYSTEM_DEFAULT_PROFILE_ID;
+
+  useEffect(() => {
+    if (
+      settings.terminalDefaultShellId &&
+      !shells.some((shell) => shell.id === settings.terminalDefaultShellId)
+    ) {
+      void updateSetting("terminalDefaultShellId", "");
+    }
+  }, [settings.terminalDefaultShellId, shells, updateSetting]);
+
+  useEffect(() => {
+    if (
+      settings.terminalDefaultProfileId &&
+      !allProfiles.some((profile) => profile.id === settings.terminalDefaultProfileId)
+    ) {
+      void updateSetting("terminalDefaultProfileId", "");
+    }
+  }, [allProfiles, settings.terminalDefaultProfileId, updateSetting]);
+
   return (
     <div className="space-y-4">
+      <Section
+        title="Launch"
+        description="Choose which shell and profile new terminal tabs should use by default."
+      >
+        <SettingRow
+          label="Default Shell"
+          description="Fallback shell when a terminal profile does not override it."
+          onReset={() =>
+            updateSetting("terminalDefaultShellId", getDefaultSetting("terminalDefaultShellId"))
+          }
+          canReset={settings.terminalDefaultShellId !== getDefaultSetting("terminalDefaultShellId")}
+        >
+          <Select
+            value={selectedDefaultShellId}
+            options={shellOptions}
+            onChange={(value) =>
+              updateSetting(
+                "terminalDefaultShellId",
+                value === DEFAULT_SHELL_OPTION_VALUE ? "" : value,
+              )
+            }
+            className="w-56"
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Default Profile"
+          description="Used by the terminal toolbar button and Cmd+T when the terminal is focused."
+          onReset={() =>
+            updateSetting("terminalDefaultProfileId", getDefaultSetting("terminalDefaultProfileId"))
+          }
+          canReset={
+            settings.terminalDefaultProfileId !== getDefaultSetting("terminalDefaultProfileId")
+          }
+        >
+          <Select
+            value={selectedDefaultProfileId}
+            options={profileOptions}
+            onChange={(value) =>
+              updateSetting(
+                "terminalDefaultProfileId",
+                value === SYSTEM_DEFAULT_PROFILE_ID ? "" : value,
+              )
+            }
+            className="w-56"
+            size="sm"
+            searchable
+          />
+        </SettingRow>
+      </Section>
+
+      <Section
+        title="Profiles"
+        description="Create reusable launch presets with a shell override, startup directory, and optional startup commands."
+      >
+        <div className="space-y-3 px-1">
+          <div className="flex items-center justify-between">
+            <div className="text-text-lighter text-xs">
+              Built-in profiles are generated from detected shells. Custom profiles appear in the
+              terminal toolbar profile picker.
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                profileActions.addProfile({
+                  name: `Custom Profile ${profiles.length + 1}`,
+                  shell: settings.terminalDefaultShellId || undefined,
+                  startupCommands: [],
+                })
+              }
+            >
+              <Plus size={12} className="mr-1" />
+              Add Profile
+            </Button>
+          </div>
+
+          {profiles.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border/70 bg-secondary-bg/50 px-3 py-3 text-text-lighter text-xs">
+              No custom terminal profiles yet.
+            </div>
+          ) : (
+            profiles.map((profile) => (
+              <div
+                key={profile.id}
+                className="space-y-3 rounded-xl border border-border/70 bg-secondary-bg/60 p-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 font-medium text-text text-xs">{profile.name}</div>
+                    <div className="text-text-lighter text-xs">
+                      Visible in the terminal profile picker.
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => profileActions.deleteProfile(profile.id)}
+                    aria-label={`Delete ${profile.name}`}
+                  >
+                    <Trash2 size={12} />
+                  </Button>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="font-medium text-text text-xs">Name</label>
+                    <Input
+                      value={profile.name}
+                      onChange={(event) =>
+                        profileActions.updateProfile(profile.id, { name: event.target.value })
+                      }
+                      placeholder="My Profile"
+                      size="sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="font-medium text-text text-xs">Shell</label>
+                    <Select
+                      value={profile.shell || DEFAULT_SHELL_OPTION_VALUE}
+                      options={shellOptions}
+                      onChange={(value) =>
+                        profileActions.updateProfile(profile.id, {
+                          shell: value === DEFAULT_SHELL_OPTION_VALUE ? undefined : value,
+                        })
+                      }
+                      className="w-full"
+                      size="sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-medium text-text text-xs">Startup Directory</label>
+                  <Input
+                    value={profile.startupDirectory || ""}
+                    onChange={(event) =>
+                      profileActions.updateProfile(profile.id, {
+                        startupDirectory: event.target.value || undefined,
+                      })
+                    }
+                    placeholder="Leave empty to use the current workspace directory"
+                    size="sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-medium text-text text-xs">Startup Commands</label>
+                  <Textarea
+                    value={(profile.startupCommands || []).join("\n")}
+                    onChange={(event) =>
+                      profileActions.updateProfile(profile.id, {
+                        startupCommands: event.target.value
+                          .split("\n")
+                          .map((line) => line.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                    placeholder="One command per line"
+                    rows={3}
+                    size="sm"
+                  />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Section>
+
       <Section title="Typography">
         <SettingRow
           label="Font Family"

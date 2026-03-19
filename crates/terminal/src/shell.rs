@@ -113,3 +113,7 @@ impl Shell {
 pub fn get_shells() -> Vec<Shell> {
    Shell::get_available_shells()
 }
+
+pub fn get_shell_by_id(id: &str) -> Option<Shell> {
+   get_shells().into_iter().find(|shell| shell.id == id)
+}

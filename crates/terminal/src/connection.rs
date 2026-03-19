@@ -1,4 +1,4 @@
-use crate::config::TerminalConfig;
+use crate::{config::TerminalConfig, shell::get_shell_by_id};
 use anyhow::{Result, anyhow};
 use portable_pty::{Child, CommandBuilder, PtyPair, PtySize};
 use std::{
@@ -133,11 +133,15 @@ impl TerminalConnection {
             (builder, None)
          } else {
             let default_shell = default_shell();
-            let shell_path = if let Some(shell) = &config.shell {
-               if cfg!(target_os = "windows") {
-                  shell.exec_win.clone().unwrap_or(default_shell.clone())
+            let shell_path = if let Some(shell_id) = &config.shell {
+               if let Some(shell) = get_shell_by_id(shell_id) {
+                  if cfg!(target_os = "windows") {
+                     shell.exec_win.unwrap_or(default_shell.clone())
+                  } else {
+                     shell.exec_unix.unwrap_or(default_shell.clone())
+                  }
                } else {
-                  shell.exec_unix.clone().unwrap_or(default_shell.clone())
+                  default_shell.clone()
                }
             } else {
                default_shell.clone()

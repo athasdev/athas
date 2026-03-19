@@ -2,6 +2,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import {
   AlignCenter,
+  ChevronDown,
   Maximize,
   Maximize2,
   Minimize2,
@@ -16,11 +17,15 @@ import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener, useOnClickOutside } from "usehooks-ts";
+import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
+import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
 import {
   type TerminalWidthMode,
   useTerminalStore,
 } from "@/features/terminal/stores/terminal-store";
 import type { Terminal } from "@/features/terminal/types/terminal";
+import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
+import { MenuItemsList, MenuPopover, type MenuItem } from "@/ui/menu";
 import { cn } from "@/utils/cn";
 import Tooltip from "../../../ui/tooltip";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
@@ -102,7 +107,8 @@ interface TerminalTabBarProps {
   onTabPin?: (terminalId: string) => void;
   onTabRename?: (terminalId: string, name: string) => void;
   onNewTerminal?: () => void;
-  onTabCreate?: (directory: string, shell?: string) => void;
+  onNewTerminalWithProfile?: (profileId?: string) => void;
+  onTabCreate?: (directory: string, shell?: string, profileId?: string) => void;
   onCloseOtherTabs?: (terminalId: string) => void;
   onCloseAllTabs?: () => void;
   onCloseTabsToRight?: (terminalId: string) => void;
@@ -122,6 +128,7 @@ const TerminalTabBar = ({
   onTabPin,
   onTabRename,
   onNewTerminal,
+  onNewTerminalWithProfile,
   onTabCreate,
   onCloseOtherTabs,
   onCloseAllTabs,
@@ -160,9 +167,30 @@ const TerminalTabBar = ({
 
   const widthMode = useTerminalStore((state) => state.widthMode);
   const setWidthMode = useTerminalStore((state) => state.setWidthMode);
+  const customProfiles = useTerminalProfilesStore.use.profiles();
+  const availableShells = useTerminalShellsStore.use.shells();
+  const loadShells = useTerminalShellsStore.use.actions().loadShells;
 
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const profileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const [profileMenu, setProfileMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+  }>({ isOpen: false, position: { x: 0, y: 0 } });
+
+  useOnClickOutside(profileMenuRef as RefObject<HTMLElement>, (event) => {
+    const target = event.target as HTMLElement;
+    if (target && profileMenuButtonRef.current?.contains(target)) {
+      return;
+    }
+    setProfileMenu({ isOpen: false, position: { x: 0, y: 0 } });
+  });
+
+  useEffect(() => {
+    void loadShells();
+  }, [loadShells]);
 
   const handleMouseDown = (e: React.MouseEvent, index: number) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) {
@@ -362,6 +390,20 @@ const TerminalTabBar = ({
     setToolbarContextMenu({ isOpen: false, position: { x: 0, y: 0 } });
   };
 
+  const closeProfileMenu = () => {
+    setProfileMenu({ isOpen: false, position: { x: 0, y: 0 } });
+  };
+
+  const openProfileMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    setProfileMenu({
+      isOpen: true,
+      position: { x: rect.right - 220, y: rect.bottom + 8 },
+    });
+  };
+
   // Sort terminals: pinned tabs first, then regular tabs
   const sortedTerminals = [...terminals].sort((a, b) => {
     if (a.isPinned && !b.isPinned) return -1;
@@ -370,6 +412,16 @@ const TerminalTabBar = ({
   });
   const pinnedTerminals = sortedTerminals.filter((terminal) => terminal.isPinned);
   const regularTerminals = sortedTerminals.filter((terminal) => !terminal.isPinned);
+  const terminalProfiles = getAllTerminalProfiles(availableShells, customProfiles);
+  const profileMenuItems: MenuItem[] = terminalProfiles.map((profile) => ({
+    id: profile.id,
+    label: profile.name,
+    icon: <TerminalIcon size={12} className="text-text-lighter" />,
+    onClick: () => {
+      onNewTerminalWithProfile?.(profile.id);
+      closeProfileMenu();
+    },
+  }));
 
   useEffect(() => {
     if (draggedIndex === null) return;
@@ -408,17 +460,33 @@ const TerminalTabBar = ({
           <span className="ui-font text-text-lighter text-xs">No terminals</span>
         </div>
         {onNewTerminal && (
-          <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-            <button
-              onClick={onNewTerminal}
-              className={cn(
-                "flex h-6 w-6 items-center justify-center rounded-lg border border-transparent",
-                "text-text-lighter text-xs transition-colors hover:border-border/70 hover:bg-hover",
-              )}
-            >
-              <Plus size={9} />
-            </button>
-          </Tooltip>
+          <div className="flex items-center gap-0.5">
+            <Tooltip content="New Terminal (Cmd+T)" side="bottom">
+              <button
+                onClick={onNewTerminal}
+                className={cn(
+                  "flex h-6 w-6 items-center justify-center rounded-lg border border-transparent",
+                  "text-text-lighter text-xs transition-colors hover:border-border/70 hover:bg-hover",
+                )}
+              >
+                <Plus size={9} />
+              </button>
+            </Tooltip>
+            {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
+              <Tooltip content="Choose Terminal Profile" side="bottom">
+                <button
+                  ref={profileMenuButtonRef}
+                  onClick={openProfileMenu}
+                  className={cn(
+                    "flex h-6 w-5 items-center justify-center rounded-lg border border-transparent",
+                    "text-text-lighter transition-colors hover:border-border/70 hover:bg-hover",
+                  )}
+                >
+                  <ChevronDown size={10} />
+                </button>
+              </Tooltip>
+            )}
+          </div>
         )}
       </div>
     );
@@ -551,17 +619,33 @@ const TerminalTabBar = ({
               </button>
             </Tooltip>
           )}
-          <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-            <button
-              onClick={onNewTerminal}
-              className={cn(
-                "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1",
-                "text-text-lighter transition-colors hover:border-border/70 hover:bg-hover",
-              )}
-            >
-              <Plus size={14} />
-            </button>
-          </Tooltip>
+          <div className="flex shrink-0 items-center gap-0.5">
+            <Tooltip content="New Terminal (Cmd+T)" side="bottom">
+              <button
+                onClick={onNewTerminal}
+                className={cn(
+                  "flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1",
+                  "text-text-lighter transition-colors hover:border-border/70 hover:bg-hover",
+                )}
+              >
+                <Plus size={14} />
+              </button>
+            </Tooltip>
+            {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
+              <Tooltip content="Choose Terminal Profile" side="bottom">
+                <button
+                  ref={profileMenuButtonRef}
+                  onClick={openProfileMenu}
+                  className={cn(
+                    "flex h-6 w-5 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent p-1",
+                    "text-text-lighter transition-colors hover:border-border/70 hover:bg-hover",
+                  )}
+                >
+                  <ChevronDown size={11} />
+                </button>
+              </Tooltip>
+            )}
+          </div>
           {/* Split View Button */}
           {onSplitView && (
             <Tooltip
@@ -658,7 +742,7 @@ const TerminalTabBar = ({
             onDuplicate={(terminalId) => {
               const terminal = terminals.find((t) => t.id === terminalId);
               if (terminal) {
-                onTabCreate?.(terminal.currentDirectory, terminal.shell);
+                onTabCreate?.(terminal.currentDirectory, terminal.shell, terminal.profileId);
               }
             }}
             onRename={(terminalId) => {
@@ -707,6 +791,16 @@ const TerminalTabBar = ({
             currentMode={widthMode}
             onModeChange={setWidthMode}
           />
+          <MenuPopover
+            isOpen={profileMenu.isOpen}
+            menuRef={profileMenuRef}
+            className="w-[220px]"
+            style={{ left: profileMenu.position.x, top: profileMenu.position.y }}
+          >
+            <div className="ui-font px-2.5 py-1 text-[10px] text-text-lighter">New Terminal</div>
+            <div className="my-0.5 border-border/70 border-t" />
+            <MenuItemsList items={profileMenuItems} onItemSelect={closeProfileMenu} />
+          </MenuPopover>
         </>,
         document.body,
       )}
