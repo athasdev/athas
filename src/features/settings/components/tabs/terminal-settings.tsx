@@ -29,18 +29,18 @@ const FONT_HELP_TEXT =
   "Note: Selected font must be installed on your system to work correctly. If icons are missing, try installing a Nerd Font.";
 
 export const TerminalSettings = () => {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore((state) => state.settings);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const monospaceFonts = useFontStore.use.monospaceFonts();
   const { loadMonospaceFonts } = useFontStore.use.actions();
   const profiles = useTerminalProfilesStore.use.profiles();
   const profileActions = useTerminalProfilesStore.use.actions();
   const shells = useTerminalShellsStore.use.shells();
-  const loadShells = useTerminalShellsStore.use.actions().loadShells;
 
   useEffect(() => {
     loadMonospaceFonts();
-    void loadShells();
-  }, [loadMonospaceFonts, loadShells]);
+    void useTerminalShellsStore.getState().actions.loadShells();
+  }, [loadMonospaceFonts]);
 
   // Combine Nerd Fonts with system monospace fonts
   // Only include Nerd Fonts if they are actually installed on the system

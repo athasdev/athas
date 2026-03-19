@@ -42,13 +42,12 @@ const TerminalContainer = ({
     getPersistedTerminals,
     restoreTerminalsFromPersisted,
   } = useTerminalTabs();
-  const terminalSettings = useSettingsStore((state) => ({
-    terminalDefaultProfileId: state.settings.terminalDefaultProfileId,
-    terminalDefaultShellId: state.settings.terminalDefaultShellId,
-  }));
+  const terminalDefaultProfileId = useSettingsStore(
+    (state) => state.settings.terminalDefaultProfileId,
+  );
+  const terminalDefaultShellId = useSettingsStore((state) => state.settings.terminalDefaultShellId);
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
-  const loadShells = useTerminalShellsStore.use.actions().loadShells;
 
   // Wrapper to add logging and ensure terminal closes properly
   const closeTerminal = useCallback(
@@ -77,8 +76,8 @@ const TerminalContainer = ({
   const isTerminalPaneVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
 
   useEffect(() => {
-    void loadShells();
-  }, [loadShells]);
+    void useTerminalShellsStore.getState().actions.loadShells();
+  }, []);
 
   const focusNewTerminal = useCallback((terminalId: string) => {
     const existingTimeout = tabFocusTimeoutRef.current.get(terminalId);
@@ -101,7 +100,10 @@ const TerminalContainer = ({
         currentDirectory,
         customProfiles,
         explicitProfileId: profileId,
-        settings: terminalSettings,
+        settings: {
+          terminalDefaultProfileId,
+          terminalDefaultShellId,
+        },
         shells: availableShells,
       });
       const dirName = resolvedLaunch.workingDirectory.split("/").pop() || resolvedLaunch.name;
@@ -120,7 +122,8 @@ const TerminalContainer = ({
       currentDirectory,
       customProfiles,
       focusNewTerminal,
-      terminalSettings,
+      terminalDefaultProfileId,
+      terminalDefaultShellId,
     ],
   );
 

@@ -169,7 +169,6 @@ const TerminalTabBar = ({
   const setWidthMode = useTerminalStore((state) => state.setWidthMode);
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
-  const loadShells = useTerminalShellsStore.use.actions().loadShells;
 
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -189,8 +188,8 @@ const TerminalTabBar = ({
   });
 
   useEffect(() => {
-    void loadShells();
-  }, [loadShells]);
+    void useTerminalShellsStore.getState().actions.loadShells();
+  }, []);
 
   const handleMouseDown = (e: React.MouseEvent, index: number) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest("button")) {
