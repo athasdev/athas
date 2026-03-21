@@ -60,6 +60,7 @@ pub async fn get_mysql_tables(
       .iter()
       .map(|r| TableInfo {
          name: r.get::<String, _>(0),
+         kind: "table".to_string(),
       })
       .collect())
 }

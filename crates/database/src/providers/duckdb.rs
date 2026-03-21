@@ -78,7 +78,12 @@ pub async fn get_duckdb_tables(path: String) -> Result<Vec<TableInfo>, String> {
       .map_err(|e| format!("Failed to prepare statement: {}", e))?;
 
    let table_iter = stmt
-      .query_map([], |row| Ok(TableInfo { name: row.get(0)? }))
+      .query_map([], |row| {
+         Ok(TableInfo {
+            name: row.get(0)?,
+            kind: "table".to_string(),
+         })
+      })
       .map_err(|e| format!("Failed to execute query: {}", e))?;
 
    let mut tables = Vec::new();

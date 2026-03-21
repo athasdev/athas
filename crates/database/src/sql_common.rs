@@ -3,6 +3,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TableInfo {
    pub name: String,
+   #[serde(default = "default_database_object_kind")]
+   pub kind: String,
+}
+
+fn default_database_object_kind() -> String {
+   "table".to_string()
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -215,4 +221,43 @@ pub struct ColumnInfo {
    pub notnull: bool,
    pub default_value: Option<String>,
    pub primary_key: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PostgresSubscriptionInfo {
+   pub name: String,
+   pub owner: String,
+   pub enabled: bool,
+   pub publications: Vec<String>,
+   pub connection_string: String,
+   pub slot_name: Option<String>,
+   pub synchronous_commit: Option<String>,
+   pub binary: bool,
+   pub streaming: Option<String>,
+   pub two_phase: bool,
+   pub disable_on_error: bool,
+   pub password_required: bool,
+   pub run_as_owner: bool,
+   pub origin: Option<String>,
+   pub failover: bool,
+   pub two_phase_state: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreatePostgresSubscriptionParams {
+   pub name: String,
+   pub connection_string: String,
+   pub publications: Vec<String>,
+   #[serde(default)]
+   pub enabled: bool,
+   #[serde(default)]
+   pub create_slot: bool,
+   #[serde(default)]
+   pub copy_data: bool,
+   #[serde(default)]
+   pub connect: bool,
+   #[serde(default)]
+   pub failover: bool,
+   #[serde(default)]
+   pub with_slot_name: Option<String>,
 }
