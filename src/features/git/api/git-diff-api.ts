@@ -7,6 +7,11 @@ import {
   resolveRepositoryPath,
 } from "./git-repo-api";
 
+const isNoDiffFoundError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) return false;
+  return error.message.includes("No changes found for file:");
+};
+
 export const getFileDiff = async (
   repoPath: string,
   filePath: string,
@@ -36,7 +41,7 @@ export const getFileDiff = async (
 
     return diff;
   } catch (error) {
-    if (!isNotGitRepositoryError(error)) {
+    if (!isNotGitRepositoryError(error) && !isNoDiffFoundError(error)) {
       console.error("Failed to get file diff:", error);
     }
     return null;
@@ -78,7 +83,7 @@ export const getFileDiffAgainstContent = async (
 
     return diff;
   } catch (error) {
-    if (!isNotGitRepositoryError(error)) {
+    if (!isNotGitRepositoryError(error) && !isNoDiffFoundError(error)) {
       console.error("Failed to get file diff against content:", error);
     }
     return null;
