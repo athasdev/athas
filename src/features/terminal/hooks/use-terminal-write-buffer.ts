@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
 
-const WRITE_FLUSH_MS = 8;
-const MAX_BATCH_SIZE = 4096;
-
 interface TerminalWriteBufferOptions {
   getConnectionId: () => string | null;
   writeChunk: (connectionId: string, data: string) => Promise<void>;
@@ -13,65 +10,45 @@ export function useTerminalWriteBuffer({
   writeChunk,
 }: TerminalWriteBufferOptions) {
   const queueRef = useRef("");
-  const timerRef = useRef<number | null>(null);
   const flushingRef = useRef(false);
+  const getConnectionIdRef = useRef(getConnectionId);
+  const writeChunkRef = useRef(writeChunk);
+
+  getConnectionIdRef.current = getConnectionId;
+  writeChunkRef.current = writeChunk;
 
   const flush = useCallback(async () => {
     if (flushingRef.current) return;
 
-    const connectionId = getConnectionId();
-    const data = queueRef.current;
-    if (!connectionId || !data) return;
+    while (queueRef.current) {
+      const connectionId = getConnectionIdRef.current();
+      const data = queueRef.current;
+      if (!connectionId) return;
 
-    queueRef.current = "";
-    flushingRef.current = true;
-    try {
-      await writeChunk(connectionId, data);
-    } catch {
-      queueRef.current = data + queueRef.current;
-    } finally {
-      flushingRef.current = false;
-      if (queueRef.current) {
-        timerRef.current = window.setTimeout(() => {
-          timerRef.current = null;
-          void flush();
-        }, WRITE_FLUSH_MS);
+      queueRef.current = "";
+      flushingRef.current = true;
+      try {
+        await writeChunkRef.current(connectionId, data);
+      } catch {
+        queueRef.current = data + queueRef.current;
+        break;
+      } finally {
+        flushingRef.current = false;
       }
     }
-  }, [getConnectionId, writeChunk]);
-
-  const scheduleFlush = useCallback(() => {
-    if (timerRef.current !== null) return;
-    timerRef.current = window.setTimeout(() => {
-      timerRef.current = null;
-      void flush();
-    }, WRITE_FLUSH_MS);
-  }, [flush]);
+  }, []);
 
   const write = useCallback(
     (data: string) => {
       if (!data) return;
-
       queueRef.current += data;
-      if (queueRef.current.length >= MAX_BATCH_SIZE) {
-        if (timerRef.current !== null) {
-          window.clearTimeout(timerRef.current);
-          timerRef.current = null;
-        }
-        void flush();
-        return;
-      }
-
-      scheduleFlush();
+      void flush();
     },
-    [flush, scheduleFlush],
+    [flush],
   );
 
   useEffect(() => {
     return () => {
-      if (timerRef.current !== null) {
-        window.clearTimeout(timerRef.current);
-      }
       void flush();
     };
   }, [flush]);

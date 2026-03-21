@@ -409,10 +409,36 @@ export const useFileSystemStore = createSelectors(
         codeEditorRef?: React.RefObject<CodeEditorRef | null>,
         isPreview = false,
       ) => {
-        const { updateActivePath } = useSidebarStore.getState();
-
         if (isDir) {
           await get().toggleFolder(path);
+          return;
+        }
+
+        const { updateActivePath } = useSidebarStore.getState();
+        updateActivePath(path);
+
+        const {
+          buffers,
+          actions: { convertPreviewToDefinite, setActiveBuffer },
+        } = useBufferStore.getState();
+        const existingBuffer = buffers.find((buffer) => buffer.path === path);
+        if (existingBuffer) {
+          setActiveBuffer(existingBuffer.id);
+
+          if (existingBuffer.isPreview && !isPreview) {
+            convertPreviewToDefinite(existingBuffer.id);
+          }
+
+          if (line) {
+            setTimeout(() => {
+              window.dispatchEvent(
+                new CustomEvent("menu-go-to-line", {
+                  detail: { line, path },
+                }),
+              );
+            }, 0);
+          }
+
           return;
         }
 
@@ -421,34 +447,35 @@ export const useFileSystemStore = createSelectors(
 
         let resolvedPath = path;
 
-        try {
-          const workspaceRoot = get().rootFolderPath;
-          const symlinkInfo = await getSymlinkInfo(path, workspaceRoot);
+        const shouldResolveSymlink = !path.startsWith("diff://") && !path.startsWith("remote://");
+        if (shouldResolveSymlink) {
+          try {
+            const workspaceRoot = get().rootFolderPath;
+            const symlinkInfo = await getSymlinkInfo(path, workspaceRoot);
 
-          if (symlinkInfo.is_symlink && symlinkInfo.target) {
-            const pathSeparator = path.includes("\\") ? "\\" : "/";
-            const pathParts = path.split(pathSeparator);
-            pathParts.pop();
-            const parentDir = pathParts.join(pathSeparator);
+            if (symlinkInfo.is_symlink && symlinkInfo.target) {
+              const pathSeparator = path.includes("\\") ? "\\" : "/";
+              const pathParts = path.split(pathSeparator);
+              pathParts.pop();
+              const parentDir = pathParts.join(pathSeparator);
 
-            if (
-              symlinkInfo.target.startsWith(pathSeparator) ||
-              symlinkInfo.target.match(/^[a-zA-Z]:/)
-            ) {
-              resolvedPath = symlinkInfo.target;
-            } else {
-              resolvedPath = workspaceRoot
-                ? `${workspaceRoot}${pathSeparator}${symlinkInfo.target}`
-                : `${parentDir}${pathSeparator}${symlinkInfo.target}`;
+              if (
+                symlinkInfo.target.startsWith(pathSeparator) ||
+                symlinkInfo.target.match(/^[a-zA-Z]:/)
+              ) {
+                resolvedPath = symlinkInfo.target;
+              } else {
+                resolvedPath = workspaceRoot
+                  ? `${workspaceRoot}${pathSeparator}${symlinkInfo.target}`
+                  : `${parentDir}${pathSeparator}${symlinkInfo.target}`;
+              }
             }
+          } catch (error) {
+            console.error("Failed to resolve symlink:", error);
           }
-        } catch (error) {
-          console.error("Failed to resolve symlink:", error);
         }
 
         if (isStaleRequest()) return;
-
-        updateActivePath(path);
         const fileName = getFilenameFromPath(path);
         const { openBuffer } = useBufferStore.getState().actions;
 

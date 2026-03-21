@@ -10,7 +10,7 @@ import {
   Terminal,
   Trash2,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -34,9 +34,15 @@ export function EmptyEditorState() {
     useBufferStore.use.actions();
   const { setIsDatabaseConnectionVisible } = useUIState();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
 
-  const customActions = useCustomActionsStore.use.actions();
-  const { addAction, updateAction, deleteAction } = useCustomActionsStore.getState().storeActions;
+  const allCustomActions = useCustomActionsStore.use.actions();
+  const { addAction, updateAction, deleteAction, getActionsForWorkspace } =
+    useCustomActionsStore.getState().storeActions;
+  const customActions = useMemo(
+    () => getActionsForWorkspace(rootFolderPath),
+    [allCustomActions, getActionsForWorkspace, rootFolderPath],
+  );
 
   const contextMenu = useContextMenu();
 
@@ -105,10 +111,10 @@ export function EmptyEditorState() {
     if (editingActionId) {
       updateAction(editingActionId, { name: command, command });
     } else {
-      addAction({ name: command, command });
+      addAction({ name: command, command, workspacePath: rootFolderPath });
     }
     handleCancel();
-  }, [inputValue, editingActionId, addAction, updateAction, handleCancel]);
+  }, [inputValue, editingActionId, addAction, updateAction, handleCancel, rootFolderPath]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -261,12 +267,12 @@ export function EmptyEditorState() {
                   <button
                     type="button"
                     onClick={() =>
-                      openTerminalBuffer({ name: action.command, command: action.command })
+                      openTerminalBuffer({ name: action.name, command: action.command })
                     }
                     className="flex flex-1 items-center gap-3"
                   >
                     <Terminal size={14} className="shrink-0 text-text-light" />
-                    <span className="text-text text-xs">{action.command}</span>
+                    <span className="text-text text-xs">{action.name}</span>
                   </button>
                   <button
                     type="button"

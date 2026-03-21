@@ -550,9 +550,7 @@ const TerminalContainer = ({
                 <div
                   className={cn(
                     "h-full min-h-0 w-full",
-                    terminal.splitMode &&
-                      terminal.splitWithId &&
-                      "w-1/2 border-border border-r",
+                    terminal.splitMode && terminal.splitWithId && "w-1/2 border-border border-r",
                   )}
                 >
                   <TerminalSession

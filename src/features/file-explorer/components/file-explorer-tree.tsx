@@ -73,6 +73,12 @@ interface FileExplorerTreeProps {
   onFileMove?: (oldPath: string, newPath: string) => void;
 }
 
+interface VisibleRow {
+  file: FileEntry;
+  depth: number;
+  isExpanded: boolean;
+}
+
 function FileExplorerTreeComponent({
   files,
   activePath,
@@ -261,12 +267,14 @@ function FileExplorerTreeComponent({
   // Compute visible rows based on expansion state in the UI store
   const expandedPaths = useFileTreeStore((s) => s.expandedPaths);
   const visibleRows = useMemo(() => {
-    const rows: Array<{ file: FileEntry; depth: number; isExpanded: boolean }> = [];
+    const rows: VisibleRow[] = [];
     const walk = (items: FileEntry[], depth: number) => {
       for (const item of items) {
         const isExpanded = item.isDir && expandedPaths.has(item.path);
         rows.push({ file: item, depth, isExpanded });
-        if (item.isDir && isExpanded && item.children) walk(item.children, depth + 1);
+        if (item.isDir && isExpanded && item.children) {
+          walk(item.children, depth + 1);
+        }
       }
     };
     walk(filteredFiles, 0);
@@ -1039,7 +1047,7 @@ function FileExplorerTreeComponent({
           </div>
         </div>
       ) : (
-        <div className="w-max min-w-full" style={{}}>
+        <div className="w-max min-w-full">
           {(() => {
             const items = rowVirtualizer.getVirtualItems();
             const paddingTop = items.length ? items[0].start : 0;
