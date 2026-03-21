@@ -15,7 +15,11 @@ import {
 import { EDITOR_CONSTANTS } from "../config/constants";
 import type { Position, Range } from "../types/editor";
 import { splitLines } from "../utils/lines";
-import { calculateCursorPosition, getAccurateCursorX } from "../utils/position";
+import {
+  calculateCursorPosition,
+  calculateOffsetFromPosition,
+  getAccurateCursorX,
+} from "../utils/position";
 
 const DEFAULT_INLINE_EDIT_INSTRUCTION = "Improve this code while preserving behavior.";
 const DEFAULT_INLINE_EDIT_MODELS: AutocompleteModel[] = [
@@ -121,44 +125,67 @@ export function useInlineEdit({
   }, [inlineEditVisible, aiAutocompleteModelId, updateSetting, checkAllProviderApiKeys]);
 
   useEffect(() => {
-    const hasSelection = Boolean(selection && selection.start.offset !== selection.end.offset);
-    if (hasSelection) return;
-    setInlineEditSelectionAnchor(null);
-    if (inlineEditVisible) {
-      inlineEditToolbarActions.hide();
+    if (!inlineEditVisible) {
+      setInlineEditSelectionAnchor(null);
+      return;
     }
-  }, [selection, inlineEditVisible, inlineEditToolbarActions]);
-
-  useEffect(() => {
-    if (!inlineEditVisible || inlineEditSelectionAnchor || !inputRef.current) return;
+    if (inlineEditSelectionAnchor || !inputRef.current) return;
     const start = inputRef.current.selectionStart;
     const end = inputRef.current.selectionEnd;
-    if (start === end) return;
     const anchorPos = calculateCursorPosition(Math.max(start, end), lines);
     setInlineEditSelectionAnchor({ line: anchorPos.line, column: anchorPos.column });
   }, [inlineEditVisible, inlineEditSelectionAnchor, lines, inputRef]);
 
+  const resolveInlineEditRange = useCallback((): Range | null => {
+    if (selection && selection.start.offset !== selection.end.offset) {
+      const start =
+        selection.start.offset <= selection.end.offset ? selection.start : selection.end;
+      const end = selection.start.offset <= selection.end.offset ? selection.end : selection.start;
+      return { start, end };
+    }
+
+    const textarea = inputRef.current;
+    if (!textarea || lines.length === 0) {
+      return null;
+    }
+
+    const cursorOffset = textarea.selectionStart;
+    const cursorPosition = calculateCursorPosition(cursorOffset, lines);
+    const lineText = lines[cursorPosition.line] ?? "";
+    const lineStartOffset = calculateOffsetFromPosition(cursorPosition.line, 0, lines);
+    const lineEndOffset = lineStartOffset + lineText.length;
+
+    return {
+      start: {
+        line: cursorPosition.line,
+        column: 0,
+        offset: lineStartOffset,
+      },
+      end: {
+        line: cursorPosition.line,
+        column: lineText.length,
+        offset: lineEndOffset,
+      },
+    };
+  }, [inputRef, lines, selection]);
+
   const handleApplyInlineEdit = useCallback(async () => {
-    if (!buffer || !selection) {
-      toast.warning("Select non-empty code before inline edit.");
+    if (!buffer) {
+      toast.warning("Inline edit requires an open buffer.");
       inlineEditToolbarActions.hide();
       return;
     }
 
-    const startOffset = Math.min(selection.start.offset, selection.end.offset);
-    const endOffset = Math.max(selection.start.offset, selection.end.offset);
-    if (startOffset === endOffset) {
-      toast.warning("Select non-empty code before inline edit.");
+    const targetRange = resolveInlineEditRange();
+    if (!targetRange) {
+      toast.warning("Could not determine an inline edit target.");
       inlineEditToolbarActions.hide();
       return;
     }
 
+    const startOffset = targetRange.start.offset;
+    const endOffset = targetRange.end.offset;
     const selectedText = buffer.content.slice(startOffset, endOffset);
-    if (!selectedText.trim()) {
-      toast.warning("Select non-empty code before inline edit.");
-      inlineEditToolbarActions.hide();
-      return;
-    }
 
     if (!isAuthenticated) {
       toast.error("Please sign in to use inline edit.");
@@ -241,7 +268,7 @@ export function useInlineEdit({
     }
   }, [
     buffer,
-    selection,
+    resolveInlineEditRange,
     isAuthenticated,
     subscription,
     hasOpenRouterKey,

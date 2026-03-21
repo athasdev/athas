@@ -923,7 +923,7 @@ export function Editor({
           textareaRef={inputRef}
         />
 
-        {filePath && inlineGitBlameEnabled && (
+        {filePath && inlineGitBlameEnabled && !inlineEditState.inlineEditVisible && (
           <GitBlameLayer
             ref={gitBlameRef}
             filePath={filePath}

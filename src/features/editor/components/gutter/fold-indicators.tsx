@@ -69,7 +69,7 @@ function FoldIndicatorsComponent({
                 ? "var(--accent, #569cd6)"
                 : "var(--text-light, rgba(255, 255, 255, 0.5))",
               opacity: isCollapsed ? 1 : 0.7,
-              fontSize: `${fontSize * 0.7}px`,
+              fontSize: `${fontSize * 0.85}px`,
               userSelect: "none",
               background: "none",
               border: "none",

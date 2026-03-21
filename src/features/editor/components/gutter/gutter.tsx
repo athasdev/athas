@@ -236,21 +236,21 @@ function GutterComponent({
               endLine={computedViewport.endLine}
             />
 
+            <FoldIndicators
+              filePath={filePath}
+              lineHeight={lineHeight}
+              fontSize={fontSize}
+              foldMapping={foldMapping}
+              startLine={computedViewport.startLine}
+              endLine={computedViewport.endLine}
+            />
+
             <LineNumbers
               totalLines={totalLines}
               lineHeight={lineHeight}
               fontSize={fontSize}
               fontFamily={fontFamily}
               onLineClick={onLineClick}
-              foldMapping={foldMapping}
-              startLine={computedViewport.startLine}
-              endLine={computedViewport.endLine}
-            />
-
-            <FoldIndicators
-              filePath={filePath}
-              lineHeight={lineHeight}
-              fontSize={fontSize}
               foldMapping={foldMapping}
               startLine={computedViewport.startLine}
               endLine={computedViewport.endLine}

@@ -67,11 +67,10 @@ class WasmParserLoader {
     if (this.parsers.has(languageId)) {
       const cached = this.parsers.get(languageId)!;
 
-      // If cached parser has no highlight query but new config provides one, update it
-      if (!cached.highlightQuery && highlightQuery) {
-        logger.info("WasmParser", `Updating cached parser ${languageId} with highlight query`);
+      // Update highlight query if a new one is provided and differs from the cached one
+      if (highlightQuery && highlightQuery !== cached.highlightQueryText) {
+        logger.info("WasmParser", `Updating highlight query for ${languageId}`);
 
-        // Create highlight query from text
         try {
           const { query, queryText: compiledQueryText } = this.compileHighlightQuery(
             cached.language,
@@ -81,6 +80,7 @@ class WasmParserLoader {
           const updatedParser: LoadedParser = {
             ...cached,
             highlightQuery: query,
+            highlightQueryText: compiledQueryText,
           };
           this.parsers.set(languageId, updatedParser);
 
@@ -88,7 +88,7 @@ class WasmParserLoader {
           indexedDBParserCache
             .get(languageId)
             .then((cachedEntry) => {
-              if (cachedEntry && !cachedEntry.highlightQuery) {
+              if (cachedEntry && cachedEntry.highlightQuery !== compiledQueryText) {
                 indexedDBParserCache.set({
                   ...cachedEntry,
                   highlightQuery: compiledQueryText,
@@ -111,6 +111,7 @@ class WasmParserLoader {
               const updatedParser: LoadedParser = {
                 ...cached,
                 highlightQuery: query,
+                highlightQueryText: compiledQueryText,
               };
               this.parsers.set(languageId, updatedParser);
 
@@ -690,6 +691,7 @@ class WasmParserLoader {
         parser,
         language,
         highlightQuery: query,
+        highlightQueryText: queryText || undefined,
         languageId,
       };
     } catch (error) {

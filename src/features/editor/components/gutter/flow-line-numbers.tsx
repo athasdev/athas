@@ -1,7 +1,7 @@
 import { memo, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useEditorStateStore } from "../../stores/state-store";
-import { calculateLineNumberWidth } from "../../utils/gutter";
+import { calculateLineNumberWidth, GUTTER_CONFIG } from "../../utils/gutter";
 
 interface LineMapping {
   virtualToActual: Map<number, number>;
@@ -29,6 +29,10 @@ function FlowLineNumbersComponent({
 }: FlowLineNumbersProps) {
   const actualCursorLine = useEditorStateStore.use.cursorPosition().line;
   const lineNumberWidth = calculateLineNumberWidth(lines.length);
+  const lineNumberOffset =
+    GUTTER_CONFIG.GIT_LANE_WIDTH +
+    GUTTER_CONFIG.DIAGNOSTIC_LANE_WIDTH +
+    GUTTER_CONFIG.FOLD_LANE_WIDTH;
 
   const visualCursorLine = useMemo(() => {
     if (foldMapping?.actualToVirtual) {
@@ -62,6 +66,14 @@ function FlowLineNumbersComponent({
             onClick={() => onLineClick?.(i)}
             title={`Line ${actualLineNumber + 1}`}
           >
+            <div
+              aria-hidden
+              style={{
+                width: `${lineNumberOffset}px`,
+                flexShrink: 0,
+              }}
+            />
+
             {/* Line number — fixed width, right-aligned */}
             <div
               style={{
