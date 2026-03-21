@@ -1,5 +1,4 @@
 import { listen } from "@tauri-apps/api/event";
-import { motion } from "framer-motion";
 import { Edit, Folder, FolderOpen, Plus, Server, Trash2, X } from "lucide-react";
 import { memo, useCallback, useEffect, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
@@ -13,6 +12,8 @@ import {
 } from "@/features/remote/services/remote-connection-actions";
 import type { RemoteConnection, RemoteConnectionFormData } from "@/features/remote/types";
 import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
+import Dialog from "@/ui/dialog";
+import { PANE_CHIP_BASE, paneIconButtonClassName, paneTitleClassName } from "@/ui/pane";
 import { toast } from "@/ui/toast-store";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/services/remote-connection-store";
@@ -156,48 +157,24 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
 
   return (
     <>
-      {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.15 }}
-        className="fixed inset-0 z-[9998] bg-black/20 backdrop-blur-[1px]"
-        onClick={onClose}
-      />
-
-      {/* Dialog */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-        className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-[9999] w-[560px] overflow-hidden rounded-lg border border-border bg-primary-bg shadow-xl"
+      <Dialog
+        title="Open Project"
+        icon={FolderOpen}
+        onClose={onClose}
+        size="lg"
+        classNames={{
+          modal: "max-w-[560px] rounded-xl",
+          content: "p-0",
+        }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-3 py-2">
-          <div className="flex items-center gap-2">
-            <FolderOpen size={14} className="text-text-lighter" />
-            <span className="font-medium text-text text-xs">Open Project</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-            aria-label="Close"
-          >
-            <X size={14} />
-          </button>
-        </div>
-
-        {/* Content */}
         <div className="max-h-[400px] overflow-y-auto">
           {/* Recent Projects */}
           <div className="border-border border-b">
-            <div className="flex items-center justify-between bg-secondary-bg px-3 py-1.5">
-              <span className="text-[10px] text-text-lighter uppercase">Recent</span>
+            <div className="flex items-center justify-between bg-secondary-bg/40 px-3 py-2">
+              <span className={paneTitleClassName("text-text-lighter")}>Recent</span>
               <button
                 onClick={handleOpenFolderClick}
-                className="rounded p-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className={paneIconButtonClassName()}
                 aria-label="Open folder"
               >
                 <Plus size={12} />
@@ -234,14 +211,14 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
 
           {/* Remote Connections */}
           <div>
-            <div className="flex items-center justify-between bg-secondary-bg px-3 py-1.5">
-              <span className="text-[10px] text-text-lighter uppercase">Remote</span>
+            <div className="flex items-center justify-between bg-secondary-bg/40 px-3 py-2">
+              <span className={paneTitleClassName("text-text-lighter")}>Remote</span>
               <button
                 onClick={() => {
                   setEditingConnection(null);
                   setIsConnectionDialogOpen(true);
                 }}
-                className="rounded p-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className={paneIconButtonClassName()}
                 aria-label="Add remote connection"
               >
                 <Plus size={12} />
@@ -313,7 +290,7 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
             )}
           </div>
         </div>
-      </motion.div>
+      </Dialog>
 
       {/* Connection Dialog */}
       <ConnectionDialog

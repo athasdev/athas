@@ -14,6 +14,8 @@ import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC } from "@/utils/platform";
 import { AccountMenu } from "./components/account-menu";
 import ProjectTabs from "./components/project-tabs";
+import RunActionsButton from "./components/run-actions-button";
+import WindowTitleDisplay from "./components/window-title-display";
 import CustomMenuBar from "./menu-bar/window-menu-bar";
 
 interface CustomTitleBarProps {
@@ -39,6 +41,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
 
   const isMacOS = IS_MAC;
   const isLinux = IS_LINUX;
+  const titleBarProjectMode = settings.titleBarProjectMode;
 
   useEffect(() => {
     const initWindow = async () => {
@@ -162,7 +165,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                   onClick={() => {
                     setMenuBarActiveMenu("File");
                   }}
-                  className="flex h-5 w-7 items-center justify-center rounded-full border border-border bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                  className="flex h-6 w-7 items-center justify-center rounded-lg border border-border/70 bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
                 >
                   <MenuIcon size={14} />
                 </button>
@@ -187,12 +190,13 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         {/* Center - Project tabs for macOS */}
         <div className="pointer-events-none absolute inset-x-0 top-1.5 flex h-6 justify-center">
           <div className="pointer-events-auto flex items-center">
-            <ProjectTabs />
+            {titleBarProjectMode === "window" ? <WindowTitleDisplay /> : <ProjectTabs />}
           </div>
         </div>
 
         {/* Account menu */}
-        <div className="mr-1 flex h-6 items-center">
+        <div className="mr-1 flex h-6 items-center gap-1.5">
+          <RunActionsButton />
           <AccountMenu iconSize={13} />
         </div>
       </div>
@@ -219,7 +223,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 onClick={() => {
                   setMenuBarActiveMenu("File");
                 }}
-                className="flex h-5 w-7 items-center justify-center rounded-full border border-border bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                className="flex h-6 w-7 items-center justify-center rounded-lg border border-border/70 bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
               >
                 <MenuIcon size={14} />
               </button>
@@ -251,12 +255,13 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               "-translate-x-1/2 absolute left-1/2",
           )}
         >
-          <ProjectTabs />
+          {titleBarProjectMode === "window" ? <WindowTitleDisplay /> : <ProjectTabs />}
         </div>
       </div>
 
       {/* Right side */}
       <div className="z-20 flex items-center gap-1">
+        <RunActionsButton />
         {/* Account menu */}
         <AccountMenu iconSize={12} className="mr-1" />
 

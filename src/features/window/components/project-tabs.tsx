@@ -10,6 +10,7 @@ import type { ProjectTab } from "@/features/window/stores/workspace-tabs-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
+import { UnifiedTab } from "@/ui/unified-tab";
 import { cn } from "@/utils/cn";
 import ProjectPickerDialog from "./project-picker-dialog";
 
@@ -357,10 +358,13 @@ const ProjectTabs = () => {
               {showDropIndicatorBefore && (
                 <div className="absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
               )}
-              <div
+              <UnifiedTab
                 role="tab"
                 tabIndex={0}
                 aria-selected={tab.isActive}
+                isActive={tab.isActive}
+                isDragged={isDraggedTab}
+                size="sm"
                 ref={(el) => {
                   tabRefs.current[index] = el;
                 }}
@@ -368,33 +372,30 @@ const ProjectTabs = () => {
                 onContextMenu={(e) => contextMenu.open(e, tab)}
                 onKeyDown={(event) => handleTabKeyDown(event, tab)}
                 className={cn(
-                  "group relative flex h-5 items-center gap-1 rounded-md px-4 text-xs transition-colors",
-                  tab.isActive
-                    ? "bg-hover/80 text-text"
-                    : "text-text-lighter hover:bg-hover/50 hover:text-text",
                   isRemote &&
                     (tab.isActive ? "text-sky-100" : "text-sky-200/85 hover:text-sky-100"),
                   isSwitchingProject && "cursor-wait",
-                  isDraggedTab && "opacity-30",
                 )}
                 onClick={() => void handleTabClick(tab)}
                 title={tab.path}
+                action={
+                  <button
+                    onClick={(e) => handleCloseTab(e, tab.id)}
+                    className={cn(
+                      "close-button -translate-y-1/2 absolute top-1/2 right-0.5 z-10 flex size-3.5 items-center justify-center rounded-md bg-primary-bg/85 text-text-lighter transition",
+                      "hover:bg-hover/50 hover:text-text",
+                      "opacity-0 group-hover:opacity-100",
+                    )}
+                    title="Close project"
+                    aria-label="Close project"
+                  >
+                    <X size={9} />
+                  </button>
+                }
               >
                 {isRemote ? <Server size={11} /> : <Folder size={11} />}
                 <span className="max-w-32 truncate">{tab.name}</span>
-                <button
-                  onClick={(e) => handleCloseTab(e, tab.id)}
-                  className={cn(
-                    "close-button -translate-y-1/2 absolute top-1/2 right-0.5 z-10 flex size-3.5 items-center justify-center rounded-md bg-primary-bg/85 text-text-lighter transition",
-                    "hover:bg-hover/50 hover:text-text",
-                    "opacity-0 group-hover:opacity-100",
-                  )}
-                  title="Close project"
-                  aria-label="Close project"
-                >
-                  <X size={9} />
-                </button>
-              </div>
+              </UnifiedTab>
             </div>
           );
         })}

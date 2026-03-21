@@ -97,6 +97,14 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    let file_menu = SubmenuBuilder::new(app, "File")
       .item(&MenuItem::with_id(
          app,
+         "new_window",
+         "New Window",
+         true,
+         Some("CmdOrCtrl+Shift+N"),
+      )?)
+      .separator()
+      .item(&MenuItem::with_id(
+         app,
          "new_file",
          "New File",
          true,

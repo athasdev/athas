@@ -28,6 +28,10 @@ export const AppearanceSettings = () => {
     { value: "left", label: "Left" },
     { value: "right", label: "Right" },
   ];
+  const titleBarProjectModeOptions = [
+    { value: "tabs", label: "Tabs" },
+    { value: "window", label: "Window" },
+  ];
 
   // Load themes from theme registry
   useEffect(() => {
@@ -268,6 +272,23 @@ export const AppearanceSettings = () => {
             disabled={settings.nativeMenuBar}
             onChange={(checked) => updateSetting("compactMenuBar", checked)}
             size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Title Bar Project Mode"
+          description="Show project tabs or a single window-style title in the custom title bar"
+          onReset={() =>
+            updateSetting("titleBarProjectMode", getDefaultSetting("titleBarProjectMode"))
+          }
+          canReset={settings.titleBarProjectMode !== getDefaultSetting("titleBarProjectMode")}
+        >
+          <Select
+            value={settings.titleBarProjectMode}
+            options={titleBarProjectModeOptions}
+            onChange={(value) => updateSetting("titleBarProjectMode", value as "tabs" | "window")}
+            className="w-24"
+            size="xs"
           />
         </SettingRow>
 

@@ -34,7 +34,7 @@ export const SidebarPaneSelector = ({
   return (
     <div
       className={cn(
-        "flex items-center gap-0.5 rounded-full border border-border/70 bg-primary-bg/65",
+        "flex items-center gap-0.5 rounded-lg border border-border/70 bg-primary-bg/65",
         compact ? "p-0.5" : "p-1",
       )}
     >

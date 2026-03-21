@@ -2,6 +2,7 @@ import { Database, Globe, Package, Pin, Sparkles, Terminal, X } from "lucide-rea
 import { memo, useCallback, useEffect, useState } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content";
+import { UnifiedTab } from "@/ui/unified-tab";
 import { cn } from "@/utils/cn";
 
 interface TabBarItemProps {
@@ -62,20 +63,14 @@ const TabBarItem = memo(function TabBarItem({
           <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
         </div>
       )}
-      <div
+      <UnifiedTab
         ref={tabRef}
         role="tab"
         aria-selected={isActive}
         aria-label={`${buffer.name}${buffer.type === "editor" && buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
         tabIndex={isActive ? 0 : -1}
-        className={cn(
-          "group relative flex h-7 shrink-0 cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-lg border pr-5 pl-2 transition-[transform,opacity,color,background-color,border-color] duration-200 ease-[ease]",
-          isActive
-            ? "border-border/80 bg-primary-bg/95 text-text"
-            : "border-transparent text-text-lighter hover:border-border/60 hover:bg-hover/80 hover:text-text",
-          isDraggedTab ? "opacity-30" : "opacity-100",
-        )}
-        style={{ maxWidth: 290 }}
+        isActive={isActive}
+        isDragged={isDraggedTab}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
@@ -84,6 +79,33 @@ const TabBarItem = memo(function TabBarItem({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         onAuxClick={handleAuxClick}
+        action={
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (buffer.isPinned) {
+                handleTabPin(buffer.id);
+              } else {
+                handleTabClose(buffer.id);
+              }
+            }}
+            className={cn(
+              "-translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 cursor-pointer select-none items-center justify-center rounded-md text-text-lighter transition-opacity",
+              "hover:bg-hover/80 hover:text-text",
+              buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+            )}
+            title={buffer.isPinned ? "Unpin tab" : `Close ${buffer.name}`}
+            tabIndex={-1}
+            draggable={false}
+          >
+            {buffer.isPinned ? (
+              <Pin className="pointer-events-none select-none fill-current text-accent" size={10} />
+            ) : (
+              <X className="pointer-events-none select-none" size={10} />
+            )}
+          </button>
+        }
       >
         <div className="grid size-3 shrink-0 place-content-center">
           {buffer.path === "extensions://marketplace" ? (
@@ -116,7 +138,7 @@ const TabBarItem = memo(function TabBarItem({
         </div>
         <span
           className={cn(
-            "ui-font flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs",
+            "ui-font max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs",
             isActive ? "text-text" : "text-text-lighter",
             buffer.isPreview && "italic",
           )}
@@ -132,33 +154,7 @@ const TabBarItem = memo(function TabBarItem({
             aria-label="Unsaved changes"
           />
         )}
-        {/* Pin button (replaces close button when pinned) */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (buffer.isPinned) {
-              handleTabPin(buffer.id);
-            } else {
-              handleTabClose(buffer.id);
-            }
-          }}
-          className={cn(
-            "-translate-y-1/2 absolute top-1/2 right-0.5 flex size-4 cursor-pointer select-none items-center justify-center rounded-md text-text-lighter transition-opacity",
-            "hover:bg-hover hover:text-text",
-            buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-          )}
-          title={buffer.isPinned ? "Unpin tab" : `Close ${buffer.name}`}
-          tabIndex={-1}
-          draggable={false}
-        >
-          {buffer.isPinned ? (
-            <Pin className="pointer-events-none select-none fill-current text-accent" size={10} />
-          ) : (
-            <X className="pointer-events-none select-none" size={10} />
-          )}
-        </button>
-      </div>
+      </UnifiedTab>
     </>
   );
 });

@@ -685,7 +685,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
     <>
       <div
         ref={tabBarRef}
-        className={`relative flex shrink-0 gap-1 overflow-x-auto overflow-y-hidden px-1.5 py-1 [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
+        className={`relative flex shrink-0 gap-1 overflow-x-auto overflow-y-hidden bg-primary-bg px-1.5 py-1 [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
         role="tablist"
         aria-label="Open files"
         onWheel={handleWheel}

@@ -76,6 +76,7 @@ export interface Settings {
   autoThemeDark: Theme;
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
+  titleBarProjectMode: "tabs" | "window";
   // AI
   aiProviderId: string;
   aiModelId: string;
@@ -223,6 +224,7 @@ export const defaultSettings: Settings = {
   autoThemeDark: "athas-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
+  titleBarProjectMode: "tabs",
   // AI
   aiProviderId: DEFAULT_AI_PROVIDER_ID,
   aiModelId: DEFAULT_AI_MODEL_ID,

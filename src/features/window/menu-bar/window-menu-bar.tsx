@@ -44,6 +44,9 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     () => ({
       File: (
         <Menu aria-label="File">
+          <MenuItem shortcut="Ctrl+Shift+N" onClick={() => handleClickEmit("menu_new_window")}>
+            New Window
+          </MenuItem>
           <MenuItem shortcut="Ctrl+N" onClick={() => handleClickEmit("menu_new_file")}>
             New File
           </MenuItem>

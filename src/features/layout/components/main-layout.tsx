@@ -282,11 +282,11 @@ export function MainLayout() {
               </ResizablePane>
             </div>
           ) : (
-            sidebarPosition === "left" &&
-            isSidebarVisible && (
+            sidebarPosition === "left" && (
               <ResizablePane
                 position="left"
                 widthKey="sidebarWidth"
+                hidden={!isSidebarVisible}
                 collapsible
                 collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
                 onCollapse={() => setIsSidebarVisible(false)}
@@ -298,7 +298,7 @@ export function MainLayout() {
 
           {/* Main content area with split view */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-2 py-2">
-            <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-primary-bg">
+            <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
               <SplitViewRoot />
             </div>
             <BottomPane diagnostics={diagnostics} onDiagnosticClick={handleDiagnosticClick} />
@@ -306,17 +306,16 @@ export function MainLayout() {
 
           {/* Right sidebar or AI chat based on settings */}
           {sidebarPosition === "right" ? (
-            isSidebarVisible && (
-              <ResizablePane
-                position="right"
-                widthKey="sidebarWidth"
-                collapsible
-                collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
-                onCollapse={() => setIsSidebarVisible(false)}
-              >
-                <MainSidebar />
-              </ResizablePane>
-            )
+            <ResizablePane
+              position="right"
+              widthKey="sidebarWidth"
+              hidden={!isSidebarVisible}
+              collapsible
+              collapseThreshold={SIDEBAR_COLLAPSE_THRESHOLD}
+              onCollapse={() => setIsSidebarVisible(false)}
+            >
+              <MainSidebar />
+            </ResizablePane>
           ) : (
             <div className={!showInlineAiChat ? "hidden" : undefined}>
               <ResizablePane

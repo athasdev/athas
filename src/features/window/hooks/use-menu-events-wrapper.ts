@@ -7,6 +7,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { fetchRawAppVersion } from "@/features/window/utils/app-version";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { useMenuEvents } from "./use-menu-events";
 
 export function useMenuEventsWrapper() {
@@ -20,6 +21,9 @@ export function useMenuEventsWrapper() {
   const { handleSave } = useEditorAppStore.use.actions();
 
   useMenuEvents({
+    onNewWindow: () => {
+      createAppWindow();
+    },
     onNewFile: fileSystemStore.handleCreateNewFile,
     onOpenFolder: fileSystemStore.handleOpenFolder,
     onCloseFolder: fileSystemStore.closeFolder,

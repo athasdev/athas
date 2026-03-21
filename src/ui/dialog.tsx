@@ -73,25 +73,25 @@ const Dialog = ({
         className={cn(
           "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-[9999]",
           "flex max-h-[90vh] flex-col overflow-hidden",
-          "rounded-2xl border border-border bg-primary-bg shadow-2xl",
+          "rounded-xl border border-border bg-primary-bg shadow-2xl",
           sizeClasses[size],
           "mx-4",
           classNames?.modal,
         )}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-border border-b px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between border-border border-b bg-primary-bg px-4 py-3">
           <div className="flex items-center gap-2">
-            {Icon && <Icon size={16} className="text-text" />}
-            <h2 className="font-medium text-sm text-text">{title}</h2>
+            {Icon && <Icon size={15} className="text-text-lighter" />}
+            <h2 className="ui-font font-medium text-text text-xs">{title}</h2>
           </div>
 
           <button
             onClick={onClose}
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded transition-colors hover:bg-hover"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
             aria-label="Close dialog"
           >
-            <X size={14} className="text-text-lighter" />
+            <X size={14} />
           </button>
         </div>
 

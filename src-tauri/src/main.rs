@@ -205,6 +205,9 @@ fn main() {
                   "new_file" => {
                      let _ = window.emit("menu_new_file", ());
                   }
+                  "new_window" => {
+                     let _ = window.emit("menu_new_window", ());
+                  }
                   "open_folder" => {
                      let _ = window.emit("menu_open_folder", ());
                   }

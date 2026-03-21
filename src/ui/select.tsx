@@ -28,6 +28,7 @@ interface SharedSelectProps {
   placeholder?: string;
   className?: string;
   menuClassName?: string;
+  triggerClassName?: string;
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
   searchable?: boolean;
@@ -231,6 +232,7 @@ function RadixSharedSelect({
   placeholder = "Select...",
   className = "",
   menuClassName = "",
+  triggerClassName,
   disabled = false,
   size = "sm",
   searchable = false,
@@ -267,12 +269,15 @@ function RadixSharedSelect({
       >
         <SelectPrimitive.Trigger
           disabled={disabled}
-          className={cn(
-            "ui-font flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-secondary-bg px-3 py-1.5 text-text transition-colors",
-            "focus:border-border focus:outline-none focus:ring-1 focus:ring-accent/20",
-            disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
-            size === "xs" ? "text-xs" : size === "sm" ? "text-xs" : "text-sm",
-          )}
+          className={
+            triggerClassName ??
+            cn(
+              "ui-font flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-secondary-bg px-3 py-1.5 text-text transition-colors",
+              "focus:border-border focus:outline-none focus:ring-1 focus:ring-accent/20",
+              disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
+              size === "xs" ? "text-xs" : size === "sm" ? "text-xs" : "text-sm",
+            )
+          }
           aria-label={placeholder}
         >
           <span className="flex min-w-0 flex-1 items-center gap-2">
