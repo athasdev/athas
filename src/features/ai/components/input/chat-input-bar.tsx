@@ -674,7 +674,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               : "Configure API key to enable AI chat..."
           }
           className={cn(
-            "max-h-[140px] min-h-[64px] w-full resize-none overflow-y-auto bg-transparent",
+            "max-h-[140px] min-h-[64px] w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent",
             "ui-font px-2 py-1.5 text-inherit text-text placeholder:text-text-lighter",
             "focus:outline-none",
             !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",

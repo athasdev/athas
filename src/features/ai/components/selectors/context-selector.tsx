@@ -287,7 +287,7 @@ export function ContextSelector({
         </div>
       </Dropdown>
 
-      <div className="scrollbar-hidden flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 overflow-x-hidden">
         {selectedItems.map((item) => (
           <div
             key={`selected-${item.type}-${item.id}`}

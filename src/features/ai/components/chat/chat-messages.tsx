@@ -5,7 +5,7 @@ import { hasPlanBlock } from "@/features/ai/lib/plan-parser";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { getRelativeTime } from "../../lib/formatting";
 import { useAIChatStore } from "../../store/store";
-import { AcpActivityPanel } from "./acp-activity-panel";
+import { AcpInlineEvent } from "./acp-inline-event";
 import { ChatMessage } from "./chat-message";
 
 interface ChatMessagesProps {
@@ -39,14 +39,30 @@ export const ChatMessages = memo(
     const messages = currentChat?.messages || [];
     const timelineItems = useMemo(
       () =>
-        messages.map((message, messageIndex) => ({
-          id: `message-${message.id}`,
-          timestamp: getTimestampMs(message.timestamp),
-          order: messageIndex,
-          message,
-          messageIndex,
-        })),
-      [messages],
+        [
+          ...messages.map((message, messageIndex) => ({
+            id: `message-${message.id}`,
+            type: "message" as const,
+            timestamp: getTimestampMs(message.timestamp),
+            order: messageIndex,
+            message,
+            messageIndex,
+          })),
+          ...(acpEvents || []).map((event, eventIndex) => ({
+            id: `acp-${event.id}`,
+            type: "acp" as const,
+            timestamp: getTimestampMs(event.timestamp),
+            order: messages.length + eventIndex,
+            event,
+          })),
+        ].sort((a, b) => {
+          if (a.timestamp !== b.timestamp) {
+            return a.timestamp - b.timestamp;
+          }
+
+          return a.order - b.order;
+        }),
+      [messages, acpEvents],
     );
 
     // Get recent chats excluding the current one (title "New Chat" means it's empty/unused)
@@ -94,6 +110,10 @@ export const ChatMessages = memo(
     return (
       <>
         {timelineItems.map((item) => {
+          if (item.type === "acp") {
+            return <AcpInlineEvent key={item.id} event={item.event} />;
+          }
+
           const message = item.message;
           const index = item.messageIndex;
           const prevMessage = index > 0 ? messages[index - 1] : null;
@@ -131,7 +151,6 @@ export const ChatMessages = memo(
             </div>
           );
         })}
-        {acpEvents && acpEvents.length > 0 ? <AcpActivityPanel events={acpEvents} /> : null}
         <div ref={ref} />
       </>
     );

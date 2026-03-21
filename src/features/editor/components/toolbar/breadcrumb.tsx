@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, ChevronRight, Eye, Search, Sparkles } from "lucide-react";
 import { useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
@@ -13,6 +14,7 @@ import type { FileEntry } from "@/features/file-system/types/app";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { buttonClassName } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Tooltip from "@/ui/tooltip";
 import { isMac } from "@/utils/platform";
@@ -319,7 +321,11 @@ export default function Breadcrumb() {
             (isCsvFile() && activeBuffer?.type !== "csvPreview")) && (
             <button
               onClick={handlePreviewClick}
-              className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              className={buttonClassName({
+                variant: "ghost",
+                size: "icon-xs",
+                className: "rounded text-text-lighter",
+              })}
               title="Preview"
               aria-label="Preview"
             >
@@ -329,7 +335,11 @@ export default function Breadcrumb() {
           <Tooltip content={inlineEditTooltip} side="bottom">
             <button
               onClick={handleInlineEditClick}
-              className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"
+              className={buttonClassName({
+                variant: "ghost",
+                size: "icon-xs",
+                className: "rounded text-text-lighter",
+              })}
               title={inlineEditTooltip}
               aria-label={`AI inline edit (${inlineEditShortcutLabel})`}
             >
@@ -338,11 +348,17 @@ export default function Breadcrumb() {
           </Tooltip>
           <button
             onClick={onSearchClick}
-            className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"
+            className={buttonClassName({
+              variant: "ghost",
+              size: "icon-xs",
+              className: "rounded text-text-lighter",
+            })}
             title="Find in file"
           >
             <Search size={12} />
           </button>
+          <div className="mx-1 h-3.5 w-px bg-border/70" />
+          <EditorStatusActions />
         </div>
       </div>
 

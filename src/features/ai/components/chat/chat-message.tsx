@@ -251,13 +251,13 @@ export const ChatMessage = memo(function ChatMessage({
             )}
           </div>
 
-          <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="pointer-events-none absolute right-2 bottom-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             {isLastMessage &&
               (hasError(message.content) ? (
                 <Tooltip content="Retry" side="top">
                   <button
                     onClick={handleRetryMessage}
-                    className="rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
+                    className="pointer-events-auto rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
                     title="Retry"
                     aria-label="Retry failed message"
                   >
@@ -268,7 +268,7 @@ export const ChatMessage = memo(function ChatMessage({
                 <Tooltip content="Regenerate" side="top">
                   <button
                     onClick={handleRetryMessage}
-                    className="rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
+                    className="pointer-events-auto rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
                     title="Regenerate"
                     aria-label="Regenerate response"
                   >
@@ -278,7 +278,7 @@ export const ChatMessage = memo(function ChatMessage({
               ))}
             <button
               onClick={() => handleCopyMessage(message.content, message.id)}
-              className="rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
+              className="pointer-events-auto rounded-full border border-border bg-primary-bg/90 p-1 transition-colors hover:bg-hover"
               title="Copy message"
               aria-label="Copy message"
             >

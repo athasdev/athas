@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { memo, useEffect, useState } from "react";
-import { toast } from "@/ui/toast-store";
+import { toast } from "@/ui/toast";
 import {
   connectRemoteConnection,
   disconnectRemoteConnection,

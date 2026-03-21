@@ -20,7 +20,7 @@ import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
-import { toast } from "@/ui/toast-store";
+import { toast } from "@/ui/toast";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { FileEntry } from "../types/app";
 import type { FsActions, FsState } from "../types/interface";

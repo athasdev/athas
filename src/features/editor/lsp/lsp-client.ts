@@ -13,7 +13,7 @@ import type {
   ApplyDiagnosticCodeActionResult,
   Diagnostic,
   DiagnosticCodeAction,
-} from "@/features/diagnostics/types";
+} from "@/features/diagnostics/types/diagnostics";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useBufferStore } from "../stores/buffer-store";
 import { logger } from "../utils/logger";

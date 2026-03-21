@@ -346,7 +346,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
     lines
       .find((l) => l.startsWith("title:"))
       ?.replace("title:", "")
-      .trim() || "Error";
+      .trim() || "";
   const code =
     lines
       .find((l) => l.startsWith("code:"))
@@ -362,38 +362,36 @@ function ErrorBlock({ errorData }: { errorData: string }) {
       .find((l) => l.startsWith("details:"))
       ?.replace("details:", "")
       .trim() || "";
+  const summary = title || message || "Error";
+  const normalizedDetails = details && details !== message ? details : "";
 
   return (
-    <div className="error-block">
-      <div className="error-header">
-        <span className="error-title">
-          {title}
-          {code ? ` (${code})` : ""}
-        </span>
-      </div>
-      <div className="error-message">{message}</div>
-      {details && (
-        <div className="mt-1.5">
+    <div className="my-1 rounded-lg border border-red-500/25 bg-red-500/6 px-2.5 py-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+        <span className="text-red-300/85">Error</span>
+        <span className="text-red-100/95">{summary}</span>
+        {code ? <span className="text-red-200/55">({code})</span> : null}
+        {normalizedDetails && (
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1 text-red-400 text-xs transition-colors hover:text-red-300"
+            className="inline-flex items-center gap-1 text-red-200/70 transition-colors hover:text-red-100"
           >
             {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            {isExpanded ? "Hide" : "Show"} details
+            {isExpanded ? "Hide details" : "Details"}
           </button>
-          {isExpanded && (
-            <pre className="editor-font mt-1.5 overflow-x-auto rounded bg-red-950/20 p-2 text-red-300 text-xs">
-              {(() => {
-                try {
-                  const parsed = JSON.parse(details);
-                  return JSON.stringify(parsed, null, 2);
-                } catch {
-                  return details;
-                }
-              })()}
-            </pre>
-          )}
-        </div>
+        )}
+      </div>
+      {normalizedDetails && isExpanded && (
+        <pre className="editor-font mt-2 overflow-x-auto rounded border border-red-500/20 bg-red-950/20 p-2 text-[11px] text-red-100/85">
+          {(() => {
+            try {
+              const parsed = JSON.parse(normalizedDetails);
+              return JSON.stringify(parsed, null, 2);
+            } catch {
+              return normalizedDetails;
+            }
+          })()}
+        </pre>
       )}
     </div>
   );

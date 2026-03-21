@@ -499,6 +499,12 @@ details: ${errorDetails || mainError}
           }));
         },
         (event) => {
+          appendAcpEvent({
+            kind: "permission",
+            label: "Permission requested",
+            detail: event.description || `${event.permissionType} ${event.resource}`.trim(),
+            state: "info",
+          });
           setPermissionQueue((prev) => [
             ...prev,
             {

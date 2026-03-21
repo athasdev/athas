@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { buildRemoteRootPath } from "@/features/remote/utils/remote-path";
-import { toast } from "@/ui/toast-store";
+import { toast } from "@/ui/toast";
 import { connectionStore } from "./remote-connection-store";
 import type { RemoteConnection } from "../types";
 import { getFriendlyRemoteError } from "../utils/remote-errors";
