@@ -19,8 +19,8 @@ import { Dropdown, dropdownItemClassName, dropdownTriggerClassName } from "@/ui/
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";
-import { useGitHubStore } from "../store";
-import type { PRFilter, PullRequest } from "../types";
+import { useGitHubStore } from "../stores/github-store";
+import type { PRFilter, PullRequest } from "../types/github";
 
 const filterLabels: Record<PRFilter, string> = {
   all: "All PRs",

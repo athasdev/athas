@@ -7,7 +7,7 @@ import type {
   PullRequestComment,
   PullRequestDetails,
   PullRequestFile,
-} from "./types";
+} from "../types/github";
 
 const PR_LIST_CACHE_TTL_MS = 30_000;
 const PR_DETAILS_CACHE_TTL_MS = 120_000;

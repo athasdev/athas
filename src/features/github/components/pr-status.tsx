@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { memo, useState } from "react";
 import { cn } from "@/utils/cn";
-import type { Label, LinkedIssue, ReviewRequest, StatusCheck } from "../types";
+import type { Label, LinkedIssue, ReviewRequest, StatusCheck } from "../types/github";
 
 // CI Status Indicator
 interface CIStatusProps {

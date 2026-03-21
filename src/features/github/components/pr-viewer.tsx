@@ -27,14 +27,14 @@ import {
 import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
-import { toast } from "@/ui/toast-store";
+import { toast } from "@/ui/toast";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { usePRDiffHighlighting } from "../hooks/use-pr-diff-highlighting";
-import { useGitHubStore } from "../store";
-import type { Label, LinkedIssue, PullRequestFile, ReviewRequest } from "../types";
+import { useGitHubStore } from "../stores/github-store";
+import type { Label, LinkedIssue, PullRequestFile, ReviewRequest } from "../types/github";
 import GitHubMarkdown from "./github-markdown";
 import {
   AssigneesList,

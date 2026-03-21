@@ -22,7 +22,7 @@ import { ContextMenu } from "@/ui/context-menu";
 import { PANE_CHIP_BASE, paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
 import { SearchPopover } from "@/ui/search-popover";
 import { cn } from "@/utils/cn";
-import type { Diagnostic, DiagnosticCodeAction } from "./types";
+import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics";
 
 interface DiagnosticsPaneProps {
   diagnostics: Diagnostic[];
