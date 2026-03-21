@@ -1,3 +1,4 @@
+import { buttonClassName } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 export const PANE_HEADER_BASE = "flex min-h-7 items-center gap-1.5 bg-primary-bg px-1.5 py-1";
@@ -7,8 +8,11 @@ export const PANE_TITLE_BASE = "ui-font font-medium text-xs text-text";
 export const PANE_CHIP_BASE =
   "ui-font inline-flex h-5 items-center rounded-md border border-border/70 bg-primary-bg px-1.5 text-xs text-text-lighter";
 
-export const PANE_ICON_BUTTON_BASE =
-  "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text";
+export const PANE_ICON_BUTTON_BASE = buttonClassName({
+  variant: "subtle",
+  size: "icon-sm",
+  className: "shrink-0 rounded-lg text-text-lighter",
+});
 
 export const PANE_GROUP_BASE = "flex items-center gap-1";
 

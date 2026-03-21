@@ -39,7 +39,7 @@ import { extensionLoader } from "./extensions/loader/extension-loader";
 import { initializeExtensionStore } from "./extensions/registry/extension-store";
 import { initializeWasmTokenizer } from "./features/editor/lib/wasm-parser/wasm-parser-api";
 import { initializeKeymaps } from "./features/keymaps/init";
-import { WindowResizeBorder } from "./features/window/window-resize-border";
+import { WindowResizeBorder } from "./features/window/components/window-resize-border";
 import { useCliOpen } from "./features/window/hooks/use-cli-open";
 import { useDeepLink } from "./features/window/hooks/use-deep-link";
 import { useAuthStore } from "./features/window/stores/auth-store";

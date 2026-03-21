@@ -7,7 +7,7 @@ import IconThemeSelector from "@/features/command-palette/components/icon-theme-
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
 import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
-import type { Diagnostic } from "@/features/diagnostics/types";
+import type { Diagnostic } from "@/features/diagnostics/types/diagnostics";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -26,9 +26,9 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-s
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
-import CustomTitleBarWithSettings from "../../window/custom-title-bar";
+import CustomTitleBarWithSettings from "../../window/components/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
-import EditorFooter from "./footer/editor-footer";
+import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
 import { MainSidebar } from "./sidebar/main-sidebar";
 
@@ -359,7 +359,7 @@ export function MainLayout() {
         )}
       </div>
 
-      <EditorFooter />
+      <Footer />
 
       {/* Global modals and overlays */}
       <QuickOpen />

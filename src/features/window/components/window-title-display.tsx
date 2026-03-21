@@ -1,7 +1,7 @@
 import { LayoutPanelTop } from "lucide-react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
-import { UnifiedTab } from "@/ui/unified-tab";
+import { Tab } from "@/ui/tabs";
 
 const getWorkspaceName = (path?: string) => {
   if (!path) return "Athas";
@@ -16,13 +16,13 @@ export default function WindowTitleDisplay() {
   const title = activeProject?.name || getWorkspaceName(rootFolderPath);
 
   return (
-    <UnifiedTab
+    <Tab
       isActive
       size="sm"
       className="min-w-[180px] cursor-default justify-center border border-border/70 bg-primary-bg/70 px-4 text-text"
     >
       <LayoutPanelTop size={12} className="text-text-lighter" />
       <span className="truncate">{title}</span>
-    </UnifiedTab>
+    </Tab>
   );
 }

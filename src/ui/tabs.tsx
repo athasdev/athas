@@ -1,8 +1,9 @@
 import type { HTMLAttributes, ReactNode } from "react";
 import { forwardRef } from "react";
+import { buttonVariantClassName } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
-interface UnifiedTabProps extends HTMLAttributes<HTMLDivElement> {
+export interface TabProps extends HTMLAttributes<HTMLDivElement> {
   isActive: boolean;
   isDragged?: boolean;
   maxWidth?: number;
@@ -11,7 +12,7 @@ interface UnifiedTabProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
 }
 
-export const UnifiedTab = forwardRef<HTMLDivElement, UnifiedTabProps>(function UnifiedTab(
+export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
   {
     isActive,
     isDragged = false,
@@ -33,9 +34,8 @@ export const UnifiedTab = forwardRef<HTMLDivElement, UnifiedTabProps>(function U
         size === "sm"
           ? "flex h-5 items-center gap-1 px-4 text-xs"
           : "flex h-7 items-center gap-1 pr-6 pl-2.5",
-        isActive
-          ? "bg-hover/80 text-text"
-          : "text-text-lighter/90 hover:bg-hover/65 hover:text-text",
+        buttonVariantClassName(isActive ? "subtle" : "ghost"),
+        isActive ? "text-text" : "text-text-lighter/90",
         isDragged ? "opacity-30" : "opacity-100",
         className,
       )}

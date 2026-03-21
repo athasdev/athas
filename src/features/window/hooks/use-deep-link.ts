@@ -1,7 +1,7 @@
 import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { useEffect } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
-import { toast } from "@/ui/toast-store";
+import { toast } from "@/ui/toast";
 import { handleWindowOpenRequest, parseWindowOpenUrl } from "../utils/window-open-request";
 
 /**

@@ -2,7 +2,11 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { cn } from "@/utils/cn";
 
-const VimStatusIndicator = () => {
+interface VimStatusIndicatorProps {
+  compact?: boolean;
+}
+
+const VimStatusIndicator = ({ compact = false }: VimStatusIndicatorProps) => {
   const { settings } = useSettingsStore();
   const vimMode = settings.vimMode;
   const mode = useVimStore.use.mode();
@@ -74,22 +78,22 @@ const VimStatusIndicator = () => {
 
   return (
     <div className="flex items-center gap-1">
-      {/* Mode indicator */}
       <div
         className={cn(
-          "ui-font rounded-sm border px-1 py-[1px] font-semibold text-xs tracking-wider",
-          "transition-colors duration-200",
+          "ui-font border font-semibold tracking-wider transition-colors duration-200",
+          compact ? "rounded-md px-1.5 py-0.5 text-[10px]" : "rounded-sm px-1 py-[1px] text-xs",
           getModeColor(),
         )}
       >
         {modeDisplay}
       </div>
 
-      {/* Key buffer display */}
       {keyDisplay && (
         <div
           className={cn(
-            "ui-font rounded-sm border px-1 py-[1px] text-xs",
+            compact
+              ? "ui-font rounded-md border px-1.5 py-0.5 text-[10px]"
+              : "ui-font rounded-sm border px-1 py-[1px] text-xs",
             "border-gray-500/20 bg-gray-500/10 text-gray-300",
           )}
           title="Current keystroke sequence"

@@ -1,44 +1,42 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import {
-  AlertCircle,
-  Download,
-  Loader2,
-  Settings,
-  Sparkles,
-  Terminal as TerminalIcon,
-  X,
-  Zap,
-  ZapOff,
-} from "lucide-react";
+import { AlertCircle, Download, Sparkles, Terminal as TerminalIcon, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Dropdown } from "@/ui/dropdown";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
-import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import GitBranchManager from "@/features/git/components/git-branch-manager";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
-import { toast } from "@/ui/toast-store";
+import { toast } from "@/ui/toast";
 import Select from "@/ui/select";
 import {
   beginDesktopAuthSession,
   DesktopAuthError,
   waitForDesktopAuthToken,
 } from "@/features/window/services/auth-api";
+import { buttonClassName } from "@/ui/button";
 import {
   type AutocompleteModel,
   fetchAutocompleteModels,
 } from "@/features/editor/services/editor-autocomplete-service";
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { getFilenameFromPath } from "../../../file-system/controllers/file-utils";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
-import VimStatusIndicator from "../../../vim/components/vim-status-indicator";
+
+const footerIconButtonClass = buttonClassName({
+  variant: "subtle",
+  size: "xs",
+  className: "rounded-md bg-primary-bg/40 px-2 text-text-lighter",
+});
+
+const footerCompactButtonClass = buttonClassName({
+  variant: "subtle",
+  size: "icon-sm",
+  className: "rounded-md bg-primary-bg/40 text-text-lighter",
+});
 
 const DEFAULT_AUTOCOMPLETE_MODELS: AutocompleteModel[] = [
   { id: "mistralai/devstral-small", name: "Devstral Small 1.1" },
@@ -46,120 +44,6 @@ const DEFAULT_AUTOCOMPLETE_MODELS: AutocompleteModel[] = [
   { id: "openai/gpt-5-nano", name: "GPT-5 Nano" },
   { id: "google/gemini-3-flash-preview", name: "Gemini 3 Flash Preview" },
 ];
-
-// LSP Status Indicator Component
-const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => {
-  const lspStatus = useLspStore.use.lspStatus();
-  const [isOpen, setIsOpen] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-
-  const getStatusConfig = (status: LspStatus) => {
-    switch (status) {
-      case "connected":
-        return {
-          icon: <Zap size={12} />,
-          color: "text-green-400",
-          bgHover: "hover:bg-green-400/10",
-          title: "Language Servers Active",
-        };
-      case "connecting":
-        return {
-          icon: <Loader2 size={12} className="animate-spin" />,
-          color: "text-yellow-400",
-          bgHover: "hover:bg-yellow-400/10",
-          title: "Connecting to Language Server...",
-        };
-      case "error":
-        return {
-          icon: <ZapOff size={12} />,
-          color: "text-red-400",
-          bgHover: "hover:bg-red-400/10",
-          title: `Language Server Error: ${lspStatus.lastError || "Unknown"}`,
-        };
-      default:
-        return {
-          icon: <ZapOff size={12} />,
-          color: "text-text-lighter opacity-50",
-          bgHover: "hover:bg-hover",
-          title: "No active language servers",
-        };
-    }
-  };
-
-  const config = getStatusConfig(lspStatus.status);
-
-  // Get active language servers from supported languages or workspaces
-  const activeServers = lspStatus.supportedLanguages || [];
-  const hasActiveServers = lspStatus.status === "connected" && activeServers.length > 0;
-
-  return (
-    <div className="relative">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "flex h-6 w-6 items-center justify-center rounded-full border border-transparent p-0 transition-colors",
-          config.color,
-          config.bgHover,
-        )}
-        style={{ minHeight: 0, minWidth: 0 }}
-        title={config.title}
-      >
-        {config.icon}
-      </button>
-      <Dropdown
-        isOpen={isOpen}
-        anchorRef={buttonRef}
-        anchorSide="top"
-        anchorAlign="end"
-        onClose={() => setIsOpen(false)}
-        className="w-[260px] overflow-hidden rounded-lg p-0"
-      >
-        <div className="border-border border-b bg-primary-bg/50 px-3 py-2">
-          <span className="font-medium text-text text-xs">{projectName || "No Project"}</span>
-        </div>
-        <div className="p-2">
-          {hasActiveServers ? (
-            <div className="space-y-1">
-              <div className="px-1 pb-1 text-[10px] text-text-lighter uppercase tracking-wide">
-                Active Language Servers
-              </div>
-              {activeServers.map((server) => (
-                <div key={server} className="flex items-center gap-2 rounded p-1 hover:bg-hover">
-                  <Zap size={10} className="text-green-400" />
-                  <span className="text-text text-xs capitalize">{server}</span>
-                </div>
-              ))}
-            </div>
-          ) : lspStatus.status === "connecting" ? (
-            <div className="flex items-center gap-2 px-2 py-2 text-text-lighter">
-              <Loader2 size={12} className="animate-spin text-yellow-400" />
-              <span className="text-xs">Connecting...</span>
-            </div>
-          ) : lspStatus.status === "error" ? (
-            <div className="space-y-2 p-1">
-              <div className="flex items-center gap-2 text-red-400">
-                <ZapOff size={12} />
-                <span className="text-xs">Connection Error</span>
-              </div>
-              {lspStatus.lastError && (
-                <div className="rounded-md bg-red-500/10 p-1 text-[10px] text-red-400">
-                  {lspStatus.lastError}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 px-2 py-2 text-text-lighter">
-              <ZapOff size={12} className="opacity-50" />
-              <span className="text-xs">No active language servers</span>
-            </div>
-          )}
-        </div>
-      </Dropdown>
-    </div>
-  );
-};
 
 const AiUsageStatusIndicator = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -275,8 +159,10 @@ const AiUsageStatusIndicator = () => {
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "ui-font flex items-center gap-1 rounded-full px-2 py-1 font-medium text-xs hover:bg-hover",
+          footerIconButtonClass,
+          "ui-font gap-1 font-medium text-xs",
           modeToneClass,
+          isOpen && "border-border/60 bg-hover/80",
         )}
         style={{ minHeight: 0, minWidth: 0 }}
         title={`${planLabel} • ${modeLabel}`}
@@ -289,16 +175,16 @@ const AiUsageStatusIndicator = () => {
         anchorSide="top"
         anchorAlign="end"
         onClose={() => setIsOpen(false)}
-        className="w-[320px] overflow-hidden rounded-2xl p-0"
+        className="w-[320px] overflow-hidden rounded-xl p-0"
       >
-        <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/75 px-3 py-2.5">
-          <span className="font-medium text-text text-xs">AI</span>
+        <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/55 px-3 py-2.5">
+          <span className="ui-font font-medium text-text text-xs">AI</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => {
                 void refreshAll();
               }}
-              className="ui-font rounded-md px-1.5 py-1 text-[10px] text-text-lighter hover:bg-hover hover:text-text"
+              className={cn(footerIconButtonClass, "h-6 px-2 text-[10px]")}
             >
               Refresh
             </button>
@@ -307,13 +193,13 @@ const AiUsageStatusIndicator = () => {
                 setIsOpen(false);
                 uiState.openSettingsDialog("ai");
               }}
-              className="ui-font rounded-md px-1.5 py-1 text-[10px] text-text-lighter hover:bg-hover hover:text-text"
+              className={cn(footerIconButtonClass, "h-6 px-2 text-[10px]")}
             >
               AI Settings
             </button>
             <button
               onClick={() => setIsOpen(false)}
-              className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
+              className={cn(footerCompactButtonClass, "px-0")}
               aria-label="Close AI status dropdown"
             >
               <X size={12} />
@@ -371,10 +257,7 @@ const AiUsageStatusIndicator = () => {
   );
 };
 
-const EditorFooter = () => {
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
+const Footer = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const settings = useSettingsStore((state) => state.settings);
   const uiState = useUIState();
@@ -382,17 +265,12 @@ const EditorFooter = () => {
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
   const { actions } = useGitStore();
   const { available, downloading, installing, updateInfo, downloadAndInstall } = useUpdater(false);
-  const cursorPosition = useEditorStateStore.use.cursorPosition();
 
-  // Get diagnostics count for badge display
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
   const diagnosticsCount = Array.from(diagnosticsByFile.values()).reduce(
     (total, diagnostics) => total + diagnostics.length,
     0,
   );
-  const footerPillClass =
-    "flex h-6 items-center gap-0.5 rounded-full border border-transparent px-2 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text";
-  const footerActiveClass = "border-border bg-selected text-text";
 
   return (
     <div className="relative z-20 flex min-h-9 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
@@ -421,19 +299,14 @@ const EditorFooter = () => {
                 !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "terminal";
               uiState.setIsBottomPaneVisible(showingTerminal);
 
-              // Request terminal focus after showing
               if (showingTerminal) {
                 setTimeout(() => {
                   uiState.requestTerminalFocus();
                 }, 100);
               }
             }}
-            className={cn(
-              footerPillClass,
-              uiState.isBottomPaneVisible &&
-                uiState.bottomPaneActiveTab === "terminal" &&
-                footerActiveClass,
-            )}
+            className={footerCompactButtonClass}
+            data-active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"}
             style={{ minHeight: 0, minWidth: 0 }}
             title="Toggle Terminal"
           >
@@ -451,14 +324,14 @@ const EditorFooter = () => {
               uiState.setIsBottomPaneVisible(showingDiagnostics);
             }}
             className={cn(
-              footerPillClass,
-              uiState.isBottomPaneVisible &&
-                uiState.bottomPaneActiveTab === "diagnostics" &&
-                footerActiveClass,
+              footerIconButtonClass,
               !(uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics") &&
                 diagnosticsCount > 0 &&
                 "text-warning",
             )}
+            data-active={
+              uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"
+            }
             style={{ minHeight: 0, minWidth: 0 }}
             title={
               diagnosticsCount > 0
@@ -470,24 +343,15 @@ const EditorFooter = () => {
             {diagnosticsCount > 0 && <span className="ml-0.5 text-[10px]">{diagnosticsCount}</span>}
           </button>
         )}
-
-        {/* LSP Status indicator */}
-        <LspStatusIndicator
-          projectName={rootFolderPath ? getFilenameFromPath(rootFolderPath) : null}
-        />
-
-        {/* Vim status indicator */}
-        <VimStatusIndicator />
-
         {/* Update indicator */}
         {available && (
           <button
             onClick={downloadAndInstall}
             disabled={downloading || installing}
             className={cn(
-              footerPillClass,
+              footerCompactButtonClass,
               downloading || installing
-                ? "cursor-not-allowed border-transparent text-text-lighter"
+                ? "cursor-not-allowed opacity-60"
                 : "text-blue-400 hover:text-blue-300",
             )}
             style={{ minHeight: 0, minWidth: 0 }}
@@ -505,13 +369,6 @@ const EditorFooter = () => {
       </div>
 
       <div className="ui-font flex items-center gap-1 text-text-lighter text-xs">
-        {/* Cursor position */}
-        {activeBuffer && (
-          <span className="mr-1 text-[10px]">
-            Ln {cursorPosition.line + 1}, Col {cursorPosition.column + 1}
-          </span>
-        )}
-
         {isAuthenticated && <AiUsageStatusIndicator />}
 
         {/* AI Chat button */}
@@ -519,30 +376,16 @@ const EditorFooter = () => {
           onClick={() => {
             useSettingsStore.getState().toggleAIChatVisible();
           }}
-          className={cn(
-            "flex h-6 items-center justify-center rounded-full border border-transparent px-2 transition-colors",
-            settings.isAIChatVisible
-              ? "border-border bg-selected text-text"
-              : "text-text-lighter hover:border-border/70 hover:bg-hover hover:text-text",
-          )}
+          className={footerCompactButtonClass}
+          data-active={settings.isAIChatVisible}
           style={{ minHeight: 0, minWidth: 0 }}
           title="Toggle AI Chat"
         >
           <Sparkles size={12} />
-        </button>
-
-        {/* Settings button */}
-        <button
-          onClick={() => uiState.setIsSettingsDialogVisible(true)}
-          className="flex h-6 items-center justify-center rounded-full border border-transparent px-2 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
-          style={{ minHeight: 0, minWidth: 0 }}
-          title="Settings"
-        >
-          <Settings size={12} />
         </button>
       </div>
     </div>
   );
 };
 
-export default EditorFooter;
+export default Footer;

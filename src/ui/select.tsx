@@ -11,6 +11,7 @@ import type {
 } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
+import { buttonClassName } from "@/ui/button";
 import { type MenuItem, MenuItemsList, MenuPopover } from "@/ui/menu";
 import { cn } from "@/utils/cn";
 import { adjustPositionToFitViewport } from "@/utils/fit-viewport";
@@ -271,12 +272,12 @@ function RadixSharedSelect({
           disabled={disabled}
           className={
             triggerClassName ??
-            cn(
-              "ui-font flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-secondary-bg px-3 py-1.5 text-text transition-colors",
-              "focus:border-border focus:outline-none focus:ring-1 focus:ring-accent/20",
-              disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
-              size === "xs" ? "text-xs" : size === "sm" ? "text-xs" : "text-sm",
-            )
+            buttonClassName({
+              variant: "subtle",
+              size: size === "xs" ? "xs" : size === "sm" ? "sm" : "md",
+              className:
+                "w-full justify-between gap-2 rounded-lg bg-secondary-bg px-3 text-text focus:ring-1 focus:ring-accent/20",
+            })
           }
           aria-label={placeholder}
         >
@@ -393,10 +394,12 @@ function Select(props: SelectProps) {
           onChange={onChange}
           disabled={disabled}
           className={cn(
-            "ui-font w-full appearance-none rounded-xl border border-border bg-secondary-bg/80 text-text transition-colors",
+            buttonClassName({
+              variant: "subtle",
+              size,
+              className: "w-full appearance-none rounded-xl bg-secondary-bg/80 text-text",
+            }),
             "focus:border-border focus:outline-none focus:ring-1 focus:ring-accent/20",
-            disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
-            sizeClasses[size],
             leftIcon ? "pr-8 pl-8" : "pr-8",
             nativeClassName,
           )}

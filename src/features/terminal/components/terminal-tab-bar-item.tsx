@@ -2,7 +2,7 @@ import { Pin, X } from "lucide-react";
 import { memo, useCallback, useEffect, useRef } from "react";
 import type { Terminal } from "@/features/terminal/types/terminal";
 import Input from "@/ui/input";
-import { UnifiedTab } from "@/ui/unified-tab";
+import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
 interface TerminalTabBarItemProps {
@@ -88,7 +88,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
           />
         </div>
       )}
-      <UnifiedTab
+      <Tab
         ref={tabRef}
         role="tab"
         aria-selected={isActive}
@@ -188,7 +188,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
             {displayName}
           </span>
         )}
-      </UnifiedTab>
+      </Tab>
     </>
   );
 });

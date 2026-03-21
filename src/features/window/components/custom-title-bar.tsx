@@ -9,13 +9,14 @@ import {
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import Button from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC } from "@/utils/platform";
-import { AccountMenu } from "./components/account-menu";
-import ProjectTabs from "./components/project-tabs";
-import RunActionsButton from "./components/run-actions-button";
-import WindowTitleDisplay from "./components/window-title-display";
+import { AccountMenu } from "./account-menu";
+import ProjectTabs from "./project-tabs";
+import RunActionsButton from "./run-actions-button";
+import WindowTitleDisplay from "./window-title-display";
 import CustomMenuBar from "./menu-bar/window-menu-bar";
 
 interface CustomTitleBarProps {
@@ -113,32 +114,38 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         {isLinux && (
           <div className="flex items-center">
             <Tooltip content="Minimize" side="bottom">
-              <button
+              <Button
                 onClick={handleMinimize}
-                className="flex h-6 w-8 items-center justify-center rounded-full border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
+                variant="subtle"
+                size="icon-sm"
+                className="pointer-events-auto"
               >
                 <Minus className="h-3.5 w-3.5 text-text-lighter" />
-              </button>
+              </Button>
             </Tooltip>
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
-              <button
+              <Button
                 onClick={handleToggleMaximize}
-                className="flex h-6 w-8 items-center justify-center rounded-full border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
+                variant="subtle"
+                size="icon-sm"
+                className="pointer-events-auto"
               >
                 {isMaximized ? (
                   <Minimize2 className="h-3.5 w-3.5 text-text-lighter" />
                 ) : (
                   <Maximize2 className="h-3.5 w-3.5 text-text-lighter" />
                 )}
-              </button>
+              </Button>
             </Tooltip>
             <Tooltip content="Close" side="bottom">
-              <button
+              <Button
                 onClick={handleClose}
-                className="group flex h-6 w-8 items-center justify-center rounded-full border border-transparent transition-colors hover:bg-error"
+                variant="danger"
+                size="icon-sm"
+                className="pointer-events-auto group"
               >
                 <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
-              </button>
+              </Button>
             </Tooltip>
           </div>
         )}
@@ -161,14 +168,16 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           {!settings.nativeMenuBar && settings.compactMenuBar && (
             <div className="relative">
               <Tooltip content="Menu" side="bottom">
-                <button
+                <Button
                   onClick={() => {
                     setMenuBarActiveMenu("File");
                   }}
-                  className="flex h-6 w-7 items-center justify-center rounded-lg border border-border/70 bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                  variant="subtle"
+                  size="icon-sm"
+                  className="pointer-events-auto"
                 >
                   <MenuIcon size={14} />
-                </button>
+                </Button>
               </Tooltip>
               <CustomMenuBar
                 activeMenu={menuBarActiveMenu}
@@ -219,14 +228,16 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         {!settings.nativeMenuBar && settings.compactMenuBar && (
           <div className="relative mr-2">
             <Tooltip content="Menu" side="bottom">
-              <button
+              <Button
                 onClick={() => {
                   setMenuBarActiveMenu("File");
                 }}
-                className="flex h-6 w-7 items-center justify-center rounded-lg border border-border/70 bg-primary-bg/70 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                variant="subtle"
+                size="icon-sm"
+                className="pointer-events-auto"
               >
                 <MenuIcon size={14} />
-              </button>
+              </Button>
             </Tooltip>
             <CustomMenuBar
               activeMenu={menuBarActiveMenu}
@@ -269,32 +280,38 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         {isLinux && (
           <div className="flex items-center gap-0.5">
             <Tooltip content="Minimize" side="bottom">
-              <button
+              <Button
                 onClick={handleMinimize}
-                className="flex h-6 w-8 items-center justify-center rounded-full border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
+                variant="subtle"
+                size="icon-sm"
+                className="pointer-events-auto"
               >
                 <Minus className="h-3.5 w-3.5 text-text-lighter" />
-              </button>
+              </Button>
             </Tooltip>
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
-              <button
+              <Button
                 onClick={handleToggleMaximize}
-                className="flex h-6 w-8 items-center justify-center rounded-full border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text"
+                variant="subtle"
+                size="icon-sm"
+                className="pointer-events-auto"
               >
                 {isMaximized ? (
                   <Minimize2 className="h-3.5 w-3.5 text-text-lighter" />
                 ) : (
                   <Maximize2 className="h-3.5 w-3.5 text-text-lighter" />
                 )}
-              </button>
+              </Button>
             </Tooltip>
             <Tooltip content="Close" side="bottom">
-              <button
+              <Button
                 onClick={handleClose}
-                className="group flex h-6 w-8 items-center justify-center rounded-full border border-transparent transition-colors hover:bg-error"
+                variant="danger"
+                size="icon-sm"
+                className="pointer-events-auto group"
               >
                 <X className="h-3.5 w-3.5 text-text-lighter group-hover:text-white" />
-              </button>
+              </Button>
             </Tooltip>
           </div>
         )}

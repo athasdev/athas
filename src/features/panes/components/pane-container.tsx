@@ -8,7 +8,7 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
 import type { GitHunk } from "@/features/git/types/git-types";
-import { useGitHubStore } from "@/features/github/store";
+import { useGitHubStore } from "@/features/github/stores/github-store";
 import { useSettingsStore } from "@/features/settings/store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";

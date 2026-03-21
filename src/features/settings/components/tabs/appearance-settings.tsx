@@ -13,11 +13,11 @@ import {
 } from "@/features/settings/lib/ui-font-size";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
-import { FontSelector } from "@/ui/font-selector";
 import Section, { SettingRow } from "@/ui/section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { IS_MAC } from "@/utils/platform";
+import { FontSelector } from "../font-selector";
 
 export const AppearanceSettings = () => {
   const { settings, updateSetting } = useSettingsStore();

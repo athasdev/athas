@@ -3,12 +3,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
-import Button from "@/ui/button";
+import Button, { buttonClassName } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import Tooltip from "@/ui/tooltip";
-import { cn } from "@/utils/cn";
 
 type ActionDraft = {
   id?: string;
@@ -98,7 +97,7 @@ export default function RunActionsButton() {
   return (
     <>
       <div ref={triggerRef} className="pointer-events-auto">
-        <div className="flex h-7 items-center rounded-[14px] border border-border/80 bg-primary-bg/75 p-0.5 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset] backdrop-blur-sm">
+        <div className="flex items-center gap-1">
           <Tooltip
             content={primaryAction ? `Run ${primaryAction.name}` : "Add run action"}
             side="bottom"
@@ -106,23 +105,27 @@ export default function RunActionsButton() {
             <button
               type="button"
               onClick={handlePrimaryRun}
-              className="flex h-6 min-w-10 items-center justify-center rounded-[11px] px-2.5 text-text transition-colors hover:bg-hover"
+              className={buttonClassName({
+                variant: "subtle",
+                size: "xs",
+                className: "min-w-9 rounded-md px-2 text-text-lighter",
+              })}
               aria-label={primaryAction ? `Run ${primaryAction.name}` : "Add run action"}
             >
-              <Play size={14} className="translate-x-[0.5px] fill-none" />
+              <Play size={13} className="translate-x-[0.5px] fill-none" />
             </button>
           </Tooltip>
-
-          <div className="mx-0.5 h-4 w-px bg-border/80" />
 
           <Tooltip content="Run actions" side="bottom">
             <button
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
-              className={cn(
-                "flex h-6 w-7 items-center justify-center rounded-[11px] text-text-lighter transition-colors hover:bg-hover hover:text-text",
-                isMenuOpen && "bg-hover text-text",
-              )}
+              className={buttonClassName({
+                variant: "subtle",
+                size: "icon-sm",
+                className: "rounded-md text-text-lighter",
+              })}
+              data-active={isMenuOpen}
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
               aria-label="Open run actions"
@@ -138,7 +141,7 @@ export default function RunActionsButton() {
         anchorRef={triggerRef}
         anchorAlign="end"
         onClose={closeMenu}
-        className="w-[264px] p-1.5"
+        className="w-[264px] rounded-xl p-1.5"
       >
         <div className="px-2 pt-1 pb-2">
           <div className="text-[11px] uppercase tracking-[0.14em] text-text-lighter/80">
@@ -170,7 +173,11 @@ export default function RunActionsButton() {
                         command: action.command,
                       })
                     }
-                    className="flex size-6 items-center justify-center rounded-md text-text-lighter transition-colors hover:bg-secondary-bg hover:text-text"
+                    className={buttonClassName({
+                      variant: "ghost",
+                      size: "icon-sm",
+                      className: "rounded-md text-text-lighter",
+                    })}
                     aria-label={`Edit ${action.name}`}
                   >
                     <Pencil size={12} />
@@ -178,7 +185,11 @@ export default function RunActionsButton() {
                   <button
                     type="button"
                     onClick={() => deleteAction(action.id)}
-                    className="flex size-6 items-center justify-center rounded-md text-text-lighter transition-colors hover:bg-secondary-bg hover:text-error"
+                    className={buttonClassName({
+                      variant: "ghost",
+                      size: "icon-sm",
+                      className: "rounded-md text-text-lighter hover:text-error",
+                    })}
                     aria-label={`Delete ${action.name}`}
                   >
                     <Trash2 size={12} />

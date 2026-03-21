@@ -1,10 +1,10 @@
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import { FontSelector } from "@/ui/font-selector";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
 import Section, { SettingRow } from "@/ui/section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
+import { FontSelector } from "../font-selector";
 
 export const EditorSettings = () => {
   const { settings, updateSetting } = useSettingsStore();

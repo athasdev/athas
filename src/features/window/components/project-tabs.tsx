@@ -10,7 +10,7 @@ import type { ProjectTab } from "@/features/window/stores/workspace-tabs-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
-import { UnifiedTab } from "@/ui/unified-tab";
+import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import ProjectPickerDialog from "./project-picker-dialog";
 
@@ -358,7 +358,7 @@ const ProjectTabs = () => {
               {showDropIndicatorBefore && (
                 <div className="absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
               )}
-              <UnifiedTab
+              <Tab
                 role="tab"
                 tabIndex={0}
                 aria-selected={tab.isActive}
@@ -395,7 +395,7 @@ const ProjectTabs = () => {
               >
                 {isRemote ? <Server size={11} /> : <Folder size={11} />}
                 <span className="max-w-32 truncate">{tab.name}</span>
-              </UnifiedTab>
+              </Tab>
             </div>
           );
         })}

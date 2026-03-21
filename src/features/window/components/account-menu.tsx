@@ -1,8 +1,9 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { CircleUser, CreditCard, ExternalLink, LogIn, LogOut } from "lucide-react";
+import { CircleUser, CreditCard, ExternalLink, LogIn, LogOut, Settings } from "lucide-react";
 import { useRef, useState } from "react";
 import { useAuthStore } from "@/features/window/stores/auth-store";
-import { toast } from "@/ui/toast-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { toast } from "@/ui/toast";
 import Button from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Tooltip from "@/ui/tooltip";
@@ -11,7 +12,6 @@ import {
   DesktopAuthError,
   waitForDesktopAuthToken,
 } from "@/features/window/services/auth-api";
-import { cn } from "@/utils/cn";
 
 interface AccountMenuProps {
   iconSize?: number;
@@ -24,6 +24,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
   const subscription = useAuthStore((s) => s.subscription);
   const logout = useAuthStore((s) => s.logout);
   const handleAuthCallback = useAuthStore((s) => s.handleAuthCallback);
+  const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
 
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -76,10 +77,26 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     await openUrl("https://athas.dev/pricing");
   };
 
+  const handleOpenSettings = () => {
+    setIsSettingsDialogVisible(true);
+  };
+
   const subscriptionStatus = subscription?.status ?? "free";
   const isEnterprise = subscription?.subscription?.plan === "enterprise";
 
   const signedOutItems: ContextMenuItem[] = [
+    {
+      id: "settings",
+      label: "Settings",
+      icon: <Settings size={12} />,
+      onClick: handleOpenSettings,
+    },
+    {
+      id: "settings-separator",
+      label: "",
+      separator: true,
+      onClick: () => {},
+    },
     {
       id: "sign-in",
       label: "Sign In",
@@ -119,6 +136,12 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
       onClick: handleManageAccount,
     },
     {
+      id: "settings",
+      label: "Settings",
+      icon: <Settings size={12} />,
+      onClick: handleOpenSettings,
+    },
+    {
       id: "sign-out-separator",
       label: "",
       separator: true,
@@ -141,13 +164,9 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
           ref={buttonRef}
           onClick={handleClick}
           type="button"
-          variant="ghost"
-          size="sm"
-          className={cn(
-            "h-6 w-6 min-w-6 rounded-lg border border-transparent p-0 text-text-lighter hover:border-border/70",
-            isAuthenticated && "text-blue-400 hover:text-blue-300",
-            className,
-          )}
+          variant="subtle"
+          size="icon-sm"
+          className={className}
         >
           {isAuthenticated && user?.avatar_url ? (
             <img

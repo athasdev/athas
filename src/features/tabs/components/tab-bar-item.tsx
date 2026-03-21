@@ -2,7 +2,7 @@ import { Database, Globe, Package, Pin, Sparkles, Terminal, X } from "lucide-rea
 import { memo, useCallback, useEffect, useState } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content";
-import { UnifiedTab } from "@/ui/unified-tab";
+import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
 interface TabBarItemProps {
@@ -63,7 +63,7 @@ const TabBarItem = memo(function TabBarItem({
           <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
         </div>
       )}
-      <UnifiedTab
+      <Tab
         ref={tabRef}
         role="tab"
         aria-selected={isActive}
@@ -154,7 +154,7 @@ const TabBarItem = memo(function TabBarItem({
             aria-label="Unsaved changes"
           />
         )}
-      </UnifiedTab>
+      </Tab>
     </>
   );
 });
