@@ -1,25 +1,18 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Check, ChevronDown, Download, LoaderCircle, Plus, Search, Settings2 } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig } from "@/features/ai/types/acp";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
 interface UnifiedAgentSelectorProps {
   variant?: "header" | "input";
   onOpenSettings?: () => void;
-}
-
-interface DropdownPosition {
-  left: number;
-  top: number;
-  width: number;
-  maxHeight: number;
 }
 
 export function UnifiedAgentSelector({
@@ -32,8 +25,6 @@ export function UnifiedAgentSelector({
   const [availableAgents, setAvailableAgents] = useState<AgentConfig[]>([]);
   const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set(["custom"]));
   const [installingAgentId, setInstallingAgentId] = useState<string | null>(null);
-  const [position, setPosition] = useState<DropdownPosition | null>(null);
-
   const { showToast } = useToast();
   const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
   const setSelectedAgentId = useAIChatStore((state) => state.setSelectedAgentId);
@@ -41,7 +32,6 @@ export function UnifiedAgentSelector({
   const changeCurrentChatAgent = useAIChatStore((state) => state.changeCurrentChatAgent);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const currentAgentId = getCurrentAgentId();
@@ -139,75 +129,6 @@ export function UnifiedAgentSelector({
       setSelectedIndex(0);
     }
   }, [isOpen]);
-
-  const updateDropdownPosition = useCallback(() => {
-    const trigger = triggerRef.current;
-    if (!trigger) return;
-
-    const rect = trigger.getBoundingClientRect();
-    const viewportPadding = 8;
-    const width = 320;
-    const estimatedHeight = 450;
-    const safeWidth = Math.min(width, window.innerWidth - viewportPadding * 2);
-    const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
-    const availableAbove = rect.top - viewportPadding;
-    const openUp =
-      variant !== "header" &&
-      availableBelow < Math.min(estimatedHeight, 280) &&
-      availableAbove > availableBelow;
-    const maxHeight = Math.max(
-      220,
-      Math.min(estimatedHeight, openUp ? availableAbove - 6 : availableBelow - 6),
-    );
-    const measuredHeight = dropdownRef.current?.getBoundingClientRect().height ?? estimatedHeight;
-    const visibleHeight = Math.min(maxHeight, measuredHeight);
-
-    const desiredLeft = rect.right - safeWidth;
-    const left = Math.max(
-      viewportPadding,
-      Math.min(desiredLeft, window.innerWidth - safeWidth - viewportPadding),
-    );
-    const top = openUp ? Math.max(viewportPadding, rect.top - visibleHeight - 6) : rect.bottom + 6;
-
-    setPosition({ left, top, width: safeWidth, maxHeight });
-  }, [variant, isCustomAgent]);
-
-  useLayoutEffect(() => {
-    if (!isOpen) return;
-    updateDropdownPosition();
-  }, [isOpen, updateDropdownPosition, search, filteredItems.length]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleDocumentMouseDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (dropdownRef.current?.contains(target)) return;
-      if (triggerRef.current?.contains(target)) return;
-      setIsOpen(false);
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setIsOpen(false);
-      }
-    };
-
-    const handleReposition = () => updateDropdownPosition();
-
-    document.addEventListener("mousedown", handleDocumentMouseDown);
-    document.addEventListener("keydown", handleEscape);
-    window.addEventListener("resize", handleReposition);
-    window.addEventListener("scroll", handleReposition, true);
-
-    return () => {
-      document.removeEventListener("mousedown", handleDocumentMouseDown);
-      document.removeEventListener("keydown", handleEscape);
-      window.removeEventListener("resize", handleReposition);
-      window.removeEventListener("scroll", handleReposition, true);
-    };
-  }, [isOpen, updateDropdownPosition]);
 
   const handleAgentChange = useCallback(
     async (agentId: AgentType) => {
@@ -323,127 +244,113 @@ export function UnifiedAgentSelector({
         </button>
       )}
 
-      {isOpen &&
-        position &&
-        createPortal(
-          <div
-            ref={dropdownRef}
+      <Dropdown
+        isOpen={isOpen}
+        anchorRef={triggerRef}
+        anchorAlign="end"
+        onClose={() => setIsOpen(false)}
+        className="flex w-[320px] flex-col overflow-hidden rounded-2xl p-0"
+      >
+        <div className="bg-secondary-bg px-2 py-2" onKeyDown={handleKeyDown}>
+          <Input
+            ref={inputRef}
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="scrollbar-hidden fixed z-[10030] flex flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 shadow-lg backdrop-blur-sm"
-            style={{
-              top: `${position.top}px`,
-              left: `${position.left}px`,
-              width: `${position.width}px`,
-              maxHeight: `${position.maxHeight}px`,
-            }}
-          >
-            <div className="bg-secondary-bg px-2 py-2">
-              <Input
-                ref={inputRef}
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Search agents..."
-                variant="ghost"
-                leftIcon={Search}
-                className="w-full pr-3"
-              />
-            </div>
+            placeholder="Search agents..."
+            variant="ghost"
+            leftIcon={Search}
+            className="w-full pr-3"
+          />
+        </div>
 
-            {/* Items */}
-            <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
-              {filteredItems.length === 0 ? (
-                <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
-              ) : (
-                filteredItems.map((item) => {
-                  selectableIndex++;
-                  const itemIndex = selectableIndex;
-                  const isSelected = itemIndex === selectedIndex;
-                  const isInstalling = installingAgentId === item.id;
-                  const isUnavailable = !item.isInstalled && item.id !== "custom";
+        <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+          {filteredItems.length === 0 ? (
+            <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
+          ) : (
+            filteredItems.map((item) => {
+              selectableIndex++;
+              const itemIndex = selectableIndex;
+              const isSelected = itemIndex === selectedIndex;
+              const isInstalling = installingAgentId === item.id;
+              const isUnavailable = !item.isInstalled && item.id !== "custom";
 
-                  return (
-                    <div
-                      key={item.id}
-                      onMouseEnter={() => setSelectedIndex(itemIndex)}
-                      className={cn(
-                        "group flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-colors",
-                        isSelected ? "bg-hover/90" : "bg-transparent",
-                        item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
-                      )}
-                    >
-                      <button
-                        onClick={() =>
-                          item.isInstalled || item.id === "custom"
-                            ? handleAgentChange(item.id as AgentType)
-                            : handleInstallAgent(item.id)
-                        }
-                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                      >
-                        <ProviderIcon
-                          providerId={item.id}
-                          size={10}
-                          className="text-text-lighter"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-text text-xs">{item.name}</div>
-                          {isUnavailable ? (
-                            <div className="mt-0.5 text-[10px] text-text-lighter">
-                              Install before use
-                            </div>
-                          ) : null}
+              return (
+                <div
+                  key={item.id}
+                  onMouseEnter={() => setSelectedIndex(itemIndex)}
+                  className={cn(
+                    "group flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors",
+                    isSelected ? "bg-hover/90" : "bg-transparent",
+                    item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
+                  )}
+                >
+                  <button
+                    onClick={() =>
+                      item.isInstalled || item.id === "custom"
+                        ? handleAgentChange(item.id as AgentType)
+                        : handleInstallAgent(item.id)
+                    }
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  >
+                    <ProviderIcon providerId={item.id} size={10} className="text-text-lighter" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-text text-xs">{item.name}</div>
+                      {isUnavailable ? (
+                        <div className="mt-0.5 text-[10px] text-text-lighter">
+                          Install before use
                         </div>
-                      </button>
-                      <div className="flex min-w-[4.5rem] shrink-0 items-center justify-end gap-1">
-                        {item.id === "custom" && onOpenSettings ? (
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setIsOpen(false);
-                              onOpenSettings();
-                            }}
-                            className={cn(
-                              "flex size-6 shrink-0 items-center justify-center rounded-md transition-colors",
-                              item.isCurrent
-                                ? "bg-accent/15 text-accent"
-                                : "text-text-lighter hover:bg-secondary-bg hover:text-text",
-                            )}
-                            aria-label="Open Athas Agent settings"
-                            title="Athas Agent settings"
-                          >
-                            <Settings2 size={12} />
-                          </button>
-                        ) : null}
-                        {item.isCurrent && <Check size={10} className="shrink-0 text-accent" />}
-                        {!item.isCurrent && item.isInstalled && item.id !== "custom" && (
-                          <Check size={10} className="shrink-0 text-green-500" />
-                        )}
-                        {isUnavailable && item.canInstall ? (
-                          <button
-                            type="button"
-                            onClick={() => void handleInstallAgent(item.id)}
-                            disabled={isInstalling}
-                            className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-border bg-secondary-bg/80 px-2 py-0 text-[10px] text-text-lighter transition-colors hover:bg-hover disabled:cursor-wait disabled:opacity-70"
-                          >
-                            {isInstalling ? (
-                              <LoaderCircle size={10} className="animate-spin" />
-                            ) : (
-                              <Download size={10} />
-                            )}
-                            {isInstalling ? "Installing" : "Install"}
-                          </button>
-                        ) : null}
-                      </div>
+                      ) : null}
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </div>,
-          document.body,
-        )}
+                  </button>
+                  <div className="flex min-w-[4.5rem] shrink-0 items-center justify-end gap-1">
+                    {item.id === "custom" && onOpenSettings ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setIsOpen(false);
+                          onOpenSettings();
+                        }}
+                        className={cn(
+                          "flex size-6 shrink-0 items-center justify-center rounded-md transition-colors",
+                          item.isCurrent
+                            ? "bg-accent/15 text-accent"
+                            : "text-text-lighter hover:bg-secondary-bg hover:text-text",
+                        )}
+                        aria-label="Open Athas Agent settings"
+                        title="Athas Agent settings"
+                      >
+                        <Settings2 size={12} />
+                      </button>
+                    ) : null}
+                    {item.isCurrent && <Check size={10} className="shrink-0 text-accent" />}
+                    {!item.isCurrent && item.isInstalled && item.id !== "custom" && (
+                      <Check size={10} className="shrink-0 text-green-500" />
+                    )}
+                    {isUnavailable && item.canInstall ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleInstallAgent(item.id)}
+                        disabled={isInstalling}
+                        className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-border bg-secondary-bg/80 px-2 py-0 text-[10px] text-text-lighter transition-colors hover:bg-hover disabled:cursor-wait disabled:opacity-70"
+                      >
+                        {isInstalling ? (
+                          <LoaderCircle size={10} className="animate-spin" />
+                        ) : (
+                          <Download size={10} />
+                        )}
+                        {isInstalling ? "Installing" : "Install"}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </Dropdown>
     </>
   );
 }
