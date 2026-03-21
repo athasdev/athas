@@ -13,7 +13,7 @@ import {
 import type { RemoteConnection, RemoteConnectionFormData } from "@/features/remote/types";
 import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
 import Dialog from "@/ui/dialog";
-import { PANE_CHIP_BASE, paneIconButtonClassName, paneTitleClassName } from "@/ui/pane";
+import { paneIconButtonClassName, paneTitleClassName } from "@/ui/pane";
 import { toast } from "@/ui/toast-store";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/services/remote-connection-store";

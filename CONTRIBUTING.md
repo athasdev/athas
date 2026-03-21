@@ -23,7 +23,7 @@ bun dev
 2. Auto-fix issues: `bun fix`
 3. Formatting only when needed: `bun format`
 4. App runs: `bun dev`
-5. Run release validation when touching release flow: `bun release:check`
+5. Run release validation when touching release flow: `bun pre-release`
 6. Rebase on master: `git rebase origin/master`
 7. Squash commits into logical units
 8. Review and agree to the
