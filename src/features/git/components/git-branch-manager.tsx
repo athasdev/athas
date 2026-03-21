@@ -1,9 +1,11 @@
 import { Check, ChevronDown, GitBranch, Plus, Search, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { buttonClassName } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { dropdownTriggerClassName } from "@/ui/dropdown";
+import { paneIconButtonClassName } from "@/ui/pane";
 import { cn } from "@/utils/cn";
 import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../api/git-branches-api";
 import { createStash } from "../api/git-stash-api";
@@ -30,8 +32,12 @@ const GitBranchManager = ({
   const [newBranchName, setNewBranchName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
   const { showToast } = useToast();
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const createInputRef = useRef<HTMLInputElement>(null);
   const dropdownWidth = useMemo(() => (compact ? 360 : 420), [compact]);
   const filteredBranches = useMemo(() => {
     const normalizedQuery = branchQuery.trim().toLowerCase();
@@ -69,13 +75,29 @@ const GitBranchManager = ({
     const handleOpenFromPalette = () => {
       if (!paletteTarget || !repoPath) return;
       setIsDropdownOpen(true);
-      setBranchQuery("");
+      setShowSearch(true);
+      setShowCreate(false);
       void loadBranches();
     };
 
     window.addEventListener("athas:open-branch-manager", handleOpenFromPalette);
     return () => window.removeEventListener("athas:open-branch-manager", handleOpenFromPalette);
   }, [paletteTarget, repoPath, loadBranches]);
+
+  useEffect(() => {
+    if (!isDropdownOpen) {
+      setShowSearch(false);
+      setShowCreate(false);
+      setBranchQuery("");
+      return;
+    }
+
+    if (showSearch) {
+      window.requestAnimationFrame(() => searchInputRef.current?.focus());
+    } else if (showCreate) {
+      window.requestAnimationFrame(() => createInputRef.current?.focus());
+    }
+  }, [isDropdownOpen, showSearch, showCreate]);
 
   const handleBranchChange = async (branchName: string) => {
     if (!repoPath || !branchName || branchName === currentBranch) return;
@@ -179,7 +201,8 @@ const GitBranchManager = ({
     const nextOpen = !isDropdownOpen;
     setIsDropdownOpen(nextOpen);
     if (nextOpen) {
-      setBranchQuery("");
+      setShowSearch(true);
+      setShowCreate(false);
       await loadBranches();
     }
   };
@@ -191,6 +214,7 @@ const GitBranchManager = ({
         data-branch-manager-trigger="true"
         onClick={() => void handleToggleDropdown()}
         disabled={isLoading}
+        type="button"
         className={
           compact
             ? dropdownTriggerClassName("max-w-44")
@@ -208,82 +232,118 @@ const GitBranchManager = ({
         anchorSide={placement === "up" ? "top" : "bottom"}
         onClose={() => setIsDropdownOpen(false)}
         className="flex flex-col overflow-hidden rounded-2xl p-0"
-        style={{ width: `${dropdownWidth}px` }}
+        style={{
+          width: `min(${dropdownWidth}px, calc(100vw - 16px))`,
+          maxWidth: "calc(100vw - 16px)",
+          maxHeight: compact ? "240px" : "280px",
+        }}
       >
-        <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/75 px-3 py-2.5">
+        <div className="flex items-center justify-between bg-secondary-bg/75 px-2.5 py-2">
           <div className="flex min-w-0 items-center gap-1.5">
             <GitBranch size={12} className="shrink-0 text-text-lighter" />
             <span className="truncate font-medium text-text text-xs">{currentBranch}</span>
-            <span className="rounded-full bg-selected px-1.5 py-0.5 text-[9px] text-text-lighter">
-              Current
-            </span>
           </div>
-          <button
-            onClick={() => setIsDropdownOpen(false)}
-            className="rounded-md p-1 text-text-lighter hover:bg-hover hover:text-text"
-            aria-label="Close branch dropdown"
-          >
-            <X size={12} />
-          </button>
-        </div>
-
-        <div className="border-border/60 border-b p-2.5">
-          <div className="mb-1 font-medium text-[10px] text-text-lighter">Create Branch</div>
-          <div className="flex gap-1.5">
-            <Input
-              id="new-branch-name"
-              type="text"
-              placeholder="feature/new-branch"
-              value={newBranchName}
-              onChange={(e) => setNewBranchName(e.target.value)}
-              className="flex-1"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && newBranchName.trim()) {
-                  e.preventDefault();
-                  void handleCreateBranch();
-                }
-              }}
-              disabled={isLoading}
-            />
+          <div className="flex items-center gap-1">
             <button
-              onClick={() => void handleCreateBranch()}
-              disabled={!newBranchName.trim() || isLoading}
-              className={cn(
-                "flex items-center gap-1 rounded-lg border border-accent bg-accent px-2 py-1.5 text-white text-xs",
-                "hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50",
-              )}
+              onClick={() => {
+                setShowSearch((prev) => {
+                  const next = !prev;
+                  if (next) setShowCreate(false);
+                  if (!next) setBranchQuery("");
+                  return next;
+                });
+              }}
+              className={cn(paneIconButtonClassName("h-6 w-6"), showSearch && "bg-hover text-text")}
+              aria-label="Toggle branch search"
+              title="Search branches"
+              type="button"
             >
-              <Plus size={10} />
-              Create
+              <Search size={11} />
+            </button>
+            <button
+              onClick={() => {
+                setShowCreate((prev) => {
+                  const next = !prev;
+                  if (next) setShowSearch(false);
+                  return next;
+                });
+              }}
+              className={cn(paneIconButtonClassName("h-6 w-6"), showCreate && "bg-hover text-text")}
+              aria-label="Toggle create branch"
+              title="Create branch"
+              type="button"
+            >
+              <Plus size={11} />
+            </button>
+            <button
+              onClick={() => setIsDropdownOpen(false)}
+              className={paneIconButtonClassName("h-6 w-6")}
+              aria-label="Close branch dropdown"
+              title="Close"
+              type="button"
+            >
+              <X size={11} />
             </button>
           </div>
         </div>
 
-        <div className="border-border/60 border-b p-2.5">
-          <label htmlFor="branch-search" className="mb-1 block text-[10px] text-text-lighter">
-            Find Branch
-          </label>
-          <div className="relative">
-            <Search
-              size={11}
-              className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 text-text-lighter"
-            />
+        {showCreate && (
+          <div className="border-border/60 border-t px-2.5 py-2">
+            <div className="flex gap-1.5">
+              <Input
+                ref={createInputRef}
+                id="new-branch-name"
+                type="text"
+                placeholder="feature/new-branch"
+                value={newBranchName}
+                onChange={(e) => setNewBranchName(e.target.value)}
+                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newBranchName.trim()) {
+                    e.preventDefault();
+                    void handleCreateBranch();
+                  }
+                }}
+                disabled={isLoading}
+              />
+              <button
+                onClick={() => void handleCreateBranch()}
+                disabled={!newBranchName.trim() || isLoading}
+                className={buttonClassName({
+                  variant: "default",
+                  size: "sm",
+                  className: "shrink-0 gap-1 rounded-lg",
+                })}
+                type="button"
+              >
+                <Plus size={10} />
+                Create
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showSearch && (
+          <div className="px-2 py-1">
             <Input
+              ref={searchInputRef}
               id="branch-search"
               type="text"
-              placeholder="Search by branch name"
+              placeholder="Search branches"
               value={branchQuery}
               onChange={(e) => setBranchQuery(e.target.value)}
               disabled={isLoading}
               leftIcon={Search}
-              className="w-full"
+              size="xs"
+              variant="ghost"
+              className="w-full px-0 py-0 pl-6 pr-1 bg-transparent focus:bg-transparent focus:ring-0"
             />
           </div>
-        </div>
+        )}
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           <div className="mb-1 flex items-center justify-between px-1 text-[10px] text-text-lighter">
-            <span>Branches</span>
+            <span>{showSearch && branchQuery ? "Matches" : "Branches"}</span>
             <span>
               {filteredBranches.length}
               {branchQuery ? ` / ${branches.length}` : ""}
@@ -313,6 +373,7 @@ const GitBranchManager = ({
                         ? "font-medium text-text"
                         : "text-text-lighter hover:text-text",
                     )}
+                    type="button"
                   >
                     {branch === currentBranch && (
                       <Check size={10} className="shrink-0 text-success" />
@@ -336,6 +397,7 @@ const GitBranchManager = ({
                       )}
                       title={`Delete ${branch}`}
                       aria-label={`Delete branch ${branch}`}
+                      type="button"
                     >
                       <Trash2 size={10} />
                     </button>

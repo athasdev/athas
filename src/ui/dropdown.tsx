@@ -10,13 +10,18 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { buttonClassName } from "@/ui/button";
 import Input from "@/ui/input";
 import type { MenuItem } from "@/ui/menu";
 import { cn } from "@/utils/cn";
 import { Search } from "lucide-react";
 
 export const DROPDOWN_TRIGGER_BASE =
-  "ui-font flex h-6 min-w-0 items-center gap-1 rounded-lg border border-transparent px-2 text-xs text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text disabled:opacity-50";
+  buttonClassName({
+    variant: "subtle",
+    size: "xs",
+    className: "min-w-0 gap-1 rounded-lg px-2 text-text-lighter",
+  });
 
 export const DROPDOWN_ITEM_BASE =
   "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs transition-colors hover:bg-hover";
@@ -90,6 +95,20 @@ type ContentProps = ItemsContent | SectionsContent | ChildrenContent;
 export type DropdownProps = DropdownBaseProps & PositioningProps & ContentProps;
 
 const VIEWPORT_PADDING = 8;
+const RESIZE_REPOSITION_THRESHOLD = 2;
+
+function getNumericMaxHeight(value: CSSProperties["maxHeight"]) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const match = value.trim().match(/^(\d+(?:\.\d+)?)px$/);
+    if (match) {
+      return Number.parseFloat(match[1]);
+    }
+  }
+  return null;
+}
 
 function getViewportBounds() {
   const vv = window.visualViewport;
@@ -109,6 +128,8 @@ export function Dropdown(props: DropdownProps) {
 
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const lockedWidthRef = useRef<number | null>(null);
+  const lastMenuSizeRef = useRef<{ width: number; height: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [focusIndex, setFocusIndex] = useState(-1);
   const [resolvedSide, setResolvedSide] = useState<AnchorSide>("bottom");
@@ -159,10 +180,25 @@ export function Dropdown(props: DropdownProps) {
     if (!menu) return;
 
     const vp = getViewportBounds();
-    const maxH = Math.max(120, vp.height - VIEWPORT_PADDING * 2);
-    menu.style.maxHeight = `${maxH}px`;
+    const userMaxHeight = getNumericMaxHeight(style?.maxHeight);
+    const hasExplicitWidth = style?.width != null;
 
-    const menuRect = menu.getBoundingClientRect();
+    const applyMaxHeight = (height: number) => {
+      const nextHeight = userMaxHeight == null ? height : Math.min(height, userMaxHeight);
+      menu.style.maxHeight = `${nextHeight}px`;
+    };
+
+    const applyLockedWidth = () => {
+      if (hasExplicitWidth) return;
+
+      if (lockedWidthRef.current == null) {
+        lockedWidthRef.current = menu.getBoundingClientRect().width;
+      }
+
+      if (lockedWidthRef.current != null) {
+        menu.style.width = `${lockedWidthRef.current}px`;
+      }
+    };
 
     let x: number;
     let y: number;
@@ -170,6 +206,21 @@ export function Dropdown(props: DropdownProps) {
 
     if (anchorRef?.current) {
       const anchorRect = anchorRef.current.getBoundingClientRect();
+      const viewportMaxHeight = Math.max(120, vp.height - VIEWPORT_PADDING * 2);
+      const spaceBelow = vp.top + vp.height - anchorRect.bottom - VIEWPORT_PADDING;
+      const spaceAbove = anchorRect.top - vp.top - VIEWPORT_PADDING;
+
+      if (anchorSide === "bottom") {
+        finalSide = spaceBelow >= spaceAbove ? "bottom" : "top";
+      } else {
+        finalSide = spaceAbove >= spaceBelow ? "top" : "bottom";
+      }
+
+      const availableHeight = finalSide === "bottom" ? spaceBelow : spaceAbove;
+      applyMaxHeight(Math.max(120, Math.min(viewportMaxHeight, availableHeight)));
+      applyLockedWidth();
+
+      const menuRect = menu.getBoundingClientRect();
 
       if (anchorAlign === "end") {
         x = anchorRect.right - menuRect.width;
@@ -177,10 +228,7 @@ export function Dropdown(props: DropdownProps) {
         x = anchorRect.left;
       }
 
-      const spaceBelow = vp.top + vp.height - anchorRect.bottom - VIEWPORT_PADDING;
-      const spaceAbove = anchorRect.top - vp.top - VIEWPORT_PADDING;
-
-      if (anchorSide === "bottom") {
+      if (finalSide === "bottom") {
         if (menuRect.height <= spaceBelow || spaceBelow >= spaceAbove) {
           y = anchorRect.bottom + 6;
           finalSide = "bottom";
@@ -198,6 +246,11 @@ export function Dropdown(props: DropdownProps) {
         }
       }
     } else if (point) {
+      const maxH = Math.max(120, vp.height - VIEWPORT_PADDING * 2);
+      applyMaxHeight(maxH);
+      applyLockedWidth();
+
+      const menuRect = menu.getBoundingClientRect();
       x = point.x;
       y = point.y;
 
@@ -211,6 +264,8 @@ export function Dropdown(props: DropdownProps) {
       return;
     }
 
+    const menuRect = menu.getBoundingClientRect();
+
     const minX = vp.left + VIEWPORT_PADDING;
     const maxX = vp.left + vp.width - menuRect.width - VIEWPORT_PADDING;
     const minY = vp.top + VIEWPORT_PADDING;
@@ -219,8 +274,8 @@ export function Dropdown(props: DropdownProps) {
     x = Math.max(minX, Math.min(x, maxX));
     y = Math.max(minY, Math.min(y, maxY));
 
-    menu.style.left = `${x}px`;
-    menu.style.top = `${y}px`;
+    menu.style.left = `${Math.round(x)}px`;
+    menu.style.top = `${Math.round(y)}px`;
     setResolvedSide(finalSide);
   }, [anchorRef, anchorSide, anchorAlign, point]);
 
@@ -231,9 +286,42 @@ export function Dropdown(props: DropdownProps) {
   }, [isOpen, positionMenu, searchQuery]);
 
   useEffect(() => {
+    if (isOpen) return;
+    lockedWidthRef.current = null;
+    lastMenuSizeRef.current = null;
+    if (menuRef.current && style?.width == null) {
+      menuRef.current.style.width = "";
+    }
+  }, [isOpen, style?.width]);
+
+  useEffect(() => {
     if (!isOpen) return;
 
-    const resizeObserver = new ResizeObserver(positionMenu);
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+
+      const { width, height } = entry.contentRect;
+      const previousSize = lastMenuSizeRef.current;
+      lastMenuSizeRef.current = { width, height };
+
+      if (!previousSize) {
+        positionMenu();
+        return;
+      }
+
+      const widthDelta = Math.abs(width - previousSize.width);
+      const heightDelta = Math.abs(height - previousSize.height);
+
+      if (
+        widthDelta < RESIZE_REPOSITION_THRESHOLD &&
+        heightDelta < RESIZE_REPOSITION_THRESHOLD
+      ) {
+        return;
+      }
+
+      positionMenu();
+    });
     if (menuRef.current) resizeObserver.observe(menuRef.current);
 
     const handleClickOutside = (e: MouseEvent) => {

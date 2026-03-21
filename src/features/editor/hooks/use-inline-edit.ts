@@ -3,7 +3,7 @@ import { useAIChatStore } from "@/features/ai/store/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
-import { toast } from "@/ui/toast-store";
+import { toast } from "@/ui/toast";
 import {
   type AutocompleteModel,
   fetchAutocompleteModels,
@@ -72,6 +72,7 @@ export function useInlineEdit({
   const [inlineEditInstruction, setInlineEditInstruction] = useState("");
   const [isInlineEditRunning, setIsInlineEditRunning] = useState(false);
   const [isInlineEditModelLoading, setIsInlineEditModelLoading] = useState(false);
+  const [inlineEditError, setInlineEditError] = useState<string | null>(null);
   const [inlineEditModels, setInlineEditModels] = useState<AutocompleteModel[]>(
     DEFAULT_INLINE_EDIT_MODELS,
   );
@@ -90,8 +91,12 @@ export function useInlineEdit({
   const checkAllProviderApiKeys = useAIChatStore((state) => state.checkAllProviderApiKeys);
 
   useEffect(() => {
-    if (!inlineEditVisible) return;
+    if (!inlineEditVisible) {
+      setInlineEditError(null);
+      return;
+    }
     setInlineEditInstruction("");
+    setInlineEditError(null);
     requestAnimationFrame(() => {
       inlineEditInstructionRef.current?.focus();
       inlineEditInstructionRef.current?.select();
@@ -221,6 +226,7 @@ export function useInlineEdit({
     const beforeSelection = buffer.content.slice(0, startOffset);
     const afterSelection = buffer.content.slice(endOffset);
 
+    setInlineEditError(null);
     setIsInlineEditRunning(true);
 
     try {
@@ -258,6 +264,9 @@ export function useInlineEdit({
 
       toast.success("Inline edit applied.");
     } catch (error) {
+      const errorMessage =
+        error instanceof InlineEditError ? error.message : "Inline edit failed. Please try again.";
+      setInlineEditError(errorMessage);
       if (error instanceof InlineEditError) {
         toast.error(error.message);
       } else {
@@ -275,6 +284,7 @@ export function useInlineEdit({
     checkAllProviderApiKeys,
     aiAutocompleteModelId,
     inlineEditInstruction,
+    inlineEditError,
     updateBufferContent,
     setCursorPosition,
     setSelection,
@@ -338,6 +348,8 @@ export function useInlineEdit({
     inlineEditVisible,
     inlineEditInstruction,
     setInlineEditInstruction,
+    inlineEditError,
+    setInlineEditError,
     isInlineEditRunning,
     isInlineEditModelLoading,
     inlineEditModels,

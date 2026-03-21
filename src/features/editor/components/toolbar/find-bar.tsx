@@ -101,7 +101,7 @@ const FindBar = () => {
   }
 
   return (
-    <div className="pointer-events-none absolute top-2 right-2 z-30">
+    <div className="pointer-events-none absolute top-9 right-2 z-30">
       <div className="pointer-events-auto">
         <SearchPopover
           value={searchQuery}

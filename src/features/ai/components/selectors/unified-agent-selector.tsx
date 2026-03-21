@@ -8,6 +8,7 @@ import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
+import { paneIconButtonClassName } from "@/ui/pane";
 import { cn } from "@/utils/cn";
 
 interface UnifiedAgentSelectorProps {
@@ -223,16 +224,18 @@ export function UnifiedAgentSelector({
         <button
           ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
-          className="flex h-8 items-center gap-1 rounded-full pr-1.5 pl-2 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+          type="button"
+          className={paneIconButtonClassName()}
           aria-label="New chat"
+          title="New chat"
         >
           <Plus size={14} />
-          <ChevronDown size={10} className={cn("transition-transform", isOpen && "rotate-180")} />
         </button>
       ) : (
         <button
           ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
+          type="button"
           className="ui-font flex h-8 items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
         >
           <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />

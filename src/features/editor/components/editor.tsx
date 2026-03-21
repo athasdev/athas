@@ -790,7 +790,12 @@ export function Editor({
                   <Input
                     ref={inlineEditState.inlineEditInstructionRef}
                     value={inlineEditState.inlineEditInstruction}
-                    onChange={(e) => inlineEditState.setInlineEditInstruction(e.target.value)}
+                    onChange={(e) => {
+                      inlineEditState.setInlineEditInstruction(e.target.value);
+                      if (inlineEditState.inlineEditError) {
+                        inlineEditState.setInlineEditError(null);
+                      }
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
@@ -820,6 +825,11 @@ export function Editor({
                     <X size={13} />
                   </button>
                 </div>
+                {inlineEditState.inlineEditError && (
+                  <div className="ui-font mt-1.5 rounded-md bg-red-500/10 px-2 py-1.5 text-[11px] text-red-300">
+                    {inlineEditState.inlineEditError}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between px-2 py-1">
