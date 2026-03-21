@@ -292,6 +292,7 @@ const toggleTerminalPane = () => {
   } else {
     state.setBottomPaneActiveTab("terminal");
     state.setIsBottomPaneVisible(true);
+    window.dispatchEvent(new CustomEvent("terminal-ensure-session"));
     setTimeout(() => state.requestTerminalFocus(), 100);
   }
 };

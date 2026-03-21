@@ -148,7 +148,9 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         allowProposedApi: true,
         theme: getTerminalTheme(),
         scrollback: terminalScrollback,
-        convertEol: true,
+        convertEol: false,
+        macOptionIsMeta: true,
+        rightClickSelectsWord: false,
       });
 
       const addons = createTerminalAddons(terminal, {
@@ -168,6 +170,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       });
 
       if (terminal.textarea) {
+        terminal.textarea.spellcheck = false;
         terminal.textarea.addEventListener("beforeinput", (event) => {
           if (event.inputType === "insertReplacementText" || event.inputType === "insertFromDrop") {
             const text = event.dataTransfer?.getData("text/plain") ?? event.data;
@@ -436,11 +439,40 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   }, [fitTerminal, isInitialized]);
 
   useEffect(() => {
-    if (isActive && isVisible && xtermRef.current && isInitialized) {
-      const cleanupFit = fitTerminal(12);
-      requestAnimationFrame(() => xtermRef.current?.focus());
-      return () => cleanupFit?.();
-    }
+    if (!isActive || !isVisible || !xtermRef.current || !isInitialized) return;
+
+    let cancelled = false;
+
+    // Fit the terminal first to recalculate dimensions after display:none → display:flex
+    const cleanupFit = fitTerminal(6);
+
+    // Focus with verified retry — wait for layout to fully settle after tab switch
+    const ensureFocus = (attempt: number) => {
+      if (cancelled || !xtermRef.current || attempt >= 8) return;
+
+      xtermRef.current.focus();
+
+      // Verify the textarea actually received focus
+      requestAnimationFrame(() => {
+        if (cancelled || !xtermRef.current) return;
+        const textarea = xtermRef.current.textarea;
+        if (textarea && document.activeElement !== textarea) {
+          ensureFocus(attempt + 1);
+        }
+      });
+    };
+
+    // Wait 2 frames for DOM layout to settle after display change, then focus
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!cancelled) ensureFocus(0);
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      cleanupFit?.();
+    };
   }, [isActive, isInitialized, isVisible, fitTerminal]);
 
   useEffect(() => {
@@ -624,11 +656,14 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         currentMatch={searchResults.current}
         totalMatches={searchResults.total}
       />
-      <div className="min-h-0 flex-1 pl-[16px]">
+      <div className="flex min-h-0 flex-1 flex-col pl-[16px]">
         <div
           ref={terminalContainerRef}
           id={`terminal-${sessionId}`}
-          className={`xterm-container h-full min-h-0 text-text ${!isActive ? "opacity-60" : ""}`}
+          className={`xterm-container flex h-full min-h-0 flex-1 text-text ${!isActive ? "opacity-60" : ""}`}
+          onMouseDown={() => {
+            requestAnimationFrame(() => xtermRef.current?.focus());
+          }}
         />
       </div>
     </div>

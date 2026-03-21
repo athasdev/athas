@@ -40,6 +40,8 @@ export function useTerminalConnection({
   const currentInputLineRef = useRef("");
   const initialCommandSentForConnectionRef = useRef<string | null>(null);
   const onTerminalExitRef = useRef(onTerminalExit);
+  const explicitExitRequestedRef = useRef(false);
+  const lastExitInfoRef = useRef<{ exitCode?: number | null; signal?: string | null } | null>(null);
   const outputBufferRef = useRef("");
   const outputFlushFrameRef = useRef<number | null>(null);
   const { write, flush } = useTerminalWriteBuffer({
@@ -58,6 +60,11 @@ export function useTerminalConnection({
 
   useEffect(() => {
     currentConnectionIdRef.current = connectionId ?? null;
+  }, [connectionId]);
+
+  useEffect(() => {
+    explicitExitRequestedRef.current = false;
+    lastExitInfoRef.current = null;
   }, [connectionId]);
 
   useEffect(() => {
@@ -99,10 +106,10 @@ export function useTerminalConnection({
         if (hasNewline) {
           currentInputLineRef.current += data;
           if (/^\s*exit\s*$/i.test(currentInputLineRef.current.trim())) {
+            explicitExitRequestedRef.current = true;
             currentInputLineRef.current = "";
             write(data);
             window.setTimeout(() => {
-              onTerminalExitRef.current?.(sessionId);
               void invoke(remoteConnectionId ? "close_remote_terminal" : "close_terminal", {
                 id: activeConnectionId,
               }).catch(() => {});
@@ -190,13 +197,34 @@ export function useTerminalConnection({
       terminal.writeln(`\r\n\x1b[31mError: ${error.error}\x1b[0m`);
     });
 
+    const unlistenExit = listen(`pty-exit-${connectionId}`, (event) => {
+      const payload = event.payload as { exitCode?: number | null; signal?: string | null };
+      lastExitInfoRef.current = payload;
+    });
+
     const unlistenClosed = listen(`pty-closed-${connectionId}`, async () => {
       try {
         await invoke(remoteConnectionId ? "close_remote_terminal" : "close_terminal", {
           id: connectionId,
         });
       } catch {}
-      onTerminalExitRef.current?.(sessionId);
+
+      if (explicitExitRequestedRef.current) {
+        onTerminalExitRef.current?.(sessionId);
+        return;
+      }
+
+      const exitCode = lastExitInfoRef.current?.exitCode;
+      const signal = lastExitInfoRef.current?.signal;
+      const details =
+        signal != null
+          ? `signal ${signal}`
+          : exitCode != null
+            ? `exit code ${exitCode}`
+            : "unknown status";
+
+      terminal.writeln(`\r\n\x1b[33mTerminal process exited unexpectedly (${details}).\x1b[0m`);
+      terminal.writeln("\x1b[90mOpen a new terminal tab or close this one manually.\x1b[0m");
     });
 
     return () => {
@@ -211,6 +239,7 @@ export function useTerminalConnection({
       unlistenThemeChange();
       unlistenOutput.then((fn) => fn());
       unlistenError.then((fn) => fn());
+      unlistenExit.then((fn) => fn());
       unlistenClosed.then((fn) => fn());
     };
   }, [

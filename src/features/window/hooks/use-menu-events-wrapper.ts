@@ -106,8 +106,8 @@ export function useMenuEventsWrapper() {
       uiState.setBottomPaneActiveTab("terminal");
       uiState.setIsBottomPaneVisible(showingTerminal);
 
-      // Request terminal focus after showing
       if (showingTerminal) {
+        window.dispatchEvent(new CustomEvent("terminal-ensure-session"));
         setTimeout(() => {
           uiState.requestTerminalFocus();
         }, 100);

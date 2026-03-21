@@ -97,6 +97,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         } else {
           setBottomPaneActiveTab("terminal");
           setIsBottomPaneVisible(true);
+          window.dispatchEvent(new CustomEvent("terminal-ensure-session"));
         }
         onClose();
       },
