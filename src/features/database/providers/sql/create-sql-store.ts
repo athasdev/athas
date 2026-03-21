@@ -5,9 +5,12 @@ import { createSelectors } from "@/utils/zustand-selectors";
 import type {
   ColumnFilter,
   ColumnInfo,
+  CreatePostgresSubscriptionParams,
+  DatabaseObjectKind,
   DatabaseInfo,
   FilteredQueryResult,
   ForeignKeyInfo,
+  PostgresSubscriptionInfo,
   QueryResult,
   TableInfo,
 } from "../../models/common.types";
@@ -19,9 +22,11 @@ export interface SqlDatabaseState {
   fileName: string;
   tables: TableInfo[];
   selectedTable: string | null;
+  selectedObjectKind: DatabaseObjectKind;
   queryResult: QueryResult | null;
   tableMeta: ColumnInfo[];
   foreignKeys: ForeignKeyInfo[];
+  subscriptionInfo: PostgresSubscriptionInfo | null;
   dbInfo: DatabaseInfo | null;
   error: string | null;
   isLoading: boolean;
@@ -72,6 +77,10 @@ export interface SqlDatabaseActions {
     columns: { name: string; type: string; notnull: boolean }[],
   ) => Promise<void>;
   dropTable: (name: string) => Promise<void>;
+  createSubscription: (params: CreatePostgresSubscriptionParams) => Promise<void>;
+  dropSubscription: (name: string, withDropSlot: boolean) => Promise<void>;
+  setSubscriptionEnabled: (name: string, enabled: boolean) => Promise<void>;
+  refreshSubscription: (name: string, copyData: boolean) => Promise<void>;
 
   setColumnWidth: (table: string, column: string, width: number) => void;
   navigateToForeignKey: (toTable: string, toColumn: string, value: unknown) => Promise<void>;
@@ -113,9 +122,11 @@ const initialState: SqlDatabaseState = {
   fileName: "",
   tables: [],
   selectedTable: null,
+  selectedObjectKind: "table",
   queryResult: null,
   tableMeta: [],
   foreignKeys: [],
+  subscriptionInfo: null,
   dbInfo: null,
   error: null,
   isLoading: false,
@@ -131,6 +142,11 @@ const initialState: SqlDatabaseState = {
   sqlHistory: [],
   columnWidths: {},
 };
+
+function getObjectKind(objects: TableInfo[], name: string | null | undefined): DatabaseObjectKind {
+  if (!name) return "table";
+  return objects.find((object) => object.name === name)?.kind ?? "table";
+}
 
 export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
   const cmds = getCommandMap(dbType);
@@ -161,7 +177,9 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
             set({ tables });
 
             if (tables.length > 0) {
-              await get().actions.selectTable(tables[0].name);
+              const initialObject =
+                tables.find((table) => (table.kind ?? "table") === "table") ?? tables[0];
+              await get().actions.selectTable(initialObject.name);
             }
 
             // Try to get database info
@@ -217,19 +235,55 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
           const state = get();
           const connKey = mode === "file" ? state.databasePath : state.connectionId;
           if (!connKey) return;
+          const selectedObjectKind = getObjectKind(state.tables, tableName);
 
           set({
             selectedTable: tableName,
+            selectedObjectKind,
             currentPage: 1,
             searchTerm: "",
             isCustomQuery: false,
             columnFilters: [],
             sortColumn: null,
+            queryResult: null,
+            tableMeta: [],
+            foreignKeys: [],
+            subscriptionInfo: null,
             isLoading: true,
           });
 
           try {
             const connArg = getConnectionArg(mode, connKey);
+
+            if (selectedObjectKind === "subscription" && dbType === "postgres") {
+              const [subscriptionInfo, queryResult] = await Promise.all([
+                invoke("get_postgres_subscription_info", {
+                  ...connArg,
+                  subscription: tableName,
+                }) as Promise<PostgresSubscriptionInfo>,
+                invoke("get_postgres_subscription_status", {
+                  ...connArg,
+                  subscription: tableName,
+                }) as Promise<QueryResult>,
+              ]);
+
+              const tableMeta: ColumnInfo[] = queryResult.columns.map((column) => ({
+                name: column,
+                type: "text",
+                notnull: false,
+                default_value: null,
+                primary_key: column === "relation",
+              }));
+
+              set({
+                subscriptionInfo,
+                queryResult,
+                tableMeta,
+                foreignKeys: [],
+                totalPages: 1,
+              });
+              return;
+            }
 
             // Get table schema - provider-specific PRAGMA or information_schema
             let tableMeta: ColumnInfo[];
@@ -285,6 +339,34 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
           try {
             const connArg = getConnectionArg(mode, connKey);
+
+            if (state.selectedObjectKind === "subscription" && dbType === "postgres") {
+              const [subscriptionInfo, queryResult] = await Promise.all([
+                invoke("get_postgres_subscription_info", {
+                  ...connArg,
+                  subscription: state.selectedTable,
+                }) as Promise<PostgresSubscriptionInfo>,
+                invoke("get_postgres_subscription_status", {
+                  ...connArg,
+                  subscription: state.selectedTable,
+                }) as Promise<QueryResult>,
+              ]);
+
+              set({
+                subscriptionInfo,
+                queryResult,
+                tableMeta: queryResult.columns.map((column) => ({
+                  name: column,
+                  type: "text",
+                  notnull: false,
+                  default_value: null,
+                  primary_key: column === "relation",
+                })),
+                totalPages: 1,
+              });
+              return;
+            }
+
             const offset = (state.currentPage - 1) * state.pageSize;
 
             const result = (await invoke(cmds.queryFiltered, {
@@ -320,27 +402,32 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
         },
 
         setSearchTerm: (term: string) => {
+          if (get().selectedObjectKind !== "table") return;
           set({ searchTerm: term, currentPage: 1 });
           get().actions.refresh();
         },
 
         setCurrentPage: (page: number) => {
+          if (get().selectedObjectKind !== "table") return;
           set({ currentPage: page });
           get().actions.refresh();
         },
 
         setPageSize: (size: number) => {
+          if (get().selectedObjectKind !== "table") return;
           set({ pageSize: size, currentPage: 1 });
           get().actions.refresh();
         },
 
         addColumnFilter: (column: string) => {
+          if (get().selectedObjectKind !== "table") return;
           set((s) => {
             s.columnFilters.push({ column, operator: "contains", value: "" });
           });
         },
 
         updateColumnFilter: (index: number, updates: Partial<ColumnFilter>) => {
+          if (get().selectedObjectKind !== "table") return;
           set((s) => {
             s.columnFilters[index] = { ...s.columnFilters[index], ...updates };
             s.currentPage = 1;
@@ -349,6 +436,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
         },
 
         removeColumnFilter: (index: number) => {
+          if (get().selectedObjectKind !== "table") return;
           set((s) => {
             s.columnFilters.splice(index, 1);
             s.currentPage = 1;
@@ -357,11 +445,13 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
         },
 
         clearFilters: () => {
+          if (get().selectedObjectKind !== "table") return;
           set({ columnFilters: [], currentPage: 1 });
           get().actions.refresh();
         },
 
         toggleSort: (column: string) => {
+          if (get().selectedObjectKind !== "table") return;
           set((s) => {
             if (s.sortColumn === column) {
               s.sortDirection = s.sortDirection === "asc" ? "desc" : "asc";
@@ -406,7 +496,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
         insertRow: async (values: Record<string, unknown>) => {
           const state = get();
           const connKey = mode === "file" ? state.databasePath : state.connectionId;
-          if (!connKey || !state.selectedTable) return;
+          if (!connKey || !state.selectedTable || state.selectedObjectKind !== "table") return;
 
           try {
             const connArg = getConnectionArg(mode, connKey);
@@ -426,7 +516,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
         updateRow: async (pkColumn: string, pkValue: unknown, values: Record<string, unknown>) => {
           const state = get();
           const connKey = mode === "file" ? state.databasePath : state.connectionId;
-          if (!connKey || !state.selectedTable) return;
+          if (!connKey || !state.selectedTable || state.selectedObjectKind !== "table") return;
 
           const { [pkColumn]: _, ...updateValues } = values;
 
@@ -450,7 +540,7 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
         deleteRow: async (pkColumn: string, pkValue: unknown) => {
           const state = get();
           const connKey = mode === "file" ? state.databasePath : state.connectionId;
-          if (!connKey || !state.selectedTable) return;
+          if (!connKey || !state.selectedTable || state.selectedObjectKind !== "table") return;
 
           try {
             const connArg = getConnectionArg(mode, connKey);
@@ -470,7 +560,13 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
         updateCell: async (rowIndex: number, columnName: string, newValue: unknown) => {
           const state = get();
           const connKey = mode === "file" ? state.databasePath : state.connectionId;
-          if (!connKey || !state.selectedTable || !state.queryResult) return;
+          if (
+            !connKey ||
+            !state.selectedTable ||
+            !state.queryResult ||
+            state.selectedObjectKind !== "table"
+          )
+            return;
 
           const pkColumn = state.tableMeta.find((c) => c.primary_key);
           if (!pkColumn) {
@@ -550,18 +646,121 @@ export function createSqlStore(dbType: DatabaseType, mode: ConnectionMode) {
 
             if (state.selectedTable === name) {
               if (tables.length > 0) {
-                await get().actions.selectTable(tables[0].name);
+                const nextObject =
+                  tables.find((table) => (table.kind ?? "table") === "table") ?? tables[0];
+                await get().actions.selectTable(nextObject.name);
               } else {
                 set({
                   selectedTable: null,
+                  selectedObjectKind: "table",
                   queryResult: null,
                   tableMeta: [],
                   foreignKeys: [],
+                  subscriptionInfo: null,
                 });
               }
             }
           } catch (err) {
             set({ error: `Drop table failed: ${err}` });
+          }
+        },
+
+        createSubscription: async (params: CreatePostgresSubscriptionParams) => {
+          const state = get();
+          const connKey = mode === "file" ? state.databasePath : state.connectionId;
+          if (!connKey || dbType !== "postgres") return;
+
+          try {
+            const connArg = getConnectionArg(mode, connKey);
+            await invoke("create_postgres_subscription", {
+              ...connArg,
+              params,
+            });
+
+            const tables = (await invoke(cmds.getTables, connArg)) as TableInfo[];
+            set({ tables, error: null });
+            await get().actions.selectTable(params.name);
+          } catch (err) {
+            set({ error: `Create subscription failed: ${err}` });
+          }
+        },
+
+        dropSubscription: async (name: string, withDropSlot: boolean) => {
+          const state = get();
+          const connKey = mode === "file" ? state.databasePath : state.connectionId;
+          if (!connKey || dbType !== "postgres") return;
+
+          try {
+            const connArg = getConnectionArg(mode, connKey);
+            await invoke("drop_postgres_subscription", {
+              ...connArg,
+              subscription: name,
+              withDropSlot,
+            });
+
+            const tables = (await invoke(cmds.getTables, connArg)) as TableInfo[];
+            set({ tables, error: null });
+
+            if (state.selectedTable === name) {
+              const nextObject =
+                tables.find((table) => (table.kind ?? "table") === "table") ?? tables[0];
+              if (nextObject) {
+                await get().actions.selectTable(nextObject.name);
+              } else {
+                set({
+                  selectedTable: null,
+                  selectedObjectKind: "table",
+                  queryResult: null,
+                  tableMeta: [],
+                  foreignKeys: [],
+                  subscriptionInfo: null,
+                });
+              }
+            }
+          } catch (err) {
+            set({ error: `Drop subscription failed: ${err}` });
+          }
+        },
+
+        setSubscriptionEnabled: async (name: string, enabled: boolean) => {
+          const state = get();
+          const connKey = mode === "file" ? state.databasePath : state.connectionId;
+          if (!connKey || dbType !== "postgres") return;
+
+          try {
+            const connArg = getConnectionArg(mode, connKey);
+            await invoke("set_postgres_subscription_enabled", {
+              ...connArg,
+              subscription: name,
+              enabled,
+            });
+            set({ error: null });
+            if (state.selectedTable === name) {
+              await get().actions.refresh();
+            }
+          } catch (err) {
+            set({ error: `Update subscription failed: ${err}` });
+          }
+        },
+
+        refreshSubscription: async (name: string, copyData: boolean) => {
+          const state = get();
+          const connKey = mode === "file" ? state.databasePath : state.connectionId;
+          if (!connKey || dbType !== "postgres") return;
+
+          try {
+            const connArg = getConnectionArg(mode, connKey);
+            await invoke("refresh_postgres_subscription", {
+              ...connArg,
+              subscription: name,
+              copyData,
+            });
+            set({ error: null });
+            if (state.selectedTable === name) {
+              await get().actions.refresh();
+            }
+          } catch (err) {
+            set({ error: `Refresh subscription failed: ${err}` });
           }
         },
 

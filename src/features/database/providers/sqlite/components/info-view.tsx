@@ -38,7 +38,7 @@ export default function InfoView({
 
         {/* Tables */}
         <div className="p-3">
-          <div className="ui-font mb-2 text-text-lighter text-xs">tables</div>
+          <div className="ui-font mb-2 text-text-lighter text-xs">objects</div>
           <div className="space-y-1">
             {tables.map((table) => (
               <button
@@ -49,6 +49,7 @@ export default function InfoView({
                 }`}
               >
                 {table.name}
+                {table.kind === "subscription" ? " [subscription]" : ""}
               </button>
             ))}
           </div>

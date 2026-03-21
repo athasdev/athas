@@ -1,5 +1,7 @@
 import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
+import CreateSubscriptionDialog from "../postgres/components/create-subscription-dialog";
+import PostgresSubscriptionSchemaView from "../postgres/components/postgres-subscription-schema-view";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import type { ViewMode } from "../../models/common.types";
 import type { DatabaseType } from "../../models/provider.types";
@@ -34,15 +36,21 @@ export default function SqlDatabaseViewer({
 
   const [viewMode, setViewMode] = useState<ViewMode>("data");
   const [showColumnTypes, setShowColumnTypes] = useState(true);
-  const [createRowModal, setCreateRowModal] = useState({ isOpen: false, tableName: "" });
+  const [createRowModal, setCreateRowModal] = useState({
+    isOpen: false,
+    tableName: "",
+  });
   const [editRowModal, setEditRowModal] = useState<{
     isOpen: boolean;
     tableName: string;
     rowData: Record<string, unknown>;
   }>({ isOpen: false, tableName: "", rowData: {} });
   const [createTableModal, setCreateTableModal] = useState(false);
+  const [createSubscriptionModal, setCreateSubscriptionModal] = useState(false);
 
   const initKey = databasePath || connectionId || "";
+  const isSubscription = store.selectedObjectKind === "subscription";
+  const canMutateRows = store.selectedObjectKind === "table";
 
   useEffect(() => {
     if (initKey) actions.init(initKey);
@@ -51,7 +59,12 @@ export default function SqlDatabaseViewer({
 
   const handleTableContextMenu = (e: React.MouseEvent, tableName: string) => {
     e.preventDefault();
-    setDatabaseTableMenu({ x: e.clientX, y: e.clientY, tableName, databaseType });
+    setDatabaseTableMenu({
+      x: e.clientX,
+      y: e.clientY,
+      tableName,
+      databaseType,
+    });
   };
 
   const handleRowContextMenu = (e: React.MouseEvent, rowIndex: number) => {
@@ -76,6 +89,7 @@ export default function SqlDatabaseViewer({
   };
 
   const handleDeleteRow = async (_: string, rowData: Record<string, unknown>) => {
+    if (!canMutateRows) return;
     const pk = store.tableMeta.find((c) => c.primary_key);
     if (!pk) return;
     const pkValue = rowData[pk.name];
@@ -83,6 +97,7 @@ export default function SqlDatabaseViewer({
   };
 
   const handleSubmitEditRow = async (values: Record<string, unknown>) => {
+    if (!canMutateRows) return;
     const pk = store.tableMeta.find((c) => c.primary_key);
     if (!pk) return;
     const pkValue = editRowModal.rowData[pk.name];
@@ -103,7 +118,9 @@ export default function SqlDatabaseViewer({
           .join(","),
       )
       .join("\n");
-    const blob = new Blob([`${headers}\n${rows}`], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([`${headers}\n${rows}`], {
+      type: "text/csv;charset=utf-8;",
+    });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `${store.selectedTable || "result"}_${new Date().toISOString().split("T")[0]}.csv`;
@@ -128,6 +145,8 @@ export default function SqlDatabaseViewer({
       <TableToolbar
         fileName={store.fileName}
         dbInfo={store.dbInfo}
+        selectedObjectKind={store.selectedObjectKind}
+        subscriptionInfo={store.subscriptionInfo}
         viewMode={viewMode}
         setViewMode={setViewMode}
         isCustomQuery={store.isCustomQuery}
@@ -137,6 +156,28 @@ export default function SqlDatabaseViewer({
         hasData={!!store.queryResult}
         exportAsCSV={exportAsCSV}
         copyAsJSON={copyAsJSON}
+        onCreateSubscription={
+          databaseType === "postgres" ? () => setCreateSubscriptionModal(true) : undefined
+        }
+        onToggleSubscription={
+          isSubscription && store.selectedTable && store.subscriptionInfo
+            ? () =>
+                void actions.setSubscriptionEnabled(
+                  store.selectedTable!,
+                  !store.subscriptionInfo!.enabled,
+                )
+            : undefined
+        }
+        onRefreshSubscription={
+          isSubscription && store.selectedTable
+            ? () => void actions.refreshSubscription(store.selectedTable!, false)
+            : undefined
+        }
+        onDropSubscription={
+          isSubscription && store.selectedTable
+            ? () => void actions.dropSubscription(store.selectedTable!, true)
+            : undefined
+        }
       />
 
       <div className="flex min-h-0 flex-1 gap-2 p-2 pt-1.5">
@@ -158,7 +199,7 @@ export default function SqlDatabaseViewer({
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-primary-bg/85">
           <QueryBar
-            searchTerm={store.searchTerm}
+            searchTerm={canMutateRows ? store.searchTerm : ""}
             setSearchTerm={actions.setSearchTerm}
             customQuery={store.customQuery}
             setCustomQuery={actions.setCustomQuery}
@@ -168,7 +209,7 @@ export default function SqlDatabaseViewer({
             isLoading={store.isLoading}
           />
 
-          {viewMode === "data" && (
+          {viewMode === "data" && canMutateRows && (
             <FilterBar
               filters={store.columnFilters}
               columns={store.tableMeta}
@@ -208,15 +249,32 @@ export default function SqlDatabaseViewer({
               onAddColumnFilter={actions.addColumnFilter}
               onRowContextMenu={handleRowContextMenu}
               onCellEdit={actions.updateCell}
+              canSortColumns={canMutateRows}
+              canFilterColumns={canMutateRows}
+              canEditCells={canMutateRows}
+              canCreateRows={canMutateRows}
+              canOpenRowMenu={canMutateRows}
               onCreateRow={() =>
+                canMutateRows &&
                 store.selectedTable &&
-                setCreateRowModal({ isOpen: true, tableName: store.selectedTable })
+                setCreateRowModal({
+                  isOpen: true,
+                  tableName: store.selectedTable,
+                })
               }
             />
           )}
 
           {!store.isLoading &&
             viewMode === "schema" &&
+            isSubscription &&
+            store.subscriptionInfo && (
+              <PostgresSubscriptionSchemaView subscriptionInfo={store.subscriptionInfo} />
+            )}
+
+          {!store.isLoading &&
+            viewMode === "schema" &&
+            !isSubscription &&
             store.selectedTable &&
             store.tableMeta.length > 0 && (
               <SchemaView
@@ -251,6 +309,7 @@ export default function SqlDatabaseViewer({
             viewMode === "data" &&
             store.queryResult &&
             !store.isCustomQuery &&
+            canMutateRows &&
             store.totalPages > 1 && (
               <PaginationControls
                 currentPage={store.currentPage}
@@ -290,6 +349,12 @@ export default function SqlDatabaseViewer({
         isOpen={createTableModal}
         onClose={() => setCreateTableModal(false)}
         onSubmit={actions.createTable}
+      />
+
+      <CreateSubscriptionDialog
+        isOpen={createSubscriptionModal}
+        onClose={() => setCreateSubscriptionModal(false)}
+        onSubmit={actions.createSubscription}
       />
     </div>
   );

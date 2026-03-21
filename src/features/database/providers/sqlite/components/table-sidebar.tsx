@@ -1,8 +1,9 @@
-import { Code, Database, Plus, Table } from "lucide-react";
+import { Code, Database, Plus, Radio, Table } from "lucide-react";
 import { cn } from "@/utils/cn";
+import type { TableInfo } from "../sqlite-types";
 
 interface TableSidebarProps {
-  tables: { name: string }[];
+  tables: TableInfo[];
   selectedTable: string | null;
   onSelectTable: (name: string) => void;
   onTableContextMenu: (e: React.MouseEvent, name: string) => void;
@@ -20,13 +21,16 @@ export default function TableSidebar({
   sqlHistory,
   onSelectHistory,
 }: TableSidebarProps) {
+  const tableObjects = tables.filter((table) => (table.kind ?? "table") === "table");
+  const subscriptionObjects = tables.filter((table) => table.kind === "subscription");
+
   return (
     <div className="flex w-64 flex-col overflow-hidden rounded-2xl bg-primary-bg/75">
       <div className="group p-3 pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-text-lighter text-xs">
             <Database size={12} />
-            Tables ({tables.length})
+            Objects ({tables.length})
           </div>
           <button
             onClick={onCreateTable}
@@ -38,21 +42,49 @@ export default function TableSidebar({
         </div>
       </div>
       <div className="custom-scrollbar flex-1 space-y-1 overflow-y-auto p-2">
-        {tables.map((t) => (
-          <button
-            key={t.name}
-            onClick={() => onSelectTable(t.name)}
-            onContextMenu={(e) => onTableContextMenu(e, t.name)}
-            className={cn(
-              "flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-hover",
-              selectedTable === t.name && "bg-selected text-text",
-            )}
-            aria-label={`Select table ${t.name}`}
-          >
-            <Table size={12} className="shrink-0" />
-            <span className="truncate">{t.name}</span>
-          </button>
-        ))}
+        {tableObjects.length > 0 && (
+          <>
+            <div className="px-2.5 py-1 text-text-lighter text-[11px] uppercase tracking-wide">
+              Tables
+            </div>
+            {tableObjects.map((t) => (
+              <button
+                key={t.name}
+                onClick={() => onSelectTable(t.name)}
+                onContextMenu={(e) => onTableContextMenu(e, t.name)}
+                className={cn(
+                  "flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-hover",
+                  selectedTable === t.name && "bg-selected text-text",
+                )}
+                aria-label={`Select table ${t.name}`}
+              >
+                <Table size={12} className="shrink-0" />
+                <span className="truncate">{t.name}</span>
+              </button>
+            ))}
+          </>
+        )}
+        {subscriptionObjects.length > 0 && (
+          <>
+            <div className="mt-2 px-2.5 py-1 text-text-lighter text-[11px] uppercase tracking-wide">
+              Subscriptions
+            </div>
+            {subscriptionObjects.map((t) => (
+              <button
+                key={t.name}
+                onClick={() => onSelectTable(t.name)}
+                className={cn(
+                  "flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-hover",
+                  selectedTable === t.name && "bg-selected text-text",
+                )}
+                aria-label={`Select subscription ${t.name}`}
+              >
+                <Radio size={12} className="shrink-0" />
+                <span className="truncate">{t.name}</span>
+              </button>
+            ))}
+          </>
+        )}
       </div>
       {sqlHistory.length > 0 && (
         <div className="mx-2 mb-2 rounded-xl bg-secondary-bg/50">

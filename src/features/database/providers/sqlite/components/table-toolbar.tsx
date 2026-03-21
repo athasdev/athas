@@ -1,10 +1,31 @@
-import { Code, Copy, Database, Download, Info, Settings, Table, Type } from "lucide-react";
+import {
+  Code,
+  Copy,
+  Database,
+  Download,
+  Info,
+  Plus,
+  RefreshCw,
+  Settings,
+  Table,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+  Type,
+} from "lucide-react";
 import { cn } from "@/utils/cn";
-import type { DatabaseInfo, ViewMode } from "../sqlite-types";
+import type {
+  DatabaseInfo,
+  DatabaseObjectKind,
+  PostgresSubscriptionInfo,
+  ViewMode,
+} from "../sqlite-types";
 
 interface TableToolbarProps {
   fileName: string;
   dbInfo: DatabaseInfo | null;
+  selectedObjectKind?: DatabaseObjectKind;
+  subscriptionInfo?: PostgresSubscriptionInfo | null;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
   isCustomQuery: boolean;
@@ -14,6 +35,10 @@ interface TableToolbarProps {
   hasData: boolean;
   exportAsCSV: () => void;
   copyAsJSON: () => void;
+  onCreateSubscription?: () => void;
+  onToggleSubscription?: () => void;
+  onRefreshSubscription?: () => void;
+  onDropSubscription?: () => void;
 }
 
 const VIEW_TABS: { mode: ViewMode; icon: typeof Table; label: string }[] = [
@@ -25,6 +50,8 @@ const VIEW_TABS: { mode: ViewMode; icon: typeof Table; label: string }[] = [
 export default function TableToolbar({
   fileName,
   dbInfo,
+  selectedObjectKind = "table",
+  subscriptionInfo,
   viewMode,
   setViewMode,
   isCustomQuery,
@@ -34,7 +61,13 @@ export default function TableToolbar({
   hasData,
   exportAsCSV,
   copyAsJSON,
+  onCreateSubscription,
+  onToggleSubscription,
+  onRefreshSubscription,
+  onDropSubscription,
 }: TableToolbarProps) {
+  const isSubscription = selectedObjectKind === "subscription";
+
   return (
     <div className="mx-2 mt-2 rounded-2xl bg-primary-bg/85 px-3 py-2">
       <div className="flex items-center justify-between">
@@ -68,7 +101,7 @@ export default function TableToolbar({
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {viewMode === "data" && !isCustomQuery && (
+          {viewMode === "data" && !isCustomQuery && !isSubscription && (
             <button
               onClick={() => setShowColumnTypes(!showColumnTypes)}
               className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
@@ -87,6 +120,46 @@ export default function TableToolbar({
             >
               <Code size={12} />
               SQL
+            </button>
+          )}
+          {onCreateSubscription && (
+            <button
+              onClick={onCreateSubscription}
+              className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
+              aria-label="Create subscription"
+            >
+              <Plus size={12} />
+              Subscription
+            </button>
+          )}
+          {isSubscription && subscriptionInfo && onToggleSubscription && (
+            <button
+              onClick={onToggleSubscription}
+              className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
+              aria-label={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
+            >
+              {subscriptionInfo.enabled ? <ToggleRight size={12} /> : <ToggleLeft size={12} />}
+              {subscriptionInfo.enabled ? "Disable" : "Enable"}
+            </button>
+          )}
+          {isSubscription && onRefreshSubscription && (
+            <button
+              onClick={onRefreshSubscription}
+              className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
+              aria-label="Refresh subscription"
+            >
+              <RefreshCw size={12} />
+              Refresh
+            </button>
+          )}
+          {isSubscription && onDropSubscription && (
+            <button
+              onClick={onDropSubscription}
+              className="flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-text-lighter text-xs hover:border-border/70 hover:bg-hover hover:text-text"
+              aria-label="Drop subscription"
+            >
+              <Trash2 size={12} />
+              Drop
             </button>
           )}
           {hasData && (
