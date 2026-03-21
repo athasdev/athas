@@ -12,14 +12,15 @@ import {
   WandSparkles,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useContextMenu } from "@/hooks/use-context-menu";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
-import Input from "@/ui/input";
+import { PANE_CHIP_BASE, paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
+import { SearchPopover } from "@/ui/search-popover";
 import { cn } from "@/utils/cn";
 import type { Diagnostic, DiagnosticCodeAction } from "./types";
 
@@ -84,10 +85,9 @@ const SEVERITY_LABEL: Record<Diagnostic["severity"], string> = {
 };
 
 const CONTROL_PILL_BASE =
-  "ui-font inline-flex shrink-0 items-center gap-1 rounded-full border border-border/70 bg-primary-bg px-2.5 py-1 text-text-lighter text-xs transition-colors hover:bg-hover hover:text-text";
+  "ui-font inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-primary-bg px-2.5 text-text-lighter text-xs transition-colors hover:bg-hover hover:text-text";
 
-const CHIP_BASE =
-  "ui-font inline-flex items-center rounded-full border border-border/70 bg-primary-bg px-1.5 py-0.5 text-[10px] text-text-lighter";
+const CHIP_BASE = PANE_CHIP_BASE;
 
 const getSeverityIcon = (severity: Diagnostic["severity"], size = 11) => {
   switch (severity) {
@@ -196,6 +196,7 @@ const DiagnosticsPane = ({
 
   const [preferences, setPreferences] = useState<PanePreferences>(() => loadPreferences());
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = useState<Record<Diagnostic["severity"], boolean>>({
     error: true,
@@ -208,11 +209,23 @@ const DiagnosticsPane = ({
     Record<string, DiagnosticCodeAction[]>
   >({});
   const [loadingActionsKey, setLoadingActionsKey] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(preferences));
   }, [preferences]);
+
+  useEffect(() => {
+    if (!isSearchVisible) return;
+
+    const timeoutId = window.setTimeout(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    }, 20);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isSearchVisible]);
 
   // Fetch quick-fix actions lazily only when a diagnostic is right-clicked.
   useEffect(() => {
@@ -598,6 +611,18 @@ const DiagnosticsPane = ({
     Number(preferences.sortBy !== DEFAULT_PREFERENCES.sortBy) +
     Number(preferences.onlyCurrentFile !== DEFAULT_PREFERENCES.onlyCurrentFile);
 
+  const hasSearch = Boolean(searchQuery.trim());
+  const visibleProblemCount = filteredDiagnostics.length;
+  const problemSummary = `${visibleProblemCount} problem${visibleProblemCount === 1 ? "" : "s"}`;
+  const problemSummaryTone =
+    visibleBySeverity.error > 0
+      ? "text-error"
+      : visibleBySeverity.warning > 0
+        ? "text-warning"
+        : visibleBySeverity.info > 0
+          ? "text-info"
+          : "text-text-lighter";
+
   const filterContextMenuItems = useMemo<ContextMenuItem[]>(() => {
     if (!filterContextMenu.data) return [];
 
@@ -691,56 +716,108 @@ const DiagnosticsPane = ({
 
   const content = (
     <div className="flex h-full min-h-0 flex-col bg-primary-bg">
-      <div className="border-border/70 border-b bg-secondary-bg/70 px-2 py-1.5">
-        <div className="flex items-center gap-2">
-          <h3 className="ui-font shrink-0 font-medium text-text text-xs">Problems</h3>
+      <div className={paneHeaderClassName()}>
+        <div className="relative flex min-h-7 w-full items-center gap-1.5">
+          <span className={cn("ui-font text-xs", problemSummaryTone)}>{problemSummary}</span>
 
-          <span className={CHIP_BASE}>
-            {filteredDiagnostics.length}
-            {filteredDiagnostics.length !== diagnostics.length ? ` / ${diagnostics.length}` : ""}
-          </span>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSearchVisible((visible) => {
+                  if (visible && !searchQuery.trim()) {
+                    return false;
+                  }
+                  return true;
+                });
+              }}
+              className={cn(
+                paneIconButtonClassName(),
+                (isSearchVisible || hasSearch) && "border-border/70 bg-hover text-text",
+              )}
+              title="Search problems"
+            >
+              <Search size={12} />
+            </button>
 
-          <div className="relative ml-auto w-full max-w-[340px]">
-            <Search
-              size={12}
-              className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-text-lighter"
-            />
-            <Input
-              type="text"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search problems"
-              className="w-full rounded-full border-border/80 bg-primary-bg py-1.5 pr-10 pl-8 focus:border-accent/70 focus:ring-accent/25"
-            />
             <button
               type="button"
               onClick={(event) => {
                 filterContextMenu.open(event, "filters");
               }}
               className={cn(
-                "-translate-y-1/2 absolute top-1/2 right-1.5 inline-flex items-center justify-center rounded-md p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text",
+                "relative",
+                paneIconButtonClassName(),
                 hasFilterSettings && "text-accent",
               )}
               title="Filter problems"
             >
               <Filter size={12} />
+              {activeFilterCount > 0 && (
+                <span className="-top-1 -right-1 absolute inline-flex min-w-4 items-center justify-center rounded-full border border-accent/30 bg-accent/15 px-1 text-[9px] text-accent">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
-            {activeFilterCount > 0 && (
-              <span className="-top-1 -right-1 absolute inline-flex min-w-4 items-center justify-center rounded-full border border-accent/30 bg-accent/15 px-1 text-[9px] text-accent">
-                {activeFilterCount}
-              </span>
+
+            {!isEmbedded && (
+              <button
+                type="button"
+                onClick={onClose}
+                className={paneIconButtonClassName()}
+                title="Close problems pane"
+              >
+                <X size={13} />
+              </button>
             )}
           </div>
 
-          {!isEmbedded && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="shrink-0 rounded-md p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
-              title="Close problems pane"
-            >
-              <X size={13} />
-            </button>
+          {isSearchVisible && (
+            <div className="absolute top-full right-0 z-30 mt-1">
+              <SearchPopover
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onClose={() => {
+                  setIsSearchVisible(false);
+                  if (!searchQuery.trim()) {
+                    setSearchQuery("");
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    if (searchQuery.trim()) {
+                      setSearchQuery("");
+                    } else {
+                      setIsSearchVisible(false);
+                    }
+                  }
+                }}
+                placeholder="Search problems"
+                inputRef={searchInputRef}
+                extraActions={
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      filterContextMenu.open(event, "filters");
+                    }}
+                    className={cn(
+                      "relative",
+                      paneIconButtonClassName(),
+                      hasFilterSettings && "text-accent",
+                    )}
+                    title="Filter problems"
+                  >
+                    <Filter size={12} />
+                    {activeFilterCount > 0 && (
+                      <span className="-top-1 -right-1 absolute inline-flex min-w-4 items-center justify-center rounded-full border border-accent/30 bg-accent/15 px-1 text-[9px] text-accent">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+                }
+              />
+            </div>
           )}
         </div>
       </div>
@@ -903,7 +980,7 @@ const DiagnosticsPane = ({
     return content;
   }
 
-  return <div className="flex h-44 flex-col border-border border-t bg-secondary-bg">{content}</div>;
+  return <div className="flex h-44 flex-col border-border border-t bg-primary-bg">{content}</div>;
 };
 
 export default DiagnosticsPane;

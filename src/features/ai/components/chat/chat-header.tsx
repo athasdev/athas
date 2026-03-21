@@ -3,7 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Input from "@/ui/input";
+import {
+  PANE_CHIP_BASE,
+  paneHeaderClassName,
+  paneIconButtonClassName,
+  paneTitleClassName,
+} from "@/ui/pane";
 import Tooltip from "@/ui/tooltip";
+import { cn } from "@/utils/cn";
 import { useAIChatStore } from "../../store/store";
 import ChatHistoryDropdown from "../history/sidebar";
 import { UnifiedAgentSelector } from "../selectors/unified-agent-selector";
@@ -63,7 +70,7 @@ function EditableChatTitle({
         onChange={(e) => setEditValue(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className="rounded-full border-border bg-secondary-bg/80 px-2.5 py-1 font-medium focus:border-accent/40 focus:bg-hover"
+        className="h-6 rounded-lg border-border/80 bg-primary-bg px-2.5 py-1 text-xs font-medium focus:border-accent/40 focus:bg-hover"
         style={{ minWidth: "100px", maxWidth: "200px" }}
       />
     );
@@ -71,7 +78,7 @@ function EditableChatTitle({
 
   return (
     <span
-      className="block max-w-full cursor-pointer truncate rounded-full px-2 py-1 font-medium transition-colors hover:bg-hover"
+      className="block max-w-full cursor-pointer truncate rounded-lg px-2 py-1 text-xs font-medium transition-colors hover:bg-hover"
       onClick={() => setIsEditing(true)}
       title="Click to rename chat"
     >
@@ -99,7 +106,7 @@ export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
   const historyButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <div className="relative z-[10020] flex items-center gap-2 bg-gradient-to-b from-primary-bg/80 to-transparent px-3 py-2 backdrop-blur-sm">
+    <div className={cn("relative z-[10020]", paneHeaderClassName())}>
       <div className="min-w-0 flex-1">
         {currentChatId ? (
           <EditableChatTitle
@@ -108,10 +115,10 @@ export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
           />
         ) : (
           <div className="flex min-w-0 items-center gap-2">
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary-bg/70 text-text-lighter">
+            <span className={cn(PANE_CHIP_BASE, "size-6 justify-center px-0")}>
               <ProviderIcon providerId={currentAgentId} size={12} />
             </span>
-            <span className="truncate font-medium text-text text-xs">New Chat</span>
+            <span className={cn(paneTitleClassName(), "truncate")}>New Chat</span>
           </div>
         )}
       </div>
@@ -121,7 +128,7 @@ export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
           <button
             ref={historyButtonRef}
             onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-            className="flex size-8 items-center justify-center rounded-full p-0 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+            className={paneIconButtonClassName()}
             aria-label="Toggle chat history"
           >
             <History size={14} />
