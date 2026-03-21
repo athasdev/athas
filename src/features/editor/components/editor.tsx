@@ -321,8 +321,12 @@ export function Editor({
     updateBufferContent,
   });
 
-  useOnClickOutside(inlineEditState.inlineEditPopoverRef as RefObject<HTMLElement>, () => {
+  useOnClickOutside(inlineEditState.inlineEditPopoverRef as RefObject<HTMLElement>, (event) => {
     if (!inlineEditState.inlineEditVisible) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest(".inline-edit-model-selector-menu")) {
+      return;
+    }
     inlineEditState.inlineEditToolbarActions.hide();
   });
 
@@ -377,9 +381,13 @@ export function Editor({
       }
     } else {
       setSelection(undefined);
-      inlineEditState.setInlineEditSelectionAnchor(null);
       if (inlineEditState.inlineEditVisible) {
-        inlineEditState.inlineEditToolbarActions.hide();
+        inlineEditState.setInlineEditSelectionAnchor({
+          line: position.line,
+          column: position.column,
+        });
+      } else {
+        inlineEditState.setInlineEditSelectionAnchor(null);
       }
     }
 
@@ -771,14 +779,14 @@ export function Editor({
           <div ref={inlineEditOverlayRef} className="pointer-events-none absolute inset-0 z-[200]">
             <div
               ref={inlineEditState.inlineEditPopoverRef}
-              className="pointer-events-auto absolute w-80 overflow-hidden rounded-2xl border border-border bg-primary-bg/95 backdrop-blur-sm"
+              className="pointer-events-auto absolute w-[360px] overflow-hidden rounded-lg border border-border/60 bg-primary-bg/95"
               style={{
                 top: `${inlineEditState.popoverPosition.top}px`,
                 left: `${inlineEditState.popoverPosition.left}px`,
               }}
             >
-              <div className="p-1.5">
-                <div className="flex items-center gap-1.5">
+              <div className="px-2 py-1.5">
+                <div className="flex items-center gap-2">
                   <Input
                     ref={inlineEditState.inlineEditInstructionRef}
                     value={inlineEditState.inlineEditInstruction}
@@ -796,9 +804,26 @@ export function Editor({
                       }
                     }}
                     variant="ghost"
-                    className="ui-font h-8 flex-1 px-1.5 text-xs placeholder:text-text-lighter/80"
-                    placeholder="Describe the edit you want..."
+                    size="sm"
+                    className="ui-font h-8 flex-1 bg-transparent px-0 text-xs placeholder:text-text-lighter/80 focus:bg-transparent"
+                    placeholder={
+                      selection && selection.start.offset !== selection.end.offset
+                        ? "Describe the edit for the selection..."
+                        : "Describe the edit for the current line..."
+                    }
                   />
+                  <button
+                    onClick={() => inlineEditState.inlineEditToolbarActions.hide()}
+                    className="rounded-md p-1 text-text-lighter transition-colors hover:bg-hover hover:text-text"
+                    aria-label="Close inline edit"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between px-2 py-1">
+                <div className="min-w-0 flex-1">
                   <InlineEditModelSelector
                     models={inlineEditState.inlineEditModels}
                     value={inlineEditState.aiAutocompleteModelId}
@@ -808,17 +833,14 @@ export function Editor({
                     disabled={inlineEditState.isInlineEditRunning}
                     isLoading={inlineEditState.isInlineEditModelLoading}
                   />
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
                   <button
-                    onClick={() => inlineEditState.inlineEditToolbarActions.hide()}
-                    className="rounded-lg p-1.5 text-text-lighter hover:bg-hover hover:text-text"
-                    aria-label="Close inline edit"
-                  >
-                    <X size={13} />
-                  </button>
-                  <button
+                    type="button"
                     onClick={() => void inlineEditState.handleApplyInlineEdit()}
                     disabled={inlineEditState.isInlineEditRunning}
-                    className="ui-font flex h-8 items-center gap-1 rounded-lg border border-accent bg-accent px-2 text-white text-xs hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="ui-font inline-flex items-center gap-1 p-1 text-xs text-accent transition-colors hover:text-accent/80 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <CornerDownLeft size={11} />
                     {inlineEditState.isInlineEditRunning ? "Applying..." : "Send"}

@@ -56,9 +56,9 @@ export const InlineEditModelSelector = ({
       options={options}
       onChange={onChange}
       disabled={disabled || isLoading}
-      menuClassName="w-[240px]"
+      menuClassName="inline-edit-model-selector-menu w-[240px]"
       className="max-w-[150px]"
-      openDirection="up"
+      openDirection="auto"
       placeholder={isLoading ? "Loading models..." : "Select model"}
       CustomTrigger={({ ref, onClick }) => (
         <button
@@ -67,8 +67,8 @@ export const InlineEditModelSelector = ({
           onClick={onClick}
           disabled={disabled || isLoading}
           className={cn(
-            "ui-font flex h-8 max-w-[150px] items-center gap-1 rounded-lg border border-border bg-secondary-bg/70 px-2 text-text text-xs",
-            "hover:bg-hover disabled:cursor-not-allowed disabled:opacity-60",
+            "ui-font flex h-7 max-w-[170px] items-center gap-1.5 rounded-md px-2 text-text text-xs",
+            "transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-60",
           )}
           aria-label="Inline edit model selector"
         >
