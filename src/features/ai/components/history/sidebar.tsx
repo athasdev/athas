@@ -1,18 +1,11 @@
 import { Check, Search, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import type { Chat } from "@/features/ai/types/ai-chat";
+import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { ProviderIcon } from "../icons/provider-icons";
-
-interface DropdownPosition {
-  left: number;
-  top: number;
-  width: number;
-  maxHeight: number;
-}
 
 interface ChatHistoryDropdownProps {
   isOpen: boolean;
@@ -25,7 +18,6 @@ interface ChatHistoryDropdownProps {
 }
 
 const DROPDOWN_WIDTH = 340;
-const ESTIMATED_HEIGHT = 400;
 
 export default function ChatHistoryDropdown({
   isOpen,
@@ -36,48 +28,13 @@ export default function ChatHistoryDropdown({
   onDeleteChat,
   triggerRef,
 }: ChatHistoryDropdownProps) {
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [position, setPosition] = useState<DropdownPosition | null>(null);
 
   const filteredChats = useMemo(() => {
     if (!searchQuery.trim()) return chats;
     return chats.filter((chat) => chat.title.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [chats, searchQuery]);
-
-  const updatePosition = useCallback(() => {
-    const trigger = triggerRef.current;
-    if (!trigger) return;
-
-    const rect = trigger.getBoundingClientRect();
-    const viewportPadding = 8;
-    const safeWidth = Math.min(DROPDOWN_WIDTH, window.innerWidth - viewportPadding * 2);
-    const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
-    const availableAbove = rect.top - viewportPadding;
-    const openUp =
-      availableBelow < Math.min(ESTIMATED_HEIGHT, 280) && availableAbove > availableBelow;
-    const maxHeight = Math.max(
-      220,
-      Math.min(ESTIMATED_HEIGHT, openUp ? availableAbove - 6 : availableBelow - 6),
-    );
-    const measuredHeight = dropdownRef.current?.getBoundingClientRect().height ?? ESTIMATED_HEIGHT;
-    const visibleHeight = Math.min(maxHeight, measuredHeight);
-
-    const desiredLeft = rect.right - safeWidth;
-    const left = Math.max(
-      viewportPadding,
-      Math.min(desiredLeft, window.innerWidth - safeWidth - viewportPadding),
-    );
-    const top = openUp ? Math.max(viewportPadding, rect.top - visibleHeight - 6) : rect.bottom + 6;
-
-    setPosition({ left, top, width: safeWidth, maxHeight });
-  }, [triggerRef]);
-
-  useLayoutEffect(() => {
-    if (!isOpen) return;
-    updatePosition();
-  }, [isOpen, updatePosition, searchQuery, chats.length]);
 
   useEffect(() => {
     if (isOpen) {
@@ -86,50 +43,14 @@ export default function ChatHistoryDropdown({
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleMouseDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (dropdownRef.current?.contains(target)) return;
-      if (triggerRef.current?.contains(target)) return;
-      onClose();
-    };
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-      }
-    };
-
-    const handleReposition = () => updatePosition();
-
-    document.addEventListener("mousedown", handleMouseDown);
-    document.addEventListener("keydown", handleEscape);
-    window.addEventListener("resize", handleReposition);
-    window.addEventListener("scroll", handleReposition, true);
-
-    return () => {
-      document.removeEventListener("mousedown", handleMouseDown);
-      document.removeEventListener("keydown", handleEscape);
-      window.removeEventListener("resize", handleReposition);
-      window.removeEventListener("scroll", handleReposition, true);
-    };
-  }, [isOpen, onClose, triggerRef, updatePosition]);
-
-  if (!isOpen || !position) return null;
-
-  return createPortal(
-    <div
-      ref={dropdownRef}
-      className="fixed z-[10030] flex flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 backdrop-blur-sm"
-      style={{
-        left: `${position.left}px`,
-        top: `${position.top}px`,
-        width: `${position.width}px`,
-        maxHeight: `${position.maxHeight}px`,
-      }}
+  return (
+    <Dropdown
+      isOpen={isOpen}
+      anchorRef={triggerRef}
+      anchorAlign="end"
+      onClose={onClose}
+      className="flex flex-col overflow-hidden rounded-2xl p-0"
+      style={{ width: `${DROPDOWN_WIDTH}px` }}
     >
       <div className="bg-secondary-bg px-2 py-2">
         <Input
@@ -211,7 +132,6 @@ export default function ChatHistoryDropdown({
           </div>
         )}
       </div>
-    </div>,
-    document.body,
+    </Dropdown>
   );
 }

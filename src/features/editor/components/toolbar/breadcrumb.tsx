@@ -1,7 +1,5 @@
 import { ArrowLeft, ArrowRight, ChevronRight, Eye, Search, Sparkles } from "lucide-react";
-import { type RefObject, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { useEventListener, useOnClickOutside } from "usehooks-ts";
+import { useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
@@ -13,9 +11,9 @@ import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
-import { toast } from "@/ui/toast-store";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Tooltip from "@/ui/tooltip";
 import { isMac } from "@/utils/platform";
 
@@ -26,8 +24,6 @@ interface DirectoryEntry {
 }
 
 export default function Breadcrumb() {
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
@@ -86,15 +82,9 @@ export default function Breadcrumb() {
   };
 
   const handleInlineEditClick = () => {
-    const hasSelection = selection && selection.start.offset !== selection.end.offset;
-    if (!hasSelection) {
-      toast.warning("Select non-empty code before inline edit.");
-      return;
-    }
     inlineEditActions.show();
   };
 
-  const hasSelection = selection && selection.start.offset !== selection.end.offset;
   const inlineEditTooltip = `AI inline edit (${inlineEditShortcutLabel})`;
 
   const isMarkdownFile = () => {
@@ -279,26 +269,11 @@ export default function Breadcrumb() {
     }
   };
 
-  // Close dropdown when clicking outside
-  useOnClickOutside(dropdownRef as RefObject<HTMLElement>, () => {
-    setDropdown(null);
-  });
-
-  useEventListener("keydown", async (e: KeyboardEvent) => {
-    if (e.key === "Escape") {
-      if (dropdown && dropdown.navigationStack.length > 0) {
-        await handleGoBack();
-      } else {
-        setDropdown(null);
-      }
-    }
-  });
-
   if (!activeBuffer || segments.length === 0) return null;
 
   return (
     <>
-      <div className="flex min-h-7 select-none items-center justify-between border-border border-b bg-terniary-bg px-3 py-1">
+      <div className="flex min-h-7 select-none items-center justify-between bg-terniary-bg px-3 py-1">
         <div className="ui-font flex items-center gap-0.5 overflow-hidden text-text-lighter text-xs">
           <div className="mr-1 flex items-center gap-0.5">
             <button
@@ -330,7 +305,7 @@ export default function Breadcrumb() {
                   buttonRefs.current[index] = el;
                 }}
                 onClick={(e) => handleSegmentClick(index, e)}
-                className="flex max-w-[240px] items-center gap-1 truncate rounded px-1 py-0.5 text-xs transition-colors hover:bg-hover hover:text-text"
+                className="flex max-w-[240px] items-center gap-1 truncate rounded-md px-1 py-0.5 text-xs transition-colors hover:bg-hover hover:text-text"
                 title={segment}
               >
                 {segment}
@@ -354,8 +329,7 @@ export default function Breadcrumb() {
           <Tooltip content={inlineEditTooltip} side="bottom">
             <button
               onClick={handleInlineEditClick}
-              disabled={!hasSelection}
-              className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-5 w-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text"
               title={inlineEditTooltip}
               aria-label={`AI inline edit (${inlineEditShortcutLabel})`}
             >
@@ -372,86 +346,81 @@ export default function Breadcrumb() {
         </div>
       </div>
 
-      {dropdown &&
-        createPortal(
-          <div
-            ref={dropdownRef}
-            className="breadcrumb-dropdown fixed overflow-y-auto rounded-md border border-border bg-secondary-bg py-1 shadow-lg"
-            style={{
-              zIndex: EDITOR_CONSTANTS.Z_INDEX.DROPDOWN,
-              maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
-              minWidth: `${EDITOR_CONSTANTS.DROPDOWN_MIN_WIDTH}px`,
-              left: `${dropdown.x}px`,
-              top: `${dropdown.y}px`,
-            }}
-          >
-            {/* Go back button when we have navigation history */}
-            {dropdown.navigationStack.length > 0 && (
-              <button
-                onClick={handleGoBack}
-                className="ui-font flex w-full items-center gap-2 border-border border-b px-3 py-1.5 text-left text-text-lighter text-xs hover:bg-hover hover:text-text"
-              >
-                <ArrowLeft size={12} className="shrink-0" />
-                <span>Go back</span>
-              </button>
-            )}
+      {dropdown && (
+        <Dropdown
+          isOpen={Boolean(dropdown)}
+          point={{ x: dropdown.x, y: dropdown.y }}
+          onClose={() => setDropdown(null)}
+          className="breadcrumb-dropdown min-w-0"
+          style={{
+            zIndex: EDITOR_CONSTANTS.Z_INDEX.DROPDOWN,
+            maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
+            minWidth: `${EDITOR_CONSTANTS.DROPDOWN_MIN_WIDTH}px`,
+          }}
+        >
+          {dropdown.navigationStack.length > 0 && (
+            <button
+              onClick={handleGoBack}
+              className={dropdownItemClassName(
+                "border-border/70 border-b text-text-lighter hover:text-text",
+              )}
+            >
+              <ArrowLeft size={12} className="shrink-0" />
+              <span>Go back</span>
+            </button>
+          )}
 
-            {dropdown.items.map((item) => (
-              <button
-                key={item.path}
-                onClick={async () => {
-                  if (item.isDir) {
-                    // For folders, load their contents and update dropdown
-                    try {
-                      const entries = await readDirectory(item.path);
-                      const fileEntries: FileEntry[] = entries.map((entry: DirectoryEntry) => ({
-                        name: entry.name || "Unknown",
-                        path: entry.path,
-                        isDir: entry.is_dir || false,
-                        children: undefined,
-                      }));
+          {dropdown.items.map((item) => (
+            <button
+              key={item.path}
+              onClick={async () => {
+                if (item.isDir) {
+                  try {
+                    const entries = await readDirectory(item.path);
+                    const fileEntries: FileEntry[] = entries.map((entry: DirectoryEntry) => ({
+                      name: entry.name || "Unknown",
+                      path: entry.path,
+                      isDir: entry.is_dir || false,
+                      children: undefined,
+                    }));
 
-                      // Sort: directories first, then files, alphabetically
-                      fileEntries.sort((a, b) => {
-                        if (a.isDir && !b.isDir) return -1;
-                        if (!a.isDir && b.isDir) return 1;
-                        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-                      });
+                    fileEntries.sort((a, b) => {
+                      if (a.isDir && !b.isDir) return -1;
+                      if (!a.isDir && b.isDir) return 1;
+                      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+                    });
 
-                      // Update dropdown with new contents and track navigation
-                      setDropdown((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              items: fileEntries,
-                              currentPath: item.path,
-                              navigationStack: [...prev.navigationStack, prev.currentPath],
-                            }
-                          : null,
-                      );
-                    } catch (error) {
-                      logger.error("Editor", "Failed to load folder contents:", error);
-                    }
-                  } else {
-                    // For files, navigate and close dropdown
-                    onNavigate(item.path);
-                    setDropdown(null);
+                    setDropdown((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            items: fileEntries,
+                            currentPath: item.path,
+                            navigationStack: [...prev.navigationStack, prev.currentPath],
+                          }
+                        : null,
+                    );
+                  } catch (error) {
+                    logger.error("Editor", "Failed to load folder contents:", error);
                   }
-                }}
-                className="ui-font flex w-full items-center gap-2 px-3 py-1.5 text-left text-text text-xs hover:bg-hover"
-              >
-                <FileExplorerIcon
-                  fileName={item.name}
-                  isDir={item.isDir}
-                  isExpanded={false}
-                  className="shrink-0 text-text-lighter"
-                />
-                <span className="truncate">{item.name}</span>
-              </button>
-            ))}
-          </div>,
-          document.body,
-        )}
+                } else {
+                  onNavigate(item.path);
+                  setDropdown(null);
+                }
+              }}
+              className={dropdownItemClassName()}
+            >
+              <FileExplorerIcon
+                fileName={item.name}
+                isDir={item.isDir}
+                isExpanded={false}
+                className="shrink-0 text-text-lighter"
+              />
+              <span className="truncate">{item.name}</span>
+            </button>
+          ))}
+        </Dropdown>
+      )}
     </>
   );
 }

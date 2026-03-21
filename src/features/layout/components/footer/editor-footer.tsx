@@ -10,9 +10,8 @@ import {
   Zap,
   ZapOff,
 } from "lucide-react";
-import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { useOnClickOutside } from "usehooks-ts";
+import { useEffect, useRef, useState } from "react";
+import { Dropdown } from "@/ui/dropdown";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
@@ -52,50 +51,7 @@ const DEFAULT_AUTOCOMPLETE_MODELS: AutocompleteModel[] = [
 const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => {
   const lspStatus = useLspStore.use.lspStatus();
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close on click outside
-  useOnClickOutside(dropdownRef as RefObject<HTMLElement>, (event) => {
-    const target = event.target as HTMLElement;
-    if (target && buttonRef.current?.contains(target)) {
-      return;
-    }
-    setIsOpen(false);
-  });
-
-  // Update position when opened
-  useLayoutEffect(() => {
-    if (isOpen && buttonRef.current && dropdownRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const dropdownRect = dropdownRef.current.getBoundingClientRect();
-      const dropdownWidth = dropdownRect.width;
-      const dropdownHeight = dropdownRect.height;
-      const padding = 8;
-
-      // Calculate position - open above and to the left
-      let left = rect.right - dropdownWidth;
-      let top = rect.top - dropdownHeight - padding;
-
-      // Ensure it doesn't go off the left edge
-      if (left < padding) {
-        left = padding;
-      }
-
-      // Ensure it doesn't go off the right edge
-      if (left + dropdownWidth > window.innerWidth - padding) {
-        left = window.innerWidth - dropdownWidth - padding;
-      }
-
-      // Ensure it doesn't go off the top edge
-      if (top < padding) {
-        top = rect.bottom + padding;
-      }
-
-      setPosition({ top, left });
-    }
-  }, [isOpen]);
 
   const getStatusConfig = (status: LspStatus) => {
     switch (status) {
@@ -136,21 +92,33 @@ const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => 
   const activeServers = lspStatus.supportedLanguages || [];
   const hasActiveServers = lspStatus.status === "connected" && activeServers.length > 0;
 
-  const renderDropdown = () => {
-    if (!isOpen) return null;
-
-    return (
-      <div
-        ref={dropdownRef}
-        className="fixed z-9999 w-[260px] overflow-hidden rounded-lg border border-border bg-secondary-bg shadow-xl"
-        style={{ top: position.top, left: position.left }}
+  return (
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "flex h-6 w-6 items-center justify-center rounded-full border border-transparent p-0 transition-colors",
+          config.color,
+          config.bgHover,
+        )}
+        style={{ minHeight: 0, minWidth: 0 }}
+        title={config.title}
       >
-        {/* Header - Project Name */}
+        {config.icon}
+      </button>
+      <Dropdown
+        isOpen={isOpen}
+        anchorRef={buttonRef}
+        anchorSide="top"
+        anchorAlign="end"
+        onClose={() => setIsOpen(false)}
+        className="w-[260px] overflow-hidden rounded-lg p-0"
+      >
         <div className="border-border border-b bg-primary-bg/50 px-3 py-2">
           <span className="font-medium text-text text-xs">{projectName || "No Project"}</span>
         </div>
-
-        {/* Language Servers List */}
         <div className="p-2">
           {hasActiveServers ? (
             <div className="space-y-1">
@@ -188,41 +156,19 @@ const LspStatusIndicator = ({ projectName }: { projectName: string | null }) => 
             </div>
           )}
         </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="relative">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "flex h-6 w-6 items-center justify-center rounded-full border border-transparent p-0 transition-colors",
-          config.color,
-          config.bgHover,
-        )}
-        style={{ minHeight: 0, minWidth: 0 }}
-        title={config.title}
-      >
-        {config.icon}
-      </button>
-      {typeof document !== "undefined" && createPortal(renderDropdown(), document.body)}
+      </Dropdown>
     </div>
   );
 };
 
 const AiUsageStatusIndicator = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [autocompleteModels, setAutocompleteModels] = useState<AutocompleteModel[]>(
     DEFAULT_AUTOCOMPLETE_MODELS,
   );
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const subscription = useAuthStore((state) => state.subscription);
@@ -322,41 +268,28 @@ const AiUsageStatusIndicator = () => {
     }
   };
 
-  useOnClickOutside(dropdownRef as RefObject<HTMLElement>, (event) => {
-    const target = event.target as HTMLElement;
-    if (target && buttonRef.current?.contains(target)) return;
-    setIsOpen(false);
-  });
-
-  useLayoutEffect(() => {
-    if (isOpen && buttonRef.current && dropdownRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const dropdownRect = dropdownRef.current.getBoundingClientRect();
-      const dropdownWidth = dropdownRect.width;
-      const dropdownHeight = dropdownRect.height;
-      const padding = 8;
-
-      let left = rect.right - dropdownWidth;
-      let top = rect.top - dropdownHeight - padding;
-
-      if (left < padding) left = padding;
-      if (left + dropdownWidth > window.innerWidth - padding) {
-        left = window.innerWidth - dropdownWidth - padding;
-      }
-      if (top < padding) top = rect.bottom + padding;
-
-      setPosition({ top, left });
-    }
-  }, [isOpen]);
-
-  const renderDropdown = () => {
-    if (!isOpen) return null;
-
-    return (
-      <div
-        ref={dropdownRef}
-        className="fixed z-[10030] flex w-[320px] flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 backdrop-blur-sm"
-        style={{ top: position.top, left: position.left }}
+  return (
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "ui-font flex items-center gap-1 rounded-full px-2 py-1 font-medium text-xs hover:bg-hover",
+          modeToneClass,
+        )}
+        style={{ minHeight: 0, minWidth: 0 }}
+        title={`${planLabel} • ${modeLabel}`}
+      >
+        <span className="ui-font text-[11px]">{indicatorLabel}</span>
+      </button>
+      <Dropdown
+        isOpen={isOpen}
+        anchorRef={buttonRef}
+        anchorSide="top"
+        anchorAlign="end"
+        onClose={() => setIsOpen(false)}
+        className="w-[320px] overflow-hidden rounded-2xl p-0"
       >
         <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/75 px-3 py-2.5">
           <span className="font-medium text-text text-xs">AI</span>
@@ -433,26 +366,7 @@ const AiUsageStatusIndicator = () => {
             </div>
           </>
         )}
-      </div>
-    );
-  };
-
-  return (
-    <div className="relative">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "ui-font flex items-center gap-1 rounded-full px-2 py-1 font-medium text-xs hover:bg-hover",
-          modeToneClass,
-        )}
-        style={{ minHeight: 0, minWidth: 0 }}
-        title={`${planLabel} • ${modeLabel}`}
-      >
-        <span className="ui-font text-[11px]">{indicatorLabel}</span>
-      </button>
-      {typeof document !== "undefined" && createPortal(renderDropdown(), document.body)}
+      </Dropdown>
     </div>
   );
 };
