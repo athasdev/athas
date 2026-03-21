@@ -53,7 +53,9 @@ const useToastStoreBase = create<ToastState>()((set, get) => ({
     },
     dismiss: (id) => {
       set((state) => ({
-        toasts: state.toasts.map((toast) => (toast.id === id ? { ...toast, isExiting: true } : toast)),
+        toasts: state.toasts.map((toast) =>
+          toast.id === id ? { ...toast, isExiting: true } : toast,
+        ),
       }));
 
       window.dispatchEvent(new CustomEvent("toast-dismissed", { detail: { toastId: id } }));

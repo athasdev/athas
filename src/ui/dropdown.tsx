@@ -16,12 +16,11 @@ import type { MenuItem } from "@/ui/menu";
 import { cn } from "@/utils/cn";
 import { Search } from "lucide-react";
 
-export const DROPDOWN_TRIGGER_BASE =
-  buttonClassName({
-    variant: "subtle",
-    size: "xs",
-    className: "min-w-0 gap-1 rounded-lg px-2 text-text-lighter",
-  });
+export const DROPDOWN_TRIGGER_BASE = buttonClassName({
+  variant: "subtle",
+  size: "xs",
+  className: "min-w-0 gap-1 rounded-lg px-2 text-text-lighter",
+});
 
 export const DROPDOWN_ITEM_BASE =
   "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs transition-colors hover:bg-hover";
@@ -313,10 +312,7 @@ export function Dropdown(props: DropdownProps) {
       const widthDelta = Math.abs(width - previousSize.width);
       const heightDelta = Math.abs(height - previousSize.height);
 
-      if (
-        widthDelta < RESIZE_REPOSITION_THRESHOLD &&
-        heightDelta < RESIZE_REPOSITION_THRESHOLD
-      ) {
+      if (widthDelta < RESIZE_REPOSITION_THRESHOLD && heightDelta < RESIZE_REPOSITION_THRESHOLD) {
         return;
       }
 
