@@ -32,9 +32,8 @@ async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExte
     return;
   }
 
-  const { setSyntaxHighlightingFilePath } = await import(
-    "@/features/editor/extensions/builtin/syntax-highlighting"
-  );
+  const { setSyntaxHighlightingFilePath } =
+    await import("@/features/editor/extensions/builtin/syntax-highlighting");
   setSyntaxHighlightingFilePath(activeBuffer.path);
 }
 
