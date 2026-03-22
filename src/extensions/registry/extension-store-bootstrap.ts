@@ -28,7 +28,9 @@ export async function loadInstalledExtensionsSnapshot(
   let backendInstalled: ExtensionInstallationMetadata[] = [];
 
   try {
-    backendInstalled = await invoke<ExtensionInstallationMetadata[]>("list_installed_extensions_new");
+    backendInstalled = await invoke<ExtensionInstallationMetadata[]>(
+      "list_installed_extensions_new",
+    );
   } catch {
     // Backend command may not exist yet, continue with IndexedDB check.
   }
@@ -79,7 +81,9 @@ export function buildInstalledExtensionsMap(params: {
   availableExtensions: Map<string, AvailableExtension>;
 }): Map<string, ExtensionInstallationMetadata> {
   const { backendInstalled, indexedDBInstalled, availableExtensions } = params;
-  const installedExtensions = new Map(backendInstalled.map((extension) => [extension.id, extension]));
+  const installedExtensions = new Map(
+    backendInstalled.map((extension) => [extension.id, extension]),
+  );
 
   for (const installed of indexedDBInstalled) {
     const extensionId = resolveInstalledExtensionId(installed, availableExtensions);
@@ -124,12 +128,7 @@ export async function initializeExtensionStoreBootstrap(params: {
   loadInstalledExtensions: () => Promise<void>;
   checkForUpdates: () => Promise<string[]>;
 }) {
-  const {
-    onProgress,
-    loadAvailableExtensions,
-    loadInstalledExtensions,
-    checkForUpdates,
-  } = params;
+  const { onProgress, loadAvailableExtensions, loadInstalledExtensions, checkForUpdates } = params;
 
   if (!progressListenerInitialized) {
     await listen<{

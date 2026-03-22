@@ -343,9 +343,7 @@ async function initializeExtensionStoreImpl(): Promise<void> {
     useExtensionStoreBase.getState().actions;
   await initializeExtensionStoreBootstrap({
     onProgress: (extensionId, progress, error) => {
-      useExtensionStoreBase
-        .getState()
-        .actions.updateInstallProgress(extensionId, progress, error);
+      useExtensionStoreBase.getState().actions.updateInstallProgress(extensionId, progress, error);
     },
     loadAvailableExtensions,
     loadInstalledExtensions,
