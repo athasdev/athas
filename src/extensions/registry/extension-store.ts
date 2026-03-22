@@ -16,9 +16,14 @@ import {
   mergeMarketplaceLanguageExtensions,
 } from "./extension-store-helpers";
 import {
+  buildInstalledExtensionMetadata,
+  installExtensionLifecycle,
+  uninstallExtensionLifecycle,
+  updateExtensionLifecycle,
+} from "./extension-store-lifecycle";
+import {
   buildRuntimeManifest,
   getExtensionManifestForLanguage,
-  installLanguageExtensionManifest,
   registerLanguageProvider,
   resolveInstalledExtensionId,
   resolveToolPaths,
@@ -235,92 +240,44 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
         try {
           if (extension.manifest.languages && extension.manifest.languages.length > 0) {
-            const languageConfigs = extension.manifest.languages;
-            await installLanguageExtensionManifest(extensionId, extension.manifest, (progress) => {
-              set((state) => {
-                const ext = state.availableExtensions.get(extensionId);
-                if (ext) {
-                  ext.installProgress = progress;
-                }
-              });
-            });
-
-            const primaryLanguageId = languageConfigs[0].id;
-            const toolPaths = await resolveToolPaths(primaryLanguageId, extension.manifest, {
-              ensureInstalled: true,
-            });
-            const runtimeManifest = buildRuntimeManifest(extension.manifest, toolPaths);
-            extensionRegistry.registerExtension(runtimeManifest, {
-              isBundled: false,
-              isEnabled: true,
-              state: "installed",
-            });
-
-            set((state) => {
-              const ext = state.availableExtensions.get(extensionId);
-              if (ext) {
-                ext.isInstalling = false;
-                ext.isInstalled = true;
-                ext.installProgress = 100;
-                ext.manifest = runtimeManifest;
-
-                state.installedExtensions.set(extensionId, {
-                  id: extensionId,
-                  name: ext.manifest.displayName,
-                  version: ext.manifest.version,
-                  installed_at: new Date().toISOString(),
-                  enabled: true,
-                });
-              }
-              state.availableExtensions = new Map(state.availableExtensions);
-            });
-
-            for (const languageConfig of languageConfigs) {
-              await registerLanguageProvider({
-                extensionId,
-                languageId: languageConfig.id,
-                displayName: extension.manifest.displayName,
-                version: extension.manifest.version,
-                extensions: languageConfig.extensions,
-                aliases: languageConfig.aliases,
-              });
-            }
-
-            const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
-            const bufferState = useBufferStore.getState();
-            const activeBuffer = bufferState.buffers.find((b) => b.isActive);
-
-            if (activeBuffer && extension.manifest.languages) {
-              const fileExt = `.${activeBuffer.path.split(".").pop()?.toLowerCase()}`;
-              const matchesLanguage = extension.manifest.languages.some((lang) =>
-                lang.extensions.includes(fileExt),
-              );
-
-              if (matchesLanguage) {
-                const { setSyntaxHighlightingFilePath } =
-                  await import("@/features/editor/extensions/builtin/syntax-highlighting");
-                setSyntaxHighlightingFilePath(activeBuffer.path);
-              }
-            }
-          } else {
-            // Non-language extension without LSP - use backend download
-            await invoke("install_extension_from_url", {
+            await installExtensionLifecycle({
               extensionId,
-              url: extension.manifest.installation.downloadUrl,
-              checksum: extension.manifest.installation.checksum,
-              size: extension.manifest.installation.size,
-            });
-
-            // Reload installed extensions
-            await get().actions.loadInstalledExtensions();
-
-            set((state) => {
-              const ext = state.availableExtensions.get(extensionId);
-              if (ext) {
-                ext.isInstalling = false;
-                ext.isInstalled = true;
-                ext.installProgress = 100;
-              }
+              extension,
+              onProgress: (progress) => {
+                set((state) => {
+                  const ext = state.availableExtensions.get(extensionId);
+                  if (ext) {
+                    ext.installProgress = progress;
+                  }
+                });
+              },
+              onLanguageInstalled: (runtimeManifest) => {
+                set((state) => {
+                  const ext = state.availableExtensions.get(extensionId);
+                  if (ext) {
+                    ext.isInstalling = false;
+                    ext.isInstalled = true;
+                    ext.installProgress = 100;
+                    ext.manifest = runtimeManifest;
+                    state.installedExtensions.set(
+                      extensionId,
+                      buildInstalledExtensionMetadata(extensionId, ext),
+                    );
+                  }
+                  state.availableExtensions = new Map(state.availableExtensions);
+                });
+              },
+              onNonLanguageInstalled: () => {
+                set((state) => {
+                  const ext = state.availableExtensions.get(extensionId);
+                  if (ext) {
+                    ext.isInstalling = false;
+                    ext.isInstalled = true;
+                    ext.installProgress = 100;
+                  }
+                });
+              },
+              reloadInstalledExtensions: get().actions.loadInstalledExtensions,
             });
           }
         } catch (error) {
@@ -345,59 +302,29 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         }
 
         try {
-          // Check if this is a language extension
-          if (extension.manifest.languages && extension.manifest.languages.length > 0) {
-            const languageIds = extension.manifest.languages.map((language) => language.id);
-
-            // Uninstall all languages for this extension (removes from IndexedDB)
-            await Promise.all(
-              languageIds.map(async (languageId) => {
-                wasmParserLoader.unloadParser(languageId);
-                await extensionInstaller.uninstallLanguage(languageId);
-              }),
-            );
-
-            // Also unload from extension manager if loaded
-            const { extensionManager } = await import("@/features/editor/extensions/manager");
-            try {
-              await Promise.all(
-                languageIds.map((languageId) =>
-                  extensionManager.unloadLanguageExtension(`${extensionId}:${languageId}`),
-                ),
-              );
-              // Backward compatibility for previously loaded single-id providers.
-              await extensionManager.unloadLanguageExtension(extensionId);
-            } catch (error) {
-              console.warn(`Failed to unload language extension ${extensionId}:`, error);
-            }
-
-            extensionRegistry.unregisterExtension(extensionId);
-
-            // Mark as not installed
-            set((state) => {
-              const ext = state.availableExtensions.get(extensionId);
-              if (ext) {
-                ext.isInstalled = false;
-              }
-              // Also remove from installedExtensions map for consistency
-              state.installedExtensions.delete(extensionId);
-              // Create new Map reference to trigger React re-render
-              state.availableExtensions = new Map(state.availableExtensions);
-            });
-          } else {
-            // Non-language extension - use backend uninstall
-            await invoke("uninstall_extension_new", { extensionId });
-
-            // Reload installed extensions
-            await get().actions.loadInstalledExtensions();
-
-            set((state) => {
-              const ext = state.availableExtensions.get(extensionId);
-              if (ext) {
-                ext.isInstalled = false;
-              }
-            });
-          }
+          await uninstallExtensionLifecycle({
+            extensionId,
+            extension,
+            onLanguageUninstalled: () => {
+              set((state) => {
+                const ext = state.availableExtensions.get(extensionId);
+                if (ext) {
+                  ext.isInstalled = false;
+                }
+                state.installedExtensions.delete(extensionId);
+                state.availableExtensions = new Map(state.availableExtensions);
+              });
+            },
+            onNonLanguageUninstalled: () => {
+              set((state) => {
+                const ext = state.availableExtensions.get(extensionId);
+                if (ext) {
+                  ext.isInstalled = false;
+                }
+              });
+            },
+            reloadInstalledExtensions: get().actions.loadInstalledExtensions,
+          });
         } catch (error) {
           console.error(`Failed to uninstall extension ${extensionId}:`, error);
           throw error;
@@ -461,43 +388,21 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           );
         }
 
-        const languageIds = extension.manifest.languages.map((language) => language.id);
-
-        // Unload from memory
-        const { extensionManager } = await import("@/features/editor/extensions/manager");
-        try {
-          await Promise.all(
-            languageIds.map((languageId) =>
-              extensionManager.unloadLanguageExtension(`${extensionId}:${languageId}`),
-            ),
-          );
-          // Backward compatibility for previously loaded single-id providers.
-          await extensionManager.unloadLanguageExtension(extensionId);
-        } catch {
-          // May not be loaded
-        }
-
-        // Unload parsers from memory and delete from IndexedDB
-        await Promise.all(
-          languageIds.map(async (languageId) => {
-            wasmParserLoader.unloadParser(languageId);
-            await extensionInstaller.uninstallLanguage(languageId);
-          }),
-        );
-        extensionRegistry.unregisterExtension(extensionId);
-
-        // Remove from updates set
-        set((state) => {
-          state.extensionsWithUpdates.delete(extensionId);
-          state.installedExtensions.delete(extensionId);
-          const ext = state.availableExtensions.get(extensionId);
-          if (ext) {
-            ext.isInstalled = false;
-          }
+        await updateExtensionLifecycle({
+          extensionId,
+          extension,
+          clearInstalledStateForUpdate: () => {
+            set((state) => {
+              state.extensionsWithUpdates.delete(extensionId);
+              state.installedExtensions.delete(extensionId);
+              const ext = state.availableExtensions.get(extensionId);
+              if (ext) {
+                ext.isInstalled = false;
+              }
+            });
+          },
+          reinstall: () => get().actions.installExtension(extensionId),
         });
-
-        // Reinstall
-        await get().actions.installExtension(extensionId);
       },
     },
   })),
