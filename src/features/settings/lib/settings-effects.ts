@@ -1,4 +1,7 @@
-import { cacheFontsForBootstrap, cacheThemeForBootstrap } from "@/features/settings/lib/appearance-bootstrap";
+import {
+  cacheFontsForBootstrap,
+  cacheThemeForBootstrap,
+} from "@/features/settings/lib/appearance-bootstrap";
 import type { Settings, Theme } from "@/features/settings/types/settings";
 
 const ALL_THEME_CLASSES = [
@@ -42,7 +45,9 @@ export async function applyTheme(theme: Theme) {
   }
 }
 
-export function cacheFontSettings(settings: Pick<Settings, "fontFamily" | "uiFontFamily" | "uiFontSize">) {
+export function cacheFontSettings(
+  settings: Pick<Settings, "fontFamily" | "uiFontFamily" | "uiFontSize">,
+) {
   cacheFontsForBootstrap(settings.fontFamily, settings.uiFontFamily, settings.uiFontSize);
 }
 

@@ -2,7 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { defaultSettings } from "@/features/settings/config/default-settings";
 import { applySettingsSideEffects } from "@/features/settings/lib/settings-effects";
 import { normalizeSettings } from "@/features/settings/lib/settings-normalization";
-import { loadSettingsFromStore, saveSettingsToStore } from "@/features/settings/lib/settings-persistence";
+import {
+  loadSettingsFromStore,
+  saveSettingsToStore,
+} from "@/features/settings/lib/settings-persistence";
 import type { Settings } from "@/features/settings/types/settings";
 
 function getSystemThemePreference(): "light" | "dark" {
