@@ -1,33 +1,25 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { extensionInstaller } from "../installer/extension-installer";
-import {
-  getPackagedLanguageExtensions,
-  initializeLanguagePackager,
-} from "../languages/language-packager";
-import { extensionRegistry } from "../registry/extension-registry";
+import { getPackagedLanguageExtensions } from "../languages/language-packager";
 import {
   findExtensionForFile,
   isExtensionAllowedByEnterprisePolicy,
   mergeMarketplaceLanguageExtensions,
 } from "./extension-store-helpers";
 import {
+  buildInstalledExtensionsMap,
+  initializeExtensionStoreBootstrap,
+  loadInstalledExtensionsSnapshot,
+} from "./extension-store-bootstrap";
+import {
   buildInstalledExtensionMetadata,
   installExtensionLifecycle,
   uninstallExtensionLifecycle,
   updateExtensionLifecycle,
 } from "./extension-store-lifecycle";
-import {
-  buildRuntimeManifest,
-  getExtensionManifestForLanguage,
-  registerLanguageProvider,
-  resolveInstalledExtensionId,
-  resolveToolPaths,
-} from "./extension-store-runtime";
+import { resolveInstalledExtensionId } from "./extension-store-runtime";
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
 import type { ExtensionManifest } from "../types/extension-manifest";
 
@@ -101,98 +93,19 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
         });
 
         try {
-          // Load from backend (non-language extensions)
-          let backendInstalled: ExtensionInstallationMetadata[] = [];
-          try {
-            backendInstalled = await invoke<ExtensionInstallationMetadata[]>(
-              "list_installed_extensions_new",
-            );
-          } catch {
-            // Backend command may not exist yet, continue with IndexedDB check
-          }
-
-          // Also check IndexedDB for installed language parsers
-          const indexedDBInstalled = await extensionInstaller.listInstalled();
           const availableExtensions = get().availableExtensions;
-
-          // Register language extensions with the ExtensionManager
-          for (const installed of indexedDBInstalled) {
-            const languageId = installed.languageId;
-            const extensionId = resolveInstalledExtensionId(installed, availableExtensions);
-
-            const extension = getExtensionManifestForLanguage(
-              extensionId,
-              availableExtensions,
-              languageId,
-            );
-            const languageConfig = extension?.languages?.find((lang) => lang.id === languageId);
-            const languageExtensions = languageConfig?.extensions || [`.${languageId}`];
-            const aliases = languageConfig?.aliases;
-
-            if (extension) {
-              const toolPaths = await resolveToolPaths(languageId, extension);
-              const runtimeManifest = buildRuntimeManifest(extension, toolPaths);
-              extensionRegistry.registerExtension(runtimeManifest, {
-                isBundled: false,
-                isEnabled: true,
-                state: "installed",
-              });
-            }
-
-            try {
-              await registerLanguageProvider({
-                extensionId,
-                languageId,
-                displayName: extension?.displayName || languageId,
-                version: installed.version,
-                extensions: languageExtensions,
-                aliases,
-              });
-            } catch (error) {
-              console.debug(`Could not load language extension ${languageId}:`, error);
-            }
-          }
+          const { backendInstalled, indexedDBInstalled } =
+            await loadInstalledExtensionsSnapshot(availableExtensions);
+          const installedExtensions = buildInstalledExtensionsMap({
+            backendInstalled,
+            indexedDBInstalled,
+            availableExtensions,
+          });
 
           set((state) => {
-            // Start with backend installed extensions
-            state.installedExtensions = new Map(backendInstalled.map((ext) => [ext.id, ext]));
-
-            // Add language extensions from IndexedDB
-            for (const installed of indexedDBInstalled) {
-              const extensionId = resolveInstalledExtensionId(installed, state.availableExtensions);
-
-              if (!state.installedExtensions.has(extensionId)) {
-                // Get manifest info if available, but always add to installedExtensions
-                // to avoid timing issues where availableExtensions hasn't loaded yet
-                const ext =
-                  state.availableExtensions.get(extensionId) ||
-                  (() => {
-                    const manifest = getExtensionManifestForLanguage(
-                      extensionId,
-                      state.availableExtensions,
-                      installed.languageId,
-                    );
-                    return manifest
-                      ? {
-                          manifest,
-                          isInstalled: true,
-                          isInstalling: false,
-                        }
-                      : undefined;
-                  })();
-                state.installedExtensions.set(extensionId, {
-                  id: extensionId,
-                  name: ext?.manifest.displayName || installed.languageId,
-                  version: installed.version,
-                  installed_at: new Date().toISOString(),
-                  enabled: true,
-                });
-              }
-            }
-
+            state.installedExtensions = installedExtensions;
             state.isLoadingInstalled = false;
 
-            // Update available extensions with installation status
             for (const [id, ext] of state.availableExtensions) {
               ext.isInstalled = state.installedExtensions.has(id);
             }
@@ -411,8 +324,6 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 // Create selectors wrapper
 export const useExtensionStore = createSelectors(useExtensionStoreBase);
 
-// Setup progress listener
-let progressListenerInitialized = false;
 let extensionStoreInitPromise: Promise<void> | null = null;
 
 export async function waitForExtensionStoreInitialization(): Promise<void> {
@@ -428,41 +339,16 @@ export const initializeExtensionStore = (): Promise<void> => {
 };
 
 async function initializeExtensionStoreImpl(): Promise<void> {
-  if (!progressListenerInitialized) {
-    // Listen for installation progress events
-    await listen<{
-      extension_id: string;
-      status: { type: string; error?: string };
-      progress: number;
-      message: string;
-    }>("extension://install-progress", (event) => {
-      const { extension_id, progress, status } = event.payload;
-      const error = status.type === "failed" ? status.error : undefined;
-
-      useExtensionStoreBase
-        .getState()
-        .actions.updateInstallProgress(extension_id, progress * 100, error);
-    });
-
-    progressListenerInitialized = true;
-  }
-
-  // Initialize Tree-sitter WASM (needed for syntax highlighting)
-  try {
-    await wasmParserLoader.initialize();
-  } catch (error) {
-    console.error("Failed to initialize WASM parser loader:", error);
-  }
-
-  // Fetch extension manifests from CDN before loading available extensions
-  await initializeLanguagePackager();
-
-  // Load available extensions first, then installed extensions
-  // (installed extensions check needs available extensions to be loaded first)
   const { loadAvailableExtensions, loadInstalledExtensions, checkForUpdates } =
     useExtensionStoreBase.getState().actions;
-
-  await loadAvailableExtensions();
-  await loadInstalledExtensions();
-  await checkForUpdates();
+  await initializeExtensionStoreBootstrap({
+    onProgress: (extensionId, progress, error) => {
+      useExtensionStoreBase
+        .getState()
+        .actions.updateInstallProgress(extensionId, progress, error);
+    },
+    loadAvailableExtensions,
+    loadInstalledExtensions,
+    checkForUpdates,
+  });
 }
