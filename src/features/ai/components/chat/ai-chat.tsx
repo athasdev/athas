@@ -23,6 +23,7 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
+import Badge from "@/ui/badge";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
@@ -740,9 +741,12 @@ details: ${errorDetails || mainError}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-border/60 bg-secondary-bg/70 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-text-lighter">
+                      <Badge
+                        shape="pill"
+                        className="bg-secondary-bg/70 font-medium uppercase tracking-[0.16em] text-text-lighter"
+                      >
                         Permission
-                      </span>
+                      </Badge>
                       {permissionQueue.length > 1 ? (
                         <span className="text-[11px] text-text-lighter">
                           {permissionQueue.length - 1} more queued

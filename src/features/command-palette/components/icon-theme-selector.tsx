@@ -10,6 +10,7 @@ import Command, {
   CommandItem,
   CommandList,
 } from "@/ui/command";
+import Badge from "@/ui/badge";
 
 interface IconThemeInfo {
   id: string;
@@ -202,9 +203,9 @@ const IconThemeSelector = ({
                   <div className="flex items-center gap-2 truncate text-xs">
                     <span className="truncate">{theme.name}</span>
                     {isCurrent && !isPreviewing && (
-                      <span className="rounded bg-accent/10 px-1 py-0.5 font-medium text-[10px] text-accent">
+                      <Badge variant="accent" className="px-1 py-0.5">
                         current
-                      </span>
+                      </Badge>
                     )}
                   </div>
                 </div>

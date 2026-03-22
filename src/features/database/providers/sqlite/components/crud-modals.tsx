@@ -379,15 +379,16 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                 />
                 <Select
                   value={column.type}
-                  onChange={(e) => updateColumn(index, "type", e.target.value)}
+                  onChange={(value) => updateColumn(index, "type", value)}
+                  options={[
+                    { value: "TEXT", label: "TEXT" },
+                    { value: "INTEGER", label: "INTEGER" },
+                    { value: "REAL", label: "REAL" },
+                    { value: "BLOB", label: "BLOB" },
+                  ]}
                   size="md"
                   className="bg-input"
-                >
-                  <option value="TEXT">TEXT</option>
-                  <option value="INTEGER">INTEGER</option>
-                  <option value="REAL">REAL</option>
-                  <option value="BLOB">BLOB</option>
-                </Select>
+                />
                 <label
                   htmlFor={`column-not-null-${index}`}
                   className="ui-font flex items-center gap-1 text-text text-xs"

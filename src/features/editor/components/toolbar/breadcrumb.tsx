@@ -31,7 +31,6 @@ export default function Breadcrumb() {
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { rootFolderPath, handleFileSelect } = useFileSystemStore();
   const { isFindVisible, setIsFindVisible } = useUIState();
-  const selection = useEditorStateStore.use.selection?.();
   const inlineEditActions = useInlineEditToolbarStore.use.actions();
 
   const jumpListActions = useJumpListStore.use.actions();
@@ -307,7 +306,7 @@ export default function Breadcrumb() {
                   buttonRefs.current[index] = el;
                 }}
                 onClick={(e) => handleSegmentClick(index, e)}
-                className="flex max-w-[240px] items-center gap-1 truncate rounded-md px-1 py-0.5 text-xs transition-colors hover:bg-hover hover:text-text"
+                className="flex max-w-60 items-center gap-1 truncate rounded-md px-1 py-0.5 text-xs transition-colors hover:bg-hover hover:text-text"
                 title={segment}
               >
                 {segment}

@@ -36,6 +36,7 @@ export interface FsActions {
   ) => Promise<void>;
   handleFileOpen: (path: string, isDir: boolean) => Promise<void>;
   toggleFolder: (path: string) => Promise<void>;
+  revealPathInTree: (targetPath: string) => Promise<void>;
   handleCreateNewFile: () => Promise<void>;
   handleCreateNewFileInDirectory: (
     dirPath: string,

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { toast } from "@/ui/toast";
 import Button from "@/ui/button";
-import Section, { SettingRow } from "@/ui/section";
+import Section, { SettingRow } from "../settings-section";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
 import { updateEnterprisePolicy } from "@/features/window/services/auth-api";

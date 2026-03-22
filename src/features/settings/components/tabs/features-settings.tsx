@@ -1,5 +1,5 @@
 import { useSettingsStore } from "@/features/settings/store";
-import Section, { SettingRow } from "@/ui/section";
+import Section, { SettingRow } from "../settings-section";
 import Switch from "@/ui/switch";
 import { createCoreFeaturesList } from "../../config/features";
 import type { CoreFeature } from "../../types/feature";

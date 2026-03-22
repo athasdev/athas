@@ -13,7 +13,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { isVirtualContent } from "@/features/panes/types/pane-content";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import KeybindingBadge from "@/ui/keybinding-badge";
+import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
 
 interface TabContextMenuProps {
@@ -149,7 +149,7 @@ const TabContextMenu = ({
       id: "close",
       label: "Close",
       icon: <X size={12} />,
-      keybinding: <KeybindingBadge keys={closeKeys} className="opacity-60" />,
+      keybinding: <Keybinding keys={closeKeys} className="opacity-60" />,
       onClick: () => onCloseTab(buffer.id),
     },
     {

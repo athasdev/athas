@@ -2,7 +2,7 @@ import { Copy, Download, Edit, Pin, PinOff, RotateCcw, X } from "lucide-react";
 import type { Terminal } from "@/features/terminal/types/terminal";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
-import KeybindingBadge from "@/ui/keybinding-badge";
+import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
 
 interface TerminalTabContextMenuProps {
@@ -63,7 +63,7 @@ const TerminalTabContextMenu = ({
           id: "rename",
           label: "Rename Terminal",
           icon: <Edit size={12} />,
-          keybinding: <KeybindingBadge keys={["F2"]} />,
+          keybinding: <Keybinding keys={["F2"]} />,
           onClick: () => onRename(terminal.id),
         },
         {
@@ -77,7 +77,7 @@ const TerminalTabContextMenu = ({
           id: "close",
           label: "Close Terminal",
           icon: <X size={12} />,
-          keybinding: <KeybindingBadge keys={[modKey, "W"]} />,
+          keybinding: <Keybinding keys={[modKey, "W"]} />,
           onClick: () => onCloseTab(terminal.id),
         },
         {

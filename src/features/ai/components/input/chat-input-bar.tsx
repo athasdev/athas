@@ -4,6 +4,7 @@ import { useAIChatStore } from "@/features/ai/store/store";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import Badge from "@/ui/badge";
 import { cn } from "@/utils/cn";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
@@ -710,10 +711,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
             </div>
 
             {queueCount > 0 && (
-              <div className="flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-blue-400 text-xs">
+              <Badge
+                shape="pill"
+                size="sm"
+                className="gap-1 border border-blue-500/30 bg-blue-500/10 px-2.5 text-blue-400"
+              >
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
                 <span>{queueCount}</span>
-              </div>
+              </Badge>
             )}
           </div>
 

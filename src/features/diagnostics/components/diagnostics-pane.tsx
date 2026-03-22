@@ -17,10 +17,11 @@ import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useContextMenu } from "@/hooks/use-context-menu";
+import Badge from "@/ui/badge";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
 import { PANE_CHIP_BASE, paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
-import { SearchPopover } from "@/ui/search-popover";
+import { SearchPopover } from "@/ui/search";
 import { cn } from "@/utils/cn";
 import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics";
 
@@ -754,9 +755,13 @@ const DiagnosticsPane = ({
             >
               <Filter size={12} />
               {activeFilterCount > 0 && (
-                <span className="-top-1 -right-1 absolute inline-flex min-w-4 items-center justify-center rounded-full border border-accent/30 bg-accent/15 px-1 text-[9px] text-accent">
+                <Badge
+                  variant="accent"
+                  shape="pill"
+                  className="-top-1 -right-1 absolute min-w-4 border-accent/30 bg-accent/15 px-1 text-[9px]"
+                >
                   {activeFilterCount}
-                </span>
+                </Badge>
               )}
             </button>
 
@@ -810,9 +815,13 @@ const DiagnosticsPane = ({
                   >
                     <Filter size={12} />
                     {activeFilterCount > 0 && (
-                      <span className="-top-1 -right-1 absolute inline-flex min-w-4 items-center justify-center rounded-full border border-accent/30 bg-accent/15 px-1 text-[9px] text-accent">
+                      <Badge
+                        variant="accent"
+                        shape="pill"
+                        className="-top-1 -right-1 absolute min-w-4 border-accent/30 bg-accent/15 px-1 text-[9px]"
+                      >
                         {activeFilterCount}
-                      </span>
+                      </Badge>
                     )}
                   </button>
                 }

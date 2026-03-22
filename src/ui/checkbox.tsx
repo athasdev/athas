@@ -1,3 +1,4 @@
+import { cva } from "class-variance-authority";
 import { Check } from "lucide-react";
 import { cn } from "@/utils/cn";
 
@@ -9,6 +10,24 @@ interface CheckboxProps {
   className?: string;
   ariaLabel?: string;
 }
+
+const checkboxVariants = cva(
+  [
+    "flex items-center justify-center rounded-[5px] border border-border bg-secondary-bg text-transparent transition-colors",
+    "peer-focus:ring-1 peer-focus:ring-accent/50",
+    "peer-checked:border-accent peer-checked:bg-accent peer-checked:text-white",
+  ],
+  {
+    variants: {
+      size: {
+        sm: "size-4",
+      },
+    },
+    defaultVariants: {
+      size: "sm",
+    },
+  },
+);
 
 export default function Checkbox({
   id,
@@ -35,13 +54,7 @@ export default function Checkbox({
         aria-label={ariaLabel}
         className="peer sr-only"
       />
-      <span
-        className={cn(
-          "flex size-4 items-center justify-center rounded-[5px] border border-border bg-secondary-bg text-transparent transition-colors",
-          "peer-focus:ring-1 peer-focus:ring-accent/50",
-          "peer-checked:border-accent peer-checked:bg-accent peer-checked:text-white",
-        )}
-      >
+      <span className={checkboxVariants()}>
         <Check size={11} strokeWidth={3} />
       </span>
     </label>

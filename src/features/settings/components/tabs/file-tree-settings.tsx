@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import Input from "@/ui/input";
-import Section, { SettingRow } from "@/ui/section";
+import Section, { SettingRow } from "../settings-section";
 
 export const FileTreeSettings = () => {
   const { settings, updateSetting } = useSettingsStore();

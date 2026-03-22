@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import Button from "@/ui/button";
-import Section, { SettingRow } from "@/ui/section";
+import Section, { SettingRow } from "../settings-section";
 
 export const GeneralSettings = () => {
   const {

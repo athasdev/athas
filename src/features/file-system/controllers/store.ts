@@ -7,6 +7,7 @@ import { immer } from "zustand/middleware/immer";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { getAncestorDirectoryPaths } from "@/features/file-explorer/utils/file-explorer-tree-utils";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import { useGitBlameStore } from "@/features/git/stores/git-blame-store";
@@ -732,6 +733,50 @@ export const useFileSystemStore = createSelectors(
         } else {
           // Collapse: only toggle UI state; keep children cached
           uiStore.toggleFolder(path);
+        }
+      },
+
+      revealPathInTree: async (targetPath: string) => {
+        const { rootFolderPath } = get();
+        const ancestorPaths = getAncestorDirectoryPaths(targetPath, rootFolderPath);
+
+        for (const ancestorPath of ancestorPaths) {
+          const node = findFileInTree(get().files, ancestorPath);
+          if (!node || !node.isDir) continue;
+          if (!useFileTreeStore.getState().isExpanded(ancestorPath)) {
+            await get().toggleFolder(ancestorPath);
+          } else if (!node.children || node.children.length === 0) {
+            let childEntries: FileEntry[];
+            const isRemotePath = ancestorPath.startsWith("remote://");
+            if (isRemotePath) {
+              const match = ancestorPath.match(/^remote:\/\/([^/]+)(\/.*)?$/);
+              if (!match) continue;
+              const connectionId = match[1];
+              const remotePath = match[2] || "/";
+              const entries = await invoke<
+                Array<{ name: string; path: string; is_dir: boolean; size: number }>
+              >("ssh_read_directory", {
+                connectionId,
+                path: remotePath,
+              });
+              childEntries = entries.map((entry) => ({
+                name: entry.name,
+                path: `remote://${connectionId}${entry.path}`,
+                isDir: entry.is_dir,
+                children: entry.is_dir ? [] : undefined,
+              }));
+            } else {
+              childEntries = sortFileEntries(await readDirectoryContents(ancestorPath));
+            }
+
+            set((state) => {
+              state.files = updateFileInTree(state.files, ancestorPath, (item) => ({
+                ...item,
+                children: childEntries,
+              }));
+              state.filesVersion++;
+            });
+          }
         }
       },
 

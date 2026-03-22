@@ -48,17 +48,12 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
               <span className="text-text-lighter text-xs">Database</span>
               <Select
                 value={store.selectedDatabase}
-                onChange={(e) => actions.selectDatabase(e.target.value)}
+                onChange={actions.selectDatabase}
+                options={store.databases.map((db) => ({ value: db, label: db }))}
                 aria-label="Select database"
                 size="xs"
                 className="rounded-full border-border/70 bg-secondary-bg/70 px-2.5 focus:border-accent/60 focus:ring-accent/30"
-              >
-                {store.databases.map((db) => (
-                  <option key={db} value={db}>
-                    {db}
-                  </option>
-                ))}
-              </Select>
+              />
             </>
           )}
           <div className="ml-auto flex items-center gap-1 text-text-lighter text-xs">

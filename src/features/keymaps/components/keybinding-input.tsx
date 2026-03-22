@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import KeybindingBadge from "@/ui/keybinding-badge";
+import Keybinding from "@/ui/keybinding";
 import { cn } from "@/utils/cn";
 import { useKeybindingRecorder } from "../hooks/use-keybinding-recorder";
 
@@ -66,7 +66,7 @@ export function KeybindingInput({
     >
       <div className="min-w-0 flex-1 truncate">
         {keys.length > 0 ? (
-          <KeybindingBadge keys={keys} />
+          <Keybinding keys={keys} />
         ) : (
           <span className="text-[10px] text-text-lighter">
             {isRecording ? "Press keys..." : value || "Not assigned"}

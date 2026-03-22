@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { SEARCH_TOGGLE_ICONS, SearchPopover } from "@/ui/search-popover";
+import { SEARCH_TOGGLE_ICONS, SearchPopover } from "@/ui/search";
 
 export interface TerminalSearchOptions {
   caseSensitive: boolean;

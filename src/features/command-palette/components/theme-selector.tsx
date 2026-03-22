@@ -3,6 +3,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
+import Badge from "@/ui/badge";
 import Button from "@/ui/button";
 import Command, {
   CommandEmpty,
@@ -247,9 +248,9 @@ const ThemeSelector = ({ isVisible, onClose, onThemeChange, currentTheme }: Them
                   <div className="flex items-center gap-2 truncate text-xs">
                     <span className="truncate">{theme.name}</span>
                     {isCurrent && !isSelected && (
-                      <span className="rounded bg-accent/10 px-1 py-0.5 font-medium text-[10px] text-accent">
+                      <Badge variant="accent" className="px-1 py-0.5">
                         current
-                      </span>
+                      </Badge>
                     )}
                   </div>
                 </div>

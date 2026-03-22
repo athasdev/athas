@@ -1,3 +1,4 @@
+import { cva } from "class-variance-authority";
 import type React from "react";
 import { cn } from "@/utils/cn";
 
@@ -9,6 +10,39 @@ interface ToggleProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
 }
 
+const toggleVariants = cva(
+  "inline-flex items-center justify-center ui-font font-medium transition-all duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed rounded select-none",
+  {
+    variants: {
+      size: {
+        xs: "px-1 py-1 text-xs h-5 min-w-[20px]",
+        sm: "px-1.5 py-1 text-xs h-6 min-w-[24px]",
+        md: "px-2 py-1.5 text-sm h-7 min-w-[28px]",
+      },
+      variant: {
+        default: "border border-transparent",
+        outline: "border border-border",
+      },
+      pressed: {
+        true: "bg-selected text-text border-border",
+        false: "bg-transparent text-text-lighter hover:bg-hover hover:text-text",
+      },
+    },
+    defaultVariants: {
+      size: "sm",
+      variant: "default",
+      pressed: false,
+    },
+    compoundVariants: [
+      {
+        variant: "default",
+        pressed: false,
+        className: "border-transparent",
+      },
+    ],
+  },
+);
+
 export default function Toggle({
   pressed,
   onPressedChange,
@@ -18,27 +52,9 @@ export default function Toggle({
   children,
   ...props
 }: ToggleProps) {
-  const baseClasses =
-    "inline-flex items-center justify-center ui-font font-medium transition-all duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed rounded select-none";
-
-  const sizes = {
-    xs: "px-1 py-1 text-xs h-5 min-w-[20px]",
-    sm: "px-1.5 py-1 text-xs h-6 min-w-[24px]",
-    md: "px-2 py-1.5 text-sm h-7 min-w-[28px]",
-  };
-
-  const variants = {
-    default: pressed
-      ? "bg-selected text-text border border-border"
-      : "bg-transparent text-text-lighter hover:bg-hover hover:text-text border border-transparent",
-    outline: pressed
-      ? "bg-selected text-text border border-border"
-      : "bg-transparent text-text-lighter hover:bg-hover hover:text-text border border-border",
-  };
-
   return (
     <button
-      className={cn(baseClasses, variants[variant], sizes[size], className)}
+      className={cn(toggleVariants({ size, variant, pressed }), className)}
       onClick={() => onPressedChange(!pressed)}
       data-pressed={pressed}
       {...props}

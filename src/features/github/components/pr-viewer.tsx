@@ -1221,17 +1221,18 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
                   <div className="relative">
                     <Select
                       value={fileStatusFilter}
-                      onChange={(e) => setFileStatusFilter(e.target.value as FileStatusFilter)}
+                      onChange={(value) => setFileStatusFilter(value as FileStatusFilter)}
+                      options={[
+                        { value: "all", label: "All statuses" },
+                        { value: "added", label: "Added" },
+                        { value: "modified", label: "Modified" },
+                        { value: "deleted", label: "Deleted" },
+                        { value: "renamed", label: "Renamed" },
+                      ]}
                       size="md"
                       leftIcon={SlidersHorizontal}
                       className="w-full rounded-md border-border/70 bg-primary-bg/70 sm:w-40"
-                    >
-                      <option value="all">All statuses</option>
-                      <option value="added">Added</option>
-                      <option value="modified">Modified</option>
-                      <option value="deleted">Deleted</option>
-                      <option value="renamed">Renamed</option>
-                    </Select>
+                    />
                   </div>
                 </div>
               </div>

@@ -12,7 +12,7 @@ import {
 import Button from "@/ui/button";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
-import Section, { SettingRow } from "@/ui/section";
+import Section, { SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";

@@ -1,4 +1,5 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { cva } from "class-variance-authority";
+import { AnimatePresence, motion, type Transition } from "framer-motion";
 import {
   type CSSProperties,
   type ReactNode,
@@ -12,7 +13,6 @@ import {
 import { createPortal } from "react-dom";
 import { buttonClassName } from "@/ui/button";
 import Input from "@/ui/input";
-import type { MenuItem } from "@/ui/menu";
 import { cn } from "@/utils/cn";
 import { Search } from "lucide-react";
 
@@ -22,8 +22,33 @@ export const DROPDOWN_TRIGGER_BASE = buttonClassName({
   className: "min-w-0 gap-1 rounded-lg px-2 text-text-lighter",
 });
 
-export const DROPDOWN_ITEM_BASE =
-  "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs transition-colors hover:bg-hover";
+const dropdownRootVariants = cva(
+  "fixed z-[10040] min-w-[190px] max-w-[min(420px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
+);
+
+const dropdownItemVariants = cva(
+  "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs transition-colors",
+  {
+    variants: {
+      disabled: {
+        true: "cursor-not-allowed opacity-50",
+        false: "cursor-pointer hover:bg-hover",
+      },
+      focused: {
+        true: "bg-hover",
+        false: "",
+      },
+    },
+    defaultVariants: {
+      disabled: false,
+      focused: false,
+    },
+  },
+);
+
+const dropdownSectionLabelVariants = cva("ui-font px-2.5 py-1 text-[10px] text-text-lighter");
+
+export const DROPDOWN_ITEM_BASE = dropdownItemVariants();
 
 export function dropdownTriggerClassName(className?: string) {
   return cn(DROPDOWN_TRIGGER_BASE, className);
@@ -31,6 +56,131 @@ export function dropdownTriggerClassName(className?: string) {
 
 export function dropdownItemClassName(className?: string) {
   return cn(DROPDOWN_ITEM_BASE, className);
+}
+
+export interface MenuItem {
+  id: string;
+  label: string;
+  icon?: ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  separator?: boolean;
+  keybinding?: ReactNode;
+  className?: string;
+}
+
+interface MenuPopoverProps {
+  isOpen: boolean;
+  menuRef: RefObject<HTMLDivElement | null>;
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+  initial?: { opacity: number; scale: number; y?: number };
+  animate?: { opacity: number; scale: number; y?: number };
+  exit?: { opacity: number; scale: number; y?: number };
+  transition?: Transition;
+}
+
+export function MenuPopover({
+  isOpen,
+  menuRef,
+  children,
+  className,
+  style,
+  initial = { opacity: 0, scale: 0.95 },
+  animate = { opacity: 1, scale: 1 },
+  exit = { opacity: 0, scale: 0.95 },
+  transition = { duration: 0.12, ease: "easeOut" as const },
+}: MenuPopoverProps) {
+  if (typeof document === "undefined") return null;
+
+  const node = isOpen ? (
+    <motion.div
+      ref={menuRef}
+      initial={initial}
+      animate={animate}
+      exit={exit}
+      transition={transition}
+      className={cn(dropdownRootVariants(), className)}
+      style={style}
+    >
+      {children}
+    </motion.div>
+  ) : null;
+
+  return createPortal(<AnimatePresence>{node}</AnimatePresence>, document.body);
+}
+
+interface MenuItemsListProps {
+  items: MenuItem[];
+  onItemSelect?: () => void;
+  className?: string;
+  itemClassName?: string;
+  focusIndex?: number;
+}
+
+export function MenuItemsList({
+  items,
+  onItemSelect,
+  className,
+  itemClassName,
+  focusIndex = -1,
+}: MenuItemsListProps) {
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  useEffect(() => {
+    if (focusIndex >= 0 && itemRefs.current[focusIndex]) {
+      itemRefs.current[focusIndex]?.scrollIntoView({ block: "nearest" });
+    }
+  }, [focusIndex]);
+
+  let selectableIdx = -1;
+
+  return (
+    <div className={className}>
+      {items.map((item) => {
+        if (item.separator) {
+          return <div key={item.id} className="my-0.5 border-border/70 border-t" />;
+        }
+
+        selectableIdx++;
+        const isFocused = selectableIdx === focusIndex;
+
+        return (
+          <button
+            key={item.id}
+            ref={(el) => {
+              if (!item.disabled) {
+                itemRefs.current[selectableIdx] = el;
+              }
+            }}
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              if (item.disabled) return;
+              item.onClick();
+              onItemSelect?.();
+            }}
+            disabled={item.disabled}
+            className={cn(
+              dropdownItemVariants({
+                disabled: item.disabled,
+                focused: isFocused,
+              }),
+              itemClassName,
+              item.className,
+            )}
+          >
+            {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
+            <span className="flex-1">{item.label}</span>
+            {item.keybinding && (
+              <span className="shrink-0 text-text-lighter text-xs">{item.keybinding}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export interface DropdownSection {
@@ -357,7 +507,7 @@ export function Dropdown(props: DropdownProps) {
       setSearchQuery("");
       setFocusIndex(-1);
       if (searchable) {
-        setTimeout(() => searchRef.current?.focus(), 0);
+        requestAnimationFrame(() => searchRef.current?.focus());
       }
     }
   }, [isOpen, searchable]);
@@ -414,119 +564,54 @@ export function Dropdown(props: DropdownProps) {
 
   const yDir = resolvedSide === "top" ? 4 : -4;
 
-  const node = isOpen ? (
-    <motion.div
-      ref={menuRef}
-      role="menu"
+  return (
+    <MenuPopover
+      isOpen={isOpen}
+      menuRef={menuRef}
+      className={className}
+      style={{ transformOrigin, ...style }}
       initial={{ opacity: 0, scale: 0.95, y: yDir }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: yDir }}
       transition={{ duration: 0.12, ease: "easeOut" }}
-      className={cn(
-        "fixed z-[10040] min-w-[190px] max-w-[min(420px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
-        className,
-      )}
-      style={{ transformOrigin, ...style }}
-      onKeyDown={handleKeyDown}
     >
-      {searchable && (
-        <div className="px-1 pb-1">
-          <Input
-            ref={searchRef}
-            type="text"
-            placeholder={searchPlaceholder ?? "Search..."}
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setFocusIndex(-1);
-            }}
-            leftIcon={Search}
-            variant="ghost"
-            className="w-full"
-          />
-        </div>
-      )}
-      {hasChildren && (props as ChildrenContent).children}
-      {hasItems && (
-        <DropdownItemsList items={getFilteredItems()} focusIndex={focusIndex} onClose={onClose} />
-      )}
-      {hasSections &&
-        getFilteredSections().map((section, sectionIdx) => (
-          <div key={section.id}>
-            {sectionIdx > 0 && <div className="my-0.5 border-border/70 border-t" />}
-            {section.label && (
-              <div className="ui-font px-2.5 py-1 text-[10px] text-text-lighter">
-                {section.label}
-              </div>
-            )}
-            <DropdownItemsList items={section.items} focusIndex={-1} onClose={onClose} />
+      <div role="menu" onKeyDown={handleKeyDown}>
+        {searchable && (
+          <div className="px-1 pb-1">
+            <Input
+              ref={searchRef}
+              type="text"
+              placeholder={searchPlaceholder ?? "Search..."}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setFocusIndex(-1);
+              }}
+              leftIcon={Search}
+              variant="ghost"
+              className="w-full"
+            />
           </div>
-        ))}
-    </motion.div>
-  ) : null;
-
-  return createPortal(<AnimatePresence>{node}</AnimatePresence>, document.body);
-}
-
-function DropdownItemsList({
-  items,
-  focusIndex,
-  onClose,
-}: {
-  items: MenuItem[];
-  focusIndex: number;
-  onClose: () => void;
-}) {
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  useEffect(() => {
-    if (focusIndex >= 0 && itemRefs.current[focusIndex]) {
-      itemRefs.current[focusIndex]?.scrollIntoView({ block: "nearest" });
-    }
-  }, [focusIndex]);
-
-  let selectableIdx = -1;
-  return (
-    <div>
-      {items.map((item) => {
-        if (item.separator) {
-          return <div key={item.id} className="my-0.5 border-border/70 border-t" />;
-        }
-
-        selectableIdx++;
-        const isFocused = selectableIdx === focusIndex;
-
-        return (
-          <button
-            key={item.id}
-            ref={(el) => {
-              if (!item.disabled) {
-                itemRefs.current[selectableIdx] = el;
-              }
-            }}
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              if (item.disabled) return;
-              item.onClick();
-              onClose();
-            }}
-            disabled={item.disabled}
-            className={cn(
-              "ui-font flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs transition-colors",
-              item.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-hover",
-              isFocused && "bg-hover",
-              item.className,
-            )}
-          >
-            {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
-            <span className="flex-1">{item.label}</span>
-            {item.keybinding && (
-              <span className="shrink-0 text-text-lighter text-xs">{item.keybinding}</span>
-            )}
-          </button>
-        );
-      })}
-    </div>
+        )}
+        {hasChildren && (props as ChildrenContent).children}
+        {hasItems && (
+          <MenuItemsList
+            items={getFilteredItems()}
+            focusIndex={focusIndex}
+            onItemSelect={onClose}
+          />
+        )}
+        {hasSections &&
+          getFilteredSections().map((section, sectionIdx) => (
+            <div key={section.id}>
+              {sectionIdx > 0 && <div className="my-0.5 border-border/70 border-t" />}
+              {section.label && (
+                <div className={dropdownSectionLabelVariants()}>{section.label}</div>
+              )}
+              <MenuItemsList items={section.items} onItemSelect={onClose} />
+            </div>
+          ))}
+      </div>
+    </MenuPopover>
   );
 }

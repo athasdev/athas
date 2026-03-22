@@ -1,43 +1,24 @@
 import ignore from "ignore";
-import {
-  AlertTriangle,
-  Clipboard,
-  Copy,
-  Edit,
-  Eye,
-  FilePlus,
-  FileText,
-  FolderOpen,
-  FolderPlus,
-  ImageIcon,
-  Info,
-  Link,
-  RefreshCw,
-  Scissors,
-  Search,
-  Terminal,
-  Trash,
-  Upload,
-} from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEventListener } from "usehooks-ts";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import type { ContextMenuState, FileEntry } from "@/features/file-system/types/app";
+import type { FileEntry } from "@/features/file-system/types/app";
 import { useGitStore } from "@/features/git/stores/git-store";
 import type { GitFile } from "@/features/git/types/git-types";
 import { useSettingsStore } from "@/features/settings/store";
-import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
+import { useFileExplorerContextMenu } from "../hooks/use-file-explorer-context-menu";
 import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
+import { useFileExplorerSync } from "../hooks/use-file-explorer-sync";
+import { useFileExplorerVisibleRows } from "../hooks/use-file-explorer-visible-rows";
 import { FileExplorerTreeItem } from "./file-explorer-tree-item";
 import "../styles/file-explorer-tree.css";
 
@@ -73,12 +54,6 @@ interface FileExplorerTreeProps {
   onFileMove?: (oldPath: string, newPath: string) => void;
 }
 
-interface VisibleRow {
-  file: FileEntry;
-  depth: number;
-  isExpanded: boolean;
-}
-
 function FileExplorerTreeComponent({
   files,
   activePath,
@@ -98,10 +73,10 @@ function FileExplorerTreeComponent({
   onUploadFile,
   onFileMove,
 }: FileExplorerTreeProps) {
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [deleteCandidate, setDeleteCandidate] = useState<{ path: string; isDir: boolean } | null>(
-    null,
-  );
+  const [deleteCandidate, setDeleteCandidate] = useState<{
+    path: string;
+    isDir: boolean;
+  } | null>(null);
   const [isDeletingPath, setIsDeletingPath] = useState(false);
   const [editingValue, setEditingValue] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -114,9 +89,7 @@ function FileExplorerTreeComponent({
 
   const { settings } = useSettingsStore();
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
-
-  const clipboardActions = useFileClipboardStore.getState().actions;
-  const clipboard = useFileClipboardStore((s) => s.clipboard);
+  const revealPathInTree = useFileSystemStore((state) => state.revealPathInTree);
 
   const { dragState, startDrag } = useFileExplorerDragDrop(rootFolderPath, onFileMove);
 
@@ -193,7 +166,10 @@ function FileExplorerTreeComponent({
 
   const gitStatusClassLookup = useMemo(() => {
     if (!gitStatus || !settings.showGitStatusInFileTree)
-      return null as null | { files: Map<string, string>; directories: Map<string, string> };
+      return null as null | {
+        files: Map<string, string>;
+        directories: Map<string, string>;
+      };
 
     const mapStatus = (status: GitFile): string => {
       switch (status.status) {
@@ -264,29 +240,16 @@ function FileExplorerTreeComponent({
     return process(files);
   }, [files, isGitIgnored, isUserHidden]);
 
-  // Compute visible rows based on expansion state in the UI store
-  const expandedPaths = useFileTreeStore((s) => s.expandedPaths);
-  const visibleRows = useMemo(() => {
-    const rows: VisibleRow[] = [];
-    const walk = (items: FileEntry[], depth: number) => {
-      for (const item of items) {
-        const isExpanded = item.isDir && expandedPaths.has(item.path);
-        rows.push({ file: item, depth, isExpanded });
-        if (item.isDir && isExpanded && item.children) {
-          walk(item.children, depth + 1);
-        }
-      }
-    };
-    walk(filteredFiles, 0);
-    return rows;
-  }, [filteredFiles, expandedPaths]);
+  useFileExplorerSync({
+    activePath,
+    updateActivePath,
+    revealPathInTree,
+  });
 
-  // Virtualizer setup
-  const rowVirtualizer = useVirtualizer({
-    count: visibleRows.length,
-    estimateSize: () => 22,
-    getScrollElement: () => containerRef.current,
-    overscan: 8,
+  const { visibleRows, rowVirtualizer } = useFileExplorerVisibleRows({
+    files: filteredFiles,
+    activePath,
+    containerRef,
   });
 
   // No sticky overlays or global guides
@@ -308,7 +271,10 @@ function FileExplorerTreeComponent({
           return { ...item, children: [...(item.children || []), newItem] };
         }
         if (item.children) {
-          return { ...item, children: addNewItemToTree(item.children, targetPath) };
+          return {
+            ...item,
+            children: addNewItemToTree(item.children, targetPath),
+          };
         }
         return item;
       });
@@ -399,20 +365,131 @@ function FileExplorerTreeComponent({
     setEditingValue("");
   };
 
-  const handleContextMenu = (e: React.MouseEvent, filePath: string, isDir: boolean) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const openPathInTab = useCallback(
+    async (path: string) => {
+      if (onFileOpen) {
+        await Promise.resolve(onFileOpen(path, false));
+        return;
+      }
+      await Promise.resolve(onFileSelect(path, false));
+    },
+    [onFileOpen, onFileSelect],
+  );
 
-    let x = e.pageX;
-    let y = e.pageY;
-    const menuWidth = 250;
-    const menuHeight = 400;
+  const collectLoadedFilesInDirectory = useCallback(
+    (directoryPath: string): string[] => {
+      const directory = findFileInTree(filteredFiles, directoryPath);
+      if (!directory || !directory.isDir) return [];
 
-    if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth;
-    if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight;
+      const collected: string[] = [];
+      const walk = (entries?: FileEntry[]) => {
+        if (!entries) return;
+        for (const entry of entries) {
+          if (entry.isDir) {
+            walk(entry.children);
+          } else {
+            collected.push(entry.path);
+          }
+        }
+      };
 
-    setContextMenu({ x, y, path: filePath, isDir });
-  };
+      walk(directory.children);
+      return collected;
+    },
+    [filteredFiles],
+  );
+
+  const collectLocalFilesInDirectory = useCallback(
+    async (directoryPath: string): Promise<string[]> => {
+      const collected: string[] = [];
+      const stack: string[] = [directoryPath];
+
+      while (stack.length > 0) {
+        const currentPath = stack.pop();
+        if (!currentPath) continue;
+
+        const entries = await readDirectory(currentPath);
+        for (const entry of entries as Array<{
+          path: string;
+          is_dir?: boolean;
+        }>) {
+          if (!entry.path) continue;
+          const isDir = !!entry.is_dir;
+          const entryName = getPathBaseName(entry.path);
+
+          if (isAlwaysHiddenFileName(entryName)) {
+            continue;
+          }
+
+          if (isUserHidden(entry.path, isDir) || isGitIgnored(entry.path, isDir)) {
+            continue;
+          }
+
+          if (isDir) {
+            stack.push(entry.path);
+          } else {
+            collected.push(entry.path);
+          }
+        }
+      }
+
+      return collected;
+    },
+    [isUserHidden, isGitIgnored],
+  );
+
+  const handleOpenAllFilesInDirectory = useCallback(
+    async (directoryPath: string) => {
+      let filePaths: string[] = [];
+
+      if (directoryPath.startsWith("remote://")) {
+        filePaths = collectLoadedFilesInDirectory(directoryPath);
+      } else {
+        try {
+          filePaths = await collectLocalFilesInDirectory(directoryPath);
+        } catch (error) {
+          console.error(
+            "Failed to scan directory for Open All, falling back to loaded tree:",
+            error,
+          );
+          filePaths = collectLoadedFilesInDirectory(directoryPath);
+        }
+      }
+
+      const uniqueFilePaths = Array.from(new Set(filePaths));
+      if (uniqueFilePaths.length === 0) return;
+
+      if (uniqueFilePaths.length > 100) {
+        const shouldProceed = window.confirm(
+          `${uniqueFilePaths.length} files will be opened in tabs. Continue?`,
+        );
+        if (!shouldProceed) return;
+      }
+
+      for (const filePath of uniqueFilePaths) {
+        await openPathInTab(filePath);
+      }
+
+      updateActivePath?.(uniqueFilePaths[uniqueFilePaths.length - 1]);
+    },
+    [collectLoadedFilesInDirectory, collectLocalFilesInDirectory, openPathInTab, updateActivePath],
+  );
+
+  const { contextMenu, setContextMenu, handleContextMenu, contextMenuElement } =
+    useFileExplorerContextMenu({
+      rootFolderPath,
+      onFileSelect,
+      onCreateNewFolderInDirectory,
+      onGenerateImage,
+      onRefreshDirectory,
+      onRenamePath,
+      onRevealInFinder,
+      onUploadFile,
+      onDuplicatePath,
+      onDeleteRequested: setDeleteCandidate,
+      onStartInlineEditing: startInlineEditing,
+      onOpenAllFilesInDirectory: handleOpenAllFilesInDirectory,
+    });
 
   useEventListener(
     "keydown",
@@ -447,7 +524,6 @@ function FileExplorerTreeComponent({
     (e: React.MouseEvent) => {
       const t = getTargetItem(e.target);
       if (!t) {
-        // clicked on empty space clears selection
         e.preventDefault();
         e.stopPropagation();
         updateActivePath?.("");
@@ -525,334 +601,6 @@ function FileExplorerTreeComponent({
   const handleContainerMouseUp = useCallback(() => setMouseDownInfo(null), []);
   const handleContainerMouseLeave = useCallback(() => setMouseDownInfo(null), []);
 
-  const openPathInTab = useCallback(
-    async (path: string) => {
-      if (onFileOpen) {
-        await Promise.resolve(onFileOpen(path, false));
-        return;
-      }
-      await Promise.resolve(onFileSelect(path, false));
-    },
-    [onFileOpen, onFileSelect],
-  );
-
-  const collectLoadedFilesInDirectory = useCallback(
-    (directoryPath: string): string[] => {
-      const directory = findFileInTree(filteredFiles, directoryPath);
-      if (!directory || !directory.isDir) return [];
-
-      const collected: string[] = [];
-      const walk = (entries?: FileEntry[]) => {
-        if (!entries) return;
-        for (const entry of entries) {
-          if (entry.isDir) {
-            walk(entry.children);
-          } else {
-            collected.push(entry.path);
-          }
-        }
-      };
-
-      walk(directory.children);
-      return collected;
-    },
-    [filteredFiles],
-  );
-
-  const collectLocalFilesInDirectory = useCallback(
-    async (directoryPath: string): Promise<string[]> => {
-      const collected: string[] = [];
-      const stack: string[] = [directoryPath];
-
-      while (stack.length > 0) {
-        const currentPath = stack.pop();
-        if (!currentPath) continue;
-
-        const entries = await readDirectory(currentPath);
-        for (const entry of entries as Array<{ path: string; is_dir?: boolean }>) {
-          if (!entry.path) continue;
-          const isDir = !!entry.is_dir;
-          const entryName = getPathBaseName(entry.path);
-
-          if (isAlwaysHiddenFileName(entryName)) {
-            continue;
-          }
-
-          if (isUserHidden(entry.path, isDir) || isGitIgnored(entry.path, isDir)) {
-            continue;
-          }
-
-          if (isDir) {
-            stack.push(entry.path);
-          } else {
-            collected.push(entry.path);
-          }
-        }
-      }
-
-      return collected;
-    },
-    [isUserHidden, isGitIgnored],
-  );
-
-  const handleOpenAllFilesInDirectory = useCallback(
-    async (directoryPath: string) => {
-      let filePaths: string[] = [];
-
-      if (directoryPath.startsWith("remote://")) {
-        filePaths = collectLoadedFilesInDirectory(directoryPath);
-      } else {
-        try {
-          filePaths = await collectLocalFilesInDirectory(directoryPath);
-        } catch (error) {
-          console.error(
-            "Failed to scan directory for Open All, falling back to loaded tree:",
-            error,
-          );
-          filePaths = collectLoadedFilesInDirectory(directoryPath);
-        }
-      }
-
-      const uniqueFilePaths = Array.from(new Set(filePaths));
-      if (uniqueFilePaths.length === 0) return;
-
-      if (uniqueFilePaths.length > 100) {
-        const shouldProceed = window.confirm(
-          `${uniqueFilePaths.length} files will be opened in tabs. Continue?`,
-        );
-        if (!shouldProceed) return;
-      }
-
-      for (const filePath of uniqueFilePaths) {
-        await openPathInTab(filePath);
-      }
-
-      updateActivePath?.(uniqueFilePaths[uniqueFilePaths.length - 1]);
-    },
-    [collectLoadedFilesInDirectory, collectLocalFilesInDirectory, openPathInTab, updateActivePath],
-  );
-
-  const contextMenuItems = useMemo<ContextMenuItem[]>(() => {
-    if (!contextMenu) return [];
-
-    const items: ContextMenuItem[] = [];
-
-    if (contextMenu.isDir) {
-      items.push(
-        {
-          id: "new-file",
-          label: "New File",
-          icon: <FilePlus size={12} />,
-          onClick: () => startInlineEditing(contextMenu.path, false),
-        },
-        {
-          id: "new-folder",
-          label: "New Folder",
-          icon: <FolderPlus size={12} />,
-          onClick: () => {
-            if (onCreateNewFolderInDirectory) startInlineEditing(contextMenu.path, true);
-          },
-        },
-        {
-          id: "upload-files",
-          label: "Upload Files",
-          icon: <Upload size={12} />,
-          onClick: () => onUploadFile?.(contextMenu.path),
-        },
-        {
-          id: "refresh",
-          label: "Refresh",
-          icon: <RefreshCw size={12} />,
-          onClick: () => onRefreshDirectory?.(contextMenu.path),
-        },
-        {
-          id: "open-all-files",
-          label: "Open All Files",
-          icon: <FolderOpen size={12} />,
-          onClick: () => void handleOpenAllFilesInDirectory(contextMenu.path),
-        },
-        {
-          id: "open-terminal",
-          label: "Open in Terminal",
-          icon: <Terminal size={12} />,
-          onClick: () => {
-            const folderName = contextMenu.path.split("/").pop() || "terminal";
-            const { openTerminalBuffer } = useBufferStore.getState().actions;
-            openTerminalBuffer({
-              name: folderName,
-              workingDirectory: contextMenu.path,
-            });
-          },
-        },
-        {
-          id: "find-in-folder",
-          label: "Find in Folder",
-          icon: <Search size={12} />,
-          onClick: () => {},
-        },
-      );
-
-      if (onGenerateImage) {
-        items.push({
-          id: "generate-image",
-          label: "Generate Image",
-          icon: <ImageIcon size={12} />,
-          onClick: () => onGenerateImage(contextMenu.path),
-        });
-      }
-
-      items.push({ id: "sep-dir", label: "", separator: true, onClick: () => {} });
-    } else {
-      items.push(
-        {
-          id: "open",
-          label: "Open",
-          icon: <FolderOpen size={12} />,
-          onClick: () => onFileSelect(contextMenu.path, false),
-        },
-        {
-          id: "copy-content",
-          label: "Copy Content",
-          icon: <Copy size={12} />,
-          onClick: async () => {
-            try {
-              const response = await fetch(contextMenu.path);
-              const content = await response.text();
-              await navigator.clipboard.writeText(content);
-            } catch {}
-          },
-        },
-        {
-          id: "duplicate-file",
-          label: "Duplicate",
-          icon: <FileText size={12} />,
-          onClick: () => onDuplicatePath?.(contextMenu.path),
-        },
-        {
-          id: "properties",
-          label: "Properties",
-          icon: <Info size={12} />,
-          onClick: async () => {
-            try {
-              const stats = await fetch(`file://${contextMenu.path}`, { method: "HEAD" });
-              const size = stats.headers.get("content-length") || "Unknown";
-              const fileName = contextMenu.path.split("/").pop() || "";
-              const extension = fileName.includes(".") ? fileName.split(".").pop() : "No extension";
-              alert(
-                `File: ${fileName}\nPath: ${contextMenu.path}\nSize: ${size} bytes\nType: ${extension}`,
-              );
-            } catch {
-              const fileName = contextMenu.path.split("/").pop() || "";
-              alert(`File: ${fileName}\nPath: ${contextMenu.path}`);
-            }
-          },
-        },
-        { id: "sep-file", label: "", separator: true, onClick: () => {} },
-      );
-    }
-
-    items.push(
-      {
-        id: "copy-path",
-        label: "Copy Path",
-        icon: <Link size={12} />,
-        onClick: async () => {
-          try {
-            await navigator.clipboard.writeText(contextMenu.path);
-          } catch {}
-        },
-      },
-      {
-        id: "copy-relative-path",
-        label: "Copy Relative Path",
-        icon: <FileText size={12} />,
-        onClick: async () => {
-          try {
-            let relativePath = contextMenu.path;
-            if (rootFolderPath && contextMenu.path.startsWith(rootFolderPath)) {
-              relativePath = contextMenu.path.substring(rootFolderPath.length + 1);
-            }
-            await navigator.clipboard.writeText(relativePath);
-          } catch {}
-        },
-      },
-      {
-        id: "copy",
-        label: "Copy",
-        icon: <Copy size={12} />,
-        onClick: () =>
-          clipboardActions.copy([{ path: contextMenu.path, is_dir: contextMenu.isDir }]),
-      },
-      {
-        id: "cut",
-        label: "Cut",
-        icon: <Scissors size={12} />,
-        onClick: () =>
-          clipboardActions.cut([{ path: contextMenu.path, is_dir: contextMenu.isDir }]),
-      },
-    );
-
-    if (clipboard && contextMenu.isDir) {
-      items.push({
-        id: "paste",
-        label: "Paste",
-        icon: <Clipboard size={12} />,
-        onClick: () => {
-          clipboardActions.paste(contextMenu.path).then(() => {
-            onRefreshDirectory?.(contextMenu.path);
-          });
-        },
-      });
-    }
-
-    items.push(
-      {
-        id: "rename",
-        label: "Rename",
-        icon: <Edit size={12} />,
-        onClick: () => onRenamePath?.(contextMenu.path),
-      },
-      {
-        id: "reveal",
-        label: "Reveal in Finder",
-        icon: <Eye size={12} />,
-        onClick: () => {
-          if (onRevealInFinder) onRevealInFinder(contextMenu.path);
-          else if (window.electron) window.electron.shell.showItemInFolder(contextMenu.path);
-          else {
-            const parentDir = contextMenu.path.substring(0, contextMenu.path.lastIndexOf("/"));
-            window.open(`file://${parentDir}`, "_blank");
-          }
-        },
-      },
-      { id: "sep-end", label: "", separator: true, onClick: () => {} },
-      {
-        id: "delete",
-        label: "Delete",
-        icon: <Trash size={12} />,
-        className: "text-red-400",
-        onClick: () => setDeleteCandidate({ path: contextMenu.path, isDir: contextMenu.isDir }),
-      },
-    );
-
-    return items;
-  }, [
-    clipboard,
-    clipboardActions,
-    contextMenu,
-    handleOpenAllFilesInDirectory,
-    onCreateNewFolderInDirectory,
-    onDuplicatePath,
-    onFileSelect,
-    onGenerateImage,
-    onRefreshDirectory,
-    onRenamePath,
-    onRevealInFinder,
-    onUploadFile,
-    rootFolderPath,
-    startInlineEditing,
-  ]);
-
   // No recursive render; rows are virtualized
 
   const handleRootDrop = (e: React.DragEvent) => {
@@ -877,7 +625,7 @@ function FileExplorerTreeComponent({
       className={cn(
         "file-tree-container relative flex min-w-full flex-1 select-none flex-col overflow-auto p-1",
         dragState.dragOverPath === "__ROOT__" &&
-          "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-10",
+          "border-2! border-dashed! border-accent! bg-accent! bg-opacity-10!",
       )}
       ref={containerRef}
       style={{ scrollBehavior: "auto", overscrollBehavior: "contain" }}
@@ -895,6 +643,7 @@ function FileExplorerTreeComponent({
         const isDir = visibleRows[curIndex]?.file.isDir;
 
         const toggle = (path: string) => useFileTreeStore.getState().toggleFolder(path);
+        const clipboardActions = useFileClipboardStore.getState().actions;
 
         const mod = e.metaKey || e.ctrlKey;
         if (mod && current) {
@@ -1083,15 +832,7 @@ function FileExplorerTreeComponent({
         </div>
       )}
 
-      {contextMenu && (
-        <ContextMenu
-          isOpen
-          position={{ x: contextMenu.x, y: contextMenu.y }}
-          items={contextMenuItems}
-          onClose={() => setContextMenu(null)}
-          className="min-w-[220px]"
-        />
-      )}
+      {contextMenuElement}
       {deleteCandidate && (
         <Dialog
           title={deleteCandidate.isDir ? "Delete Folder" : "Delete File"}

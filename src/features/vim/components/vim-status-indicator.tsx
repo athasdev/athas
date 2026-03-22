@@ -1,6 +1,6 @@
 import { useSettingsStore } from "@/features/settings/store";
+import Badge from "@/ui/badge";
 import { useVimStore } from "@/features/vim/stores/vim-store";
-import { cn } from "@/utils/cn";
 
 interface VimStatusIndicatorProps {
   compact?: boolean;
@@ -78,28 +78,21 @@ const VimStatusIndicator = ({ compact = false }: VimStatusIndicatorProps) => {
 
   return (
     <div className="flex items-center gap-1">
-      <div
-        className={cn(
-          "ui-font border font-semibold tracking-wider transition-colors duration-200",
-          compact ? "rounded-md px-1.5 py-0.5 text-[10px]" : "rounded-sm px-1 py-[1px] text-xs",
-          getModeColor(),
-        )}
+      <Badge
+        size={compact ? "compact" : "sm"}
+        className={`border font-semibold tracking-wider transition-colors duration-200 ${getModeColor()}`}
       >
         {modeDisplay}
-      </div>
+      </Badge>
 
       {keyDisplay && (
-        <div
-          className={cn(
-            compact
-              ? "ui-font rounded-md border px-1.5 py-0.5 text-[10px]"
-              : "ui-font rounded-sm border px-1 py-[1px] text-xs",
-            "border-gray-500/20 bg-gray-500/10 text-gray-300",
-          )}
+        <Badge
+          size={compact ? "compact" : "sm"}
+          className="border border-gray-500/20 bg-gray-500/10 text-gray-300"
           title="Current keystroke sequence"
         >
           {keyDisplay}
-        </div>
+        </Badge>
       )}
     </div>
   );

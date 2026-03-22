@@ -7,7 +7,7 @@ import {
   SearchPopover,
   SearchReplaceRow,
   SearchReplaceToggle,
-} from "@/ui/search-popover";
+} from "@/ui/search";
 
 const FindBar = () => {
   // Get data from stores

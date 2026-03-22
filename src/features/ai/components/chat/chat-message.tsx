@@ -4,6 +4,7 @@ import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message } from "@/features/ai/types/ai-chat";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import Badge from "@/ui/badge";
 import Tooltip from "@/ui/tooltip";
 import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "../../store/store";
@@ -132,13 +133,13 @@ export const ChatMessage = memo(function ChatMessage({
           <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-text-lighter/80">
             Tool Activity
           </div>
-          <div className="rounded-full border border-border/60 bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter">
+          <Badge shape="pill" className="text-text-lighter">
             {toolCalls.length} call{toolCalls.length !== 1 ? "s" : ""}
-          </div>
+          </Badge>
           {runningToolCount > 0 ? (
-            <div className="rounded-full border border-border/60 bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter">
+            <Badge shape="pill" className="text-text-lighter">
               {runningToolCount} running
-            </div>
+            </Badge>
           ) : null}
         </div>
         <div className="space-y-2">
@@ -188,9 +189,9 @@ export const ChatMessage = memo(function ChatMessage({
             <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-text-lighter/80">
               Tool Activity
             </div>
-            <div className="rounded-full border border-border/60 bg-primary-bg/70 px-2 py-1 text-[10px] text-text-lighter">
+            <Badge shape="pill" className="text-text-lighter">
               {toolCalls.length} call{toolCalls.length !== 1 ? "s" : ""}
-            </div>
+            </Badge>
           </div>
           <div className="space-y-2">
             {message.toolCalls!.map((toolCall, toolIndex) => (

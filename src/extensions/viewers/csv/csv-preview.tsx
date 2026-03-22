@@ -96,17 +96,18 @@ export function CsvPreview() {
             <Select
               id="csv-delimiter"
               value={delimiter}
-              onChange={(e) => setDelimiter(e.target.value as any)}
+              onChange={(value) => setDelimiter(value as any)}
+              options={[
+                { value: "auto", label: "Auto" },
+                { value: ",", label: "Comma" },
+                { value: "\t", label: "Tab" },
+                { value: ";", label: "Semicolon" },
+                { value: "|", label: "Pipe" },
+              ]}
               size="xs"
               className="min-w-24 rounded border-border px-1"
               title="Change delimiter"
-            >
-              <option value="auto">Auto</option>
-              <option value=",">Comma</option>
-              <option value="\t">Tab</option>
-              <option value=";">Semicolon</option>
-              <option value="|">Pipe</option>
-            </Select>
+            />
 
             {/* Header toggle */}
             <button

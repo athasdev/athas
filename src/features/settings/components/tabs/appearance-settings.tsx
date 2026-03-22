@@ -13,7 +13,7 @@ import {
 } from "@/features/settings/lib/ui-font-size";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import Button from "@/ui/button";
-import Section, { SettingRow } from "@/ui/section";
+import Section, { SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { IS_MAC } from "@/utils/platform";

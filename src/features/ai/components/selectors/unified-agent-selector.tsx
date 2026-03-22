@@ -37,7 +37,6 @@ export function UnifiedAgentSelector({
 
   const currentAgentId = getCurrentAgentId();
   const currentAgent = AGENT_OPTIONS.find((a) => a.id === currentAgentId);
-  const isCustomAgent = currentAgentId === "custom";
   const agentConfigById = useMemo(
     () => new Map(availableAgents.map((agent) => [agent.id, agent])),
     [availableAgents],
@@ -170,7 +169,10 @@ export function UnifiedAgentSelector({
       try {
         await invoke<AgentConfig>("install_acp_agent", { agentId });
         await reloadAgents();
-        showToast({ message: `${agent.name} installed successfully`, type: "success" });
+        showToast({
+          message: `${agent.name} installed successfully`,
+          type: "success",
+        });
       } catch (error) {
         showToast({
           message: `Failed to install ${agent.name}: ${error instanceof Error ? error.message : String(error)}`,
@@ -307,7 +309,7 @@ export function UnifiedAgentSelector({
                       ) : null}
                     </div>
                   </button>
-                  <div className="flex min-w-[4.5rem] shrink-0 items-center justify-end gap-1">
+                  <div className="flex min-w-18 shrink-0 items-center justify-end gap-1">
                     {item.id === "custom" && onOpenSettings ? (
                       <button
                         type="button"

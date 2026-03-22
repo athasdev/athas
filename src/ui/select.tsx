@@ -1,20 +1,10 @@
 import * as SelectPrimitive from "@radix-ui/react-select";
+import { cva } from "class-variance-authority";
 import { Check, ChevronDown, Search } from "lucide-react";
-import type {
-  ChangeEvent,
-  ComponentType,
-  FC,
-  ReactElement,
-  ReactNode,
-  RefObject,
-  SelectHTMLAttributes,
-} from "react";
+import type { AriaAttributes, ComponentType, KeyboardEvent, ReactNode, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
-import { useOnClickOutside } from "usehooks-ts";
 import { buttonClassName } from "@/ui/button";
-import { type MenuItem, MenuItemsList, MenuPopover } from "@/ui/menu";
 import { cn } from "@/utils/cn";
-import { adjustPositionToFitViewport } from "@/utils/fit-viewport";
 
 export interface SelectOption {
   value: string;
@@ -22,38 +12,22 @@ export interface SelectOption {
   icon?: ReactNode;
 }
 
-interface SharedSelectProps {
+export interface SelectProps {
   value: string;
   options: SelectOption[];
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   menuClassName?: string;
-  triggerClassName?: string;
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
   searchable?: boolean;
   openDirection?: "up" | "down" | "auto";
-  CustomTrigger?: FC<{
-    ref: RefObject<HTMLButtonElement | null>;
-    onClick: () => void;
-  }>;
-}
-
-interface NativeSelectProps extends Omit<
-  SelectHTMLAttributes<HTMLSelectElement>,
-  "size" | "onChange" | "value"
-> {
-  value: string;
-  onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
-  options?: undefined;
-  children: ReactNode;
-  className?: string;
-  size?: "xs" | "sm" | "md";
   leftIcon?: ReactNode | ComponentType<{ size?: number; className?: string }>;
+  id?: string;
+  title?: string;
+  "aria-label"?: AriaAttributes["aria-label"];
 }
-
-export type SelectProps = SharedSelectProps | NativeSelectProps;
 
 const sizeClasses = {
   xs: "h-7 px-2.5 py-1 text-xs",
@@ -61,184 +35,114 @@ const sizeClasses = {
   md: "h-9 px-3 py-1.5 text-sm",
 };
 
+const selectTriggerVariants = cva(
+  "ui-font inline-flex w-fit items-center justify-between gap-2 whitespace-nowrap font-medium text-text transition-all duration-150 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+  {
+    variants: {
+      size: sizeClasses,
+      withIcon: {
+        true: "pl-2",
+        false: "",
+      },
+    },
+    defaultVariants: {
+      size: "sm",
+      withIcon: false,
+    },
+  },
+);
+
+const selectContentVariants = cva(
+  "z-[10040] max-h-96 min-w-[8rem] overflow-hidden rounded-2xl border border-border bg-secondary-bg/95 shadow-xl backdrop-blur-sm transition-[opacity,transform] duration-150 ease-out",
+);
+
+const selectItemVariants = cva(
+  "ui-font flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs outline-none transition-colors",
+);
+
+const selectSearchInputVariants = cva(
+  "ui-font w-full rounded-lg bg-primary-bg/70 py-2 pr-3 pl-8 text-text text-xs placeholder-text-lighter focus:outline-none",
+);
+
 const iconSizes = {
   xs: 10,
   sm: 12,
   md: 14,
 };
 
-function renderLeftIcon(
-  leftIcon: NativeSelectProps["leftIcon"],
-  size: "xs" | "sm" | "md",
-): ReactNode {
-  if (!leftIcon) return null;
-  // Handle both regular functions and forwardRef components (typeof === "object" with $$typeof)
-  if (typeof leftIcon === "function" || (typeof leftIcon === "object" && "render" in leftIcon)) {
-    const Icon = leftIcon as ComponentType<{ size?: number; className?: string }>;
-    return <Icon size={size === "md" ? 14 : 12} className="text-text-lighter" />;
-  }
-  return leftIcon;
+function filterSelectOptions(options: SelectOption[], searchQuery: string) {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  if (!normalizedQuery) return options;
+
+  return options.filter((option) => option.label.toLowerCase().includes(normalizedQuery));
 }
 
-function LegacyCustomTriggerSelect({
+function renderTriggerIcon(icon: SelectProps["leftIcon"], size: "xs" | "sm" | "md"): ReactNode {
+  if (!icon) return null;
+
+  if (
+    typeof icon === "function" ||
+    (typeof icon === "object" && icon !== null && "render" in icon)
+  ) {
+    const Icon = icon as ComponentType<{ size?: number; className?: string }>;
+    return <Icon size={size === "md" ? 14 : 12} className="shrink-0 text-text-lighter" />;
+  }
+
+  return <span className="shrink-0 text-text-lighter">{icon}</span>;
+}
+
+function SelectSearchField({
   value,
-  options,
   onChange,
-  className = "",
-  menuClassName = "",
-  disabled = false,
-  searchable = false,
-  openDirection = "down",
-  CustomTrigger,
-}: SharedSelectProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [dropdownPosition, setDropdownPosition] = useState({
-    top: 0,
-    left: 0,
-    width: 0,
-  });
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  useOnClickOutside(dropdownRef as RefObject<HTMLElement>, (event) => {
-    const target = event.target as HTMLElement;
-    if (target && buttonRef.current?.contains(target)) {
-      return;
-    }
-    setIsOpen(false);
-  });
-
-  useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-
-      let yPosition: number;
-      if (openDirection === "up") {
-        yPosition = rect.top - 8;
-      } else if (openDirection === "down") {
-        yPosition = rect.bottom + 8;
-      } else {
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const spaceAbove = rect.top;
-        yPosition = spaceBelow < 200 && spaceAbove > spaceBelow ? rect.top - 8 : rect.bottom + 8;
-      }
-
-      const position = adjustPositionToFitViewport({
-        x: rect.left,
-        y: yPosition,
-        width: rect.width,
-        height: rect.height,
-      });
-
-      setDropdownPosition({
-        top:
-          openDirection === "up"
-            ? position.y - (dropdownRef.current?.offsetHeight || 200)
-            : position.y,
-        left: position.x,
-        width: Math.max(rect.width, searchable ? 280 : rect.width),
-      });
-
-      if (searchable) {
-        searchInputRef.current?.focus();
-      }
-    } else {
-      setSearchQuery("");
-    }
-  }, [isOpen, openDirection, searchable]);
-
-  const filteredOptions =
-    searchable && searchQuery
-      ? options.filter((option) => option.label.toLowerCase().includes(searchQuery.toLowerCase()))
-      : options;
-
-  const menuItems: MenuItem[] = filteredOptions.map((option) => ({
-    id: option.value,
-    label: option.label,
-    icon: option.icon,
-    onClick: () => {
-      onChange(option.value);
-      setIsOpen(false);
-    },
-    className: value === option.value ? "bg-hover text-text" : undefined,
-  }));
-
+  inputRef,
+  onKeyDown,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  inputRef: RefObject<HTMLInputElement | null>;
+  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+}) {
   return (
-    <div className={cn("relative", className)}>
-      {CustomTrigger && (
-        <CustomTrigger ref={buttonRef} onClick={() => !disabled && setIsOpen((open) => !open)} />
-      )}
-      <MenuPopover
-        isOpen={isOpen && !disabled}
-        menuRef={dropdownRef}
-        className={cn(
-          "max-h-96 overflow-hidden rounded-2xl bg-primary-bg/95 p-0 shadow-xl",
-          menuClassName,
-        )}
-        style={{
-          top: dropdownPosition.top,
-          left: dropdownPosition.left,
-          width: dropdownPosition.width,
-          transformOrigin: openDirection === "up" ? "bottom" : "top",
-        }}
-        initial={{
-          opacity: 0,
-          scale: 0.95,
-          y: openDirection === "up" ? 4 : -4,
-        }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: openDirection === "up" ? 4 : -4 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-      >
-        {searchable && (
-          <div className="border-border/60 border-b px-1.5 py-1.5">
-            <div className="relative">
-              <Search
-                size="var(--app-ui-icon-size-sm)"
-                className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
-              />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search..."
-                className="ui-font w-full rounded-lg bg-secondary-bg/70 py-2 pr-3 pl-8 text-text text-xs placeholder-text-lighter focus:outline-none"
-                onClick={(event) => event.stopPropagation()}
-              />
-            </div>
-          </div>
-        )}
-
-        {filteredOptions.length === 0 ? (
-          <div className="ui-font p-3 text-center text-text-lighter text-xs">
-            No matching options
-          </div>
-        ) : (
-          <div className="min-h-0 overflow-y-auto p-1.5">
-            <MenuItemsList items={menuItems} className="space-y-1" itemClassName="min-h-8" />
-          </div>
-        )}
-      </MenuPopover>
+    <div className="border-border/60 border-b px-1.5 py-1.5">
+      <div className="relative">
+        <Search size={12} className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="Search..."
+          className={selectSearchInputVariants()}
+          onKeyDown={onKeyDown}
+          onClick={(event) => event.stopPropagation()}
+        />
+      </div>
     </div>
   );
 }
 
-function RadixSharedSelect({
+function SelectEmptyState() {
+  return (
+    <div className="ui-font p-3 text-center text-text-lighter text-xs">No matching options</div>
+  );
+}
+
+export default function Select({
   value,
   options,
   onChange,
   placeholder = "Select...",
   className = "",
   menuClassName = "",
-  triggerClassName,
   disabled = false,
   size = "sm",
   searchable = false,
   openDirection = "down",
-}: Omit<SharedSelectProps, "CustomTrigger">) {
+  leftIcon,
+  id,
+  title,
+  "aria-label": ariaLabel,
+}: SelectProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -255,13 +159,21 @@ function RadixSharedSelect({
   }, [open, searchable]);
 
   const selectedOption = options.find((option) => option.value === value);
-  const filteredOptions =
-    searchable && searchQuery
-      ? options.filter((option) => option.label.toLowerCase().includes(searchQuery.toLowerCase()))
-      : options;
+  const filteredOptions = searchable ? filterSelectOptions(options, searchQuery) : options;
+  const triggerIcon = renderTriggerIcon(leftIcon, size);
+  const resolvedTriggerClassName = cn(
+    selectTriggerVariants({ size, withIcon: Boolean(triggerIcon) }),
+    buttonClassName({
+      variant: "ghost",
+      size,
+      className:
+        "rounded-md bg-transparent text-text-lighter hover:bg-hover hover:text-text focus:ring-1 focus:ring-accent/20",
+    }),
+    className,
+  );
 
   return (
-    <div className={className}>
+    <div className="min-w-0">
       <SelectPrimitive.Root
         value={value}
         onValueChange={onChange}
@@ -269,20 +181,17 @@ function RadixSharedSelect({
         onOpenChange={setOpen}
       >
         <SelectPrimitive.Trigger
+          id={id}
+          title={title}
           disabled={disabled}
-          className={
-            triggerClassName ??
-            buttonClassName({
-              variant: "subtle",
-              size: size === "xs" ? "xs" : size === "sm" ? "sm" : "md",
-              className:
-                "w-full justify-between gap-2 rounded-lg bg-secondary-bg px-3 text-text focus:ring-1 focus:ring-accent/20",
-            })
-          }
-          aria-label={placeholder}
+          className={resolvedTriggerClassName}
+          aria-label={ariaLabel ?? placeholder}
         >
           <span className="flex min-w-0 flex-1 items-center gap-2">
-            {selectedOption?.icon && <span className="size-3 shrink-0">{selectedOption.icon}</span>}
+            {triggerIcon}
+            {selectedOption?.icon && (
+              <span className="size-3 shrink-0 text-text-lighter">{selectedOption.icon}</span>
+            )}
             <SelectPrimitive.Value placeholder={placeholder}>
               <span className="truncate text-left">
                 {selectedOption?.label || value || placeholder}
@@ -301,36 +210,20 @@ function RadixSharedSelect({
             align="start"
             sideOffset={6}
             collisionPadding={8}
-            className={cn(
-              "z-[10040] max-h-96 min-w-[8rem] overflow-hidden rounded-2xl border border-border bg-secondary-bg/95 shadow-xl backdrop-blur-sm",
-              menuClassName,
-            )}
+            className={cn(selectContentVariants(), menuClassName)}
           >
             {searchable && (
-              <div className="border-border/60 border-b px-1.5 py-1.5">
-                <div className="relative">
-                  <Search
-                    size={12}
-                    className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter"
-                  />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search..."
-                    className="ui-font w-full rounded-lg bg-primary-bg/70 py-2 pr-3 pl-8 text-text text-xs placeholder-text-lighter focus:outline-none"
-                    onKeyDown={(event) => event.stopPropagation()}
-                  />
-                </div>
-              </div>
+              <SelectSearchField
+                value={searchQuery}
+                onChange={setSearchQuery}
+                inputRef={searchInputRef}
+                onKeyDown={(event) => event.stopPropagation()}
+              />
             )}
 
             <SelectPrimitive.Viewport className="max-h-96 p-1.5">
               {filteredOptions.length === 0 ? (
-                <div className="ui-font p-3 text-center text-text-lighter text-xs">
-                  No matching options
-                </div>
+                <SelectEmptyState />
               ) : (
                 <div className="space-y-1">
                   {filteredOptions.map((option) => (
@@ -338,7 +231,7 @@ function RadixSharedSelect({
                       key={option.value}
                       value={option.value}
                       className={cn(
-                        "ui-font flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text text-xs outline-none transition-colors",
+                        selectItemVariants(),
                         "data-[highlighted]:bg-hover data-[state=checked]:bg-hover",
                       )}
                     >
@@ -362,65 +255,3 @@ function RadixSharedSelect({
     </div>
   );
 }
-
-function Select(props: SharedSelectProps): ReactElement;
-function Select(props: NativeSelectProps): ReactElement;
-function Select(props: SelectProps) {
-  const { value, className = "", disabled = false, size = "sm" } = props;
-  const isNativeSelect = !("options" in props && props.options);
-
-  if (isNativeSelect) {
-    const {
-      children,
-      onChange,
-      leftIcon,
-      className: nativeClassName,
-      size: _nativeSize,
-      value: _nativeValue,
-      disabled: _nativeDisabled,
-      ...nativeProps
-    } = props as NativeSelectProps;
-
-    return (
-      <div className={cn("relative", className)}>
-        {leftIcon && (
-          <span className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 z-10 text-text-lighter">
-            {renderLeftIcon(leftIcon, size)}
-          </span>
-        )}
-        <select
-          {...nativeProps}
-          value={value}
-          onChange={onChange}
-          disabled={disabled}
-          className={cn(
-            buttonClassName({
-              variant: "subtle",
-              size,
-              className: "w-full appearance-none rounded-xl bg-secondary-bg/80 text-text",
-            }),
-            "focus:border-border focus:outline-none focus:ring-1 focus:ring-accent/20",
-            leftIcon ? "pr-8 pl-8" : "pr-8",
-            nativeClassName,
-          )}
-        >
-          {children}
-        </select>
-        <ChevronDown
-          size={iconSizes[size]}
-          className="-translate-y-1/2 pointer-events-none absolute top-1/2 right-3 text-text-lighter"
-        />
-      </div>
-    );
-  }
-
-  const sharedProps = props as SharedSelectProps;
-
-  if (sharedProps.CustomTrigger) {
-    return <LegacyCustomTriggerSelect {...sharedProps} />;
-  }
-
-  return <RadixSharedSelect {...sharedProps} />;
-}
-
-export default Select;

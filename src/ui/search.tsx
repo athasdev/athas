@@ -1,3 +1,4 @@
+import { cva } from "class-variance-authority";
 import {
   CaseSensitive,
   ChevronDown,
@@ -39,11 +40,54 @@ interface SearchPopoverProps {
   className?: string;
 }
 
-const iconButtonClassName =
-  "flex h-6 w-6 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text";
+const searchSurfaceVariants = cva(
+  "w-[320px] rounded-xl border border-border/70 bg-primary-bg/95 p-1.5 shadow-[0_16px_36px_-28px_rgba(0,0,0,0.55)] backdrop-blur-sm",
+);
 
-const toggleButtonClassName =
-  "flex h-6 w-6 items-center justify-center rounded-lg border border-transparent transition-colors hover:border-border/70 hover:bg-hover";
+const searchIconButtonVariants = cva(
+  "flex h-6 w-6 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text",
+  {
+    variants: {
+      disabled: {
+        true: "cursor-not-allowed opacity-50",
+        false: "",
+      },
+    },
+    defaultVariants: {
+      disabled: false,
+    },
+  },
+);
+
+const searchToggleButtonVariants = cva(
+  "flex h-6 w-6 items-center justify-center rounded-lg border border-transparent transition-colors hover:border-border/70 hover:bg-hover",
+  {
+    variants: {
+      active: {
+        true: "border-border/70 bg-hover text-text",
+        false: "text-text-lighter",
+      },
+    },
+    defaultVariants: {
+      active: false,
+    },
+  },
+);
+
+const searchActionButtonVariants = cva(
+  "ui-font flex h-8 items-center justify-center rounded-lg border border-transparent px-2.5 text-xs text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text",
+  {
+    variants: {
+      disabled: {
+        true: "cursor-not-allowed opacity-50",
+        false: "",
+      },
+    },
+    defaultVariants: {
+      disabled: false,
+    },
+  },
+);
 
 export function SearchPopover({
   value,
@@ -63,12 +107,7 @@ export function SearchPopover({
   className,
 }: SearchPopoverProps) {
   return (
-    <div
-      className={cn(
-        "w-[320px] rounded-xl border border-border/70 bg-primary-bg/95 p-1.5 shadow-[0_16px_36px_-28px_rgba(0,0,0,0.55)] backdrop-blur-sm",
-        className,
-      )}
-    >
+    <div className={cn(searchSurfaceVariants(), className)}>
       <div className="flex items-center gap-1.5">
         {leadingControl}
 
@@ -107,7 +146,7 @@ export function SearchPopover({
         <button
           type="button"
           onClick={onClose}
-          className={iconButtonClassName}
+          className={searchIconButtonVariants()}
           aria-label="Close search"
         >
           <X size={12} />
@@ -122,10 +161,7 @@ export function SearchPopover({
                 key={option.id}
                 type="button"
                 onClick={option.onToggle}
-                className={cn(
-                  toggleButtonClassName,
-                  option.active ? "border-border/70 bg-hover text-text" : "text-text-lighter",
-                )}
+                className={searchToggleButtonVariants({ active: option.active })}
                 title={option.label}
                 aria-label={option.label}
                 aria-pressed={option.active}
@@ -142,10 +178,7 @@ export function SearchPopover({
                   type="button"
                   onClick={onPrevious}
                   disabled={!canNavigate}
-                  className={cn(
-                    iconButtonClassName,
-                    !canNavigate && "cursor-not-allowed opacity-50",
-                  )}
+                  className={searchIconButtonVariants({ disabled: !canNavigate })}
                   aria-label="Previous match"
                 >
                   <ChevronUp size={12} />
@@ -156,10 +189,7 @@ export function SearchPopover({
                   type="button"
                   onClick={onNext}
                   disabled={!canNavigate}
-                  className={cn(
-                    iconButtonClassName,
-                    !canNavigate && "cursor-not-allowed opacity-50",
-                  )}
+                  className={searchIconButtonVariants({ disabled: !canNavigate })}
                   aria-label="Next match"
                 >
                   <ChevronDown size={12} />
@@ -186,7 +216,7 @@ export function SearchReplaceToggle({
     <button
       type="button"
       onClick={onToggle}
-      className={iconButtonClassName}
+      className={searchIconButtonVariants()}
       title={isExpanded ? "Hide replace" : "Show replace"}
       aria-label={isExpanded ? "Hide replace" : "Show replace"}
     >
@@ -232,10 +262,7 @@ export function SearchReplaceRow({
         type="button"
         onClick={onReplace}
         disabled={!canReplace}
-        className={cn(
-          "ui-font flex h-8 items-center justify-center rounded-lg border border-transparent px-2.5 text-xs text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text",
-          !canReplace && "cursor-not-allowed opacity-50",
-        )}
+        className={searchActionButtonVariants({ disabled: !canReplace })}
       >
         Replace
       </button>
@@ -243,10 +270,7 @@ export function SearchReplaceRow({
         type="button"
         onClick={onReplaceAll}
         disabled={!canReplace}
-        className={cn(
-          "ui-font flex h-8 items-center justify-center rounded-lg border border-transparent px-2.5 text-xs text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text",
-          !canReplace && "cursor-not-allowed opacity-50",
-        )}
+        className={searchActionButtonVariants({ disabled: !canReplace })}
       >
         All
       </button>

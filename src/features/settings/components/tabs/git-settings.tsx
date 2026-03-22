@@ -1,5 +1,5 @@
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import Section, { SettingRow } from "@/ui/section";
+import Section, { SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 

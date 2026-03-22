@@ -10,7 +10,7 @@ import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { buttonClassName } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
-import KeybindingBadge from "@/ui/keybinding-badge";
+import Keybinding from "@/ui/keybinding";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
@@ -420,7 +420,7 @@ export function EditorStatusActions() {
               <span>{option.label}</span>
               <span className="flex items-center gap-2">
                 {option.shortcut ? (
-                  <KeybindingBadge keys={option.shortcut} className="shrink-0" />
+                  <Keybinding keys={option.shortcut} className="shrink-0" />
                 ) : null}
                 <span className="flex size-4 items-center justify-center">
                   {option.checked ? <Check size={11} className="text-accent" /> : null}

@@ -238,17 +238,15 @@ const AiUsageStatusIndicator = () => {
               <Select
                 id="footer-ai-model-select"
                 value={aiAutocompleteModelId}
-                onChange={(e) => updateSetting("aiAutocompleteModelId", e.target.value)}
+                onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
+                options={autocompleteModels.map((model) => ({
+                  value: model.id,
+                  label: model.name,
+                }))}
                 disabled={isLoadingModels}
                 size="sm"
                 className="focus:border-accent focus:ring-accent/30"
-              >
-                {autocompleteModels.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                  </option>
-                ))}
-              </Select>
+              />
             </div>
           </>
         )}

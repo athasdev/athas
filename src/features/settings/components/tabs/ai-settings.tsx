@@ -10,7 +10,7 @@ import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import Button from "@/ui/button";
 import Input from "@/ui/input";
-import Section, { SettingRow } from "@/ui/section";
+import Section, { SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/features/editor/services/editor-autocomplete-service";

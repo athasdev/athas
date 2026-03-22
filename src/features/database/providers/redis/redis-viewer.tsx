@@ -1,5 +1,6 @@
 import { Clock, Key, RefreshCw, Search, Server, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import Badge from "@/ui/badge";
 import Button from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
@@ -93,14 +94,14 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 )}
                 aria-label={`Select key ${keyInfo.key}`}
               >
-                <span
+                <Badge
                   className={cn(
-                    "rounded-full bg-secondary-bg/70 px-1.5 py-0.5 font-bold text-[10px] uppercase",
+                    "border-0 bg-secondary-bg/70 px-1.5 font-bold uppercase",
                     TYPE_COLORS[keyInfo.type] || "text-text-lighter",
                   )}
                 >
                   {keyInfo.type.substring(0, 3)}
-                </span>
+                </Badge>
                 <span className="flex-1 truncate">{keyInfo.key}</span>
                 {keyInfo.ttl > 0 && (
                   <span className="flex items-center gap-0.5 text-text-lighter">
@@ -161,14 +162,14 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               <div className="flex items-center gap-2 border-border/60 border-b px-3 py-2">
                 <Key size={12} className="text-text-lighter" />
                 <span className="ui-font font-medium text-xs">{store.selectedKey}</span>
-                <span
+                <Badge
                   className={cn(
-                    "ui-font rounded-full bg-secondary-bg/70 px-1.5 py-0.5 font-bold text-[10px] uppercase",
+                    "border-0 bg-secondary-bg/70 px-1.5 font-bold uppercase",
                     TYPE_COLORS[store.selectedKeyType || ""] || "text-text-lighter",
                   )}
                 >
                   {store.selectedKeyType}
-                </span>
+                </Badge>
                 <div className="flex-1" />
                 <button
                   onClick={() => actions.deleteKey(store.selectedKey!)}

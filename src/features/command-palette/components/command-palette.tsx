@@ -27,7 +27,7 @@ import Command, {
   CommandItem,
   CommandList,
 } from "@/ui/command";
-import KeybindingBadge from "@/ui/keybinding-badge";
+import Keybinding from "@/ui/keybinding";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createDatabaseActions } from "../constants/database-actions";
 import { createFileActions } from "../constants/file-actions";
@@ -325,7 +325,7 @@ const CommandPalette = () => {
                 </div>
                 {action.keybinding && (
                   <div className="shrink-0">
-                    <KeybindingBadge keys={action.keybinding} />
+                    <Keybinding keys={action.keybinding} />
                   </div>
                 )}
               </CommandItem>

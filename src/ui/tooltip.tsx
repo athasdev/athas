@@ -1,8 +1,7 @@
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import { cva } from "class-variance-authority";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { cn } from "@/utils/cn";
-import { calculateTooltipPosition } from "@/utils/fit-viewport";
 
 interface TooltipProps {
   content: string;
@@ -11,106 +10,28 @@ interface TooltipProps {
   className?: string;
 }
 
+const tooltipContentVariants = cva(
+  "pointer-events-none z-[99999] whitespace-nowrap rounded-lg border border-border/70 bg-secondary-bg/95 px-2.5 py-1.5 text-text text-xs shadow-lg backdrop-blur-sm",
+);
+
 export default function Tooltip({ content, children, side = "top", className }: TooltipProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-
-  const updatePosition = () => {
-    if (!triggerRef.current || !tooltipRef.current) return;
-
-    const triggerRect = triggerRef.current.getBoundingClientRect();
-    const tooltipRect = tooltipRef.current.getBoundingClientRect();
-
-    const { x, y } = calculateTooltipPosition(triggerRect, tooltipRect, side);
-
-    setPosition({ x, y });
-  };
-
-  const showTooltip = () => {
-    setIsVisible(true);
-  };
-
-  const hideTooltip = () => {
-    setIsVisible(false);
-  };
-
-  useEffect(() => {
-    if (isVisible) {
-      updatePosition();
-
-      const handleMouseMove = (e: MouseEvent) => {
-        if (!triggerRef.current) return;
-
-        const rect = triggerRef.current.getBoundingClientRect();
-        const isOverTrigger =
-          e.clientX >= rect.left &&
-          e.clientX <= rect.right &&
-          e.clientY >= rect.top &&
-          e.clientY <= rect.bottom;
-
-        if (!isOverTrigger) {
-          hideTooltip();
-        }
-      };
-
-      const handleResize = () => {
-        hideTooltip();
-      };
-
-      const handleScroll = () => {
-        hideTooltip();
-      };
-
-      const handlePointerDown = () => {
-        hideTooltip();
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("pointerdown", handlePointerDown, true);
-      window.addEventListener("resize", handleResize);
-      window.addEventListener("scroll", handleScroll, true);
-
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("pointerdown", handlePointerDown, true);
-        window.removeEventListener("resize", handleResize);
-        window.removeEventListener("scroll", handleScroll, true);
-      };
-    }
-  }, [isVisible]);
-
   return (
-    <>
-      <div
-        ref={triggerRef}
-        className="inline-block"
-        onMouseEnter={showTooltip}
-        onMouseLeave={hideTooltip}
-        onMouseDown={hideTooltip}
-        onClick={hideTooltip}
-      >
-        {children}
-      </div>
-      {isVisible &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            ref={tooltipRef}
-            className={cn(
-              "pointer-events-none fixed z-[99999] whitespace-nowrap rounded-lg border border-border/70 bg-secondary-bg/95 px-2.5 py-1.5 text-text text-xs shadow-lg backdrop-blur-sm",
-              className,
-            )}
-            style={{
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-            }}
+    <TooltipPrimitive.Provider delayDuration={150} skipDelayDuration={100}>
+      <TooltipPrimitive.Root>
+        <TooltipPrimitive.Trigger asChild>
+          <span className="inline-block">{children}</span>
+        </TooltipPrimitive.Trigger>
+        <TooltipPrimitive.Portal>
+          <TooltipPrimitive.Content
+            side={side}
+            sideOffset={6}
+            collisionPadding={8}
+            className={cn(tooltipContentVariants(), className)}
           >
             {content}
-          </div>,
-          document.body,
-        )}
-    </>
+          </TooltipPrimitive.Content>
+        </TooltipPrimitive.Portal>
+      </TooltipPrimitive.Root>
+    </TooltipPrimitive.Provider>
   );
 }

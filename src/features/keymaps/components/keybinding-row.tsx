@@ -1,10 +1,10 @@
 import { useState } from "react";
-import KeybindingBadge from "@/ui/keybinding-badge";
+import Badge from "@/ui/badge";
+import KeybindingDisplay from "@/ui/keybinding";
 import { cn } from "@/utils/cn";
 import { useKeybindingConflicts } from "../hooks/use-keybinding-conflicts";
 import { useKeymapStore } from "../stores/store";
 import type { Command, Keybinding } from "../types";
-import { parseKeybinding } from "../utils/parser";
 import { keymapRegistry } from "../utils/registry";
 import { KeybindingInput } from "./keybinding-input";
 
@@ -56,13 +56,6 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
     }
   };
 
-  const keys = keybinding?.key
-    ? parseKeybinding(keybinding.key).parts.flatMap((p) => [
-        ...p.modifiers.map((m) => m.charAt(0).toUpperCase() + m.slice(1)),
-        p.key.toUpperCase(),
-      ])
-    : [];
-
   const source = keybinding?.source || "default";
   const isUserOverride = source === "user";
 
@@ -97,8 +90,8 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             className="flex h-7 w-full items-center justify-start rounded border border-border bg-secondary-bg px-2 text-xs hover:border-accent"
             aria-label={`Edit keybinding for ${command.title}`}
           >
-            {keys.length > 0 ? (
-              <KeybindingBadge keys={keys} />
+            {keybinding?.key ? (
+              <KeybindingDisplay binding={keybinding.key} />
             ) : (
               <span className="text-text-lighter">Not assigned</span>
             )}
@@ -113,14 +106,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
 
       {/* Source */}
       <div className="flex items-center">
-        <span
-          className={cn(
-            "rounded px-2 py-0.5 text-[10px]",
-            isUserOverride ? "bg-accent/10 text-accent" : "text-text-lighter",
-          )}
-        >
-          {source}
-        </span>
+        <Badge variant={isUserOverride ? "accent" : "muted"}>{source}</Badge>
       </div>
 
       {/* Actions */}

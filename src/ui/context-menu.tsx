@@ -1,6 +1,5 @@
 import type { CSSProperties } from "react";
-import { Dropdown } from "@/ui/dropdown";
-import type { MenuItem } from "@/ui/menu";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 
 export type ContextMenuItem = MenuItem;
 

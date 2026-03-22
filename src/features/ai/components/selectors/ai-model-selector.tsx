@@ -31,7 +31,7 @@ import {
 } from "@/features/ai/types/providers";
 import { useSettingsStore } from "@/features/settings/store";
 import Input from "@/ui/input";
-import { MenuPopover } from "@/ui/menu";
+import { MenuPopover } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 import {
   getProvider,

@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useConnectionStore } from "@/features/database/stores/connection-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Button from "@/ui/button";
-import Section, { SettingRow } from "@/ui/section";
+import Section, { SettingRow } from "../settings-section";
 
 const formatDbType = (dbType: string) => {
   switch (dbType) {

@@ -28,8 +28,7 @@ import {
 } from "@/features/terminal/stores/terminal-store";
 import type { Terminal } from "@/features/terminal/types/terminal";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
-import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
-import { MenuItemsList, type MenuItem } from "@/ui/menu";
+import { Dropdown, dropdownItemClassName, MenuItemsList, type MenuItem } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 import Tooltip from "../../../ui/tooltip";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
