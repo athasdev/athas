@@ -23,10 +23,7 @@ import {
   resolveInstalledExtensionId,
   resolveToolPaths,
 } from "./extension-store-runtime";
-import type {
-  AvailableExtension,
-  ExtensionInstallationMetadata,
-} from "./extension-store-types";
+import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
 import type { ExtensionManifest } from "../types/extension-manifest";
 
 interface ExtensionStoreState {
